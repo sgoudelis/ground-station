@@ -64,7 +64,7 @@ typing_extensions==4.12.2
 urllib3==2.7.0
 uvicorn==0.34.0
 webrtcvad-wheels==2.0.14
-websocket-client==1.8.0
+websocket-client==1.9.0
 websockets==14.0
 wsproto==1.2.0
 yarl==1.20.0
