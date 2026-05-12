@@ -38,7 +38,7 @@ passlib==1.7.4
 Pillow==12.2.0
 pre-commit==4.5.1
 propcache==0.3.1
-psutil==7.0.0
+psutil==7.2.2
 pycparser==2.22
 pydantic==2.10.6
 pydantic_core==2.27.2
