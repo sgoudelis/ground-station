@@ -36,7 +36,7 @@ netifaces==0.11.0
 numpy==2.3.1
 passlib==1.7.4
 Pillow==12.2.0
-pre-commit==4.5.1
+pre-commit==4.6.0
 propcache==0.3.1
 psutil==7.0.0
 pycparser==2.22
