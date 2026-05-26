@@ -1,13 +1,40 @@
 """WebRTC helper models and routes."""
 
 import json
+import os
 from typing import Dict, Optional
+from urllib.parse import urlparse
 
 import httpx
 from fastapi import FastAPI, HTTPException, WebSocket
 from pydantic import BaseModel
 
 from common.logger import logger
+
+# Allowlist of permitted go2rtc base URLs.  Override via the GO2RTC_ALLOWED_HOSTS
+# environment variable (comma-separated list of "host:port" entries).
+_DEFAULT_ALLOWED_HOSTS = {"localhost:1984", "127.0.0.1:1984"}
+
+def _allowed_hosts() -> set:
+    env = os.environ.get("GO2RTC_ALLOWED_HOSTS")
+    if env:
+        return {h.strip() for h in env.split(",") if h.strip()}
+    return _DEFAULT_ALLOWED_HOSTS
+
+
+def _validate_source_url(url: str) -> None:
+    """Raise HTTPException if *url* does not point to an allowed go2rtc host."""
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https"):
+        raise HTTPException(status_code=400, detail="Invalid source_url scheme")
+    host = parsed.hostname or ""
+    port = parsed.port or (443 if parsed.scheme == "https" else 80)
+    netloc = f"{host}:{port}"
+    if netloc not in _allowed_hosts():
+        raise HTTPException(
+            status_code=400,
+            detail="source_url host is not in the allowed go2rtc hosts list",
+        )
 
 
 class RTCSessionDescription(BaseModel):
@@ -43,6 +70,7 @@ def register_webrtc_routes(app: FastAPI) -> None:
     @app.post("/api/webrtc/offer")
     async def create_webrtc_session(request: WebRTCRequest):
         """Relay WebRTC offer to go2rtc and return an answer."""
+        _validate_source_url(request.source_url)
         try:
             base_url = request.source_url.split("/stream.html")[0]
             webrtc_url = f"{base_url}/api/webrtc"
@@ -64,6 +92,8 @@ def register_webrtc_routes(app: FastAPI) -> None:
                     )
                 answer_data = response.json()
                 return RTCSessionDescription(type=answer_data["type"], sdp=answer_data["sdp"])
+        except HTTPException:
+            raise
         except Exception as e:  # pragma: no cover - network errors
             logger.error(f"Error creating WebRTC session: {str(e)}")
             raise HTTPException(
