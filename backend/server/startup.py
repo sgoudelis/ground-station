@@ -322,7 +322,13 @@ async def download_decoded_folder(foldername: str, background_tasks: BackgroundT
 async def serve_spa(request: Request, full_path: str):
     static_files_dir = os.environ.get("STATIC_FILES_DIR", "../../frontend/dist")
     if full_path.startswith(("static/", "assets/", "favicon.ico")):
-        return FileResponse(os.path.join(static_files_dir, full_path))
+        base_dir = Path(static_files_dir).resolve()
+        file_path = (base_dir / full_path).resolve()
+        try:
+            file_path.relative_to(base_dir)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid path")
+        return FileResponse(str(file_path))
     return FileResponse(os.path.join(static_files_dir, "index.html"))
 
 
