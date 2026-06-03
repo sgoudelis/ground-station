@@ -115,6 +115,10 @@
     "day_night_separator": "Day/night separator line",
     "satellite_tooltip": "Satellite tooltip",
     "coordinate_grid": "Coordinate grid",
+    "enable_map_dragging": "Enable map dragging",
+    "enable_map_dragging_desc": "Allow click-and-drag panning on the map. When off, use the arrow buttons to pan.",
+    "enable_map_zooming": "Enable map zooming",
+    "enable_map_zooming_desc": "Allow mouse wheel, pinch, and double-click zoom on the map. When off, use the +/- buttons on the map.",
     "footprint_color": "Footprint color",
     "past_orbit_color": "Past orbit line color",
     "future_orbit_color": "Future orbit line color"

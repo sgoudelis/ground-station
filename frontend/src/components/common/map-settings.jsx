@@ -37,6 +37,8 @@ import {getTileLayerById, tileLayers} from './tile-layers.jsx';
 import { useTranslation } from 'react-i18next';
 
 const SETTINGS_KEYS = [
+    'enableMapDragging',
+    'enableMapZooming',
     'showPastOrbitPath',
     'showFutureOrbitPath',
     'showSatelliteCoverage',
@@ -70,6 +72,8 @@ const normalizeProjectionLabel = (projection) => {
 
 const buildSettings = ({
     initialLockOnTarget,
+    initialEnableMapDragging,
+    initialEnableMapZooming,
     initialShowPastOrbitPath,
     initialShowFutureOrbitPath,
     initialShowSatelliteCoverage,
@@ -85,6 +89,8 @@ const buildSettings = ({
     initialShowGrid,
 }) => ({
     lockOnTarget: Boolean(initialLockOnTarget),
+    enableMapDragging: Boolean(initialEnableMapDragging),
+    enableMapZooming: Boolean(initialEnableMapZooming),
     showPastOrbitPath: Boolean(initialShowPastOrbitPath),
     showFutureOrbitPath: Boolean(initialShowFutureOrbitPath),
     showSatelliteCoverage: Boolean(initialShowSatelliteCoverage),
@@ -130,6 +136,17 @@ const ToggleRow = ({ label, checked, onChange }) => (
         label={label}
         sx={{ ml: 0.2 }}
     />
+);
+
+const ToggleRowWithDescription = ({ label, description, checked, onChange }) => (
+    <Box>
+        <ToggleRow label={label} checked={checked} onChange={onChange} />
+        {description ? (
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', ml: 4.6, mt: -0.25 }}>
+                {description}
+            </Typography>
+        ) : null}
+    </Box>
 );
 
 const ColorSetting = ({ label, value, disabled = false, onChange }) => {
@@ -199,11 +216,13 @@ const ColorSetting = ({ label, value, disabled = false, onChange }) => {
     );
 };
 
-const MapSettingsIsland = ({ initialLockOnTarget, initialShowPastOrbitPath, initialShowFutureOrbitPath, initialShowSatelliteCoverage,
+const MapSettingsIsland = ({ initialLockOnTarget, initialEnableMapDragging, initialEnableMapZooming,
+                            initialShowPastOrbitPath, initialShowFutureOrbitPath, initialShowSatelliteCoverage,
                             initialShowSunIcon, initialShowMoonIcon, initialShowTerminatorLine,
                             initialSatelliteCoverageColor, initialPastOrbitLineColor, initialFutureOrbitLineColor,
                             initialOrbitProjectionDuration, initialTileLayerID, initialShowTooltip, initialShowGrid,
-                               handleLockOnTarget, handleShowFutureOrbitPath, handleShowPastOrbitPath,
+                               handleLockOnTarget, handleEnableMapDragging, handleEnableMapZooming,
+                               handleShowFutureOrbitPath, handleShowPastOrbitPath,
                             handleShowSatelliteCoverage, handleSetShowSunIcon, handleSetShowMoonIcon,
                             handleShowTerminatorLine, handleFutureOrbitLineColor, handlePastOrbitLineColor,
                             handleSatelliteCoverageColor, handleOrbitProjectionDuration, handleShowTooltip,
@@ -236,6 +255,8 @@ const MapSettingsIsland = ({ initialLockOnTarget, initialShowPastOrbitPath, init
     const initialSettings = useMemo(
         () => buildSettings({
             initialLockOnTarget,
+            initialEnableMapDragging,
+            initialEnableMapZooming,
             initialShowPastOrbitPath,
             initialShowFutureOrbitPath,
             initialShowSatelliteCoverage,
@@ -252,6 +273,8 @@ const MapSettingsIsland = ({ initialLockOnTarget, initialShowPastOrbitPath, init
         }),
         [
             initialLockOnTarget,
+            initialEnableMapDragging,
+            initialEnableMapZooming,
             initialShowPastOrbitPath,
             initialShowFutureOrbitPath,
             initialShowSatelliteCoverage,
@@ -271,6 +294,8 @@ const MapSettingsIsland = ({ initialLockOnTarget, initialShowPastOrbitPath, init
     const defaults = useMemo(
         () => buildSettings({
             initialLockOnTarget: defaultSettings?.lockOnTarget,
+            initialEnableMapDragging: defaultSettings?.enableMapDragging,
+            initialEnableMapZooming: defaultSettings?.enableMapZooming,
             initialShowPastOrbitPath: defaultSettings?.showPastOrbitPath,
             initialShowFutureOrbitPath: defaultSettings?.showFutureOrbitPath,
             initialShowSatelliteCoverage: defaultSettings?.showSatelliteCoverage,
@@ -323,6 +348,8 @@ const MapSettingsIsland = ({ initialLockOnTarget, initialShowPastOrbitPath, init
             satelliteCoverageColor: normalizeHexColor(draftSettings.satelliteCoverageColor, initialSettings.satelliteCoverageColor),
         };
 
+        handleEnableMapDragging?.(sanitizedSettings.enableMapDragging);
+        handleEnableMapZooming?.(sanitizedSettings.enableMapZooming);
         handleShowPastOrbitPath(sanitizedSettings.showPastOrbitPath);
         handleShowFutureOrbitPath(sanitizedSettings.showFutureOrbitPath);
         handleShowSatelliteCoverage(sanitizedSettings.showSatelliteCoverage);
@@ -416,6 +443,23 @@ const MapSettingsIsland = ({ initialLockOnTarget, initialShowPastOrbitPath, init
                             defaultValue: 'Switching map projection rebuilds the map canvas and may recenter the view.',
                         })}
                     </Typography>
+
+                    <ToggleRowWithDescription
+                        label={t('map_settings.enable_map_dragging', { defaultValue: 'Enable map dragging' })}
+                        description={t('map_settings.enable_map_dragging_desc', {
+                            defaultValue: 'Allow click-and-drag panning directly on the map.',
+                        })}
+                        checked={draftSettings.enableMapDragging}
+                        onChange={(value) => setDraftSettings((prev) => ({ ...prev, enableMapDragging: value }))}
+                    />
+                    <ToggleRowWithDescription
+                        label={t('map_settings.enable_map_zooming', { defaultValue: 'Enable map zooming' })}
+                        description={t('map_settings.enable_map_zooming_desc', {
+                            defaultValue: 'Allow mouse wheel, pinch, double-click, and zoom control buttons on the map.',
+                        })}
+                        checked={draftSettings.enableMapZooming}
+                        onChange={(value) => setDraftSettings((prev) => ({ ...prev, enableMapZooming: value }))}
+                    />
                 </SectionBlock>
 
                 <SectionBlock

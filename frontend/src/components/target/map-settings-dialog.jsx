@@ -42,6 +42,8 @@ import {
     setTileLayerID,
     setOpenMapSettingsDialog,
     setShowGrid,
+    setEnableMapDragging,
+    setEnableMapZooming,
 } from "./target-slice.jsx";
 
 function MapSettingsIslandDialog({updateBackend}) {
@@ -63,6 +65,8 @@ function MapSettingsIslandDialog({updateBackend}) {
         tileLayerID,
         openMapSettingsDialog,
         showGrid,
+        enableMapDragging,
+        enableMapZooming,
     } = useSelector(state => state.targetSatTrack);
 
     const handleCloseDialog = () => {
@@ -120,8 +124,12 @@ function MapSettingsIslandDialog({updateBackend}) {
                         initialTileLayerID={tileLayerID}
                         initialShowTooltip={showTooltip}
                         initialShowGrid={showGrid}
+                        initialEnableMapDragging={enableMapDragging}
+                        initialEnableMapZooming={enableMapZooming}
                         initialShowTerminatorLine={showTerminatorLine}
                         defaultSettings={{
+                            enableMapDragging: false,
+                            enableMapZooming: false,
                             lockOnTarget: true,
                             showPastOrbitPath: true,
                             showFutureOrbitPath: true,
@@ -151,6 +159,8 @@ function MapSettingsIslandDialog({updateBackend}) {
                         handleShowTooltip={(value)=>{dispatch(setShowTooltip(value))}}
                         handleTileLayerID={(value)=>{dispatch(setTileLayerID(value))}}
                         handleShowGrid={(value)=>{dispatch(setShowGrid(value))}}
+                        handleEnableMapDragging={(value)=>{dispatch(setEnableMapDragging(value))}}
+                        handleEnableMapZooming={(value)=>{dispatch(setEnableMapZooming(value))}}
                         onCancel={handleCloseDialog}
                         updateBackend={updateBackend}
                     />

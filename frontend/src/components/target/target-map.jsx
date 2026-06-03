@@ -81,6 +81,7 @@ import TargetNumberIcon from '../common/target-number-icon.jsx';
 import { useTooltipOrientation } from '../common/tooltip-orientation.js';
 import MapSettingsIslandDialog from './map-settings-dialog.jsx';
 import CoordinateGrid from "../common/mercator-grid.jsx";
+import {MapInteractionSync} from '../common/map-interaction-sync.jsx';
 import createTerminatorLine from "../common/terminator-line.jsx";
 import {getSunMoonCoords} from "../common/sunmoon.jsx";
 import SolarSystemCanvas from "../celestial/solarsystem-canvas.jsx";
@@ -304,12 +305,16 @@ const CenterHomeButton = React.memo(function CenterHomeButton() {
     );
 });
 
-const CenterMapButton = React.memo(function CenterMapButton() {
+const CenterMapButton = React.memo(function CenterMapButton({getCenterCoordinates, onCenterClick}) {
     const { t } = useTranslation('target');
-    const targetCoordinates = [0, 0];
 
     const handleClick = () => {
-        MapObject.setView(targetCoordinates, MapObject.getZoom());
+        const coords = getCenterCoordinates?.();
+        if (!coords || !MapObject) {
+            return;
+        }
+        MapObject.setView(coords, MapObject.getZoom());
+        onCenterClick?.();
     };
 
     return (
@@ -405,6 +410,8 @@ const TargetMapContainer = ({}) => {
         sliderTimeOffset,
         openMapSettingsDialog,
         showGrid,
+        enableMapDragging,
+        enableMapZooming,
     } = useSelector(state => state.targetSatTrack);
     const trackerInstances = useSelector((state) => state.trackerInstances?.instances || []);
     const targetNumber = useMemo(() => {
@@ -430,8 +437,12 @@ const TargetMapContainer = ({}) => {
         () => getMapCrsByTileLayerId(tileLayerID),
         [tileLayerID]
     );
-
     const satellitePosition = useSelector(satellitePositionSelector);
+    const getTargetCenterCoordinates = useCallback(() => {
+        const lat = satellitePosition?.lat;
+        const lon = satellitePosition?.lon;
+        return isValidLatLon(lat, lon) ? [lat, lon] : null;
+    }, [satellitePosition?.lat, satellitePosition?.lon]);
     const satelliteCoverage = useSelector(satelliteCoverageSelector);
     const satelliteDetails = useSelector(satelliteDetailsSelector);
     const trackingState = useSelector(trackingStateSelector);
@@ -739,8 +750,8 @@ const TargetMapContainer = ({}) => {
         MapObject = map.target;
     };
 
-    // Keep target map focused on the selected satellite.
-    // If coverage is shown, auto-fit to coverage bounds (legacy behavior).
+    // Recenters on the target whenever its position updates while lock-on-target is enabled.
+    // User pan/zoom is allowed between updates in both gesture and button modes.
     useEffect(() => {
         if (!isSatelliteTarget) return;
         if (!MapObject) return;
@@ -970,14 +981,18 @@ const TargetMapContainer = ({}) => {
             <Box sx={{ width: '100%', flex: 1, minHeight: 0, position: 'relative' }}>
                 {/* Leaflet CRS is immutable after map init, so remount when projection changes. */}
                 <MapContainer
-                    key={`target-map-${selectedTileLayer.id}-${selectedTileLayer.projection || 'EPSG3857'}`}
+                    key={`target-map-${selectedTileLayer.id}-${selectedTileLayer.projection || 'EPSG3857'}-${enableMapDragging}-${enableMapZooming}`}
                     className="target-map"
                     center={satellitePosition?.lat && satellitePosition?.lon ? [satellitePosition.lat, satellitePosition.lon] : [0, 0]}
                     crs={mapCrs}
                     zoom={mapZoomLevel}
                     style={{width: '100%', height: '100%'}}
-                    dragging={false}
-                    scrollWheelZoom={false}
+                    dragging={enableMapDragging}
+                    scrollWheelZoom={enableMapZooming}
+                    doubleClickZoom={enableMapZooming}
+                    touchZoom={enableMapZooming}
+                    boxZoom={enableMapZooming}
+                    zoomControl={false}
                     maxZoom={10}
                     minZoom={0}
                     whenReady={handleWhenReady}
@@ -988,6 +1003,11 @@ const TargetMapContainer = ({}) => {
                     closePopupOnClick={false}
                 >
                 <MapEventComponent handleSetMapZoomLevel={handleSetMapZoomLevel}/>
+                <MapInteractionSync
+                    enableDragging={enableMapDragging}
+                    enableZooming={enableMapZooming}
+                    showZoomButtons={!enableMapZooming}
+                />
 
                 {selectedTileLayer.type === 'wms' ? (
                     <WMSTileLayer
@@ -1009,7 +1029,7 @@ const TargetMapContainer = ({}) => {
                         </span>
                     </Tooltip>
                     <CenterHomeButton/>
-                    <CenterMapButton/>
+                    <CenterMapButton getCenterCoordinates={getTargetCenterCoordinates}/>
                     <FullscreenMapButton/>
                 </Box>
 
@@ -1064,8 +1084,9 @@ const TargetMapContainer = ({}) => {
                 {showSatelliteCoverage ? currentSatellitesCoverage : null}
 
 
-                {/* Arrow panning is only available in free-pan mode. */}
-                {!lockOnTarget ? <MapArrowControls mapObject={MapObject} verticalOffset={25}/> : null}
+                {!enableMapDragging ? (
+                    <MapArrowControls mapObject={MapObject} verticalOffset={25}/>
+                ) : null}
 
                 {showGrid && (
                     <CoordinateGrid

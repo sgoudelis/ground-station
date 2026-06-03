@@ -339,6 +339,8 @@ export const setTargetMapSetting = createAsyncThunk(
             showTerminatorLine: state['targetSatTrack']['showTerminatorLine'],
             showTooltip: state['targetSatTrack']['showTooltip'],
             showGrid: state['targetSatTrack']['showGrid'],
+            enableMapDragging: state['targetSatTrack']['enableMapDragging'],
+            enableMapZooming: state['targetSatTrack']['enableMapZooming'],
             pastOrbitLineColor: state['targetSatTrack']['pastOrbitLineColor'],
             futureOrbitLineColor: state['targetSatTrack']['futureOrbitLineColor'],
             satelliteCoverageColor: state['targetSatTrack']['satelliteCoverageColor'],
@@ -699,6 +701,8 @@ const targetSatTrackSlice = createSlice({
         showTerminatorLine: true,
         showTooltip: true,
         showGrid: true,
+        enableMapDragging: false,
+        enableMapZooming: false,
         currentSatellitesPosition: [],
         currentSatellitesCoverage: [],
         terminatorLine: [],
@@ -1255,6 +1259,12 @@ const targetSatTrackSlice = createSlice({
         setShowGrid(state, action) {
             state.showGrid = action.payload;
         },
+        setEnableMapDragging(state, action) {
+            state.enableMapDragging = action.payload;
+        },
+        setEnableMapZooming(state, action) {
+            state.enableMapZooming = action.payload;
+        },
         setRotatorData(state, action) {
             state.rotatorData = action.payload;
         },
@@ -1630,6 +1640,8 @@ const targetSatTrackSlice = createSlice({
                     state.showTerminatorLine = action.payload['showTerminatorLine'];
                     state.showTooltip = action.payload['showTooltip'];
                     state.showGrid = action.payload['showGrid'];
+                    state.enableMapDragging = action.payload['enableMapDragging'] ?? false;
+                    state.enableMapZooming = action.payload['enableMapZooming'] ?? false;
                     state.pastOrbitLineColor = action.payload['pastOrbitLineColor'];
                     state.futureOrbitLineColor = action.payload['futureOrbitLineColor'];
                     state.satelliteCoverageColor = action.payload['satelliteCoverageColor'];
@@ -1704,6 +1716,8 @@ export const {
     setAvailableTransmitters,
     setTargetTransmitters,
     setShowGrid,
+    setEnableMapDragging,
+    setEnableMapZooming,
     setColorMap,
     setColorMaps,
     setDbRange,

@@ -404,7 +404,11 @@ export function getTimeFromISO(isoString, timezone, locale) {
     });
 }
 
-export const MapArrowControls = function ({mapObject, verticalOffset = 0}) {
+export const MapArrowControls = function ({mapObject, verticalOffset = 0, onUserInteraction}) {
+    const pan = (offset) => {
+        onUserInteraction?.();
+        mapObject?.panBy(offset);
+    };
 
     return (
         <Box sx={{'& > :not(style)': {m: 1}}} style={{
@@ -419,7 +423,7 @@ export const MapArrowControls = function ({mapObject, verticalOffset = 0}) {
             width: 115,
         }}>
             <Fab size={"small"} variant="contained" color="primary" style={{margin: 0}}
-                 onClick={() => mapObject.panBy([0, -100])}>
+                 onClick={() => pan([0, -100])}>
                 <ArrowUpwardIcon/>
             </Fab>
             <Box sx={{
@@ -431,15 +435,15 @@ export const MapArrowControls = function ({mapObject, verticalOffset = 0}) {
                 width: '100%',
                 height: 15,
             }}>
-                <Fab size={"small"} color="primary" onClick={() => mapObject.panBy([-100, 0])} style={{margin: 0, position: 'absolute', left: 0}}>
+                <Fab size={"small"} color="primary" onClick={() => pan([-100, 0])} style={{margin: 0, position: 'absolute', left: 0}}>
                     <ArrowBackIcon/>
                 </Fab>
-                <Fab size={"small"} color="primary" variant="contained" onClick={() => mapObject.panBy([100, 0])} style={{margin: 0, position: 'absolute', right: 0}}>
+                <Fab size={"small"} color="primary" variant="contained" onClick={() => pan([100, 0])} style={{margin: 0, position: 'absolute', right: 0}}>
                     <ArrowForwardIcon/>
                 </Fab>
             </Box>
             <Fab size={"small"} color="primary" variant="contained" style={{margin: 0}}
-                 onClick={() => mapObject.panBy([0, 100])}>
+                 onClick={() => pan([0, 100])}>
                 <ArrowDownwardIcon/>
             </Fab>
         </Box>

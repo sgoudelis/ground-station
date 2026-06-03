@@ -57,6 +57,7 @@ import {
 } from '../common/common.jsx';
 import MapSettingsIslandDialog from './map-settings-dialog.jsx';
 import CoordinateGrid from '../common/mercator-grid.jsx';
+import {MapInteractionSync} from '../common/map-interaction-sync.jsx';
 import SatelliteTrackSuggestion from './map-target-button.jsx';
 import {
     calculateSatelliteAzEl,
@@ -188,6 +189,8 @@ const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
         openMapSettingsDialog,
         nextPassesHours,
         showGrid,
+        enableMapDragging,
+        enableMapZooming,
         selectedSatelliteId,
         selectedSatGroupId,
         loadingSatellites,
@@ -835,15 +838,19 @@ const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
                 </Backdrop>
                 {/* Leaflet CRS is immutable after map init, so remount when projection changes. */}
                 <MapContainer
-                    key={`overview-map-${selectedTileLayer.id}-${selectedTileLayer.projection || 'EPSG3857'}`}
+                    key={`overview-map-${selectedTileLayer.id}-${selectedTileLayer.projection || 'EPSG3857'}-${enableMapDragging}-${enableMapZooming}`}
                     className="overview-map"
                     fullscreenControl={true}
                     center={[0, 0]}
                     crs={mapCrs}
                     zoom={mapZoomLevel}
                     style={{width: '100%', height: '100%'}}
-                    dragging={false}
-                    scrollWheelZoom={false}
+                    dragging={enableMapDragging}
+                    scrollWheelZoom={enableMapZooming}
+                    doubleClickZoom={enableMapZooming}
+                    touchZoom={enableMapZooming}
+                    boxZoom={enableMapZooming}
+                    zoomControl={false}
                     maxZoom={10}
                     minZoom={0}
                     whenReady={handleWhenReady}
@@ -854,6 +861,11 @@ const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
                     closePopupOnClick={false}
                 >
                 <MapEventComponent handleSetMapZoomLevel={handleSetMapZoomLevel}/>
+                <MapInteractionSync
+                    enableDragging={enableMapDragging}
+                    enableZooming={enableMapZooming}
+                    showZoomButtons={!enableMapZooming}
+                />
                 {selectedTileLayer.type === 'wms' ? (
                     <WMSTileLayer
                         url={selectedTileLayer.url}
@@ -923,10 +935,11 @@ const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
                 {mapLayers.currentSatellitesCoverage}
                 {mapLayers.currentCrosshairs}
 
-                {/* Wrap MapArrowControls with a container to detect clicks */}
-                <div ref={arrowControlsRef}>
-                    <MapArrowControls mapObject={MapObject} verticalOffset={25}/>
-                </div>
+                {!enableMapDragging ? (
+                    <div ref={arrowControlsRef}>
+                        <MapArrowControls mapObject={MapObject} verticalOffset={25}/>
+                    </div>
+                ) : null}
 
                 {showGrid && (
                     <CoordinateGrid
