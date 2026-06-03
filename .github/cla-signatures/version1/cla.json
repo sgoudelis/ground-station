@@ -1,3 +1,12 @@
 {
-   "signedContributors": []
+  "signedContributors": [
+    {
+      "name": "epiHATR",
+      "id": 29563931,
+      "comment_id": 4608923261,
+      "created_at": "2026-06-03T03:54:14Z",
+      "repoId": 941091082,
+      "pullRequestNo": 76
+    }
+  ]
 }
