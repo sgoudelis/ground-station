@@ -28,7 +28,6 @@ const MAP_ENGINE_MAPLIBRE = 'maplibre';
 const LEAFLET_MIN_ZOOM = 0;
 const MAPLIBRE_MIN_ZOOM = -6;
 const MAP_MAX_ZOOM = 10;
-const MAPLIBRE_TO_LEAFLET_ZOOM_OFFSET = 1;
 const DEFAULT_LEAFLET_ZOOM = 1.5;
 const DEFAULT_MAPLIBRE_ZOOM = 0.5;
 const MAPLIBRE_UNSUPPORTED_TILE_LAYER_IDS = new Set([
@@ -54,23 +53,6 @@ const clampMapZoomForEngine = (zoomLevel, mapEngine) => {
     return Math.min(MAP_MAX_ZOOM, Math.max(minZoom, parsedZoom));
 };
 
-const convertMapZoomForEngine = (zoomLevel, fromEngine, toEngine) => {
-    const normalizedFrom = normalizeMapEngine(fromEngine);
-    const normalizedTo = normalizeMapEngine(toEngine);
-    if (normalizedFrom === normalizedTo) {
-        return clampMapZoomForEngine(zoomLevel, normalizedTo);
-    }
-
-    const normalizedZoom = clampMapZoomForEngine(zoomLevel, normalizedFrom);
-    if (normalizedFrom === MAP_ENGINE_MAPLIBRE && normalizedTo === MAP_ENGINE_LEAFLET) {
-        return clampMapZoomForEngine(normalizedZoom + MAPLIBRE_TO_LEAFLET_ZOOM_OFFSET, normalizedTo);
-    }
-    if (normalizedFrom === MAP_ENGINE_LEAFLET && normalizedTo === MAP_ENGINE_MAPLIBRE) {
-        return clampMapZoomForEngine(normalizedZoom - MAPLIBRE_TO_LEAFLET_ZOOM_OFFSET, normalizedTo);
-    }
-    return normalizedZoom;
-};
-
 const defaultMapZoomByEngine = {
     [MAP_ENGINE_LEAFLET]: clampMapZoomForEngine(DEFAULT_LEAFLET_ZOOM, MAP_ENGINE_LEAFLET),
     [MAP_ENGINE_MAPLIBRE]: clampMapZoomForEngine(DEFAULT_MAPLIBRE_ZOOM, MAP_ENGINE_MAPLIBRE),
@@ -81,43 +63,26 @@ const parseFiniteZoom = (value) => {
     return Number.isFinite(parsedZoom) ? parsedZoom : null;
 };
 
-const resolveLegacyZoomForEngine = (legacyZoom, legacyEngine, targetEngine) => {
-    if (!Number.isFinite(legacyZoom)) {
-        return null;
-    }
-    const normalizedLegacyEngine = normalizeMapEngine(legacyEngine);
-    const normalizedTargetEngine = normalizeMapEngine(targetEngine);
-    if (normalizedLegacyEngine === normalizedTargetEngine) {
-        return clampMapZoomForEngine(legacyZoom, normalizedTargetEngine);
-    }
-    return convertMapZoomForEngine(legacyZoom, normalizedLegacyEngine, normalizedTargetEngine);
-};
-
-// Build a complete per-engine zoom map while migrating legacy single-value zoom state.
-const buildMapZoomByEngine = (mapZoomByEngine, mapEngine, legacyMapZoomLevel) => {
-    const normalizedMapEngine = normalizeMapEngine(mapEngine);
-    const legacyZoom = parseFiniteZoom(legacyMapZoomLevel);
+const normalizeMapZoomByEngine = (mapZoomByEngine) => {
     const candidateMapZoomByEngine = (mapZoomByEngine && typeof mapZoomByEngine === 'object') ? mapZoomByEngine : {};
-
-    const fallbackLeafletZoom = resolveLegacyZoomForEngine(legacyZoom, normalizedMapEngine, MAP_ENGINE_LEAFLET)
-        ?? defaultMapZoomByEngine[MAP_ENGINE_LEAFLET];
-    const fallbackMapLibreZoom = resolveLegacyZoomForEngine(legacyZoom, normalizedMapEngine, MAP_ENGINE_MAPLIBRE)
-        ?? defaultMapZoomByEngine[MAP_ENGINE_MAPLIBRE];
-
     const leafletZoom = parseFiniteZoom(candidateMapZoomByEngine[MAP_ENGINE_LEAFLET]);
     const mapLibreZoom = parseFiniteZoom(candidateMapZoomByEngine[MAP_ENGINE_MAPLIBRE]);
-
     return {
         [MAP_ENGINE_LEAFLET]: clampMapZoomForEngine(
-            leafletZoom ?? fallbackLeafletZoom,
+            leafletZoom ?? defaultMapZoomByEngine[MAP_ENGINE_LEAFLET],
             MAP_ENGINE_LEAFLET
         ),
         [MAP_ENGINE_MAPLIBRE]: clampMapZoomForEngine(
-            mapLibreZoom ?? fallbackMapLibreZoom,
+            mapLibreZoom ?? defaultMapZoomByEngine[MAP_ENGINE_MAPLIBRE],
             MAP_ENGINE_MAPLIBRE
         ),
     };
 };
+
+const hasCustomZoomState = (mapZoomByEngine) => (
+    parseFiniteZoom(mapZoomByEngine?.[MAP_ENGINE_LEAFLET]) !== defaultMapZoomByEngine[MAP_ENGINE_LEAFLET]
+    || parseFiniteZoom(mapZoomByEngine?.[MAP_ENGINE_MAPLIBRE]) !== defaultMapZoomByEngine[MAP_ENGINE_MAPLIBRE]
+);
 
 const resolveCompatibleTileLayerId = (tileLayerID, mapEngine) => {
     const normalizedMapEngine = normalizeMapEngine(mapEngine);
@@ -153,12 +118,7 @@ export const setEarthViewMapSetting = createAsyncThunk(
     async ({socket, key}, {getState, rejectWithValue}) => {
         const state = getState();
         const mapEngine = normalizeMapEngine(state['earthViewTrack']['mapEngine']);
-        const mapZoomByEngine = buildMapZoomByEngine(
-            state['earthViewTrack']['mapZoomByEngine'],
-            mapEngine,
-            state['earthViewTrack']['mapZoomLevel']
-        );
-        const mapZoomLevel = mapZoomByEngine[mapEngine];
+        const mapZoomByEngine = normalizeMapZoomByEngine(state['earthViewTrack']['mapZoomByEngine']);
         const mapSettings = {
             enableMapDragging: state['earthViewTrack']['enableMapDragging'],
             enableMapZooming: state['earthViewTrack']['enableMapZooming'],
@@ -176,7 +136,6 @@ export const setEarthViewMapSetting = createAsyncThunk(
             orbitProjectionDuration: state['earthViewTrack']['orbitProjectionDuration'],
             tileLayerID: state['earthViewTrack']['tileLayerID'],
             mapEngine,
-            mapZoomLevel,
             mapZoomByEngine,
         };
 
@@ -348,7 +307,6 @@ const earthViewSlice = createSlice({
         tileLayerID: 'satellite',
         mapEngine: MAP_ENGINE_MAPLIBRE,
         mapZoomByEngine: {...defaultMapZoomByEngine},
-        mapZoomLevel: defaultMapZoomByEngine[MAP_ENGINE_MAPLIBRE],
         satelliteGroupId: null,
         satGroups: [],
         formGroupSelectError: false,
@@ -475,10 +433,8 @@ const earthViewSlice = createSlice({
         },
         setMapEngine(state, action) {
             const nextMapEngine = normalizeMapEngine(action.payload);
-            const mapZoomByEngine = buildMapZoomByEngine(state.mapZoomByEngine, state.mapEngine, state.mapZoomLevel);
             state.mapEngine = nextMapEngine;
-            state.mapZoomByEngine = mapZoomByEngine;
-            state.mapZoomLevel = mapZoomByEngine[nextMapEngine];
+            state.mapZoomByEngine = normalizeMapZoomByEngine(state.mapZoomByEngine);
             state.tileLayerID = resolveCompatibleTileLayerId(state.tileLayerID, state.mapEngine);
         },
         setTileLayerID(state, action) {
@@ -486,11 +442,10 @@ const earthViewSlice = createSlice({
         },
         setMapZoomLevel(state, action) {
             const mapEngine = normalizeMapEngine(state.mapEngine);
-            const mapZoomByEngine = buildMapZoomByEngine(state.mapZoomByEngine, mapEngine, state.mapZoomLevel);
+            const mapZoomByEngine = normalizeMapZoomByEngine(state.mapZoomByEngine);
             const clampedZoom = clampMapZoomForEngine(action.payload, mapEngine);
             mapZoomByEngine[mapEngine] = clampedZoom;
             state.mapZoomByEngine = mapZoomByEngine;
-            state.mapZoomLevel = clampedZoom;
         },
         setSatelliteGroupId(state, action) {
             state.satelliteGroupId = action.payload;
@@ -668,28 +623,20 @@ const earthViewSlice = createSlice({
                 // Handle null/undefined payload for first-time users
                 if (action.payload) {
                     const mapEngine = normalizeMapEngine(action.payload['mapEngine'] ?? state.mapEngine);
-                    const currentMapZoomByEngine = buildMapZoomByEngine(
-                        state.mapZoomByEngine,
-                        state.mapEngine,
-                        state.mapZoomLevel
-                    );
+                    const currentMapZoomByEngine = normalizeMapZoomByEngine(state.mapZoomByEngine);
                     const payloadMapZoomByEngine = action.payload['mapZoomByEngine'];
                     let nextMapZoomByEngine = currentMapZoomByEngine;
+                    const keepPersistedReduxZoom = hasCustomZoomState(currentMapZoomByEngine);
 
-                    // Prefer explicit per-engine zooms from backend.
-                    // Legacy single-value backend zooms are intentionally ignored to avoid
-                    // reintroducing historical Leaflet/MapLibre offset drift on refresh.
-                    if (payloadMapZoomByEngine && typeof payloadMapZoomByEngine === 'object') {
-                        nextMapZoomByEngine = buildMapZoomByEngine(
-                            payloadMapZoomByEngine,
-                            mapEngine,
-                            action.payload['mapZoomLevel']
-                        );
+                    // Keep persisted Redux zoom whenever the user has already customized it.
+                    // Backend zoom values can lag behind because map zoom is not auto-saved on every zoom event.
+                    // For fresh/default local state, still accept explicit per-engine zoom values from backend.
+                    if (!keepPersistedReduxZoom && payloadMapZoomByEngine && typeof payloadMapZoomByEngine === 'object') {
+                        nextMapZoomByEngine = normalizeMapZoomByEngine(payloadMapZoomByEngine);
                     }
 
                     state.mapEngine = mapEngine;
                     state.mapZoomByEngine = nextMapZoomByEngine;
-                    state.mapZoomLevel = nextMapZoomByEngine[mapEngine];
                     state.tileLayerID = resolveCompatibleTileLayerId(action.payload['tileLayerID'], mapEngine);
                     state.showPastOrbitPath = action.payload['showPastOrbitPath'];
                     state.showFutureOrbitPath = action.payload['showFutureOrbitPath'];

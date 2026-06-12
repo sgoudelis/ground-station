@@ -20,28 +20,34 @@
 import {useSelector} from "react-redux";
 import {normalizeMapEngine} from "../common/tile-layers.jsx";
 import {normalizeTargetType} from './celestial-target-utils.js';
-import LeafletTargetMapRenderer from './target-map-leaflet.jsx';
-import TargetMapMapLibreRenderer from './target-map-maplibre.jsx';
-import TargetMapMapLibreGlobeRenderer from './target-map-maplibreglobe.jsx';
+import TargetMapCompositeView from './target-map-composite-view.jsx';
+import TargetEarthMapLibreView from './target-earth-maplibre-view.jsx';
+import TargetEarthMapLibreGlobeView from './target-earth-maplibre-globe-view.jsx';
+import TargetSkyPlanetariumView from './target-sky-planetarium-view.jsx';
 
 const MAP_ENGINE_MAPLIBRE_GLOBE = 'maplibre-globe';
+const MAP_ENGINE_PLANETARIUM = 'planetarium';
 
-const TargetMapContainer = () => {
+const TargetViewRouter = () => {
     const mapEngine = useSelector((state) => state.targetSatTrack?.mapEngine);
     const trackingState = useSelector((state) => state.targetSatTrack?.trackingState || {});
     const normalizedMapEngine = normalizeMapEngine(mapEngine);
     const targetType = normalizeTargetType(trackingState);
 
+    if (mapEngine === MAP_ENGINE_PLANETARIUM) {
+        return <TargetSkyPlanetariumView/>;
+    }
+
     // Globe renderer is intentionally satellite-target-only on the Target page.
     if (mapEngine === MAP_ENGINE_MAPLIBRE_GLOBE && targetType === 'satellite') {
-        return <TargetMapMapLibreGlobeRenderer/>;
+        return <TargetEarthMapLibreGlobeView/>;
     }
 
     if (normalizedMapEngine === 'maplibre' && targetType === 'satellite') {
-        return <TargetMapMapLibreRenderer/>;
+        return <TargetEarthMapLibreView/>;
     }
 
-    return <LeafletTargetMapRenderer/>;
+    return <TargetMapCompositeView/>;
 };
 
-export default TargetMapContainer;
+export default TargetViewRouter;

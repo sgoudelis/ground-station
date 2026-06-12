@@ -18,10 +18,10 @@
  */
 
 import React from 'react';
-import TargetMapMapLibreRenderer from './target-map-maplibre.jsx';
+import TargetEarthMapLibreView from './target-earth-maplibre-view.jsx';
 
-const TargetMapMapLibreGlobeRenderer = () => (
-    <TargetMapMapLibreRenderer projection="globe"/>
+const TargetEarthMapLibreGlobeView = () => (
+    <TargetEarthMapLibreView projection="globe"/>
 );
 
-export default TargetMapMapLibreGlobeRenderer;
+export default TargetEarthMapLibreGlobeView;

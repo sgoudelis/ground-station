@@ -351,7 +351,7 @@ const MapLibreEarthViewMapRenderer = ({handleSetTrackingOnBackend}) => {
         orbitProjectionDuration,
         tileLayerID,
         mapEngine,
-        mapZoomLevel,
+        mapZoomByEngine,
         showGrid,
         enableMapDragging,
         enableMapZooming,
@@ -379,6 +379,13 @@ const MapLibreEarthViewMapRenderer = ({handleSetTrackingOnBackend}) => {
         () => normalizeMapEngine(mapEngine),
         [mapEngine]
     );
+    const mapZoomLevel = useMemo(() => {
+        const engineZoom = Number(mapZoomByEngine?.[normalizedMapEngine]);
+        if (Number.isFinite(engineZoom)) {
+            return engineZoom;
+        }
+        return normalizedMapEngine === 'maplibre' ? 0.5 : 1.5;
+    }, [mapZoomByEngine, normalizedMapEngine]);
     const selectedTileLayer = useMemo(
         () => getTileLayerById(tileLayerID, {mapEngine: normalizedMapEngine}),
         [normalizedMapEngine, tileLayerID]

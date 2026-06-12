@@ -6,7 +6,11 @@ import {
     DialogContent,
     DialogTitle,
     FormControlLabel,
+    FormControl,
+    InputLabel,
+    MenuItem,
     Paper,
+    Select,
     Stack,
     Switch,
     Typography,
@@ -14,7 +18,9 @@ import {
 import { useDispatch } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import {
+    DEFAULT_PLANETARIUM_DISPLAY_OPTIONS,
     DEFAULT_SOLAR_SYSTEM_DISPLAY_OPTIONS,
+    setPlanetariumDisplayOption,
     setSolarSystemDisplayOption,
 } from './celestial-display-slice.jsx';
 
@@ -41,9 +47,15 @@ const DIALOG_CONTENT_SX = {
     flexDirection: 'column',
 };
 
-const SETTING_KEYS = Object.keys(DEFAULT_SOLAR_SYSTEM_DISPLAY_OPTIONS);
+const SOLAR_SETTING_KEYS = Object.keys(DEFAULT_SOLAR_SYSTEM_DISPLAY_OPTIONS);
+const PLANETARIUM_SETTING_KEYS = Object.keys(DEFAULT_PLANETARIUM_DISPLAY_OPTIONS);
+const VIEW_MODE_SOLAR_SYSTEM = 'solar-system';
+const VIEW_MODE_PLANETARIUM = 'planetarium';
+const normalizeViewMode = (value) => (
+    value === VIEW_MODE_PLANETARIUM ? VIEW_MODE_PLANETARIUM : VIEW_MODE_SOLAR_SYSTEM
+);
 
-const SECTION_DEFS = [
+const SOLAR_SYSTEM_SECTION_DEFS = [
     {
         title: 'Scene Elements',
         subtitle: 'Primary solar system layers and labels.',
@@ -92,6 +104,17 @@ const SECTION_DEFS = [
         ],
     },
     {
+        title: 'Astronomy Background',
+        subtitle: 'Reference layers behind the map.',
+        options: [
+            {
+                key: 'showStarfieldBackground',
+                label: 'Show bright-star field',
+                description: 'Render a vector ecliptic projection from the Bright Star Catalogue.',
+            },
+        ],
+    },
+    {
         title: 'Guides and Metadata',
         subtitle: 'Contextual markers, labels, and scene metadata.',
         options: [
@@ -129,15 +152,80 @@ const SECTION_DEFS = [
     },
 ];
 
-const buildSettings = (initialOptions) => {
+const PLANETARIUM_SECTION_DEFS = [
+    {
+        title: 'Sky Layers',
+        subtitle: 'Primary overlays for the planetarium viewport.',
+        options: [
+            {
+                key: 'showGrid',
+                label: 'Show sky grid',
+                description: 'Draw azimuth/elevation guide lines.',
+            },
+            {
+                key: 'showHorizonCompass',
+                label: 'Show horizon compass',
+                description: 'Draw the horizon line with N/E/S/W ticks.',
+            },
+            {
+                key: 'showStarField',
+                label: 'Show star field',
+                description: 'Render bright stars from the loaded sky catalog.',
+            },
+            {
+                key: 'showStarNames',
+                label: 'Show star names',
+                description: 'Label bright named stars when zoom allows.',
+            },
+            {
+                key: 'showConstellationLabels',
+                label: 'Show constellation labels',
+                description: 'Render constellation names in the sky background.',
+            },
+        ],
+    },
+    {
+        title: 'Target Overlays',
+        subtitle: 'Tracking overlays and labels for planets and targets.',
+        options: [
+            {
+                key: 'showPassCurves',
+                label: 'Show pass curves',
+                description: 'Draw predicted pass arcs for visible targets.',
+            },
+            {
+                key: 'showPlanetLabels',
+                label: 'Show planet labels',
+                description: 'Show labels for planetary bodies.',
+            },
+            {
+                key: 'showTargetLabels',
+                label: 'Show target labels',
+                description: 'Show labels for tracked targets.',
+            },
+            {
+                key: 'showRotatorCrosshair',
+                label: 'Show rotator crosshair',
+                description: 'Render the live rotator crosshair when available.',
+            },
+            {
+                key: 'showHud',
+                label: 'Show HUD labels',
+                description: 'Show viewport and observer/timestamp readouts.',
+            },
+        ],
+    },
+];
+
+const buildSettings = (initialOptions, defaults, settingKeys) => {
     const settings = {};
-    SETTING_KEYS.forEach((key) => {
-        settings[key] = Boolean(initialOptions?.[key] ?? DEFAULT_SOLAR_SYSTEM_DISPLAY_OPTIONS[key]);
+    settingKeys.forEach((key) => {
+        settings[key] = Boolean(initialOptions?.[key] ?? defaults[key]);
     });
     return settings;
 };
 
-const settingsEqual = (left, right) => SETTING_KEYS.every((key) => left[key] === right[key]);
+const settingsEqual = (left, right, settingKeys) => settingKeys.every((key) => left[key] === right[key]);
 
 const SectionBlock = ({ title, subtitle, children }) => (
     <Paper
@@ -187,56 +275,98 @@ const normalizeInteractionSettings = (settings) => ({
 
 function SolarSystemLayoutOptionsDialog({
     open,
-    initialOptions,
+    initialSolarSystemOptions,
+    initialPlanetariumOptions,
     initialInteractionSettings,
+    initialViewMode,
     onApplyInteractionSettings,
+    onApplyViewMode,
     onClose,
 }) {
     const dispatch = useDispatch();
     const { t } = useTranslation('common');
 
-    const initialSettings = useMemo(() => buildSettings(initialOptions), [initialOptions]);
+    const initialSolarSettings = useMemo(
+        () => buildSettings(initialSolarSystemOptions, DEFAULT_SOLAR_SYSTEM_DISPLAY_OPTIONS, SOLAR_SETTING_KEYS),
+        [initialSolarSystemOptions],
+    );
+    const initialPlanetariumSettings = useMemo(
+        () => buildSettings(initialPlanetariumOptions, DEFAULT_PLANETARIUM_DISPLAY_OPTIONS, PLANETARIUM_SETTING_KEYS),
+        [initialPlanetariumOptions],
+    );
     const initialInteraction = useMemo(
         () => normalizeInteractionSettings(initialInteractionSettings),
         [initialInteractionSettings]
     );
-    const [draftSettings, setDraftSettings] = useState(initialSettings);
+    const normalizedInitialViewMode = useMemo(
+        () => normalizeViewMode(initialViewMode),
+        [initialViewMode],
+    );
+    const [draftSolarSettings, setDraftSolarSettings] = useState(initialSolarSettings);
+    const [draftPlanetariumSettings, setDraftPlanetariumSettings] = useState(initialPlanetariumSettings);
     const [draftInteraction, setDraftInteraction] = useState(initialInteraction);
+    const [draftViewMode, setDraftViewMode] = useState(normalizedInitialViewMode);
 
     useEffect(() => {
         if (open) {
-            setDraftSettings(initialSettings);
+            setDraftSolarSettings(initialSolarSettings);
+            setDraftPlanetariumSettings(initialPlanetariumSettings);
             setDraftInteraction(initialInteraction);
+            setDraftViewMode(normalizedInitialViewMode);
         }
-    }, [open, initialInteraction, initialSettings]);
+    }, [open, initialInteraction, initialPlanetariumSettings, initialSolarSettings, normalizedInitialViewMode]);
 
-    const isDisplayDirty = !settingsEqual(draftSettings, initialSettings);
+    const isSolarDisplayDirty = !settingsEqual(draftSolarSettings, initialSolarSettings, SOLAR_SETTING_KEYS);
+    const isPlanetariumDisplayDirty = !settingsEqual(
+        draftPlanetariumSettings,
+        initialPlanetariumSettings,
+        PLANETARIUM_SETTING_KEYS,
+    );
+    const isDisplayDirty = isSolarDisplayDirty || isPlanetariumDisplayDirty;
     const isInteractionDirty = (
         draftInteraction.enableMapDragging !== initialInteraction.enableMapDragging
         || draftInteraction.enableMapZooming !== initialInteraction.enableMapZooming
     );
-    const isDirty = isDisplayDirty || isInteractionDirty;
+    const isViewModeDirty = draftViewMode !== normalizedInitialViewMode;
+    const isDirty = isDisplayDirty || isInteractionDirty || isViewModeDirty;
+    const isSolarSystemViewMode = draftViewMode === VIEW_MODE_SOLAR_SYSTEM;
+    const activeSectionDefs = isSolarSystemViewMode ? SOLAR_SYSTEM_SECTION_DEFS : PLANETARIUM_SECTION_DEFS;
+    const activeDraftSettings = isSolarSystemViewMode ? draftSolarSettings : draftPlanetariumSettings;
+    const setActiveDraftSettings = isSolarSystemViewMode ? setDraftSolarSettings : setDraftPlanetariumSettings;
 
     const handleCancel = () => {
-        setDraftSettings(initialSettings);
+        setDraftSolarSettings(initialSolarSettings);
+        setDraftPlanetariumSettings(initialPlanetariumSettings);
         setDraftInteraction(initialInteraction);
+        setDraftViewMode(normalizedInitialViewMode);
         onClose?.();
     };
 
     const handleApply = () => {
         // Commit only changed keys to keep Redux updates focused and predictable.
-        SETTING_KEYS.forEach((key) => {
-            if (draftSettings[key] !== initialSettings[key]) {
-                dispatch(
-                    setSolarSystemDisplayOption({
-                        key,
-                        value: draftSettings[key],
-                    }),
-                );
-            }
+        SOLAR_SETTING_KEYS.forEach((key) => {
+            if (draftSolarSettings[key] === initialSolarSettings[key]) return;
+            dispatch(
+                setSolarSystemDisplayOption({
+                    key,
+                    value: draftSolarSettings[key],
+                }),
+            );
+        });
+        PLANETARIUM_SETTING_KEYS.forEach((key) => {
+            if (draftPlanetariumSettings[key] === initialPlanetariumSettings[key]) return;
+            dispatch(
+                setPlanetariumDisplayOption({
+                    key,
+                    value: draftPlanetariumSettings[key],
+                }),
+            );
         });
         if (isInteractionDirty) {
             onApplyInteractionSettings?.(draftInteraction);
+        }
+        if (isViewModeDirty) {
+            onApplyViewMode?.(draftViewMode);
         }
         onClose?.();
     };
@@ -257,8 +387,29 @@ function SolarSystemLayoutOptionsDialog({
                     <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto', px: 2, pt: 2, pb: 1.5 }}>
                         <Stack spacing={1.5}>
                             <SectionBlock
+                                title="View Mode"
+                                subtitle="Choose the primary celestial visualization for this island."
+                            >
+                                <FormControl fullWidth size="small">
+                                    <InputLabel id="celestial-view-mode-label">View</InputLabel>
+                                    <Select
+                                        labelId="celestial-view-mode-label"
+                                        value={draftViewMode}
+                                        label="View"
+                                        onChange={(event) => setDraftViewMode(normalizeViewMode(event.target.value))}
+                                    >
+                                        <MenuItem value={VIEW_MODE_SOLAR_SYSTEM}>Solar System</MenuItem>
+                                        <MenuItem value={VIEW_MODE_PLANETARIUM}>Planetarium</MenuItem>
+                                    </Select>
+                                </FormControl>
+                            </SectionBlock>
+                            <SectionBlock
                                 title="Map Interaction"
-                                subtitle="Enable gesture-driven panning and zooming on the solar-system map."
+                                subtitle={
+                                    isSolarSystemViewMode
+                                        ? 'Enable gesture-driven panning and zooming on the solar-system map.'
+                                        : 'Enable gesture-driven panning and zooming in the planetarium viewport.'
+                                }
                             >
                                 <ToggleRowWithDescription
                                     label={t('map_settings.enable_map_dragging', { defaultValue: 'Enable map dragging' })}
@@ -287,16 +438,16 @@ function SolarSystemLayoutOptionsDialog({
                                     }}
                                 />
                             </SectionBlock>
-                            {SECTION_DEFS.map((section) => (
+                            {activeSectionDefs.map((section) => (
                                 <SectionBlock key={section.title} title={section.title} subtitle={section.subtitle}>
                                     {section.options.map((option) => (
                                         <ToggleRowWithDescription
                                             key={option.key}
                                             label={option.label}
                                             description={option.description}
-                                            checked={Boolean(draftSettings[option.key])}
+                                            checked={Boolean(activeDraftSettings[option.key])}
                                             onChange={(value) => {
-                                                setDraftSettings((current) => ({
+                                                setActiveDraftSettings((current) => ({
                                                     ...current,
                                                     [option.key]: value,
                                                 }));
@@ -327,8 +478,10 @@ function SolarSystemLayoutOptionsDialog({
                             <Button
                                 variant="text"
                                 onClick={() => {
-                                    setDraftSettings({ ...DEFAULT_SOLAR_SYSTEM_DISPLAY_OPTIONS });
+                                    setDraftSolarSettings({ ...DEFAULT_SOLAR_SYSTEM_DISPLAY_OPTIONS });
+                                    setDraftPlanetariumSettings({ ...DEFAULT_PLANETARIUM_DISPLAY_OPTIONS });
                                     setDraftInteraction({ enableMapDragging: false, enableMapZooming: false });
+                                    setDraftViewMode(VIEW_MODE_SOLAR_SYSTEM);
                                 }}
                             >
                                 {t('map_settings.reset_defaults', { defaultValue: 'Reset Defaults' })}

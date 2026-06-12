@@ -86,18 +86,22 @@ This project was built with the help of Claude Code and Codex.
 
 ## Key Features
 
-*   **Real-time Satellite Tracking:** Track hundreds of satellites with high-precision orbital models. TLE data is automatically updated from CelesTrak and SatNOGS.
-*   **Multi-Target Tracking Fleet:** Run multiple target trackers at the same time, each with its own rig/rotator control path, so you can operate several target-hardware chains in parallel.
-*   **Automated Antenna Rotator Control:** Interface with popular antenna rotators to automatically track satellites as they pass overhead.
-*   **Rig Control (Hamlib):** Control Hamlib-compatible rigs with Doppler correction during satellite passes.
-*   **SDR Integration:** Stream and record live radio signals from a wide range of SDR devices, including RTL-SDR, SoapySDR, and UHD/USRP radios.
-*   **IQ Recording & Playback:** Record raw IQ data in SigMF format with complete metadata (center frequency, sample rate, satellite info) and play back recordings through a virtual SDR device for analysis and debugging.
-*   **Data Decoding:** Decode SSTV, FSK, GFSK, GMSK, and BPSK with AX25 USP Geoscan framing. LoRa and AFSK decoders are currently not working; help is needed.
-*   **AI-Powered Transcription:** Real-time speech-to-text for demodulated audio via Gemini Live or Deepgram. Privacy-conscious and user-keyed, with optional translation and file output to `backend/data/transcriptions/`.
-*   **Scheduled Observations:** Define detailed observation tasks that automatically listen, decode, transcribe, and record audio and IQ during satellite passes without manual intervention.
-*   **SatDump Integration:** Decode weather satellite images from METEOR-M2 (LRPT and HRPT) via SatDump, coupled with automated observations.
-*   **Performance Monitoring:** Real-time visualization of the signal processing pipeline showing data flow between components (SDR → FFT → Demodulator → Decoder → Browser), queue health monitoring, throughput rates, and component statistics to diagnose bottlenecks and optimize performance.
-*   **Responsive Web Interface:** A modern, responsive, and intuitive web interface built with Material-UI that adapts seamlessly to desktop, tablet, and mobile devices, allowing you to control all aspects of the ground station from anywhere on your network. Works great on a tablet and cell.
+*   **Real-time Orbit Tracking:** Track Earth-orbiting targets using Skyfield/SGP4 propagation from stored orbital elements.
+*   **Configurable Orbital Sources + Metadata Enrichment:** Sync orbital data from configured sources (default CelesTrak feeds) and enrich satellites/transmitters from SatNOGS APIs.
+*   **Multi-Target Tracker Instances:** Run multiple tracker instances in parallel (`target-N` slots), each with independent runtime state.
+*   **Automated Antenna Rotator Control:** Drive connected rotators with continuous az/el updates, limit checks, and anti-thrashing retarget logic.
+*   **Rig Control with Doppler Correction:** Control compatible rigs (rigctld/Hamlib paths) with RX/TX Doppler-corrected tuning during tracking.
+*   **SDR Hardware Support:** RTL-SDR (USB/rtl_tcp), SoapySDR (local/remote), UHD/USRP, plus a virtual SigMF Playback SDR.
+*   **Live DSP Pipeline:** Stream IQ to FFT/waterfall, demodulators, decoders, recorders, and browser consumers through queue-based worker orchestration.
+*   **IQ Recording (SigMF):** Record IQ as `.sigmf-data` + `.sigmf-meta` with center frequency, sample rate, session stats, and target satellite metadata.
+*   **SigMF Playback:** Replay recorded IQ through the same processing pipeline used for live SDR operation.
+*   **Data Decoding + Framing Protocols:** Supported decoder paths include SSTV, FSK, GFSK, GMSK, BPSK, and GNSS, with AX.25/USP/GEOSCAN framing support in the packet pipelines (LoRa/AFSK are currently disabled in the UI).
+*   **Transcription Services:** Real-time demodulated-audio transcription via Gemini Live or Deepgram, with optional translation and file output under `backend/data/transcriptions/`.
+*   **Scheduled Observations:** APScheduler-driven AOS/LOS orchestration for automatic start/stop of tracking, SDR, decoding, recording, and transcription tasks.
+*   **SatDump Post-Processing:** Optional SatDump processing for IQ recordings, including METEOR LRPT/HRPT pipelines.
+*   **Performance Monitoring:** Live pipeline metrics (queue utilization, throughput, drops, and component health) streamed to the frontend.
+*   **Responsive Web Interface:** Material-UI + Socket.IO frontend for desktop, tablet, and mobile operation.
+*   **Celestial Tracking Integration:** Solar-system/celestial vector support backed by the NASA/JPL Horizons API for non-TLE body tracking paths.
 
 ## Scheduled Observations & Automated Pass Recording
 
@@ -111,16 +115,6 @@ Ground Station includes a comprehensive automated observation system that can sc
 *   **Multi-SDR Observing:** Automated observations can run on one SDR while additional SDRs record, decode, and listen to the same pass in parallel.
 *   **Status Management:** Real-time observation status tracking (scheduled, running, completed, failed, cancelled, missed) with automatic cleanup of old completed observations.
 *   **Session Management:** Automated observations run in isolated internal VFO sessions (namespace: "internal:<observation_id>"). When using different SDRs, user sessions and automated observations operate completely independently without any interference.
-
-## Planned Features & Roadmap
-
-The following features are planned or in development:
-
-*   **Additional Decoders:**
-    *   AFSK packet decoder
-    *   LoRa decoders
-    *   NOAA APT weather satellite images
-    *   Additional telemetry formats
 
 ## Architecture
 <a id="arch-v1"></a>
@@ -363,6 +357,7 @@ flowchart TB
 *   **[FastAPI](https://fastapi.tiangolo.com/):** A modern, fast (high-performance), web framework for building APIs with Python 3.7+ based on standard Python type hints.
 *   **[SQLAlchemy](https://www.sqlalchemy.org/):** The Python SQL Toolkit and Object Relational Mapper that gives application developers the full power and flexibility of SQL.
 *   **[Skyfield](https://rhodesmill.org/skyfield/):** A modern astronomy library for Python that computes positions for the stars, planets, and satellites in orbit around the Earth.
+*   **[NASA/JPL Horizons API](https://ssd-api.jpl.nasa.gov/doc/horizons.html):** Ephemeris vectors and observer geometry for solar-system body tracking.
 *   **[SGP4](https://pypi.org/project/sgp4/):** A Python implementation of the SGP4 satellite propagation model.
 *   **[Socket.IO](https://python-socketio.readthedocs.io/en/latest/):** A library for real-time, bidirectional, event-based communication.
 *   **[pyrtlsdr](https://pypi.org/project/pyrtlsdr/):** A Python wrapper for the RTL-SDR library.
@@ -499,8 +494,6 @@ docker run -d \
   --device=/dev/bus/usb \
   --privileged \
   -v /path/to/data:/app/backend/data \
-  -e GS_ENVIRONMENT=production \
-  -e GR_BUFFER_TYPE=vmcirc_mmap_tmpfile \
   ghcr.io/sgoudelis/ground-station:<version>
 
 # ARM64 (Raspberry Pi, etc)
@@ -512,8 +505,6 @@ docker run -d \
   -v /dev:/dev \
   --privileged \
   -v /path/to/data:/app/backend/data \
-  -e GS_ENVIRONMENT=production \
-  -e GR_BUFFER_TYPE=vmcirc_mmap_tmpfile \
   ghcr.io/sgoudelis/ground-station:<version>
 ```
 
@@ -531,8 +522,6 @@ docker run -d \
   --device=/dev/bus/usb \
   --privileged \
   -v /path/to/data:/app/backend/data \
-  -e GS_ENVIRONMENT=production \
-  -e GR_BUFFER_TYPE=vmcirc_mmap_tmpfile \
   ghcr.io/sgoudelis/ground-station:<version>
 
 # ARM64 (Raspberry Pi, etc)
@@ -544,8 +533,6 @@ docker run -d \
   -v /dev:/dev \
   --privileged \
   -v /path/to/data:/app/backend/data \
-  -e GS_ENVIRONMENT=production \
-  -e GR_BUFFER_TYPE=vmcirc_mmap_tmpfile \
   ghcr.io/sgoudelis/ground-station:<version>
 ```
 

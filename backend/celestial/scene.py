@@ -49,6 +49,8 @@ DEFAULT_CELESTIAL_TARGETS: List[Dict[str, str]] = []
 CELESTIAL_PASS_HORIZON_DEG = 0.0
 CURVE_DENSIFY_TARGET_STEP_SECONDS = 5 * 60
 CURVE_DENSIFY_MAX_INSERTS_PER_SEGMENT = 8
+OBSERVER_SKY_TARGET_STEP_MINUTES = 5
+MAX_OBSERVER_SKY_SAMPLES_PER_TARGET = 1500
 DEFAULT_FRAME = "heliocentric-ecliptic"
 DEFAULT_CENTER = "sun"
 BODY_HORIZONS_COMMANDS: Dict[str, str] = {
@@ -395,6 +397,41 @@ def _compute_adaptive_step_minutes(
         effective_step = max(effective_step, required_step)
 
     return min(max(5, effective_step), 24 * 60)
+
+
+def _compute_observer_sample_step_minutes(
+    past_hours: int,
+    future_hours: int,
+    source_step_minutes: int,
+) -> int:
+    """Choose local sky sampling density without requiring extra Horizons calls."""
+    span_hours = max(1, int(past_hours) + int(future_hours))
+    span_minutes = span_hours * 60
+
+    # Short planetarium windows need real az/el samples, otherwise each sparse
+    # vector sample becomes a visible kink in the projected sky path.
+    if span_hours <= 72:
+        desired_step = OBSERVER_SKY_TARGET_STEP_MINUTES
+    elif span_hours <= 14 * 24:
+        desired_step = 15
+    elif span_hours <= 60 * 24:
+        desired_step = 60
+    elif span_hours <= 180 * 24:
+        desired_step = 180
+    else:
+        desired_step = 360
+
+    source_step = max(OBSERVER_SKY_TARGET_STEP_MINUTES, int(source_step_minutes))
+    effective_step = min(source_step, desired_step)
+    estimated_samples = int(span_minutes / effective_step) + 1
+    if estimated_samples > MAX_OBSERVER_SKY_SAMPLES_PER_TARGET:
+        required_step = _round_up(
+            int(math.ceil(span_minutes / max(1, MAX_OBSERVER_SKY_SAMPLES_PER_TARGET - 1))),
+            OBSERVER_SKY_TARGET_STEP_MINUTES,
+        )
+        effective_step = max(effective_step, required_step)
+
+    return min(max(OBSERVER_SKY_TARGET_STEP_MINUTES, effective_step), 24 * 60)
 
 
 def _bucket_epoch(epoch: datetime, bucket_seconds: int) -> datetime:
@@ -1067,6 +1104,10 @@ def _build_pass_events_from_samples(
                         "end_azimuth_deg": end_az,
                         "peak_azimuth_deg": float(active_pass["peak_azimuth_deg"]),
                         "peak_elevation_deg": float(active_pass["peak_elevation_deg"]),
+                        "start_azimuth": float(active_pass["start_azimuth_deg"]),
+                        "end_azimuth": end_az,
+                        "peak_azimuth": float(active_pass["peak_azimuth_deg"]),
+                        "peak_altitude": float(active_pass["peak_elevation_deg"]),
                         "elevation_curve": elevation_curve,
                         "estimated_start": bool(active_pass["estimated_start"]),
                         "estimated_end": False,
@@ -1115,6 +1156,10 @@ def _build_pass_events_from_samples(
                 "end_azimuth_deg": end_az,
                 "peak_azimuth_deg": float(active_pass["peak_azimuth_deg"]),
                 "peak_elevation_deg": float(active_pass["peak_elevation_deg"]),
+                "start_azimuth": float(active_pass["start_azimuth_deg"]),
+                "end_azimuth": end_az,
+                "peak_azimuth": float(active_pass["peak_azimuth_deg"]),
+                "peak_altitude": float(active_pass["peak_elevation_deg"]),
                 "elevation_curve": elevation_curve,
                 "estimated_start": bool(active_pass["estimated_start"]),
                 "estimated_end": True,
@@ -1183,8 +1228,24 @@ def _extract_row_observer_samples(
                 for idx in range(len(positions))
             ]
 
-    for index, target_position in enumerate(positions):
-        sample_time = sample_times[index]
+    target_samples = list(zip(sample_times, positions))
+    observer_step_minutes = _compute_observer_sample_step_minutes(
+        past_hours=past_hours,
+        future_hours=future_hours,
+        source_step_minutes=step_minutes,
+    )
+    observer_sample_times = _build_window_timestamps(
+        epoch=epoch,
+        past_hours=past_hours,
+        future_hours=future_hours,
+        step_minutes=observer_step_minutes,
+    )
+
+    for sample_time in observer_sample_times:
+        target_position = _interpolate_position_from_samples(target_samples, sample_time)
+        if not target_position:
+            continue
+
         earth_position_for_sample = _interpolate_position_from_samples(
             earth_samples,
             sample_time,

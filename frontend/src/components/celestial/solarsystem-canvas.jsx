@@ -52,6 +52,23 @@ const MAX_BACKGROUND_RING_RADIUS_PX = 12000;
 const MAX_ZONE_LABEL_RADIUS_PX = 3600;
 const AU_IN_KM = 149597870.7;
 const KM_TO_MI = 0.621371192;
+const GALACTIC_CENTER_ECLIPTIC_LONGITUDE_DEG = 266.85;
+const GALACTIC_CENTER_DIRECTION_DISTANCE_PX = 10000;
+const GALACTIC_CENTER_COLOR_DARK = '#D97AA8';
+const GALACTIC_CENTER_COLOR_LIGHT = '#A84E78';
+const STARFIELD_MIN_ALPHA = 0.035;
+const STARFIELD_MAX_ALPHA = 0.42;
+const STARFIELD_ALPHA_MULTIPLIER = 1.8;
+const STARFIELD_COLOR_STOPS = [
+    { bv: -0.35, rgb: [170, 205, 255] },
+    { bv: 0, rgb: [215, 228, 255] },
+    { bv: 0.45, rgb: [255, 244, 214] },
+    { bv: 0.9, rgb: [255, 216, 174] },
+    { bv: 1.6, rgb: [255, 176, 124] },
+];
+const ASSET_BASE_URL = import.meta.env.BASE_URL || '/';
+const NORMALIZED_ASSET_BASE_URL = ASSET_BASE_URL.endsWith('/') ? ASSET_BASE_URL : `${ASSET_BASE_URL}/`;
+const STARFIELD_CATALOG_URL = `${NORMALIZED_ASSET_BASE_URL}assets/astronomy/stars-bright-v1.json`;
 const IMPERIAL_DISTANCE_REGIONS = new Set(['US', 'LR', 'MM']);
 const DEFAULT_DISPLAY_OPTIONS = {
     showGrid: true,
@@ -61,6 +78,7 @@ const DEFAULT_DISPLAY_OPTIONS = {
     showTrackedObjects: true,
     showTrackedOrbits: true,
     showTrackedLabels: true,
+    showStarfieldBackground: true,
     showAsteroidZones: true,
     showZoneLabels: true,
     showResonanceMarkers: true,
@@ -105,6 +123,35 @@ const hexToRgba = (hex, alpha) => {
     const g = Number.parseInt(value.slice(2, 4), 16);
     const b = Number.parseInt(value.slice(4, 6), 16);
     return `rgba(${r},${g},${b},${alpha})`;
+};
+const resolveStarRgba = (bv, alpha) => {
+    const normalizedBv = Number.isFinite(Number(bv)) ? Number(bv) : 0.65;
+    const stops = STARFIELD_COLOR_STOPS;
+    let lower = stops[0];
+    let upper = stops[stops.length - 1];
+
+    for (let index = 0; index < stops.length - 1; index += 1) {
+        if (normalizedBv >= stops[index].bv && normalizedBv <= stops[index + 1].bv) {
+            lower = stops[index];
+            upper = stops[index + 1];
+            break;
+        }
+    }
+
+    if (normalizedBv <= stops[0].bv) {
+        lower = stops[0];
+        upper = stops[0];
+    } else if (normalizedBv >= stops[stops.length - 1].bv) {
+        lower = stops[stops.length - 1];
+        upper = stops[stops.length - 1];
+    }
+
+    const span = upper.bv - lower.bv;
+    const fraction = span > 0 ? clamp((normalizedBv - lower.bv) / span, 0, 1) : 0;
+    const rgb = lower.rgb.map((channel, index) => Math.round(
+        channel + (upper.rgb[index] - channel) * fraction,
+    ));
+    return `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${alpha})`;
 };
 const resolveTrackedColor = (body, fallbackHex) => {
     const value = String(body?.color || '').trim();
@@ -520,6 +567,8 @@ const SolarSystemCanvas = ({
     });
 
     const [viewport, setViewport] = useState(() => normalizeViewport(initialViewport || DEFAULT_VIEWPORT));
+    const [starCatalog, setStarCatalog] = useState(null);
+    const [starCatalogLoadFailed, setStarCatalogLoadFailed] = useState(false);
     const isDragInteractionEnabled = Boolean(enableMapDragging);
     const isZoomInteractionEnabled = Boolean(enableMapZooming);
     const effectiveLocale = useMemo(
@@ -639,6 +688,32 @@ const SolarSystemCanvas = ({
         ...DEFAULT_DISPLAY_OPTIONS,
         ...(displayOptions || {}),
     };
+
+    useEffect(() => {
+        if (!effectiveDisplayOptions.showStarfieldBackground || starCatalog || starCatalogLoadFailed) return undefined;
+
+        const controller = new AbortController();
+        fetch(STARFIELD_CATALOG_URL, { signal: controller.signal })
+            .then((response) => {
+                if (!response.ok) {
+                    throw new Error(`Failed to load star catalog: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then((payload) => {
+                if (!Array.isArray(payload?.stars)) {
+                    throw new Error('Star catalog payload is missing a stars array');
+                }
+                setStarCatalog(payload);
+            })
+            .catch((error) => {
+                if (error?.name !== 'AbortError') {
+                    setStarCatalogLoadFailed(true);
+                }
+            });
+
+        return () => controller.abort();
+    }, [effectiveDisplayOptions.showStarfieldBackground, starCatalog, starCatalogLoadFailed]);
 
     const commitViewport = useCallback((nextViewport) => {
         hasPersistentViewportRef.current = true;
@@ -1133,6 +1208,66 @@ const SolarSystemCanvas = ({
             return null;
         };
 
+        const drawStarfieldBackground = () => {
+            const stars = Array.isArray(starCatalog?.stars) ? starCatalog.stars : [];
+            if (!stars.length) return;
+
+            // Orthographic ecliptic-sphere projection in screen space. Catalog
+            // stars are directions at effectively infinite distance, so they
+            // must not pan or zoom with AU-scale solar-system geometry.
+            const skyCenterX = width / 2;
+            const skyCenterY = height / 2;
+            const skyRadiusPx = Math.hypot(width, height) * 0.56;
+            const alphaScale = theme.palette.mode === 'dark' ? 1 : 0.72;
+
+            ctx.save();
+            stars.forEach((star) => {
+                const lambdaDeg = Number(star?.lambdaDeg);
+                const betaDeg = Number(star?.betaDeg);
+                const magnitude = Number(star?.mag);
+                if (!Number.isFinite(lambdaDeg) || !Number.isFinite(betaDeg) || !Number.isFinite(magnitude)) return;
+
+                const lambdaRad = lambdaDeg * Math.PI / 180;
+                const betaRad = betaDeg * Math.PI / 180;
+                const projectedRadius = Math.max(0, Math.cos(betaRad)) * skyRadiusPx;
+                const sx = skyCenterX + Math.cos(lambdaRad) * projectedRadius;
+                const sy = skyCenterY - Math.sin(lambdaRad) * projectedRadius;
+                if (!isPointInsideViewport(sx, sy, width, height, -3)) return;
+
+                const brightness = clamp((6.55 - magnitude) / 8.05, 0, 1);
+                const alpha = clamp(
+                    (
+                        STARFIELD_MIN_ALPHA
+                        + (brightness ** 1.75) * (STARFIELD_MAX_ALPHA - STARFIELD_MIN_ALPHA)
+                    ) * alphaScale * STARFIELD_ALPHA_MULTIPLIER,
+                    0,
+                    1,
+                );
+                const radius = magnitude <= 0
+                    ? 1.8
+                    : magnitude <= 1.5
+                        ? 1.35
+                        : 0.45 + brightness * 0.85;
+
+                if (magnitude <= 1.5) {
+                    ctx.beginPath();
+                    ctx.arc(sx, sy, radius + 1.1, 0, Math.PI * 2);
+                    ctx.fillStyle = resolveStarRgba(star?.bv, alpha * 0.18);
+                    ctx.fill();
+                }
+
+                ctx.beginPath();
+                ctx.arc(sx, sy, radius, 0, Math.PI * 2);
+                ctx.fillStyle = resolveStarRgba(star?.bv, alpha);
+                ctx.fill();
+            });
+            ctx.restore();
+        };
+
+        if (effectiveDisplayOptions.showStarfieldBackground) {
+            drawStarfieldBackground();
+        }
+
         // World-space grid (moves with pan/zoom).
         if (effectiveDisplayOptions.showGrid) {
             const gridStepAu = scale > 80 ? 0.5 : scale > 30 ? 1 : scale > 12 ? 2 : 5;
@@ -1626,6 +1761,16 @@ const SolarSystemCanvas = ({
                 distanceKm: distanceKmFromViewportCenter(earthWorldXAu, earthWorldYAu),
             });
         }
+        const galacticCenterLongitudeRad = GALACTIC_CENTER_ECLIPTIC_LONGITUDE_DEG * Math.PI / 180;
+        const galacticCenterDirectionX = Math.cos(galacticCenterLongitudeRad);
+        const galacticCenterDirectionY = -Math.sin(galacticCenterLongitudeRad);
+        // Galactic Center is a sky direction, so keep it fixed to the starfield projection.
+        offscreenAnchors.push({
+            label: width < 300 ? 'Galactic Ctr' : 'Galactic Center',
+            color: theme.palette.mode === 'dark' ? GALACTIC_CENTER_COLOR_DARK : GALACTIC_CENTER_COLOR_LIGHT,
+            x: width / 2 + galacticCenterDirectionX * GALACTIC_CENTER_DIRECTION_DISTANCE_PX,
+            y: height / 2 + galacticCenterDirectionY * GALACTIC_CENTER_DIRECTION_DISTANCE_PX,
+        });
 
         const hiddenAnchors = offscreenAnchors.filter((target) => !isPointInsideViewport(
             target.x,
@@ -1635,7 +1780,7 @@ const SolarSystemCanvas = ({
             OFFSCREEN_TARGET_VISIBILITY_PADDING_PX,
         ));
 
-        // Keep labels readable when both Sun and Earth are hidden in the same direction.
+        // Keep labels readable when multiple offscreen indicators share the same edge.
         hiddenAnchors.forEach((target, index) => {
             const offsetIndex = index - (hiddenAnchors.length - 1) / 2;
             drawOffscreenDirectionIndicator(target, offsetIndex);
@@ -1645,6 +1790,7 @@ const SolarSystemCanvas = ({
         asteroidZones,
         displayOptions,
         renderablePlanets,
+        starCatalog,
         tracked,
         hasTrackedRows,
         moonOrbitRings,

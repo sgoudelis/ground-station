@@ -353,7 +353,6 @@ const MapSettingsIsland = ({ initialLockOnTarget, initialEnableMapDragging, init
         () => getTileLayerById(draftSettings.tileLayerID, { mapEngine: draftSettings.mapEngine }),
         [draftSettings.mapEngine, draftSettings.tileLayerID]
     );
-    const isPlanetariumEngine = draftSettings.mapEngine === 'planetarium';
 
     const availableTileLayers = useMemo(
         () => getTileLayersForEngine(draftSettings.mapEngine),
@@ -436,13 +435,7 @@ const MapSettingsIsland = ({ initialLockOnTarget, initialEnableMapDragging, init
                 <Stack spacing={1.5}>
                 <SectionBlock
                     title={t('map_settings.section_base_map', { defaultValue: 'Base Map' })}
-                    subtitle={
-                        isPlanetariumEngine
-                            ? t('map_settings.section_base_map_planetarium_desc', {
-                                defaultValue: 'Select the active rendering engine and pointer interaction behavior.',
-                            })
-                            : t('map_settings.section_base_map_desc', { defaultValue: 'Choose a basemap and projection.' })
-                    }
+                    subtitle={t('map_settings.section_base_map_desc', { defaultValue: 'Choose a basemap and projection.' })}
                 >
                     <FormControl fullWidth size="small" variant="outlined">
                         <InputLabel id="map-engine-label">{t('map_settings.map_engine', { defaultValue: 'Map Engine' })}</InputLabel>
@@ -467,56 +460,52 @@ const MapSettingsIsland = ({ initialLockOnTarget, initialEnableMapDragging, init
                         </Select>
                     </FormControl>
 
-                    {!isPlanetariumEngine ? (
-                        <FormControl fullWidth size="small" variant="outlined">
-                            <InputLabel id="tile-layer-label">{t('map_settings.tile_layer')}</InputLabel>
-                            <Select
-                                labelId="tile-layer-label"
-                                value={draftSettings.tileLayerID}
-                                label={t('map_settings.tile_layer')}
-                                onChange={(e) => setDraftSettings((prev) => ({ ...prev, tileLayerID: e.target.value }))}
-                                renderValue={(value) => {
-                                    const layer = getTileLayerById(value, { mapEngine: draftSettings.mapEngine });
-                                    return (
-                                        <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
-                                            <Typography variant="body2" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                {layer.name}
-                                            </Typography>
-                                            <Chip size="small" label={normalizeProjectionLabel(layer.projection)} />
-                                        </Stack>
-                                    );
-                                }}
-                            >
-                                {availableTileLayers.map((layer) => (
-                                    <MenuItem key={layer.id} value={layer.id}>
-                                        <Stack direction="row" alignItems="center" spacing={1} sx={{ width: '100%', minWidth: 0 }}>
-                                            <Box sx={{ minWidth: 0, flexGrow: 1 }}>
-                                                <Typography variant="body2">{layer.name}</Typography>
-                                                {layer.description ? (
-                                                    <Typography variant="caption" color="text.secondary">
-                                                        {layer.description}
-                                                    </Typography>
-                                                ) : null}
-                                            </Box>
-                                            <Chip size="small" label={normalizeProjectionLabel(layer.projection)} />
-                                        </Stack>
-                                    </MenuItem>
-                                ))}
-                            </Select>
-                        </FormControl>
-                    ) : null}
-
-                    {!isPlanetariumEngine ? (
-                        <Typography
-                            variant="caption"
-                            color={projectionChanged || mapEngineChanged ? 'warning.main' : 'text.secondary'}
-                            sx={{ display: 'block' }}
+                    <FormControl fullWidth size="small" variant="outlined">
+                        <InputLabel id="tile-layer-label">{t('map_settings.tile_layer')}</InputLabel>
+                        <Select
+                            labelId="tile-layer-label"
+                            value={draftSettings.tileLayerID}
+                            label={t('map_settings.tile_layer')}
+                            onChange={(e) => setDraftSettings((prev) => ({ ...prev, tileLayerID: e.target.value }))}
+                            renderValue={(value) => {
+                                const layer = getTileLayerById(value, { mapEngine: draftSettings.mapEngine });
+                                return (
+                                    <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
+                                        <Typography variant="body2" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                            {layer.name}
+                                        </Typography>
+                                        <Chip size="small" label={normalizeProjectionLabel(layer.projection)} />
+                                    </Stack>
+                                );
+                            }}
                         >
-                            {t('map_settings.projection_note', {
-                                defaultValue: 'Switching map engine or projection rebuilds the map canvas and may recenter the view.',
-                            })}
-                        </Typography>
-                    ) : null}
+                            {availableTileLayers.map((layer) => (
+                                <MenuItem key={layer.id} value={layer.id}>
+                                    <Stack direction="row" alignItems="center" spacing={1} sx={{ width: '100%', minWidth: 0 }}>
+                                        <Box sx={{ minWidth: 0, flexGrow: 1 }}>
+                                            <Typography variant="body2">{layer.name}</Typography>
+                                            {layer.description ? (
+                                                <Typography variant="caption" color="text.secondary">
+                                                    {layer.description}
+                                                </Typography>
+                                            ) : null}
+                                        </Box>
+                                        <Chip size="small" label={normalizeProjectionLabel(layer.projection)} />
+                                    </Stack>
+                                </MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
+
+                    <Typography
+                        variant="caption"
+                        color={projectionChanged || mapEngineChanged ? 'warning.main' : 'text.secondary'}
+                        sx={{ display: 'block' }}
+                    >
+                        {t('map_settings.projection_note', {
+                            defaultValue: 'Switching map engine or projection rebuilds the map canvas and may recenter the view.',
+                        })}
+                    </Typography>
 
                     <ToggleRowWithDescription
                         label={t('map_settings.enable_map_dragging', { defaultValue: 'Enable map dragging' })}
@@ -536,7 +525,6 @@ const MapSettingsIsland = ({ initialLockOnTarget, initialEnableMapDragging, init
                     />
                 </SectionBlock>
 
-                {!isPlanetariumEngine ? (
                 <SectionBlock
                     title={t('map_settings.section_satellite_overlays', { defaultValue: 'Satellite Overlays' })}
                 >
@@ -599,9 +587,7 @@ const MapSettingsIsland = ({ initialLockOnTarget, initialEnableMapDragging, init
                         onChange={(value) => setDraftSettings((prev) => ({ ...prev, showGrid: value }))}
                     />
                 </SectionBlock>
-                ) : null}
 
-                {!isPlanetariumEngine ? (
                 <SectionBlock
                     title={t('map_settings.section_orbital_paths', { defaultValue: 'Orbital Paths' })}
                 >
@@ -638,9 +624,7 @@ const MapSettingsIsland = ({ initialLockOnTarget, initialEnableMapDragging, init
                         </Select>
                     </FormControl>
                 </SectionBlock>
-                ) : null}
 
-                {!isPlanetariumEngine ? (
                 <SectionBlock
                     title={t('map_settings.section_visual_styling', { defaultValue: 'Visual Styling' })}
                     subtitle={t('map_settings.section_visual_styling_desc', {
@@ -666,7 +650,6 @@ const MapSettingsIsland = ({ initialLockOnTarget, initialEnableMapDragging, init
                         onChange={(value) => setDraftSettings((prev) => ({ ...prev, futureOrbitLineColor: value }))}
                     />
                 </SectionBlock>
-                ) : null}
                 </Stack>
             </Box>
 

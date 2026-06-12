@@ -52,13 +52,29 @@ import {
     MAP_ENGINE_MAPLIBRE_GLOBE,
 } from "../common/tile-layers.jsx";
 
+const MAP_ENGINE_PLANETARIUM = 'planetarium';
+
 const TARGET_MAP_ENGINE_OPTIONS = [
     {id: MAP_ENGINE_LEAFLET, name: 'Leaflet'},
     {id: MAP_ENGINE_MAPLIBRE, name: 'MapLibre'},
     {id: MAP_ENGINE_MAPLIBRE_GLOBE, name: 'MapLibre Globe'},
+    {id: MAP_ENGINE_PLANETARIUM, name: 'Planetarium'},
 ];
 
-function MapSettingsIslandDialog({updateBackend}) {
+const normalizeTargetMapEngine = (mapEngine) => {
+    const normalizedMapEngine = String(mapEngine || '').trim().toLowerCase();
+    if (
+        normalizedMapEngine === MAP_ENGINE_LEAFLET
+        || normalizedMapEngine === MAP_ENGINE_MAPLIBRE
+        || normalizedMapEngine === MAP_ENGINE_MAPLIBRE_GLOBE
+        || normalizedMapEngine === MAP_ENGINE_PLANETARIUM
+    ) {
+        return normalizedMapEngine;
+    }
+    return MAP_ENGINE_MAPLIBRE;
+};
+
+function TargetMapSettingsDialog({updateBackend}) {
     const dispatch = useDispatch();
     const { t } = useTranslation('target');
     const {
@@ -142,6 +158,7 @@ function MapSettingsIslandDialog({updateBackend}) {
                         initialEnableMapZooming={enableMapZooming}
                         initialShowTerminatorLine={showTerminatorLine}
                         mapEngineOptions={TARGET_MAP_ENGINE_OPTIONS}
+                        normalizeMapEngineValue={normalizeTargetMapEngine}
                         defaultSettings={{
                             lockOnTarget: true,
                             enableMapDragging: false,
@@ -187,4 +204,4 @@ function MapSettingsIslandDialog({updateBackend}) {
     );
 }
 
-export default MapSettingsIslandDialog;
+export default TargetMapSettingsDialog;

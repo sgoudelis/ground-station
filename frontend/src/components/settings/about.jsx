@@ -63,6 +63,7 @@ const AboutPage = () => {
         { name: 'FastAPI', description: 'A fast Python web framework for API services.', url: 'https://fastapi.tiangolo.com/' },
         { name: 'SQLAlchemy', description: 'Python SQL toolkit and ORM.', url: 'https://www.sqlalchemy.org/' },
         { name: 'Skyfield', description: 'Astronomy library for orbital and celestial positions.', url: 'https://rhodesmill.org/skyfield/' },
+        { name: 'NASA/JPL Horizons API', description: 'Ephemeris vectors and observer geometry for solar-system body tracking.', url: 'https://ssd-api.jpl.nasa.gov/doc/horizons.html' },
         { name: 'SGP4', description: 'Satellite propagation model implementation.', url: 'https://pypi.org/project/sgp4/' },
         { name: 'Socket.IO', description: 'Realtime bidirectional communication library.', url: 'https://python-socketio.readthedocs.io/en/latest/' },
         { name: 'pyrtlsdr', description: 'Python wrapper for RTL-SDR.', url: 'https://pypi.org/project/pyrtlsdr/' },

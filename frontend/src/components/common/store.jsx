@@ -174,7 +174,7 @@ const targetSatTrackPersistConfig = {
 const earthViewTrackPersistConfig = {
     key: 'earthViewTrack',
     storage,
-    whitelist: ['selectedSatGroupId', 'selectedSatelliteId', 'satellitesTableColumnVisibility', 'passesTablePageSize', 'satellitesTablePageSize', 'passesTableSortModel', 'satellitesTableSortModel', 'showGeostationarySatellites', 'mapEngine', 'mapZoomByEngine', 'mapZoomLevel']
+    whitelist: ['selectedSatGroupId', 'selectedSatelliteId', 'satellitesTableColumnVisibility', 'passesTablePageSize', 'satellitesTablePageSize', 'passesTableSortModel', 'satellitesTableSortModel', 'showGeostationarySatellites', 'mapEngine', 'mapZoomByEngine']
 };
 
 // Persist configuration for the dashboard slice
@@ -278,7 +278,7 @@ const celestialMonitoredPersistConfig = {
 const celestialDisplayPersistConfig = {
     key: 'celestialDisplay',
     storage,
-    whitelist: ['solarSystem'],
+    whitelist: ['solarSystem', 'planetarium'],
 };
 
 
