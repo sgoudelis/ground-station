@@ -1,0 +1,178 @@
+﻿{
+    "map_settings":  {
+                         "title":  "Map Settings",
+                         "close":  "关闭"
+                     },
+    "map_controls":  {
+                         "map_settings":  "Map settings",
+                         "go_home":  "Go home",
+                         "go_to_center":  "Go to center of map",
+                         "go_fullscreen":  "Go fullscreen"
+                     },
+    "next_passes":  {
+                        "title":  "Next passes for {{name}} in the next {{hours}} hours",
+                        "start":  "开始",
+                        "end":  "结束",
+                        "duration":  "持续时间",
+                        "progress":  "进度",
+                        "distance_aos":  "Distance at AOS",
+                        "distance_los":  "Distance at LOS",
+                        "distance_peak":  "Distance at peak",
+                        "max_el":  "Max El",
+                        "geo_stat":  "GEO Stat",
+                        "geo_sync":  "GEO Sync",
+                        "no_satellite_selected":  "Please select a satellite to view passes"
+                    },
+    "passes_table_settings":  {
+                                  "title":  "Passes Table Settings",
+                                  "description":  "Choose which columns to display in the passes table",
+                                  "rows_per_page":  "Rows per page",
+                                  "category_time":  "Time Information",
+                                  "category_basic":  "基本信息",
+                                  "category_distance":  "Distance Information",
+                                  "category_orbital":  "Orbital Information",
+                                  "always_visible":  "always visible",
+                                  "close":  "关闭"
+                              },
+    "pass_timeline":  {
+                          "title":  "Pass Timeline for {{name}} - Next {{hours}} hours"
+                      },
+    "timeline":  {
+                     "zoomIn":  "放大",
+                     "zoomOut":  "缩小",
+                     "resetZoom":  "重置缩放",
+                     "sunrise":  "Sunrise",
+                     "sunset":  "Sunset",
+                     "now":  "NOW",
+                     "noPassesAvailable":  "No satellite passes available",
+                     "noPassesForSelected":  "No passes for the selected {{hours}} hours",
+                     "active":  "活跃",
+                     "start":  "开始",
+                     "end":  "结束",
+                     "duration":  "持续时间",
+                     "maxElevation":  "Max Elevation",
+                     "minDistance":  "Min Distance"
+                 },
+    "rig_control":  {
+                        "title":  "Radio rig control",
+                        "connected":  "已连接",
+                        "not_connected":  "Not connected",
+                        "unknown":  "未知",
+                        "failed_start_tracking":  "Failed to start tracking",
+                        "on_rig":  "On Rig:",
+                        "doppler_shift":  "Doppler shift:",
+                        "transmitted":  "Transmitted:",
+                        "observed":  "Observed:",
+                        "connect":  "CONNECT",
+                        "disconnect":  "DISCONNECT",
+                        "track_radio":  "TRACK RADIO",
+                        "stop":  "停止"
+                    },
+    "rotator_control":  {
+                            "title":  "Rotator control",
+                            "failed_start_tracking":  "Failed to start tracking with the rotator",
+                            "az":  "AZ:",
+                            "el":  "EL:",
+                            "ccw":  "⟲ CCW",
+                            "cw":  "CW ⟳",
+                            "up":  "↑ UP",
+                            "down":  "DOWN ↓",
+                            "connect":  "CONNECT",
+                            "disconnect":  "DISCONNECT",
+                            "park":  "PARK",
+                            "track":  "TRACK",
+                            "stop":  "停止"
+                        },
+    "satellite_search":  {
+                             "search_label":  "Search satellites (by name or NORAD ID)"
+                         },
+    "satellite_dropdown":  {
+                               "label":  "Satellite"
+                           },
+    "satellite_info":  {
+                           "title":  "Satellite Info",
+                           "sections":  {
+                                            "position_data":  "位置数据",
+                                            "orbital_data":  "轨道数据",
+                                            "metadata":  "METADATA"
+                                        },
+                           "labels":  {
+                                          "latitude":  "纬度",
+                                          "longitude":  "经度",
+                                          "azimuth":  "方位角",
+                                          "elevation":  "ELEVATION",
+                                          "altitude":  "高度",
+                                          "velocity":  "速度",
+                                          "geostationary":  "GEOSTATIONARY",
+                                          "launch_date":  "LAUNCH DATE",
+                                          "added_to_db":  "ADDED TO DB",
+                                          "countries":  "国家",
+                                          "alternative_name":  "备用名称",
+                                          "satellite_id":  "SATELLITE ID"
+                                      },
+                           "values":  {
+                                          "yes":  "是",
+                                          "no":  "否",
+                                          "na":  "N/A"
+                                      }
+                       },
+    "errors":  {
+                   "failed_get_tracking_state":  "Failed to get tracking state"
+               },
+    "group_dropdown":  {
+                           "label":  "Group",
+                           "user_groups":  "User defined satellite groups",
+                           "tle_groups":  "Orbital source groups",
+                           "none_created":  "None created"
+                       },
+    "rig_control_labels":  {
+                               "rig_label":  "Radio rig",
+                               "vfo_label":  "VFO",
+                               "transmitter_label":  "Transmitter",
+                               "no_rig_control":  "[no radio rig control]",
+                               "select_rig":  "select a rig",
+                               "select_sdr":  "select a SDR",
+                               "no_vfo_control":  "[no VFO control]",
+                               "select_vfo":  "select a VFO",
+                               "no_frequency_control":  "[no frequency control]",
+                               "select_transmitter":  "select a transmitter",
+                               "no_transmitters":  "No transmitters available for this satellite"
+                           },
+    "rotator_control_labels":  {
+                                   "rotator_label":  "Rotator",
+                                   "none":  "无",
+                                   "rotators":  "旋转器",
+                                   "no_rotator_control":  "[no rotator control]",
+                                   "select_rotator":  "select a rotator"
+                               },
+    "satellite_selector":  {
+                               "title":  "Select a satellite",
+                               "stop_tracking":  "STOP TRACKING"
+                           },
+    "satellite_map":  {
+                          "title":  "Target tracking"
+                      },
+    "satellite_transmitters":  {
+                                   "title":  "发射机",
+                                   "count":  "Count",
+                                   "sections":  {
+                                                    "communication_overview":  "COMMUNICATION OVERVIEW",
+                                                    "transmitter_details":  "TRANSMITTER DETAILS"
+                                                },
+                                   "labels":  {
+                                                  "total":  "TOTAL",
+                                                  "active":  "活跃",
+                                                  "inactive":  "非活跃",
+                                                  "frequency_bands":  "频段",
+                                                  "downlink":  "Downlink",
+                                                  "mode":  "Mode",
+                                                  "baud":  "Baud",
+                                                  "band":  "Band"
+                                              },
+                                   "messages":  {
+                                                    "frequency_violation":  "⚠️ FREQUENCY VIOLATION",
+                                                    "no_transmitters":  "No Transmitters Available",
+                                                    "no_transmitters_desc":  "This satellite doesn\u0027t have any registered transmitters."
+                                                }
+                               }
+}

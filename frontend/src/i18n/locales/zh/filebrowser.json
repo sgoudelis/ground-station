@@ -1,0 +1,107 @@
+﻿{
+    "title":  "文件浏览器",
+    "sort_by":  "排序方式",
+    "sort":  {
+                 "created":  "创建日期",
+                 "modified":  "修改日期",
+                 "name":  "名称",
+                 "size":  "大小",
+                 "sample_rate":  "采样率"
+             },
+    "filter":  "筛选",
+    "filters":  {
+                    "recordings":  "录制",
+                    "snapshots":  "快照",
+                    "decoded":  "已解码",
+                    "audio":  "音频"
+                },
+    "sort_order":  {
+                       "ascending":  "升序",
+                       "descending":  "降序"
+                   },
+    "refresh":  "刷新",
+    "storage":  {
+                    "title":  "存储",
+                    "used":  "used of",
+                    "available":  "available"
+                },
+    "no_files":  {
+                     "title":  "未找到文件",
+                     "message_filter":  "Enable at least one filter to see files",
+                     "message_empty":  "Take snapshots or record IQ data from the waterfall view"
+                 },
+    "recording":  {
+                      "type":  "录制",
+                      "in_progress":  "Recording in Progress",
+                      "in_progress_message":  "Recording in Progress",
+                      "snapshot_message":  "Waterfall snapshot will be saved on stop",
+                      "delete_message":  "This will delete the data file, metadata file, and snapshot."
+                  },
+    "snapshot":  {
+                     "type":  "快照",
+                     "description":  "Ground Station Waterfall Snapshot"
+                 },
+    "audio":  {
+                  "type":  "音频录制",
+                  "description":  "VFO Audio Recording",
+                  "in_progress":  "Recording Audio",
+                  "in_progress_message":  "Audio Recording in Progress"
+              },
+    "details":  {
+                    "title":  "Recording Details",
+                    "name":  "名称",
+                    "files":  "文件",
+                    "metadata":  "Metadata",
+                    "captures":  "Captures",
+                    "data_type":  "数据类型",
+                    "sample_rate":  "采样率",
+                    "version":  "SigMF Version",
+                    "recorder":  "Recorder",
+                    "description":  "描述",
+                    "created":  "Created",
+                    "modified":  "Modified"
+                },
+    "actions":  {
+                    "view_details":  "查看详情",
+                    "download":  "下载",
+                    "download_data":  "Download Data",
+                    "download_metadata":  "Download Metadata",
+                    "download_snapshot":  "Download Snapshot",
+                    "delete":  "删除",
+                    "cannot_delete_active":  "Cannot delete active recording",
+                    "close":  "关闭"
+                },
+    "delete_dialog":  {
+                          "title_recording":  "Delete Recording",
+                          "title_snapshot":  "Delete Snapshot",
+                          "title_decoded":  "Delete Decoded File",
+                          "title_audio":  "Delete Audio Recording",
+                          "warning":  "This action cannot be undone!",
+                          "confirm":  "Are you sure you want to delete",
+                          "cancel":  "取消",
+                          "delete":  "删除"
+                      },
+    "batch_delete_dialog":  {
+                                "title":  "Delete Multiple Items",
+                                "confirm":  "Are you sure you want to delete {{count}} 个项目?",
+                                "message":  "This will permanently delete all selected recordings and snapshots."
+                            },
+    "selection":  {
+                      "select":  "选择",
+                      "exit":  "Exit Select",
+                      "no_items":  "No items selected",
+                      "count":  "{{count}} 个项目 selected",
+                      "select_all":  "全选",
+                      "clear":  "清除",
+                      "delete":  "Delete Selected"
+                  },
+    "toast":  {
+                  "recording_deleted":  "Recording \"{{name}}\" deleted successfully",
+                  "snapshot_deleted":  "Snapshot \"{{name}}\" deleted successfully",
+                  "decoded_deleted":  "Decoded file \"{{name}}\" deleted successfully",
+                  "audio_deleted":  "Audio recording \"{{name}}\" deleted successfully",
+                  "delete_failed":  "Failed to delete: {{error}}",
+                  "batch_delete_partial":  "Some items could not be deleted",
+                  "batch_delete_failed":  "Failed to delete items: {{error}}"
+              }
+}

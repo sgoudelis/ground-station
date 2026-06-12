@@ -1,0 +1,19 @@
+﻿{
+    "tracking":  "跟踪",
+    "birds_eye_view":  "鸟瞰图",
+    "tracking_console":  "跟踪控制台",
+    "waterfall_view":  "瀑布图",
+    "hardware":  "硬件",
+    "rigs":  "电台",
+    "rotators":  "旋转器",
+    "cameras":  "摄像头",
+    "sdrs":  "SDR",
+    "satellites":  "卫星",
+    "orbital_sources":  "轨道数据源",
+    "groups":  "分组",
+    "settings":  "设置",
+    "preferences":  "偏好设置",
+    "location":  "位置",
+    "maintenance":  "维护",
+    "about":  "关于"
+}

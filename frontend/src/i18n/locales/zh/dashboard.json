@@ -1,0 +1,106 @@
+﻿{
+    "layout":  {
+                   "done_editing":  "Done editing",
+                   "edit_layout":  "Edit layout"
+               },
+    "connection":  {
+                       "connection_failed":  "Connection Failed",
+                       "network_error":  "Network error",
+                       "reconnecting":  "Reconnecting",
+                       "attempt":  "Attempt {{count}}",
+                       "connecting":  "Connecting",
+                       "establishing_connection":  "Establishing connection"
+                   },
+    "version_update":  {
+                           "new_version_available":  "New Version Available",
+                           "version":  "Version {{version}}",
+                           "refreshing_in":  "Refreshing in {{seconds}}s...",
+                           "refreshing_now":  "Refreshing now...",
+                           "cancel":  "取消",
+                           "refresh_now":  "Refresh Now"
+                       },
+    "target_popover":  {
+                           "sections":  {
+                                            "basic_information":  "基本信息",
+                                            "current_position":  "当前位置",
+                                            "mission_information":  "任务信息"
+                                        },
+                           "norad_id":  "NORAD ID：",
+                           "status":  "状态：",
+                           "operator":  "运营方：",
+                           "countries":  "国家：",
+                           "latitude":  "纬度：",
+                           "longitude":  "经度：",
+                           "altitude":  "高度：",
+                           "velocity":  "速度：",
+                           "azimuth":  "方位角：",
+                           "elevation":  "仰角：",
+                           "launched":  "发射：",
+                           "deployed":  "部署：",
+                           "decayed":  "衰减：",
+                           "geostationary":  "Geostationary:",
+                           "website":  "网站：",
+                           "yes":  "是",
+                           "no":  "否",
+                           "na":  "N/A"
+                       },
+    "version_info":  {
+                         "version":  "版本：",
+                         "build_date":  "构建日期：",
+                         "git_commit":  "Git 提交：",
+                         "unknown":  "未知",
+                         "loading":  "Loading version...",
+                         "unavailable":  "Version unavailable"
+                     },
+    "connection_popover":  {
+                               "network_connected_ws":  "Network: Connected (WebSocket)",
+                               "network_connected_polling":  "Network: Connected (Polling)",
+                               "network_connecting":  "Network: Connecting...",
+                               "network_disconnected":  "Network: Disconnected",
+                               "network_unknown":  "Network: Unknown",
+                               "connection_status":  "Connection Status",
+                               "transport":  "Transport:",
+                               "duration":  "Duration:",
+                               "reconnecting":  "Reconnecting... (Attempt: {{count}})",
+                               "current_traffic_rate":  "Current Traffic Rate",
+                               "upload":  "Upload:",
+                               "download":  "Download:",
+                               "msgs_per_second":  "{{count}} msgs/s",
+                               "application_level":  "Application Level (Session Total)",
+                               "sent":  "Sent:",
+                               "received":  "Received:",
+                               "messages":  "{{count}} messages",
+                               "transport_upgrades":  "Transport Upgrades:",
+                               "audio_buffer":  "Audio Buffer",
+                               "browser_buffer_length":  "Browser Buffer Length:"
+                           },
+    "hardware_popover":  {
+                             "socket_disconnected":  "Socket: Disconnected",
+                             "rig_disconnected":  "Rig: Disconnected",
+                             "rig_tracking":  "Rig: Tracking ({{frequency}} Hz)",
+                             "rig_stopped":  "Rig: Stopped",
+                             "rig_connected":  "Rig: Connected",
+                             "rotator_disconnected":  "Rotator: Disconnected",
+                             "rotator_tracking":  "Rotator: Tracking (Az: {{az}}°, El: {{el}}°)",
+                             "rotator_slewing":  "Rotator: Slewing (Az: {{az}}°, El: {{el}}°)",
+                             "rotator_stopped":  "Rotator: Stopped (Az: {{az}}°, El: {{el}}°)",
+                             "rotator_connected":  "Rotator: Connected (Az: {{az}}°, El: {{el}}°)"
+                         },
+    "orbital_sync_popover":  {
+                                 "syncing":  "Synchronizing: {{progress}}%",
+                                 "sync_failed":  "Sync Failed: {{error}}",
+                                 "last_sync":  "Last sync: {{date}}",
+                                 "satellite_orbital_sync":  "Satellite Orbital Data Sync",
+                                 "orbital_sync_status":  "Orbital Synchronization Status",
+                                 "status":  "状态",
+                                 "idle":  "idle",
+                                 "progress":  "Progress: {{progress}}%",
+                                 "last_update":  "Last Update",
+                                 "na":  "N/A",
+                                 "statistics":  "Statistics",
+                                 "satellites":  "Satellites: {{count}}",
+                                 "transmitters":  "Transmitters: {{count}}",
+                                 "groups":  "Groups: {{count}}",
+                                 "errors":  "Errors ({{count}})"
+                             }
+}

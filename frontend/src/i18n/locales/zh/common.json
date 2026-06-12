@@ -1,0 +1,122 @@
+﻿{
+    "app_name":  "地面站",
+    "loading":  "正在加载...",
+    "error":  "错误",
+    "success":  "成功",
+    "save":  "保存",
+    "cancel":  "取消",
+    "delete":  "删除",
+    "edit":  "编辑",
+    "add":  "添加",
+    "close":  "关闭",
+    "confirm":  "确认",
+    "yes":  "是",
+    "no":  "否",
+    "search":  "搜索",
+    "filter":  "筛选",
+    "actions":  "操作",
+    "name":  "名称",
+    "description":  "描述",
+    "status":  "状态",
+    "connected":  "已连接",
+    "disconnected":  "已断开",
+    "online":  "在线",
+    "offline":  "离线",
+    "notifications":  {
+                          "connection":  {
+                                             "connected_to_backend":  "已连接到后端",
+                                             "reconnecting_to_backend":  "正在重新连接后端",
+                                             "attempt":  "Attempt {{attempt}}",
+                                             "connection_error":  "连接错误",
+                                             "lost_connection":  "与后端的连接已断开"
+                                         },
+                          "sync":  {
+                                       "tle_sync_complete":  "轨道数据同步完成！",
+                                       "new_items":  "New: {{satellites}} satellites, {{transmitters}} transmitters",
+                                       "modified_items":  "Modified: {{satellites}} satellites, {{transmitters}} transmitters",
+                                       "removed_items":  "Removed: {{satellites}} satellites, {{transmitters}} transmitters",
+                                       "no_changes":  "未检测到变更"
+                                   },
+                          "rotator":  {
+                                          "connected":  "旋转器已连接",
+                                          "disconnected":  "旋转器已断开"
+                                      },
+                          "radio":  {
+                                        "connected":  "电台已连接",
+                                        "disconnected":  "电台已断开"
+                                    },
+                          "tracking":  {
+                                           "elevation_below_horizon":  "目标仰角低于地平线",
+                                           "azimuth_out_of_bounds":  "目标方位角超出范围",
+                                           "below_min_elevation":  "目标低于最小仰角",
+                                           "above_max_elevation":  "目标高于最大仰角",
+                                           "below_min_azimuth":  "目标低于最小方位角",
+                                           "above_max_azimuth":  "目标高于最大方位角",
+                                           "satellite_changed":  "目标卫星已更改",
+                                           "satellite_info":  "{{name}} (NORAD {{noradId}})"
+                                       },
+                          "decoder":  {
+                                          "output_received":  "已收到解码器输出"
+                                      }
+                      },
+    "humanize":  {
+                     "bytes":  {
+                                   "bytes":  "字节",
+                                   "kb":  "KB",
+                                   "mb":  "MB",
+                                   "gb":  "GB",
+                                   "tb":  "TB"
+                               },
+                     "date":  {
+                                  "just_now":  "刚刚",
+                                  "minute_ago":  "{{count}} 分钟前",
+                                  "minutes_ago":  "{{count}} 分钟前",
+                                  "hour_ago":  "{{count}} 小时前",
+                                  "hours_ago":  "{{count}} 小时前",
+                                  "day_ago":  "{{count}} 天前",
+                                  "days_ago":  "{{count}} 天前",
+                                  "week_ago":  "{{count}} 周前",
+                                  "weeks_ago":  "{{count}} 周前",
+                                  "month_ago":  "{{count}} 个月前",
+                                  "months_ago":  "{{count}} 个月前",
+                                  "year_ago":  "{{count}} 年前",
+                                  "years_ago":  "{{count}} 年前",
+                                  "never":  "从不"
+                              }
+                 },
+    "satellite_status":  {
+                             "alive":  "存活",
+                             "dead":  "失效",
+                             "re_entered":  "已再入",
+                             "future":  "未来",
+                             "not_available":  "n/a"
+                         },
+    "transmitter_status":  {
+                               "active":  "活跃",
+                               "inactive":  "非活跃",
+                               "invalid":  "无效"
+                           },
+    "map_settings":  {
+                         "orbit_projection_time":  "Orbit Projection Time",
+                         "tile_layer":  "Tile Layer",
+                         "time_options":  {
+                                              "1_hour":  "1 Hour",
+                                              "2_hours":  "2 Hours",
+                                              "4_hours":  "4 Hours",
+                                              "8_hours":  "8 Hours",
+                                              "12_hours":  "12 Hours",
+                                              "24_hours":  "24 Hours"
+                                          },
+                         "satellite_coverage":  "Satellite coverage",
+                         "past_orbit_path":  "Past orbit path plotting",
+                         "future_orbit_path":  "Future orbit path plotting",
+                         "show_sun":  "Show the sun",
+                         "show_moon":  "Show the moon",
+                         "day_night_separator":  "Day/night separator line",
+                         "satellite_tooltip":  "Satellite tooltip",
+                         "coordinate_grid":  "Coordinate grid",
+                         "footprint_color":  "Footprint color",
+                         "past_orbit_color":  "Past orbit line color",
+                         "future_orbit_color":  "Future orbit line color"
+                     }
+}

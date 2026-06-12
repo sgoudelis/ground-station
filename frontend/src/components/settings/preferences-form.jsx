@@ -80,6 +80,7 @@ const languageOptions = [
     { name: 'Deutsch', value: 'de_DE' },
     { name: 'Italiano', value: 'it_IT' },
     { name: 'Nederlands', value: 'nl_NL' },
+    { name: '简体中文', value: 'zh_CN' },
 ];
 
 const localeOptions = [

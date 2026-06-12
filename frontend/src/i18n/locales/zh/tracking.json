@@ -1,0 +1,18 @@
+﻿{
+    "title":  "跟踪",
+    "select_satellite":  "Select Satellite",
+    "track":  "Track",
+    "stop_tracking":  "Stop Tracking",
+    "passes":  "Passes",
+    "next_pass":  "Next Pass",
+    "current_pass":  "Current Pass",
+    "aos":  "AOS",
+    "los":  "LOS",
+    "max_elevation":  "Max Elevation",
+    "azimuth":  "方位角",
+    "elevation":  "Elevation",
+    "range":  "Range",
+    "velocity":  "速度",
+    "doppler":  "Doppler",
+    "frequency":  "Frequency"
+}
