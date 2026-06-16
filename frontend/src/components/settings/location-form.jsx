@@ -19,27 +19,17 @@
 
 import React, { useEffect } from 'react';
 import {
-    Alert,
-    Backdrop,
     Box,
     Button,
     ButtonGroup,
-    Checkbox,
-    Chip,
-    CircularProgress,
     Dialog,
     DialogActions,
     DialogContent,
     DialogTitle,
     Fab,
-    FormControlLabel,
     InputAdornment,
-    LinearProgress,
     MenuItem,
     Skeleton,
-    Step,
-    StepButton,
-    Stepper,
     Stack,
     TextField,
     Typography,
@@ -48,9 +38,6 @@ import { alpha } from '@mui/material/styles';
 import Grid from '@mui/material/Grid';
 import ZoomInIcon from '@mui/icons-material/ZoomIn';
 import ZoomOutIcon from '@mui/icons-material/ZoomOut';
-import CloudDoneIcon from '@mui/icons-material/CloudDone';
-import CloudOffIcon from '@mui/icons-material/CloudOff';
-import SyncIcon from '@mui/icons-material/Sync';
 import { useTranslation } from 'react-i18next';
 import Map, { Layer, Marker, Source } from 'react-map-gl/maplibre';
 import maplibregl from 'maplibre-gl';
@@ -75,8 +62,8 @@ import {
     setQth,
     storeLocation,
 } from './location-slice.jsx';
-import { fetchSyncState } from '../satellites/synchronize-slice.jsx';
 import { useUserTimeSettings } from '../../hooks/useUserTimeSettings.jsx';
+import SetupWizard from '../setup/setup.jsx';
 
 const locationCardSx = {
     backgroundColor: (theme) => (
@@ -91,8 +78,6 @@ const MAPLIBRE_LOCATION_MAX_ZOOM = 10;
 const LOCATION_COVERAGE_RADIUS_METERS = 400000;
 const LOCATION_COVERAGE_STEPS = 96;
 const EARTH_RADIUS_METERS = 6371008.8;
-const FULL_RESTORE_MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024;
-const FULL_RESTORE_MAX_FILE_SIZE_MB = FULL_RESTORE_MAX_FILE_SIZE_BYTES / (1024 * 1024);
 
 const createEmptyFeatureCollection = () => ({
     type: 'FeatureCollection',
@@ -185,12 +170,13 @@ const normalizeHorizonMask = (value) => {
     if (!Number.isFinite(parsed)) return 0;
     return Math.max(0, Math.min(90, parsed));
 };
-const WIZARD_STEP_RESTORE = 0;
-const WIZARD_STEP_IDENTITY = 1;
-const WIZARD_STEP_COORDINATES = 2;
-const WIZARD_STEP_REVIEW = 3;
 
-const LocationPage = ({ wizardMode = false, onWizardCompleted = null }) => {
+const LocationPage = ({
+    wizardMode = false,
+    onWizardCompleted = null,
+    wizardRequireAdminSetup = false,
+    wizardBackendReady = true,
+}) => {
     const { socket } = useSocket();
     const dispatch = useDispatch();
     const { t } = useTranslation('settings');
@@ -204,12 +190,6 @@ const LocationPage = ({ wizardMode = false, onWizardCompleted = null }) => {
     const [manualLatInput, setManualLatInput] = React.useState('');
     const [manualLonInput, setManualLonInput] = React.useState('');
     const [manualInputError, setManualInputError] = React.useState('');
-    const [wizardStep, setWizardStep] = React.useState(WIZARD_STEP_RESTORE);
-    const [wizardRestoreFile, setWizardRestoreFile] = React.useState(null);
-    const [wizardRestoreDropTables, setWizardRestoreDropTables] = React.useState(true);
-    const [wizardRestoreLoading, setWizardRestoreLoading] = React.useState(false);
-    const [wizardRestoreFileInputKey, setWizardRestoreFileInputKey] = React.useState(0);
-    const [showRestoreReloadBackdrop, setShowRestoreReloadBackdrop] = React.useState(false);
     const mapRef = React.useRef(null);
 
     const {
@@ -221,14 +201,9 @@ const LocationPage = ({ wizardMode = false, onWizardCompleted = null }) => {
         polylines,
         altitude,
     } = useSelector((state) => state.location);
-    const {
-        syncState,
-        synchronizing,
-        status: syncStatus,
-        error: syncError,
-    } = useSelector((state) => state.syncSatellite);
 
     const hasLocation = location && location.lat != null && location.lon != null;
+    const hasPersistedLocation = locationId != null;
     const stationName = location?.name || '';
     const stationCallsign = location?.callsign || '';
     const stationType = normalizeStationType(location?.station_type);
@@ -425,12 +400,6 @@ const LocationPage = ({ wizardMode = false, onWizardCompleted = null }) => {
         () => createCoverageGeoJSON(normalizedLocation),
         [normalizedLocation]
     );
-    const wizardSteps = [
-        t('location.wizard_step_restore', { defaultValue: 'Restore Backup (Optional)' }),
-        t('location.wizard_step_identity', { defaultValue: 'Station Identity' }),
-        t('location.wizard_step_coordinates', { defaultValue: 'Coordinates & Map' }),
-        t('location.wizard_step_review', { defaultValue: 'Review & Save' }),
-    ];
     const coordinateNumberFormatter = React.useMemo(
         () => new Intl.NumberFormat(locale, {
             minimumFractionDigits: 6,
@@ -461,89 +430,6 @@ const LocationPage = ({ wizardMode = false, onWizardCompleted = null }) => {
             : (numericValue >= 0 ? 'E' : 'W');
         return `${absoluteValue}° ${hemisphere}`;
     }, [coordinateNumberFormatter]);
-    const isWizardLastStep = wizardStep === WIZARD_STEP_REVIEW;
-    const canAdvanceWizard = wizardStep !== WIZARD_STEP_COORDINATES || hasLocation;
-    const syncLastUpdateText = React.useMemo(() => {
-        if (!syncState?.last_update) {
-            return t('location.state_unavailable', { defaultValue: 'Unavailable' });
-        }
-
-        const timestamp = new Date(syncState.last_update);
-        if (Number.isNaN(timestamp.getTime())) {
-            return String(syncState.last_update);
-        }
-
-        return timestamp.toLocaleString();
-    }, [syncState?.last_update, t]);
-    const orbitalSyncUiState = React.useMemo(() => {
-        const rawStatus = String(syncState?.status || '').toLowerCase();
-        const normalizedStatus = (
-            rawStatus === 'in_progress' || rawStatus === 'inprogress' || rawStatus === 'started'
-        )
-            ? 'inprogress'
-            : rawStatus;
-        const hasErrors = Array.isArray(syncState?.errors) && syncState.errors.length > 0;
-        const primaryError = hasErrors
-            ? syncState.errors[0]
-            : (syncError || null);
-
-        if (normalizedStatus === 'inprogress' || synchronizing) {
-            const progressValue = Number.isFinite(Number(syncState?.progress))
-                ? Number(syncState?.progress)
-                : 0;
-            return {
-                label: t('location.orbital_sync_in_progress', { defaultValue: 'Synchronization in progress' }),
-                color: 'info',
-                icon: <SyncIcon />,
-                progress: Math.max(0, Math.min(100, progressValue)),
-                error: null,
-            };
-        }
-
-        if ((normalizedStatus === 'complete' && syncState?.success === false) || hasErrors || primaryError) {
-            return {
-                label: t('location.orbital_sync_failed', { defaultValue: 'Synchronization failed' }),
-                color: 'error',
-                icon: <CloudOffIcon />,
-                progress: null,
-                error: primaryError || t('location.state_unavailable', { defaultValue: 'Unavailable' }),
-            };
-        }
-
-        if (normalizedStatus === 'complete' && syncState?.success === true) {
-            return {
-                label: t('location.orbital_sync_ok', { defaultValue: 'Synchronization complete' }),
-                color: 'success',
-                icon: <CloudDoneIcon />,
-                progress: null,
-                error: null,
-            };
-        }
-
-        return {
-            label: t('location.orbital_sync_idle', { defaultValue: 'Synchronization status unavailable' }),
-            color: 'default',
-            icon: <CloudOffIcon />,
-            progress: null,
-            error: null,
-        };
-    }, [
-        syncState?.errors,
-        syncState?.progress,
-        syncState?.status,
-        syncState?.success,
-        syncError,
-        synchronizing,
-        t,
-    ]);
-
-    useEffect(() => {
-        if (!wizardMode || wizardStep !== WIZARD_STEP_REVIEW || !socket || !socket.connected) {
-            return;
-        }
-
-        dispatch(fetchSyncState({ socket }));
-    }, [dispatch, socket, wizardMode, wizardStep]);
 
     const handleMapClick = async (event) => {
         const lngLat = event?.lngLat;
@@ -731,180 +617,6 @@ const LocationPage = ({ wizardMode = false, onWizardCompleted = null }) => {
         dispatch(setQth(getMaidenhead(savedState.lat, savedState.lon)));
         reCenterMap(savedState.lat, savedState.lon);
     };
-
-    const handleWizardNext = () => {
-        if (!wizardMode || isWizardLastStep || !canAdvanceWizard) return;
-        setWizardStep((currentStep) => currentStep + 1);
-    };
-
-    const canNavigateToWizardStep = React.useCallback((targetStep) => {
-        if (!wizardMode) return false;
-        if (locationSaving || wizardRestoreLoading) return false;
-        if (targetStep < WIZARD_STEP_RESTORE || targetStep > WIZARD_STEP_REVIEW) return false;
-
-        // Always allow revisiting current/past steps.
-        if (targetStep <= wizardStep) return true;
-
-        // Moving to Review requires valid coordinates/location.
-        if (targetStep >= WIZARD_STEP_REVIEW && !hasLocation) return false;
-
-        return true;
-    }, [wizardMode, locationSaving, wizardRestoreLoading, wizardStep, hasLocation]);
-
-    const handleWizardStepClick = React.useCallback((targetStep) => {
-        if (!canNavigateToWizardStep(targetStep)) return;
-        setWizardStep(targetStep);
-    }, [canNavigateToWizardStep]);
-
-    const handleWizardBack = () => {
-        if (!wizardMode || wizardStep === WIZARD_STEP_RESTORE) return;
-        setWizardStep((currentStep) => currentStep - 1);
-    };
-
-    const handleWizardSave = async () => {
-        const saveSucceeded = await handleSetLocation();
-        if (saveSucceeded && wizardMode && typeof onWizardCompleted === 'function') {
-            onWizardCompleted();
-        }
-    };
-
-    const handleWizardRestoreFileSelect = (event) => {
-        const file = event.target.files?.[0];
-        if (!file) return;
-
-        if (file.size > FULL_RESTORE_MAX_FILE_SIZE_BYTES) {
-            toast.error(
-                t('location.wizard_restore_file_too_large', {
-                    defaultValue: `Selected file exceeds ${FULL_RESTORE_MAX_FILE_SIZE_MB} MB limit. Please choose a smaller backup file.`,
-                })
-            );
-            setWizardRestoreFile(null);
-            setWizardRestoreFileInputKey((current) => current + 1);
-            return;
-        }
-
-        setWizardRestoreFile(file);
-    };
-
-    const handleWizardRestoreDatabase = async () => {
-        if (!socket || !wizardRestoreFile) return;
-
-        if (wizardRestoreFile.size > FULL_RESTORE_MAX_FILE_SIZE_BYTES) {
-            toast.error(
-                t('location.wizard_restore_file_too_large', {
-                    defaultValue: `Selected file exceeds ${FULL_RESTORE_MAX_FILE_SIZE_MB} MB limit. Please choose a smaller backup file.`,
-                })
-            );
-            return;
-        }
-
-        setWizardRestoreLoading(true);
-        try {
-            const sqlContent = await wizardRestoreFile.text();
-            const response = await socket.emitWithAck('api.call', {
-                cmd: 'database-backup.full_restore',
-                data: {
-                    action: 'full_restore',
-                    sql: sqlContent,
-                    drop_tables: wizardRestoreDropTables,
-                },
-            });
-
-            if (response?.success) {
-                toast.success(
-                    t('location.wizard_restore_success', {
-                        defaultValue: `Backup restored successfully. ${response.tables_created} tables created, ${response.rows_inserted} rows inserted.`,
-                    })
-                );
-                setShowRestoreReloadBackdrop(true);
-                setTimeout(() => {
-                    window.location.reload();
-                }, 1000);
-                return;
-            }
-
-            toast.error(
-                t('location.wizard_restore_failed', {
-                    defaultValue: `Failed to restore database: ${response?.error || 'Unknown error'}`,
-                })
-            );
-        } catch (error) {
-            toast.error(
-                t('location.wizard_restore_error', {
-                    defaultValue: `Error restoring database: ${error?.message || String(error)}`,
-                })
-            );
-        } finally {
-            setWizardRestoreLoading(false);
-        }
-    };
-
-    const wizardRestoreSection = (
-        <SettingsSection
-            title={t('location.wizard_restore_title', { defaultValue: 'Restore Existing Backup (Optional)' })}
-            description={t('location.wizard_restore_help', {
-                defaultValue: 'If you already have a Ground Station backup, restore it now before continuing setup.',
-            })}
-            sx={locationCardSx}
-        >
-            <Stack spacing={2}>
-                <Alert severity="warning">
-                    {t('location.wizard_restore_warning', {
-                        defaultValue: 'This replaces database content with the selected backup file.',
-                    })}
-                </Alert>
-                <Alert severity="info">
-                    {t('location.wizard_restore_file_requirements', {
-                        defaultValue: `Use a full SQL backup that includes schema and data. Maximum size: ${FULL_RESTORE_MAX_FILE_SIZE_MB} MB.`,
-                    })}
-                </Alert>
-                <FormControlLabel
-                    control={(
-                        <Checkbox
-                            checked={wizardRestoreDropTables}
-                            onChange={(event) => setWizardRestoreDropTables(event.target.checked)}
-                            disabled={wizardRestoreLoading}
-                        />
-                    )}
-                    label={t('location.wizard_restore_drop_tables', {
-                        defaultValue: 'Drop existing tables before restore (recommended)',
-                    })}
-                />
-                <Button
-                    variant="outlined"
-                    component="label"
-                    disabled={wizardRestoreLoading}
-                    fullWidth
-                >
-                    {t('location.wizard_restore_select_file', { defaultValue: 'Select Full Backup SQL File' })}
-                    <input
-                        key={wizardRestoreFileInputKey}
-                        type="file"
-                        hidden
-                        accept=".sql"
-                        onChange={handleWizardRestoreFileSelect}
-                    />
-                </Button>
-                {wizardRestoreFile && (
-                    <Typography variant="body2" color="text.secondary">
-                        {t('location.wizard_restore_selected_file', {
-                            defaultValue: `Selected: ${wizardRestoreFile.name}`,
-                        })}
-                    </Typography>
-                )}
-                <Button
-                    variant="contained"
-                    color="warning"
-                    onClick={handleWizardRestoreDatabase}
-                    disabled={!wizardRestoreFile || wizardRestoreLoading}
-                >
-                    {wizardRestoreLoading
-                        ? <CircularProgress size={20} color="inherit" />
-                        : t('location.wizard_restore_button', { defaultValue: 'Restore Backup and Reload' })}
-                </Button>
-            </Stack>
-        </SettingsSection>
-    );
 
     const stationIdentitySection = (
         <SettingsSection
@@ -1398,126 +1110,6 @@ const LocationPage = ({ wizardMode = false, onWizardCompleted = null }) => {
         </SettingsSection>
     );
 
-    const wizardReviewSection = (
-        <SettingsSection
-            title={t('location.wizard_review_title', { defaultValue: 'Review Configuration' })}
-            description={t('location.wizard_review_help', {
-                defaultValue: 'Verify station identity and coordinates, then save to continue.',
-            })}
-            sx={locationCardSx}
-        >
-            <Grid container spacing={2} columns={12}>
-                <Grid size={{ xs: 12, sm: 6 }}>
-                    <Typography variant="caption" color="text.secondary">{t('location.station_name', { defaultValue: 'Station Name' })}</Typography>
-                    <Typography variant="body1" sx={{ color: 'text.primary', fontWeight: 600 }}>
-                        {normalizeStationName(stationName) || 'home'}
-                    </Typography>
-                </Grid>
-                <Grid size={{ xs: 12, sm: 6 }}>
-                    <Typography variant="caption" color="text.secondary">{t('location.ham_callsign', { defaultValue: 'HAM Callsign' })}</Typography>
-                    <Typography variant="body1" sx={{ color: 'text.primary', fontWeight: 600 }}>
-                        {stationCallsignLabel || t('location.state_unavailable', { defaultValue: 'Unavailable' })}
-                    </Typography>
-                </Grid>
-                <Grid size={{ xs: 12, sm: 6 }}>
-                    <Typography variant="caption" color="text.secondary">{t('location.station_type', { defaultValue: 'Station Type' })}</Typography>
-                    <Typography variant="body1" sx={{ color: 'text.primary', fontWeight: 600, textTransform: 'capitalize' }}>
-                        {stationType}
-                    </Typography>
-                </Grid>
-                <Grid size={{ xs: 12, sm: 6 }}>
-                    <Typography variant="caption" color="text.secondary">{t('location.horizon_mask', { defaultValue: 'Horizon Mask (°)' })}</Typography>
-                    <Typography variant="body1" sx={{ color: 'text.primary', fontWeight: 600 }}>
-                        {`${stationHorizonMask}\u00b0`}
-                    </Typography>
-                </Grid>
-            </Grid>
-        </SettingsSection>
-    );
-
-    const wizardOrbitalSyncSection = (
-        <SettingsSection
-            title={t('location.orbital_sync_title', { defaultValue: 'Orbital Data Sync' })}
-            sx={locationCardSx}
-        >
-            <Stack spacing={1.1}>
-                <Typography variant="caption" color="text.secondary">
-                    {t('location.orbital_sync_review_help', {
-                        defaultValue: 'Current backend synchronization state for orbital data.',
-                    })}
-                </Typography>
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ xs: 'stretch', sm: 'center' }}>
-                    <Chip
-                        size="small"
-                        color={orbitalSyncUiState.color}
-                        icon={orbitalSyncUiState.icon}
-                        label={orbitalSyncUiState.label}
-                    />
-                    <Typography variant="caption" color="text.secondary">
-                        {t('location.orbital_sync_last_update', { defaultValue: 'Last update' })}: {syncLastUpdateText}
-                    </Typography>
-                </Stack>
-                {orbitalSyncUiState.progress != null && (
-                    <LinearProgress
-                        variant="determinate"
-                        value={orbitalSyncUiState.progress}
-                        sx={{ height: 8, borderRadius: 1 }}
-                    />
-                )}
-                {orbitalSyncUiState.error && (
-                    <Typography variant="caption" color="error.main">
-                        {orbitalSyncUiState.error}
-                    </Typography>
-                )}
-                {syncStatus === 'loading' && (
-                    <Typography variant="caption" color="text.secondary">
-                        {t('location.state_loading', { defaultValue: 'Loading...' })}
-                    </Typography>
-                )}
-            </Stack>
-        </SettingsSection>
-    );
-
-    const wizardReviewContent = (
-        <Grid container spacing={2} columns={12} alignItems="stretch">
-            <Grid
-                size={{ xs: 12, md: 5 }}
-                sx={{
-                    display: 'flex',
-                    '& > *': {
-                        width: '100%',
-                        height: '100%',
-                    },
-                }}
-            >
-                {wizardReviewSection}
-            </Grid>
-            <Grid
-                size={{ xs: 12, md: 7 }}
-                sx={{
-                    display: 'flex',
-                    '& > *': {
-                        width: '100%',
-                        height: '100%',
-                    },
-                }}
-            >
-                {stationCoordinatesSection}
-            </Grid>
-            <Grid
-                size={{ xs: 12, md: 12 }}
-                sx={{
-                    display: 'flex',
-                    '& > *': {
-                        width: '100%',
-                    },
-                }}
-            >
-                {wizardOrbitalSyncSection}
-            </Grid>
-        </Grid>
-    );
-
     const defaultLocationContent = (
         <>
             <Grid container spacing={2} columns={{ xs: 1, sm: 1, md: 1, lg: 2 }}>
@@ -1565,113 +1157,14 @@ const LocationPage = ({ wizardMode = false, onWizardCompleted = null }) => {
             </SettingsActionFooter>
         </>
     );
-
-    const wizardLocationContent = (
-        <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-            <Box sx={{ px: { xs: 0, sm: 1 } }}>
-                <Box
-                    sx={{
-                        position: 'sticky',
-                        top: 0,
-                        zIndex: 3,
-                        py: 0.75,
-                        mb: '2em',
-                        backgroundColor: (theme) => (
-                            theme.palette.mode === 'dark'
-                                ? theme.palette.background.elevated
-                                : theme.palette.background.paper
-                        ),
-                        borderBottom: '1px solid',
-                        borderColor: 'divider',
-                    }}
-                >
-                    <Stepper activeStep={wizardStep} alternativeLabel>
-                        {wizardSteps.map((label, index) => (
-                            <Step key={label} completed={index < wizardStep}>
-                                <StepButton
-                                    onClick={() => handleWizardStepClick(index)}
-                                    disabled={!canNavigateToWizardStep(index)}
-                                >
-                                    {label}
-                                </StepButton>
-                            </Step>
-                        ))}
-                    </Stepper>
-                </Box>
-            </Box>
-
-            <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
-                {wizardStep === WIZARD_STEP_RESTORE && (
-                    <Stack spacing={2}>
-                        {wizardRestoreSection}
-                    </Stack>
-                )}
-
-                {wizardStep === WIZARD_STEP_IDENTITY && (
-                    <Stack spacing={2}>
-                        {stationIdentitySection}
-                    </Stack>
-                )}
-
-                {wizardStep === WIZARD_STEP_COORDINATES && (
-                    <Stack spacing={2}>
-                        {wizardMapSection}
-                    </Stack>
-                )}
-
-                {wizardStep === WIZARD_STEP_REVIEW && (
-                    <Stack spacing={2}>
-                        {wizardReviewContent}
-                    </Stack>
-                )}
-            </Box>
-
-            <SettingsActionFooter
-                statusText={wizardStep === WIZARD_STEP_RESTORE
-                    ? t('location.wizard_restore_skip_help', {
-                        defaultValue: 'You can skip this step and continue with a fresh setup.',
-                    })
-                    : ''}
-                mobileInline
-                sx={{
-                    mt: 'auto',
-                    zIndex: 4,
-                    backgroundColor: (theme) => (
-                        theme.palette.mode === 'dark'
-                            ? alpha(theme.palette.grey[700], 0.18)
-                            : alpha(theme.palette.grey[100], 0.9)
-                    ),
-                }}
-            >
-                <Button
-                    variant="outlined"
-                    onClick={handleWizardBack}
-                    disabled={wizardStep === WIZARD_STEP_RESTORE || locationSaving || wizardRestoreLoading}
-                >
-                    {t('location.back', { defaultValue: 'Back' })}
-                </Button>
-                {isWizardLastStep ? (
-                    <Button
-                        variant="contained"
-                        disabled={!canSave || !isDifferentFromSaved}
-                        aria-label={t('location.save_location')}
-                        onClick={handleWizardSave}
-                    >
-                        {locationSaving
-                            ? t('location.state_saving', { defaultValue: 'Saving...' })
-                            : t('location.finish_setup', { defaultValue: 'Save and Continue' })}
-                    </Button>
-                ) : (
-                    <Button
-                        variant="contained"
-                        onClick={handleWizardNext}
-                        disabled={!canAdvanceWizard || locationSaving || wizardRestoreLoading}
-                    >
-                        {t('location.next', { defaultValue: 'Next' })}
-                    </Button>
-                )}
-            </SettingsActionFooter>
-        </Box>
+    const wizardReviewData = React.useMemo(
+        () => ({
+            stationName: normalizeStationName(stationName) || 'home',
+            stationCallsignLabel,
+            stationType,
+            stationHorizonMask,
+        }),
+        [stationCallsignLabel, stationHorizonMask, stationName, stationType]
     );
 
     return (
@@ -1701,7 +1194,26 @@ const LocationPage = ({ wizardMode = false, onWizardCompleted = null }) => {
                     />
                 )}
 
-                {wizardMode ? wizardLocationContent : defaultLocationContent}
+                {wizardMode ? (
+                    <SetupWizard
+                        wizardBackendReady={wizardBackendReady}
+                        wizardRequireAdminSetup={wizardRequireAdminSetup}
+                        hasLocation={hasLocation}
+                        hasPersistedLocation={hasPersistedLocation}
+                        canSave={canSave}
+                        isDifferentFromSaved={isDifferentFromSaved}
+                        locationSaving={locationSaving}
+                        onPersistLocation={handleSetLocation}
+                        onWizardCompleted={onWizardCompleted}
+                        stationIdentitySection={stationIdentitySection}
+                        stationCoordinatesSection={stationCoordinatesSection}
+                        wizardMapSection={wizardMapSection}
+                        reviewData={wizardReviewData}
+                        sectionSx={locationCardSx}
+                    />
+                ) : (
+                    defaultLocationContent
+                )}
             </Stack>
 
             <Dialog
@@ -1765,18 +1277,6 @@ const LocationPage = ({ wizardMode = false, onWizardCompleted = null }) => {
                     </Button>
                 </DialogActions>
             </Dialog>
-
-            <Backdrop
-                sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }}
-                open={showRestoreReloadBackdrop}
-            >
-                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                    <CircularProgress color="inherit" size={60} />
-                    <Typography variant="h6" sx={{ mt: 2 }}>
-                        {t('location.wizard_restore_reloading', { defaultValue: 'Reloading application...' })}
-                    </Typography>
-                </Box>
-            </Backdrop>
         </SettingsSurface>
     );
 };

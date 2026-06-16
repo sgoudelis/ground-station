@@ -27,9 +27,8 @@ import GroupWorkIcon from '@mui/icons-material/GroupWork';
 import WavesIcon from '@mui/icons-material/Waves';
 import FolderIcon from '@mui/icons-material/Folder';
 import SettingsApplicationsIcon from '@mui/icons-material/SettingsApplications';
-import TuneIcon from '@mui/icons-material/Tune';
-import HubIcon from '@mui/icons-material/Hub';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
+import GroupIcon from '@mui/icons-material/Group';
 import i18n from '../i18n/config.js';
 import { CelestialSolarIcon, TleIcon } from '../components/common/custom-icons.jsx';
 import { Box, CircularProgress } from '@mui/material';
@@ -247,7 +246,7 @@ const SchedulerIconWithStatus = () => {
     );
 };
 
-export const getNavigation = ({ showCelestial = false } = {}) => {
+export const getNavigation = ({ showCelestial = false, isAdmin = false } = {}) => {
     const operationsSection = [
         {
             kind: 'header',
@@ -320,19 +319,14 @@ export const getNavigation = ({ showCelestial = false } = {}) => {
             icon: <SettingsApplicationsIcon/>,
         },
         {
-            segment: 'admin/system/preferences',
-            title: i18n.t('preferences', { ns: 'navigation' }),
-            icon: <TuneIcon/>,
-        },
-        {
-            segment: 'admin/system/integrations',
-            title: i18n.t('integrations', { ns: 'navigation', defaultValue: 'Integrations' }),
-            icon: <HubIcon/>,
-        },
-        {
             segment: 'admin/system/location',
             title: i18n.t('location', { ns: 'navigation' }),
             icon: <LocationOnIcon/>,
+        },
+        {
+            segment: 'admin/system/users',
+            title: i18n.t('users', { ns: 'navigation', defaultValue: 'Users' }),
+            icon: <GroupIcon />,
         },
         {
             segment: 'admin/system/hardware',
@@ -351,10 +345,11 @@ export const getNavigation = ({ showCelestial = false } = {}) => {
         },
     ];
 
-    return [
-        ...operationsSection,
-        ...administrationSection,
-    ];
+    if (!isAdmin) {
+        return [...operationsSection];
+    }
+
+    return [...operationsSection, ...administrationSection];
 };
 
 // Keep NAVIGATION for backward compatibility but make it dynamic

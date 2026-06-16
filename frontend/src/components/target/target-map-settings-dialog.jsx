@@ -45,6 +45,7 @@ import {
     setShowGrid,
     setEnableMapDragging,
     setEnableMapZooming,
+    setAutoSwitchPlanetariumByVisibility,
 } from "./target-slice.jsx";
 import {
     MAP_ENGINE_LEAFLET,
@@ -96,6 +97,7 @@ function TargetMapSettingsDialog({updateBackend}) {
         showGrid,
         enableMapDragging,
         enableMapZooming,
+        autoSwitchPlanetariumByVisibility,
     } = useSelector(state => state.targetSatTrack);
 
     const handleCloseDialog = () => {
@@ -156,6 +158,7 @@ function TargetMapSettingsDialog({updateBackend}) {
                         initialShowGrid={showGrid}
                         initialEnableMapDragging={enableMapDragging}
                         initialEnableMapZooming={enableMapZooming}
+                        initialAutoSwitchPlanetariumByVisibility={autoSwitchPlanetariumByVisibility}
                         initialShowTerminatorLine={showTerminatorLine}
                         mapEngineOptions={TARGET_MAP_ENGINE_OPTIONS}
                         normalizeMapEngineValue={normalizeTargetMapEngine}
@@ -163,6 +166,7 @@ function TargetMapSettingsDialog({updateBackend}) {
                             lockOnTarget: true,
                             enableMapDragging: false,
                             enableMapZooming: false,
+                            autoSwitchPlanetariumByVisibility: false,
                             showPastOrbitPath: true,
                             showFutureOrbitPath: true,
                             showSatelliteCoverage: true,
@@ -195,6 +199,7 @@ function TargetMapSettingsDialog({updateBackend}) {
                         handleShowGrid={(value)=>{dispatch(setShowGrid(value))}}
                         handleEnableMapDragging={(value)=>{dispatch(setEnableMapDragging(value))}}
                         handleEnableMapZooming={(value)=>{dispatch(setEnableMapZooming(value))}}
+                        handleAutoSwitchPlanetariumByVisibility={(value)=>{dispatch(setAutoSwitchPlanetariumByVisibility(value))}}
                         onCancel={handleCloseDialog}
                         updateBackend={updateBackend}
                     />

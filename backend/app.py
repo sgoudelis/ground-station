@@ -14,7 +14,14 @@ from common.logger import get_logger_config, logger  # noqa: E402
 from handlers.socket import register_socketio_handlers  # noqa: E402
 from server.shmmonitor import start_cleanup_thread  # noqa: E402
 from server.shutdown import cleanup_everything, signal_handler  # noqa: E402
-from server.startup import init_db, sio, socket_app  # noqa: E402
+from server.startup import (  # noqa: E402
+    SOCKET_IO_MAX_PAYLOAD_BYTES,
+    SOCKET_IO_PING_INTERVAL_SECONDS,
+    SOCKET_IO_PING_TIMEOUT_SECONDS,
+    init_db,
+    sio,
+    socket_app,
+)
 from server.version import get_version_base  # noqa: E402
 
 try:
@@ -86,6 +93,14 @@ def main() -> None:
             socket_app,
             host=arguments.host,
             port=arguments.port,
+            # Keep Uvicorn WebSocket frame size aligned with Socket.IO/Engine.IO
+            # payload limits configured in server.startup, otherwise large setup
+            # restore uploads can be disconnected before the backend handler runs.
+            ws_max_size=SOCKET_IO_MAX_PAYLOAD_BYTES,
+            # Align transport ping settings with Socket.IO server heartbeat settings
+            # for long-running restore operations.
+            ws_ping_interval=SOCKET_IO_PING_INTERVAL_SECONDS,
+            ws_ping_timeout=SOCKET_IO_PING_TIMEOUT_SECONDS,
             log_config=get_logger_config(arguments),
         )
     except KeyboardInterrupt:

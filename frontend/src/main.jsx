@@ -29,10 +29,10 @@ import {
     AdminSystemAboutPage,
     AdminSystemGeneralPage,
     AdminSystemHardwarePage,
-    AdminSystemIntegrationsPage,
     AdminSystemLocationPage,
     AdminSystemMaintenancePage,
-    AdminSystemPreferencesPage,
+    AdminSystemUsersPage,
+    UserPreferencesPage,
 } from "./components/settings/settings.jsx";
 import EarthViewLayout from "./components/earthview/main-layout.jsx";
 import App from "./App.jsx";
@@ -104,6 +104,10 @@ const router = createBrowserRouter([
                         Component: ScheduledObservationsLayout,
                     },
                     {
+                        path: "preferences",
+                        Component: UserPreferencesPage,
+                    },
+                    {
                         path: "solarsystem",
                         Component: CelestialRouteGuard,
                     },
@@ -126,7 +130,7 @@ const router = createBrowserRouter([
                         children: [
                             {
                                 index: true,
-                                element: <Navigate to="/admin/system/preferences" replace />,
+                                element: <Navigate to="/admin/system/general" replace />,
                             },
                             {
                                 path: "hardware",
@@ -175,7 +179,7 @@ const router = createBrowserRouter([
                                 children: [
                                     {
                                         index: true,
-                                        element: <Navigate to="/admin/system/preferences" replace />,
+                                        element: <Navigate to="/admin/system/general" replace />,
                                     },
                                     {
                                         path: "general",
@@ -183,15 +187,19 @@ const router = createBrowserRouter([
                                     },
                                     {
                                         path: "preferences",
-                                        Component: AdminSystemPreferencesPage,
+                                        element: <Navigate to="/preferences" replace />,
                                     },
                                     {
                                         path: "integrations",
-                                        Component: AdminSystemIntegrationsPage,
+                                        element: <Navigate to="/preferences" replace />,
                                     },
                                     {
                                         path: "location",
                                         Component: AdminSystemLocationPage,
+                                    },
+                                    {
+                                        path: "users",
+                                        Component: AdminSystemUsersPage,
                                     },
                                     {
                                         path: "hardware",
@@ -267,7 +275,7 @@ const router = createBrowserRouter([
                         children: [
                             {
                                 index: true,
-                                element: <Navigate to="/admin/system/preferences" replace />,
+                                element: <Navigate to="/admin/system/general" replace />,
                             },
                             {
                                 path: "general",
@@ -285,20 +293,20 @@ const router = createBrowserRouter([
                             },
                             {
                                 path: "preferences",
-                                element: <Navigate to="/admin/system/preferences" replace />,
+                                element: <Navigate to="/preferences" replace />,
                             },
                             {
                                 path: "integrations",
-                                element: <Navigate to="/admin/system/integrations" replace />,
+                                element: <Navigate to="/preferences" replace />,
                             },
                             {
                                 path: "location",
                                 element: <Navigate to="/admin/system/location" replace />,
                             },
-                            // {
-                            //     path: "users",
-                            //     Component: SettingsTabUsers,
-                            // },
+                            {
+                                path: "users",
+                                element: <Navigate to="/admin/system/users" replace />,
+                            },
                             {
                                 path: "maintenance",
                                 element: <Navigate to="/admin/system/maintenance" replace />,

@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-
+import asyncio
 import html
 import json
 import re
@@ -64,6 +64,82 @@ def _split_sql_statements(sql_content: str) -> List[str]:
         statements.append(trailing)
 
     return statements
+
+
+def _parse_full_restore_sql(sql: str) -> Dict[str, Any]:
+    """
+    Parse a full-backup SQL payload into statement groups used by restore logic.
+
+    This function is intentionally synchronous so it can run via asyncio.to_thread()
+    and keep the main event loop responsive during large restore uploads.
+    """
+    # Decode HTML entities in the SQL content first.
+    sql = html.unescape(sql)
+
+    # Parse SQL into lines and remove comments/empty lines.
+    lines = []
+    for line in sql.split("\n"):
+        stripped = line.strip()
+        # Keep the line if it's not empty and not a comment.
+        if stripped and not stripped.startswith("--"):
+            lines.append(line)
+
+    # Join multi-line statements.
+    sql_content = "\n".join(lines)
+
+    # Split statements safely to keep semicolons inside quoted text values.
+    statements = _split_sql_statements(sql_content)
+
+    # Separate CREATE (table/index) and INSERT statements.
+    create_statements: List[str] = []
+    index_statements: List[str] = []
+    insert_statements: List[str] = []
+    alembic_create = None
+    alembic_inserts: List[str] = []
+
+    for stmt in statements:
+        stmt_upper = stmt.upper().strip()
+        if stmt_upper.startswith("CREATE TABLE"):
+            # Separate alembic_version CREATE statement.
+            if "ALEMBIC_VERSION" in stmt_upper:
+                alembic_create = stmt
+            else:
+                create_statements.append(stmt)
+        elif stmt_upper.startswith("CREATE INDEX") or stmt_upper.startswith("CREATE UNIQUE INDEX"):
+            # Keep index DDL so restored databases preserve lookup/uniqueness constraints.
+            index_statements.append(stmt)
+        elif stmt_upper.startswith("INSERT INTO"):
+            # Separate alembic_version INSERT statements.
+            if "ALEMBIC_VERSION" in stmt_upper:
+                alembic_inserts.append(stmt)
+            else:
+                insert_statements.append(stmt)
+        # Skip any other statements (like malformed content).
+
+    if not create_statements and not alembic_create:
+        raise ValueError("No CREATE TABLE statements found in backup file")
+
+    # Validate that we only have safe statements.
+    # Only process CREATE TABLE/INDEX and INSERT INTO statements, ignore others.
+    valid_statements = (
+        create_statements
+        + index_statements
+        + insert_statements
+        + ([alembic_create] if alembic_create else [])
+        + alembic_inserts
+    )
+    if len(valid_statements) == 0:
+        raise ValueError(
+            "No valid CREATE TABLE/INDEX or INSERT INTO statements found in backup file"
+        )
+
+    return {
+        "create_statements": create_statements,
+        "index_statements": index_statements,
+        "insert_statements": insert_statements,
+        "alembic_create": alembic_create,
+        "alembic_inserts": alembic_inserts,
+    }
 
 
 def _normalize_optional_json(value):
@@ -288,7 +364,33 @@ async def full_backup() -> Dict[str, Any]:
                     sql_statements.append(schema[0] + ";")
                     sql_statements.append("")
 
-            sql_statements.append("")
+            # Include explicit CREATE INDEX statements. SQLite stores most indexes
+            # outside CREATE TABLE SQL and omitting them can break ON CONFLICT upserts
+            # after restore when uniqueness constraints are index-backed.
+            index_result = await session.execute(
+                text(
+                    """
+                    SELECT sql
+                    FROM sqlite_master
+                    WHERE type='index'
+                      AND name NOT LIKE 'sqlite_%'
+                      AND tbl_name NOT LIKE 'sqlite_%'
+                      AND sql IS NOT NULL
+                    ORDER BY name
+                    """
+                )
+            )
+            index_schemas = index_result.fetchall()
+            if index_schemas:
+                sql_statements.append("-- ========================================")
+                sql_statements.append("-- DATABASE INDEXES")
+                sql_statements.append("-- ========================================")
+                sql_statements.append("")
+                for schema in index_schemas:
+                    if schema[0]:
+                        sql_statements.append(schema[0] + ";")
+                        sql_statements.append("")
+
             sql_statements.append("-- ========================================")
             sql_statements.append("-- TABLE DATA")
             sql_statements.append("-- ========================================")
@@ -331,61 +433,14 @@ async def full_restore(sql: str, drop_tables: bool = True) -> Dict[str, Any]:
         Dict with success status and statistics
     """
     try:
-        # Decode HTML entities in the SQL content first
-        sql = html.unescape(sql)
-
-        # Parse SQL into lines and remove comments/empty lines
-        lines = []
-        for line in sql.split("\n"):
-            stripped = line.strip()
-            # Keep the line if it's not empty and not a comment
-            if stripped and not stripped.startswith("--"):
-                lines.append(line)
-
-        # Join multi-line statements
-        sql_content = "\n".join(lines)
-
-        # Split statements safely to keep semicolons inside quoted text values
-        statements = _split_sql_statements(sql_content)
-
-        # Separate CREATE and INSERT statements
-        create_statements = []
-        insert_statements = []
-        alembic_create = None
-        alembic_inserts = []
-
-        for stmt in statements:
-            stmt_upper = stmt.upper().strip()
-            if stmt_upper.startswith("CREATE TABLE"):
-                # Separate alembic_version CREATE statement
-                if "ALEMBIC_VERSION" in stmt_upper:
-                    alembic_create = stmt
-                else:
-                    create_statements.append(stmt)
-            elif stmt_upper.startswith("INSERT INTO"):
-                # Separate alembic_version INSERT statements
-                if "ALEMBIC_VERSION" in stmt_upper:
-                    alembic_inserts.append(stmt)
-                else:
-                    insert_statements.append(stmt)
-            # Skip any other statements (like HTML entities or malformed content)
-
-        if not create_statements and not alembic_create:
-            return {"success": False, "error": "No CREATE TABLE statements found in backup file"}
-
-        # Validate that we only have safe statements
-        # Only process CREATE TABLE and INSERT INTO statements, ignore others
-        valid_statements = (
-            create_statements
-            + insert_statements
-            + ([alembic_create] if alembic_create else [])
-            + alembic_inserts
-        )
-        if len(valid_statements) == 0:
-            return {
-                "success": False,
-                "error": "No valid CREATE TABLE or INSERT INTO statements found in backup file",
-            }
+        # Parse the uploaded SQL off the main event loop so large restores do not
+        # starve Socket.IO heartbeats and drop the client connection mid-restore.
+        parsed_restore = await asyncio.to_thread(_parse_full_restore_sql, sql)
+        create_statements = parsed_restore["create_statements"]
+        index_statements = parsed_restore["index_statements"]
+        insert_statements = parsed_restore["insert_statements"]
+        alembic_create = parsed_restore["alembic_create"]
+        alembic_inserts = parsed_restore["alembic_inserts"]
 
         async with AsyncSessionLocal() as session:
             try:
@@ -442,6 +497,13 @@ async def full_restore(sql: str, drop_tables: bool = True) -> Dict[str, Any]:
                     await (await session.connection()).exec_driver_sql(stmt)
                     rows_inserted += 1
 
+                # Recreate indexes after data import for faster restore and to ensure
+                # unique lookup constraints required by ON CONFLICT upserts.
+                indexes_created = 0
+                for stmt in index_statements:
+                    await (await session.connection()).exec_driver_sql(stmt)
+                    indexes_created += 1
+
                 # Normalize malformed legacy JSON payloads that can break ORM deserialization.
                 normalized_rows = await _normalize_transmitters_itu_notification(session)
 
@@ -454,6 +516,7 @@ async def full_restore(sql: str, drop_tables: bool = True) -> Dict[str, Any]:
                 return {
                     "success": True,
                     "tables_created": tables_created,
+                    "indexes_created": indexes_created,
                     "rows_inserted": rows_inserted,
                     "rows_normalized": normalized_rows,
                 }

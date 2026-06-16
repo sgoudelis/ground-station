@@ -95,7 +95,7 @@ This project was built with the help of Claude Code and Codex.
 *   **Live DSP Pipeline:** Stream IQ to FFT/waterfall, demodulators, decoders, recorders, and browser consumers through queue-based worker orchestration.
 *   **IQ Recording (SigMF):** Record IQ as `.sigmf-data` + `.sigmf-meta` with center frequency, sample rate, session stats, and target satellite metadata.
 *   **SigMF Playback:** Replay recorded IQ through the same processing pipeline used for live SDR operation.
-*   **Data Decoding + Framing Protocols:** Supported decoder paths include SSTV, FSK, GFSK, GMSK, BPSK, and GNSS, with AX.25/USP/GEOSCAN framing support in the packet pipelines (LoRa/AFSK are currently disabled in the UI).
+*   **Data Decoding + Framing Protocols:** Supported decoder paths include SSTV, FSK, GFSK, GMSK, BPSK, and GNSS, with AX.25/USP/GEOSCAN framing support in the packet pipelines.
 *   **Transcription Services:** Real-time demodulated-audio transcription via Gemini Live or Deepgram, with optional translation and file output under `backend/data/transcriptions/`.
 *   **Scheduled Observations:** APScheduler-driven AOS/LOS orchestration for automatic start/stop of tracking, SDR, decoding, recording, and transcription tasks.
 *   **SatDump Post-Processing:** Optional SatDump processing for IQ recordings, including METEOR LRPT/HRPT pipelines.

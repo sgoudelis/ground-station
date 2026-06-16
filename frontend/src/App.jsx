@@ -20,6 +20,8 @@
 import * as React from 'react';
 import { Outlet } from "react-router";
 import { ReactRouterAppProvider } from "@toolpad/core/react-router";
+import { CssBaseline } from '@mui/material';
+import { ThemeProvider } from '@mui/material/styles';
 import { setupTheme } from './theme.js';
 import { useSocket } from "./components/common/socket.jsx";
 import { AudioProvider } from "./components/dashboard/audio-provider.jsx";
@@ -29,24 +31,35 @@ import { getNavigation } from "./config/navigation.jsx";
 import { BRANDING } from "./config/branding.jsx";
 import { useSocketEventHandlers } from "./hooks/useSocketEventHandlers.jsx";
 import { usePassFetching } from "./hooks/usePassFetching.jsx";
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
+import { loadAuthStatus } from './components/auth/auth-slice.jsx';
+import { resetRuntimeSessionState } from './components/dashboard/dashboard-slice.jsx';
+import ConnectionOverlay from './components/dashboard/reconnecting-overlay.jsx';
+import { LoginScreen, SetupScreen } from './components/auth/screens.jsx';
 
 export default function App() {
-    const { socket } = useSocket();
+    const dispatch = useDispatch();
+    const { socket, handleTokenChange } = useSocket();
     const { i18n } = useTranslation();
     const preferences = useSelector((state) => state.preferences.preferences);
+    const authState = useSelector((state) => state.auth);
+    const dashboardRuntimeState = useSelector((state) => state.dashboard);
+    const authUserRole = String(authState?.user?.role || '').toLowerCase();
+    const isAdmin = authUserRole === 'admin';
     const celestialEnabledPreference = preferences.find((pref) => pref.name === 'celestial_enabled');
     const showCelestial = String(celestialEnabledPreference?.value ?? 'false').toLowerCase() === 'true';
     const [systemTheme, setSystemTheme] = React.useState('dark');
     const navigation = React.useMemo(
-        () => getNavigation({ showCelestial }),
-        [showCelestial, i18n.language],
+        () => getNavigation({ showCelestial, isAdmin }),
+        [showCelestial, isAdmin, i18n.language],
     );
 
     // Get theme preference and create theme
     const themePreference = preferences.find(pref => pref.name === 'theme');
     const themeMode = themePreference ? themePreference.value : 'dark';
+    const [sessionBootstrapped, setSessionBootstrapped] = React.useState(false);
+    const [awaitingRuntimeReset, setAwaitingRuntimeReset] = React.useState(false);
 
     // Listen for system theme changes when 'auto' is selected
     React.useEffect(() => {
@@ -70,6 +83,25 @@ export default function App() {
 
     const dashboardTheme = React.useMemo(() => setupTheme(themeMode), [themeMode, systemTheme]);
 
+    React.useEffect(() => {
+        if (authState.statusInitialized) {
+            return;
+        }
+        dispatch(loadAuthStatus());
+    }, [dispatch, authState.statusInitialized]);
+
+    React.useEffect(() => {
+        // Reset dashboard runtime connection/data flags whenever auth token changes.
+        // This avoids a stale dashboard frame from a previous session during logout/login.
+        dispatch(resetRuntimeSessionState());
+        setSessionBootstrapped(false);
+        setAwaitingRuntimeReset(true);
+    }, [dispatch, authState?.token]);
+
+    React.useEffect(() => {
+        handleTokenChange(authState?.token || null);
+    }, [authState?.token, handleTokenChange]);
+
     // Sync language from Redux to i18n on mount and when it changes
     React.useEffect(() => {
         const languagePref = preferences.find(pref => pref.name === 'language');
@@ -81,8 +113,70 @@ export default function App() {
         }
     }, [preferences, i18n, showCelestial]);
 
-    useSocketEventHandlers(socket);
-    usePassFetching(socket);
+    const appRuntimeEnabled = !authState.setupRequired && authState.authenticated;
+    const dashboardRuntimeReady =
+        (dashboardRuntimeState?.connected ?? false) &&
+        !(dashboardRuntimeState?.initialDataLoading ?? false);
+
+    useSocketEventHandlers(socket, appRuntimeEnabled);
+    usePassFetching(socket, appRuntimeEnabled);
+
+    React.useEffect(() => {
+        if (!authState.authenticated || authState.setupRequired) {
+            setSessionBootstrapped(false);
+            setAwaitingRuntimeReset(false);
+            return;
+        }
+
+        // Require one fresh "not ready" runtime state after token change before
+        // allowing the dashboard to become bootstrapped. This blocks stale
+        // connected/data-ready flags from the previous session.
+        if (awaitingRuntimeReset) {
+            if (!dashboardRuntimeReady) {
+                setAwaitingRuntimeReset(false);
+            }
+            return;
+        }
+
+        if (dashboardRuntimeReady) {
+            setSessionBootstrapped(true);
+        }
+    }, [authState.authenticated, authState.setupRequired, dashboardRuntimeReady, awaitingRuntimeReset]);
+
+    const renderPreAuth = (content) => (
+        <ThemeProvider theme={dashboardTheme}>
+            <CssBaseline />
+            {content}
+        </ThemeProvider>
+    );
+
+    const showBootstrapLoader = !authState.statusInitialized && authState.loadingStatus;
+
+    if (showBootstrapLoader) {
+        return renderPreAuth(<ConnectionOverlay />);
+    }
+
+    if (authState.setupRequired) {
+        return renderPreAuth(
+            <>
+                <SetupScreen />
+                <ToastContainerWithStyles />
+            </>
+        );
+    }
+
+    if (!authState.authenticated) {
+        return renderPreAuth(
+            <>
+                <LoginScreen />
+                <ToastContainerWithStyles />
+            </>
+        );
+    }
+
+    if (!sessionBootstrapped) {
+        return renderPreAuth(<ConnectionOverlay />);
+    }
 
     return (
         <AudioProvider>

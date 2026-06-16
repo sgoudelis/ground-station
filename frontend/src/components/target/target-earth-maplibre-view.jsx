@@ -239,7 +239,7 @@ const TargetAttributionBar = React.memo(function TargetAttributionBar({htmlStrin
     );
 });
 
-const TargetEarthMapLibreView = ({projection = MAPLIBRE_PROJECTION_MERCATOR}) => {
+const TargetEarthMapLibreView = ({projection = MAPLIBRE_PROJECTION_MERCATOR, effectiveMapEngine = null}) => {
     const {socket} = useSocket();
     const dispatch = useDispatch();
     const {t} = useTranslation('target');
@@ -278,8 +278,8 @@ const TargetEarthMapLibreView = ({projection = MAPLIBRE_PROJECTION_MERCATOR}) =>
     const mapViewportRef = useRef(null);
     const popupRef = useRef(null);
     const normalizedMapEngine = useMemo(
-        () => normalizeMapEngine(mapEngine),
-        [mapEngine]
+        () => normalizeMapEngine(effectiveMapEngine || mapEngine),
+        [effectiveMapEngine, mapEngine]
     );
 
     const targetNumber = useMemo(() => {

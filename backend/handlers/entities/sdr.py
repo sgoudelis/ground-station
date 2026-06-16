@@ -19,7 +19,7 @@ from typing import Any, Dict, Optional, Union
 import crud
 from common.pathguard import resolve_sigmf_meta_path
 from common.sdrconfig import SDRConfig
-from crud import fetch_all_preferences
+from crud.preferences import fetch_integration_preferences_map
 from db import AsyncSessionLocal
 from demodulators.amdemodulator import AMDemodulator
 from demodulators.fmdemodulator import FMDemodulator
@@ -27,6 +27,7 @@ from demodulators.fmstereodemodulator import FMStereoDemodulator
 from demodulators.ssbdemodulator import SSBDemodulator
 from handlers.entities.filebrowser import emit_file_browser_state
 from handlers.entities.transcriptionhelpers import fetch_transmitter_and_satellite
+from handlers.routing import get_auth_context
 from pipeline.orchestration.processmanager import process_manager
 from server.audiorecorder import start_audio_recording, stop_audio_recording
 from server.recorder import start_recording, stop_recording
@@ -721,22 +722,16 @@ def _auto_start_transcription(sdr_id, session_id, vfo_number, vfo_state, logger)
         # Fetch API keys from preferences
         async def fetch_and_start():
             async with AsyncSessionLocal() as dbsession:
-                prefs_result = await fetch_all_preferences(dbsession)
-                if not prefs_result["success"]:
-                    logger.debug("Failed to fetch preferences for auto-start transcription")
-                    return
-
-                preferences = prefs_result["data"]
+                auth_context = get_auth_context() or {}
+                user_id = auth_context.get("user_id")
+                preferences = await fetch_integration_preferences_map(dbsession, user_id=user_id)
 
                 # Get provider from VFO state (default to gemini for backward compatibility)
                 provider = getattr(vfo_state, "transcription_provider", "gemini") or "gemini"
 
                 # Get the appropriate API key based on provider
                 if provider == "gemini":
-                    api_key = next(
-                        (p["value"] for p in preferences if p["name"] == "gemini_api_key"),
-                        "",
-                    )
+                    api_key = preferences.get("gemini_api_key", "")
                     if not api_key:
                         logger.debug(
                             "Gemini API key not configured, skipping auto-start transcription"
@@ -744,10 +739,7 @@ def _auto_start_transcription(sdr_id, session_id, vfo_number, vfo_state, logger)
                         return
                     transcription_manager.set_gemini_api_key(api_key)
                 elif provider == "deepgram":
-                    api_key = next(
-                        (p["value"] for p in preferences if p["name"] == "deepgram_api_key"),
-                        "",
-                    )
+                    api_key = preferences.get("deepgram_api_key", "")
                     if not api_key:
                         logger.debug(
                             "Deepgram API key not configured, skipping auto-start transcription"
@@ -756,14 +748,7 @@ def _auto_start_transcription(sdr_id, session_id, vfo_number, vfo_state, logger)
                     transcription_manager.set_deepgram_api_key(api_key)
 
                     # Set Google Translate API key for Deepgram translation
-                    google_translate_key = next(
-                        (
-                            p["value"]
-                            for p in preferences
-                            if p["name"] == "google_translate_api_key"
-                        ),
-                        "",
-                    )
+                    google_translate_key = preferences.get("google_translate_api_key", "")
                     transcription_manager.set_google_translate_api_key(google_translate_key)
                 else:
                     logger.warning(

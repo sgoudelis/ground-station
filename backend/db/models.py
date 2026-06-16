@@ -28,10 +28,12 @@ from sqlalchemy import (
     Enum,
     Float,
     ForeignKey,
+    Index,
     Integer,
     MetaData,
     String,
     TypeDecorator,
+    text,
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.ext.declarative import declarative_base
@@ -119,6 +121,17 @@ class SDRType(str, PyEnum):
     SOAPYSDRREMOTE = "soapysdrremote"
     UHD = "uhd"
     SIGMFPLAYBACK = "sigmfplayback"
+
+
+class UserRole(str, PyEnum):
+    ADMIN = "admin"
+    OPERATOR = "operator"
+
+
+class PreferenceScope(str, PyEnum):
+    USER = "user"
+    SYSTEM = "system"
+    BOOTSTRAP = "bootstrap"
 
 
 class Satellites(Base):
@@ -326,6 +339,13 @@ class Locations(Base):
 class Preferences(Base):
     __tablename__ = "preferences"
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=True)
+    scope = Column(
+        String,
+        nullable=False,
+        default=PreferenceScope.BOOTSTRAP.value,
+        server_default=PreferenceScope.BOOTSTRAP.value,
+    )
     name = Column(String, nullable=False)
     value = Column(String, nullable=False)
     added = Column(AwareDateTime, nullable=False, default=datetime.now(timezone.utc))
@@ -334,6 +354,43 @@ class Preferences(Base):
         nullable=True,
         default=datetime.now(timezone.utc),
         onupdate=datetime.now(timezone.utc),
+    )
+
+    __table_args__ = (
+        CheckConstraint(
+            "scope IN ('user', 'system', 'bootstrap')",
+            name="ck_preferences_scope",
+        ),
+        CheckConstraint(
+            "(scope = 'user' AND user_id IS NOT NULL) OR "
+            "(scope IN ('system', 'bootstrap') AND user_id IS NULL)",
+            name="ck_preferences_scope_user_id",
+        ),
+        # User scoped keys are unique per user account.
+        Index(
+            "uq_preferences_user_name",
+            "user_id",
+            "name",
+            unique=True,
+            sqlite_where=text("scope = 'user'"),
+            postgresql_where=text("scope = 'user'"),
+        ),
+        # System scoped keys are global singletons.
+        Index(
+            "uq_preferences_system_name",
+            "name",
+            unique=True,
+            sqlite_where=text("scope = 'system'"),
+            postgresql_where=text("scope = 'system'"),
+        ),
+        # Bootstrap keys exist only before first admin setup and are key-unique.
+        Index(
+            "uq_preferences_bootstrap_name",
+            "name",
+            unique=True,
+            sqlite_where=text("scope = 'bootstrap'"),
+            postgresql_where=text("scope = 'bootstrap'"),
+        ),
     )
 
 
@@ -513,6 +570,22 @@ class CelestialVectorSnapshots(Base):
         onupdate=datetime.now(timezone.utc),
     )
 
+    __table_args__ = (
+        # Keep lookup uniqueness in model metadata so schema bootstrap/restore paths
+        # can recreate this constraint when the DB is rebuilt from SQL dumps.
+        Index(
+            "ix_celestial_vector_snapshots_lookup",
+            "target_id",
+            "epoch_bucket_utc",
+            "past_hours",
+            "future_hours",
+            "step_minutes",
+            "frame",
+            "center",
+            unique=True,
+        ),
+    )
+
 
 class ObservationStatus(str, PyEnum):
     SCHEDULED = "scheduled"
@@ -630,6 +703,65 @@ class ScheduledObservations(Base):
     execution_log = Column(JSON, nullable=True)  # Array of timestamped events/errors
 
     # Metadata
+    created_at = Column(AwareDateTime, nullable=False, default=datetime.now(timezone.utc))
+    updated_at = Column(
+        AwareDateTime,
+        nullable=False,
+        default=datetime.now(timezone.utc),
+        onupdate=datetime.now(timezone.utc),
+    )
+
+
+class Users(Base):
+    __tablename__ = "users"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
+    username = Column(String, nullable=False)
+    username_norm = Column(String, nullable=False, unique=True, index=True)
+    password_hash = Column(String, nullable=False)
+    role = Column(
+        String, nullable=False, default=UserRole.OPERATOR.value, server_default="operator"
+    )
+    is_active = Column(Boolean, nullable=False, default=True, server_default="1")
+    last_login_at = Column(AwareDateTime, nullable=True)
+    failed_login_count = Column(Integer, nullable=False, default=0, server_default="0")
+    locked_until = Column(AwareDateTime, nullable=True)
+    created_by_user_id = Column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    updated_by_user_id = Column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    created_at = Column(AwareDateTime, nullable=False, default=datetime.now(timezone.utc))
+    updated_at = Column(
+        AwareDateTime,
+        nullable=False,
+        default=datetime.now(timezone.utc),
+        onupdate=datetime.now(timezone.utc),
+    )
+
+    __table_args__ = (
+        CheckConstraint(
+            "role IN ('admin', 'operator')",
+            name="ck_users_role",
+        ),
+    )
+
+
+class AuthSessions(Base):
+    __tablename__ = "auth_sessions"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
+    user_id = Column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    token_hash = Column(String, nullable=False, unique=True, index=True)
+    expires_at = Column(AwareDateTime, nullable=False, index=True)
+    revoked_at = Column(AwareDateTime, nullable=True, index=True)
+    revoke_reason = Column(String, nullable=True)
+    last_seen_at = Column(AwareDateTime, nullable=True)
+    created_ip = Column(String, nullable=True)
+    created_user_agent = Column(String, nullable=True)
     created_at = Column(AwareDateTime, nullable=False, default=datetime.now(timezone.utc))
     updated_at = Column(
         AwareDateTime,

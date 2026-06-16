@@ -52,6 +52,7 @@ import tasksReducer from '../tasks/tasks-slice.jsx';
 import celestialReducer from '../celestial/celestial-slice.jsx';
 import celestialMonitoredReducer from '../celestial/monitored-slice.jsx';
 import celestialDisplayReducer from '../celestial/celestial-display-slice.jsx';
+import authReducer from '../auth/auth-slice.jsx';
 import backendSyncMiddleware from '../waterfall/vfo-marker/vfo-middleware.jsx';
 
 const storage = storageEngine?.default ?? storageEngine;
@@ -167,7 +168,7 @@ const preferencesPersistConfig = {
 const targetSatTrackPersistConfig = {
     key: 'targetSatTrack',
     storage,
-    whitelist: ['passesTableSortModel', 'trackerId', 'lockOnTarget']
+    whitelist: ['passesTableSortModel', 'trackerId', 'lockOnTarget', 'autoSwitchPlanetariumByVisibility']
 };
 
 // Persist configuration for earth view tracking slice
@@ -281,6 +282,27 @@ const celestialDisplayPersistConfig = {
     whitelist: ['solarSystem', 'planetarium'],
 };
 
+const authPersistConfig = {
+    key: 'auth',
+    storage,
+    stateReconciler: (inboundState, originalState) => {
+        // Keep auth rehydration strict. Older persisted payloads may still contain
+        // transient fields (e.g. authenticated/loadingStatus) from previous builds,
+        // which can cause UI flicker during app bootstrap.
+        if (!inboundState) {
+            return originalState;
+        }
+        return {
+            ...originalState,
+            token: inboundState.token ?? null,
+            user: inboundState.user ?? null,
+            showLogoutConfirmation:
+                inboundState.showLogoutConfirmation ?? originalState.showLogoutConfirmation,
+        };
+    },
+    whitelist: ['token', 'user', 'showLogoutConfirmation'],
+};
+
 
 // Wrap reducers with persistReducer
 const persistedWaterfallReducer = persistReducer(waterfallPersistConfig, waterfallReducer);
@@ -314,6 +336,7 @@ const persistedTasksReducer = persistReducer(tasksPersistConfig, tasksReducer);
 const persistedCelestialReducer = persistReducer(celestialPersistConfig, celestialReducer);
 const persistedCelestialMonitoredReducer = persistReducer(celestialMonitoredPersistConfig, celestialMonitoredReducer);
 const persistedCelestialDisplayReducer = persistReducer(celestialDisplayPersistConfig, celestialDisplayReducer);
+const persistedAuthReducer = persistReducer(authPersistConfig, authReducer);
 
 
 export const store = configureStore({
@@ -348,6 +371,7 @@ export const store = configureStore({
         celestial: persistedCelestialReducer,
         celestialMonitored: persistedCelestialMonitoredReducer,
         celestialDisplay: persistedCelestialDisplayReducer,
+        auth: persistedAuthReducer,
     },
     devTools: process.env.NODE_ENV !== "production",
     middleware: (getDefaultMiddleware) =>

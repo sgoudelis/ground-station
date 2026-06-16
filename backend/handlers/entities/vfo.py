@@ -20,11 +20,12 @@ from typing import Any, Dict, Optional, Union
 
 from sqlalchemy import select
 
-from crud.preferences import fetch_all_preferences
+from crud.preferences import fetch_integration_preferences_map
 from db import AsyncSessionLocal
 from db.models import Satellites, Transmitters
 from handlers.entities.sdr import handle_vfo_demodulator_state
 from handlers.entities.transcriptionhelpers import fetch_transmitter_and_satellite
+from handlers.routing import get_auth_context
 from pipeline.config.decoderconfigservice import decoder_config_service
 from pipeline.orchestration.processmanager import process_manager
 from pipeline.registries.decoderregistry import decoder_registry
@@ -350,92 +351,73 @@ async def toggle_transcription(
             # Fetch API key from preferences based on provider
             try:
                 async with AsyncSessionLocal() as dbsession:
-                    prefs_result = await fetch_all_preferences(dbsession)
-                    if prefs_result["success"]:
-                        preferences = prefs_result["data"]
+                    auth_context = get_auth_context() or {}
+                    user_id = auth_context.get("user_id")
+                    preferences = await fetch_integration_preferences_map(
+                        dbsession, user_id=user_id
+                    )
 
-                        # Get the appropriate API key based on provider
-                        if provider == "gemini":
-                            api_key = next(
-                                (p["value"] for p in preferences if p["name"] == "gemini_api_key"),
-                                "",
-                            )
-                            if api_key:
-                                transcription_manager.set_gemini_api_key(api_key)
-                                logger.info("Updated transcription manager with Gemini API key")
-                            else:
-                                logger.warning("Gemini API key not configured in preferences")
-                        elif provider == "deepgram":
-                            api_key = next(
-                                (
-                                    p["value"]
-                                    for p in preferences
-                                    if p["name"] == "deepgram_api_key"
-                                ),
-                                "",
-                            )
-                            if api_key:
-                                transcription_manager.set_deepgram_api_key(api_key)
-                                logger.info("Updated transcription manager with Deepgram API key")
-
-                                # Set Google Translate API key for Deepgram translation
-                                google_translate_key = next(
-                                    (
-                                        p["value"]
-                                        for p in preferences
-                                        if p["name"] == "google_translate_api_key"
-                                    ),
-                                    "",
-                                )
-                                transcription_manager.set_google_translate_api_key(
-                                    google_translate_key
-                                )
-                                logger.info(
-                                    "Updated transcription manager with Google Translate API key"
-                                )
-                            else:
-                                logger.warning("Deepgram API key not configured in preferences")
-                        else:
-                            logger.error(f"Unknown transcription provider: {provider}")
-                            api_key = None
-
+                    # Get the appropriate API key based on provider
+                    if provider == "gemini":
+                        api_key = preferences.get("gemini_api_key", "")
                         if api_key:
-                            # Fetch transmitter and satellite info
-                            satellite_dict = None
-                            transmitter_dict = None
+                            transcription_manager.set_gemini_api_key(api_key)
+                            logger.info("Updated transcription manager with Gemini API key")
+                        else:
+                            logger.warning("Gemini API key not configured in preferences")
+                    elif provider == "deepgram":
+                        api_key = preferences.get("deepgram_api_key", "")
+                        if api_key:
+                            transcription_manager.set_deepgram_api_key(api_key)
+                            logger.info("Updated transcription manager with Deepgram API key")
 
-                            if (
-                                vfo_state
-                                and vfo_state.locked_transmitter_id
-                                and vfo_state.locked_transmitter_id != "none"
-                            ):
-                                transmitter_dict, satellite_dict = (
-                                    await fetch_transmitter_and_satellite(
-                                        vfo_state.locked_transmitter_id
-                                    )
+                            # Set Google Translate API key for Deepgram translation
+                            google_translate_key = preferences.get("google_translate_api_key", "")
+                            transcription_manager.set_google_translate_api_key(google_translate_key)
+                            logger.info(
+                                "Updated transcription manager with Google Translate API key"
+                            )
+                        else:
+                            logger.warning("Deepgram API key not configured in preferences")
+                    else:
+                        logger.error(f"Unknown transcription provider: {provider}")
+                        api_key = None
+
+                    if api_key:
+                        # Fetch transmitter and satellite info
+                        satellite_dict = None
+                        transmitter_dict = None
+
+                        if (
+                            vfo_state
+                            and vfo_state.locked_transmitter_id
+                            and vfo_state.locked_transmitter_id != "none"
+                        ):
+                            transmitter_dict, satellite_dict = (
+                                await fetch_transmitter_and_satellite(
+                                    vfo_state.locked_transmitter_id
                                 )
-
-                            # Start/restart can stop old worker and unsubscribe queues.
-                            # Run in a worker thread so Socket.IO event loop stays responsive.
-                            success = await asyncio.to_thread(
-                                transcription_manager.start_transcription,
-                                sdr_id=sdr_id,
-                                session_id=sid,
-                                vfo_number=vfo_number,
-                                language=language,
-                                translate_to=translate_to,
-                                provider=provider,
-                                satellite=satellite_dict,
-                                transmitter=transmitter_dict,
                             )
 
-                            if not success:
-                                logger.warning(
-                                    f"Failed to start {provider} transcription worker for VFO {vfo_number}, "
-                                    f"updating VFO state only"
-                                )
-                    else:
-                        logger.warning("Failed to fetch preferences, updating VFO state only")
+                        # Start/restart can stop old worker and unsubscribe queues.
+                        # Run in a worker thread so Socket.IO event loop stays responsive.
+                        success = await asyncio.to_thread(
+                            transcription_manager.start_transcription,
+                            sdr_id=sdr_id,
+                            session_id=sid,
+                            vfo_number=vfo_number,
+                            language=language,
+                            translate_to=translate_to,
+                            provider=provider,
+                            satellite=satellite_dict,
+                            transmitter=transmitter_dict,
+                        )
+
+                        if not success:
+                            logger.warning(
+                                f"Failed to start {provider} transcription worker for VFO {vfo_number}, "
+                                f"updating VFO state only"
+                            )
             except Exception as e:
                 logger.error(
                     f"Error fetching API key for {provider}: {e}, updating VFO state only",

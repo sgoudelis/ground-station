@@ -602,6 +602,15 @@ const TargetMapCompositeView = ({}) => {
         effectiveRotatorData?.tracking,
         effectiveTrackingState?.rotator_state,
     ]);
+    const planetariumRotatorMinElevation = useMemo(() => {
+        const connected = effectiveRotatorData?.connected === true;
+        const minElevation = Number(effectiveRotatorData?.minel);
+        if (!connected || !Number.isFinite(minElevation)) return null;
+        return minElevation;
+    }, [
+        effectiveRotatorData?.connected,
+        effectiveRotatorData?.minel,
+    ]);
     const clearRenderedSatelliteLayers = useCallback(() => {
         setCurrentPastSatellitesPaths([]);
         setCurrentFutureSatellitesPaths([]);
@@ -1129,6 +1138,7 @@ const TargetMapCompositeView = ({}) => {
                                     selectedTargetKeys={nonSatelliteTargetKey ? [nonSatelliteTargetKey] : []}
                                     focusTargetKey={nonSatelliteTargetKey}
                                     rotatorCrosshair={planetariumRotatorCrosshair}
+                                    rotatorMinElevation={planetariumRotatorMinElevation}
                                     enableMapDragging={targetViewEnableDragging}
                                     enableMapZooming={targetViewEnableZooming}
                                     fitAllSignal={nonSatelliteFitAllSignal}

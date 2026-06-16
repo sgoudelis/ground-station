@@ -20,14 +20,22 @@ from typing import Any, Dict, Optional, Union
 import crud
 from db import AsyncSessionLocal
 from handlers.entities.tracking import emit_tracker_data, emit_ui_tracker_values
+from handlers.routing import get_auth_context
 from tracker.runner import get_all_tracker_managers
+
+
+def _current_user_id() -> Optional[str]:
+    """Return authenticated user id from dispatcher context for user-scoped preference operations."""
+    auth_context = get_auth_context() or {}
+    user_id = str(auth_context.get("user_id") or "").strip()
+    return user_id or None
 
 
 async def fetch_preferences(
     sio: Any, data: Optional[Dict], logger: Any, sid: str
-) -> Dict[str, Union[bool, list]]:
+) -> Dict[str, Union[bool, list, str]]:
     """
-    Fetch all preferences.
+    Fetch user-scoped preferences for the authenticated session user.
 
     Args:
         sio: Socket.IO server instance
@@ -40,15 +48,22 @@ async def fetch_preferences(
     """
     async with AsyncSessionLocal() as dbsession:
         logger.debug("Fetching preferences")
-        preferences = await crud.preferences.fetch_all_preferences(dbsession)
-        return {"success": preferences["success"], "data": preferences.get("data", [])}
+        user_id = _current_user_id()
+        if not user_id:
+            return {"success": False, "data": [], "error": "Authentication required."}
+        preferences = await crud.preferences.fetch_user_preferences(dbsession, user_id)
+        return {
+            "success": preferences["success"],
+            "data": preferences.get("data", []),
+            "error": preferences.get("error"),
+        }
 
 
 async def update_preferences(
     sio: Any, data: Optional[Dict], logger: Any, sid: str
 ) -> Dict[str, Union[bool, list, str]]:
     """
-    Update preferences.
+    Update user-scoped preferences for the authenticated session user.
 
     Args:
         sio: Socket.IO server instance
@@ -64,8 +79,57 @@ async def update_preferences(
         if not data:
             return {"success": False, "data": [], "error": "No data provided"}
 
-        update_reply = await crud.preferences.set_preferences(dbsession, list(data))
-        return {"success": update_reply["success"], "data": update_reply.get("data", [])}
+        user_id = _current_user_id()
+        if not user_id:
+            return {"success": False, "data": [], "error": "Authentication required."}
+
+        update_reply = await crud.preferences.set_user_preferences(dbsession, user_id, list(data))
+        return {
+            "success": update_reply["success"],
+            "data": update_reply.get("data", []),
+            "error": update_reply.get("error"),
+        }
+
+
+async def fetch_system_preferences(
+    sio: Any, data: Optional[Dict], logger: Any, sid: str
+) -> Dict[str, Union[bool, list, str]]:
+    """
+    Fetch global/system preferences.
+
+    These keys are station-wide and are not tied to a specific user profile.
+    """
+    del sio, data, sid
+    async with AsyncSessionLocal() as dbsession:
+        logger.debug("Fetching system preferences")
+        preferences = await crud.preferences.fetch_system_preferences(dbsession)
+        return {
+            "success": preferences["success"],
+            "data": preferences.get("data", []),
+            "error": preferences.get("error"),
+        }
+
+
+async def update_system_preferences(
+    sio: Any, data: Optional[Dict], logger: Any, sid: str
+) -> Dict[str, Union[bool, list, str]]:
+    """
+    Update global/system preferences.
+
+    Authorization for this command is enforced centrally in dispatcher/auth policy.
+    """
+    del sio, sid
+    async with AsyncSessionLocal() as dbsession:
+        logger.debug(f"Updating system preferences, data: {data}")
+        if not data:
+            return {"success": False, "data": [], "error": "No data provided"}
+
+        update_reply = await crud.preferences.set_system_preferences(dbsession, list(data))
+        return {
+            "success": update_reply["success"],
+            "data": update_reply.get("data", []),
+            "error": update_reply.get("error"),
+        }
 
 
 async def get_map_settings(
@@ -136,6 +200,8 @@ def register_handlers(registry):
         {
             "fetch-preferences": (fetch_preferences, "api_call"),
             "update-preferences": (update_preferences, "api_call"),
+            "fetch-system-preferences": (fetch_system_preferences, "api_call"),
+            "update-system-preferences": (update_system_preferences, "api_call"),
             "get-map-settings": (get_map_settings, "api_call"),
             "set-map-settings": (set_map_settings, "api_call"),
         }

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Box, Typography } from '@mui/material';
-import { useTheme } from '@mui/material/styles';
+import { alpha, useTheme } from '@mui/material/styles';
 
 const ASSET_BASE_URL = import.meta.env.BASE_URL || '/';
 const NORMALIZED_ASSET_BASE_URL = ASSET_BASE_URL.endsWith('/') ? ASSET_BASE_URL : `${ASSET_BASE_URL}/`;
@@ -246,12 +246,39 @@ const buildPassCurves = (scene = {}) => {
                 }))
                 .filter((point) => point.az != null && point.el != null)
                 .map((point) => ({ az: normalizeDegrees(point.az), el: point.el }));
+            const startMs = new Date(pass?.event_start || '').getTime();
+            const endMs = new Date(pass?.event_end || '').getTime();
             return {
                 key: String(pass?.target_key || '').trim(),
                 points: normalizedPoints,
+                startMs: Number.isFinite(startMs) ? startMs : null,
+                endMs: Number.isFinite(endMs) ? endMs : null,
             };
         })
         .filter((curve) => curve.key && curve.points.length >= 2);
+};
+
+const getPassCurveIntensity = (curve, nowMs, maxFutureLeadMs) => {
+    if (!curve || !Number.isFinite(nowMs)) return 0.55;
+    const startMs = Number(curve.startMs);
+    const endMs = Number(curve.endMs);
+    if (!Number.isFinite(startMs) || !Number.isFinite(endMs)) return 0.55;
+
+    // Active pass should remain fully emphasized.
+    if (nowMs >= startMs && nowMs <= endMs) return 1;
+
+    // Future passes fade gradually as their start time gets farther from now.
+    if (nowMs < startMs) {
+        const leadMs = startMs - nowMs;
+        const normalizedLead = clamp(leadMs / Math.max(1, maxFutureLeadMs), 0, 1);
+        return 1 - normalizedLead * 0.75;
+    }
+
+    // Past curves are still visible but de-emphasized.
+    const ageMs = nowMs - endMs;
+    const fadeWindowMs = 2 * 60 * 60 * 1000;
+    const normalizedAge = clamp(ageMs / fadeWindowMs, 0, 1);
+    return 0.5 - normalizedAge * 0.3;
 };
 
 const extractConstellationAbbreviation = (name) => {
@@ -366,6 +393,7 @@ function PlanetariumCanvas({
     selectedTargetKeys = [],
     focusTargetKey = '',
     rotatorCrosshair = null,
+    rotatorMinElevation = null,
     enableMapDragging = true,
     enableMapZooming = true,
     fitAllSignal = 0,
@@ -405,6 +433,13 @@ function PlanetariumCanvas({
             el,
         };
     }, [rotatorCrosshair]);
+    const normalizedRotatorMinElevation = useMemo(() => {
+        const minElevation = toFiniteNumber(rotatorMinElevation);
+        if (minElevation == null) return null;
+        // Horizon already defines 0°, so only render explicit positive hardware limits.
+        if (minElevation <= 0 || minElevation > 90) return null;
+        return minElevation;
+    }, [rotatorMinElevation]);
     const observerLocation = scene?.meta?.observer_location || null;
     const sceneDate = useMemo(() => resolveSceneDate(scene), [scene]);
     const observerName = String(observerLocation?.name || '').trim();
@@ -596,6 +631,7 @@ function PlanetariumCanvas({
         const mutedTextColor = theme.palette.text.secondary;
         const gridColor = theme.palette.mode === 'dark' ? 'rgba(160, 190, 255, 0.15)' : 'rgba(45, 65, 105, 0.15)';
         const horizonColor = theme.palette.mode === 'dark' ? 'rgba(120, 210, 190, 0.55)' : 'rgba(35, 120, 105, 0.45)';
+        const rotatorLimitColor = theme.palette.mode === 'dark' ? 'rgba(255, 181, 71, 0.85)' : 'rgba(176, 92, 0, 0.82)';
         const skyGradient = ctx.createRadialGradient(
             size.width / 2,
             size.height / 2,
@@ -693,6 +729,35 @@ function PlanetariumCanvas({
             drawPolyline(horizonPoints, horizonColor, 1.6);
             drawHorizonTicks();
         }
+        if (normalizedRotatorMinElevation != null) {
+            const minElevationPoints = [];
+            for (let az = 0; az <= 360; az += 2) minElevationPoints.push({ az, el: normalizedRotatorMinElevation });
+            drawPolyline(minElevationPoints, rotatorLimitColor, 1.5, [6, 4]);
+
+            const labelAzCandidates = [
+                normalizeDegrees(view.centerAz),
+                0,
+                90,
+                180,
+                270,
+            ];
+            const labelPoint = labelAzCandidates
+                .map((az) => projectSkyPoint({ az, el: normalizedRotatorMinElevation }, view, size))
+                .find((point) => (
+                    point
+                    && point.x >= 10
+                    && point.x <= size.width - 10
+                    && point.y >= 10
+                    && point.y <= size.height - 10
+                ));
+            if (labelPoint) {
+                drawText(ctx, `Min EL ${Math.round(normalizedRotatorMinElevation)}${String.fromCharCode(176)}`, labelPoint.x + 8, labelPoint.y - 8, {
+                    color: rotatorLimitColor,
+                    font: '700 11px sans-serif',
+                    align: 'left',
+                });
+            }
+        }
 
         if (effectiveDisplayOptions.showStarField) {
             starObjects.forEach((star) => {
@@ -739,11 +804,22 @@ function PlanetariumCanvas({
         }
 
         if (effectiveDisplayOptions.showPassCurves) {
+            const nowMs = sceneDate.getTime();
+            const maxFutureLeadMs = passCurves.reduce((maxLeadMs, curve) => {
+                if (!Number.isFinite(curve?.startMs) || curve.startMs <= nowMs) return maxLeadMs;
+                return Math.max(maxLeadMs, curve.startMs - nowMs);
+            }, 0);
             passCurves.forEach((curve) => {
                 const isSelected = selectedKeys.has(curve.key) || curve.key === focusedKey;
+                const intensity = getPassCurveIntensity(curve, nowMs, maxFutureLeadMs);
+                const selectedColor = alpha(theme.palette.warning.main, clamp(0.28 + intensity * 0.72, 0, 1));
+                const unselectedColor = alpha(
+                    theme.palette.mode === 'dark' ? '#8fb0ff' : '#3e6cc5',
+                    clamp(0.12 + intensity * 0.46, 0, 1),
+                );
                 drawPolyline(
                     curve.points,
-                    isSelected ? theme.palette.warning.main : 'rgba(125, 168, 255, 0.48)',
+                    isSelected ? selectedColor : unselectedColor,
                     isSelected ? 2 : 1,
                     isSelected ? [] : [4, 5],
                 );
@@ -896,6 +972,7 @@ function PlanetariumCanvas({
         skyObjects,
         starObjects,
         normalizedRotatorCrosshair,
+        normalizedRotatorMinElevation,
         theme,
         timestamp,
         view,

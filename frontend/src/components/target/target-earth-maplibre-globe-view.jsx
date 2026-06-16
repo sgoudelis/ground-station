@@ -20,8 +20,8 @@
 import React from 'react';
 import TargetEarthMapLibreView from './target-earth-maplibre-view.jsx';
 
-const TargetEarthMapLibreGlobeView = () => (
-    <TargetEarthMapLibreView projection="globe"/>
+const TargetEarthMapLibreGlobeView = ({effectiveMapEngine = 'maplibre-globe'}) => (
+    <TargetEarthMapLibreView projection="globe" effectiveMapEngine={effectiveMapEngine}/>
 );
 
 export default TargetEarthMapLibreGlobeView;

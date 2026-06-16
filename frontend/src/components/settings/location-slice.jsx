@@ -47,7 +47,7 @@ const normalizeLocationPayload = (payload) => ({
 
 export const fetchLocationForUserId = createAsyncThunk(
     'location/fetchLocationForUser',
-    async ({socket}, {rejectWithValue}) => {
+    async ({socket, suppressNotFoundWarning = false}, {rejectWithValue}) => {
         return new Promise((resolve, reject) => {
             socket.emit("api.call", {
   cmd: 'get-locations',
@@ -58,7 +58,9 @@ export const fetchLocationForUserId = createAsyncThunk(
       // Return the first location from the list
       resolve(response.data[0]);
     } else {
-      toast.warning('No location found in the backend, please set one');
+      if (!suppressNotFoundWarning) {
+        toast.warning('No location found in the backend, please set one');
+      }
       resolve(null); // or resolve({}) if no data
     }
   } else {

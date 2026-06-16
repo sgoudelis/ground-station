@@ -420,6 +420,7 @@ export const setTargetMapSetting = createAsyncThunk(
             lockOnTarget: state['targetSatTrack']['lockOnTarget'],
             enableMapDragging: state['targetSatTrack']['enableMapDragging'],
             enableMapZooming: state['targetSatTrack']['enableMapZooming'],
+            autoSwitchPlanetariumByVisibility: state['targetSatTrack']['autoSwitchPlanetariumByVisibility'] ?? false,
             showPastOrbitPath: state['targetSatTrack']['showPastOrbitPath'],
             showFutureOrbitPath: state['targetSatTrack']['showFutureOrbitPath'],
             showSatelliteCoverage: state['targetSatTrack']['showSatelliteCoverage'],
@@ -811,6 +812,7 @@ const targetSatTrackSlice = createSlice({
         orbitProjectionDuration: 60*24,
         tileLayerID: 'satellite',
         mapEngine: MAP_ENGINE_MAPLIBRE,
+        autoSwitchPlanetariumByVisibility: false,
         targetViewMode: TARGET_VIEW_MODE_SOLAR_SYSTEM,
         targetViewEnableDragging: true,
         targetViewEnableZooming: true,
@@ -1150,6 +1152,9 @@ const targetSatTrackSlice = createSlice({
         },
         setEnableMapZooming(state, action) {
             state.enableMapZooming = action.payload;
+        },
+        setAutoSwitchPlanetariumByVisibility(state, action) {
+            state.autoSwitchPlanetariumByVisibility = Boolean(action.payload);
         },
         setShowPastOrbitPath(state, action) {
             state.showPastOrbitPath = action.payload;
@@ -1753,6 +1758,7 @@ const targetSatTrackSlice = createSlice({
                     state.lockOnTarget = action.payload['lockOnTarget'] ?? true;
                     state.enableMapDragging = action.payload['enableMapDragging'] ?? false;
                     state.enableMapZooming = action.payload['enableMapZooming'] ?? false;
+                    state.autoSwitchPlanetariumByVisibility = action.payload['autoSwitchPlanetariumByVisibility'] ?? false;
                     state.tileLayerID = resolveCompatibleTileLayerId(action.payload['tileLayerID'], mapEngine);
                     state.showPastOrbitPath = action.payload['showPastOrbitPath'];
                     state.showFutureOrbitPath = action.payload['showFutureOrbitPath'];
@@ -1799,6 +1805,7 @@ export const {
     setLockOnTarget,
     setEnableMapDragging,
     setEnableMapZooming,
+    setAutoSwitchPlanetariumByVisibility,
     setShowPastOrbitPath,
     setShowFutureOrbitPath,
     setShowSatelliteCoverage,

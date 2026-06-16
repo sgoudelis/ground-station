@@ -328,6 +328,15 @@ const TargetSkyPlanetariumView = () => {
         effectiveRotatorData?.tracking,
         effectiveTrackingState?.rotator_state,
     ]);
+    const rotatorMinElevation = useMemo(() => {
+        const connected = effectiveRotatorData?.connected === true;
+        const minElevation = Number(effectiveRotatorData?.minel);
+        if (!connected || !Number.isFinite(minElevation)) return null;
+        return minElevation;
+    }, [
+        effectiveRotatorData?.connected,
+        effectiveRotatorData?.minel,
+    ]);
     const tracksProgress = celestialState?.tracksProgress || null;
     const tracksProgressText = useMemo(() => {
         if (!celestialState?.tracksLoading) return '';
@@ -438,6 +447,7 @@ const TargetSkyPlanetariumView = () => {
                         selectedTargetKeys={selectedTargetKeys}
                         focusTargetKey={focusTargetKey}
                         rotatorCrosshair={rotatorCrosshair}
+                        rotatorMinElevation={rotatorMinElevation}
                         enableMapDragging={enableMapDragging}
                         enableMapZooming={enableMapZooming}
                         fitAllSignal={fitAllSignal}

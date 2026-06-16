@@ -422,9 +422,12 @@ export const SocketProvider = ({ children }) => {
         // Configure manager with increased payload size limits for large Socket.IO messages
         const manager = new Manager(backendURL, {
             // Increase max HTTP buffer size (default is 1e6 = 1MB, increase to 30MB)
-            maxHttpBufferSize: 30 * 1024 * 1024
+            maxHttpBufferSize: 30 * 1024 * 1024,
         });
-        const newSocket = manager.socket("/");
+        const authPayload = token ? { token } : {};
+        const newSocket = manager.socket("/", {
+            auth: authPayload,
+        });
         setSocket(newSocket);
         setSocketForMiddleware(newSocket);
 
@@ -523,7 +526,7 @@ export const SocketProvider = ({ children }) => {
             console.info('Closing socket connection');
             newSocket.close();
         };
-    }, [collectStats]);
+    }, [collectStats, token]);
 
     const providerValue = {
         socket,

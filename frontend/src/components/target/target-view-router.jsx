@@ -28,19 +28,56 @@ import TargetSkyPlanetariumView from './target-sky-planetarium-view.jsx';
 const MAP_ENGINE_MAPLIBRE_GLOBE = 'maplibre-globe';
 const MAP_ENGINE_PLANETARIUM = 'planetarium';
 
+export const resolveEffectiveMapEngine = ({
+    mapEngine,
+    autoSwitchPlanetariumByVisibility,
+    targetType,
+    targetElevation,
+}) => {
+    // Auto switching is satellite-specific because globe/earth renderers are satellite-target oriented.
+    if (!autoSwitchPlanetariumByVisibility || targetType !== 'satellite') {
+        return mapEngine;
+    }
+    const hasElevation = (
+        targetElevation !== null
+        && targetElevation !== undefined
+        && String(targetElevation).trim() !== ''
+    );
+    if (!hasElevation) {
+        return mapEngine;
+    }
+    const elevation = Number(targetElevation);
+    if (!Number.isFinite(elevation)) {
+        return mapEngine;
+    }
+    return elevation > 0 ? MAP_ENGINE_PLANETARIUM : MAP_ENGINE_MAPLIBRE_GLOBE;
+};
+
 const TargetViewRouter = () => {
     const mapEngine = useSelector((state) => state.targetSatTrack?.mapEngine);
+    const autoSwitchPlanetariumByVisibility = useSelector(
+        (state) => state.targetSatTrack?.autoSwitchPlanetariumByVisibility ?? false
+    );
+    const targetElevation = useSelector(
+        (state) => state.targetSatTrack?.satelliteData?.position?.el
+    );
     const trackingState = useSelector((state) => state.targetSatTrack?.trackingState || {});
-    const normalizedMapEngine = normalizeMapEngine(mapEngine);
     const targetType = normalizeTargetType(trackingState);
+    const effectiveMapEngine = resolveEffectiveMapEngine({
+        mapEngine,
+        autoSwitchPlanetariumByVisibility,
+        targetType,
+        targetElevation,
+    });
+    const normalizedMapEngine = normalizeMapEngine(effectiveMapEngine);
 
-    if (mapEngine === MAP_ENGINE_PLANETARIUM) {
+    if (effectiveMapEngine === MAP_ENGINE_PLANETARIUM) {
         return <TargetSkyPlanetariumView/>;
     }
 
     // Globe renderer is intentionally satellite-target-only on the Target page.
-    if (mapEngine === MAP_ENGINE_MAPLIBRE_GLOBE && targetType === 'satellite') {
-        return <TargetEarthMapLibreGlobeView/>;
+    if (effectiveMapEngine === MAP_ENGINE_MAPLIBRE_GLOBE && targetType === 'satellite') {
+        return <TargetEarthMapLibreGlobeView effectiveMapEngine={effectiveMapEngine}/>;
     }
 
     if (normalizedMapEngine === 'maplibre' && targetType === 'satellite') {

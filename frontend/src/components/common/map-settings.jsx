@@ -45,6 +45,7 @@ import { useTranslation } from 'react-i18next';
 const SETTINGS_KEYS = [
     'enableMapDragging',
     'enableMapZooming',
+    'autoSwitchPlanetariumByVisibility',
     'showPastOrbitPath',
     'showFutureOrbitPath',
     'showSatelliteCoverage',
@@ -81,6 +82,7 @@ const buildSettings = ({
     initialLockOnTarget,
     initialEnableMapDragging,
     initialEnableMapZooming,
+    initialAutoSwitchPlanetariumByVisibility,
     initialShowPastOrbitPath,
     initialShowFutureOrbitPath,
     initialShowSatelliteCoverage,
@@ -103,6 +105,7 @@ const buildSettings = ({
         lockOnTarget: Boolean(initialLockOnTarget),
         enableMapDragging: Boolean(initialEnableMapDragging),
         enableMapZooming: Boolean(initialEnableMapZooming),
+        autoSwitchPlanetariumByVisibility: Boolean(initialAutoSwitchPlanetariumByVisibility),
         showPastOrbitPath: Boolean(initialShowPastOrbitPath),
         showFutureOrbitPath: Boolean(initialShowFutureOrbitPath),
         showSatelliteCoverage: Boolean(initialShowSatelliteCoverage),
@@ -231,11 +234,13 @@ const ColorSetting = ({ label, value, disabled = false, onChange }) => {
 };
 
 const MapSettingsIsland = ({ initialLockOnTarget, initialEnableMapDragging, initialEnableMapZooming,
+                            initialAutoSwitchPlanetariumByVisibility,
                             initialShowPastOrbitPath, initialShowFutureOrbitPath, initialShowSatelliteCoverage,
                             initialShowSunIcon, initialShowMoonIcon, initialShowTerminatorLine,
                             initialSatelliteCoverageColor, initialPastOrbitLineColor, initialFutureOrbitLineColor,
                             initialOrbitProjectionDuration, initialTileLayerID, initialMapEngine, initialShowTooltip, initialShowGrid,
                                handleLockOnTarget, handleEnableMapDragging, handleEnableMapZooming,
+                               handleAutoSwitchPlanetariumByVisibility,
                                handleShowFutureOrbitPath, handleShowPastOrbitPath,
                             handleShowSatelliteCoverage, handleSetShowSunIcon, handleSetShowMoonIcon,
                             handleShowTerminatorLine, handleFutureOrbitLineColor, handlePastOrbitLineColor,
@@ -263,9 +268,27 @@ const MapSettingsIsland = ({ initialLockOnTarget, initialEnableMapDragging, init
         ),
         [defaultSettings?.lockOnTarget, handleLockOnTarget, initialLockOnTarget]
     );
+    const supportsAutoSwitchPlanetariumByVisibility = useMemo(
+        () => (
+            typeof initialAutoSwitchPlanetariumByVisibility === 'boolean'
+            || typeof defaultSettings?.autoSwitchPlanetariumByVisibility === 'boolean'
+            || typeof handleAutoSwitchPlanetariumByVisibility === 'function'
+        ),
+        [
+            defaultSettings?.autoSwitchPlanetariumByVisibility,
+            handleAutoSwitchPlanetariumByVisibility,
+            initialAutoSwitchPlanetariumByVisibility,
+        ]
+    );
     const settingsKeys = useMemo(
-        () => (supportsLockOnTarget ? [...SETTINGS_KEYS, 'lockOnTarget'] : SETTINGS_KEYS),
-        [supportsLockOnTarget]
+        () => {
+            const keys = supportsLockOnTarget ? [...SETTINGS_KEYS, 'lockOnTarget'] : [...SETTINGS_KEYS];
+            if (!supportsAutoSwitchPlanetariumByVisibility) {
+                return keys.filter((key) => key !== 'autoSwitchPlanetariumByVisibility');
+            }
+            return keys;
+        },
+        [supportsAutoSwitchPlanetariumByVisibility, supportsLockOnTarget]
     );
 
     const initialSettings = useMemo(
@@ -273,6 +296,7 @@ const MapSettingsIsland = ({ initialLockOnTarget, initialEnableMapDragging, init
             initialLockOnTarget,
             initialEnableMapDragging,
             initialEnableMapZooming,
+            initialAutoSwitchPlanetariumByVisibility,
             initialShowPastOrbitPath,
             initialShowFutureOrbitPath,
             initialShowSatelliteCoverage,
@@ -293,6 +317,7 @@ const MapSettingsIsland = ({ initialLockOnTarget, initialEnableMapDragging, init
             initialLockOnTarget,
             initialEnableMapDragging,
             initialEnableMapZooming,
+            initialAutoSwitchPlanetariumByVisibility,
             initialShowPastOrbitPath,
             initialShowFutureOrbitPath,
             initialShowSatelliteCoverage,
@@ -316,6 +341,7 @@ const MapSettingsIsland = ({ initialLockOnTarget, initialEnableMapDragging, init
             initialLockOnTarget: defaultSettings?.lockOnTarget,
             initialEnableMapDragging: defaultSettings?.enableMapDragging,
             initialEnableMapZooming: defaultSettings?.enableMapZooming,
+            initialAutoSwitchPlanetariumByVisibility: defaultSettings?.autoSwitchPlanetariumByVisibility,
             initialShowPastOrbitPath: defaultSettings?.showPastOrbitPath,
             initialShowFutureOrbitPath: defaultSettings?.showFutureOrbitPath,
             initialShowSatelliteCoverage: defaultSettings?.showSatelliteCoverage,
@@ -390,6 +416,9 @@ const MapSettingsIsland = ({ initialLockOnTarget, initialEnableMapDragging, init
 
         handleEnableMapDragging?.(sanitizedSettings.enableMapDragging);
         handleEnableMapZooming?.(sanitizedSettings.enableMapZooming);
+        if (supportsAutoSwitchPlanetariumByVisibility) {
+            handleAutoSwitchPlanetariumByVisibility?.(sanitizedSettings.autoSwitchPlanetariumByVisibility);
+        }
         handleShowPastOrbitPath(sanitizedSettings.showPastOrbitPath);
         handleShowFutureOrbitPath(sanitizedSettings.showFutureOrbitPath);
         handleShowSatelliteCoverage(sanitizedSettings.showSatelliteCoverage);
@@ -516,6 +545,22 @@ const MapSettingsIsland = ({ initialLockOnTarget, initialEnableMapDragging, init
                                 defaultValue: 'Switching map engine or projection rebuilds the map canvas and may recenter the view.',
                             })}
                         </Typography>
+                    ) : null}
+
+                    {supportsAutoSwitchPlanetariumByVisibility ? (
+                        <ToggleRowWithDescription
+                            label={t('map_settings.auto_switch_planetarium_visibility', {
+                                defaultValue: 'Auto-switch planetarium when target is visible',
+                            })}
+                            description={t('map_settings.auto_switch_planetarium_visibility_desc', {
+                                defaultValue: 'For satellite targets: use planetarium above horizon and switch back to globe below horizon.',
+                            })}
+                            checked={draftSettings.autoSwitchPlanetariumByVisibility}
+                            onChange={(value) => setDraftSettings((prev) => ({
+                                ...prev,
+                                autoSwitchPlanetariumByVisibility: value,
+                            }))}
+                        />
                     ) : null}
 
                     <ToggleRowWithDescription

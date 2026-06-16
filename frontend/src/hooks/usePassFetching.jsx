@@ -26,12 +26,17 @@ import { fetchNextPasses } from '../components/target/target-slice.jsx';
  * Custom hook to manage satellite pass fetching
  * Fetches satellite passes every hour for the selected satellite
  * @param {Object} socket - Socket.IO connection instance
+ * @param {boolean} enabled - whether periodic pass fetching is active
  */
-export const usePassFetching = (socket) => {
+export const usePassFetching = (socket, enabled = true) => {
     const dispatch = useDispatch();
     const { satelliteId, nextPassesHours } = useSelector((state) => state.targetSatTrack);
 
     useEffect(() => {
+        if (!enabled || !socket) {
+            return undefined;
+        }
+
         const fetchPasses = () => {
             if (satelliteId) {
                 dispatch(fetchNextPasses({socket, noradId: satelliteId, hours: nextPassesHours}))
@@ -54,5 +59,5 @@ export const usePassFetching = (socket) => {
         return () => {
             clearInterval(interval);
         };
-    }, [satelliteId, socket, dispatch, nextPassesHours]);
+    }, [satelliteId, socket, enabled, dispatch, nextPassesHours]);
 };
