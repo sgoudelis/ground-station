@@ -307,6 +307,13 @@ loggers:
       - default
     propagate: no
 
+  # Silence passlib startup debug noise from authentication initialization.
+  passlib:
+    level: WARNING
+    handlers:
+      - default
+    propagate: no
+
 root:
   level: DEBUG
   handlers:

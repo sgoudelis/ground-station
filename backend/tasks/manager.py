@@ -111,6 +111,12 @@ class TaskInfo:
     tracker_notified: bool = False
 
 
+def _is_soapysdr_task(task_name: str, func_name: str) -> bool:
+    normalized_name = str(task_name or "").strip().lower()
+    normalized_func_name = str(func_name or "").strip().lower()
+    return "soapysdr" in normalized_name or "soapysdr" in normalized_func_name
+
+
 def _task_wrapper(func: Callable, args: Tuple, kwargs: Dict, queue: mp.Queue):
     """
     Wrapper function that runs in the child process.
@@ -262,6 +268,20 @@ class BackgroundTaskManager:
                 },
             )
 
+            if _is_soapysdr_task(name, func.__name__):
+                # Keep discovery lifecycle events available for setup-mode UI
+                # where the full runtime socket hook is not active yet.
+                await self.sio.emit(
+                    "soapysdr:discovery_started",
+                    {
+                        "task_id": task_id,
+                        "name": name,
+                        "mode": kwargs.get("mode", "single"),
+                        "refresh_interval": kwargs.get("refresh_interval"),
+                        "duration": kwargs.get("refresh_interval", 0),
+                    },
+                )
+
             # Start monitoring in background
             monitor_task = asyncio.create_task(self._monitor_task(task_id))
             self._monitor_tasks[task_id] = monitor_task
@@ -367,6 +387,20 @@ class BackgroundTaskManager:
                     "duration": task_info.end_time - task_info.start_time,
                 },
             )
+
+            if (
+                task_info.status == TaskStatus.FAILED
+                and _is_soapysdr_task(task_info.name, task_info.func_name)
+                and not any(line.startswith("FAILED:") for line in task_info.error_lines)
+            ):
+                await self.sio.emit(
+                    "soapysdr:discovery_error",
+                    {
+                        "task_id": task_id,
+                        "name": task_info.name,
+                        "error": f"Task failed with return code {return_code}",
+                    },
+                )
 
             # Special handling for waterfall generation tasks
             if task_info.name.startswith("Waterfall:") and task_info.status == TaskStatus.COMPLETED:
@@ -497,6 +531,15 @@ class BackgroundTaskManager:
                     "error": error,
                 },
             )
+            if _is_soapysdr_task(task_info.name, task_info.func_name):
+                await self.sio.emit(
+                    "soapysdr:discovery_error",
+                    {
+                        "task_id": task_id,
+                        "name": task_info.name,
+                        "error": error,
+                    },
+                )
 
         elif msg_type == "discovery_update":
             # SoapySDR discovery data update from background task

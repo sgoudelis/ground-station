@@ -29,6 +29,10 @@ def test_build_pass_events_extracts_crossing_window():
     event = events[0]
     assert event["target_key"] == "mission:Voyager 1"
     assert event["peak_elevation_deg"] == 8.0
+    assert event["peak_altitude"] == event["peak_elevation_deg"]
+    assert event["start_azimuth"] == event["start_azimuth_deg"]
+    assert event["end_azimuth"] == event["end_azimuth_deg"]
+    assert event["peak_azimuth"] == event["peak_azimuth_deg"]
     assert event["estimated_start"] is False
     assert event["estimated_end"] is False
     assert len(event["elevation_curve"]) >= 3
@@ -139,7 +143,9 @@ def test_extract_row_observer_samples_prefers_supplied_earth_orbit_samples(monke
         logger=type("_DummyLogger", (), {"debug": lambda *_args, **_kwargs: None})(),
     )
 
-    assert len(samples) == 2
+    assert len(samples) > 2
+    assert samples[0]["time"] == start
+    assert samples[1]["time"] == start + timedelta(minutes=5)
     assert all("el_deg" in sample and "az_deg" in sample for sample in samples)
 
 

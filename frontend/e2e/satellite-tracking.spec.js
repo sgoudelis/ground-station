@@ -4,6 +4,12 @@
 
 import { test, expect } from '@playwright/test';
 
+const getVisibleMapSurface = (page) => page
+  .locator(
+    '.leaflet-container, .maplibregl-map, .maplibregl-canvas, canvas[aria-label="Planetarium sky map"], [role="region"][aria-label="Map"]',
+  )
+  .first();
+
 test.describe('Satellite Tracking', () => {
   test.beforeEach(async ({ page }) => {
     // Navigate to the tracking console
@@ -12,8 +18,8 @@ test.describe('Satellite Tracking', () => {
   });
 
   test('should display satellite map', async ({ page }) => {
-    // Wait for map container to be visible
-    const mapContainer = page.locator('.leaflet-container, .maplibregl-canvas').first();
+    // Tracking view can render Leaflet, MapLibre, or Planetarium depending on persisted preferences.
+    const mapContainer = getVisibleMapSurface(page);
     await expect(mapContainer).toBeVisible({ timeout: 10000 });
   });
 
@@ -56,8 +62,7 @@ test.describe('Satellite Earth View', () => {
   });
 
   test('should display birds eye view map', async ({ page }) => {
-    // Check for map in earth view
-    const mapContainer = page.locator('.leaflet-container, .maplibregl-canvas').first();
+    const mapContainer = getVisibleMapSurface(page);
     await expect(mapContainer).toBeVisible({ timeout: 10000 });
   });
 });

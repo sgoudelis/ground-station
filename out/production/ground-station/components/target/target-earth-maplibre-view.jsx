@@ -51,7 +51,7 @@ import {
     islandTitleBarSx,
 } from '../common/common.jsx';
 import TargetNumberIcon from '../common/target-number-icon.jsx';
-import MapSettingsIslandDialog from './map-settings-dialog.jsx';
+import TargetMapSettingsDialog from './target-map-settings-dialog.jsx';
 import createTerminatorLine from '../common/terminator-line.jsx';
 import {getSunMoonCoords} from '../common/sunmoon.jsx';
 import {useSocket} from '../common/socket.jsx';
@@ -239,7 +239,7 @@ const TargetAttributionBar = React.memo(function TargetAttributionBar({htmlStrin
     );
 });
 
-const TargetMapMapLibreRenderer = ({projection = MAPLIBRE_PROJECTION_MERCATOR}) => {
+const TargetEarthMapLibreView = ({projection = MAPLIBRE_PROJECTION_MERCATOR}) => {
     const {socket} = useSocket();
     const dispatch = useDispatch();
     const {t} = useTranslation('target');
@@ -977,7 +977,7 @@ const TargetMapMapLibreRenderer = ({projection = MAPLIBRE_PROJECTION_MERCATOR}) 
                     </Box>
                 ) : null}
 
-                <MapSettingsIslandDialog updateBackend={() => {
+                <TargetMapSettingsDialog updateBackend={() => {
                     const key = 'target-map-settings';
                     dispatch(setTargetMapSetting({socket, key}));
                 }}/>
@@ -989,4 +989,4 @@ const TargetMapMapLibreRenderer = ({projection = MAPLIBRE_PROJECTION_MERCATOR}) 
     );
 };
 
-export default TargetMapMapLibreRenderer;
+export default TargetEarthMapLibreView;

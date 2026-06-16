@@ -45,6 +45,7 @@ import {
     setShowGrid,
     setEnableMapDragging,
     setEnableMapZooming,
+    setAutoSwitchPlanetariumByVisibility,
 } from "./target-slice.jsx";
 import {
     MAP_ENGINE_LEAFLET,
@@ -52,13 +53,29 @@ import {
     MAP_ENGINE_MAPLIBRE_GLOBE,
 } from "../common/tile-layers.jsx";
 
+const MAP_ENGINE_PLANETARIUM = 'planetarium';
+
 const TARGET_MAP_ENGINE_OPTIONS = [
     {id: MAP_ENGINE_LEAFLET, name: 'Leaflet'},
     {id: MAP_ENGINE_MAPLIBRE, name: 'MapLibre'},
     {id: MAP_ENGINE_MAPLIBRE_GLOBE, name: 'MapLibre Globe'},
+    {id: MAP_ENGINE_PLANETARIUM, name: 'Planetarium'},
 ];
 
-function MapSettingsIslandDialog({updateBackend}) {
+const normalizeTargetMapEngine = (mapEngine) => {
+    const normalizedMapEngine = String(mapEngine || '').trim().toLowerCase();
+    if (
+        normalizedMapEngine === MAP_ENGINE_LEAFLET
+        || normalizedMapEngine === MAP_ENGINE_MAPLIBRE
+        || normalizedMapEngine === MAP_ENGINE_MAPLIBRE_GLOBE
+        || normalizedMapEngine === MAP_ENGINE_PLANETARIUM
+    ) {
+        return normalizedMapEngine;
+    }
+    return MAP_ENGINE_MAPLIBRE;
+};
+
+function TargetMapSettingsDialog({updateBackend}) {
     const dispatch = useDispatch();
     const { t } = useTranslation('target');
     const {
@@ -80,6 +97,7 @@ function MapSettingsIslandDialog({updateBackend}) {
         showGrid,
         enableMapDragging,
         enableMapZooming,
+        autoSwitchPlanetariumByVisibility,
     } = useSelector(state => state.targetSatTrack);
 
     const handleCloseDialog = () => {
@@ -140,12 +158,15 @@ function MapSettingsIslandDialog({updateBackend}) {
                         initialShowGrid={showGrid}
                         initialEnableMapDragging={enableMapDragging}
                         initialEnableMapZooming={enableMapZooming}
+                        initialAutoSwitchPlanetariumByVisibility={autoSwitchPlanetariumByVisibility}
                         initialShowTerminatorLine={showTerminatorLine}
                         mapEngineOptions={TARGET_MAP_ENGINE_OPTIONS}
+                        normalizeMapEngineValue={normalizeTargetMapEngine}
                         defaultSettings={{
                             lockOnTarget: true,
                             enableMapDragging: false,
                             enableMapZooming: false,
+                            autoSwitchPlanetariumByVisibility: false,
                             showPastOrbitPath: true,
                             showFutureOrbitPath: true,
                             showSatelliteCoverage: true,
@@ -178,6 +199,7 @@ function MapSettingsIslandDialog({updateBackend}) {
                         handleShowGrid={(value)=>{dispatch(setShowGrid(value))}}
                         handleEnableMapDragging={(value)=>{dispatch(setEnableMapDragging(value))}}
                         handleEnableMapZooming={(value)=>{dispatch(setEnableMapZooming(value))}}
+                        handleAutoSwitchPlanetariumByVisibility={(value)=>{dispatch(setAutoSwitchPlanetariumByVisibility(value))}}
                         onCancel={handleCloseDialog}
                         updateBackend={updateBackend}
                     />
@@ -187,4 +209,4 @@ function MapSettingsIslandDialog({updateBackend}) {
     );
 }
 
-export default MapSettingsIslandDialog;
+export default TargetMapSettingsDialog;

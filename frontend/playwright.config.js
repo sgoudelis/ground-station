@@ -1,9 +1,5 @@
 import {defineConfig, devices} from '@playwright/test';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const configDir = path.dirname(fileURLToPath(import.meta.url));
-const storageStatePath = path.resolve(configDir, 'e2e/.auth/state.json');
+import { storageStatePath } from './e2e/auth-state.js';
 
 /**
  * Playwright E2E testing configuration
@@ -11,7 +7,6 @@ const storageStatePath = path.resolve(configDir, 'e2e/.auth/state.json');
  */
 export default defineConfig({
     testDir: './e2e',
-    globalSetup: './e2e/global-setup.js',
 
     // Maximum time one test can run
     timeout: 60 * 1000,
@@ -37,8 +32,6 @@ export default defineConfig({
         // Base URL for page.goto('/')
         // Use BASE_URL env var if provided (for CI with Docker), otherwise use dev server
         baseURL: process.env.BASE_URL || 'http://localhost:5173',
-        storageState: storageStatePath,
-
         // Collect trace on first retry
         trace: 'on-first-retry',
 
@@ -52,8 +45,32 @@ export default defineConfig({
   // Configure projects for major browsers
   projects: [
     {
+      name: 'setup-wizard',
+      testMatch: '**/setup-wizard.spec.js',
+      workers: 1,
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: undefined,
+      },
+    },
+    {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      dependencies: ['setup-wizard'],
+      testIgnore: ['**/setup-wizard.spec.js', '**/auth.spec.js'],
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: storageStatePath,
+      },
+    },
+    {
+      name: 'auth-flow',
+      dependencies: ['chromium'],
+      testMatch: '**/auth.spec.js',
+      workers: 1,
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: storageStatePath,
+      },
     },
     // // Mobile viewports
     // {

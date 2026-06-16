@@ -289,11 +289,16 @@ function stringToColor(string) {
 }
 
 export function stringAvatar(name) {
+    const normalizedName = String(name || '').trim();
+    const nameParts = normalizedName.split(/\s+/).filter(Boolean);
+    const firstInitial = nameParts[0]?.[0] || '?';
+    const secondInitial = nameParts[1]?.[0] || firstInitial;
+
     return {
         sx: {
-            bgcolor: stringToColor(name),
+            bgcolor: stringToColor(normalizedName || 'unknown-user'),
         },
-        children: `${name.split(' ')[0][0]}${name.split(' ')[1][0]}`,
+        children: `${firstInitial}${secondInitial}`.toUpperCase(),
     };
 }
 

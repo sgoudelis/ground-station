@@ -68,6 +68,22 @@ const rigsSlice = createSlice({
         setShowLocationSetupDialog: (state, action) => {
             state.showLocationSetupDialog = action.payload;
         },
+        resetRuntimeSessionState: (state) => {
+            // Force a clean runtime bootstrap for each authenticated session.
+            // Without this reset, logout/login cycles can briefly reuse stale
+            // "connected + data loaded" flags from the previous session.
+            state.connecting = true;
+            state.connected = false;
+            state.disconnected = false;
+            state.reconnecting = false;
+            state.reConnectAttempt = 0;
+            state.connectionError = null;
+            state.initialDataLoading = true;
+            state.initialDataProgress = {
+                completed: 0,
+                total: 0,
+            };
+        },
     },
 });
 
@@ -82,6 +98,7 @@ export const {
     setInitialDataLoading,
     setInitialDataProgress,
     setShowLocationSetupDialog,
+    resetRuntimeSessionState,
 } = rigsSlice.actions;
 
 export default rigsSlice.reducer;

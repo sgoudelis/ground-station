@@ -20,7 +20,20 @@ This module provides a unified dispatch mechanism that routes commands
 to their registered handlers via the handler registry.
 """
 
+from contextvars import ContextVar
 from typing import Any, Dict, Optional, Union
+
+from common import auth
+
+_auth_context_var: ContextVar[Optional[Dict[str, Any]]] = ContextVar(
+    "dispatch_auth_context",
+    default=None,
+)
+
+
+def get_auth_context() -> Optional[Dict[str, Any]]:
+    """Expose the current request auth context to handlers without changing handler signatures."""
+    return _auth_context_var.get()
 
 
 def _normalize_dispatch_reply(
@@ -62,6 +75,7 @@ async def dispatch_request(
     logger: Any,
     sid: str,
     registry: Any,
+    auth_context: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Union[bool, None, dict, list, str]]:
     """
     Generic request dispatcher using registry.
@@ -77,18 +91,40 @@ async def dispatch_request(
     Returns:
         Dictionary containing 'success' status and any response data
     """
-    route = registry.get_handler(cmd)
+    command = str(cmd or "").strip()
+    setup_required = await auth.is_setup_required()
+    if setup_required and not auth.is_command_allowed_during_setup(command):
+        return {
+            "success": False,
+            "data": None,
+            "error": "Setup required. Complete admin registration first.",
+        }
+
+    if not setup_required:
+        # All runtime command execution requires an authenticated user context.
+        if not auth_context:
+            return {"success": False, "data": None, "error": "Authentication required."}
+
+        user_role = str(auth_context.get("role") or "").strip().lower()
+        if not auth.is_command_allowed_for_role(command, user_role):
+            return {"success": False, "data": None, "error": "Not authorized for this action."}
+
+    route = registry.get_handler(command)
 
     if not route:
-        logger.error(f"Unknown command: {cmd}")
-        return {"success": False, "data": None, "error": f"Unknown command: {cmd}"}
+        logger.error(f"Unknown command: {command}")
+        return {"success": False, "data": None, "error": f"Unknown command: {command}"}
 
+    auth_token = _auth_context_var.set(auth_context)
     try:
-        raw_result: Dict[str, Union[bool, None, dict, list, str]] = await route.handler(
-            sio, data, logger, sid
-        )
-        return _normalize_dispatch_reply(raw_result)
-    except Exception as e:
-        logger.error(f"Error handling command '{cmd}': {str(e)}")
-        logger.exception(e)
-        return {"success": False, "data": None, "error": str(e)}
+        try:
+            raw_result: Dict[str, Union[bool, None, dict, list, str]] = await route.handler(
+                sio, data, logger, sid
+            )
+            return _normalize_dispatch_reply(raw_result)
+        except Exception as e:
+            logger.error(f"Error handling command '{cmd}': {str(e)}")
+            logger.exception(e)
+            return {"success": False, "data": None, "error": str(e)}
+    finally:
+        _auth_context_var.reset(auth_token)

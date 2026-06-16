@@ -6,7 +6,7 @@ import tempfile
 import zipfile
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Set
+from typing import Any, Dict, Optional, Set
 
 import socketio
 from engineio.payload import Payload
@@ -14,15 +14,17 @@ from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy import select
 
 from audio.audiobroadcaster import AudioBroadcaster
 from audio.audiostreamer import WebAudioStreamer
+from common import auth as authsvc
 from common.arguments import arguments
 from common.audio_queue_config import get_audio_queue_config
 from common.logger import logger
-from db import *  # noqa: F401,F403
-from db import engine  # Explicit import for type checker
+from db import AsyncSessionLocal, engine
 from db.migrations import run_migrations
+from db.models import Locations
 from observations import events as obs_events
 from observations.events import emit_scheduled_observations_changed as _emit
 from observations.events import set_socketio_instance
@@ -43,8 +45,15 @@ from tracker.messages import handle_tracker_messages
 
 # Increase payload limits to handle large waterfall PNG images and maintenance uploads.
 Payload.max_decode_packets = 50
-# Default is 100KB (100000 bytes), increase to 30MB.
-Payload.max_decode_packet_size = 30 * 1024 * 1024  # 30MB
+# Keep comfortably above the user-facing 300MB restore limit so JSON/Socket.IO escaping
+# overhead does not reject requests near the configured cap.
+SOCKET_IO_MAX_PAYLOAD_BYTES = 384 * 1024 * 1024  # 384MB
+# Large setup restore payloads can keep a request in-flight for a while; allow longer
+# heartbeat windows so transport is not dropped mid-restore.
+SOCKET_IO_PING_INTERVAL_SECONDS = 25
+SOCKET_IO_PING_TIMEOUT_SECONDS = 120
+# Default is 100KB (100000 bytes), increase for large backup restore payloads.
+Payload.max_decode_packet_size = SOCKET_IO_MAX_PAYLOAD_BYTES
 
 # At the top of the file, add a global to track background tasks
 background_tasks: Set[asyncio.Task] = set()
@@ -80,6 +89,18 @@ async def lifespan(fastapiapp: FastAPI):
     background_task_manager = BackgroundTaskManager(sio)
     runtimestate.background_task_manager = background_task_manager
     logger.info("BackgroundTaskManager initialized")
+
+    # Trim stale auth-session history at startup. Active sessions are excluded by policy.
+    try:
+        trim_result = await authsvc.trim_inactive_auth_sessions(keep_last=300)
+        logger.info(
+            "Auth session history trim complete: deleted=%s, keep_last=%s",
+            trim_result.get("deleted"),
+            trim_result.get("kept"),
+        )
+    except Exception:
+        # Startup should continue even if retention cleanup fails.
+        logger.exception("Auth session history trim failed at startup")
 
     # Start audio broadcaster
     audio_broadcaster.start()
@@ -121,9 +142,15 @@ async def lifespan(fastapiapp: FastAPI):
             name="SoapySDR Discovery (monitor)",
         )
 
-    # Schedule initial sync if needed
+    # Schedule initial sync if needed.
+    # During first-time setup we defer this background sync so the setup wizard
+    # can explicitly start and display finalization status to the user.
     if _needs_initial_sync:
-        asyncio.create_task(run_initial_sync(background_task_manager))
+        setup_required = await authsvc.is_setup_required(force_refresh=True)
+        if setup_required:
+            logger.info("Deferring startup initial orbital sync because setup is still required.")
+        else:
+            asyncio.create_task(run_initial_sync(background_task_manager))
 
     # Start the background task scheduler
     scheduler = start_scheduler(sio, process_manager, background_task_manager)
@@ -189,7 +216,9 @@ sio = socketio.AsyncServer(
     logger=True,
     engineio_logger=True,
     binary=True,
-    max_http_buffer_size=30 * 1024 * 1024,  # 30MB for large Socket.IO payloads
+    max_http_buffer_size=SOCKET_IO_MAX_PAYLOAD_BYTES,
+    ping_interval=SOCKET_IO_PING_INTERVAL_SECONDS,
+    ping_timeout=SOCKET_IO_PING_TIMEOUT_SECONDS,
 )
 
 
@@ -218,6 +247,221 @@ app.add_middleware(
 )
 
 process_manager.set_sio(sio)
+
+
+def _client_ip_from_request(request: Request) -> Optional[str]:
+    xff = request.headers.get("x-forwarded-for")
+    if xff:
+        return str(xff.split(",")[0].strip())
+    if request.client:
+        return str(request.client.host)
+    return None
+
+
+async def _load_station_identity() -> Optional[Dict[str, Optional[str]]]:
+    """Load a lightweight station identity payload for pre-auth UI surfaces."""
+    try:
+        async with AsyncSessionLocal() as session:
+            # Mirror location ordering used across the app when a single "active" location is needed.
+            location_row = (
+                await session.execute(
+                    select(Locations)
+                    .order_by(Locations.updated.desc(), Locations.added.desc())
+                    .limit(1)
+                )
+            ).scalar_one_or_none()
+            if location_row is None:
+                return None
+
+            station_name = str(location_row.name or "").strip() or None
+            callsign = str(location_row.callsign or "").strip().upper() or None
+            return {
+                "name": station_name,
+                "callsign": callsign,
+            }
+    except Exception:
+        # Pre-auth station identity is best-effort only; auth bootstrap must still work when unavailable.
+        logger.debug("Failed to load station identity for auth status", exc_info=True)
+        return None
+
+
+async def _require_request_auth(
+    request: Request,
+    require_auth: bool = True,
+    require_admin: bool = False,
+) -> Optional[Dict[str, Any]]:
+    auth_header = request.headers.get("authorization")
+    token = authsvc.extract_bearer_token(auth_header)
+    auth_context = await authsvc.authenticate_token(token) if token else None
+
+    if require_auth and not auth_context:
+        raise HTTPException(status_code=401, detail="Authentication required.")
+
+    if require_admin and not authsvc.is_admin_role((auth_context or {}).get("role")):
+        raise HTTPException(status_code=403, detail="Admin access is required.")
+
+    return auth_context
+
+
+@app.get("/api/auth/status")
+async def auth_status(request: Request):
+    """Return setup/authentication status for frontend app bootstrapping."""
+    setup_required = await authsvc.is_setup_required()
+    station_identity = await _load_station_identity()
+    auth_header = request.headers.get("authorization")
+    token = authsvc.extract_bearer_token(auth_header)
+    auth_context = await authsvc.authenticate_token(token, touch_last_seen=False) if token else None
+    return {
+        "setup_required": setup_required,
+        "authenticated": bool(auth_context),
+        "user": auth_context,
+        "station": station_identity,
+    }
+
+
+@app.post("/api/auth/setup-admin")
+async def setup_admin(request: Request):
+    """One-time bootstrap endpoint to create the initial admin account."""
+    payload = await request.json()
+    username = str(payload.get("username") or "")
+    password = str(payload.get("password") or "")
+
+    result = await authsvc.bootstrap_admin(
+        username=username,
+        password=password,
+        client_ip=_client_ip_from_request(request),
+        user_agent=request.headers.get("user-agent"),
+    )
+    if not result.get("success"):
+        message = str(result.get("error") or "Failed to initialize admin account.")
+        status_code = 409 if "already completed" in message.lower() else 400
+        raise HTTPException(status_code=status_code, detail=message)
+    return result
+
+
+@app.post("/api/auth/login")
+async def auth_login(request: Request):
+    """Login endpoint that returns an opaque bearer token."""
+    payload = await request.json()
+    username = str(payload.get("username") or "")
+    password = str(payload.get("password") or "")
+    keep_session_active = authsvc.coerce_keep_session_active(
+        payload.get("keep_session_active", payload.get("keepSessionActive"))
+    )
+    result = await authsvc.login(
+        username=username,
+        password=password,
+        client_ip=_client_ip_from_request(request),
+        user_agent=request.headers.get("user-agent"),
+        keep_session_active=keep_session_active,
+    )
+    if not result.get("success"):
+        raise HTTPException(status_code=401, detail=str(result.get("error") or "Login failed."))
+    return result
+
+
+@app.post("/api/auth/logout")
+async def auth_logout(request: Request):
+    """Revoke the current auth session token."""
+    await _require_request_auth(request, require_auth=True, require_admin=False)
+    auth_header = request.headers.get("authorization")
+    token = authsvc.extract_bearer_token(auth_header)
+    await authsvc.logout(token, reason="logout")
+    return {"success": True}
+
+
+@app.get("/api/auth/me")
+async def auth_me(request: Request):
+    """Return current user context from bearer token."""
+    auth_context = await _require_request_auth(request, require_auth=True, require_admin=False)
+    return {"success": True, "data": auth_context}
+
+
+@app.get("/api/auth/users")
+async def auth_list_users(request: Request):
+    """Admin endpoint: list all users."""
+    await _require_request_auth(request, require_auth=True, require_admin=True)
+    return await authsvc.list_users()
+
+
+@app.post("/api/auth/users")
+async def auth_create_user(request: Request):
+    """Admin endpoint: create a new user account."""
+    auth_context = await _require_request_auth(request, require_auth=True, require_admin=True)
+    if auth_context is None:
+        raise HTTPException(status_code=401, detail="Authentication required.")
+    payload = await request.json()
+    result = await authsvc.create_user(
+        username=str(payload.get("username") or ""),
+        password=str(payload.get("password") or ""),
+        role=str(payload.get("role") or ""),
+        actor_user_id=str(auth_context.get("user_id")),
+    )
+    if not result.get("success"):
+        raise HTTPException(
+            status_code=400, detail=str(result.get("error") or "Failed to create user.")
+        )
+    return result
+
+
+@app.patch("/api/auth/users/{user_id}")
+async def auth_update_user(user_id: str, request: Request):
+    """Admin endpoint: update role and activation state for a user."""
+    auth_context = await _require_request_auth(request, require_auth=True, require_admin=True)
+    if auth_context is None:
+        raise HTTPException(status_code=401, detail="Authentication required.")
+    payload = await request.json()
+    role = payload.get("role", None)
+    is_active = payload.get("is_active", None)
+    result = await authsvc.update_user(
+        user_id=user_id,
+        role=role,
+        is_active=is_active,
+        actor_user_id=str(auth_context.get("user_id")),
+    )
+    if not result.get("success"):
+        raise HTTPException(
+            status_code=400, detail=str(result.get("error") or "Failed to update user.")
+        )
+    return result
+
+
+@app.post("/api/auth/users/{user_id}/reset-password")
+async def auth_reset_user_password(user_id: str, request: Request):
+    """Admin endpoint: reset a user password and revoke active sessions."""
+    auth_context = await _require_request_auth(request, require_auth=True, require_admin=True)
+    if auth_context is None:
+        raise HTTPException(status_code=401, detail="Authentication required.")
+    payload = await request.json()
+    result = await authsvc.reset_user_password(
+        user_id=user_id,
+        new_password=str(payload.get("password") or ""),
+        actor_user_id=str(auth_context.get("user_id")),
+    )
+    if not result.get("success"):
+        raise HTTPException(
+            status_code=400,
+            detail=str(result.get("error") or "Failed to reset user password."),
+        )
+    return result
+
+
+@app.delete("/api/auth/users/{user_id}")
+async def auth_delete_user(user_id: str, request: Request):
+    """Admin endpoint: delete a user account."""
+    auth_context = await _require_request_auth(request, require_auth=True, require_admin=True)
+    if auth_context is None:
+        raise HTTPException(status_code=401, detail="Authentication required.")
+    result = await authsvc.delete_user(
+        user_id=user_id,
+        actor_user_id=str(auth_context.get("user_id")),
+    )
+    if not result.get("success"):
+        raise HTTPException(
+            status_code=400, detail=str(result.get("error") or "Failed to delete user.")
+        )
+    return result
+
 
 # Mount data directories for recordings, snapshots, decoded data (SSTV, AFSK, Morse, etc.), and audio
 # Ensure these directories exist before mounting
@@ -293,7 +537,10 @@ def _resolve_decoded_folder(decoded_root: Path, foldername: str) -> Path:
 
 
 @app.get("/api/decoded/{foldername}/download")
-async def download_decoded_folder(foldername: str, background_tasks: BackgroundTasks):
+async def download_decoded_folder(
+    foldername: str, request: Request, background_tasks: BackgroundTasks
+):
+    await _require_request_auth(request, require_auth=True, require_admin=False)
     decoded_root = Path(decoded_dir).resolve()
     folder_path = _resolve_decoded_folder(decoded_root, foldername)
     temp_zip = tempfile.NamedTemporaryFile(delete=False, suffix=".zip")

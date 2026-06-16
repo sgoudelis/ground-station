@@ -224,7 +224,7 @@ const LeafletEarthViewMapRenderer = ({handleSetTrackingOnBackend}) => {
         orbitProjectionDuration,
         tileLayerID,
         mapEngine,
-        mapZoomLevel,
+        mapZoomByEngine,
         satelliteGroupId,
         openMapSettingsDialog,
         nextPassesHours,
@@ -244,6 +244,13 @@ const LeafletEarthViewMapRenderer = ({handleSetTrackingOnBackend}) => {
         () => normalizeMapEngine(mapEngine),
         [mapEngine]
     );
+    const mapZoomLevel = useMemo(() => {
+        const engineZoom = Number(mapZoomByEngine?.[normalizedMapEngine]);
+        if (Number.isFinite(engineZoom)) {
+            return engineZoom;
+        }
+        return normalizedMapEngine === 'maplibre' ? -6 : 1.5;
+    }, [mapZoomByEngine, normalizedMapEngine]);
     const selectedTileLayer = useMemo(
         () => getTileLayerById(tileLayerID, { mapEngine: normalizedMapEngine }),
         [normalizedMapEngine, tileLayerID]

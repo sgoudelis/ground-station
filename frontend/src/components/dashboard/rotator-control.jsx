@@ -52,6 +52,56 @@ import {
 } from '../target/rotator-utils.js';
 import { ROTATOR_STATES, TRACKER_COMMAND_SCOPES, TRACKER_COMMAND_STATUS } from '../target/tracking-constants.js';
 import RotatorQuickEditDialog from "./rotator-quick-edit-dialog.jsx";
+import {
+    buildTargetKeyFromTrackingState,
+} from '../target/celestial-target-utils.js';
+
+const finiteOrNull = (value) => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+};
+
+const passTimeMs = (value) => {
+    const parsed = new Date(value || '').getTime();
+    return Number.isFinite(parsed) ? parsed : null;
+};
+
+const buildSatellitePassKey = (noradId) => {
+    const normalized = String(noradId ?? '').trim();
+    return normalized ? `satellite:${normalized}` : '';
+};
+
+const resolvePassTargetKey = (pass = {}) => {
+    const explicitKey = String(pass?.target_key || '').trim();
+    if (explicitKey) return explicitKey;
+    return buildSatellitePassKey(pass?.norad_id);
+};
+
+const selectCurrentOrNextPass = ({ passes = [], nowMs = Date.now(), targetKey = '', windowHours = null }) => {
+    const normalizedTargetKey = String(targetKey || '').trim();
+    const windowHoursNumber = Number(windowHours);
+    const windowEndMs = Number.isFinite(windowHoursNumber) && windowHoursNumber > 0
+        ? nowMs + (windowHoursNumber * 3600 * 1000)
+        : null;
+    const scopedPasses = (Array.isArray(passes) ? passes : [])
+        .filter((pass) => {
+            if (!normalizedTargetKey) return false;
+            return resolvePassTargetKey(pass) === normalizedTargetKey;
+        })
+        .filter((pass) => {
+            const startMs = passTimeMs(pass?.event_start);
+            const endMs = passTimeMs(pass?.event_end);
+            if (startMs == null || endMs == null || endMs < nowMs) return false;
+            return windowEndMs == null || startMs <= windowEndMs;
+        })
+        .sort((left, right) => (passTimeMs(left?.event_start) ?? 0) - (passTimeMs(right?.event_start) ?? 0));
+
+    return scopedPasses.find((pass) => {
+        const startMs = passTimeMs(pass?.event_start);
+        const endMs = passTimeMs(pass?.event_end);
+        return startMs != null && endMs != null && startMs <= nowMs && nowMs <= endMs;
+    }) || scopedPasses[0] || null;
+};
 
 
 const RotatorControl = React.memo(function RotatorControl({ trackerId: trackerIdOverride = "" }) {
@@ -79,7 +129,7 @@ const RotatorControl = React.memo(function RotatorControl({ trackerId: trackerId
         satelliteData,
         lastRotatorEvent,
         satellitePasses,
-        activePass,
+        nextPassesHours,
         rotatorConnecting,
         rotatorDisconnecting,
         trackerCommandsById,
@@ -88,6 +138,7 @@ const RotatorControl = React.memo(function RotatorControl({ trackerId: trackerId
     } = useSelector((state) => state.targetSatTrack);
     const trackerInstances = useSelector((state) => state.trackerInstances?.instances || []);
     const hasTargets = trackerInstances.length > 0;
+    const celestialState = useSelector((state) => state.celestial || {});
 
     const { rigs } = useSelector((state) => state.rigs);
     const { rotators } = useSelector((state) => state.rotators);
@@ -231,6 +282,34 @@ const RotatorControl = React.memo(function RotatorControl({ trackerId: trackerId
     }, [activeRotatorCommand]);
 
     const lastUpdateAge = Math.max(0, Math.floor((now - lastRotatorUpdateAt) / 1000));
+    const effectiveTargetPassKey = React.useMemo(
+        () => buildTargetKeyFromTrackingState(effectiveTrackingState) || buildSatellitePassKey(effectiveSatelliteId),
+        [effectiveSatelliteId, effectiveTrackingState]
+    );
+    const targetCurrentPosition = React.useMemo(() => ({
+        az: finiteOrNull(effectiveSatelliteData?.position?.az),
+        el: finiteOrNull(effectiveSatelliteData?.position?.el),
+    }), [effectiveSatelliteData?.position?.az, effectiveSatelliteData?.position?.el]);
+    const gaugePass = React.useMemo(() => {
+        const combinedPasses = [
+            ...(Array.isArray(satellitePasses) ? satellitePasses : []),
+            ...(Array.isArray(celestialState?.celestialTracks?.celestial_passes)
+                ? celestialState.celestialTracks.celestial_passes
+                : []),
+        ];
+        return selectCurrentOrNextPass({
+            passes: combinedPasses,
+            nowMs: now,
+            targetKey: effectiveTargetPassKey,
+            windowHours: nextPassesHours,
+        });
+    }, [
+        celestialState?.celestialTracks?.celestial_passes,
+        effectiveTargetPassKey,
+        nextPassesHours,
+        now,
+        satellitePasses,
+    ]);
 
     const connectDisabled = !hasTargets || isRotatorCommandBusy || !canConnectRotator(effectiveRotatorData, effectiveSelectedRotatorValue);
     const connectDisabledReason = !hasTargets
@@ -641,19 +720,19 @@ const RotatorControl = React.memo(function RotatorControl({ trackerId: trackerId
                         <Grid size="grow" style={{textAlign: 'center'}}>
                             <GaugeAz
                                 az={effectiveRotatorData['az']}
-                                limits={[activePass?.['start_azimuth'], activePass?.['end_azimuth']]}
-                                peakAz={activePass?.['peak_azimuth']}
-                                targetCurrentAz={effectiveSatelliteData?.['position']['az']}
-                                isGeoStationary={activePass?.['is_geostationary']}
-                                isGeoSynchronous={activePass?.['is_geosynchronous']}
+                                limits={[gaugePass?.start_azimuth, gaugePass?.end_azimuth]}
+                                peakAz={gaugePass?.peak_azimuth}
+                                targetCurrentAz={targetCurrentPosition.az}
+                                isGeoStationary={gaugePass?.is_geostationary}
+                                isGeoSynchronous={gaugePass?.is_geosynchronous}
                                 hardwareLimits={[effectiveRotatorData['minaz'], effectiveRotatorData['maxaz']]}
                             />
                         </Grid>
                         <Grid size="grow" style={{textAlign: 'center'}}>
                             <GaugeEl
                                 el={effectiveRotatorData['el']}
-                                maxElevation={activePass?.['peak_altitude']}
-                                targetCurrentEl={effectiveSatelliteData?.['position']['el']}
+                                maxElevation={gaugePass?.peak_altitude}
+                                targetCurrentEl={targetCurrentPosition.el}
                                 hardwareLimits={[effectiveRotatorData['minel'], effectiveRotatorData['maxel']]}
                             />
                         </Grid>

@@ -88,6 +88,7 @@ import {
 import { updateMetrics } from '../components/performance/performance-slice.jsx';
 import { setSystemInfo } from '../components/settings/system-info-slice.jsx';
 import { setRuntimeSnapshot } from '../components/settings/sessions-slice.jsx';
+import { loadAuthStatus } from '../components/auth/auth-slice.jsx';
 import { fetchSatelliteGroups } from '../components/earthview/earthview-slice.jsx';
 import { addTranscription } from '../components/waterfall/transcription-slice.jsx';
 import { fetchSoapySDRServers } from '../components/hardware/sdr-slice.jsx';
@@ -114,8 +115,9 @@ import {
 /**
  * Custom hook to handle all socket event listeners
  * @param {Object} socket - Socket.IO connection instance
+ * @param {boolean} enabled - whether event handlers should be active
  */
-export const useSocketEventHandlers = (socket) => {
+export const useSocketEventHandlers = (socket, enabled = true) => {
     const { t } = useTranslation('common');
     const dispatch = useDispatch();
 
@@ -123,10 +125,17 @@ export const useSocketEventHandlers = (socket) => {
     const notifiedVisibility = useRef(new Set());
 
     useEffect(() => {
-        if (!socket) return;
+        if (!socket || !enabled) return;
+        let lastBootstrappedSocketId = null;
 
-        // Connection event
-        socket.on('connect', async () => {
+        const handleConnect = async () => {
+            // Avoid duplicate bootstrap for the same socket session when listeners
+            // attach after the socket is already connected.
+            if (socket.id && socket.id === lastBootstrappedSocketId) {
+                return;
+            }
+            lastBootstrappedSocketId = socket.id || null;
+
             console.log('Socket connected with ID:', socket.id, socket);
 
             // Update connection state
@@ -137,6 +146,20 @@ export const useSocketEventHandlers = (socket) => {
             dispatch(setReConnectAttempt(0));
             dispatch(setInitialDataLoading(true));
             dispatch(setInitialDataProgress({ completed: 0, total: 0 }));
+
+            // Re-validate auth/setup state after each reconnect.
+            // This prevents stale runtime UI when backend setup state changed
+            // (for example, reconnecting against a fresh temp DB).
+            try {
+                const authStatus = await dispatch(loadAuthStatus()).unwrap();
+                if (authStatus?.setup_required || !authStatus?.authenticated) {
+                    dispatch(setInitialDataLoading(false));
+                    dispatch(setInitialDataProgress({ completed: 0, total: 0 }));
+                    return;
+                }
+            } catch {
+                // If status refresh fails, continue with runtime bootstrap path.
+            }
 
             // Update current session ID and clean up stale decoders from previous sessions
             store.dispatch(setCurrentSessionId(socket.id));
@@ -165,7 +188,13 @@ export const useSocketEventHandlers = (socket) => {
             //     }
             // );
             await initializeAppData(socket);
-        });
+        };
+
+        // Connection event
+        socket.on('connect', handleConnect);
+        if (socket.connected) {
+            void handleConnect();
+        }
 
         // Reconnection attempt event
         socket.on("reconnect_attempt", (attempt) => {
@@ -672,6 +701,12 @@ export const useSocketEventHandlers = (socket) => {
 
         // Decoder data events (SSTV, AFSK, Morse, GMSK, Transcription, etc.)
         socket.on('decoder-data', (data) => {
+            // Some backends/bridges can emit an empty decoder payload transiently.
+            // Guarding here avoids crashing the app shell on malformed events.
+            if (!data || typeof data !== 'object' || typeof data.type !== 'string') {
+                return;
+            }
+
             switch (data.type) {
                 case 'decoder-status':
                     // GNSS decoder restart: clear GNSS table/fix timeline so UI reflects a fresh session.
@@ -871,7 +906,7 @@ export const useSocketEventHandlers = (socket) => {
         // Cleanup function
         return () => {
             clearInterval(timingInterval);
-            socket.off('connect');
+            socket.off('connect', handleConnect);
             socket.off('reconnect_attempt');
             socket.off('connect_error');
             socket.off('reconnect_error');
@@ -914,5 +949,5 @@ export const useSocketEventHandlers = (socket) => {
             socket.off("soapysdr:refresh_complete");
             socket.off("soapysdr:discovery_error");
         };
-    }, [socket, dispatch, t]);
+    }, [socket, enabled, dispatch, t]);
 };

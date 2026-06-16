@@ -28,7 +28,16 @@ import {
     useMap,
     useMapEvents,
 } from 'react-leaflet';
-import {Box, Fab, Slider, Typography, Tooltip, IconButton, useTheme} from "@mui/material";
+import {
+    Box,
+    CircularProgress,
+    Fab,
+    Slider,
+    Typography,
+    Tooltip,
+    IconButton,
+    useTheme,
+} from "@mui/material";
 import { styled } from '@mui/material/styles';
 import { Tooltip as LeafletTooltip } from 'react-leaflet';
 import L from 'leaflet';
@@ -62,6 +71,7 @@ import {
     getTrackingStateFromBackend,
     setSatelliteId,
     setTargetMapSetting,
+    TARGET_VIEW_MODE_PLANETARIUM,
 } from './target-slice.jsx';
 import {getMapCrsByTileLayerId, getTileLayerById, normalizeMapEngine} from "../common/tile-layers.jsx";
 import {homeIcon, sunIcon, moonIcon, satelliteIcon2} from '../common/dataurl-icons.jsx';
@@ -78,11 +88,14 @@ import {
 } from "../common/common.jsx";
 import TargetNumberIcon from '../common/target-number-icon.jsx';
 import { useTooltipOrientation } from '../common/tooltip-orientation.js';
-import MapSettingsIslandDialog from './map-settings-dialog.jsx';
+import TargetMapSettingsDialog from './target-map-settings-dialog.jsx';
+import TargetSkyViewSettingsDialog from './target-sky-view-settings-dialog.jsx';
 import CoordinateGrid from "../common/mercator-grid.jsx";
 import createTerminatorLine from "../common/terminator-line.jsx";
 import {getSunMoonCoords} from "../common/sunmoon.jsx";
 import SolarSystemCanvas from "../celestial/solarsystem-canvas.jsx";
+import PlanetariumCanvas from "../celestial/planetarium-canvas.jsx";
+import CelestialToolbar from '../celestial/celestial-toolbar.jsx';
 import { fetchCelestialTracks, fetchSolarSystemScene } from "../celestial/celestial-slice.jsx";
 import {
     satelliteCoverageSelector,
@@ -108,6 +121,51 @@ import {resolveDynamicOrbitPathSegments} from '../common/orbit-path-dynamic-spli
 
 const storageMapZoomValueKey = "target-map-zoom-level";
 const TARGET_SLOT_ID_PATTERN = /^target-(\d+)$/;
+
+const getFullscreenElement = () => (
+    document.fullscreenElement
+    || document.webkitFullscreenElement
+    || document.mozFullScreenElement
+    || document.msFullscreenElement
+    || null
+);
+
+const requestFullscreen = (element) => {
+    if (!element) return;
+    if (element.requestFullscreen) {
+        element.requestFullscreen();
+        return;
+    }
+    if (element.webkitRequestFullscreen) {
+        element.webkitRequestFullscreen();
+        return;
+    }
+    if (element.mozRequestFullScreen) {
+        element.mozRequestFullScreen();
+        return;
+    }
+    if (element.msRequestFullscreen) {
+        element.msRequestFullscreen();
+    }
+};
+
+const exitFullscreen = () => {
+    if (document.exitFullscreen) {
+        document.exitFullscreen();
+        return;
+    }
+    if (document.webkitExitFullscreen) {
+        document.webkitExitFullscreen();
+        return;
+    }
+    if (document.mozCancelFullScreen) {
+        document.mozCancelFullScreen();
+        return;
+    }
+    if (document.msExitFullscreen) {
+        document.msExitFullscreen();
+    }
+};
 
 // Match overview tracked-satellite tooltip style.
 const TrackedSatelliteTooltip = styled(LeafletTooltip)(({ theme }) => ({
@@ -394,7 +452,7 @@ const TargetAttributionBar = React.memo(function TargetAttributionBar({ htmlStri
     );
 });
 
-const LeafletTargetMapRenderer = ({}) => {
+const TargetMapCompositeView = ({}) => {
     const {socket} = useSocket();
     const dispatch = useDispatch();
     const { t } = useTranslation('target');
@@ -402,7 +460,9 @@ const LeafletTargetMapRenderer = ({}) => {
     const {
         groupId,
         trackerId,
+        trackerViews,
         satelliteId: noradId,
+        rotatorData,
         showPastOrbitPath,
         showFutureOrbitPath,
         showSatelliteCoverage,
@@ -425,10 +485,12 @@ const LeafletTargetMapRenderer = ({}) => {
         moonPos,
         gridEditable,
         sliderTimeOffset,
-        openMapSettingsDialog,
         showGrid,
         enableMapDragging,
         enableMapZooming,
+        targetViewMode,
+        targetViewEnableDragging,
+        targetViewEnableZooming,
     } = useSelector(state => state.targetSatTrack);
     const trackerInstances = useSelector((state) => state.trackerInstances?.instances || []);
     const targetNumber = useMemo(() => {
@@ -475,6 +537,12 @@ const LeafletTargetMapRenderer = ({}) => {
     const celestialState = useSelector((state) => state.celestial || {});
     const monitoredRows = useSelector((state) => state.celestialMonitored?.monitored || []);
     const {location} = useSelector(state => state.location);
+    const scopedTrackerView = useMemo(
+        () => (trackerId ? trackerViews?.[trackerId] || null : null),
+        [trackerId, trackerViews]
+    );
+    const effectiveTrackingState = scopedTrackerView?.trackingState || trackingState || {};
+    const effectiveRotatorData = scopedTrackerView?.rotatorData || rotatorData || {};
     const isSatelliteTarget = targetType === 'satellite';
     const missionCommand = String(trackingState?.command || '').trim();
     const bodyId = String(trackingState?.body_id || '').trim().toLowerCase();
@@ -504,6 +572,13 @@ const LeafletTargetMapRenderer = ({}) => {
         [bodyId, missionCommand, nextPassesHours, nonSatelliteTargetName, targetType],
     );
     const [focusTargetSignal, setFocusTargetSignal] = useState(0);
+    const [nonSatelliteFitAllSignal, setNonSatelliteFitAllSignal] = useState(0);
+    const [nonSatelliteZoomInSignal, setNonSatelliteZoomInSignal] = useState(0);
+    const [nonSatelliteZoomOutSignal, setNonSatelliteZoomOutSignal] = useState(0);
+    const [nonSatelliteResetZoomSignal, setNonSatelliteResetZoomSignal] = useState(0);
+    const [nonSatelliteCenterSignal, setNonSatelliteCenterSignal] = useState(0);
+    const [nonSatelliteFullscreen, setNonSatelliteFullscreen] = useState(false);
+    const nonSatelliteViewportRef = useRef(null);
     const lastAutoFetchedSignatureRef = useRef('');
     const pendingFocusTargetKeyRef = useRef('');
     const [currentPastSatellitesPaths, setCurrentPastSatellitesPaths] = useState([]);
@@ -511,6 +586,31 @@ const LeafletTargetMapRenderer = ({}) => {
     const [currentSatellitesPosition, setCurrentSatellitesPosition] = useState([]);
     const [currentSatellitesCoverage, setCurrentSatellitesCoverage] = useState([]);
     const [currentCrosshairs, setCurrentCrosshairs] = useState([]);
+    const planetariumRotatorCrosshair = useMemo(() => {
+        const az = Number(effectiveRotatorData?.az);
+        const el = Number(effectiveRotatorData?.el);
+        const connected = effectiveRotatorData?.connected === true;
+        const tracking = effectiveRotatorData?.tracking === true
+            || String(effectiveTrackingState?.rotator_state || '').trim().toLowerCase() === 'tracking';
+        if (!connected || !tracking) return null;
+        if (!Number.isFinite(az) || !Number.isFinite(el)) return null;
+        return { visible: true, az, el };
+    }, [
+        effectiveRotatorData?.az,
+        effectiveRotatorData?.el,
+        effectiveRotatorData?.connected,
+        effectiveRotatorData?.tracking,
+        effectiveTrackingState?.rotator_state,
+    ]);
+    const planetariumRotatorMinElevation = useMemo(() => {
+        const connected = effectiveRotatorData?.connected === true;
+        const minElevation = Number(effectiveRotatorData?.minel);
+        if (!connected || !Number.isFinite(minElevation)) return null;
+        return minElevation;
+    }, [
+        effectiveRotatorData?.connected,
+        effectiveRotatorData?.minel,
+    ]);
     const clearRenderedSatelliteLayers = useCallback(() => {
         setCurrentPastSatellitesPaths([]);
         setCurrentFutureSatellitesPaths([]);
@@ -528,7 +628,6 @@ const LeafletTargetMapRenderer = ({}) => {
             dispatch(fetchCelestialTracks({ socket, payload: nonSatellitePayload })),
         ]);
     }, [dispatch, nonSatellitePayload, socket]);
-
     const nonSatelliteFetchSignature = useMemo(() => {
         if (isSatelliteTarget || !nonSatellitePayload) return '';
         const futureHours = clampTargetPassHours(nextPassesHours);
@@ -558,6 +657,25 @@ const LeafletTargetMapRenderer = ({}) => {
             setFocusTargetSignal((value) => value + 1);
         }
     }, [isSatelliteTarget, nonSatelliteTargetKey]);
+    useEffect(() => {
+        const handleFullscreenChange = () => {
+            const viewportElement = nonSatelliteViewportRef.current;
+            const fullscreenElement = getFullscreenElement();
+            setNonSatelliteFullscreen(Boolean(viewportElement && fullscreenElement === viewportElement));
+        };
+
+        handleFullscreenChange();
+        document.addEventListener('fullscreenchange', handleFullscreenChange);
+        document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+        document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+        document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+        return () => {
+            document.removeEventListener('fullscreenchange', handleFullscreenChange);
+            document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+            document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
+            document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
+        };
+    }, []);
 
     // Subscribe to map events
     function MapEventComponent({handleSetMapZoomLevel}) {
@@ -902,13 +1020,49 @@ const LeafletTargetMapRenderer = ({}) => {
     const handleOpenSettings = useCallback(() => {
         dispatch(setOpenMapSettingsDialog(true));
     }, [dispatch]);
+    const handleToggleNonSatelliteFullscreen = useCallback(() => {
+        const viewportElement = nonSatelliteViewportRef.current;
+        if (!viewportElement) return;
+        const fullscreenElement = getFullscreenElement();
+        if (fullscreenElement === viewportElement) {
+            exitFullscreen();
+            return;
+        }
+        requestFullscreen(viewportElement);
+    }, []);
+    const tracksProgress = celestialState?.tracksProgress || null;
+    const tracksProgressText = useMemo(() => {
+        if (!celestialState?.tracksLoading) return '';
+        const current = Number(tracksProgress?.current);
+        const total = Number(tracksProgress?.total);
+        if (Number.isFinite(current) && Number.isFinite(total) && total > 0) {
+            return `${Math.max(0, Math.min(current, total))}/${total}`;
+        }
+        return 'Loading...';
+    }, [celestialState?.tracksLoading, tracksProgress?.current, tracksProgress?.total]);
     if (!isSatelliteTarget) {
-        const scopedTargetRows = Array.isArray(nonSatelliteScene?.celestial) ? nonSatelliteScene.celestial : [];
-        const hasTargetData = scopedTargetRows.length > 0;
         const nonSatelliteTitle = targetType === 'mission' ? 'Target Map · Mission' : 'Target Map · Body';
 
         return (
-            <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+            <Box
+                ref={nonSatelliteViewportRef}
+                sx={{
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    minHeight: 0,
+                    '&:fullscreen': {
+                        width: '100vw',
+                        height: '100vh',
+                        bgcolor: 'background.paper',
+                    },
+                    '&:-webkit-full-screen': {
+                        width: '100vw',
+                        height: '100vh',
+                        bgcolor: 'background.paper',
+                    },
+                }}
+            >
                 <TitleBar
                     className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}
                     sx={islandTitleBarSx}
@@ -922,7 +1076,18 @@ const LeafletTargetMapRenderer = ({}) => {
                                 {nonSatelliteTargetName || '-'}
                             </Typography>
                         </Box>
-                        <Box sx={{ display: 'flex', gap: 0.5 }}>
+                        <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+                            <Tooltip title={t('map_settings.title')}>
+                                <span>
+                                    <IconButton
+                                        size="small"
+                                        onClick={handleOpenSettings}
+                                        sx={{ padding: '2px' }}
+                                    >
+                                        <SettingsIcon fontSize="small" />
+                                    </IconButton>
+                                </span>
+                            </Tooltip>
                             <Tooltip title="Refresh target scene">
                                 <span>
                                     <IconButton
@@ -938,6 +1103,26 @@ const LeafletTargetMapRenderer = ({}) => {
                         </Box>
                     </Box>
                 </TitleBar>
+                <TargetSkyViewSettingsDialog updateBackend={() => {
+                    const key = 'target-map-settings';
+                    dispatch(setTargetMapSetting({socket, key}));
+                }}/>
+                <CelestialToolbar
+                    onFitAll={() => setNonSatelliteFitAllSignal((value) => value + 1)}
+                    onZoomIn={() => setNonSatelliteZoomInSignal((value) => value + 1)}
+                    onZoomOut={() => setNonSatelliteZoomOutSignal((value) => value + 1)}
+                    onZoomReset={() => setNonSatelliteResetZoomSignal((value) => value + 1)}
+                    onCenterSun={() => setNonSatelliteCenterSignal((value) => value + 1)}
+                    onRefresh={handleRefreshNonSatelliteScene}
+                    loading={celestialState?.tracksLoading}
+                    loadingText={tracksProgressText}
+                    disabled={!socket || !nonSatellitePayload}
+                    onToggleFullscreen={handleToggleNonSatelliteFullscreen}
+                    fullscreen={nonSatelliteFullscreen}
+                    fullscreenLabel={t('map_controls.go_fullscreen', { defaultValue: 'Go fullscreen' })}
+                    exitFullscreenLabel={t('map_controls.exit_fullscreen', { defaultValue: 'Exit fullscreen' })}
+                    showZoomButtons={!targetViewEnableZooming}
+                />
                 <Box sx={{ width: '100%', flex: 1, minHeight: 0 }}>
                     {!nonSatellitePayload ? (
                         <Box sx={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', p: 2 }}>
@@ -946,23 +1131,63 @@ const LeafletTargetMapRenderer = ({}) => {
                             </Typography>
                         </Box>
                     ) : (
-                        <Box sx={{ height: '100%', minHeight: 220 }}>
-                            {!hasTargetData && celestialState?.tracksLoading ? (
-                                <Box sx={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', p: 2 }}>
-                                    <Typography variant="body2" sx={{ color: 'text.secondary', textAlign: 'center' }}>
-                                        Loading target scene...
-                                    </Typography>
-                                </Box>
+                        <Box sx={{ height: '100%', minHeight: 220, position: 'relative' }}>
+                            {targetViewMode === TARGET_VIEW_MODE_PLANETARIUM ? (
+                                <PlanetariumCanvas
+                                    scene={nonSatelliteScene}
+                                    selectedTargetKeys={nonSatelliteTargetKey ? [nonSatelliteTargetKey] : []}
+                                    focusTargetKey={nonSatelliteTargetKey}
+                                    rotatorCrosshair={planetariumRotatorCrosshair}
+                                    rotatorMinElevation={planetariumRotatorMinElevation}
+                                    enableMapDragging={targetViewEnableDragging}
+                                    enableMapZooming={targetViewEnableZooming}
+                                    fitAllSignal={nonSatelliteFitAllSignal}
+                                    zoomInSignal={nonSatelliteZoomInSignal}
+                                    zoomOutSignal={nonSatelliteZoomOutSignal}
+                                    resetZoomSignal={nonSatelliteResetZoomSignal}
+                                    centerSunSignal={nonSatelliteCenterSignal}
+                                />
                             ) : (
                                 <SolarSystemCanvas
                                     scene={nonSatelliteScene}
                                     selectedTargetKeys={nonSatelliteTargetKey ? [nonSatelliteTargetKey] : []}
+                                    fitAllSignal={nonSatelliteFitAllSignal}
                                     focusTargetSignal={focusTargetSignal}
                                     focusTargetKey={nonSatelliteTargetKey}
+                                    zoomInSignal={nonSatelliteZoomInSignal}
+                                    zoomOutSignal={nonSatelliteZoomOutSignal}
+                                    resetZoomSignal={nonSatelliteResetZoomSignal}
+                                    centerSunSignal={nonSatelliteCenterSignal}
                                     instantFocus={true}
                                     initialViewport={celestialState?.mapSettings?.solarSystemViewport || null}
+                                    enableMapDragging={targetViewEnableDragging}
+                                    enableMapZooming={targetViewEnableZooming}
                                 />
                             )}
+                            {celestialState?.tracksLoading ? (
+                                <Box
+                                    sx={{
+                                        position: 'absolute',
+                                        inset: 0,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        flexDirection: 'column',
+                                        gap: 1.25,
+                                        bgcolor: (theme) => theme.palette.mode === 'dark'
+                                            ? 'rgba(8, 10, 14, 0.72)'
+                                            : 'rgba(248, 250, 255, 0.78)',
+                                        pointerEvents: 'none',
+                                    }}
+                                >
+                                    <CircularProgress size={34} />
+                                    <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
+                                        {targetViewMode === TARGET_VIEW_MODE_PLANETARIUM
+                                            ? 'Loading planetarium vectors...'
+                                            : 'Loading target scene...'}
+                                    </Typography>
+                                </Box>
+                            ) : null}
                         </Box>
                     )}
                 </Box>
@@ -1048,7 +1273,7 @@ const LeafletTargetMapRenderer = ({}) => {
                     </Box>
                 ) : null}
 
-                <MapSettingsIslandDialog updateBackend={() => {
+                <TargetMapSettingsDialog updateBackend={() => {
                     const key = 'target-map-settings';
                     dispatch(setTargetMapSetting({socket, key: key}));
                 }}/>
@@ -1119,4 +1344,4 @@ const LeafletTargetMapRenderer = ({}) => {
     );
 };
 
-export default LeafletTargetMapRenderer;
+export default TargetMapCompositeView;

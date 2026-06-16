@@ -14,12 +14,30 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from common.common import logger, serialize_object
 from db.models import CelestialTargets, CelestialVectorSnapshots
+
+_SNAPSHOT_UPSERT_CONFLICT_MISSING_CONSTRAINT_ERROR = (
+    "ON CONFLICT clause does not match any PRIMARY KEY or UNIQUE constraint"
+)
+_SNAPSHOT_LOOKUP_INDEX_SQL = """
+CREATE UNIQUE INDEX IF NOT EXISTS ix_celestial_vector_snapshots_lookup
+ON celestial_vector_snapshots
+(
+    target_id,
+    epoch_bucket_utc,
+    past_hours,
+    future_hours,
+    step_minutes,
+    frame,
+    center
+)
+"""
 
 
 def _normalize_target_entry(row: Dict[str, Any]) -> Dict[str, Any]:
@@ -82,6 +100,14 @@ def _normalize_snapshot_entry(row: Dict[str, Any]) -> Dict[str, Any]:
         "created_at": row.get("created_at"),
         "updated_at": row.get("updated_at"),
     }
+
+
+def _is_missing_snapshot_lookup_constraint_error(exc: OperationalError) -> bool:
+    return _SNAPSHOT_UPSERT_CONFLICT_MISSING_CONSTRAINT_ERROR in str(exc)
+
+
+async def _ensure_snapshot_lookup_unique_index(session: AsyncSession) -> None:
+    await session.execute(text(_SNAPSHOT_LOOKUP_INDEX_SQL))
 
 
 async def ensure_celestial_target(
@@ -420,7 +446,19 @@ async def upsert_celestial_vector_snapshot(
                 "updated_at": now_utc,
             },
         )
-        await session.execute(stmt)
+        try:
+            await session.execute(stmt)
+        except OperationalError as exc:
+            if not _is_missing_snapshot_lookup_constraint_error(exc):
+                raise
+            # Some restored databases were missing lookup indexes because older full backups
+            # included table SQL + row data but not CREATE INDEX statements.
+            logger.warning(
+                "Celestial vector snapshot lookup index missing during upsert; creating index and retrying."
+            )
+            await session.rollback()
+            await _ensure_snapshot_lookup_unique_index(session)
+            await session.execute(stmt)
         await session.commit()
 
         result = await session.execute(

@@ -1,6 +1,7 @@
 import time
 from typing import Any, Dict, Optional
 
+from common import auth as authsvc
 from common.logger import logger
 from handlers.entities import (
     appsettings,
@@ -54,6 +55,9 @@ def _register_all_handlers():
 # Register all handlers at module load time.
 _register_all_handlers()
 
+# Auth context keyed by socket session id.
+SOCKET_AUTH: Dict[str, Dict[str, Any]] = {}
+
 
 def register_socketio_handlers(sio):
     """Register Socket.IO event handlers."""
@@ -73,7 +77,27 @@ def register_socketio_handlers(sio):
         origin = environ.get("HTTP_ORIGIN")
         referer = environ.get("HTTP_REFERER")
 
-        logger.info(f"Client {sid} from {client_ip} connected, auth: {auth}")
+        logger.info(f"Client {sid} from {client_ip} connected")
+
+        setup_required = await authsvc.is_setup_required()
+        token = authsvc.extract_socket_token(auth)
+        auth_context = await authsvc.authenticate_token(token)
+        if not setup_required and auth_context is None:
+            logger.warning(f"Rejecting unauthenticated socket connection sid={sid}")
+            return False
+
+        if auth_context:
+            SOCKET_AUTH[sid] = auth_context
+            logger.info(
+                "Authenticated socket sid=%s as user=%s role=%s",
+                sid,
+                auth_context.get("username"),
+                auth_context.get("role"),
+            )
+        else:
+            # Setup mode allows temporary unauthenticated access for onboarding-only commands.
+            SOCKET_AUTH[sid] = {}
+
         SESSIONS[sid] = environ
 
         # Persist client metadata into SessionTracker so snapshots can include it.
@@ -99,6 +123,7 @@ def register_socketio_handlers(sio):
     async def disconnect(sid, environ):
         del environ
         session_env = SESSIONS.pop(sid, {})
+        SOCKET_AUTH.pop(sid, None)
         remote_addr = session_env.get("REMOTE_ADDR", "unknown")
         logger.info(f"Client {sid} from {remote_addr} disconnected")
         # Clean up session via SessionService (stops processes and clears tracker including metadata).
@@ -117,7 +142,16 @@ def register_socketio_handlers(sio):
 
         normalized_cmd = cmd.strip()
         logger.debug(f"Received api.call from sid={sid}, cmd={normalized_cmd}")
-        reply = await dispatch_request(sio, normalized_cmd, data, logger, sid, handler_registry)
+        auth_context = SOCKET_AUTH.get(sid) or None
+        reply = await dispatch_request(
+            sio,
+            normalized_cmd,
+            data,
+            logger,
+            sid,
+            handler_registry,
+            auth_context=auth_context,
+        )
         return reply
 
     return SESSIONS

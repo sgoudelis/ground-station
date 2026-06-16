@@ -28,19 +28,26 @@ import {
     AppBar,
     Avatar,
     Backdrop,
+    Button,
     Box,
+    Checkbox,
+    Chip,
     CssBaseline,
     Dialog,
+    DialogActions,
     DialogTitle,
     DialogContent,
+    DialogContentText,
     Divider,
     Drawer,
+    FormControlLabel,
     IconButton,
     List,
     ListItem,
     ListItemButton,
     ListItemIcon,
     ListItemText,
+    Menu,
     MenuItem,
     MenuList,
     Toolbar,
@@ -52,7 +59,7 @@ import {GroundStationLogoGreenBlue} from "../common/dataurl-icons.jsx";
 import {stringAvatar} from "../common/common.jsx";
 import Grid from "@mui/material/Grid";
 import BorderColorIcon from '@mui/icons-material/BorderColor';
-import {useCallback, useEffect, useRef, useState} from "react";
+import {useEffect, useRef, useState} from "react";
 import {setGridEditable as setEarthViewGridEditable} from '../earthview/earthview-slice.jsx';
 import {setGridEditable as setTargetGridEditable} from '../target/target-slice.jsx';
 import {setGridEditable as setWaterfallGridEditable} from '../waterfall/waterfall-slice.jsx';
@@ -80,9 +87,12 @@ import BackgroundTasksPopover from "../tasks/tasks-popover.jsx";
 import LocationPage from "../settings/location-form.jsx";
 import MenuIcon from '@mui/icons-material/Menu';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import LogoutIcon from '@mui/icons-material/Logout';
+import TuneIcon from '@mui/icons-material/Tune';
 import {getNavigation} from "../../config/navigation.jsx";
 import { useUserTimeSettings } from '../../hooks/useUserTimeSettings.jsx';
 import { formatTime } from '../../utils/date-time.js';
+import { logoutUser, setShowLogoutConfirmation } from '../auth/auth-slice.jsx';
 
 // Drawer widths
 const drawerWidthExpanded = 240;
@@ -772,6 +782,81 @@ const createPreviewComponent = (mini) => {
     return PreviewComponent;
 };
 
+const resolveRoleLabel = (role) => {
+    if (role === 'admin') {
+        return 'Admin';
+    }
+    return 'Operator';
+};
+
+const hashString = (value) => {
+    const normalized = String(value || '');
+    let hash = 2166136261;
+    for (let i = 0; i < normalized.length; i += 1) {
+        hash ^= normalized.charCodeAt(i);
+        hash = Math.imul(hash, 16777619);
+    }
+    return hash >>> 0;
+};
+
+const buildIdenticonDataUri = (seed, fillColor) => {
+    const size = 5;
+    const mirrorCols = Math.ceil(size / 2);
+    let state = seed || 1;
+    const nextBit = () => {
+        state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
+        return (state & 1) === 1;
+    };
+
+    const rects = [];
+    for (let y = 0; y < size; y += 1) {
+        for (let x = 0; x < mirrorCols; x += 1) {
+            if (!nextBit()) {
+                continue;
+            }
+            const mirrorX = size - x - 1;
+            rects.push(`<rect x="${x}" y="${y}" width="1" height="1" fill="${fillColor}" />`);
+            if (mirrorX !== x) {
+                rects.push(
+                    `<rect x="${mirrorX}" y="${y}" width="1" height="1" fill="${fillColor}" />`
+                );
+            }
+        }
+    }
+
+    const svg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 ${size} ${size}' shape-rendering='crispEdges'>${rects.join('')}</svg>`;
+    return `url("data:image/svg+xml;utf8,${encodeURIComponent(svg)}")`;
+};
+
+const buildUserRoleAvatarProps = (username, role) => {
+    const seed = hashString(username || 'unknown-user');
+    const hue = seed % 360;
+    const bgColor = `hsl(${hue} 54% 42%)`;
+    const fillColor = `hsla(${hue}, 92%, 92%, 0.58)`;
+    const roleRingColor = role === 'admin' ? 'rgba(245,158,11,0.88)' : 'rgba(59,130,246,0.88)';
+
+    return {
+        sx: {
+            bgcolor: bgColor,
+            backgroundImage: buildIdenticonDataUri(seed, fillColor),
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            border: '2px solid rgba(255,255,255,0.78)',
+            boxShadow: `0 0 0 2px ${roleRingColor}, inset 0 0 0 1px rgba(0,0,0,0.08)`,
+        },
+        children: null,
+    };
+};
+
+const roleChipSx = {
+    height: 16,
+    '& .MuiChip-label': {
+        px: 0.6,
+        fontSize: '0.64rem',
+        lineHeight: 1.05,
+    },
+};
+
 export default function Layout() {
     const theme = useTheme();
     const dispatch = useDispatch();
@@ -781,10 +866,28 @@ export default function Layout() {
     const { t } = useTranslation();
     const [open, setOpen] = React.useState(false);
     const [mobileOpen, setMobileOpen] = React.useState(false);
+    const [userMenuAnchorEl, setUserMenuAnchorEl] = React.useState(null);
+    const [logoutDialogOpen, setLogoutDialogOpen] = React.useState(false);
+    const [skipLogoutConfirmChecked, setSkipLogoutConfirmChecked] = React.useState(false);
     const preferences = useSelector((state) => state.preferences?.preferences || []);
+    const authUser = useSelector((state) => state.auth?.user || null);
+    const showLogoutConfirmation = useSelector(
+        (state) => state.auth?.showLogoutConfirmation !== false
+    );
+    const userRole = String(authUser?.role || '').toLowerCase();
+    const isAdmin = userRole === 'admin';
     const celestialEnabledPreference = preferences.find((pref) => pref.name === 'celestial_enabled');
     const showCelestial = String(celestialEnabledPreference?.value ?? 'false').toLowerCase() === 'true';
-    const [navigation, setNavigation] = React.useState(getNavigation({ showCelestial }));
+    const userMenuOpen = Boolean(userMenuAnchorEl);
+    const roleLabel = resolveRoleLabel(userRole);
+    const username = String(authUser?.username || '').trim() || 'Unknown user';
+    const userAvatarProps = React.useMemo(
+        () => buildUserRoleAvatarProps(username, userRole),
+        [username, userRole]
+    );
+    const userMenuButtonId = 'sidebar-user-menu-button';
+    const userMenuId = 'sidebar-user-menu';
+    const [navigation, setNavigation] = React.useState(getNavigation({ showCelestial, isAdmin }));
     const { timezone, locale } = useUserTimeSettings();
 
     const {
@@ -815,8 +918,8 @@ export default function Layout() {
 
     // Update navigation when language changes or state changes
     React.useEffect(() => {
-        setNavigation(getNavigation({ showCelestial }));
-    }, [t, showCelestial]);
+        setNavigation(getNavigation({ showCelestial, isAdmin }));
+    }, [t, showCelestial, isAdmin]);
 
     useEffect(() => {
         console.info('Initializing audio...');
@@ -899,6 +1002,52 @@ export default function Layout() {
         if (window.innerWidth < 600) {
             setMobileOpen(false);
         }
+    };
+
+    const handleOpenUserMenu = (event) => {
+        setUserMenuAnchorEl(event.currentTarget);
+    };
+
+    const handleCloseUserMenu = () => {
+        setUserMenuAnchorEl(null);
+    };
+
+    const handleMenuNavigation = (path) => {
+        handleCloseUserMenu();
+        navigate(path);
+        if (window.innerWidth < 600) {
+            setMobileOpen(false);
+        }
+    };
+
+    const executeLogout = async () => {
+        if (window.innerWidth < 600) {
+            setMobileOpen(false);
+        }
+        await dispatch(logoutUser());
+    };
+
+    const handleMenuLogout = () => {
+        handleCloseUserMenu();
+        if (!showLogoutConfirmation) {
+            void executeLogout();
+            return;
+        }
+        setSkipLogoutConfirmChecked(false);
+        setLogoutDialogOpen(true);
+    };
+
+    const handleLogoutDialogClose = () => {
+        setLogoutDialogOpen(false);
+        setSkipLogoutConfirmChecked(false);
+    };
+
+    const handleLogoutDialogConfirm = async () => {
+        if (skipLogoutConfirmChecked) {
+            dispatch(setShowLogoutConfirmation(false));
+        }
+        setLogoutDialogOpen(false);
+        await executeLogout();
     };
 
     const isActiveRoute = (segment) => {
@@ -1023,79 +1172,143 @@ export default function Layout() {
     const drawerContent = (isExpanded) => (
         <>
             <Toolbar />
-            <Box component="nav" role="navigation" aria-label="Main navigation" sx={{ overflow: 'auto', mt: 1 }}>
-                <List>
-                    {navigation.map((item, index) => {
-                        if (item.kind === 'header') {
-                            return isExpanded ? (
-                                <ListItem key={index} sx={{ pt: 2, pb: 1 }}>
-                                    <Typography
-                                        variant="caption"
-                                        sx={{
-                                            fontWeight: 'bold',
-                                            color: 'text.secondary',
-                                            pl: 2
-                                        }}
-                                    >
-                                        {item.title}
-                                    </Typography>
-                                </ListItem>
-                            ) : null;
-                        }
-
-                        if (item.kind === 'divider') {
-                            return <Divider key={index} sx={{ my: 1 }} />;
-                        }
-
-                        const isActive = isActiveRoute(item.segment);
-
-                        return (
-                            <ListItem key={index} disablePadding sx={{ display: 'block' }}>
-                                <Tooltip
-                                    title={getTooltipText(item, isExpanded)}
-                                    placement="right"
-                                    disableFocusListener
-                                    disableTouchListener
-                                >
-                                    <ListItemButton
-                                        onClick={() => handleNavigation(item.segment)}
-                                        selected={isActive}
-                                        sx={{
-                                            minHeight: 40,
-                                            justifyContent: isExpanded ? 'flex-start' : 'center',
-                                            px: isExpanded ? 2 : 0,
-                                            py: 0.75,
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                        }}
-                                    >
-                                        <ListItemIcon
+            <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                <Box component="nav" role="navigation" aria-label="Main navigation" sx={{ overflow: 'auto', mt: 1, flex: 1 }}>
+                    <List>
+                        {navigation.map((item, index) => {
+                            if (item.kind === 'header') {
+                                return isExpanded ? (
+                                    <ListItem key={index} sx={{ pt: 2, pb: 1 }}>
+                                        <Typography
+                                            variant="caption"
                                             sx={{
-                                                minWidth: 0,
-                                                mr: isExpanded ? 2 : 0,
+                                                fontWeight: 'bold',
+                                                color: 'text.secondary',
+                                                pl: 2
+                                            }}
+                                        >
+                                            {item.title}
+                                        </Typography>
+                                    </ListItem>
+                                ) : null;
+                            }
+
+                            if (item.kind === 'divider') {
+                                return <Divider key={index} sx={{ my: 1 }} />;
+                            }
+
+                            const isActive = isActiveRoute(item.segment);
+
+                            return (
+                                <ListItem key={index} disablePadding sx={{ display: 'block' }}>
+                                    <Tooltip
+                                        title={getTooltipText(item, isExpanded)}
+                                        placement="right"
+                                        disableFocusListener
+                                        disableTouchListener
+                                    >
+                                        <ListItemButton
+                                            onClick={() => handleNavigation(item.segment)}
+                                            selected={isActive}
+                                            sx={{
+                                                minHeight: 40,
+                                                justifyContent: isExpanded ? 'flex-start' : 'center',
+                                                px: isExpanded ? 2 : 0,
+                                                py: 0.75,
                                                 display: 'flex',
-                                                justifyContent: 'center',
                                                 alignItems: 'center',
                                             }}
                                         >
-                                            {item.icon}
-                                        </ListItemIcon>
-                                        {isExpanded && (
-                                            <ListItemText
-                                                primary={item.title}
+                                            <ListItemIcon
                                                 sx={{
-                                                    '& .MuiTypography-root': {
-                                                        fontSize: '0.875rem'
-                                                    }
+                                                    minWidth: 0,
+                                                    mr: isExpanded ? 2 : 0,
+                                                    display: 'flex',
+                                                    justifyContent: 'center',
+                                                    alignItems: 'center',
                                                 }}
-                                            />
-                                        )}
-                                    </ListItemButton>
-                                </Tooltip>
-                            </ListItem>
-                        );
-                    })}
-                </List>
+                                            >
+                                                {item.icon}
+                                            </ListItemIcon>
+                                            {isExpanded && (
+                                                <ListItemText
+                                                    primary={item.title}
+                                                    sx={{
+                                                        '& .MuiTypography-root': {
+                                                            fontSize: '0.875rem'
+                                                        }
+                                                    }}
+                                                />
+                                            )}
+                                        </ListItemButton>
+                                    </Tooltip>
+                                </ListItem>
+                            );
+                        })}
+                    </List>
+                </Box>
+                <Divider />
+                <Box sx={{ p: 1 }}>
+                    <Tooltip
+                        title={isExpanded ? '' : 'User menu'}
+                        placement="right"
+                        disableFocusListener={isExpanded}
+                        disableTouchListener={isExpanded}
+                    >
+                        <ListItemButton
+                            id={userMenuButtonId}
+                            onClick={handleOpenUserMenu}
+                            aria-label={`Open user menu for ${username}`}
+                            aria-haspopup="menu"
+                            aria-controls={userMenuOpen ? userMenuId : undefined}
+                            aria-expanded={userMenuOpen ? 'true' : undefined}
+                            sx={{
+                                minHeight: 46,
+                                justifyContent: isExpanded ? 'flex-start' : 'center',
+                                px: isExpanded ? 1.25 : 0,
+                                borderRadius: 1,
+                                transition: (theme) => theme.transitions.create(['background-color'], {
+                                    duration: theme.transitions.duration.shortest,
+                                }),
+                            }}
+                        >
+                            <ListItemIcon
+                                sx={{
+                                    minWidth: 0,
+                                    mr: isExpanded ? 1.25 : 0,
+                                    display: 'flex',
+                                    justifyContent: 'center',
+                                }}
+                            >
+                                <Avatar {...userAvatarProps} sx={{ ...userAvatarProps.sx, width: 30, height: 30 }} />
+                            </ListItemIcon>
+                            {isExpanded && (
+                                <Box sx={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
+                                    <Stack direction="row" spacing={0.75} alignItems="center">
+                                        <Typography
+                                            variant="body2"
+                                            sx={{
+                                                fontWeight: 600,
+                                                whiteSpace: 'nowrap',
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis',
+                                                maxWidth: 130,
+                                            }}
+                                        >
+                                            {username}
+                                        </Typography>
+                                        <Chip
+                                            label={roleLabel}
+                                            size="small"
+                                            color={isAdmin ? 'warning' : 'default'}
+                                            sx={roleChipSx}
+                                        />
+                                    </Stack>
+                                </Box>
+                            )}
+                        </ListItemButton>
+                    </Tooltip>
+                </Box>
             </Box>
         </>
     );
@@ -1174,6 +1387,132 @@ export default function Layout() {
             >
                 {drawerContent(open)}
             </CustomDrawer>
+
+            <Menu
+                id={userMenuId}
+                anchorEl={userMenuAnchorEl}
+                open={userMenuOpen}
+                onClose={handleCloseUserMenu}
+                MenuListProps={{
+                    'aria-label': 'User menu',
+                    'aria-labelledby': userMenuButtonId,
+                    autoFocusItem: true,
+                    sx: {
+                        py: 0.25,
+                    },
+                }}
+                anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+                transformOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                PaperProps={{
+                    sx: {
+                        mt: 0.5,
+                        minWidth: 245,
+                        borderRadius: 1.25,
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        boxShadow: 6,
+                        overflow: 'hidden',
+                    },
+                }}
+            >
+                <Box
+                    sx={{
+                        px: 1.75,
+                        py: 1,
+                        borderBottom: '1px solid',
+                        borderColor: 'divider',
+                        backgroundColor: (theme) => theme.palette.action.hover,
+                    }}
+                >
+                    <Stack direction="row" spacing={1} alignItems="center">
+                        <Avatar {...userAvatarProps} sx={{ ...userAvatarProps.sx, width: 32, height: 32 }} />
+                        <Box sx={{ minWidth: 0, flex: 1 }}>
+                            <Typography
+                                variant="subtitle2"
+                                sx={{
+                                    fontWeight: 700,
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                }}
+                            >
+                                {username}
+                            </Typography>
+                            <Stack direction="row" spacing={0.5} alignItems="center">
+                                <Chip
+                                    label={roleLabel}
+                                    size="small"
+                                    color={isAdmin ? 'warning' : 'default'}
+                                    sx={roleChipSx}
+                                />
+                            </Stack>
+                        </Box>
+                    </Stack>
+                </Box>
+                <MenuItem
+                    onClick={() => handleMenuNavigation('/preferences')}
+                    sx={{ minHeight: 40, px: 1.75, py: 0.75 }}
+                >
+                    <ListItemIcon sx={{ minWidth: 30, color: 'text.secondary' }}>
+                        <TuneIcon fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText
+                        sx={{ my: 0 }}
+                        primary="Preferences"
+                        primaryTypographyProps={{ variant: 'body2', fontWeight: 500, lineHeight: 1.2 }}
+                    />
+                </MenuItem>
+                <MenuItem
+                    onClick={handleMenuLogout}
+                    sx={{ minHeight: 40, px: 1.75, py: 0.75 }}
+                >
+                    <ListItemIcon sx={{ minWidth: 30, color: 'text.secondary' }}>
+                        <LogoutIcon fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText
+                        sx={{ my: 0 }}
+                        primary="Logout"
+                        primaryTypographyProps={{ variant: 'body2', fontWeight: 500, lineHeight: 1.2 }}
+                    />
+                </MenuItem>
+            </Menu>
+
+            <Dialog
+                open={logoutDialogOpen}
+                onClose={handleLogoutDialogClose}
+                aria-labelledby="logout-confirm-dialog-title"
+            >
+                <DialogTitle id="logout-confirm-dialog-title">
+                    {t('auth.logout_confirm_title', { defaultValue: 'Confirm Logout' })}
+                </DialogTitle>
+                <DialogContent sx={{ pt: '24px !important' }}>
+                    <DialogContentText sx={{ mb: 1 }}>
+                        {t('auth.logout_confirm_message', {
+                            defaultValue: 'Are you sure you want to log out?',
+                        })}
+                    </DialogContentText>
+                    <FormControlLabel
+                        control={(
+                            <Checkbox
+                                size="small"
+                                checked={skipLogoutConfirmChecked}
+                                onChange={(event) => setSkipLogoutConfirmChecked(event.target.checked)}
+                            />
+                        )}
+                        label={t('auth.logout_confirm_skip', {
+                            defaultValue: "Don't show this again",
+                        })}
+                    />
+                </DialogContent>
+                <DialogActions sx={{ px: 3, pb: 2 }}>
+                    <Button onClick={handleLogoutDialogClose} color="inherit">
+                        {t('common.cancel', { defaultValue: 'Cancel' })}
+                    </Button>
+                    <Button onClick={handleLogoutDialogConfirm} color="error" variant="contained" autoFocus>
+                        {t('auth.logout', { defaultValue: 'Logout' })}
+                    </Button>
+                </DialogActions>
+            </Dialog>
 
             <Box
                 component="main"

@@ -37,7 +37,7 @@ import {
     getTileLayerById,
     getTileLayersForEngine,
     mapEngineOptions,
-    normalizeMapEngine,
+    normalizeMapEngine as defaultNormalizeMapEngine,
     resolveCompatibleTileLayerId,
 } from './tile-layers.jsx';
 import { useTranslation } from 'react-i18next';
@@ -45,6 +45,7 @@ import { useTranslation } from 'react-i18next';
 const SETTINGS_KEYS = [
     'enableMapDragging',
     'enableMapZooming',
+    'autoSwitchPlanetariumByVisibility',
     'showPastOrbitPath',
     'showFutureOrbitPath',
     'showSatelliteCoverage',
@@ -81,6 +82,7 @@ const buildSettings = ({
     initialLockOnTarget,
     initialEnableMapDragging,
     initialEnableMapZooming,
+    initialAutoSwitchPlanetariumByVisibility,
     initialShowPastOrbitPath,
     initialShowFutureOrbitPath,
     initialShowSatelliteCoverage,
@@ -95,13 +97,15 @@ const buildSettings = ({
     initialMapEngine,
     initialShowTooltip,
     initialShowGrid,
+    normalizeMapEngineValue = defaultNormalizeMapEngine,
 }) => {
-    const mapEngine = normalizeMapEngine(initialMapEngine);
+    const mapEngine = normalizeMapEngineValue(initialMapEngine);
     const tileLayerID = resolveCompatibleTileLayerId(initialTileLayerID, mapEngine);
     return {
         lockOnTarget: Boolean(initialLockOnTarget),
         enableMapDragging: Boolean(initialEnableMapDragging),
         enableMapZooming: Boolean(initialEnableMapZooming),
+        autoSwitchPlanetariumByVisibility: Boolean(initialAutoSwitchPlanetariumByVisibility),
         showPastOrbitPath: Boolean(initialShowPastOrbitPath),
         showFutureOrbitPath: Boolean(initialShowFutureOrbitPath),
         showSatelliteCoverage: Boolean(initialShowSatelliteCoverage),
@@ -230,17 +234,20 @@ const ColorSetting = ({ label, value, disabled = false, onChange }) => {
 };
 
 const MapSettingsIsland = ({ initialLockOnTarget, initialEnableMapDragging, initialEnableMapZooming,
+                            initialAutoSwitchPlanetariumByVisibility,
                             initialShowPastOrbitPath, initialShowFutureOrbitPath, initialShowSatelliteCoverage,
                             initialShowSunIcon, initialShowMoonIcon, initialShowTerminatorLine,
                             initialSatelliteCoverageColor, initialPastOrbitLineColor, initialFutureOrbitLineColor,
                             initialOrbitProjectionDuration, initialTileLayerID, initialMapEngine, initialShowTooltip, initialShowGrid,
                                handleLockOnTarget, handleEnableMapDragging, handleEnableMapZooming,
+                               handleAutoSwitchPlanetariumByVisibility,
                                handleShowFutureOrbitPath, handleShowPastOrbitPath,
                             handleShowSatelliteCoverage, handleSetShowSunIcon, handleSetShowMoonIcon,
                             handleShowTerminatorLine, handleFutureOrbitLineColor, handlePastOrbitLineColor,
                             handleSatelliteCoverageColor, handleOrbitProjectionDuration, handleShowTooltip,
                                handleTileLayerID, handleMapEngine, handleShowGrid, updateBackend, onCancel, defaultSettings, open,
-                               mapEngineOptions: allowedMapEngineOptions = mapEngineOptions}) => {
+                               mapEngineOptions: allowedMapEngineOptions = mapEngineOptions,
+                               normalizeMapEngineValue = defaultNormalizeMapEngine}) => {
 
     const { t } = useTranslation('common');
 
@@ -261,9 +268,27 @@ const MapSettingsIsland = ({ initialLockOnTarget, initialEnableMapDragging, init
         ),
         [defaultSettings?.lockOnTarget, handleLockOnTarget, initialLockOnTarget]
     );
+    const supportsAutoSwitchPlanetariumByVisibility = useMemo(
+        () => (
+            typeof initialAutoSwitchPlanetariumByVisibility === 'boolean'
+            || typeof defaultSettings?.autoSwitchPlanetariumByVisibility === 'boolean'
+            || typeof handleAutoSwitchPlanetariumByVisibility === 'function'
+        ),
+        [
+            defaultSettings?.autoSwitchPlanetariumByVisibility,
+            handleAutoSwitchPlanetariumByVisibility,
+            initialAutoSwitchPlanetariumByVisibility,
+        ]
+    );
     const settingsKeys = useMemo(
-        () => (supportsLockOnTarget ? [...SETTINGS_KEYS, 'lockOnTarget'] : SETTINGS_KEYS),
-        [supportsLockOnTarget]
+        () => {
+            const keys = supportsLockOnTarget ? [...SETTINGS_KEYS, 'lockOnTarget'] : [...SETTINGS_KEYS];
+            if (!supportsAutoSwitchPlanetariumByVisibility) {
+                return keys.filter((key) => key !== 'autoSwitchPlanetariumByVisibility');
+            }
+            return keys;
+        },
+        [supportsAutoSwitchPlanetariumByVisibility, supportsLockOnTarget]
     );
 
     const initialSettings = useMemo(
@@ -271,6 +296,7 @@ const MapSettingsIsland = ({ initialLockOnTarget, initialEnableMapDragging, init
             initialLockOnTarget,
             initialEnableMapDragging,
             initialEnableMapZooming,
+            initialAutoSwitchPlanetariumByVisibility,
             initialShowPastOrbitPath,
             initialShowFutureOrbitPath,
             initialShowSatelliteCoverage,
@@ -285,11 +311,13 @@ const MapSettingsIsland = ({ initialLockOnTarget, initialEnableMapDragging, init
             initialMapEngine,
             initialShowTooltip,
             initialShowGrid,
+            normalizeMapEngineValue,
         }),
         [
             initialLockOnTarget,
             initialEnableMapDragging,
             initialEnableMapZooming,
+            initialAutoSwitchPlanetariumByVisibility,
             initialShowPastOrbitPath,
             initialShowFutureOrbitPath,
             initialShowSatelliteCoverage,
@@ -304,6 +332,7 @@ const MapSettingsIsland = ({ initialLockOnTarget, initialEnableMapDragging, init
             initialMapEngine,
             initialShowTooltip,
             initialShowGrid,
+            normalizeMapEngineValue,
         ]
     );
 
@@ -312,6 +341,7 @@ const MapSettingsIsland = ({ initialLockOnTarget, initialEnableMapDragging, init
             initialLockOnTarget: defaultSettings?.lockOnTarget,
             initialEnableMapDragging: defaultSettings?.enableMapDragging,
             initialEnableMapZooming: defaultSettings?.enableMapZooming,
+            initialAutoSwitchPlanetariumByVisibility: defaultSettings?.autoSwitchPlanetariumByVisibility,
             initialShowPastOrbitPath: defaultSettings?.showPastOrbitPath,
             initialShowFutureOrbitPath: defaultSettings?.showFutureOrbitPath,
             initialShowSatelliteCoverage: defaultSettings?.showSatelliteCoverage,
@@ -326,8 +356,9 @@ const MapSettingsIsland = ({ initialLockOnTarget, initialEnableMapDragging, init
             initialMapEngine: defaultSettings?.mapEngine,
             initialShowTooltip: defaultSettings?.showTooltip,
             initialShowGrid: defaultSettings?.showGrid,
+            normalizeMapEngineValue,
         }),
-        [defaultSettings]
+        [defaultSettings, normalizeMapEngineValue]
     );
 
     const [draftSettings, setDraftSettings] = useState(initialSettings);
@@ -348,6 +379,7 @@ const MapSettingsIsland = ({ initialLockOnTarget, initialEnableMapDragging, init
         () => getTileLayerById(draftSettings.tileLayerID, { mapEngine: draftSettings.mapEngine }),
         [draftSettings.mapEngine, draftSettings.tileLayerID]
     );
+    const isPlanetariumEngine = draftSettings.mapEngine === 'planetarium';
 
     const availableTileLayers = useMemo(
         () => getTileLayersForEngine(draftSettings.mapEngine),
@@ -371,7 +403,7 @@ const MapSettingsIsland = ({ initialLockOnTarget, initialEnableMapDragging, init
     const isDirty = !settingsEqual(draftSettings, initialSettings, settingsKeys);
 
     const applySettings = async () => {
-        const mapEngine = normalizeMapEngine(draftSettings.mapEngine);
+        const mapEngine = normalizeMapEngineValue(draftSettings.mapEngine);
         const tileLayerID = resolveCompatibleTileLayerId(draftSettings.tileLayerID, mapEngine);
         const sanitizedSettings = {
             ...draftSettings,
@@ -384,6 +416,9 @@ const MapSettingsIsland = ({ initialLockOnTarget, initialEnableMapDragging, init
 
         handleEnableMapDragging?.(sanitizedSettings.enableMapDragging);
         handleEnableMapZooming?.(sanitizedSettings.enableMapZooming);
+        if (supportsAutoSwitchPlanetariumByVisibility) {
+            handleAutoSwitchPlanetariumByVisibility?.(sanitizedSettings.autoSwitchPlanetariumByVisibility);
+        }
         handleShowPastOrbitPath(sanitizedSettings.showPastOrbitPath);
         handleShowFutureOrbitPath(sanitizedSettings.showFutureOrbitPath);
         handleShowSatelliteCoverage(sanitizedSettings.showSatelliteCoverage);
@@ -430,7 +465,13 @@ const MapSettingsIsland = ({ initialLockOnTarget, initialEnableMapDragging, init
                 <Stack spacing={1.5}>
                 <SectionBlock
                     title={t('map_settings.section_base_map', { defaultValue: 'Base Map' })}
-                    subtitle={t('map_settings.section_base_map_desc', { defaultValue: 'Choose a basemap and projection.' })}
+                    subtitle={
+                        isPlanetariumEngine
+                            ? t('map_settings.section_base_map_planetarium_desc', {
+                                defaultValue: 'Select the active rendering engine and pointer interaction behavior.',
+                            })
+                            : t('map_settings.section_base_map_desc', { defaultValue: 'Choose a basemap and projection.' })
+                    }
                 >
                     <FormControl fullWidth size="small" variant="outlined">
                         <InputLabel id="map-engine-label">{t('map_settings.map_engine', { defaultValue: 'Map Engine' })}</InputLabel>
@@ -439,7 +480,7 @@ const MapSettingsIsland = ({ initialLockOnTarget, initialEnableMapDragging, init
                             value={draftSettings.mapEngine}
                             label={t('map_settings.map_engine', { defaultValue: 'Map Engine' })}
                             onChange={(e) => {
-                                const nextMapEngine = normalizeMapEngine(e.target.value);
+                                const nextMapEngine = normalizeMapEngineValue(e.target.value);
                                 setDraftSettings((prev) => ({
                                     ...prev,
                                     mapEngine: nextMapEngine,
@@ -455,52 +496,72 @@ const MapSettingsIsland = ({ initialLockOnTarget, initialEnableMapDragging, init
                         </Select>
                     </FormControl>
 
-                    <FormControl fullWidth size="small" variant="outlined">
-                        <InputLabel id="tile-layer-label">{t('map_settings.tile_layer')}</InputLabel>
-                        <Select
-                            labelId="tile-layer-label"
-                            value={draftSettings.tileLayerID}
-                            label={t('map_settings.tile_layer')}
-                            onChange={(e) => setDraftSettings((prev) => ({ ...prev, tileLayerID: e.target.value }))}
-                            renderValue={(value) => {
-                                const layer = getTileLayerById(value, { mapEngine: draftSettings.mapEngine });
-                                return (
-                                    <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
-                                        <Typography variant="body2" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                            {layer.name}
-                                        </Typography>
-                                        <Chip size="small" label={normalizeProjectionLabel(layer.projection)} />
-                                    </Stack>
-                                );
-                            }}
-                        >
-                            {availableTileLayers.map((layer) => (
-                                <MenuItem key={layer.id} value={layer.id}>
-                                    <Stack direction="row" alignItems="center" spacing={1} sx={{ width: '100%', minWidth: 0 }}>
-                                        <Box sx={{ minWidth: 0, flexGrow: 1 }}>
-                                            <Typography variant="body2">{layer.name}</Typography>
-                                            {layer.description ? (
-                                                <Typography variant="caption" color="text.secondary">
-                                                    {layer.description}
-                                                </Typography>
-                                            ) : null}
-                                        </Box>
-                                        <Chip size="small" label={normalizeProjectionLabel(layer.projection)} />
-                                    </Stack>
-                                </MenuItem>
-                            ))}
-                        </Select>
-                    </FormControl>
+                    {!isPlanetariumEngine ? (
+                        <FormControl fullWidth size="small" variant="outlined">
+                            <InputLabel id="tile-layer-label">{t('map_settings.tile_layer')}</InputLabel>
+                            <Select
+                                labelId="tile-layer-label"
+                                value={draftSettings.tileLayerID}
+                                label={t('map_settings.tile_layer')}
+                                onChange={(e) => setDraftSettings((prev) => ({ ...prev, tileLayerID: e.target.value }))}
+                                renderValue={(value) => {
+                                    const layer = getTileLayerById(value, { mapEngine: draftSettings.mapEngine });
+                                    return (
+                                        <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
+                                            <Typography variant="body2" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                {layer.name}
+                                            </Typography>
+                                            <Chip size="small" label={normalizeProjectionLabel(layer.projection)} />
+                                        </Stack>
+                                    );
+                                }}
+                            >
+                                {availableTileLayers.map((layer) => (
+                                    <MenuItem key={layer.id} value={layer.id}>
+                                        <Stack direction="row" alignItems="center" spacing={1} sx={{ width: '100%', minWidth: 0 }}>
+                                            <Box sx={{ minWidth: 0, flexGrow: 1 }}>
+                                                <Typography variant="body2">{layer.name}</Typography>
+                                                {layer.description ? (
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        {layer.description}
+                                                    </Typography>
+                                                ) : null}
+                                            </Box>
+                                            <Chip size="small" label={normalizeProjectionLabel(layer.projection)} />
+                                        </Stack>
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                    ) : null}
 
-                    <Typography
-                        variant="caption"
-                        color={projectionChanged || mapEngineChanged ? 'warning.main' : 'text.secondary'}
-                        sx={{ display: 'block' }}
-                    >
-                        {t('map_settings.projection_note', {
-                            defaultValue: 'Switching map engine or projection rebuilds the map canvas and may recenter the view.',
-                        })}
-                    </Typography>
+                    {!isPlanetariumEngine ? (
+                        <Typography
+                            variant="caption"
+                            color={projectionChanged || mapEngineChanged ? 'warning.main' : 'text.secondary'}
+                            sx={{ display: 'block' }}
+                        >
+                            {t('map_settings.projection_note', {
+                                defaultValue: 'Switching map engine or projection rebuilds the map canvas and may recenter the view.',
+                            })}
+                        </Typography>
+                    ) : null}
+
+                    {supportsAutoSwitchPlanetariumByVisibility ? (
+                        <ToggleRowWithDescription
+                            label={t('map_settings.auto_switch_planetarium_visibility', {
+                                defaultValue: 'Auto-switch planetarium when target is visible',
+                            })}
+                            description={t('map_settings.auto_switch_planetarium_visibility_desc', {
+                                defaultValue: 'For satellite targets: use planetarium above horizon and switch back to globe below horizon.',
+                            })}
+                            checked={draftSettings.autoSwitchPlanetariumByVisibility}
+                            onChange={(value) => setDraftSettings((prev) => ({
+                                ...prev,
+                                autoSwitchPlanetariumByVisibility: value,
+                            }))}
+                        />
+                    ) : null}
 
                     <ToggleRowWithDescription
                         label={t('map_settings.enable_map_dragging', { defaultValue: 'Enable map dragging' })}
@@ -520,6 +581,7 @@ const MapSettingsIsland = ({ initialLockOnTarget, initialEnableMapDragging, init
                     />
                 </SectionBlock>
 
+                {!isPlanetariumEngine ? (
                 <SectionBlock
                     title={t('map_settings.section_satellite_overlays', { defaultValue: 'Satellite Overlays' })}
                 >
@@ -582,7 +644,9 @@ const MapSettingsIsland = ({ initialLockOnTarget, initialEnableMapDragging, init
                         onChange={(value) => setDraftSettings((prev) => ({ ...prev, showGrid: value }))}
                     />
                 </SectionBlock>
+                ) : null}
 
+                {!isPlanetariumEngine ? (
                 <SectionBlock
                     title={t('map_settings.section_orbital_paths', { defaultValue: 'Orbital Paths' })}
                 >
@@ -619,7 +683,9 @@ const MapSettingsIsland = ({ initialLockOnTarget, initialEnableMapDragging, init
                         </Select>
                     </FormControl>
                 </SectionBlock>
+                ) : null}
 
+                {!isPlanetariumEngine ? (
                 <SectionBlock
                     title={t('map_settings.section_visual_styling', { defaultValue: 'Visual Styling' })}
                     subtitle={t('map_settings.section_visual_styling_desc', {
@@ -645,6 +711,7 @@ const MapSettingsIsland = ({ initialLockOnTarget, initialEnableMapDragging, init
                         onChange={(value) => setDraftSettings((prev) => ({ ...prev, futureOrbitLineColor: value }))}
                     />
                 </SectionBlock>
+                ) : null}
                 </Stack>
             </Box>
 

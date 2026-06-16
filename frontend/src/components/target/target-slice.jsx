@@ -38,6 +38,13 @@ import {
 const MAP_ENGINE_LEAFLET = 'leaflet';
 const MAP_ENGINE_MAPLIBRE = 'maplibre';
 const MAP_ENGINE_MAPLIBRE_GLOBE = 'maplibre-globe';
+const MAP_ENGINE_PLANETARIUM = 'planetarium';
+export const TARGET_VIEW_MODE_SOLAR_SYSTEM = 'solar-system';
+export const TARGET_VIEW_MODE_PLANETARIUM = 'planetarium';
+export const TARGET_VIEW_MODE_OPTIONS = [
+    {id: TARGET_VIEW_MODE_SOLAR_SYSTEM, name: 'Solar System'},
+    {id: TARGET_VIEW_MODE_PLANETARIUM, name: 'Planetarium'},
+];
 const LEAFLET_MIN_ZOOM = 0;
 const MAPLIBRE_MIN_ZOOM = -6;
 const MAP_MAX_ZOOM = 10;
@@ -50,7 +57,11 @@ const MAPLIBRE_UNSUPPORTED_TILE_LAYER_IDS = new Set([
 
 const normalizeMapEngine = (mapEngine) => {
     const normalizedMapEngine = String(mapEngine || '').trim().toLowerCase();
-    if (normalizedMapEngine === MAP_ENGINE_MAPLIBRE || normalizedMapEngine === MAP_ENGINE_MAPLIBRE_GLOBE) {
+    if (
+        normalizedMapEngine === MAP_ENGINE_MAPLIBRE
+        || normalizedMapEngine === MAP_ENGINE_MAPLIBRE_GLOBE
+        || normalizedMapEngine === MAP_ENGINE_PLANETARIUM
+    ) {
         return normalizedMapEngine;
     }
     return MAP_ENGINE_LEAFLET;
@@ -106,6 +117,10 @@ const resolveCompatibleTileLayerId = (tileLayerID, mapEngine) => {
     }
     return normalizedTileLayerID;
 };
+
+const normalizeTargetViewMode = (viewMode) => (
+    viewMode === TARGET_VIEW_MODE_PLANETARIUM ? TARGET_VIEW_MODE_PLANETARIUM : TARGET_VIEW_MODE_SOLAR_SYSTEM
+);
 
 const normalizeSource = (source) => {
     if (typeof source !== 'string') {
@@ -399,12 +414,13 @@ export const sendNudgeCommand = createAsyncThunk(
 
 export const setTargetMapSetting = createAsyncThunk(
     'targetSatTrack/setTargetMapSetting',
-    async ({socket, key}, {getState, rejectWithValue}) => {
+    async ({socket, key, overrides = {}}, {getState, rejectWithValue}) => {
         const state = getState();
         const mapSettings = {
             lockOnTarget: state['targetSatTrack']['lockOnTarget'],
             enableMapDragging: state['targetSatTrack']['enableMapDragging'],
             enableMapZooming: state['targetSatTrack']['enableMapZooming'],
+            autoSwitchPlanetariumByVisibility: state['targetSatTrack']['autoSwitchPlanetariumByVisibility'] ?? false,
             showPastOrbitPath: state['targetSatTrack']['showPastOrbitPath'],
             showFutureOrbitPath: state['targetSatTrack']['showFutureOrbitPath'],
             showSatelliteCoverage: state['targetSatTrack']['showSatelliteCoverage'],
@@ -419,7 +435,14 @@ export const setTargetMapSetting = createAsyncThunk(
             orbitProjectionDuration: state['targetSatTrack']['orbitProjectionDuration'],
             tileLayerID: state['targetSatTrack']['tileLayerID'],
             mapEngine: state['targetSatTrack']['mapEngine'],
+            targetViewMode: normalizeTargetViewMode(state['targetSatTrack']['targetViewMode']),
+            targetViewEnableDragging: state['targetSatTrack']['targetViewEnableDragging'] ?? true,
+            targetViewEnableZooming: state['targetSatTrack']['targetViewEnableZooming'] ?? true,
+            ...overrides,
         };
+        mapSettings.targetViewMode = normalizeTargetViewMode(mapSettings.targetViewMode);
+        mapSettings.targetViewEnableDragging = Boolean(mapSettings.targetViewEnableDragging);
+        mapSettings.targetViewEnableZooming = Boolean(mapSettings.targetViewEnableZooming);
 
         return await new Promise((resolve, reject) => {
             socket.emit("api.call", {
@@ -789,6 +812,10 @@ const targetSatTrackSlice = createSlice({
         orbitProjectionDuration: 60*24,
         tileLayerID: 'satellite',
         mapEngine: MAP_ENGINE_MAPLIBRE,
+        autoSwitchPlanetariumByVisibility: false,
+        targetViewMode: TARGET_VIEW_MODE_SOLAR_SYSTEM,
+        targetViewEnableDragging: true,
+        targetViewEnableZooming: true,
         mapZoomLevel: 2,
         sunPos: null,
         moonPos: null,
@@ -1126,6 +1153,9 @@ const targetSatTrackSlice = createSlice({
         setEnableMapZooming(state, action) {
             state.enableMapZooming = action.payload;
         },
+        setAutoSwitchPlanetariumByVisibility(state, action) {
+            state.autoSwitchPlanetariumByVisibility = Boolean(action.payload);
+        },
         setShowPastOrbitPath(state, action) {
             state.showPastOrbitPath = action.payload;
         },
@@ -1173,6 +1203,15 @@ const targetSatTrackSlice = createSlice({
         },
         setTileLayerID(state, action) {
             state.tileLayerID = resolveCompatibleTileLayerId(action.payload, state.mapEngine);
+        },
+        setTargetViewMode(state, action) {
+            state.targetViewMode = normalizeTargetViewMode(action.payload);
+        },
+        setTargetViewEnableDragging(state, action) {
+            state.targetViewEnableDragging = Boolean(action.payload);
+        },
+        setTargetViewEnableZooming(state, action) {
+            state.targetViewEnableZooming = Boolean(action.payload);
         },
         setMapZoomLevel(state, action) {
             state.mapZoomLevel = clampMapZoomForEngine(action.payload, state.mapEngine);
@@ -1719,6 +1758,7 @@ const targetSatTrackSlice = createSlice({
                     state.lockOnTarget = action.payload['lockOnTarget'] ?? true;
                     state.enableMapDragging = action.payload['enableMapDragging'] ?? false;
                     state.enableMapZooming = action.payload['enableMapZooming'] ?? false;
+                    state.autoSwitchPlanetariumByVisibility = action.payload['autoSwitchPlanetariumByVisibility'] ?? false;
                     state.tileLayerID = resolveCompatibleTileLayerId(action.payload['tileLayerID'], mapEngine);
                     state.showPastOrbitPath = action.payload['showPastOrbitPath'];
                     state.showFutureOrbitPath = action.payload['showFutureOrbitPath'];
@@ -1732,6 +1772,9 @@ const targetSatTrackSlice = createSlice({
                     state.futureOrbitLineColor = action.payload['futureOrbitLineColor'];
                     state.satelliteCoverageColor = action.payload['satelliteCoverageColor'];
                     state.orbitProjectionDuration = action.payload['orbitProjectionDuration'];
+                    state.targetViewMode = normalizeTargetViewMode(action.payload['targetViewMode']);
+                    state.targetViewEnableDragging = action.payload['targetViewEnableDragging'] ?? true;
+                    state.targetViewEnableZooming = action.payload['targetViewEnableZooming'] ?? true;
                 }
             })
             .addCase(getTargetMapSettings.rejected, (state, action) => {
@@ -1762,6 +1805,7 @@ export const {
     setLockOnTarget,
     setEnableMapDragging,
     setEnableMapZooming,
+    setAutoSwitchPlanetariumByVisibility,
     setShowPastOrbitPath,
     setShowFutureOrbitPath,
     setShowSatelliteCoverage,
@@ -1824,6 +1868,9 @@ export const {
     setRotatorDisconnecting,
     setTrackerCommandStatus,
     setUITrackerValues,
+    setTargetViewMode,
+    setTargetViewEnableDragging,
+    setTargetViewEnableZooming,
 } = targetSatTrackSlice.actions;
 
 export default targetSatTrackSlice.reducer;

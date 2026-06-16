@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-from .dispatcher import dispatch_request
+from .dispatcher import dispatch_request, get_auth_context
 from .registry import HandlerRegistry, handler_registry
 
-__all__ = ["HandlerRegistry", "handler_registry", "dispatch_request"]
+__all__ = ["HandlerRegistry", "handler_registry", "dispatch_request", "get_auth_context"]

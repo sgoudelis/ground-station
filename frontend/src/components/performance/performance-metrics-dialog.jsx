@@ -17,7 +17,7 @@
  *
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
     Dialog,
     DialogTitle,
@@ -42,25 +42,44 @@ const PerformanceMetricsDialog = () => {
     const metrics = useSelector((state) => state.performance.latestMetrics);
     const connected = useSelector((state) => state.performance.connected);
     const [autoArrangeHandler, setAutoArrangeHandler] = useState(null);
+    const monitoringActiveRef = useRef(false);
 
-    // Start monitoring when dialog opens, stop when it closes
+    // Tie monitoring RPCs to the actual dialog open/close state.
+    // Avoid unconditional cleanup stop calls because this component is always mounted,
+    // and app remount/reload cycles (e.g., theme save + StrictMode) would otherwise
+    // emit noisy duplicate `monitoring.stop` requests.
     useEffect(() => {
-        if (open && socket) {
-            socket.emit("api.call", {
-  cmd: "monitoring.start",
-  data: null
-});
+        if (!socket) {
+            return;
         }
 
-        return () => {
-            if (socket) {
-                socket.emit("api.call", {
-  cmd: "monitoring.stop",
-  data: null
-});
-            }
-        };
+        if (open && !monitoringActiveRef.current) {
+            socket.emit("api.call", {
+                cmd: "monitoring.start",
+                data: null
+            });
+            monitoringActiveRef.current = true;
+        }
+
+        if (!open && monitoringActiveRef.current) {
+            socket.emit("api.call", {
+                cmd: "monitoring.stop",
+                data: null
+            });
+            monitoringActiveRef.current = false;
+        }
     }, [open, socket]);
+
+    // Safety cleanup: only send stop if this component previously started monitoring.
+    useEffect(() => () => {
+        if (socket && monitoringActiveRef.current) {
+            socket.emit("api.call", {
+                cmd: "monitoring.stop",
+                data: null
+            });
+            monitoringActiveRef.current = false;
+        }
+    }, [socket]);
 
     // Close dialog when socket disconnects
     useEffect(() => {

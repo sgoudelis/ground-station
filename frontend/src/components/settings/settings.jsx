@@ -42,6 +42,7 @@ import SatelliteGroupsTable from "../satellites/groups-table.jsx";
 import LocationPage from "./location-form.jsx";
 import PreferencesForm from "./preferences-form.jsx";
 import MaintenanceForm from "./maintenance-form.jsx";
+import UsersForm from "./users-form.jsx";
 import {AntTab, AntTabs} from "../common/common.jsx";
 import SDRsPage from "../hardware/sdr-table.jsx";
 import AppSettingsForm from "./app-settings-form.jsx";
@@ -76,7 +77,7 @@ export function SettingsTabIntegrations() {
         <SettingsTabs
             initialMainTab={"settings"}
             initialTab={"settings"}
-            initialSettingsSubTab={"integrations"}
+            initialSettingsSubTab={"preferences"}
         />
     );
 }
@@ -134,6 +135,14 @@ export function AdminSatellitesGroupsPage() {
     return <SatelliteGroupsForm />;
 }
 
+export function UserPreferencesPage() {
+    return (
+        <Box sx={{ flexGrow: 1, bgcolor: 'background.paper' }}>
+            <PreferencesForm />
+        </Box>
+    );
+}
+
 export function AdminSystemGeneralPage() {
     return (
         <AdminSystemPageLayout activeTab="general">
@@ -150,14 +159,6 @@ export function AdminSystemPreferencesPage() {
     );
 }
 
-export function AdminSystemIntegrationsPage() {
-    return (
-        <AdminSystemPageLayout activeTab="integrations">
-            <PreferencesForm mode="integrations" />
-        </AdminSystemPageLayout>
-    );
-}
-
 export function AdminSystemLocationPage() {
     return (
         <AdminSystemPageLayout activeTab="location">
@@ -170,6 +171,14 @@ export function AdminSystemHardwarePage() {
     return (
         <AdminSystemPageLayout activeTab="hardware">
             <AdminSystemHardwareTabs />
+        </AdminSystemPageLayout>
+    );
+}
+
+export function AdminSystemUsersPage() {
+    return (
+        <AdminSystemPageLayout activeTab="users">
+            <UsersForm />
         </AdminSystemPageLayout>
     );
 }
@@ -192,9 +201,8 @@ export function AdminSystemAboutPage() {
 
 const ADMIN_SYSTEM_TABS = [
     { key: "general", labelKey: "tabs.general", defaultLabel: "General", path: "/admin/system/general" },
-    { key: "preferences", labelKey: "tabs.preferences", defaultLabel: "Preferences", path: "/admin/system/preferences" },
-    { key: "integrations", labelKey: "tabs.integrations", defaultLabel: "Integrations", path: "/admin/system/integrations" },
     { key: "location", labelKey: "tabs.location", defaultLabel: "Location", path: "/admin/system/location" },
+    { key: "users", labelKey: "tabs.users", defaultLabel: "Users", path: "/admin/system/users" },
     { key: "hardware", labelKey: "tabs.hardware", defaultLabel: "Hardware", path: "/admin/system/hardware/rigs" },
     { key: "maintenance", labelKey: "tabs.maintenance", defaultLabel: "Maintenance", path: "/admin/system/maintenance" },
     { key: "about", labelKey: "tabs.about", defaultLabel: "About", path: "/admin/system/about" },
@@ -328,8 +336,6 @@ export const SettingsTabs = React.memo(function SettingsTabs({
                 return "settings";
             case "/settings/preferences":
                 return "settings";
-            case "/settings/integrations":
-                return "settings";
             case "/settings/location":
                 // Keep /settings/location as a deep link, but render it inside the Settings tab group.
                 return "settings";
@@ -394,9 +400,7 @@ export const SettingsTabs = React.memo(function SettingsTabs({
                     initialSubTab={
                         location.pathname === "/settings/preferences"
                             ? "preferences"
-                            : location.pathname === "/settings/integrations"
-                                ? "integrations"
-                                : location.pathname === "/settings/location"
+                            : location.pathname === "/settings/location"
                                     ? "location"
                                 : initialSettingsSubTab
                     }
@@ -559,7 +563,6 @@ const SettingsAndPreferencesForm = React.memo(function SettingsAndPreferencesFor
         // Backward-compatible alias for older deep links.
         if (pathname === "/settings/settings") return "settings";
         if (pathname === "/settings/preferences") return "preferences";
-        if (pathname === "/settings/integrations") return "integrations";
         if (pathname === "/settings/location") return "location";
         return "settings";
     }, []);
@@ -585,8 +588,6 @@ const SettingsAndPreferencesForm = React.memo(function SettingsAndPreferencesFor
         let nextPath = "/settings/general";
         if (nextTab === "preferences") {
             nextPath = "/settings/preferences";
-        } else if (nextTab === "integrations") {
-            nextPath = "/settings/integrations";
         } else if (nextTab === "location") {
             nextPath = "/settings/location";
         }
@@ -605,11 +606,10 @@ const SettingsAndPreferencesForm = React.memo(function SettingsAndPreferencesFor
                 sx={getSettingsTabRowSx('detailRow')}
             >
                 <AntTab key="preferences" value="preferences" label={t('tabs.preferences')} />
-                <AntTab key="integrations" value="integrations" label={t('tabs.integrations', { defaultValue: 'Integrations' })} />
                 <AntTab key="location" value="location" label={t('tabs.location')} />
                 <AntTab key="settings" value="settings" label={t('tabs.general', { defaultValue: 'General' })} />
             </AntTabs>
-            {(activeSubTab === "preferences" || activeSubTab === "integrations") ? <PreferencesForm mode={activeSubTab} /> : null}
+            {activeSubTab === "preferences" ? <PreferencesForm /> : null}
             {activeSubTab === "location" ? <LocationPage/> : null}
             {activeSubTab === "settings" ? <AppSettingsForm/> : null}
         </Box>

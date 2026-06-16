@@ -17,110 +17,189 @@
  *
  */
 
+import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+const USER_DEFAULT_PREFERENCES = [
+    { id: null, name: 'language', value: 'en_US' },
+    { id: null, name: 'theme', value: 'auto' },
+    { id: null, name: 'celestial_enabled', value: 'false' },
+    { id: null, name: 'timezone', value: 'Europe/Athens' },
+    { id: null, name: 'locale', value: 'browser' },
+    { id: null, name: 'toast_position', value: 'bottom-center' },
+    { id: null, name: 'stadia_maps_api_key', value: '' },
+    { id: null, name: 'gemini_api_key', value: '' },
+    { id: null, name: 'deepgram_api_key', value: '' },
+    { id: null, name: 'google_translate_api_key', value: '' },
+];
+
+const SYSTEM_DEFAULT_PREFERENCES = [];
+
+const USER_KEYS = new Set(USER_DEFAULT_PREFERENCES.map((preference) => preference.name));
+const SYSTEM_KEYS = new Set(SYSTEM_DEFAULT_PREFERENCES.map((preference) => preference.name));
+
+const clonePreferences = (preferences) => preferences.map((preference) => ({ ...preference }));
+
+const mergeByName = (basePreferences, incomingPreferences) => {
+    const merged = clonePreferences(basePreferences);
+    const indexByName = new Map(merged.map((preference, index) => [preference.name, index]));
+
+    (Array.isArray(incomingPreferences) ? incomingPreferences : []).forEach((incomingPreference) => {
+        const name = String(incomingPreference?.name || '').trim();
+        if (!name) {
+            return;
+        }
+
+        const nextPreference = {
+            id: incomingPreference?.id ?? null,
+            name,
+            value: incomingPreference?.value ?? '',
+        };
+        const existingIndex = indexByName.get(name);
+
+        if (existingIndex === undefined) {
+            indexByName.set(name, merged.length);
+            merged.push(nextPreference);
+            return;
+        }
+
+        merged[existingIndex] = {
+            ...merged[existingIndex],
+            ...nextPreference,
+        };
+    });
+
+    return merged;
+};
+
+const combinePreferences = (userPreferences, systemPreferences) => [
+    ...clonePreferences(userPreferences),
+    ...clonePreferences(systemPreferences),
+];
+
+const updatePreferenceValue = (preferences, name, value) => {
+    const existing = preferences.find((preference) => preference.name === name);
+    if (existing) {
+        existing.value = value;
+        return;
+    }
+    preferences.push({ id: null, name, value });
+};
 
 export const fetchPreferences = createAsyncThunk(
     'preferences/fetchPreferences',
-    async ({socket}, {rejectWithValue}) => {
-        return new Promise((resolve, reject) => {
-            socket.emit("api.call", {
-  cmd: 'fetch-preferences',
-  data: null
-}, response => {
-  if (response['success']) {
-    resolve(response.data);
-  } else {
-    reject(rejectWithValue('Could not fetch preferences'));
-  }
-});
-        });
-    }
+    async ({ socket }, { rejectWithValue }) =>
+        new Promise((resolve, reject) => {
+            socket.emit(
+                'api.call',
+                {
+                    cmd: 'fetch-preferences',
+                    data: null,
+                },
+                (response) => {
+                    if (response?.success) {
+                        resolve(response.data);
+                        return;
+                    }
+                    reject(rejectWithValue('Could not fetch preferences'));
+                }
+            );
+        })
 );
-
 
 export const updatePreferences = createAsyncThunk(
     'preferences/updatePreferences',
-    async ({ socket }, {getState, rejectWithValue}) => {
-        return new Promise((resolve, reject) => {
-            const preferences = getState().preferences;
-            socket.emit("api.call", {
-  cmd: 'update-preferences',
-  data: [...preferences.preferences]
-}, response => {
-  if (response['success']) {
-    resolve(response.data);
-  } else {
-    reject(rejectWithValue('Failed to set preferences'));
-  }
-});
-        });
-    }
+    async ({ socket }, { getState, rejectWithValue }) =>
+        new Promise((resolve, reject) => {
+            const userPreferences = getState().preferences.userPreferences;
+            socket.emit(
+                'api.call',
+                {
+                    cmd: 'update-preferences',
+                    data: [...userPreferences],
+                },
+                (response) => {
+                    if (response?.success) {
+                        resolve(response.data);
+                        return;
+                    }
+                    reject(rejectWithValue('Failed to set preferences'));
+                }
+            );
+        })
 );
 
+export const fetchSystemPreferences = createAsyncThunk(
+    'preferences/fetchSystemPreferences',
+    async ({ socket }, { rejectWithValue }) =>
+        new Promise((resolve, reject) => {
+            socket.emit(
+                'api.call',
+                {
+                    cmd: 'fetch-system-preferences',
+                    data: null,
+                },
+                (response) => {
+                    if (response?.success) {
+                        resolve(response.data);
+                        return;
+                    }
+                    reject(rejectWithValue('Could not fetch system preferences'));
+                }
+            );
+        })
+);
+
+export const updateSystemPreferences = createAsyncThunk(
+    'preferences/updateSystemPreferences',
+    async ({ socket }, { getState, rejectWithValue }) =>
+        new Promise((resolve, reject) => {
+            const systemPreferences = getState().preferences.systemPreferences;
+            socket.emit(
+                'api.call',
+                {
+                    cmd: 'update-system-preferences',
+                    data: [...systemPreferences],
+                },
+                (response) => {
+                    if (response?.success) {
+                        resolve(response.data);
+                        return;
+                    }
+                    reject(rejectWithValue('Failed to set system preferences'));
+                }
+            );
+        })
+);
+
+const initialUserPreferences = clonePreferences(USER_DEFAULT_PREFERENCES);
+const initialSystemPreferences = clonePreferences(SYSTEM_DEFAULT_PREFERENCES);
 
 const preferencesSlice = createSlice({
     name: 'preferences',
     initialState: {
         loading: false,
-        preferences: [
-            {
-                id: null,
-                name: 'language',
-                value: 'en_US',
-            },
-            {
-                id: null,
-                name: 'theme',
-                value: 'auto',
-            },
-            {
-                id: null,
-                name: 'celestial_enabled',
-                value: 'false',
-            },
-            {
-                id: null,
-                value: 'Europe/Athens',
-                name: 'timezone',
-            },
-            {
-                id: null,
-                name: 'stadia_maps_api_key',
-                value: "",
-            },
-            {
-                id: null,
-                name: 'toast_position',
-                value: 'bottom-center',
-            },
-            {
-                id: null,
-                name: 'gemini_api_key',
-                value: '',
-            },
-            {
-                id: null,
-                name: 'deepgram_api_key',
-                value: '',
-            },
-            {
-                id: null,
-                name: 'google_translate_api_key',
-                value: '',
-            }
-        ],
+        userPreferences: initialUserPreferences,
+        systemPreferences: initialSystemPreferences,
+        preferences: combinePreferences(initialUserPreferences, initialSystemPreferences),
         status: 'idle',
+        systemStatus: 'idle',
         error: null,
-
+        systemError: null,
     },
     reducers: {
         setPreference: (state, action) => {
-            const {name, value} = action.payload;
-            const preference = state.preferences.find((pref) => pref.name === name);
-            if (preference) {
-                preference.value = value;
+            const { name, value } = action.payload;
+            if (!name) {
+                return;
             }
+
+            if (USER_KEYS.has(name)) {
+                updatePreferenceValue(state.userPreferences, name, value);
+            }
+            if (SYSTEM_KEYS.has(name)) {
+                updatePreferenceValue(state.systemPreferences, name, value);
+            }
+            state.preferences = combinePreferences(state.userPreferences, state.systemPreferences);
         },
         setLoading: (state, action) => {
             state.loading = action.payload;
@@ -128,21 +207,14 @@ const preferencesSlice = createSlice({
     },
     extraReducers: (builder) => {
         builder
-            // fetchPreferences
             .addCase(fetchPreferences.pending, (state) => {
                 state.status = 'loading';
+                state.error = null;
             })
             .addCase(fetchPreferences.fulfilled, (state, action) => {
                 state.status = 'succeeded';
-                action.payload.forEach((preference) => {
-                    const existingPreference = state.preferences.find((pref) => pref.name === preference.name);
-                    if (existingPreference) {
-                        existingPreference.value = preference.value;
-                    } else {
-                        // Add new preference from backend if it doesn't exist in state
-                        state.preferences.push(preference);
-                    }
-                });
+                state.userPreferences = mergeByName(USER_DEFAULT_PREFERENCES, action.payload);
+                state.preferences = combinePreferences(state.userPreferences, state.systemPreferences);
             })
             .addCase(fetchPreferences.rejected, (state, action) => {
                 state.status = 'failed';
@@ -150,22 +222,48 @@ const preferencesSlice = createSlice({
             })
             .addCase(updatePreferences.pending, (state) => {
                 state.status = 'loading';
+                state.error = null;
             })
             .addCase(updatePreferences.fulfilled, (state, action) => {
                 state.status = 'succeeded';
-                state.preferences = action.payload;
+                state.userPreferences = mergeByName(USER_DEFAULT_PREFERENCES, action.payload);
+                state.preferences = combinePreferences(state.userPreferences, state.systemPreferences);
             })
             .addCase(updatePreferences.rejected, (state, action) => {
                 state.status = 'failed';
                 state.error = action.payload;
+            })
+            .addCase(fetchSystemPreferences.pending, (state) => {
+                state.systemStatus = 'loading';
+                state.systemError = null;
+            })
+            .addCase(fetchSystemPreferences.fulfilled, (state, action) => {
+                state.systemStatus = 'succeeded';
+                state.systemPreferences = mergeByName(SYSTEM_DEFAULT_PREFERENCES, action.payload);
+                state.preferences = combinePreferences(state.userPreferences, state.systemPreferences);
+            })
+            .addCase(fetchSystemPreferences.rejected, (state, action) => {
+                state.systemStatus = 'failed';
+                state.systemError = action.payload;
+            })
+            .addCase(updateSystemPreferences.pending, (state) => {
+                state.systemStatus = 'loading';
+                state.systemError = null;
+            })
+            .addCase(updateSystemPreferences.fulfilled, (state, action) => {
+                state.systemStatus = 'succeeded';
+                state.systemPreferences = mergeByName(SYSTEM_DEFAULT_PREFERENCES, action.payload);
+                state.preferences = combinePreferences(state.userPreferences, state.systemPreferences);
+            })
+            .addCase(updateSystemPreferences.rejected, (state, action) => {
+                state.systemStatus = 'failed';
+                state.systemError = action.payload;
             });
     },
 });
 
-
 export const {
     setPreference,
 } = preferencesSlice.actions;
-
 
 export default preferencesSlice.reducer;

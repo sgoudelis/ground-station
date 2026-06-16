@@ -21,7 +21,7 @@ from typing import Any, Dict, Optional
 from sqlalchemy import select
 
 from common.logger import logger
-from crud.preferences import fetch_all_preferences
+from crud.preferences import fetch_integration_preferences_map
 from db import AsyncSessionLocal
 from db.models import Transmitters
 from demodulators.amdemodulator import AMDemodulator
@@ -130,42 +130,29 @@ class TranscriptionHandler:
 
             # Fetch API keys from preferences
             async with AsyncSessionLocal() as dbsession:
-                prefs_result = await fetch_all_preferences(dbsession)
-                if not prefs_result["success"]:
-                    logger.error("Failed to fetch preferences for transcription")
-                    return False
-
-                preferences = prefs_result["data"]
+                # Scheduled/internal observations may not carry an authenticated socket context.
+                # Allow task payload to provide explicit owner user_id when available.
+                owner_user_id = str(task_config.get("user_id") or "").strip() or None
+                preferences = await fetch_integration_preferences_map(
+                    dbsession, user_id=owner_user_id
+                )
 
                 # Set appropriate API key based on provider
                 if provider == "gemini":
-                    api_key = next(
-                        (p["value"] for p in preferences if p["name"] == "gemini_api_key"),
-                        "",
-                    )
+                    api_key = preferences.get("gemini_api_key", "")
                     if not api_key:
                         logger.error("Gemini API key not configured")
                         return False
                     self.process_manager.transcription_manager.set_gemini_api_key(api_key)
                 elif provider == "deepgram":
-                    api_key = next(
-                        (p["value"] for p in preferences if p["name"] == "deepgram_api_key"),
-                        "",
-                    )
+                    api_key = preferences.get("deepgram_api_key", "")
                     if not api_key:
                         logger.error("Deepgram API key not configured")
                         return False
                     transcription_manager.set_deepgram_api_key(api_key)
 
                     # Set Google Translate API key for Deepgram translation
-                    google_translate_key = next(
-                        (
-                            p["value"]
-                            for p in preferences
-                            if p["name"] == "google_translate_api_key"
-                        ),
-                        "",
-                    )
+                    google_translate_key = preferences.get("google_translate_api_key", "")
                     transcription_manager.set_google_translate_api_key(google_translate_key)
                 else:
                     logger.error(f"Unknown transcription provider: {provider}")
