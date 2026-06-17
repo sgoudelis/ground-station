@@ -97,6 +97,42 @@
     "altitude": "高度",
     "velocity": "速度",
     "frequency_bands": "频段",
-    "modulations": "调制方式"
+    "modulations": "调制方式",
+    "no_modulations": "未检测到调制方式",
+    "countries": "国家",
+    "last_update": "最后更新",
+    "unknown": "未知",
+    "currently_targeted": "当前目标",
+    "set_as_target": "设为目标",
+    "failed_tracking": "使用旋转器启动跟踪失败"
+  },
+  "weather": {
+    "title": "天气",
+    "no_data": "无天气数据",
+    "feels": "体感温度",
+    "humidity": "湿度",
+    "wind": "风",
+    "pressure": "气压"
+  },
+  "map_settings": {
+    "title": "地图设置",
+    "close": "关闭"
+  },
+  "map_target": {
+    "already_tracking": "已在此跟踪该卫星",
+    "start_tracking": "开始跟踪 {{name}}？",
+    "set_target": "设为目标",
+    "view_details": "查看卫星详情",
+    "start_tracking_tooltip": "使用旋转器和电台开始跟踪 {{name}}"
+  },
+  "map_controls": {
+    "go_home": "返回首页",
+    "go_to_center": "移至地图中心",
+    "go_fullscreen": "全屏",
+    "map_settings": "地图设置"
+  },
+  "weather_errors": {
+    "fetch_failed": "无法获取天气数据",
+    "failed_to_fetch": "获取天气数据失败"
   }
 }
