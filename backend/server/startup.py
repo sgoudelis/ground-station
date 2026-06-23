@@ -603,7 +603,9 @@ app.mount("/satimages", StaticFiles(directory=satellites_dir, html=True), name="
 app.mount(
     "/recordings", AuthenticatedStaticFiles(directory=recordings_dir, html=True), name="recordings"
 )
-app.mount("/snapshots", StaticFiles(directory=snapshots_dir, html=True), name="snapshots")
+app.mount(
+    "/snapshots", AuthenticatedStaticFiles(directory=snapshots_dir, html=True), name="snapshots"
+)
 app.mount("/decoded", AuthenticatedStaticFiles(directory=decoded_dir, html=True), name="decoded")
 app.mount("/audio", AuthenticatedStaticFiles(directory=audio_dir, html=True), name="audio")
 # Note: html=False for transcriptions to ensure .txt files are served with correct content-type

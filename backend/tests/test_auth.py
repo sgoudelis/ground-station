@@ -147,6 +147,12 @@ def test_operator_cannot_run_admin_only_commands():
     assert auth.is_command_allowed_for_role("update-system-preferences", "operator") is False
     assert auth.is_command_allowed_for_role("update-app-config", "operator") is False
     assert auth.is_command_allowed_for_role("database-backup.full_backup", "operator") is False
+    # Session runtime snapshots leak client IP addresses; operators must not read them.
+    assert auth.is_command_allowed_for_role("fetch_runtime_snapshot", "operator") is False
+    assert auth.is_command_allowed_for_role("fetch_session_view", "operator") is False
+    # Admins retain access to the same session introspection commands.
+    assert auth.is_command_allowed_for_role("fetch_runtime_snapshot", "admin") is True
+    assert auth.is_command_allowed_for_role("fetch_session_view", "admin") is True
 
 
 def test_setup_mode_only_allows_setup_scoped_commands():

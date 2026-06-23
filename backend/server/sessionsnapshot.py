@@ -9,6 +9,7 @@ registers an asyncio.Task into the provided `background_tasks` set.
 import asyncio
 from typing import Set
 
+from common import auth as authsvc
 from common.logger import logger
 from pipeline.orchestration.processmanager import process_manager
 from session.service import session_service
@@ -18,8 +19,9 @@ from session.tracker import session_tracker
 def start_session_runtime_emitter(sio, background_tasks: Set[asyncio.Task]) -> asyncio.Task:
     """Start the session runtime snapshot emitter loop and register it in background_tasks.
 
-    Emits 'session-runtime-snapshot' every 1 second to all connected clients.
-    The snapshot includes all active sessions, their metadata, and SDR consumer state.
+    Emits 'session-runtime-snapshot' every 1 second to admin clients only.
+    The snapshot includes all active sessions, their metadata (including client IP
+    addresses), and SDR consumer state, so it is restricted to the admin room.
     """
 
     async def _session_snapshot_loop():
@@ -39,9 +41,13 @@ def start_session_runtime_emitter(sio, background_tasks: Set[asyncio.Task]) -> a
                     except Exception as e2:
                         logger.debug(f"Tracker fallback also failed: {e2}")
 
-                # Emit the snapshot to all connected clients
+                # Emit the snapshot to admins only; it carries client IP addresses.
                 if snapshot is not None:
-                    await sio.emit("session-runtime-snapshot", snapshot)
+                    await sio.emit(
+                        "session-runtime-snapshot",
+                        snapshot,
+                        room=authsvc.ADMIN_SOCKET_ROOM,
+                    )
 
                 await asyncio.sleep(interval)
             except asyncio.CancelledError:

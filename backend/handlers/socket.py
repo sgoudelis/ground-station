@@ -66,6 +66,22 @@ SOCKET_TOKENS: Dict[str, str] = {}
 def register_socketio_handlers(sio):
     """Register Socket.IO event handlers."""
 
+    async def _sync_admin_room(sid: str, auth_context: Optional[Dict[str, Any]]) -> None:
+        """Keep the admin-only broadcast room membership in sync with the socket's live role.
+
+        Session runtime snapshots leak client IP addresses, so they are emitted only to the
+        admin room. Re-syncing on connect and on every api.call lets role promotions and
+        demotions take effect without requiring the client to reconnect.
+        """
+        is_admin = authsvc.is_admin_role((auth_context or {}).get("role"))
+        try:
+            if is_admin:
+                await sio.enter_room(sid, authsvc.ADMIN_SOCKET_ROOM)
+            else:
+                await sio.leave_room(sid, authsvc.ADMIN_SOCKET_ROOM)
+        except Exception:
+            logger.debug("Failed to sync admin room for sid=%s", sid, exc_info=True)
+
     @sio.on("connect")
     async def connect(sid, environ, auth=None):
         # Prefer reverse-proxy header if present, else fall back to REMOTE_ADDR.
@@ -136,6 +152,9 @@ def register_socketio_handlers(sio):
             )
         except Exception:
             logger.debug("Failed to set session metadata in tracker", exc_info=True)
+
+        # Join the admin room so only admins receive IP-bearing session snapshots.
+        await _sync_admin_room(sid, auth_context)
 
         # Send current running tasks to newly connected client.
         if runtimestate.background_task_manager:
@@ -213,6 +232,10 @@ def register_socketio_handlers(sio):
                 )
             except Exception:
                 logger.debug("Failed to refresh session owner metadata", exc_info=True)
+
+        # Re-sync admin room membership so role changes (promote/demote) apply immediately,
+        # gating who keeps receiving IP-bearing session snapshot broadcasts.
+        await _sync_admin_room(sid, auth_context)
 
         reply = await dispatch_request(
             sio,
