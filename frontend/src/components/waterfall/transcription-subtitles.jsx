@@ -276,9 +276,14 @@ const VFOSubtitle = ({
         const viewportWidth = window.innerWidth;
         const viewportHeight = window.innerHeight;
 
-        // Calculate boundaries considering the container is centered
-        const maxX = (viewportWidth / 2) - 20;
-        const minX = -(viewportWidth / 2) + 20;
+        // Calculate boundaries considering centered positioning and actual overlay width.
+        // On mobile we keep a tighter margin so overlays can reach near the screen edges.
+        const horizontalMargin = viewportWidth <= 600 ? 6 : 20;
+        const halfWidth = rect.width / 2;
+        // If the overlay is wider than the available viewport space, lock horizontal dragging.
+        const maxHorizontalOffset = Math.max(0, (viewportWidth / 2) - halfWidth - horizontalMargin);
+        const maxX = maxHorizontalOffset;
+        const minX = -maxHorizontalOffset;
 
         // For Y: bottom positioning, so higher Y = further up
         const maxY = viewportHeight - rect.height - 20;
@@ -390,6 +395,8 @@ const VFOSubtitle = ({
                     bottom: `${position.y}px`,
                     left: '50%',
                     transform: `translate(calc(-50% + ${position.x}px), 0)`,
+                    width: { xs: 'calc(100vw - 12px)', sm: 'auto' },
+                    maxWidth: { xs: 'calc(100vw - 12px)', sm: 'none' },
                     zIndex: 1000,
                     pointerEvents: 'auto',
                     cursor: isDragging ? 'grabbing' : 'default',

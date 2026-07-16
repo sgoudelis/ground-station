@@ -17,7 +17,7 @@
  *
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
     Box,
     Typography,
@@ -30,15 +30,77 @@ import {
     Stack,
 } from '@mui/material';
 import DownloadIcon from '@mui/icons-material/Download';
+import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
+import ImageIcon from '@mui/icons-material/Image';
 import { useSelector } from 'react-redux';
-import ZoomableImage from '../common/zoomable-image.jsx';
+import WaterfallViewer from './waterfall-viewer.jsx';
 
 function formatBytes(bytes) {
+    if (!Number.isFinite(bytes) || bytes < 0) return 'Unknown size';
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB'];
     const i = Math.min(Math.floor(Math.log(bytes) / Math.log(k)), sizes.length - 1);
     return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+}
+
+function formatDimensions(width, height) {
+    return Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0
+        ? `${width}×${height}`
+        : null;
+}
+
+function buildAssociatedFiles(recording) {
+    if (!recording) return [];
+
+    const files = [];
+
+    if (recording.data_file) {
+        files.push({
+            key: 'data',
+            type: 'IQ Data',
+            filename: recording.data_file,
+            size: recording.data_size,
+            url: recording.download_urls?.data,
+        });
+    }
+
+    if (recording.meta_file) {
+        files.push({
+            key: 'metadata',
+            type: 'Metadata',
+            filename: recording.meta_file,
+            size: recording.meta_size,
+            url: recording.download_urls?.meta,
+        });
+    }
+
+    if (recording.snapshot) {
+        files.push({
+            key: 'snapshot',
+            type: 'Waterfall Snapshot',
+            filename: recording.snapshot.filename,
+            size: recording.snapshot.size,
+            url: recording.snapshot.url,
+            previewUrl: recording.snapshot.thumbnail_url || recording.snapshot.url,
+            dimensions: formatDimensions(recording.snapshot.width, recording.snapshot.height),
+        });
+
+        const thumbnail = recording.snapshot.thumbnail;
+        if (thumbnail || recording.snapshot.thumbnail_url) {
+            files.push({
+                key: 'thumbnail',
+                type: 'Thumbnail',
+                filename: thumbnail?.filename || 'Generated thumbnail',
+                size: thumbnail?.size,
+                url: thumbnail?.url || recording.snapshot.thumbnail_url,
+                previewUrl: thumbnail?.url || recording.snapshot.thumbnail_url,
+                dimensions: formatDimensions(thumbnail?.width, thumbnail?.height),
+            });
+        }
+    }
+
+    return files;
 }
 
 export default function RecordingDialog({ open, onClose, recording }) {
@@ -70,6 +132,8 @@ export default function RecordingDialog({ open, onClose, recording }) {
         py: 0.5,
     };
 
+    const associatedFiles = useMemo(() => buildAssociatedFiles(recording), [recording]);
+
     const formatFrequency = (frequencyHz) => {
         if (frequencyHz === null || frequencyHz === undefined) return '';
         if (frequencyHz >= 1e9) {
@@ -83,63 +147,6 @@ export default function RecordingDialog({ open, onClose, recording }) {
         }
         return `${frequencyHz.toFixed(0)} Hz`;
     };
-
-
-    const getImageCursorInfo = ({ event, containerRect, naturalWidth, naturalHeight, pan, zoom }) => {
-        if (!containerRect || !naturalWidth || !naturalHeight) return null;
-
-        const localX = event.clientX - containerRect.left;
-        const localY = event.clientY - containerRect.top;
-        const centeredX = localX - containerRect.width / 2;
-        const centeredY = localY - containerRect.height / 2;
-        const unscaledX = (centeredX - pan.x) / zoom;
-        const unscaledY = (centeredY - pan.y) / zoom;
-
-        const scaleToContain = Math.min(containerRect.width / naturalWidth, containerRect.height / naturalHeight);
-        const contentWidth = naturalWidth * scaleToContain;
-        const contentHeight = naturalHeight * scaleToContain;
-
-        const halfWidth = contentWidth / 2;
-        const halfHeight = contentHeight / 2;
-        if (unscaledX < -halfWidth || unscaledX > halfWidth || unscaledY < -halfHeight || unscaledY > halfHeight) {
-            return null;
-        }
-
-        const imageX = (unscaledX + halfWidth) / contentWidth * naturalWidth;
-        const imageY = (unscaledY + halfHeight) / contentHeight * naturalHeight;
-
-        const centerFrequency = recording?.metadata?.center_frequency;
-        const sampleRate = recording?.metadata?.sample_rate;
-        const startTime = recording?.metadata?.start_time;
-        const endTime = recording?.metadata?.finalized_time || recording?.modified || recording?.created;
-
-        const hasFrequencyData = Number.isFinite(centerFrequency) && Number.isFinite(sampleRate);
-        const hasTimeData = Boolean(startTime && endTime);
-
-        let frequency = null;
-        if (hasFrequencyData) {
-            const startFreq = centerFrequency - sampleRate / 2;
-            frequency = startFreq + (imageX / naturalWidth) * sampleRate;
-        }
-
-        let timeLabel = '';
-        if (hasTimeData) {
-            const startMs = new Date(startTime).getTime();
-            const endMs = new Date(endTime).getTime();
-            if (!Number.isNaN(startMs) && !Number.isNaN(endMs) && endMs >= startMs) {
-                const timeMs = startMs + (imageY / naturalHeight) * (endMs - startMs);
-                timeLabel = formatDate(new Date(timeMs).toISOString());
-            }
-        }
-
-        return {
-            x: localX,
-            y: localY,
-            frequency,
-            timeLabel,
-        };
-    };
-
     if (!recording) return null;
 
     return (
@@ -188,11 +195,19 @@ export default function RecordingDialog({ open, onClose, recording }) {
                 {recording && (
                     <Box sx={{ mt: 3 }}>
                         {recording.snapshot && (
-                            <ZoomableImage
+                            <WaterfallViewer
                                 src={recording.snapshot.url}
                                 alt={recording.name}
-                                resetKey={`${open}-${recording.snapshot.url}`}
-                                getCursorInfo={getImageCursorInfo}
+                                centerFrequency={recording?.metadata?.center_frequency}
+                                sampleRate={recording?.metadata?.sample_rate}
+                                startTime={recording?.metadata?.start_time}
+                                endTime={
+                                    recording?.metadata?.finalized_time ||
+                                    recording?.modified ||
+                                    recording?.created
+                                }
+                                formatDate={formatDate}
+                                formatFrequency={formatFrequency}
                                 containerSx={{
                                     mb: 2,
                                     height: { xs: 280, sm: 360, md: 440 },
@@ -201,76 +216,6 @@ export default function RecordingDialog({ open, onClose, recording }) {
                                         borderStyle: 'dashed',
                                     },
                                 }}
-                                renderOverlay={({ cursorInfo }) => (
-                                    cursorInfo ? (
-                                        <>
-                                            <Box
-                                                sx={{
-                                                    position: 'absolute',
-                                                    top: 0,
-                                                    bottom: 0,
-                                                    left: cursorInfo.x,
-                                                    width: '1px',
-                                                    bgcolor: 'rgba(255, 255, 255, 0.5)',
-                                                    pointerEvents: 'none',
-                                                }}
-                                            />
-                                            <Box
-                                                sx={{
-                                                    position: 'absolute',
-                                                    left: 0,
-                                                    right: 0,
-                                                    top: cursorInfo.y,
-                                                    height: '1px',
-                                                    bgcolor: 'rgba(255, 255, 255, 0.5)',
-                                                    pointerEvents: 'none',
-                                                }}
-                                            />
-                                            {cursorInfo.frequency !== null && (
-                                                <Box
-                                                    sx={{
-                                                        position: 'absolute',
-                                                        top: 8,
-                                                        left: cursorInfo.x,
-                                                        transform: 'translateX(-50%)',
-                                                        px: 1,
-                                                        py: 0.4,
-                                                        borderRadius: 1,
-                                                        bgcolor: 'rgba(0, 0, 0, 0.7)',
-                                                        color: 'common.white',
-                                                        fontSize: '0.7rem',
-                                                        letterSpacing: '0.02em',
-                                                        pointerEvents: 'none',
-                                                        whiteSpace: 'nowrap',
-                                                    }}
-                                                >
-                                                    {formatFrequency(cursorInfo.frequency)}
-                                                </Box>
-                                            )}
-                                            {cursorInfo.timeLabel && (
-                                                <Box
-                                                    sx={{
-                                                        position: 'absolute',
-                                                        left: 8,
-                                                        top: cursorInfo.y,
-                                                        transform: 'translateY(-50%)',
-                                                        px: 1,
-                                                        py: 0.4,
-                                                        borderRadius: 1,
-                                                        bgcolor: 'rgba(0, 0, 0, 0.7)',
-                                                        color: 'common.white',
-                                                        fontSize: '0.7rem',
-                                                        letterSpacing: '0.02em',
-                                                        pointerEvents: 'none',
-                                                        whiteSpace: 'nowrap',
-                                                    }}
-                                                >
-                                                    {cursorInfo.timeLabel}
-                                                </Box>
-                                            )}
-                                        </>
-                                    ) : null
-                                )}
                             />
                         )}
 
@@ -290,18 +235,96 @@ export default function RecordingDialog({ open, onClose, recording }) {
                                 <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
                                     Files
                                 </Typography>
-                                <Box sx={{ fontFamily: 'monospace', fontSize: '0.875rem' }}>
-                                    <Box sx={{ mb: 0.5 }}>
-                                        {recording.data_file} ({formatBytes(recording.data_size)})
-                                    </Box>
-                                    <Box sx={{ mb: recording.snapshot ? 0.5 : 0 }}>
-                                        {recording.meta_file}
-                                    </Box>
-                                    {recording.snapshot && (
-                                        <Box>
-                                            {recording.snapshot.filename} ({recording.snapshot.width}×{recording.snapshot.height})
+                                <Box sx={{ display: 'grid', gap: 1 }}>
+                                    {associatedFiles.map((file) => (
+                                        <Box
+                                            key={file.key}
+                                            sx={{
+                                                display: 'grid',
+                                                gridTemplateColumns: { xs: '48px 1fr', sm: '56px 1fr auto' },
+                                                alignItems: 'center',
+                                                gap: 1.25,
+                                                p: 1,
+                                                border: '1px solid',
+                                                borderColor: 'divider',
+                                                borderRadius: 1,
+                                                bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'grey.800' : 'common.white'),
+                                            }}
+                                        >
+                                            <Box
+                                                sx={{
+                                                    width: { xs: 48, sm: 56 },
+                                                    height: { xs: 36, sm: 42 },
+                                                    borderRadius: 1,
+                                                    bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'grey.900' : 'grey.100'),
+                                                    border: '1px solid',
+                                                    borderColor: 'divider',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    overflow: 'hidden',
+                                                }}
+                                            >
+                                                {file.previewUrl ? (
+                                                    <Box
+                                                        component="img"
+                                                        src={file.previewUrl}
+                                                        alt={`${file.type} preview`}
+                                                        sx={{
+                                                            width: '100%',
+                                                            height: '100%',
+                                                            objectFit: 'cover',
+                                                            display: 'block',
+                                                        }}
+                                                    />
+                                                ) : file.type === 'Waterfall Snapshot' || file.type === 'Thumbnail' ? (
+                                                    <ImageIcon sx={{ color: 'primary.main', fontSize: 24 }} />
+                                                ) : (
+                                                    <InsertDriveFileIcon sx={{ color: 'text.secondary', fontSize: 24 }} />
+                                                )}
+                                            </Box>
+                                            <Box sx={{ minWidth: 0 }}>
+                                                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                                                    {file.type}
+                                                </Typography>
+                                                <Typography variant="body2" sx={{ fontFamily: 'monospace', wordBreak: 'break-word' }}>
+                                                    {file.filename}
+                                                </Typography>
+                                            </Box>
+                                            <Box
+                                                sx={{
+                                                    display: 'flex',
+                                                    flexDirection: { xs: 'row', sm: 'column' },
+                                                    alignItems: { xs: 'center', sm: 'flex-end' },
+                                                    justifyContent: 'center',
+                                                    gap: 0.5,
+                                                    justifySelf: { xs: 'start', sm: 'end' },
+                                                    gridColumn: { xs: '2', sm: 'auto' },
+                                                }}
+                                            >
+                                                {file.dimensions && (
+                                                    <Chip
+                                                        label={file.dimensions}
+                                                        size="small"
+                                                        sx={{
+                                                            height: '22px',
+                                                            fontSize: '0.7rem',
+                                                            '& .MuiChip-label': { px: 0.85 },
+                                                        }}
+                                                    />
+                                                )}
+                                                <Chip
+                                                    label={formatBytes(file.size)}
+                                                    size="small"
+                                                    sx={{
+                                                        height: '22px',
+                                                        fontSize: '0.7rem',
+                                                        '& .MuiChip-label': { px: 0.85 },
+                                                    }}
+                                                />
+                                            </Box>
                                         </Box>
-                                    )}
+                                    ))}
                                 </Box>
                             </Box>
                         </Box>
@@ -465,14 +488,19 @@ export default function RecordingDialog({ open, onClose, recording }) {
                 )}
             </DialogContent>
             <DialogActions
+                disableSpacing
                 sx={{
                     bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'grey.900' : 'grey.100'),
                     borderTop: (theme) => `1px solid ${theme.palette.divider}`,
                     px: 3,
                     py: 2.5,
                     gap: 1,
-                    flexWrap: 'wrap',
-                    justifyContent: 'flex-end',
+                    flexDirection: { xs: 'column', sm: 'row' },
+                    alignItems: { xs: 'stretch', sm: 'center' },
+                    justifyContent: { xs: 'stretch', sm: 'flex-end' },
+                    '& .MuiButton-root': {
+                        width: { xs: '100%', sm: 'auto' },
+                    },
                 }}
             >
                 <Button

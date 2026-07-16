@@ -19,7 +19,7 @@ import asyncio
 import re
 import time
 from datetime import datetime, timezone
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 import crud
 from celestial.bodycatalog import get_celestial_body
@@ -88,6 +88,8 @@ def _infer_target_type_from_value(value: Dict[str, Any]) -> str:
     explicit_target_type = str(value.get("target_type") or "").strip().lower()
     if explicit_target_type:
         return explicit_target_type
+    if str(value.get("mission_id") or "").strip():
+        return "mission"
     if str(value.get("command") or "").strip():
         return "mission"
     if str(value.get("body_id") or "").strip():
@@ -122,6 +124,19 @@ def _resolve_non_satellite_target_name(tracking_value: Dict[str, Any], target_ty
     return str(target_type or "").strip() or "target"
 
 
+def _build_non_satellite_transmitter_target_key(
+    tracking_value: Dict[str, Any],
+    target_type: str,
+) -> str:
+    if target_type == "body":
+        body_id = str(tracking_value.get("body_id") or "").strip().lower()
+        return f"body:{body_id}" if body_id else ""
+    if target_type == "mission":
+        command = str(tracking_value.get("command") or "").strip()
+        return f"mission:{command}" if command else ""
+    return ""
+
+
 def _normalize_target_update_payload(value: Dict[str, Any]) -> Dict[str, Any]:
     payload = dict(value or {})
     target_type = _infer_target_type_from_value(payload)
@@ -146,12 +161,14 @@ def _normalize_target_update_payload(value: Dict[str, Any]) -> Dict[str, Any]:
                 "message": "command is required for mission targets",
             }
         payload["command"] = command
+        mission_id = str(payload.get("mission_id") or "").strip().lower()
+        payload["mission_id"] = mission_id or None
         payload_target_name = str(payload.get("target_name") or "").strip()
         payload["target_name"] = payload_target_name or command
+        payload["target_key"] = f"mission:{command}"
         payload["body_id"] = None
         payload["norad_id"] = None
         payload["group_id"] = None
-        payload["transmitter_id"] = "none"
     elif target_type == "body":
         body_id = str(payload.get("body_id") or "").strip().lower()
         if not body_id:
@@ -169,10 +186,14 @@ def _normalize_target_update_payload(value: Dict[str, Any]) -> Dict[str, Any]:
             payload["target_name"] = canonical_body_name or body_id
         else:
             payload["target_name"] = payload_target_name
+        payload["target_key"] = f"body:{body_id}"
         payload["command"] = None
+        payload["mission_id"] = None
         payload["norad_id"] = None
         payload["group_id"] = None
-        payload["transmitter_id"] = "none"
+    else:
+        payload["target_key"] = None
+        payload["mission_id"] = None
 
     return {"success": True, "value": payload}
 
@@ -238,10 +259,21 @@ async def emit_tracker_data(dbsession, sio, logger, tracker_id: str):
             satellite_data = await compiled_satellite_data(dbsession, norad_id)
         else:
             target_name = _resolve_non_satellite_target_name(tracking_value, target_type)
+            non_satellite_target_key = _build_non_satellite_transmitter_target_key(
+                tracking_value, target_type
+            )
+            non_satellite_transmitters: List[Dict[str, Any]] = []
+            if non_satellite_target_key:
+                transmitters_reply = await crud.transmitters.fetch_transmitters_for_target_key(
+                    dbsession, non_satellite_target_key
+                )
+                if transmitters_reply.get("success"):
+                    non_satellite_transmitters = transmitters_reply.get("data", []) or []
             satellite_data = {
                 "details": {
                     "name": target_name,
                     "target_type": target_type,
+                    "mission_id": tracking_value.get("mission_id"),
                     "command": tracking_value.get("command"),
                     "body_id": tracking_value.get("body_id"),
                     "norad_id": None,
@@ -251,7 +283,7 @@ async def emit_tracker_data(dbsession, sio, logger, tracker_id: str):
                 # causes clients to clear valid az/el until the next tracker tick.
                 "paths": {"past": [], "future": []},
                 "coverage": [],
-                "transmitters": [],
+                "transmitters": non_satellite_transmitters,
                 "error": False,
             }
         data = {
@@ -303,16 +335,26 @@ async def emit_ui_tracker_values(dbsession, sio, logger, tracker_id: str):
             ui_tracker_state = await get_ui_tracker_state(group_id, norad_id, tracker_id)
             data = ui_tracker_state["data"]
         else:
+            target_key = _build_non_satellite_transmitter_target_key(tracking_value, target_type)
+            transmitters: List[Dict[str, Any]] = []
+            if target_key:
+                transmitters_reply = await crud.transmitters.fetch_transmitters_for_target_key(
+                    dbsession, target_key
+                )
+                if transmitters_reply.get("success"):
+                    transmitters = transmitters_reply.get("data", []) or []
             data = {
                 "groups": [],
                 "satellites": [],
-                "transmitters": [],
+                "transmitters": transmitters,
                 "group_id": None,
                 "norad_id": None,
                 "rig_id": tracking_value.get("rig_id", "none"),
                 "rotator_id": tracking_value.get("rotator_id", "none"),
-                "transmitter_id": "none",
+                "transmitter_id": tracking_value.get("transmitter_id", "none"),
                 "target_type": target_type,
+                "target_key": target_key,
+                "mission_id": tracking_value.get("mission_id"),
                 "command": tracking_value.get("command"),
                 "body_id": tracking_value.get("body_id"),
             }
@@ -818,6 +860,8 @@ def _normalize_tracker_target_type(value: Dict[str, Any]) -> str:
     explicit_target_type = str(value.get("target_type") or "").strip().lower()
     if explicit_target_type in ALLOWED_TRACKER_TARGET_TYPES:
         return explicit_target_type
+    if str(value.get("mission_id") or "").strip():
+        return "mission"
     if str(value.get("command") or "").strip():
         return "mission"
     if str(value.get("body_id") or "").strip():
@@ -953,6 +997,7 @@ async def fetch_next_pass_summaries_for_trackers(
         except InvalidTrackerIdError:
             continue
         target_type = _normalize_tracker_target_type(raw)
+        mission_id = str(raw.get("mission_id") or "").strip().lower()
         command = str(raw.get("command") or "").strip()
         body_id = str(raw.get("body_id") or "").strip().lower()
         target_key = _build_non_satellite_target_key(
@@ -968,6 +1013,7 @@ async def fetch_next_pass_summaries_for_trackers(
                 "tracker_id": tracker_id,
                 "target_type": target_type,
                 "norad_id": norad_id,
+                "mission_id": mission_id if target_type == "mission" else "",
                 "command": command if target_type == "mission" else "",
                 "body_id": body_id if target_type == "body" else "",
                 "target_key": target_key,

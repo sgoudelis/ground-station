@@ -20,7 +20,6 @@ import {
     TitleBar,
 } from '../common/common.jsx';
 import {
-    fetchCelestialTracks,
     fetchSolarSystemScene,
     getCelestialMapSettings,
     refreshMonitoredCelestialNow,
@@ -39,9 +38,13 @@ import CelestialPassTimeline from './celestial-pass-timeline.jsx';
 import CelestialInfoIsland from './celestial-info-island.jsx';
 import SolarSystemLayoutOptionsDialog from './solar-system-layout-options-dialog.jsx';
 import SettingsIcon from '@mui/icons-material/Settings';
+import {
+    buildTargetKeyFromCelestialRow,
+    buildTargetSlotNumberByTargetKey,
+} from '../target/celestial-target-utils.js';
 
 export const gridLayoutStoreName = 'celestial-layouts';
-const LAYOUT_SCHEMA_VERSION = 6;
+const LAYOUT_SCHEMA_VERSION = 7;
 const SHARED_RESIZE_HANDLES = ['s', 'sw', 'w', 'se', 'nw', 'ne', 'e'];
 const DEFAULT_PAST_HOURS = 0;
 const DEFAULT_FUTURE_HOURS = 24;
@@ -62,6 +65,11 @@ const parsePositiveNumber = (value, fallback) => {
     if (!Number.isFinite(parsed) || parsed <= 0) return fallback;
     return Math.min(parsed, MAX_PROJECTION_HOURS);
 };
+const hasFiniteXYZ = (position) => (
+    Array.isArray(position)
+    && position.length >= 3
+    && position.slice(0, 3).every((value) => Number.isFinite(Number(value)))
+);
 const getFullscreenElement = () =>
     document.fullscreenElement
     || document.webkitFullscreenElement
@@ -102,18 +110,6 @@ const exitFullscreen = () => {
     if (document.msExitFullscreen) {
         document.msExitFullscreen();
     }
-};
-const buildTargetKey = (row) => {
-    const explicitKey = String(row?.targetKey || row?.target_key || '').trim();
-    if (explicitKey) return explicitKey;
-
-    const type = String(row?.targetType || row?.target_type || 'mission').toLowerCase();
-    if (type === 'body') {
-        const bodyId = String(row?.bodyId || row?.body_id || row?.command || '').trim().toLowerCase();
-        return bodyId ? `body:${bodyId}` : '';
-    }
-    const command = String(row?.command || '').trim();
-    return command ? `mission:${command}` : '';
 };
 function loadLayoutsFromLocalStorage() {
     try {
@@ -237,44 +233,44 @@ function ensureRequiredLayoutItems(layouts) {
 
 const defaultLayouts = {
     lg: [
-        { i: 'solar-system', x: 0, y: 0, w: 5, h: 13, moved: false, static: false, resizeHandles: [...SHARED_RESIZE_HANDLES] },
-        { i: 'monitored-celestial', x: 5, y: 0, w: 5, h: 13, moved: false, static: false, resizeHandles: [...SHARED_RESIZE_HANDLES] },
-        { i: 'celestial-info', x: 10, y: 0, w: 2, h: 13, moved: false, static: false, resizeHandles: [...SHARED_RESIZE_HANDLES] },
-        { i: 'celestial-timeline', x: 0, y: 13, w: 12, h: 6, moved: false, static: false, resizeHandles: [...SHARED_RESIZE_HANDLES] },
-        { i: 'celestial-passes', x: 0, y: 19, w: 12, h: 7, moved: false, static: false, resizeHandles: [...SHARED_RESIZE_HANDLES] },
+        { i: 'solar-system', x: 0, y: 0, w: 19, h: 29, moved: false, static: false, resizeHandles: [...SHARED_RESIZE_HANDLES] },
+        { i: 'monitored-celestial', x: 19, y: 0, w: 21, h: 29, moved: false, static: false, resizeHandles: [...SHARED_RESIZE_HANDLES] },
+        { i: 'celestial-info', x: 40, y: 0, w: 8, h: 29, moved: false, static: false, resizeHandles: [...SHARED_RESIZE_HANDLES] },
+        { i: 'celestial-timeline', x: 0, y: 29, w: 48, h: 11, moved: false, static: false, resizeHandles: [...SHARED_RESIZE_HANDLES] },
+        { i: 'celestial-passes', x: 0, y: 40, w: 48, h: 15, moved: false, static: false, resizeHandles: [...SHARED_RESIZE_HANDLES] },
     ],
     md: [
-        { i: 'solar-system', x: 0, y: 0, w: 7, h: 15, moved: false, static: false, resizeHandles: [...SHARED_RESIZE_HANDLES] },
-        { i: 'monitored-celestial', x: 0, y: 15, w: 10, h: 8, moved: false, static: false, resizeHandles: [...SHARED_RESIZE_HANDLES] },
-        { i: 'celestial-info', x: 7, y: 0, w: 3, h: 15, moved: false, static: false, resizeHandles: [...SHARED_RESIZE_HANDLES] },
-        { i: 'celestial-timeline', x: 0, y: 30, w: 10, h: 6, moved: false, static: false, resizeHandles: [...SHARED_RESIZE_HANDLES] },
-        { i: 'celestial-passes', x: 0, y: 23, w: 10, h: 7, moved: false, static: false, resizeHandles: [...SHARED_RESIZE_HANDLES] },
+        { i: 'solar-system', x: 0, y: 0, w: 28, h: 27, moved: false, static: false, resizeHandles: [...SHARED_RESIZE_HANDLES] },
+        { i: 'monitored-celestial', x: 0, y: 27, w: 40, h: 20, moved: false, static: false, resizeHandles: [...SHARED_RESIZE_HANDLES] },
+        { i: 'celestial-info', x: 28, y: 0, w: 12, h: 27, moved: false, static: false, resizeHandles: [...SHARED_RESIZE_HANDLES] },
+        { i: 'celestial-timeline', x: 0, y: 47, w: 40, h: 12, moved: false, static: false, resizeHandles: [...SHARED_RESIZE_HANDLES] },
+        { i: 'celestial-passes', x: 0, y: 59, w: 40, h: 18, moved: false, static: false, resizeHandles: [...SHARED_RESIZE_HANDLES] },
     ],
     sm: [
-        { i: 'solar-system', x: 0, y: 0, w: 5, h: 13, moved: false, static: false, resizeHandles: [...SHARED_RESIZE_HANDLES] },
-        { i: 'monitored-celestial', x: 1, y: 13, w: 5, h: 13, moved: false, static: false, resizeHandles: [...SHARED_RESIZE_HANDLES] },
-        { i: 'celestial-info', x: 4, y: 26, w: 2, h: 13, moved: false, static: false, resizeHandles: [...SHARED_RESIZE_HANDLES] },
-        { i: 'celestial-timeline', x: 0, y: 39, w: 6, h: 6, moved: false, static: false, resizeHandles: [...SHARED_RESIZE_HANDLES] },
-        { i: 'celestial-passes', x: 0, y: 45, w: 6, h: 7, moved: false, static: false, resizeHandles: [...SHARED_RESIZE_HANDLES] },
+        { i: 'solar-system', x: 0, y: 0, w: 15, h: 26, moved: false, static: false, resizeHandles: [...SHARED_RESIZE_HANDLES] },
+        { i: 'monitored-celestial', x: 0, y: 26, w: 24, h: 18, moved: false, static: false, resizeHandles: [...SHARED_RESIZE_HANDLES] },
+        { i: 'celestial-info', x: 15, y: 0, w: 9, h: 26, moved: false, static: false, resizeHandles: [...SHARED_RESIZE_HANDLES] },
+        { i: 'celestial-timeline', x: 0, y: 44, w: 24, h: 12, moved: false, static: false, resizeHandles: [...SHARED_RESIZE_HANDLES] },
+        { i: 'celestial-passes', x: 0, y: 56, w: 24, h: 17, moved: false, static: false, resizeHandles: [...SHARED_RESIZE_HANDLES] },
     ],
     xs: [
-        { i: 'solar-system', x: 0, y: 0, w: 2, h: 18, moved: false, static: false, resizeHandles: [...SHARED_RESIZE_HANDLES] },
-        { i: 'monitored-celestial', x: 0, y: 18, w: 2, h: 9, moved: false, static: false, resizeHandles: [...SHARED_RESIZE_HANDLES] },
-        { i: 'celestial-info', x: 0, y: 41, w: 2, h: 8, moved: false, static: false, resizeHandles: [...SHARED_RESIZE_HANDLES] },
-        { i: 'celestial-timeline', x: 0, y: 35, w: 2, h: 6, moved: false, static: false, resizeHandles: [...SHARED_RESIZE_HANDLES] },
-        { i: 'celestial-passes', x: 0, y: 27, w: 2, h: 8, moved: false, static: false, resizeHandles: [...SHARED_RESIZE_HANDLES] },
+        { i: 'solar-system', x: 0, y: 0, w: 5, h: 28, moved: false, static: false, resizeHandles: [...SHARED_RESIZE_HANDLES] },
+        { i: 'monitored-celestial', x: 0, y: 28, w: 8, h: 23, moved: false, static: false, resizeHandles: [...SHARED_RESIZE_HANDLES] },
+        { i: 'celestial-info', x: 5, y: 0, w: 3, h: 28, moved: false, static: false, resizeHandles: [...SHARED_RESIZE_HANDLES] },
+        { i: 'celestial-timeline', x: 0, y: 51, w: 8, h: 11, moved: false, static: false, resizeHandles: [...SHARED_RESIZE_HANDLES] },
+        { i: 'celestial-passes', x: 0, y: 62, w: 8, h: 17, moved: false, static: false, resizeHandles: [...SHARED_RESIZE_HANDLES] },
     ],
     xxs: [
-        { i: 'solar-system', x: 0, y: 0, w: 2, h: 18, resizeHandles: [...SHARED_RESIZE_HANDLES] },
-        { i: 'monitored-celestial', x: 0, y: 18, w: 2, h: 9, resizeHandles: [...SHARED_RESIZE_HANDLES] },
-        { i: 'celestial-passes', x: 0, y: 27, w: 2, h: 8, resizeHandles: [...SHARED_RESIZE_HANDLES] },
-        { i: 'celestial-timeline', x: 0, y: 35, w: 2, h: 6, resizeHandles: [...SHARED_RESIZE_HANDLES] },
-        { i: 'celestial-info', x: 0, y: 41, w: 2, h: 8, resizeHandles: [...SHARED_RESIZE_HANDLES] },
+        { i: 'solar-system', x: 0, y: 0, w: 8, h: 23, moved: false, static: false, resizeHandles: [...SHARED_RESIZE_HANDLES] },
+        { i: 'monitored-celestial', x: 0, y: 51, w: 8, h: 18, moved: false, static: false, resizeHandles: [...SHARED_RESIZE_HANDLES] },
+        { i: 'celestial-info', x: 0, y: 23, w: 8, h: 28, moved: false, static: false, resizeHandles: [...SHARED_RESIZE_HANDLES] },
+        { i: 'celestial-timeline', x: 0, y: 69, w: 8, h: 12, moved: false, static: false, resizeHandles: [...SHARED_RESIZE_HANDLES] },
+        { i: 'celestial-passes', x: 0, y: 81, w: 8, h: 16, moved: false, static: false, resizeHandles: [...SHARED_RESIZE_HANDLES] },
     ],
 };
 
 const CelestialMainLayout = () => {
-    const { t } = useTranslation('earthview');
+    const { t: tCelestial } = useTranslation('celestial');
     const dispatch = useDispatch();
     const { socket } = useSocket();
     const isEditing = useSelector((state) => state.dashboard?.isEditing);
@@ -282,6 +278,7 @@ const CelestialMainLayout = () => {
     const solarSystemDisplayOptions = useSelector((state) => state.celestialDisplay?.solarSystem);
     const planetariumDisplayOptions = useSelector((state) => state.celestialDisplay?.planetarium);
     const monitoredState = useSelector((state) => state.celestialMonitored);
+    const trackerInstances = useSelector((state) => state.trackerInstances?.instances || []);
     const { width, containerRef, mounted } = useContainerWidth({ measureBeforeMount: true });
 
     const [layouts, setLayouts] = useState(() => {
@@ -297,7 +294,13 @@ const CelestialMainLayout = () => {
     const [centerSunSignal, setCenterSunSignal] = useState(0);
     const [openSolarSystemLayoutOptionsDialog, setOpenSolarSystemLayoutOptionsDialog] = useState(false);
     const [solarSystemFullscreen, setSolarSystemFullscreen] = useState(false);
+    const [solarCanvasStatusInfo, setSolarCanvasStatusInfo] = useState({
+        gestureHintText: '',
+        scaleLabel: '',
+    });
     const solarSystemViewportRef = React.useRef(null);
+    const previousRenderableSolarBodiesCountRef = React.useRef(0);
+    const autoFocusedTargetKeyRef = React.useRef('');
 
     const projectionSettings = React.useMemo(() => {
         const mapSettings = celestialState.mapSettings || {};
@@ -346,8 +349,16 @@ const CelestialMainLayout = () => {
 
     useEffect(() => {
         if (!socket) return;
-        dispatch(fetchSolarSystemScene({ socket, payload: sceneRequestPayload }));
-        dispatch(fetchCelestialTracks({ socket, payload: sceneRequestPayload }));
+        dispatch(fetchSolarSystemScene({
+            socket,
+            payload: {
+                ...sceneRequestPayload,
+                // Initial page load must fill missing Horizons-backed system bodies
+                // for the selected projection; cache-only loads can leave planets
+                // present only as non-renderable metadata rows.
+                allow_network_fetch: true,
+            },
+        }));
     }, [socket, dispatch, sceneRequestPayload]);
 
     useEffect(() => {
@@ -373,6 +384,13 @@ const CelestialMainLayout = () => {
 
     const handleRefreshCelestial = React.useCallback(async () => {
         if (!socket) return;
+        await dispatch(fetchSolarSystemScene({
+            socket,
+            payload: {
+                ...sceneRequestPayload,
+                allow_network_fetch: true,
+            },
+        }));
         await dispatch(refreshMonitoredCelestialNow({ socket, payload: sceneRequestPayload }));
         await dispatch(fetchMonitoredCelestial({ socket }));
     }, [socket, dispatch, sceneRequestPayload]);
@@ -385,6 +403,22 @@ const CelestialMainLayout = () => {
             return;
         }
         requestFullscreen(viewportElement);
+    }, []);
+    const handleSolarStatusBarInfoChange = React.useCallback((nextStatusInfo) => {
+        const nextGestureHintText = String(nextStatusInfo?.gestureHintText || '');
+        const nextScaleLabel = String(nextStatusInfo?.scaleLabel || '');
+        setSolarCanvasStatusInfo((previous) => {
+            if (
+                previous.gestureHintText === nextGestureHintText
+                && previous.scaleLabel === nextScaleLabel
+            ) {
+                return previous;
+            }
+            return {
+                gestureHintText: nextGestureHintText,
+                scaleLabel: nextScaleLabel,
+            };
+        });
     }, []);
 
     const handleViewportCommit = React.useCallback((nextViewport) => {
@@ -425,6 +459,13 @@ const CelestialMainLayout = () => {
             },
         };
     }, [celestialState.solarScene, celestialState.celestialTracks]);
+    const timelineFutureHours = React.useMemo(() => {
+        // The live scene-manager stream may be produced with a different projection
+        // than the currently saved UI preference. Use the payload's projection for
+        // the timeline so the axis does not extend beyond the curve data.
+        const sceneProjection = combinedScene?.meta?.projection || {};
+        return parsePositiveNumber(sceneProjection.future_hours, projectionSettings.future_hours);
+    }, [combinedScene?.meta?.projection, projectionSettings.future_hours]);
 
     const solarBodies = Array.isArray(combinedScene?.planets) ? combinedScene.planets : [];
     const bodyTypeCounts = combinedScene?.meta?.solar_system?.body_type_counts || {};
@@ -453,12 +494,35 @@ const CelestialMainLayout = () => {
         : inferredCounts.moons;
     const trackedCount = combinedScene?.celestial?.length || 0;
     const hasSolarScene = (planetsCount + moonsCount) > 0;
+    const hasPersistedMonitoredSelection = Boolean((monitoredState?.selectedIds || []).length > 0);
+    const solarCacheMissingCount = Number(combinedScene?.meta?.solar_system?.cache?.missing_count || 0);
+    const renderableSolarBodiesCount = React.useMemo(
+        () => solarBodies.filter((body) => hasFiniteXYZ(body?.position_xyz_au)).length,
+        [solarBodies],
+    );
+    const solarSystemDataError = React.useMemo(() => {
+        if (solarCacheMissingCount <= 0 || renderableSolarBodiesCount > 0) return '';
+        return tCelestial('main_layout.solar_system_horizons_missing', {
+            count: solarCacheMissingCount,
+            defaultValue: `Horizons vectors unavailable for ${solarCacheMissingCount} solar-system bodies.`,
+        });
+    }, [solarCacheMissingCount, renderableSolarBodiesCount, tCelestial]);
+    React.useEffect(() => {
+        const previousCount = previousRenderableSolarBodiesCountRef.current;
+        previousRenderableSolarBodiesCountRef.current = renderableSolarBodiesCount;
+        if (viewMode !== VIEW_MODE_SOLAR_SYSTEM) return;
+        if (previousCount !== 0 || renderableSolarBodiesCount <= 0) return;
+        if (hasPersistedMonitoredSelection) return;
+
+        // A persisted viewport can point at an old target-only scene. When the
+        // system layer first becomes renderable, fit once so planets/moons are
+        // actually visible without requiring a manual toolbar action.
+        setFitAllSignal((value) => value + 1);
+    }, [renderableSolarBodiesCount, viewMode, hasPersistedMonitoredSelection]);
     const solarLoading = Boolean(celestialState?.solarLoading);
     const tracksLoading = Boolean(celestialState?.tracksLoading);
     const solarSystemLoading = solarLoading || tracksLoading;
-    const isSolarInitialLoad = solarSystemLoading && viewMode === VIEW_MODE_SOLAR_SYSTEM && !hasSolarScene;
     const isSolarRefreshing = solarSystemLoading && viewMode === VIEW_MODE_SOLAR_SYSTEM && hasSolarScene;
-    const isPlanetariumInitialLoad = tracksLoading && viewMode === VIEW_MODE_PLANETARIUM && trackedCount === 0;
     const isPlanetariumRefreshing = tracksLoading && viewMode === VIEW_MODE_PLANETARIUM && trackedCount > 0;
     const selectedInfoTargetKey = React.useMemo(() => {
         const focusedKey = String(focusTargetKey || '').trim();
@@ -471,11 +535,47 @@ const CelestialMainLayout = () => {
         const selectedRow = rows.find((row) => row.id === selectedId);
         if (!selectedRow) return '';
 
-        return buildTargetKey(selectedRow);
+        return buildTargetKeyFromCelestialRow(selectedRow);
     }, [focusTargetKey, monitoredState?.monitored, monitoredState?.selectedIds]);
     const selectedTargetKeys = React.useMemo(
         () => (selectedInfoTargetKey ? [selectedInfoTargetKey] : []),
         [selectedInfoTargetKey],
+    );
+    React.useEffect(() => {
+        const selectedId = (monitoredState?.selectedIds || [])[0];
+        const targetKey = String(selectedInfoTargetKey || '').trim();
+        if (viewMode !== VIEW_MODE_SOLAR_SYSTEM || selectedId == null || !targetKey) {
+            autoFocusedTargetKeyRef.current = '';
+            return;
+        }
+
+        if (String(focusTargetKey || '').trim() === targetKey) {
+            autoFocusedTargetKeyRef.current = targetKey;
+            return;
+        }
+
+        const trackedRows = Array.isArray(combinedScene?.celestial) ? combinedScene.celestial : [];
+        const selectedTrackAvailable = trackedRows.some(
+            (row) => buildTargetKeyFromCelestialRow(row) === targetKey,
+        );
+        if (!selectedTrackAvailable) return;
+        if (autoFocusedTargetKeyRef.current === targetKey) return;
+
+        // During refresh/bootstrap, wait for the selected tracked row to arrive,
+        // then focus once so persisted selection controls the viewport.
+        autoFocusedTargetKeyRef.current = targetKey;
+        setFocusTargetKey(targetKey);
+        setFocusTargetSignal((value) => value + 1);
+    }, [
+        combinedScene?.celestial,
+        focusTargetKey,
+        monitoredState?.selectedIds,
+        selectedInfoTargetKey,
+        viewMode,
+    ]);
+    const targetNumberByTargetKey = React.useMemo(
+        () => buildTargetSlotNumberByTargetKey(trackerInstances),
+        [trackerInstances],
     );
     const tracksProgress = celestialState?.tracksProgress || null;
     const tracksProgressText = React.useMemo(() => {
@@ -485,27 +585,59 @@ const CelestialMainLayout = () => {
         if (Number.isFinite(current) && Number.isFinite(total) && total > 0) {
             return `${Math.max(0, Math.min(current, total))}/${total}`;
         }
-        return 'Loading...';
-    }, [tracksLoading, tracksProgress?.current, tracksProgress?.total]);
+        return tCelestial('main_layout.loading');
+    }, [tracksLoading, tracksProgress?.current, tracksProgress?.total, tCelestial]);
     const solarToolbarLoadingText = React.useMemo(() => {
         if (!solarSystemLoading || viewMode !== VIEW_MODE_SOLAR_SYSTEM) return '';
         if (tracksLoading) return tracksProgressText;
-        return 'Loading...';
-    }, [solarSystemLoading, tracksLoading, tracksProgressText, viewMode]);
+        return tCelestial('main_layout.loading');
+    }, [solarSystemLoading, tracksLoading, tracksProgressText, viewMode, tCelestial]);
 
-    const updateProjectionSetting = React.useCallback((updates) => {
+    const updateProjectionSetting = React.useCallback(async (updates) => {
         if (!socket) return;
         const existing = celestialState.mapSettings || {};
         const nextSettings = { ...existing, ...updates };
         const unchanged = Object.keys(updates).every((key) => existing[key] === nextSettings[key]);
         if (unchanged) return;
 
-        dispatch(
+        const result = await dispatch(
             setCelestialMapSettings({
                 socket,
                 value: nextSettings,
             }),
         );
+        if (!setCelestialMapSettings.fulfilled.match(result)) return;
+
+        const projectionChanged = ['pastHours', 'futureHours', 'stepMinutes'].some(
+            (key) => Object.prototype.hasOwnProperty.call(updates, key),
+        );
+        if (!projectionChanged) return;
+
+        // The scene-manager stream is cache-only. When the user changes the
+        // projection window, explicitly fill that window so the table/timeline
+        // do not stay on the previously cached span.
+        await dispatch(
+            fetchSolarSystemScene({
+                socket,
+                payload: {
+                    past_hours: parseNonNegativeNumber(nextSettings.pastHours, DEFAULT_PAST_HOURS),
+                    future_hours: parsePositiveNumber(nextSettings.futureHours, DEFAULT_FUTURE_HOURS),
+                    step_minutes: parsePositiveNumber(nextSettings.stepMinutes, DEFAULT_STEP_MINUTES),
+                    allow_network_fetch: true,
+                },
+            }),
+        );
+        await dispatch(
+            refreshMonitoredCelestialNow({
+                socket,
+                payload: {
+                    past_hours: parseNonNegativeNumber(nextSettings.pastHours, DEFAULT_PAST_HOURS),
+                    future_hours: parsePositiveNumber(nextSettings.futureHours, DEFAULT_FUTURE_HOURS),
+                    step_minutes: parsePositiveNumber(nextSettings.stepMinutes, DEFAULT_STEP_MINUTES),
+                },
+            }),
+        );
+        await dispatch(fetchMonitoredCelestial({ socket }));
     }, [socket, celestialState.mapSettings, dispatch]);
     const updateViewMode = React.useCallback((nextViewMode) => {
         if (!socket) return;
@@ -523,6 +655,16 @@ const CelestialMainLayout = () => {
             }),
         );
     }, [socket, celestialState.mapSettings, dispatch]);
+    const handleToggleMapDragging = React.useCallback(() => {
+        updateProjectionSetting({
+            enableMapDragging: !interactionSettings.enableMapDragging,
+        });
+    }, [interactionSettings.enableMapDragging, updateProjectionSetting]);
+    const handleToggleMapZooming = React.useCallback(() => {
+        updateProjectionSetting({
+            enableMapZooming: !interactionSettings.enableMapZooming,
+        });
+    }, [interactionSettings.enableMapZooming, updateProjectionSetting]);
 
     const gridContents = [
         <StyledIslandParentNoScrollbar key="solar-system">
@@ -551,10 +693,10 @@ const CelestialMainLayout = () => {
                 >
                     <Box component="span">
                         {viewMode === VIEW_MODE_PLANETARIUM
-                            ? t('celestial.planetarium_title', { defaultValue: 'Planetarium' })
-                            : t('celestial.solar_system_layout_title', { defaultValue: 'Solar System Layout' })}
+                            ? tCelestial('main_layout.planetarium_title')
+                            : tCelestial('main_layout.solar_system_layout_title')}
                     </Box>
-                    <Tooltip title="Layout options">
+                    <Tooltip title={tCelestial('toolbar.layout_options')}>
                         <span>
                             <IconButton
                                 size="small"
@@ -579,15 +721,19 @@ const CelestialMainLayout = () => {
                         disabled={!socket}
                         onToggleFullscreen={handleToggleSolarSystemFullscreen}
                         fullscreen={solarSystemFullscreen}
-                        fullscreenLabel={t('map_controls.go_fullscreen', { defaultValue: 'Go fullscreen' })}
-                        exitFullscreenLabel={t('map_controls.exit_fullscreen', { defaultValue: 'Exit fullscreen' })}
+                        fullscreenLabel={tCelestial('toolbar.go_fullscreen')}
+                        exitFullscreenLabel={tCelestial('toolbar.exit_fullscreen')}
+                        mapDraggingEnabled={interactionSettings.enableMapDragging}
+                        mapZoomingEnabled={interactionSettings.enableMapZooming}
+                        onToggleMapDragging={handleToggleMapDragging}
+                        onToggleMapZooming={handleToggleMapZooming}
                         showZoomButtons={!interactionSettings.enableMapZooming}
                     />
                 ) : null}
                 <Box sx={{ p: 0, flex: 1, minHeight: 0, overflow: 'hidden', position: 'relative' }}>
-                    {celestialState.error && !hasSolarScene ? (
+                    {(celestialState.error && !hasSolarScene) || solarSystemDataError ? (
                         <Typography variant="body2" color="error" sx={{ p: 1 }}>
-                            {celestialState.error}
+                            {celestialState.error || solarSystemDataError}
                         </Typography>
                     ) : (
                         <Box sx={{ height: '100%', minHeight: 220, position: 'relative' }}>
@@ -604,6 +750,7 @@ const CelestialMainLayout = () => {
                                 <SolarSystemCanvas
                                     scene={combinedScene}
                                     selectedTargetKeys={selectedTargetKeys}
+                                    targetNumberByTargetKey={targetNumberByTargetKey}
                                     fitAllSignal={fitAllSignal}
                                     focusTargetSignal={focusTargetSignal}
                                     focusTargetKey={focusTargetKey}
@@ -615,33 +762,10 @@ const CelestialMainLayout = () => {
                                     enableMapDragging={interactionSettings.enableMapDragging}
                                     enableMapZooming={interactionSettings.enableMapZooming}
                                     onViewportCommit={handleViewportCommit}
+                                    onStatusBarInfoChange={handleSolarStatusBarInfoChange}
                                     displayOptions={solarSystemDisplayOptions}
                                 />
                             )}
-
-                            {isSolarInitialLoad || isPlanetariumInitialLoad ? (
-                                <Box
-                                    sx={{
-                                        position: 'absolute',
-                                        inset: 0,
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        flexDirection: 'column',
-                                        gap: 1.25,
-                                        bgcolor: (theme) => theme.palette.mode === 'dark'
-                                            ? 'rgba(8, 10, 14, 0.72)'
-                                            : 'rgba(248, 250, 255, 0.78)',
-                                    }}
-                                >
-                                    <CircularProgress size={34} />
-                                    <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
-                                        {viewMode === VIEW_MODE_PLANETARIUM
-                                            ? 'Loading planetarium vectors...'
-                                            : 'Loading solar system vectors...'}
-                                    </Typography>
-                                </Box>
-                            ) : null}
 
                             {isSolarRefreshing || isPlanetariumRefreshing ? (
                                 <Box
@@ -668,7 +792,7 @@ const CelestialMainLayout = () => {
                                         color="text.secondary"
                                         sx={{ fontFamily: 'monospace', lineHeight: 1 }}
                                     >
-                                        Updating...
+                                        {tCelestial('main_layout.updating')}
                                     </Typography>
                                 </Box>
                             ) : null}
@@ -676,9 +800,8 @@ const CelestialMainLayout = () => {
                     )}
                 </Box>
                 <CelestialStatusBar
-                    planetsCount={planetsCount}
-                    moonsCount={moonsCount}
-                    trackedCount={trackedCount}
+                    gestureHintText={viewMode === VIEW_MODE_SOLAR_SYSTEM ? solarCanvasStatusInfo.gestureHintText : ''}
+                    scaleLabel={viewMode === VIEW_MODE_SOLAR_SYSTEM ? solarCanvasStatusInfo.scaleLabel : ''}
                 />
             </Box>
         </StyledIslandParentNoScrollbar>,
@@ -689,9 +812,9 @@ const CelestialMainLayout = () => {
                     sx={{ ...islandTitleBarSx, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
                 >
                     <Box component="span">
-                        {t('celestial.monitored_title', { defaultValue: 'Monitored Celestial' })}
+                        {tCelestial('main_layout.monitored_title')}
                     </Box>
-                    <Tooltip title="Table settings">
+                    <Tooltip title={tCelestial('toolbar.table_settings')}>
                         <span>
                             <IconButton
                                 size="small"
@@ -707,8 +830,9 @@ const CelestialMainLayout = () => {
                     <MonitoredCelestialGridIsland
                         rows={monitoredState.monitored || []}
                         loading={Boolean(monitoredState.loading)}
+                        targetNumberByTargetKey={targetNumberByTargetKey}
                         onTargetSelected={(row) => {
-                            const key = buildTargetKey(row);
+                            const key = buildTargetKeyFromCelestialRow(row);
                             if (!key) return;
                             setFocusTargetKey(key);
                             setFocusTargetSignal((value) => value + 1);
@@ -732,7 +856,7 @@ const CelestialMainLayout = () => {
                 passes={combinedScene?.celestial_passes || []}
                 loading={Boolean(celestialState.tracksLoading)}
                 gridEditable={isEditing}
-                projectionFutureHours={projectionSettings.future_hours}
+                projectionFutureHours={timelineFutureHours}
                 selectedTargetKey={selectedInfoTargetKey}
                 onRefresh={handleRefreshCelestial}
             />
@@ -744,6 +868,7 @@ const CelestialMainLayout = () => {
                     tracks={combinedScene?.celestial || []}
                     loading={Boolean(celestialState.tracksLoading)}
                     gridEditable={isEditing}
+                    targetNumberByTargetKey={targetNumberByTargetKey}
                     onTargetSelected={(targetKey) => {
                         if (!targetKey) return;
                         setFocusTargetKey(targetKey);
@@ -788,8 +913,8 @@ const CelestialMainLayout = () => {
                         layouts={layouts}
                         onLayoutChange={handleLayoutsChange}
                         breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
-                        cols={{ lg: 12, md: 10, sm: 6, xs: 2, xxs: 2 }}
-                        rowHeight={30}
+                        cols={{ lg: 48, md: 40, sm: 24, xs: 8, xxs: 8 }}
+                        rowHeight={8}
                         dragConfig={{ enabled: isEditing, handle: '.react-grid-draggable' }}
                         resizeConfig={{ enabled: isEditing }}
                     >

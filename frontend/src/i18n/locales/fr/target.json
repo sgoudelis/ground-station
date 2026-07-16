@@ -119,6 +119,9 @@
   "satellite_map": {
     "title": "Suivi de la cible"
   },
+  "target_retarget_dialog": {
+    "title": "Réassigner un emplacement ou créer une nouvelle cible"
+  },
   "pass_timeline": {
     "title": "Chronologie des passages pour {{name}} - Prochaines {{hours}} heures"
   },

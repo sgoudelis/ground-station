@@ -1,7 +1,7 @@
 """
 Session runtime/snapshot handlers.
 
-Exposes read-only commands for the UI to retrieve:
+Exposes read-only commands for authenticated users to retrieve:
 - A merged runtime snapshot of sessions and SDR workers (process/consumers)
 - A per-session view merging relationships and configuration
 
@@ -33,15 +33,16 @@ async def fetch_runtime_snapshot(
         that include that session in their clients/consumers.
       - sdr_id: return only that SDR entry in sdrs{} and sessions bound to it.
     """
+    del sio, sid
     try:
         session_filter: Optional[str] = (data or {}).get("session_id") if data else None
         sdr_filter: Optional[str] = (data or {}).get("sdr_id") if data else None
 
-        # Prefer going through the service (façade) if available
+        # Prefer going through the service (facade) if available.
         try:
             snapshot: Dict[str, Any] = session_service.get_runtime_snapshot()
         except Exception:
-            # Fallback to tracker’s method using the live process_manager
+            # Fallback to tracker's method using the live process_manager.
             snapshot = session_tracker.get_runtime_snapshot(process_manager)
 
         if not isinstance(snapshot, dict):
@@ -50,31 +51,28 @@ async def fetch_runtime_snapshot(
         sessions = dict(snapshot.get("sessions", {}))
         sdrs = dict(snapshot.get("sdrs", {}))
 
-        # Enrich sessions with IP address from tracker if missing
+        # Enrich sessions with IP address from tracker if missing.
         try:
-            for _sid, entry in sessions.items():
+            for snapshot_sid, entry in sessions.items():
                 if isinstance(entry, dict) and "ip" not in entry:
-                    entry["ip"] = session_tracker.get_session_ip(_sid)
+                    entry["ip"] = session_tracker.get_session_ip(snapshot_sid)
         except Exception:
-            # Best-effort enrichment
+            # Best-effort enrichment.
             pass
 
-        # Apply sdr_id filter first if provided
+        # Apply sdr_id filter first if provided.
         if sdr_filter:
-            sdrs = {k: v for k, v in sdrs.items() if k == sdr_filter}
-            # Trim sessions to only those associated with this SDR if possible
-            # Keep sessions with matching tracker binding
+            sdrs = {key: value for key, value in sdrs.items() if key == sdr_filter}
+            # Trim sessions to only those associated with this SDR if possible.
             sessions = {
-                sid_k: sess_v
-                for sid_k, sess_v in sessions.items()
-                if sess_v.get("sdr_id") == sdr_filter
+                key: value for key, value in sessions.items() if value.get("sdr_id") == sdr_filter
             }
 
-        # Apply session_id filter if provided
+        # Apply session_id filter if provided.
         if session_filter:
-            sessions = {k: v for k, v in sessions.items() if k == session_filter}
+            sessions = {key: value for key, value in sessions.items() if key == session_filter}
 
-            # Additionally, reduce sdrs to entries that reference this session
+            # Additionally, reduce sdrs to entries that reference this session.
             filtered_sdrs: Dict[str, Any] = {}
             for sdr_id, entry in sdrs.items():
                 clients = set(entry.get("clients", []) or [])
@@ -87,10 +85,10 @@ async def fetch_runtime_snapshot(
             sdrs = filtered_sdrs
 
         return {"success": True, "data": {"sessions": sessions, "sdrs": sdrs}}
-    except Exception as e:
-        logger.error(f"Error fetching runtime snapshot: {e}")
-        logger.exception(e)
-        return {"success": False, "error": str(e)}
+    except Exception as exc:
+        logger.error(f"Error fetching runtime snapshot: {exc}")
+        logger.exception(exc)
+        return {"success": False, "error": str(exc)}
 
 
 async def fetch_session_view(
@@ -100,6 +98,7 @@ async def fetch_session_view(
     Return a merged view for a single session:
       { session_id, sdr_id, rig_id, vfo, config }
     """
+    del sio, sid
     try:
         if not data or not data.get("session_id"):
             return {"success": False, "error": "Missing session_id"}
@@ -124,10 +123,10 @@ async def fetch_session_view(
             "config": cfg or {},
         }
         return {"success": True, "data": view}
-    except Exception as e:
-        logger.error(f"Error fetching session view: {e}")
-        logger.exception(e)
-        return {"success": False, "error": str(e)}
+    except Exception as exc:
+        logger.error(f"Error fetching session view: {exc}")
+        logger.exception(exc)
+        return {"success": False, "error": str(exc)}
 
 
 def register_handlers(registry):

@@ -17,9 +17,11 @@
  *
  */
 
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { calculateBandwidthChange } from './vfo-utils.js';
 import { getBandwidthConfig } from './vfo-config.js';
+
+const DRAG_UPDATE_INTERVAL_MS = 33;
 
 /**
  * Custom hook for VFO drag operations
@@ -33,41 +35,197 @@ export const useVFODragHandlers = ({
     startFreq,
     endFreq,
     updateVFOProperty,
-    canvasRef,
-    getDecoderInfoForVFO
+    canvasRef
 }) => {
-    const handleDragMovement = useCallback((deltaX) => {
-        if (!activeMarker) return;
+    const queuedDeltaXRef = useRef(0);
+    const rafIdRef = useRef(null);
+    const lastDispatchTsRef = useRef(0);
+    const scaleFactorRef = useRef(1);
+    const draggedValuesRef = useRef({
+        markerKey: null,
+        frequency: null,
+        bandwidth: null,
+    });
 
-        const marker = vfoMarkers[activeMarker];
-        if (!marker) return;
+    const refs = useRef({
+        activeMarker: null,
+        vfoMarkers: {},
+        actualWidth: 1,
+        freqRange: 1,
+        dragMode: null,
+        startFreq: 0,
+        endFreq: 0,
+        updateVFOProperty: () => {},
+        canvasRef: null,
+    });
 
-        const rect = canvasRef.current.getBoundingClientRect();
-        const scaleFactor = actualWidth / rect.width;
-        const scaledDelta = deltaX * scaleFactor;
-        const freqDelta = (scaledDelta / actualWidth) * freqRange;
+    refs.current.activeMarker = activeMarker;
+    refs.current.vfoMarkers = vfoMarkers;
+    refs.current.actualWidth = actualWidth;
+    refs.current.freqRange = freqRange;
+    refs.current.dragMode = dragMode;
+    refs.current.startFreq = startFreq;
+    refs.current.endFreq = endFreq;
+    refs.current.updateVFOProperty = updateVFOProperty;
+    refs.current.canvasRef = canvasRef;
 
-        if (dragMode === 'body') {
-            const newFrequency = marker.frequency + freqDelta;
-            const limitedFreq = Math.round(Math.max(startFreq, Math.min(newFrequency, endFreq)));
-            updateVFOProperty(parseInt(activeMarker), { frequency: limitedFreq });
-        } else {
-            // Get bandwidth limits for this VFO's configured mode
-            const bandwidthConfig = getBandwidthConfig(marker.mode);
-
-            const currentBandwidth = marker.bandwidth || bandwidthConfig.default;
-            const limitedBandwidth = calculateBandwidthChange(
-                currentBandwidth,
-                freqDelta,
-                dragMode,
-                bandwidthConfig.min,
-                bandwidthConfig.max
-            );
-            updateVFOProperty(parseInt(activeMarker), { bandwidth: limitedBandwidth });
+    const cancelQueuedFrame = useCallback(() => {
+        if (rafIdRef.current !== null) {
+            cancelAnimationFrame(rafIdRef.current);
+            rafIdRef.current = null;
         }
-    }, [activeMarker, vfoMarkers, actualWidth, freqRange, dragMode, startFreq, endFreq, updateVFOProperty, canvasRef, getDecoderInfoForVFO]);
+    }, []);
 
-    return { handleDragMovement };
+    const initializeDragState = useCallback((markerKey) => {
+        const state = refs.current;
+        const marker = state.vfoMarkers?.[markerKey];
+        draggedValuesRef.current = {
+            markerKey,
+            frequency: marker?.frequency ?? null,
+            bandwidth: marker?.bandwidth ?? null,
+        };
+
+        const canvas = state.canvasRef?.current;
+        const rect = canvas?.getBoundingClientRect?.();
+        if (rect && rect.width > 0 && state.actualWidth > 0) {
+            scaleFactorRef.current = state.actualWidth / rect.width;
+        } else {
+            scaleFactorRef.current = 1;
+        }
+
+        queuedDeltaXRef.current = 0;
+        lastDispatchTsRef.current = 0;
+        cancelQueuedFrame();
+    }, [cancelQueuedFrame]);
+
+    const applyQueuedDelta = useCallback((deltaX) => {
+        if (!deltaX) {
+            return;
+        }
+
+        const state = refs.current;
+        const markerKey = state.activeMarker;
+        if (!markerKey) {
+            return;
+        }
+
+        const marker = state.vfoMarkers?.[markerKey];
+        if (!marker || !state.actualWidth || !state.freqRange) {
+            return;
+        }
+
+        if (draggedValuesRef.current.markerKey !== markerKey) {
+            draggedValuesRef.current = {
+                markerKey,
+                frequency: marker.frequency ?? null,
+                bandwidth: marker.bandwidth ?? null,
+            };
+        }
+
+        const scaledDelta = deltaX * scaleFactorRef.current;
+        const freqDelta = (scaledDelta / state.actualWidth) * state.freqRange;
+
+        if (state.dragMode === 'body') {
+            const currentFrequency = draggedValuesRef.current.frequency ?? marker.frequency;
+            if (currentFrequency === null || currentFrequency === undefined) {
+                return;
+            }
+
+            const newFrequency = currentFrequency + freqDelta;
+            const limitedFrequency = Math.round(
+                Math.max(state.startFreq, Math.min(newFrequency, state.endFreq))
+            );
+
+            if (limitedFrequency !== currentFrequency) {
+                draggedValuesRef.current.frequency = limitedFrequency;
+                state.updateVFOProperty(parseInt(markerKey, 10), { frequency: limitedFrequency });
+            }
+            return;
+        }
+
+        // For edge drags, maintain a local bandwidth cache to avoid stale read/write loops.
+        const bandwidthConfig = getBandwidthConfig(marker.mode);
+        const currentBandwidth = draggedValuesRef.current.bandwidth
+            ?? marker.bandwidth
+            ?? bandwidthConfig.default;
+
+        const limitedBandwidth = calculateBandwidthChange(
+            currentBandwidth,
+            freqDelta,
+            state.dragMode,
+            bandwidthConfig.min,
+            bandwidthConfig.max
+        );
+
+        if (limitedBandwidth !== currentBandwidth) {
+            draggedValuesRef.current.bandwidth = limitedBandwidth;
+            state.updateVFOProperty(parseInt(markerKey, 10), { bandwidth: limitedBandwidth });
+        }
+    }, []);
+
+    const runQueuedFrame = useCallback((timestamp) => {
+        rafIdRef.current = null;
+
+        if (!queuedDeltaXRef.current) {
+            return;
+        }
+
+        if (lastDispatchTsRef.current !== 0 && (timestamp - lastDispatchTsRef.current) < DRAG_UPDATE_INTERVAL_MS) {
+            rafIdRef.current = requestAnimationFrame(runQueuedFrame);
+            return;
+        }
+
+        const deltaX = queuedDeltaXRef.current;
+        queuedDeltaXRef.current = 0;
+        lastDispatchTsRef.current = timestamp;
+        applyQueuedDelta(deltaX);
+
+        if (queuedDeltaXRef.current) {
+            rafIdRef.current = requestAnimationFrame(runQueuedFrame);
+        }
+    }, [applyQueuedDelta]);
+
+    const handleDragMovement = useCallback((deltaX) => {
+        if (!deltaX) {
+            return;
+        }
+
+        queuedDeltaXRef.current += deltaX;
+        if (rafIdRef.current === null) {
+            rafIdRef.current = requestAnimationFrame(runQueuedFrame);
+        }
+    }, [runQueuedFrame]);
+
+    const flushDragMovement = useCallback(() => {
+        cancelQueuedFrame();
+        if (queuedDeltaXRef.current) {
+            applyQueuedDelta(queuedDeltaXRef.current);
+            queuedDeltaXRef.current = 0;
+        }
+        lastDispatchTsRef.current = 0;
+    }, [applyQueuedDelta, cancelQueuedFrame]);
+
+    const resetDragMovementState = useCallback(() => {
+        cancelQueuedFrame();
+        queuedDeltaXRef.current = 0;
+        lastDispatchTsRef.current = 0;
+        draggedValuesRef.current = {
+            markerKey: null,
+            frequency: null,
+            bandwidth: null,
+        };
+    }, [cancelQueuedFrame]);
+
+    useEffect(() => () => {
+        cancelQueuedFrame();
+    }, [cancelQueuedFrame]);
+
+    return {
+        handleDragMovement,
+        initializeDragState,
+        flushDragMovement,
+        resetDragMovementState,
+    };
 };
 
 /**
@@ -83,7 +241,8 @@ export const useVFOMouseHandlers = ({
     setCursor,
     lastClientXRef,
     dispatch,
-    setSelectedVFO
+    setSelectedVFO,
+    initializeDragState
 }) => {
     const handleMouseMove = useCallback((e) => {
         if (isDragging) return;
@@ -122,6 +281,7 @@ export const useVFOMouseHandlers = ({
             setActiveMarker(key);
             setDragMode(element);
             setIsDragging(true);
+            initializeDragState(key);
             setCursor(element === 'body' ? 'ew-resize' : 'col-resize');
             lastClientXRef.current = e.clientX;
 
@@ -130,7 +290,7 @@ export const useVFOMouseHandlers = ({
         }
 
         dispatch(setSelectedVFO(parseInt(key) || null));
-    }, [canvasRef, getHoverElement, setActiveMarker, setDragMode, setIsDragging, setCursor, lastClientXRef, dispatch, setSelectedVFO]);
+    }, [canvasRef, getHoverElement, setActiveMarker, setDragMode, setIsDragging, initializeDragState, setCursor, lastClientXRef, dispatch, setSelectedVFO]);
 
     const handleClick = useCallback((e) => {
         // Click handling is done in mousedown
@@ -164,7 +324,8 @@ export const useVFOTouchHandlers = ({
     lastTouchXRef,
     touchStartTimeoutRef,
     dispatch,
-    setSelectedVFO
+    setSelectedVFO,
+    initializeDragState
 }) => {
     const handleTouchStart = useCallback((e) => {
         if (e.touches.length !== 1) return;
@@ -180,6 +341,7 @@ export const useVFOTouchHandlers = ({
             setActiveMarker(key);
             setDragMode(element);
             setIsDragging(true);
+            initializeDragState(key);
             isDraggingRef.current = true;
             lastTouchXRef.current = touch.clientX;
 
@@ -190,7 +352,7 @@ export const useVFOTouchHandlers = ({
         dispatch(setSelectedVFO(parseInt(key) || null));
 
         return { key, element };
-    }, [canvasRef, getHoverElement, setActiveMarker, setDragMode, setIsDragging, isDraggingRef, lastTouchXRef, dispatch, setSelectedVFO]);
+    }, [canvasRef, getHoverElement, setActiveMarker, setDragMode, setIsDragging, initializeDragState, isDraggingRef, lastTouchXRef, dispatch, setSelectedVFO]);
 
     const handleTouchMove = useCallback((e, touchStartTimeoutRef, handleDragMovement) => {
         if (touchStartTimeoutRef.current) {
@@ -336,6 +498,7 @@ export const useVFODragState = ({
     activeMarker,
     handleDragMovement,
     endDragOperation,
+    flushDragMovement,
     lastClientXRef,
     lastTouchXRef
 }) => {
@@ -347,6 +510,7 @@ export const useVFODragState = ({
                     return;
                 }
 
+                // Keep marker drag isolated from container-level pan handlers.
                 e.preventDefault();
                 e.stopPropagation();
 
@@ -357,6 +521,7 @@ export const useVFODragState = ({
             };
 
             const handleMouseUp = () => {
+                flushDragMovement();
                 endDragOperation();
             };
 
@@ -368,7 +533,7 @@ export const useVFODragState = ({
                 document.removeEventListener('mouseup', handleMouseUp);
             };
         }
-    }, [isDragging, activeMarker, handleDragMovement, endDragOperation, lastClientXRef]);
+    }, [isDragging, activeMarker, handleDragMovement, endDragOperation, flushDragMovement, lastClientXRef]);
 
     // Touch drag effect
     useEffect(() => {
@@ -390,6 +555,7 @@ export const useVFODragState = ({
         const handleDocumentTouchEnd = (e) => {
             e.preventDefault();
             e.stopPropagation();
+            flushDragMovement();
             endDragOperation();
         };
 
@@ -402,5 +568,5 @@ export const useVFODragState = ({
             document.removeEventListener('touchend', handleDocumentTouchEnd, { capture: true });
             document.removeEventListener('touchcancel', handleDocumentTouchEnd, { capture: true });
         };
-    }, [isDragging, handleDragMovement, endDragOperation, lastTouchXRef]);
+    }, [isDragging, handleDragMovement, endDragOperation, flushDragMovement, lastTouchXRef]);
 };

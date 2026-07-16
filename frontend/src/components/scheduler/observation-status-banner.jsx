@@ -19,6 +19,7 @@
 
 import React, { useMemo, useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import { Box, Paper, Typography, Chip, Stack, Button, Tooltip, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions } from '@mui/material';
 import { AccessTime, RadioButtonChecked, Satellite, Router, Visibility, Cancel, Stop } from '@mui/icons-material';
 import { useSocket } from '../common/socket.jsx';
@@ -40,6 +41,7 @@ import { formatTime as formatTimeHelper } from '../../utils/date-time.js';
  */
 export default function ObservationStatusBanner() {
     const dispatch = useDispatch();
+    const { t } = useTranslation('common');
     const { socket } = useSocket();
     const observations = useSelector((state) => state.scheduler.observations);
     const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
@@ -143,11 +145,11 @@ export default function ObservationStatusBanner() {
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             <Satellite sx={{ color: 'text.secondary', fontSize: 20 }} />
                             <Typography variant="body2" fontWeight={600} color="text.secondary">
-                                NO SCHEDULED OBSERVATIONS
+                                {t('scheduler_banner.no_scheduled_observations')}
                             </Typography>
                         </Box>
                         <Typography variant="body2" color="text.secondary">
-                            No active or upcoming observations scheduled
+                            {t('scheduler_banner.no_active_or_upcoming')}
                         </Typography>
                     </Stack>
                     <Box
@@ -165,14 +167,14 @@ export default function ObservationStatusBanner() {
                             variant="outlined"
                             onClick={handleCreateMonitoredSatellite}
                         >
-                            Add monitored satellite
+                            {t('scheduler_banner.add_monitored_satellite')}
                         </Button>
                         <Button
                             size="small"
                             variant="outlined"
                             onClick={handleCreateObservation}
                         >
-                            Create observation
+                            {t('scheduler_banner.create_observation')}
                         </Button>
                     </Box>
                 </Box>
@@ -195,26 +197,26 @@ export default function ObservationStatusBanner() {
         if (observation.status === 'running') {
             const endTime = new Date(observation.task_end || observation.pass.event_end);
             const remainingMs = endTime.getTime() - now.getTime();
-            if (remainingMs <= 0) return 'Ending soon';
+            if (remainingMs <= 0) return t('scheduler_banner.ending_soon');
             const hours = Math.floor(remainingMs / 3600000);
             const minutes = Math.floor((remainingMs % 3600000) / 60000);
             const seconds = Math.floor((remainingMs % 60000) / 1000);
-            if (hours > 0) return `${hours}h ${minutes}m ${seconds}s remaining`;
-            if (minutes > 0) return `${minutes}m ${seconds}s remaining`;
-            return `${seconds}s remaining`;
+            if (hours > 0) return t('scheduler_banner.remaining_hms', { hours, minutes, seconds });
+            if (minutes > 0) return t('scheduler_banner.remaining_ms', { minutes, seconds });
+            return t('scheduler_banner.remaining_s', { seconds });
         }
         const startTime = new Date(observation.task_start || observation.pass.event_start);
         const untilMs = startTime.getTime() - now.getTime();
-        if (untilMs <= 0) return 'Starting soon';
+        if (untilMs <= 0) return t('scheduler_banner.starting_soon');
         const hours = Math.floor(untilMs / 3600000);
         const minutes = Math.floor((untilMs % 3600000) / 60000);
         const seconds = Math.floor((untilMs % 60000) / 1000);
         if (hours > 24) {
             const days = Math.floor(hours / 24);
-            return `in ${days}d ${hours % 24}h`;
+            return t('scheduler_banner.in_days_hours', { days, hours: hours % 24 });
         }
-        if (hours > 0) return `in ${hours}h ${minutes}m`;
-        return `in ${minutes}m ${seconds}s`;
+        if (hours > 0) return t('scheduler_banner.in_hours_minutes', { hours, minutes });
+        return t('scheduler_banner.in_minutes_seconds', { minutes, seconds });
     };
 
     const getTaskSummary = (observation) => {
@@ -224,9 +226,9 @@ export default function ObservationStatusBanner() {
         const recordingTasks = tasks.filter((t) => t.type === 'iq_recording' || t.type === 'audio_recording').length;
         const transcriptionTasks = tasks.filter((t) => t.type === 'transcription').length;
         const parts = [];
-        if (decoderTasks > 0) parts.push(`${decoderTasks} decoder${decoderTasks > 1 ? 's' : ''}`);
-        if (recordingTasks > 0) parts.push(`${recordingTasks} recording${recordingTasks > 1 ? 's' : ''}`);
-        if (transcriptionTasks > 0) parts.push(`${transcriptionTasks} transcription${transcriptionTasks > 1 ? 's' : ''}`);
+        if (decoderTasks > 0) parts.push(t('scheduler_banner.task_summary.decoder', { count: decoderTasks }));
+        if (recordingTasks > 0) parts.push(t('scheduler_banner.task_summary.recording', { count: recordingTasks }));
+        if (transcriptionTasks > 0) parts.push(t('scheduler_banner.task_summary.transcription', { count: transcriptionTasks }));
         return parts.join(', ');
     };
 
@@ -264,8 +266,8 @@ export default function ObservationStatusBanner() {
                     )}
                     <Typography variant="body2" fontWeight={600} color="text.secondary">
                         {hasRunning
-                            ? `RUNNING NOW (${runningObservations.length})`
-                            : 'NEXT OBSERVATION'}
+                            ? t('scheduler_banner.running_now_count', { count: runningObservations.length })
+                            : t('scheduler_banner.next_observation')}
                     </Typography>
                 </Box>
 
@@ -281,10 +283,10 @@ export default function ObservationStatusBanner() {
                             <>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap' }}>
                                     <Typography variant="body1" fontWeight={600}>
-                                        {observation.satellite?.name || 'Unknown'}
+                                        {observation.satellite?.name || t('unknown')}
                                     </Typography>
                                     <Typography variant="body2" color="text.secondary">
-                                        ({observation.satellite?.norad_id || 'N/A'})
+                                        ({observation.satellite?.norad_id || t('not_available')})
                                     </Typography>
                                     {additionalRunning > 0 && (
                                         <Chip
@@ -307,7 +309,7 @@ export default function ObservationStatusBanner() {
                                 )}
                                 {observation.pass?.peak_altitude && (
                                     <Chip
-                                        label={`${observation.pass.peak_altitude.toFixed(0)}° peak`}
+                                        label={t('scheduler_banner.peak_label', { value: observation.pass.peak_altitude.toFixed(0) })}
                                         size="small"
                                         variant="outlined"
                                     />
@@ -316,7 +318,7 @@ export default function ObservationStatusBanner() {
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                         <Router sx={{ fontSize: 16, color: 'text.secondary' }} />
                                         <Typography variant="body2" color="text.secondary">
-                                            {sdrs.length === 1 ? sdrs[0]?.name : `${sdrs.length} SDRs`}
+                                            {sdrs.length === 1 ? sdrs[0]?.name : t('scheduler_banner.sdr_count', { count: sdrs.length })}
                                         </Typography>
                                     </Box>
                                 )}
@@ -333,7 +335,7 @@ export default function ObservationStatusBanner() {
                                         justifyContent: { xs: 'flex-end', sm: 'flex-start' },
                                     }}
                                 >
-                                    <Tooltip title="Stop observation">
+                                    <Tooltip title={t('scheduler_banner.stop_observation_tooltip')}>
                                         <Button
                                             variant="outlined"
                                             size="small"
@@ -341,13 +343,13 @@ export default function ObservationStatusBanner() {
                                             startIcon={<Stop />}
                                             onClick={() => handleCancelClick(observation)}
                                         >
-                                            Stop
+                                            {t('scheduler_banner.stop')}
                                         </Button>
                                     </Tooltip>
                                 </Box>
                                 {nextObservation && (
                                     <Typography variant="body2" color="text.secondary">
-                                        Next up: <strong>{nextObservation.satellite?.name || 'Unknown'}</strong> ({nextObservation.satellite?.norad_id || 'N/A'}) {getCountdown(nextObservation)}
+                                        {t('scheduler_banner.next_up_label')}: <strong>{nextObservation.satellite?.name || t('unknown')}</strong> ({nextObservation.satellite?.norad_id || t('not_available')}) {getCountdown(nextObservation)}
                                     </Typography>
                                 )}
                             </>
@@ -366,10 +368,10 @@ export default function ObservationStatusBanner() {
                             <>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap' }}>
                                     <Typography variant="body1" fontWeight={600}>
-                                        {observation.satellite?.name || 'Unknown'}
+                                        {observation.satellite?.name || t('unknown')}
                                     </Typography>
                                     <Typography variant="body2" color="text.secondary">
-                                        ({observation.satellite?.norad_id || 'N/A'})
+                                        ({observation.satellite?.norad_id || t('not_available')})
                                     </Typography>
                                 </Box>
                                 {countdown && (
@@ -385,7 +387,7 @@ export default function ObservationStatusBanner() {
                                 {visible && (
                                     <Chip
                                         icon={<Visibility sx={{ fontSize: 16 }} />}
-                                        label="Satellite visible"
+                                        label={t('scheduler_banner.satellite_visible')}
                                         size="small"
                                         color="success"
                                         variant="outlined"
@@ -399,7 +401,7 @@ export default function ObservationStatusBanner() {
                                 )}
                                 {observation.pass?.peak_altitude && (
                                     <Chip
-                                        label={`${observation.pass.peak_altitude.toFixed(0)}° peak`}
+                                        label={t('scheduler_banner.peak_label', { value: observation.pass.peak_altitude.toFixed(0) })}
                                         size="small"
                                         variant="outlined"
                                     />
@@ -408,7 +410,7 @@ export default function ObservationStatusBanner() {
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                         <Router sx={{ fontSize: 16, color: 'text.secondary' }} />
                                         <Typography variant="body2" color="text.secondary">
-                                            {sdrs.length === 1 ? sdrs[0]?.name : `${sdrs.length} SDRs`}
+                                            {sdrs.length === 1 ? sdrs[0]?.name : t('scheduler_banner.sdr_count', { count: sdrs.length })}
                                         </Typography>
                                     </Box>
                                 )}
@@ -430,7 +432,7 @@ export default function ObservationStatusBanner() {
                                         justifyContent: { xs: 'flex-end', sm: 'flex-start' },
                                     }}
                                 >
-                                    <Tooltip title="Abort scheduled observation">
+                                    <Tooltip title={t('scheduler_banner.abort_scheduled_tooltip')}>
                                         <Button
                                             variant="outlined"
                                             size="small"
@@ -438,7 +440,7 @@ export default function ObservationStatusBanner() {
                                             startIcon={<Cancel />}
                                             onClick={() => handleCancelClick(observation)}
                                         >
-                                            Abort
+                                            {t('scheduler_banner.abort')}
                                         </Button>
                                     </Tooltip>
                                 </Box>
@@ -451,7 +453,7 @@ export default function ObservationStatusBanner() {
             {/* Confirmation Dialog */}
             <Dialog open={confirmDialogOpen} onClose={handleCloseDialog}>
                 <DialogTitle>
-                    {selectedIsRunning ? 'Stop Observation' : 'Abort Observation'}
+                    {selectedIsRunning ? t('scheduler_banner.stop_observation_title') : t('scheduler_banner.abort_observation_title')}
                 </DialogTitle>
                 <DialogContent
                     sx={{
@@ -466,29 +468,29 @@ export default function ObservationStatusBanner() {
                     <DialogContentText>
                         {selectedIsRunning ? (
                             <>
-                                Are you sure you want to stop the observation <strong>{selectedObservationForAction?.satellite?.name || 'Unknown'}</strong>?
+                                {t('scheduler_banner.stop_confirm_question', { name: selectedObservationForAction?.satellite?.name || t('unknown') })}
                                 <br />
-                                This will immediately stop the observation and remove all scheduled jobs.
+                                {t('scheduler_banner.stop_confirm_warning')}
                             </>
                         ) : (
                             <>
-                                Are you sure you want to abort the observation <strong>{selectedObservationForAction?.satellite?.name || 'Unknown'}</strong>?
+                                {t('scheduler_banner.abort_confirm_question', { name: selectedObservationForAction?.satellite?.name || t('unknown') })}
                                 <br />
-                                This will cancel the scheduled observation and remove all scheduled jobs.
+                                {t('scheduler_banner.abort_confirm_warning')}
                             </>
                         )}
                     </DialogContentText>
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={handleCloseDialog}>
-                        Cancel
+                        {t('cancel')}
                     </Button>
                     <Button
                         onClick={handleConfirmCancel}
                         color="error"
                         variant="contained"
                     >
-                        {selectedIsRunning ? 'Stop' : 'Abort'}
+                        {selectedIsRunning ? t('scheduler_banner.stop') : t('scheduler_banner.abort')}
                     </Button>
                 </DialogActions>
             </Dialog>

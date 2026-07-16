@@ -1,0 +1,321 @@
+# Template logging configuration.
+# On startup this is copied to data/configs/log_config.yaml if missing.
+version: 1
+disable_existing_loggers: False
+formatters:
+
+  colored:
+    "()": colorlog.ColoredFormatter
+    format: '[%(asctime)s] - %(name)20s - %(log_color)s%(levelname)-8s%(reset)s %(blue)s%(message)s'
+    log_colors:
+      DEBUG: cyan
+      INFO: green
+      WARNING: yellow
+      ERROR: red
+      CRITICAL: 'red,bg_white'
+
+handlers:
+  default:
+    formatter: colored
+    class: logging.StreamHandler
+    stream: ext://sys.stdout
+  access:
+    formatter: colored
+    class: logging.StreamHandler
+    stream: ext://sys.stdout
+
+loggers:
+  uvicorn.error:
+    level: WARN
+    handlers:
+      - default
+    propagate: no
+
+  uvicorn.access:
+    level: WARN
+    handlers:
+      - access
+    propagate: no
+
+  engineio.server:
+    level: WARNING
+    handlers:
+      - default
+    propagate: no
+
+  socketio.server:
+    level: WARNING
+    handlers:
+      - default
+    propagate: no
+
+  asyncio:
+    level: WARNING
+    handlers:
+      - default
+    propagate: no
+
+  urllib3.connectionpool:
+    level: WARNING
+    handlers:
+      - default
+    propagate: no
+
+  aiosqlite:
+    level: INFO
+    handlers:
+      - default
+    propagate: no
+
+  sqlalchemy:
+    level: WARNING
+    handlers:
+      - default
+    propagate: no
+
+  httpx:
+    level: INFO
+    handlers:
+      - default
+    propagate: no
+
+  httpcore.http11:
+    level: INFO
+    handlers:
+      - default
+    propagate: no
+
+  httpcore.connection:
+    level: INFO
+    handlers:
+      - default
+    propagate: no
+
+  sdr-data-process:
+    level: INFO
+    handlers:
+      - default
+    propagate: no
+
+  rtlsdr.rtlsdraio:
+    level: INFO
+    handlers:
+      - default
+    propagate: no
+
+  rtlsdr.rtlsdr:
+    level: INFO
+    handlers:
+      - default
+    propagate: no
+
+  rtlsdr-tcp-client:
+    level: INFO
+    handlers:
+      - default
+    propagate: no
+
+  soapysdr-browser:
+    level: INFO
+    handlers:
+      - default
+    propagate: no
+
+  soapysdr-remote:
+    level: INFO
+    handlers:
+      - default
+    propagate: no
+
+  soapysdr-local:
+    level: INFO
+    handlers:
+      - default
+    propagate: no
+
+  soapylocal-probe:
+    level: ERROR
+    handlers:
+      - default
+    propagate: no
+
+  soapyremote-probe:
+    level: ERROR
+    handlers:
+      - default
+    propagate: no
+
+  passes-worker:
+    level: INFO
+    handlers:
+      - default
+    propagate: no
+
+  waterfall-process:
+    level: INFO
+    handlers:
+      - default
+    propagate: no
+
+  tracker-worker:
+    level: INFO
+    handlers:
+      - default
+    propagate: no
+
+  tracker-manager:
+    level: INFO
+    handlers:
+      - default
+    propagate: no
+
+  uhd-worker:
+    level: INFO
+    handlers:
+      - default
+    propagate: no
+
+  rtlsdr-worker:
+    level: INFO
+    handlers:
+      - default
+    propagate: no
+
+  fft-processor:
+    level: INFO
+    handlers:
+      - default
+    propagate: no
+
+  alembic.runtime.migration:
+    level: WARN
+    handlers:
+      - default
+    propagate: no
+
+  tzlocal:
+    level: INFO
+    handlers:
+      - default
+    propagate: no
+
+  fm-demodulator:
+    level: INFO
+    handlers:
+      - default
+    propagate: no
+
+  ssb-demodulator:
+    level: WARN
+    handlers:
+      - default
+    propagate: no
+
+  am-demodulator:
+    level: WARN
+    handlers:
+      - default
+    propagate: no
+
+  fm-stereo-demodulator:
+    level: WARN
+    handlers:
+      - default
+    propagate: no
+
+  sdr-manager:
+    level: INFO
+    handlers:
+      - default
+    propagate: no
+
+  PIL.PngImagePlugin:
+    level: INFO
+    handlers:
+      - default
+    propagate: no
+
+  vfo-state:
+    level: INFO
+    handlers:
+      - default
+    propagate: no
+
+  session-tracker:
+    level: INFO
+    handlers:
+      - default
+    propagate: no
+
+  sstvdecoder:
+    level: INFO
+    handlers:
+      - default
+    propagate: no
+
+  morsedecoder:
+    level: INFO
+    handlers:
+      - default
+    propagate: no
+
+  telemetry.parser:
+    level: INFO
+    handlers:
+      - default
+    propagate: no
+
+  demodulator-manager:
+    level: INFO
+    handlers:
+      - default
+    propagate: no
+
+  decoderconfigservice:
+    level: INFO
+    handlers:
+      - default
+    propagate: no
+
+  transcription.deepgram:
+    level: INFO
+    handlers:
+      - default
+    propagate: no
+
+  apscheduler.scheduler:
+    level: INFO
+    handlers:
+      - default
+    propagate: no
+
+  tlesync-task:
+    level: INFO
+    handlers:
+      - default
+    propagate: no
+
+  hardware-handler:
+    level: INFO
+    handlers:
+      - default
+    propagate: no
+
+  rig-control:
+    level: INFO
+    handlers:
+      - default
+    propagate: no
+
+  # Silence passlib startup debug noise from authentication initialization.
+  passlib:
+    level: WARNING
+    handlers:
+      - default
+    propagate: no
+
+root:
+  level: DEBUG
+  handlers:
+    - default
+  propagate: no

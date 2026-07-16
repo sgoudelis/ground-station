@@ -26,6 +26,7 @@ import {
     Button,
     FormControl,
     FormHelperText,
+    IconButton,
     InputLabel,
     MenuItem,
     Select,
@@ -58,6 +59,7 @@ import SelectionActionBar from './selection-action-bar.jsx';
 import { useLocation, useNavigate } from 'react-router-dom';
 import RigEditDialog from './rig-edit-dialog.jsx';
 import { DEFAULT_RIG, validateRigForm } from './rig-edit-logic.js';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 
 
 export default function RigTable() {
@@ -120,6 +122,29 @@ export default function RigTable() {
             flex: 1,
             minWidth: 140,
         },
+        {
+            field: 'row_actions',
+            headerName: '',
+            width: 56,
+            sortable: false,
+            filterable: false,
+            disableColumnMenu: true,
+            align: 'center',
+            headerAlign: 'center',
+            renderCell: (params) => (
+                <IconButton
+                    size="small"
+                    aria-label={t('rig.edit')}
+                    onClick={(event) => {
+                        event.stopPropagation();
+                        dispatch(setFormValues(params.row));
+                        dispatch(setOpenAddDialog(true));
+                    }}
+                >
+                    <EditOutlinedIcon fontSize="small" />
+                </IconButton>
+            ),
+        },
     ];
 
     // useEffect(() => {
@@ -176,12 +201,8 @@ export default function RigTable() {
     const hasValidationErrors = Object.keys(validationErrors).length > 0;
 
     return (
-        <Paper elevation={3} sx={{padding: 2, marginTop: 0, borderRadius: 0}}>
-            <Alert severity="info">
-                <AlertTitle>{t('rig.title')}</AlertTitle>
-                {t('rig.subtitle')}
-            </Alert>
-            <Box component="form" sx={{mt: 2}}>
+        <Paper elevation={3} sx={{ px: 2, pb: 2, pt: 1, marginTop: 0, borderRadius: 0 }}>
+            <Box component="form">
                 <Box sx={{width: '100%'}}>
                     <DataGrid
                         loading={loading}
@@ -209,7 +230,7 @@ export default function RigTable() {
                         }}
                         sx={{
                             border: 0,
-                            marginTop: 2,
+                            marginTop: 1,
                             [`& .${gridClasses.cell}:focus, & .${gridClasses.cell}:focus-within`]: {
                                 outline: 'none',
                             },
@@ -446,6 +467,10 @@ export default function RigTable() {
                     </Dialog>
                 </Box>
             </Box>
+            <Alert severity="info" sx={{ mt: 2 }}>
+                <AlertTitle>{t('rig.title')}</AlertTitle>
+                {t('rig.subtitle')}
+            </Alert>
         </Paper>
     );
 }

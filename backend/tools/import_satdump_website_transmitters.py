@@ -17,6 +17,28 @@ DEFAULT_URL = "https://www.satdump.org/Satellite-List/"
 DEFAULT_SERVICE = None
 DEFAULT_SOURCE = "satdump"
 DEFAULT_CITATION = DEFAULT_URL
+TRANSMITTER_ID_ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
+TRANSMITTER_ID_BASE = len(TRANSMITTER_ID_ALPHABET)
+TRANSMITTER_ID_LENGTH = 22
+
+
+def uuid_to_short_transmitter_id(value: uuid.UUID | str) -> str:
+    """Encode a UUID as a SatNOGS-style 22-char transmitter id."""
+    uid = value if isinstance(value, uuid.UUID) else uuid.UUID(str(value).strip())
+    number = uid.int
+    encoded = []
+
+    while number:
+        number, remainder = divmod(number, TRANSMITTER_ID_BASE)
+        encoded.append(TRANSMITTER_ID_ALPHABET[remainder])
+
+    if not encoded:
+        encoded.append(TRANSMITTER_ID_ALPHABET[0])
+
+    return "".join(reversed(encoded)).rjust(
+        TRANSMITTER_ID_LENGTH,
+        TRANSMITTER_ID_ALPHABET[0],
+    )
 
 
 class SatInfo(TypedDict):
@@ -226,14 +248,15 @@ def build_rows(
             tx_name = clean_transmitter_name(raw_name)
             if not tx_name:
                 tx_name = clean_text(sat_name)
-            tx_id = uuid.uuid5(
-                uuid.NAMESPACE_URL, f"satdump-website:{norad}:{tx_name}:{frequency_hz}"
+            source_transmitter_id = str(
+                uuid.uuid5(uuid.NAMESPACE_URL, f"satdump-website:{norad}:{tx_name}:{frequency_hz}")
             )
+            tx_id = uuid_to_short_transmitter_id(source_transmitter_id)
 
             now = dt.datetime.now(dt.timezone.utc).isoformat()
             rows.append(
                 {
-                    "id": str(tx_id),
+                    "id": tx_id,
                     "description": tx_name,
                     "alive": True,
                     "type": "Transmitter",
@@ -255,6 +278,7 @@ def build_rows(
                     "citation": args.citation,
                     "service": "Unknown",
                     "source": args.source,
+                    "source_transmitter_id": source_transmitter_id,
                     "iaru_coordination": "N/A",
                     "iaru_coordination_url": "",
                     "itu_notification": '{"urls": []}',

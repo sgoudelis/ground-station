@@ -22,6 +22,11 @@ from typing import Any, Dict, Optional
 
 from sqlalchemy import select
 
+from common.filenames import (
+    looks_like_path_input,
+    resolve_base_path_within_root,
+    sanitize_filename_component,
+)
 from common.logger import logger
 from db import AsyncSessionLocal
 from db.models import Transmitters
@@ -74,19 +79,28 @@ class RecorderHandler:
             timestamp = f"{date}_{time_str}"
 
             # Build recording name: satellite_name_timestamp
-            satellite_name = satellite.get("name", "unknown").replace(" ", "_")
+            raw_satellite_name = str(satellite.get("name", "unknown")).strip() or "unknown"
+            if looks_like_path_input(raw_satellite_name):
+                logger.warning(
+                    "Path-like satellite name detected while building IQ recording filename: %r",
+                    raw_satellite_name,
+                )
+            satellite_name = sanitize_filename_component(raw_satellite_name, default="unknown")
             recording_name = f"{satellite_name}_{timestamp}"
 
             if recorder_id:
-                safe_recorder_id = recorder_id.replace(":", "_")
+                safe_recorder_id = sanitize_filename_component(
+                    recorder_id,
+                    default="recorder",
+                )
                 recording_name = f"{recording_name}_{safe_recorder_id}"
 
-            # Build recording path (directory creation handled by IQRecorder)
+            # Build recording path and enforce that it stays under recordings root.
             backend_dir = os.path.dirname(
                 os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
             )
             recordings_dir = os.path.join(backend_dir, "data", "recordings")
-            recording_path = os.path.join(recordings_dir, recording_name)
+            recording_path = str(resolve_base_path_within_root(recordings_dir, recording_name))
 
             # Extract frequency shift parameters from task config
             task_config = task_config or {}
@@ -214,8 +228,13 @@ class RecorderHandler:
             now = datetime.now()
             timestamp = now.strftime("%Y%m%d_%H%M%S")
 
-            recording_name = satellite.get("name", "unknown_satellite")
-            recording_name = recording_name.replace(" ", "_").replace("/", "_")
+            raw_satellite_name = str(satellite.get("name", "unknown_satellite")).strip()
+            if looks_like_path_input(raw_satellite_name):
+                logger.warning(
+                    "Path-like satellite name detected while building audio recording filename: %r",
+                    raw_satellite_name,
+                )
+            recording_name = sanitize_filename_component(raw_satellite_name, default="unknown")
             recording_name_full = f"{recording_name}_vfo{audio_vfo_number}_{timestamp}"
 
             # Create audio recordings directory
@@ -223,9 +242,7 @@ class RecorderHandler:
                 os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
             )
             audio_dir = os.path.join(backend_dir, "data", "audio")
-            os.makedirs(audio_dir, exist_ok=True)
-
-            recording_path = os.path.join(audio_dir, recording_name_full)
+            recording_path = str(resolve_base_path_within_root(audio_dir, recording_name_full))
 
             # 4. Start audio recorder
             success = self.process_manager.audio_recorder_manager.start_audio_recorder(

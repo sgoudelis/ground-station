@@ -43,8 +43,8 @@ import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import { formatLegibleDateTime } from "../common/common.jsx";
 import { useUserTimeSettings } from '../../hooks/useUserTimeSettings.jsx';
 import { formatDate as formatDateHelper } from '../../utils/date-time.js';
-import TargetBadge from "../common/target-badge.jsx";
-import { fetchFleetPassSummaries } from "../target/target-slice.jsx";
+import TargetNumberIcon from "../common/target-number-icon.jsx";
+import { fetchFleetPassSummaries, setTrackerId } from "../target/target-slice.jsx";
 import { useSocket } from "../common/socket.jsx";
 import { normalizeTargetType } from "../target/celestial-target-utils.js";
 
@@ -225,7 +225,16 @@ const SatelliteInfoPopover = () => {
             const azimuth = position?.az;
             const isActive = instanceTrackerId === trackerId;
             const minElevation = rotator?.minel ?? 0;
-            const isTracking = noradId != null && tracking?.norad_id === noradId;
+            const trackedNoradId = tracking?.norad_id ?? null;
+            const trackedMissionCommand = String(tracking?.command || '').trim();
+            const trackedBodyId = String(tracking?.body_id || '').trim().toLowerCase();
+            // Keep "Actively Tracking" semantics consistent across target types:
+            // compare each row target with the tracker state's current target identity.
+            const isTracking = targetType === 'satellite'
+                ? (noradId != null && trackedNoradId != null && String(trackedNoradId) === String(noradId))
+                : (targetType === 'mission'
+                    ? Boolean(missionCommand) && missionCommand === trackedMissionCommand
+                    : Boolean(bodyId) && bodyId === trackedBodyId);
             const isTrackingActive = Boolean(view?.rigData?.tracking || view?.rotatorData?.tracking);
             return {
                 trackerId: instanceTrackerId,
@@ -424,6 +433,14 @@ const SatelliteInfoPopover = () => {
         setAnchorEl(null);
     };
 
+    const handleOpenTargetPageForTracker = useCallback((nextTrackerId) => {
+        const resolvedTrackerId = String(nextTrackerId || '').trim();
+        if (!resolvedTrackerId) return;
+        dispatch(setTrackerId(resolvedTrackerId));
+        setAnchorEl(null);
+        navigate('/tracking');
+    }, [dispatch, navigate]);
+
     const handleNavigateToSatelliteInfo = () => {
         if (satelliteData.details.norad_id) {
             navigate(`/satellites/${satelliteData.details.norad_id}`);
@@ -526,9 +543,10 @@ const SatelliteInfoPopover = () => {
 
     const getFleetStatus = (row) => {
         if (row.targetType !== 'satellite') {
+            const isActivelyTracking = row.isTracking || row.isTrackingActive;
             const elevation = Number(row.elevation);
             if (!Number.isFinite(elevation)) {
-                if (row.isTrackingActive) {
+                if (isActivelyTracking) {
                     return {
                         status: 'Actively Tracking',
                         color: 'success.main',
@@ -554,7 +572,7 @@ const SatelliteInfoPopover = () => {
                 };
             }
 
-            if (row.isTrackingActive) {
+            if (isActivelyTracking) {
                 return {
                     status: 'Actively Tracking',
                     color: 'success.main',
@@ -900,21 +918,44 @@ const SatelliteInfoPopover = () => {
                                 const hasElevation = Number.isFinite(Number(row.elevation));
                                 const summary = fleetPassSummaryByTrackerId?.[row.trackerId];
                                 const aosLos = formatFleetPassCountdown(summary);
+                                const isRowTracking = row.isTracking || row.isTrackingActive;
 
                                 return (
                                     <Box
                                         key={row.trackerId}
+                                        component="button"
+                                        type="button"
+                                        onClick={() => handleOpenTargetPageForTracker(row.trackerId)}
                                         sx={{
                                             p: 1,
                                             borderRadius: 1,
-                                            border: `1px solid ${rowStatus.color}`,
+                                            border: 'none',
                                             backgroundColor: rowStatus.backgroundColor,
+                                            width: '100%',
+                                            textAlign: 'left',
+                                            cursor: 'pointer',
+                                            font: 'inherit',
+                                            appearance: 'none',
+                                            margin: 0,
+                                            outline: 'none',
+                                            WebkitTapHighlightColor: 'transparent',
+                                            '&:hover, &:focus, &:focus-visible, &:active': {
+                                                border: 'none',
+                                                backgroundColor: rowStatus.backgroundColor,
+                                                outline: 'none',
+                                                boxShadow: 'none',
+                                            },
                                         }}
                                     >
                                         <Stack direction="row" spacing={0.6} alignItems="center" sx={{ mb: 0.6 }}>
-                                            <TargetBadge
+                                            <TargetNumberIcon
                                                 targetNumber={row.targetNumber}
-                                                tracking={row.isTrackingActive}
+                                                prefix="T"
+                                                size={15}
+                                                // Keep tracking state visible while using the shared target-slot badge style.
+                                                variant={isRowTracking ? 'filled' : 'muted'}
+                                                // Match Earth View tooltip badge visual density (tooltip has ~0.9 opacity).
+                                                sx={{ flexShrink: 0, opacity: isRowTracking ? 0.9 : undefined }}
                                             />
                                             <Typography
                                                 variant="body2"

@@ -21,13 +21,13 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Union
 
 from pydantic.v1 import UUID4
-from sqlalchemy import String, and_, delete, insert, or_, select, update
+from sqlalchemy import String, and_, delete, func, insert, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from common.common import logger, serialize_object
 from crud.groups import fetch_satellite_group
-from db.models import Groups, SatelliteOrbits, Satellites, Transmitters
+from db.models import Groups, SatelliteGroupType, SatelliteOrbits, Satellites, Transmitters
 
 DATETIME_FIELDS = {"decayed", "launched", "deployed", "added", "updated"}
 SUPPORTED_CENTRAL_BODIES = {"earth", "moon", "mars"}
@@ -458,6 +458,40 @@ async def fetch_satellites(
         logger.error(f"Error fetching satellite(s): {e}")
         logger.error(traceback.format_exc())
         return {"success": False, "error": str(e)}
+
+
+async def fetch_satellite_catalog_stats(session: AsyncSession) -> dict:
+    """Fetch compact aggregate stats used by the satellite catalog UI."""
+    try:
+        satellites_count = await session.scalar(select(func.count()).select_from(Satellites))
+        groups_count = await session.scalar(select(func.count()).select_from(Groups))
+        user_groups_count = await session.scalar(
+            select(func.count()).select_from(Groups).where(Groups.type == SatelliteGroupType.USER)
+        )
+        system_groups_count = await session.scalar(
+            select(func.count()).select_from(Groups).where(Groups.type == SatelliteGroupType.SYSTEM)
+        )
+        satellite_transmitters_count = await session.scalar(
+            select(func.count())
+            .select_from(Transmitters)
+            .where(Transmitters.norad_cat_id.is_not(None))
+        )
+
+        return {
+            "success": True,
+            "data": {
+                "satellites": int(satellites_count or 0),
+                "groups": int(groups_count or 0),
+                "user_groups": int(user_groups_count or 0),
+                "system_groups": int(system_groups_count or 0),
+                "satellite_transmitters": int(satellite_transmitters_count or 0),
+            },
+            "error": None,
+        }
+    except Exception as e:
+        logger.error(f"Error fetching satellite catalog stats: {e}")
+        logger.error(traceback.format_exc())
+        return {"success": False, "data": {}, "error": str(e)}
 
 
 async def add_satellite(session: AsyncSession, data: dict) -> dict:

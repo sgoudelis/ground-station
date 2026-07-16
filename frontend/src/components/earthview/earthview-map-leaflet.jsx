@@ -204,7 +204,7 @@ function areSatellitesEquivalent(prev = [], next = []) {
     return true;
 }
 
-const LeafletEarthViewMapRenderer = ({handleSetTrackingOnBackend}) => {
+const LeafletEarthViewMapRenderer = ({handleSetTrackingOnBackend, onSatelliteMarkerContextMenu}) => {
     const {socket} = useSocket();
     const dispatch = useDispatch();
     const { t } = useTranslation('earthview');
@@ -553,10 +553,21 @@ const LeafletEarthViewMapRenderer = ({handleSetTrackingOnBackend}) => {
                     dispatch(setSelectedSatelliteId(noradId));
                 };
 
+                const onMarkerContextMenu = (event, satelliteData) => {
+                    if (typeof onSatelliteMarkerContextMenu !== 'function') {
+                        return;
+                    }
+                    const nativeEvent = event?.originalEvent;
+                    nativeEvent?.preventDefault?.();
+                    nativeEvent?.stopPropagation?.();
+                    onSatelliteMarkerContextMenu(satelliteData, nativeEvent || event);
+                };
+
                 const markerEventHandlers = {
                     //mouseover: (event) => (onMarkerMouseOver(event, satellite['norad_id'])),
                     //mouseout: (event) => (onMarkerMouseOver(event, satellite['norad_id'])),
                     click: (event) => onMarkerMouseClick(event, satellite['norad_id']),
+                    contextmenu: (event) => onMarkerContextMenu(event, satellite),
                 };
 
                 const isVisible = isSatelliteVisible(satellite['tle1'], satellite['tle2'], now, location);

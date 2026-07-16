@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import pytest
 from PIL import Image
 
 from common.decoded_thumbnails import (
@@ -8,6 +9,8 @@ from common.decoded_thumbnails import (
     get_decoded_thumbnail_url,
     select_decoded_thumbnail_source,
 )
+from common.thumbnails import get_image_thumbnail_path
+from handlers.entities.filebrowser import build_recording_snapshot_info
 
 
 def _write_png(path: Path, size=(1200, 700), color=(12, 34, 56)):
@@ -62,3 +65,24 @@ def test_get_decoded_thumbnail_url_lazily_generates_thumbnail(tmp_path):
     assert thumbnail_url is not None
     assert thumbnail_url.startswith(f"/decoded/{folder.name}/{THUMBNAIL_FILENAME}?v=")
     assert (folder / THUMBNAIL_FILENAME).exists()
+
+
+@pytest.mark.unit
+def test_build_recording_snapshot_info_includes_thumbnail_file_metadata(tmp_path):
+    source = tmp_path / "recording.png"
+    _write_png(source, size=(800, 400))
+
+    snapshot_info = build_recording_snapshot_info(source)
+
+    assert snapshot_info is not None
+    assert snapshot_info["filename"] == "recording.png"
+    assert snapshot_info["url"] == "/recordings/recording.png"
+    assert snapshot_info["size"] == source.stat().st_size
+    assert snapshot_info["width"] == 800
+    assert snapshot_info["height"] == 400
+    assert snapshot_info["thumbnail_url"].startswith("/recordings/thumbnails/recording.jpg?v=")
+    assert snapshot_info["thumbnail"]["filename"] == "recording.jpg"
+    assert snapshot_info["thumbnail"]["url"] == snapshot_info["thumbnail_url"]
+    assert snapshot_info["thumbnail"]["size"] == get_image_thumbnail_path(source).stat().st_size
+    assert snapshot_info["thumbnail"]["width"] == 640
+    assert snapshot_info["thumbnail"]["height"] == 360

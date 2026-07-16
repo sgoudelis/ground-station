@@ -134,7 +134,6 @@ let smoothedFftData = new Array(1024).fill(-120);
 let palette = null; // Uint8Array of length 256*3
 let paletteDirty = true;
 let presentLoopRunning = false;
-let presentRafId = null;
 let presentTimeoutId = null;
 let pendingRowsToPresent = 0;
 let needsPresent = false;
@@ -766,13 +765,9 @@ function startPresentLoop() {
 
 function stopPresentLoop() {
     presentLoopRunning = false;
-    if (presentRafId !== null && typeof self.cancelAnimationFrame === 'function') {
-        self.cancelAnimationFrame(presentRafId);
-    }
     if (presentTimeoutId !== null) {
         clearTimeout(presentTimeoutId);
     }
-    presentRafId = null;
     presentTimeoutId = null;
     pendingRowsToPresent = 0;
     needsPresent = false;
@@ -781,13 +776,11 @@ function stopPresentLoop() {
 function scheduleNextPresent() {
     if (!presentLoopRunning) return;
 
-    if (typeof self.requestAnimationFrame === 'function') {
-        presentRafId = self.requestAnimationFrame(presentTick);
-        return;
-    }
-
-    // Fallback for environments without rAF support in workers
-    presentTimeoutId = setTimeout(presentTick, 16);
+    // Android WebView-derived browsers can expose worker rAF but stall it.
+    // Use a target-FPS timer so pending rows keep presenting without relying
+    // on compositor-driven callbacks inside the worker.
+    const intervalMs = Math.max(1, Math.round(1000 / (Number(targetFPS) || 10)));
+    presentTimeoutId = setTimeout(presentTick, intervalMs);
 }
 
 function presentTick() {

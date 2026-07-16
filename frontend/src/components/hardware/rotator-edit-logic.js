@@ -25,6 +25,20 @@ export function toOptionalNumber(value) {
     return Number(value);
 }
 
+export function applyAzimuthModeDefaults(formValues, azimuthMode) {
+    const modeDefaults = {
+        "0_360": { minaz: 0, maxaz: 360 },
+        "-180_180": { minaz: -180, maxaz: 180 },
+        "0_450": { minaz: 0, maxaz: 450 },
+    };
+
+    return {
+        ...formValues,
+        ...(modeDefaults[azimuthMode] || {}),
+        azimuth_mode: azimuthMode,
+    };
+}
+
 export function prepareRotatorPayload(formValues) {
     return {
         ...formValues,
@@ -65,7 +79,7 @@ export function validateRotatorForm(formValues, t) {
         validationErrors.minaz = t("rotator.validation.min_az_lte_max_az");
         validationErrors.maxaz = t("rotator.validation.min_az_lte_max_az");
     }
-    if (!["0_360", "-180_180"].includes(formValues.azimuth_mode ?? "0_360")) {
+    if (!["0_360", "-180_180", "0_450"].includes(formValues.azimuth_mode ?? "0_360")) {
         validationErrors.azimuth_mode = t("rotator.validation.invalid_azimuth_mode");
     }
     if (isEmptyRotatorValue(formValues.minel)) {

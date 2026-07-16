@@ -67,6 +67,51 @@ export const fetchLocalRtlSdrDevices = createAsyncThunk(
 );
 
 
+export const fetchLocalUhdDevices = createAsyncThunk(
+    'sdrs/fetchLocalUhdDevices',
+    async ({socket}, {rejectWithValue}) => {
+        try {
+            return await new Promise((resolve, reject) => {
+                socket.emit("api.call", {
+  cmd: 'get-local-uhd-devices',
+  data: null
+}, res => {
+  if (res.success) {
+    resolve(res.data);
+  } else {
+    reject(new Error('Failed to fetch local UHD devices'));
+  }
+});
+            });
+        } catch (error) {
+            return rejectWithValue(error.message);
+        }
+    }
+);
+
+export const fetchLocalAirspyDevices = createAsyncThunk(
+    'sdrs/fetchLocalAirspyDevices',
+    async ({socket}, {rejectWithValue}) => {
+        try {
+            return await new Promise((resolve, reject) => {
+                socket.emit("api.call", {
+  cmd: 'get-local-airspy-devices',
+  data: null
+}, res => {
+  if (res.success) {
+    resolve(res.data);
+  } else {
+    reject(new Error('Failed to fetch local Airspy devices'));
+  }
+});
+            });
+        } catch (error) {
+            return rejectWithValue(error.message);
+        }
+    }
+);
+
+
 export const fetchSoapySDRServers = createAsyncThunk(
     'sdrs/fetchSoapySDRServers',
     async ({socket}, {rejectWithValue}) => {
@@ -193,9 +238,10 @@ const defaultSDR = {
     name: '',
     host: '127.0.0.1',
     port: 1234,
-    type: 'rtlsdrusbv4',
+    type: '',
     serial: '',
     driver: '',
+    antenna_labels: {},
     frequency_min: 24,
     frequency_max: 1800,
 };
@@ -214,12 +260,16 @@ const sdrsSlice = createSlice({
         loading: false,
         loadingLocalSDRs: false,
         loadingLocalRtlSDRs: false,
+        loadingLocalUhdSDRs: false,
+        loadingLocalAirspySDRs: false,
         pageSize: 10,
         formValues: defaultSDR,
         soapyServers: {},
         selectedSdrDevice: "",
         localSoapyDevices: [],
         localRtlDevices: [],
+        localUhdDevices: [],
+        localAirspyDevices: [],
     },
     reducers: {
         setSDRs: (state, action) => {
@@ -371,6 +421,36 @@ const sdrsSlice = createSlice({
             })
             .addCase(fetchLocalRtlSdrDevices.rejected, (state, action) => {
                 state.loadingLocalRtlSDRs = false;
+                state.status = 'failed';
+                state.error = action.payload;
+            })
+            .addCase(fetchLocalUhdDevices.pending, (state) => {
+                state.loadingLocalUhdSDRs = true;
+                state.error = null;
+                state.status = 'loading';
+            })
+            .addCase(fetchLocalUhdDevices.fulfilled, (state, action) => {
+                state.loadingLocalUhdSDRs = false;
+                state.status = 'succeeded';
+                state.localUhdDevices = action.payload;
+            })
+            .addCase(fetchLocalUhdDevices.rejected, (state, action) => {
+                state.loadingLocalUhdSDRs = false;
+                state.status = 'failed';
+                state.error = action.payload;
+            })
+            .addCase(fetchLocalAirspyDevices.pending, (state) => {
+                state.loadingLocalAirspySDRs = true;
+                state.error = null;
+                state.status = 'loading';
+            })
+            .addCase(fetchLocalAirspyDevices.fulfilled, (state, action) => {
+                state.loadingLocalAirspySDRs = false;
+                state.status = 'succeeded';
+                state.localAirspyDevices = action.payload;
+            })
+            .addCase(fetchLocalAirspyDevices.rejected, (state, action) => {
+                state.loadingLocalAirspySDRs = false;
                 state.status = 'failed';
                 state.error = action.payload;
             });

@@ -26,6 +26,7 @@ import {
 } from "./waterfall-slice.jsx";
 import { useTheme } from '@mui/material/styles';
 import { getBookmarkSourceStyle, normalizeBookmarkSource } from './bookmark-source-styles.js';
+import { parseTargetSlotNumber } from '../target/celestial-target-utils.js';
 
 
 const BookmarkCanvas = ({
@@ -319,6 +320,10 @@ const BookmarkCanvas = ({
             const maxAllowedLabelY = maxLabelBottomY - boxHeight;
             return Math.min(candidateLabelY, maxAllowedLabelY);
         };
+        // Keep bookmark labels aligned on predictable rows across all bookmark layers.
+        const mainLabelBaseY = clampLabelY(baseY + 35 + bookmarkLabelOffset + verticalSpacing);
+        const neighborLabelBaseY = mainLabelBaseY;
+        const dopplerLabelBaseY = clampLabelY(mainLabelBaseY - (verticalSpacing + 6));
 
         const getLabelAccentColor = (bookmark) => {
             const sourceStyle = getBookmarkSourceStyle(bookmark.metadata?.source, theme);
@@ -332,6 +337,87 @@ const BookmarkCanvas = ({
                 return 'Unknow...';
             }
             return `${normalized.slice(0, 6)}...`;
+        };
+
+        const getTrackerSlotLabel = (bookmark) => {
+            const slotNumber = parseTargetSlotNumber(bookmark.metadata?.tracker_id);
+            return slotNumber == null ? '' : `T${slotNumber}`;
+        };
+
+        // Mirror Earthview map-tooltip TargetNumberIcon style in canvas.
+        const getTrackerSlotBadgeMetrics = (trackerSlotLabel) => {
+            if (!trackerSlotLabel) {
+                return null;
+            }
+            const SLOT_BADGE_SCALE = 0.95;
+            const badgeHeight = 15 * SLOT_BADGE_SCALE;
+            const minWidth = 16 * SLOT_BADGE_SCALE;
+            const padX = 4 * SLOT_BADGE_SCALE;
+            const sideGap = 4 * SLOT_BADGE_SCALE;
+            const fontSize = Math.max(10, Math.round(badgeHeight * 0.68));
+            const fontFamily = theme.typography?.fontFamily || 'Arial';
+            ctx.save();
+            ctx.font = `900 ${fontSize}px ${fontFamily}`;
+            const textWidth = Math.ceil(ctx.measureText(trackerSlotLabel).width);
+            ctx.restore();
+            const badgeWidth = Math.max(minWidth, textWidth + (padX * 2));
+            return {
+                padX,
+                badgeHeight,
+                minWidth,
+                fontSize,
+                fontFamily,
+                textWidth,
+                badgeWidth,
+                borderRadius: 3 * SLOT_BADGE_SCALE,
+                leftReserve: badgeWidth + sideGap,
+            };
+        };
+
+        const drawTrackerSlotBadge = ({
+            boxLeft,
+            boxTop,
+            boxHeight,
+            trackerSlotLabel,
+            metrics,
+            faded = false,
+        }) => {
+            if (!trackerSlotLabel || !metrics) {
+                return;
+            }
+            const slotBadgePalette = theme.palette.badge?.targetSlot || {};
+            const badgeTop = boxTop + ((boxHeight - metrics.badgeHeight) / 2);
+            const badgeLeft = boxLeft + padding;
+            const badgeCenterY = badgeTop + (metrics.badgeHeight / 2);
+
+            ctx.save();
+            ctx.beginPath();
+            ctx.roundRect(
+                badgeLeft,
+                badgeTop,
+                metrics.badgeWidth,
+                metrics.badgeHeight,
+                metrics.borderRadius
+            );
+            ctx.fillStyle = slotBadgePalette.background || theme.palette.warning.main;
+            ctx.globalAlpha = faded ? 0.62 : 1.0;
+            ctx.shadowColor = slotBadgePalette.shadow || 'rgba(0, 0, 0, 0.2)';
+            ctx.shadowBlur = 3;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 1;
+            ctx.fill();
+
+            ctx.font = `900 ${metrics.fontSize}px ${metrics.fontFamily}`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = slotBadgePalette.text || theme.palette.common.black;
+            ctx.globalAlpha = faded ? 0.9 : 1.0;
+            ctx.fillText(
+                trackerSlotLabel,
+                badgeLeft + (metrics.badgeWidth / 2),
+                badgeCenterY
+            );
+            ctx.restore();
         };
 
         const CLUSTER_FREQUENCY_TOLERANCE_HZ = 500;
@@ -571,7 +657,7 @@ const BookmarkCanvas = ({
                 // Display label at top with alternating heights
                 if (bookmark.label) {
                     const labelOffset = (neighborRowAssignments.get(getDrawKey(bookmark, 'neighbor')) ?? 0) * verticalSpacing;
-                    const labelY = clampLabelY(baseY + labelOffset + 35 + bookmarkLabelOffset + verticalSpacing - 5);
+                    const labelY = clampLabelY(neighborLabelBaseY + labelOffset);
 
                     // Store the bottom edge of the label box (south edge)
                     labelBottomY = labelY + textHeight + padding * 2;
@@ -698,7 +784,7 @@ const BookmarkCanvas = ({
                 // For regular bookmarks and neighbor transmitters - display at top with alternating heights
                 if (bookmark.label && !isDopplerShift) {
                     const labelOffset = (mainRowAssignments.get(getDrawKey(bookmark, 'main')) ?? 0) * verticalSpacing;
-                    const labelY = clampLabelY(baseY + labelOffset + 35 + bookmarkLabelOffset + verticalSpacing);
+                    const labelY = clampLabelY(mainLabelBaseY + labelOffset);
 
                     // Store the bottom edge of the label box (south edge)
                     labelBottomY = labelY + textHeight + padding * 2;
@@ -713,11 +799,9 @@ const BookmarkCanvas = ({
                     ctx.textAlign = 'center';
 
                     // Add semi-transparent background
-                    const typeIndicatorWidth = 6;
-                    const typeIndicatorGap = 3;
-                    const typeIndicatorInset = 2;
-                    const typeIndicatorReserve = typeIndicatorInset + typeIndicatorWidth + typeIndicatorGap;
-                    const leftReserve = typeIndicatorReserve;
+                    const trackerSlotLabel = getTrackerSlotLabel(bookmark);
+                    const slotBadgeMetrics = getTrackerSlotBadgeMetrics(trackerSlotLabel);
+                    const leftReserve = slotBadgeMetrics ? slotBadgeMetrics.leftReserve : 0;
                     const displayLabel = bookmark.label;
                     const textMetrics = ctx.measureText(displayLabel);
                     const textWidth = textMetrics.width;
@@ -748,16 +832,17 @@ const BookmarkCanvas = ({
                     ctx.stroke();
                     ctx.globalAlpha = 1.0;
 
-                    // Type color indicator inside label (left stripe)
-                    ctx.fillStyle = getLabelAccentColor(bookmark);
-                    ctx.globalAlpha = isInactive ? 0.5 : 0.9;
-                    ctx.fillRect(
-                        boxLeft + typeIndicatorInset,
-                        boxTop + typeIndicatorInset,
-                        typeIndicatorWidth,
-                        boxHeight - (typeIndicatorInset * 2)
-                    );
-                    ctx.globalAlpha = 1.0;
+                    // Draw T# badge with the same visual style as Earthview map tooltip labels.
+                    if (trackerSlotLabel) {
+                        drawTrackerSlotBadge({
+                            boxLeft,
+                            boxTop,
+                            boxHeight,
+                            trackerSlotLabel,
+                            metrics: slotBadgeMetrics,
+                            faded: isInactive,
+                        });
+                    }
 
                     // Draw the text
                     ctx.shadowBlur = 2;
@@ -792,17 +877,15 @@ const BookmarkCanvas = ({
                     ctx.textAlign = 'center';
 
                     const dopplerLabelOffset = (dopplerRowAssignments.get(getDrawKey(bookmark, 'doppler')) ?? 0) * verticalSpacing;
-                    const dopplerLabelY = clampLabelY(50 + bookmarkLabelOffset - padding - textHeight + dopplerLabelOffset + verticalSpacing - 30);
+                    const dopplerLabelY = clampLabelY(dopplerLabelBaseY + dopplerLabelOffset);
 
                     // Store the bottom edge of the doppler label box (south edge)
                     labelBottomY = dopplerLabelY + textHeight + padding * 2;
 
                     // Add semi-transparent background
-                    const typeIndicatorWidth = 6;
-                    const typeIndicatorGap = 3;
-                    const typeIndicatorInset = 2;
-                    const typeIndicatorReserve = typeIndicatorInset + typeIndicatorWidth + typeIndicatorGap;
-                    const leftReserve = typeIndicatorReserve;
+                    const trackerSlotLabel = getTrackerSlotLabel(bookmark);
+                    const slotBadgeMetrics = getTrackerSlotBadgeMetrics(trackerSlotLabel);
+                    const leftReserve = slotBadgeMetrics ? slotBadgeMetrics.leftReserve : 0;
                     const displayLabel = bookmark.label;
                     const textMetrics = ctx.measureText(displayLabel);
                     const textWidth = textMetrics.width;
@@ -833,16 +916,17 @@ const BookmarkCanvas = ({
                     ctx.stroke();
                     ctx.globalAlpha = 1.0;
 
-                    // Type color indicator inside label (left stripe)
-                    ctx.fillStyle = getLabelAccentColor(bookmark);
-                    ctx.globalAlpha = 0.9;
-                    ctx.fillRect(
-                        boxLeft + typeIndicatorInset,
-                        boxTop + typeIndicatorInset,
-                        typeIndicatorWidth,
-                        boxHeight - (typeIndicatorInset * 2)
-                    );
-                    ctx.globalAlpha = 1.0;
+                    // Draw T# badge with the same visual style as Earthview map tooltip labels.
+                    if (trackerSlotLabel) {
+                        drawTrackerSlotBadge({
+                            boxLeft,
+                            boxTop,
+                            boxHeight,
+                            trackerSlotLabel,
+                            metrics: slotBadgeMetrics,
+                            faded: false,
+                        });
+                    }
 
                     // Draw the text
                     ctx.shadowBlur = 2;

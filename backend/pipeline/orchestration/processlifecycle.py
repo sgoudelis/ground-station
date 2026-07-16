@@ -30,6 +30,8 @@ from pipeline.orchestration.gnssfix import derive_gnss_fix_status_from_output, g
 from pipeline.orchestration.gnsssatelliteresolver import GnssSatelliteResolver
 from pipeline.streaming.iqbroadcaster import IQBroadcaster
 from vfos.state import VFOManager
+from workers.airspyhfworker import airspyhf_worker_process
+from workers.airspyworker import airspy_worker_process
 from workers.rtlsdrworker import rtlsdr_worker_process
 from workers.sigmfplaybackworker import sigmf_playback_worker_process
 from workers.uhdworker import uhd_worker_process
@@ -240,6 +242,8 @@ class ProcessLifecycleManager:
             "rtlsdrtcpv3",
             "rtlsdrusbv4",
             "rtlsdrtcpv4",
+            "airspy",
+            "airspyhf",
             "soapysdrremote",
             "soapysdrlocal",
             "uhd",
@@ -282,6 +286,18 @@ class ProcessLifecycleManager:
             driver = None
             worker_process = rtlsdr_worker_process
             process_name = f"Ground Station - RTL-SDR-TCP-v4-{sdr_id}"
+
+        elif sdr_device["type"] == "airspy":
+            connection_type = "airspy"
+            driver = "airspy"
+            worker_process = airspy_worker_process
+            process_name = f"Ground Station - Airspy-Worker-{sdr_id}"
+
+        elif sdr_device["type"] == "airspyhf":
+            connection_type = "airspyhf"
+            driver = "airspyhf"
+            worker_process = airspyhf_worker_process
+            process_name = f"Ground Station - AirspyHF-Worker-{sdr_id}"
 
         elif sdr_device["type"] == "soapysdrremote":
             hostname = sdr_device["host"]
@@ -343,6 +359,7 @@ class ProcessLifecycleManager:
                 "ppm_error",
                 "recording_path",
                 "loop_playback",
+                "seek_seconds",
                 "sdr_settings",
             ]:
                 if param in sdr_config:
@@ -500,7 +517,7 @@ class ProcessLifecycleManager:
                 await self.sio.enter_room(client_id, sdr_id)
 
             # Start async task to monitor the data queue
-            asyncio.create_task(self._monitor_data_queue(sdr_id))
+            asyncio.create_task(self._monitor_data_queue(sdr_id, process.pid))
 
             return sdr_id
 
@@ -671,11 +688,16 @@ class ProcessLifecycleManager:
         new_sample_rate = effective_config.get("sample_rate")
         old_center_freq = old_config.get("center_freq")
         new_center_freq = effective_config.get("center_freq")
+        seek_requested = "seek_seconds" in config and config.get("seek_seconds") is not None
 
         # If sample rate OR center frequency changed, flush all queues
         # Note: Treat None -> value (or value -> None) as a change as well so that
         # the very first change after process start is detected.
-        if (new_sample_rate != old_sample_rate) or (new_center_freq != old_center_freq):
+        if (
+            (new_sample_rate != old_sample_rate)
+            or (new_center_freq != old_center_freq)
+            or seek_requested
+        ):
             # Log appropriate message based on what changed
             if new_sample_rate != old_sample_rate:
                 if old_sample_rate is not None and new_sample_rate is not None:
@@ -697,6 +719,10 @@ class ProcessLifecycleManager:
                     self.logger.info(
                         f"Center frequency changing from {old_center_freq} to {new_center_freq}, flushing all queues"
                     )
+            if seek_requested:
+                self.logger.info(
+                    f"Playback seek requested for SDR {sdr_id}: {config.get('seek_seconds')}s, flushing all queues"
+                )
             # Flush demodulator queues
             self.demodulator_manager.flush_all_demodulator_queues(sdr_id)
 
@@ -885,23 +911,48 @@ class ProcessLifecycleManager:
             self.logger.error(f"Error restarting decoder {session_id} VFO{vfo_number}: {e}")
             self.logger.exception(e)
 
-    async def _monitor_data_queue(self, sdr_id):
+    async def _monitor_data_queue(self, sdr_id, expected_process_pid=None):
         """
         Monitor the data queue for a specific device
 
         Args:
             sdr_id: Device identifier
+            expected_process_pid: PID of the worker process this monitor owns.
         """
         if sdr_id not in self.processes:
             return
 
         process_info = self.processes[sdr_id]
+        if expected_process_pid is None:
+            expected_process_pid = process_info["process"].pid
         data_queue = process_info["data_queue"]
 
-        self.logger.info(f"Started monitoring data queue for device {sdr_id}")
+        self.logger.info(
+            f"Started monitoring data queue for device {sdr_id} (pid={expected_process_pid})"
+        )
 
         try:
-            while sdr_id in self.processes and process_info["process"].is_alive():
+            while True:
+                current_info = self.processes.get(sdr_id)
+                if current_info is None:
+                    break
+
+                current_pid = current_info["process"].pid
+                # Guard against stale monitor tasks: only the monitor attached to
+                # the current process instance is allowed to keep running/cleanup.
+                if current_pid != expected_process_pid:
+                    self.logger.info(
+                        "Stopping stale monitor for device %s (expected pid=%s, current pid=%s)",
+                        sdr_id,
+                        expected_process_pid,
+                        current_pid,
+                    )
+                    return
+
+                process_info = current_info
+                if not process_info["process"].is_alive():
+                    break
+
                 # Check if data is available
                 if not data_queue.empty():
                     try:
@@ -1110,8 +1161,18 @@ class ProcessLifecycleManager:
             self.logger.error(f"Error monitoring data queue for device {sdr_id}: {str(e)}")
 
         finally:
-            self.logger.info(f"Stopped monitoring data queue for device {sdr_id}")
+            self.logger.info(
+                f"Stopped monitoring data queue for device {sdr_id} (pid={expected_process_pid})"
+            )
 
-            # Make sure the process is cleaned up
-            if sdr_id in self.processes:
+            # Make sure the process is cleaned up only by the monitor that owns it.
+            current_info = self.processes.get(sdr_id)
+            if current_info and current_info["process"].pid == expected_process_pid:
                 await self.stop_sdr_process(sdr_id)
+            elif current_info is not None:
+                self.logger.info(
+                    "Skipping cleanup from stale monitor for device %s (expected pid=%s, current pid=%s)",
+                    sdr_id,
+                    expected_process_pid,
+                    current_info["process"].pid,
+                )

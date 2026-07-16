@@ -48,6 +48,9 @@ DEFAULT_GR_CITATION = "https://github.com/daniestevez/gr-satellites"
 DEFAULT_GR_SOURCE = "gr-satellites"
 BASE_DIR = Path(__file__).resolve().parents[3]
 DEFAULT_GR_SATYAML_DIR = BASE_DIR / "external/gr-satellites/python/satyaml"
+TRANSMITTER_ID_ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
+TRANSMITTER_ID_BASE = len(TRANSMITTER_ID_ALPHABET)
+TRANSMITTER_ID_LENGTH = 22
 
 
 class SatInfo(TypedDict):
@@ -178,6 +181,25 @@ def to_int(value):
         return None
 
 
+def uuid_to_short_transmitter_id(value: uuid.UUID | str) -> str:
+    """Encode a UUID as a SatNOGS-style 22-char transmitter id."""
+    uid = value if isinstance(value, uuid.UUID) else uuid.UUID(str(value).strip())
+    number = uid.int
+    encoded = []
+
+    while number:
+        number, remainder = divmod(number, TRANSMITTER_ID_BASE)
+        encoded.append(TRANSMITTER_ID_ALPHABET[remainder])
+
+    if not encoded:
+        encoded.append(TRANSMITTER_ID_ALPHABET[0])
+
+    return "".join(reversed(encoded)).rjust(
+        TRANSMITTER_ID_LENGTH,
+        TRANSMITTER_ID_ALPHABET[0],
+    )
+
+
 def _normalize_optional_json(value):
     if value is None:
         return None
@@ -244,14 +266,15 @@ def build_satdump_rows(
             tx_name = clean_transmitter_name(raw_name)
             if not tx_name:
                 tx_name = clean_text(sat_name)
-            tx_id = uuid.uuid5(
-                uuid.NAMESPACE_URL, f"satdump-website:{norad}:{tx_name}:{frequency_hz}"
+            source_transmitter_id = str(
+                uuid.uuid5(uuid.NAMESPACE_URL, f"satdump-website:{norad}:{tx_name}:{frequency_hz}")
             )
+            tx_id = uuid_to_short_transmitter_id(source_transmitter_id)
 
             now = dt.datetime.now(dt.timezone.utc)
             rows.append(
                 {
-                    "id": str(tx_id),
+                    "id": tx_id,
                     "description": tx_name,
                     "alive": True,
                     "type": "Transmitter",
@@ -273,6 +296,7 @@ def build_satdump_rows(
                     "citation": citation,
                     "service": DEFAULT_SATDUMP_SERVICE,
                     "source": source,
+                    "source_transmitter_id": source_transmitter_id,
                     "iaru_coordination": "N/A",
                     "iaru_coordination_url": "",
                     "itu_notification": {"urls": []},
@@ -341,7 +365,10 @@ def build_gr_rows(
                 skipped_no_frequency.append((norad, sat_name_str, tx_name_str))
                 continue
 
-            tx_id = uuid.uuid5(uuid.NAMESPACE_URL, f"{service}:{norad}:{tx_name_str}")
+            source_transmitter_id = str(
+                uuid.uuid5(uuid.NAMESPACE_URL, f"{service}:{norad}:{tx_name_str}")
+            )
+            tx_id = uuid_to_short_transmitter_id(source_transmitter_id)
             mode = tx.get("modulation")
             decoder_summary = build_decoder_summary(tx)
             description = tx_name_str
@@ -351,7 +378,7 @@ def build_gr_rows(
             now = dt.datetime.now(dt.timezone.utc)
             rows.append(
                 {
-                    "id": str(tx_id),
+                    "id": tx_id,
                     "description": description,
                     "alive": True,
                     "type": "Transmitter",
@@ -373,6 +400,7 @@ def build_gr_rows(
                     "citation": citation,
                     "service": service,
                     "source": source,
+                    "source_transmitter_id": source_transmitter_id,
                     "iaru_coordination": "N/A",
                     "iaru_coordination_url": "",
                     "itu_notification": {"urls": []},

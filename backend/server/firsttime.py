@@ -19,6 +19,8 @@ import asyncio
 import random
 import string
 
+import crud.monitoredcelestial as crud_monitored
+from celestial.bodycatalog import get_celestial_body
 from common.logger import logger
 from db import AsyncSessionLocal
 from db.models import OrbitalSources
@@ -26,6 +28,57 @@ from tasks.registry import get_task
 
 # Orbital sync is now handled by background task manager
 # from tlesync.logic import synchronize_satellite_data
+
+DEFAULT_MONITORED_BODY_IDS = [
+    "moon",
+    "mars",
+    "jupiter",
+    "saturn",
+    "uranus",
+    "neptune",
+    "pluto",
+    "sun",
+]
+
+
+def _resolve_default_body_display_name(body_id: str, catalog_name: str) -> str:
+    if body_id == "moon":
+        return "Earth's Moon"
+    return catalog_name
+
+
+async def _seed_default_monitored_celestial_targets(session) -> list[str]:
+    seeded_names: list[str] = []
+    for body_id in DEFAULT_MONITORED_BODY_IDS:
+        body = get_celestial_body(body_id)
+        if not body:
+            logger.warning(
+                "FIRSTTIME - Skipping default monitored celestial body '%s': not found in catalog.",
+                body_id,
+            )
+            continue
+
+        payload = {
+            "target_type": "body",
+            "body_id": body_id,
+            "display_name": _resolve_default_body_display_name(
+                body_id, str(body.get("name") or body_id)
+            ),
+            "enabled": True,
+        }
+        # Route seeding through CRUD so startup defaults match API-created rows
+        # (field validation, constraints, and color assignment).
+        result = await crud_monitored.add_monitored_celestial(session, payload)
+        if not result.get("success"):
+            logger.warning(
+                "FIRSTTIME - Failed to seed monitored celestial body '%s': %s",
+                body_id,
+                result.get("error"),
+            )
+            continue
+        seeded_names.append(str(payload["display_name"]))
+
+    return seeded_names
 
 
 async def first_time_initialization():
@@ -81,14 +134,19 @@ async def first_time_initialization():
                 )
                 session.add(source)
 
+            await session.commit()
             # System groups are created and updated by orbital sync based on
             # current source contents; avoid pre-seeding curated duplicates here.
 
-            await session.commit()
+            seeded_bodies = await _seed_default_monitored_celestial_targets(session)
             logger.info(
                 "Initial data populated successfully with default orbital sources: "
                 "Cubesats, Amateur, Space stations, Weather, TinyGS."
             )
+            if seeded_bodies:
+                logger.info(
+                    "Seeded default monitored celestial bodies: %s", ", ".join(seeded_bodies)
+                )
 
         except Exception as e:
             logger.error(f"Error populating initial data: {e}")

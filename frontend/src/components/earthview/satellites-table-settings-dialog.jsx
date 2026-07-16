@@ -38,9 +38,47 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import {
+    resetSatellitesTableSettings,
     setSatellitesTableColumnVisibility,
     setSatellitesTablePageSize,
 } from './earthview-slice.jsx';
+const DIALOG_PAPER_SX = {
+    bgcolor: 'background.paper',
+    border: (theme) => `1px solid ${theme.palette.divider}`,
+    borderRadius: 2,
+};
+const DIALOG_TITLE_SX = {
+    bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'grey.900' : 'grey.100'),
+    borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
+    fontSize: '1.125rem',
+    fontWeight: 'bold',
+    py: 2.2,
+};
+const DIALOG_CONTENT_SX = {
+    px: 2,
+    pt: 2,
+    pb: 1.5,
+};
+const DIALOG_ACTIONS_SX = {
+    px: 2,
+    py: 1.5,
+    bgcolor: 'background.paper',
+    borderTop: (theme) => `1px solid ${theme.palette.divider}`,
+};
+const FOOTER_ACTION_ROW_SX = {
+    width: '100%',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 1,
+    overflowX: 'auto',
+    msOverflowStyle: 'none',
+    scrollbarWidth: 'none',
+    '&::-webkit-scrollbar': { display: 'none' },
+    '& > *': {
+        flexShrink: 0,
+        whiteSpace: 'nowrap',
+    },
+};
 
 const SatellitesTableSettingsDialog = ({ open, onClose }) => {
     const { t } = useTranslation('earthview');
@@ -59,6 +97,10 @@ const SatellitesTableSettingsDialog = ({ open, onClose }) => {
 
     const handleRowsPerPageChange = (event) => {
         dispatch(setSatellitesTablePageSize(event.target.value));
+    };
+
+    const handleResetValues = () => {
+        dispatch(resetSatellitesTableSettings());
     };
 
     const columns = [
@@ -88,9 +130,9 @@ const SatellitesTableSettingsDialog = ({ open, onClose }) => {
     };
 
     return (
-        <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-            <DialogTitle>{t('satellites_table_settings.title')}</DialogTitle>
-            <DialogContent>
+        <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth PaperProps={{ sx: DIALOG_PAPER_SX }}>
+            <DialogTitle sx={DIALOG_TITLE_SX}>{t('satellites_table_settings.title')}</DialogTitle>
+            <DialogContent sx={DIALOG_CONTENT_SX}>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                     {t('satellites_table_settings.description')}
                 </Typography>
@@ -149,10 +191,16 @@ const SatellitesTableSettingsDialog = ({ open, onClose }) => {
                     </Box>
                 ))}
             </DialogContent>
-            <DialogActions>
-                <Button onClick={onClose} variant="contained">
-                    {t('satellites_table_settings.close')}
-                </Button>
+            <DialogActions sx={DIALOG_ACTIONS_SX}>
+                <Box sx={FOOTER_ACTION_ROW_SX}>
+                    <Button onClick={handleResetValues} variant="outlined">
+                        Reset Values
+                    </Button>
+                    <Box sx={{ flex: 1, minWidth: 8 }} />
+                    <Button onClick={onClose} variant="contained">
+                        {t('satellites_table_settings.close')}
+                    </Button>
+                </Box>
             </DialogActions>
         </Dialog>
     );

@@ -34,7 +34,9 @@ import {
 import ElevationDisplay from "../common/elevation-display.jsx";
 import { useUserTimeSettings } from '../../hooks/useUserTimeSettings.jsx';
 import { formatDate as formatDateHelper } from '../../utils/date-time.js';
+import RowContextMenu from "./rowcontextmenu.jsx";
 import {
+    EARTHVIEW_SATELLITES_DEFAULT_SORT_MODEL,
     setSelectedSatelliteId,
     setSatellitesTableColumnVisibility,
     setSatellitesTablePageSize,
@@ -57,6 +59,17 @@ import { toast } from '../../utils/toast-with-timestamp.jsx';
 import SatellitesTableSettingsDialog from './satellites-table-settings-dialog.jsx';
 import IconButton from '@mui/material/IconButton';
 import TargetNumberIcon from '../common/target-number-icon.jsx';
+import { setRotator, setTrackerId, setTrackingStateInBackend } from "../target/target-slice.jsx";
+import { useTargetRotatorSelectionDialog } from "../target/use-target-rotator-selection-dialog.jsx";
+import SatelliteEditDialog from "../satellites/satellite-edit-dialog.jsx";
+import TransmittersDialog from "../satellites/transmitters-dialog.jsx";
+import { fetchSatellite } from "../satellites/satellite-slice.jsx";
+import {
+    setDialogOpen,
+    setMonitoredSatelliteDialogOpen,
+    setSelectedMonitoredSatellite,
+    setSelectedObservation
+} from "../scheduler/scheduler-slice.jsx";
 
 const getVisibilityState = (elevation) => {
     if (elevation == null) return 'unknown';
@@ -126,6 +139,7 @@ const MemoizedStyledDataGrid = React.memo(({
                                                quickFilterPreset,
                                                onRowClick,
                                                onRowDoubleClick,
+                                               onRowContextMenu,
                                                selectedSatelliteId,
                                                trackedSatelliteNoradIds = [],
                                                loadingSatellites,
@@ -471,6 +485,29 @@ const MemoizedStyledDataGrid = React.memo(({
         }
     }, [onPageSizeChange, pageSize]);
 
+    // Bind context-menu directly on each row through slot props for consistent
+    // behavior across browsers (including Firefox).
+    const handleRowContextMenu = useCallback((event) => {
+        if (typeof onRowContextMenu !== 'function') {
+            return;
+        }
+
+        const rowId = event.currentTarget?.getAttribute?.('data-id');
+        if (!rowId) return;
+        const row = apiRef?.current?.getRow?.(rowId);
+        if (!row) return;
+
+        // Keep DataGrid's row selection in sync with right-click context actions.
+        // This ensures visual selection updates even when no left-click occurred.
+        if (typeof apiRef?.current?.selectRow === 'function') {
+            apiRef.current.selectRow(row.norad_id, true, true);
+        } else if (typeof apiRef?.current?.setRowSelectionModel === 'function') {
+            apiRef.current.setRowSelectionModel({ type: 'include', ids: new Set([row.norad_id]) });
+        }
+
+        onRowContextMenu({ id: rowId, row }, event);
+    }, [apiRef, onRowContextMenu]);
+
     return (
         <StyledDataGrid
             loading={loadingSatellites}
@@ -478,6 +515,9 @@ const MemoizedStyledDataGrid = React.memo(({
                 loadingOverlay: {
                     variant: 'linear-progress',
                     noRowsVariant: 'linear-progress',
+                },
+                row: {
+                    onContextMenu: handleRowContextMenu,
                 },
             }}
             apiRef={apiRef}
@@ -540,10 +580,13 @@ const SatelliteDetailsTable = React.memo(function SatelliteDetailsTable() {
     const selectedSatelliteId = useSelector(state => state.targetSatTrack?.satelliteData?.details?.norad_id);
     const selectedSatGroupId = useSelector(state => state.earthViewTrack.selectedSatGroupId);
     const trackerInstances = useSelector((state) => state.trackerInstances?.instances || []);
+    const trackingState = useSelector((state) => state.targetSatTrack?.trackingState || {});
+    const trackerViews = useSelector((state) => state.targetSatTrack?.trackerViews || {});
     const columnVisibility = useSelector(state => state.earthViewTrack.satellitesTableColumnVisibility);
     const satellitesTablePageSize = useSelector(state => state.earthViewTrack.satellitesTablePageSize);
     const satellitesTableSortModel = useSelector(state => state.earthViewTrack.satellitesTableSortModel);
     const openSatellitesTableSettingsDialog = useSelector(state => state.earthViewTrack.openSatellitesTableSettingsDialog);
+    const { requestRotatorForTarget, dialog: rotatorSelectionDialog } = useTargetRotatorSelectionDialog();
     const trackedSatelliteNoradIds = React.useMemo(() => {
         return trackerInstances
             .filter((instance) => {
@@ -578,6 +621,12 @@ const SatelliteDetailsTable = React.memo(function SatelliteDetailsTable() {
     const hasLoadedFromStorageRef = useRef(false);
     const isLoadingRef = useRef(false);
     const [quickFilterPreset, setQuickFilterPreset] = useState('all');
+    // Keep row context menu state local so actions always target the currently right-clicked row.
+    const [satelliteContextMenu, setSatelliteContextMenu] = useState(null);
+    const [satelliteEditDialogOpen, setSatelliteEditDialogOpen] = useState(false);
+    const [transmittersDialogOpen, setTransmittersDialogOpen] = useState(false);
+    const [contextSatelliteForDialogs, setContextSatelliteForDialogs] = useState(null);
+    const latestDialogSatelliteRequestRef = useRef(0);
 
     // Load column visibility from localStorage on mount
     useEffect(() => {
@@ -678,12 +727,7 @@ const SatelliteDetailsTable = React.memo(function SatelliteDetailsTable() {
     }, [dispatch]);
 
     const applyDefaultSort = useCallback(() => {
-        dispatch(setSatellitesTableSortModel([
-            { field: 'visibility', sort: 'desc' },
-            { field: 'elevation', sort: 'desc' },
-            { field: 'status', sort: 'asc' },
-            { field: 'name', sort: 'asc' },
-        ]));
+        dispatch(setSatellitesTableSortModel([...EARTHVIEW_SATELLITES_DEFAULT_SORT_MODEL]));
     }, [dispatch]);
 
     const handleQuickPreset = useCallback((preset) => {
@@ -707,6 +751,311 @@ const SatelliteDetailsTable = React.memo(function SatelliteDetailsTable() {
             ]));
         }
     }, [dispatch, applyDefaultSort]);
+
+    const copyTextToClipboard = useCallback(async (text) => {
+        if (navigator?.clipboard?.writeText) {
+            await navigator.clipboard.writeText(text);
+            return;
+        }
+
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.setAttribute('readonly', '');
+        textArea.style.position = 'absolute';
+        textArea.style.left = '-9999px';
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+    }, []);
+
+    const handleCloseSatelliteContextMenu = useCallback(() => {
+        setSatelliteContextMenu(null);
+    }, []);
+
+    const handleSuppressNativeContextMenu = useCallback((event) => {
+        event.preventDefault();
+        if (typeof event.stopPropagation === 'function') {
+            event.stopPropagation();
+        }
+        setSatelliteContextMenu(null);
+    }, []);
+
+    const handleSatelliteRowContextMenu = useCallback((params, event) => {
+        if (!params?.row) {
+            return;
+        }
+        event.preventDefault();
+        if (typeof event.stopPropagation === 'function') {
+            event.stopPropagation();
+        }
+        // UX preference: the next right click closes the currently open menu.
+        if (satelliteContextMenu) {
+            setSatelliteContextMenu(null);
+            return;
+        }
+        dispatch(setSelectedSatelliteId(params.row.norad_id));
+        setSatelliteContextMenu({
+            mouseX: event.clientX + 2,
+            mouseY: event.clientY - 6,
+            row: params.row,
+        });
+    }, [dispatch, satelliteContextMenu]);
+
+    const hydrateSatelliteForDialogs = useCallback((satelliteRow) => {
+        if (!satelliteRow) {
+            return;
+        }
+
+        setContextSatelliteForDialogs(satelliteRow);
+        const parsedNoradId = Number(satelliteRow.norad_id);
+        if (Number.isNaN(parsedNoradId) || !socket) {
+            return;
+        }
+
+        const requestId = latestDialogSatelliteRequestRef.current + 1;
+        latestDialogSatelliteRequestRef.current = requestId;
+        dispatch(fetchSatellite({ socket, noradId: parsedNoradId }))
+            .unwrap()
+            .then((response) => {
+                if (latestDialogSatelliteRequestRef.current !== requestId) {
+                    return;
+                }
+                const details = response?.details || {};
+                const transmitters = Array.isArray(response?.transmitters)
+                    ? response.transmitters
+                    : (satelliteRow?.transmitters || []);
+                setContextSatelliteForDialogs({
+                    ...satelliteRow,
+                    ...details,
+                    transmitters,
+                });
+            })
+            .catch(() => {
+                // Keep using the row payload if fetching richer details fails.
+            });
+    }, [dispatch, socket]);
+
+    const buildSchedulerSatellitePayload = useCallback((row) => {
+        return {
+            norad_id: row?.norad_id ?? '',
+            name: row?.name || `NORAD ${row?.norad_id ?? ''}`,
+            group_id: row?.group_id || selectedSatGroupId || '',
+        };
+    }, [selectedSatGroupId]);
+
+    const handleSetTrackingOnBackend = useCallback(async (row) => {
+        if (!row?.norad_id) {
+            return;
+        }
+
+        dispatch(setSelectedSatelliteId(row.norad_id));
+        const selectedAssignment = await requestRotatorForTarget(row?.name || String(row.norad_id));
+        if (!selectedAssignment) {
+            return;
+        }
+
+        const assignmentAction = String(selectedAssignment?.action || 'retarget_current_slot');
+        const isCreateNewSlot = assignmentAction === 'create_new_slot';
+        const trackerId = String(selectedAssignment?.trackerId || '');
+        const rotatorId = String(selectedAssignment?.rotatorId || 'none');
+        const assignmentRigId = String(selectedAssignment?.rigId || 'none');
+        if (!trackerId) {
+            return;
+        }
+
+        const selectedTrackerInstance = trackerInstances.find(
+            (instance) => String(instance?.tracker_id || '') === trackerId
+        );
+        const selectedTrackerView = trackerViews?.[trackerId] || {};
+        const selectedTrackerState = selectedTrackerView?.trackingState || selectedTrackerInstance?.tracking_state || {};
+        const nextRigId = isCreateNewSlot
+            ? assignmentRigId
+            : String(
+                selectedTrackerView?.selectedRadioRig
+                ?? selectedTrackerState?.rig_id
+                ?? assignmentRigId
+                ?? 'none'
+            );
+        const nextRotatorId = isCreateNewSlot ? 'none' : rotatorId;
+        const nextTransmitterId = isCreateNewSlot
+            ? 'none'
+            : String(selectedTrackerState?.transmitter_id || 'none');
+        const nextGroupId = selectedSatGroupId || selectedTrackerState?.group_id || trackingState?.group_id || '';
+
+        dispatch(setTrackerId(trackerId));
+        dispatch(setRotator({ value: nextRotatorId, trackerId }));
+
+        const normalizedTargetName = String(row?.name || row?.norad_id || '').trim();
+        const satelliteTargetPatch = {
+            target_type: 'satellite',
+            target_name: normalizedTargetName || String(row?.norad_id || '').trim(),
+            command: null,
+            body_id: null,
+        };
+
+        const newTrackingState = isCreateNewSlot
+            ? {
+                tracker_id: trackerId,
+                norad_id: row.norad_id,
+                group_id: nextGroupId,
+                ...satelliteTargetPatch,
+                rig_id: nextRigId,
+                rotator_id: nextRotatorId,
+                transmitter_id: 'none',
+                rig_state: 'disconnected',
+                rotator_state: 'disconnected',
+                rig_vfo: 'none',
+                vfo1: 'uplink',
+                vfo2: 'downlink',
+            }
+            : {
+                ...selectedTrackerState,
+                tracker_id: trackerId,
+                norad_id: row.norad_id,
+                group_id: nextGroupId,
+                ...satelliteTargetPatch,
+                rig_id: nextRigId,
+                rotator_id: nextRotatorId,
+                transmitter_id: nextTransmitterId,
+            };
+
+        await dispatch(setTrackingStateInBackend({ socket, data: newTrackingState })).unwrap();
+    }, [
+        dispatch,
+        requestRotatorForTarget,
+        selectedSatGroupId,
+        socket,
+        trackerInstances,
+        trackerViews,
+        trackingState?.group_id,
+    ]);
+
+    const handleOpenSatelliteEditDialog = useCallback((row) => {
+        if (!row) {
+            return;
+        }
+        setSatelliteEditDialogOpen(true);
+        hydrateSatelliteForDialogs(row);
+    }, [hydrateSatelliteForDialogs]);
+
+    const handleOpenTransmittersDialog = useCallback((row) => {
+        if (!row) {
+            return;
+        }
+        setTransmittersDialogOpen(true);
+        hydrateSatelliteForDialogs(row);
+    }, [hydrateSatelliteForDialogs]);
+
+    const handleScheduleObservation = useCallback((row) => {
+        const satellite = buildSchedulerSatellitePayload(row);
+        dispatch(setSelectedMonitoredSatellite(null));
+        dispatch(setMonitoredSatelliteDialogOpen(false));
+        dispatch(setSelectedObservation({
+            name: `${satellite.name} observation`,
+            enabled: true,
+            satellite,
+            pass: null,
+            sessions: [],
+            rotator: {
+                id: null,
+                tracking_enabled: false,
+                unpark_before_tracking: false,
+                park_after_observation: false,
+            },
+            rig: { id: null, doppler_correction: false, vfo: 'VFO_A' },
+        }));
+        dispatch(setDialogOpen(true));
+    }, [buildSchedulerSatellitePayload, dispatch]);
+
+    const handleMonitorSatellite = useCallback((row) => {
+        const satellite = buildSchedulerSatellitePayload(row);
+        dispatch(setSelectedObservation(null));
+        dispatch(setDialogOpen(false));
+        dispatch(setSelectedMonitoredSatellite({
+            enabled: true,
+            satellite,
+            sessions: [],
+            rotator: {
+                id: null,
+                tracking_enabled: false,
+                unpark_before_tracking: false,
+                park_after_observation: false,
+            },
+            rig: { id: null, doppler_correction: false, vfo: 'VFO_A' },
+            min_elevation: 20,
+            task_start_elevation: 10,
+            lookahead_hours: 24,
+        }));
+        dispatch(setMonitoredSatelliteDialogOpen(true));
+    }, [buildSchedulerSatellitePayload, dispatch]);
+
+    const handleSatelliteSaved = useCallback(() => {
+        if (!selectedSatGroupId || selectedSatGroupId === 'none' || !socket) {
+            return;
+        }
+        dispatch(fetchSatellitesByGroupId({ socket, satGroupId: selectedSatGroupId }));
+    }, [dispatch, selectedSatGroupId, socket]);
+
+    const handleSatelliteMenuAction = useCallback(async (action) => {
+        const row = satelliteContextMenu?.row;
+        if (!row) {
+            return;
+        }
+
+        try {
+            if (action === 'set-target') {
+                await handleSetTrackingOnBackend(row);
+                return;
+            }
+
+            if (action === 'edit-properties') {
+                handleOpenSatelliteEditDialog(row);
+                return;
+            }
+
+            if (action === 'edit-transmitters') {
+                handleOpenTransmittersDialog(row);
+                return;
+            }
+
+            if (action === 'schedule-observation') {
+                handleScheduleObservation(row);
+                return;
+            }
+
+            if (action === 'monitor-satellite') {
+                handleMonitorSatellite(row);
+                return;
+            }
+
+            if (action === 'copy-norad') {
+                await copyTextToClipboard(String(row.norad_id ?? ''));
+                toast.success('NORAD ID copied to clipboard');
+                return;
+            }
+
+            if (action === 'copy-summary') {
+                const totalTx = Array.isArray(row.transmitters) ? row.transmitters.length : 0;
+                const activeTx = Array.isArray(row.transmitters) ? row.transmitters.filter((tx) => tx.alive).length : 0;
+                const summary = `${row.name || '-'} | NORAD ${row.norad_id ?? '-'} | Status ${row.status || 'unknown'} | TX ${activeTx}/${totalTx}`;
+                await copyTextToClipboard(summary);
+                toast.success('Satellite summary copied to clipboard');
+            }
+        } catch (error) {
+            toast.error(`Failed to process menu action: ${error?.message || 'Unknown error'}`);
+        } finally {
+            setSatelliteContextMenu(null);
+        }
+    }, [
+        copyTextToClipboard,
+        handleMonitorSatellite,
+        handleOpenSatelliteEditDialog,
+        handleOpenTransmittersDialog,
+        handleScheduleObservation,
+        handleSetTrackingOnBackend,
+        satelliteContextMenu,
+    ]);
 
     useEffect(() => {
         const handleKeyboardShortcuts = (event) => {
@@ -737,9 +1086,20 @@ const SatelliteDetailsTable = React.memo(function SatelliteDetailsTable() {
         () => ({ padding: isTightHeader ? '1px' : '2px' }),
         [isTightHeader]
     );
+    const satelliteContextMenuItems = React.useMemo(() => ([
+        { key: 'set-target', label: t('satellites_table.context_menu.set_as_target'), onClick: () => handleSatelliteMenuAction('set-target') },
+        { key: 'edit-properties', label: t('satellites_table.context_menu.edit_properties'), onClick: () => handleSatelliteMenuAction('edit-properties') },
+        { key: 'edit-transmitters', label: t('satellites_table.context_menu.edit_transmitters'), onClick: () => handleSatelliteMenuAction('edit-transmitters') },
+        { key: 'schedule-observation', label: t('satellites_table.context_menu.schedule_observation'), onClick: () => handleSatelliteMenuAction('schedule-observation') },
+        { key: 'monitor-satellite', label: t('satellites_table.context_menu.monitor_satellite'), onClick: () => handleSatelliteMenuAction('monitor-satellite') },
+        { type: 'divider', key: 'divider-copy' },
+        { key: 'copy-norad', label: t('satellites_table.context_menu.copy_norad'), onClick: () => handleSatelliteMenuAction('copy-norad') },
+        { key: 'copy-summary', label: t('satellites_table.context_menu.copy_summary'), onClick: () => handleSatelliteMenuAction('copy-summary') },
+    ]), [handleSatelliteMenuAction, t]);
 
     return (
         <>
+            {rotatorSelectionDialog}
             <TitleBar
                 className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}
                 sx={islandTitleBarCompactSx}
@@ -866,6 +1226,7 @@ const SatelliteDetailsTable = React.memo(function SatelliteDetailsTable() {
                             quickFilterPreset={quickFilterPreset}
                             onRowClick={handleOnRowClick}
                             onRowDoubleClick={handleOnRowDoubleClick}
+                            onRowContextMenu={handleSatelliteRowContextMenu}
                             selectedSatelliteId={selectedSatelliteId}
                             trackedSatelliteNoradIds={trackedSatelliteNoradIds}
                             loadingSatellites={loadingSatellites}
@@ -881,9 +1242,38 @@ const SatelliteDetailsTable = React.memo(function SatelliteDetailsTable() {
                     )}
                 </div>
             </div>
+            <RowContextMenu
+                open={Boolean(satelliteContextMenu)}
+                onClose={handleCloseSatelliteContextMenu}
+                onSuppressNativeContextMenu={handleSuppressNativeContextMenu}
+                anchorPosition={
+                    satelliteContextMenu
+                        ? { top: satelliteContextMenu.mouseY, left: satelliteContextMenu.mouseX }
+                        : undefined
+                }
+                title={satelliteContextMenu?.row?.name || `NORAD ${satelliteContextMenu?.row?.norad_id ?? '-'}`}
+                noradId={satelliteContextMenu?.row?.norad_id}
+                items={satelliteContextMenuItems}
+            />
             <SatellitesTableSettingsDialog
                 open={openSatellitesTableSettingsDialog}
                 onClose={handleCloseSettings}
+            />
+            <SatelliteEditDialog
+                open={satelliteEditDialogOpen}
+                onClose={() => setSatelliteEditDialogOpen(false)}
+                satelliteData={contextSatelliteForDialogs}
+                onSaved={handleSatelliteSaved}
+            />
+            <TransmittersDialog
+                open={transmittersDialogOpen}
+                onClose={() => setTransmittersDialogOpen(false)}
+                title={t('satellites_table.context_menu.edit_transmitters_title', {
+                    name: contextSatelliteForDialogs?.name || contextSatelliteForDialogs?.norad_id || '',
+                })}
+                satelliteData={contextSatelliteForDialogs}
+                variant="paper"
+                widthOffsetPx={20}
             />
         </>
     );

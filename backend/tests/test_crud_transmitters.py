@@ -20,6 +20,7 @@ Unit tests for transmitter CRUD operations.
 import uuid
 
 import pytest
+from sqlalchemy import update
 
 from crud.satellites import add_satellite
 from crud.transmitters import (
@@ -29,10 +30,12 @@ from crud.transmitters import (
     fetch_transmitter,
     fetch_transmitters_for_satellite,
 )
+from db.models import Transmitters
 
 # TLE templates for testing
 TLE1_TEMPLATE = "1 {norad:05d}U 00000A   21001.00000000  .00000000  00000-0  00000-0 0  9990"
 TLE2_TEMPLATE = "2 {norad:05d}  51.0000 000.0000 0000000   0.0000   0.0000 15.00000000000000"
+SHORT_ID_ALPHABET = set("23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz")
 
 
 @pytest.mark.asyncio
@@ -82,6 +85,8 @@ class TestTransmittersCRUD:
         assert result["data"]["uplink_low"] == 145800000
         assert result["data"]["downlink_low"] == 437800000
         assert "id" in result["data"]
+        assert len(result["data"]["id"]) == 22
+        assert set(result["data"]["id"]).issubset(SHORT_ID_ALPHABET)
         assert "added" in result["data"]
 
     async def test_add_transmitter_with_dash_values(self, db_session):
@@ -205,7 +210,14 @@ class TestTransmittersCRUD:
             },
         )
 
-        transmitter_id_str = add_result["data"]["id"]
+        transmitter_id_short = add_result["data"]["id"]
+        transmitter_id_str = str(uuid.uuid4())
+        await db_session.execute(
+            update(Transmitters)
+            .where(Transmitters.id == transmitter_id_short)
+            .values(id=transmitter_id_str)
+        )
+        await db_session.commit()
         transmitter_id_uuid = uuid.UUID(transmitter_id_str)
 
         # Fetch by UUID (should convert to string)

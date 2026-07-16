@@ -19,6 +19,7 @@ Handles all rotator-related operations including connection, positioning, and li
 """
 
 import logging
+import math
 import time
 
 from common.constants import DictKeys, SocketEvents, TrackingEvents
@@ -58,7 +59,12 @@ class RotatorHandler:
     def _target_within_tolerance(self, current_az, current_el, target_az, target_el) -> bool:
         az_tol = float(self.tracker.az_tolerance)
         el_tol = float(self.tracker.el_tolerance)
-        az_err = self._angular_distance_deg(current_az, target_az)
+        mode = self._get_azimuth_mode()
+        if mode == "0_450":
+            # Overlap mode tracks absolute mechanical azimuth, so wraparound math is invalid.
+            az_err = abs(float(current_az) - float(target_az))
+        else:
+            az_err = self._angular_distance_deg(float(current_az), float(target_az))
         return bool(az_err <= az_tol and abs(current_el - target_el) <= el_tol)
 
     @staticmethod
@@ -68,16 +74,114 @@ class RotatorHandler:
 
     def _get_azimuth_mode(self) -> str:
         mode = str(self.tracker.rotator_details.get("azimuth_mode", "0_360"))
-        return mode if mode in {"0_360", "-180_180"} else "0_360"
+        return mode if mode in {"0_360", "-180_180", "0_450"} else "0_360"
+
+    @staticmethod
+    def _is_finite_number(value) -> bool:
+        return isinstance(value, (int, float)) and math.isfinite(float(value))
 
     def _normalize_azimuth_for_mode(self, azimuth: float, mode: str) -> float:
+        # Sky geometry always resolves to a compass bearing; overlap mode still starts from 0..360.
         if mode == "-180_180":
             normalized = azimuth % 360
             return normalized if normalized <= 180 else normalized - 360
         return azimuth % 360
 
+    def _get_overlap_candidates_for_bearing(self, bearing_az: float) -> list[float]:
+        """Map a 0..360 bearing into all equivalent absolute azimuths inside rotator limits."""
+        minaz = float(self.tracker.azimuth_limits[0])
+        maxaz = float(self.tracker.azimuth_limits[1])
+        base = float(bearing_az) % 360.0
+
+        candidates: list[float] = []
+        start_turn = int(math.floor((minaz - base) / 360.0)) - 1
+        end_turn = int(math.ceil((maxaz - base) / 360.0)) + 1
+
+        for turn in range(start_turn, end_turn + 1):
+            candidate = base + (360.0 * turn)
+            if minaz <= candidate <= maxaz:
+                candidates.append(candidate)
+
+        deduped = sorted({round(candidate, 6) for candidate in candidates})
+        return [float(candidate) for candidate in deduped]
+
+    def _resolve_overlap_target_azimuth(
+        self, bearing_az: float, current_az: float, active_target_az
+    ) -> float | None:
+        candidates = self._get_overlap_candidates_for_bearing(bearing_az)
+        if not candidates:
+            return None
+
+        minaz = float(self.tracker.azimuth_limits[0])
+        maxaz = float(self.tracker.azimuth_limits[1])
+
+        reference = None
+        if self._is_finite_number(active_target_az) and minaz <= float(active_target_az) <= maxaz:
+            reference = float(active_target_az)
+        elif self._is_finite_number(current_az) and minaz <= float(current_az) <= maxaz:
+            reference = float(current_az)
+
+        if reference is None:
+            return float(candidates[0])
+
+        return float(min(candidates, key=lambda candidate: (abs(candidate - reference), candidate)))
+
+    def _unwrap_overlap_azimuth(self, raw_az: float) -> float:
+        """
+        Recover absolute turn information for overlap rotators when hardware reports wrapped bearings.
+
+        Example: with limits [0, 450], a reported 10° can mean either 10° or 370°.
+        """
+        minaz = float(self.tracker.azimuth_limits[0])
+        maxaz = float(self.tracker.azimuth_limits[1])
+        raw_value = float(raw_az)
+
+        if minaz <= raw_value <= maxaz and (raw_value < 0.0 or raw_value > 360.0):
+            # Values outside the normal compass-bearing range carry absolute turn
+            # information. Preserve them instead of treating them as wrapped aliases.
+            return raw_value
+
+        candidates: list[float] = []
+        for turn in range(-2, 3):
+            candidate = raw_value + (360.0 * turn)
+            if minaz <= candidate <= maxaz:
+                candidates.append(candidate)
+
+        if not candidates:
+            return float(max(minaz, min(raw_value, maxaz)))
+
+        state = self.tracker.rotator_command_state
+        reference = None
+        if state.get("in_flight") and self._is_finite_number(state.get("target_az")):
+            reference = float(state["target_az"])
+        elif self._is_finite_number(self.tracker.rotator_data.get("az")):
+            reference = float(self.tracker.rotator_data["az"])
+
+        if reference is None:
+            return float(min(candidates, key=lambda candidate: abs(candidate - raw_value)))
+
+        return float(
+            min(
+                candidates,
+                key=lambda candidate: (abs(candidate - reference), abs(candidate - raw_value)),
+            )
+        )
+
+    def _is_bearing_reachable(self, bearing_az: float, mode: str) -> bool:
+        if mode == "0_450":
+            return bool(self._get_overlap_candidates_for_bearing(bearing_az))
+        return bool(self.tracker.azimuth_limits[0] <= bearing_az <= self.tracker.azimuth_limits[1])
+
+    def _azimuth_delta_for_mode(self, first: float, second: float, mode: str) -> float:
+        if mode == "0_450":
+            return abs(float(first) - float(second))
+        return self._angular_distance_deg(float(first), float(second))
+
     def _to_command_azimuth(self, azimuth_0_360: float) -> float:
-        return self._normalize_azimuth_for_mode(azimuth_0_360, self._get_azimuth_mode())
+        mode = self._get_azimuth_mode()
+        if mode == "0_450":
+            return float(azimuth_0_360)
+        return self._normalize_azimuth_for_mode(float(azimuth_0_360), mode)
 
     async def _issue_rotator_command(self, target_az, target_el):
         """Send a single rotator command and update in-flight state."""
@@ -100,6 +204,32 @@ class RotatorHandler:
         except StopAsyncIteration:
             logger.info(f"Slewing to AZ={target_az}° EL={target_el}° complete")
             self._reset_slew_state()
+        except Exception as error:
+            # Explicit no-fallback behavior for overlap mode:
+            # when a controller rejects extended azimuth commands, freeze tracking and emit an error.
+            if self._get_azimuth_mode() == "0_450":
+                self._reset_slew_state()
+                self.tracker.rotator_data.update(
+                    {
+                        "error": True,
+                        "stopped": True,
+                        "outofbounds": True,
+                    }
+                )
+                self.tracker.queue_out.put(
+                    {
+                        DictKeys.EVENT: SocketEvents.SATELLITE_TRACKING,
+                        DictKeys.DATA: {
+                            DictKeys.EVENTS: [
+                                {DictKeys.NAME: TrackingEvents.ROTATOR_ERROR, "error": str(error)}
+                            ],
+                            DictKeys.ROTATOR_DATA: self.tracker.rotator_data.copy(),
+                        },
+                    }
+                )
+                logger.error("Rotator command failed in 0_450 mode: %s", error)
+                return
+            raise
 
     def update_rotator_limits(self):
         """Update rotator limits from rotator_details if available."""
@@ -174,6 +304,7 @@ class RotatorHandler:
                         "slewing": False,
                         "outofbounds": False,
                         "stopped": True,
+                        "error": False,
                     }
                 )
 
@@ -347,9 +478,12 @@ class RotatorHandler:
         out_of_bounds = False
         mode = self._get_azimuth_mode()
         sky_az = self._normalize_azimuth_for_mode(skypoint[0], mode)
+        az_in_range = self._is_bearing_reachable(sky_az, mode)
+        az_below = sky_az < self.tracker.azimuth_limits[0]
+        az_above = sky_az > self.tracker.azimuth_limits[1]
 
         # Check azimuth limits
-        if sky_az < self.tracker.azimuth_limits[0]:
+        if not az_in_range and az_below:
             logger.debug(
                 f"Azimuth below minimum for satellite #{self.tracker.current_norad_id} {satellite_name}"
             )
@@ -361,7 +495,7 @@ class RotatorHandler:
             self.tracker.rotator_data["minazimuth"] = True
             self.tracker.rotator_data["maxazimuth"] = False
             out_of_bounds = True
-        elif sky_az > self.tracker.azimuth_limits[1]:
+        elif not az_in_range and az_above:
             logger.debug(
                 f"Azimuth above maximum for satellite #{self.tracker.current_norad_id} {satellite_name}"
             )
@@ -438,24 +572,38 @@ class RotatorHandler:
             and self.tracker.current_rotator_state == "tracking"
             and not self.tracker.rotator_data["outofbounds"]
             and not self.tracker.rotator_data["minelevation"]
+            and not self.tracker.rotator_data["error"]
         ):
             mode = self._get_azimuth_mode()
             sky_az = self._normalize_azimuth_for_mode(skypoint[0], mode)
+            current_az = self.tracker.rotator_data["az"]
+            current_el = self.tracker.rotator_data["el"]
+            state = self.tracker.rotator_command_state
 
-            # Clamp target position to rotator limits
-            target_az = max(
-                self.tracker.azimuth_limits[0],
-                min(sky_az, self.tracker.azimuth_limits[1]),
-            )
+            target_az: float
+            if mode == "0_450":
+                resolved_target_az = self._resolve_overlap_target_azimuth(
+                    bearing_az=sky_az,
+                    current_az=current_az,
+                    active_target_az=state.get("target_az"),
+                )
+                if resolved_target_az is None:
+                    self.tracker.rotator_data["outofbounds"] = True
+                    self.tracker.rotator_data["stopped"] = True
+                    self.tracker.rotator_data["slewing"] = False
+                    return
+                target_az = resolved_target_az
+            else:
+                # Clamp target position to rotator limits
+                target_az = max(
+                    self.tracker.azimuth_limits[0],
+                    min(sky_az, self.tracker.azimuth_limits[1]),
+                )
             target_el = max(
                 self.tracker.elevation_limits[0],
                 min(skypoint[1], self.tracker.elevation_limits[1]),
             )
             command_target_az = self._to_command_azimuth(target_az)
-
-            current_az = self.tracker.rotator_data["az"]
-            current_el = self.tracker.rotator_data["el"]
-            state = self.tracker.rotator_command_state
 
             # No command currently in flight: send only if needed.
             if not state["in_flight"]:
@@ -493,7 +641,7 @@ class RotatorHandler:
 
                 # Retarget if the sky target moved far enough, or refresh on watchdog timeout.
                 target_drift = max(
-                    self._angular_distance_deg(command_target_az, active_target_az),
+                    self._azimuth_delta_for_mode(command_target_az, active_target_az, mode),
                     abs(target_el - active_target_el),
                 )
                 command_age = time.time() - float(state["last_command_ts"] or 0.0)
@@ -528,6 +676,8 @@ class RotatorHandler:
     async def update_hardware_position(self):
         """Update current rotator position."""
         if self.tracker.rotator_controller:
-            self.tracker.rotator_data["az"], self.tracker.rotator_data["el"] = (
-                await self.tracker.rotator_controller.get_position()
-            )
+            az, el = await self.tracker.rotator_controller.get_position()
+            if self._get_azimuth_mode() == "0_450":
+                az = self._unwrap_overlap_azimuth(float(az))
+            self.tracker.rotator_data["az"] = az
+            self.tracker.rotator_data["el"] = el

@@ -3,6 +3,7 @@ import { Box, Typography } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
 import { useUserTimeSettings } from '../../hooks/useUserTimeSettings.jsx';
+import { buildTargetKeyFromCelestialRow } from '../target/celestial-target-utils.js';
 
 const PLANET_COLORS = {
     mercury: '#c2b280',
@@ -35,17 +36,15 @@ const MAX_ZOOM = 60000;
 const WHEEL_COMMIT_DELAY_MS = 180;
 const FOCUS_ANIMATION_DURATION_MS = 420;
 const DEFAULT_VIEWPORT = { zoom: 18, panX: 0, panY: 0 };
-const OFFSCREEN_TARGET_EDGE_INSET_PX = 12;
-const OFFSCREEN_TARGET_VISIBILITY_PADDING_PX = 6;
+const OFFSCREEN_TARGET_EDGE_INSET_PX = 6;
+const OFFSCREEN_TARGET_VISIBILITY_PADDING_PX = 4;
 const OFFSCREEN_TARGET_ARROW_LENGTH_PX = 14;
 const OFFSCREEN_TARGET_LABEL_GAP_PX = 18;
 const OFFSCREEN_TARGET_STAGGER_PX = 14;
 const OFFSCREEN_TARGET_LABEL_DEPTH_STEP_PX = 9;
 const OFFSCREEN_TARGET_LABEL_SEARCH_STEPS = 7;
-const OFFSCREEN_TARGET_LABEL_SAFE_MARGIN_PX = 4;
-const OFFSCREEN_TARGET_SOUTH_LABEL_BIAS_PX = 8;
+const OFFSCREEN_TARGET_LABEL_SAFE_MARGIN_PX = 2;
 const OFFSCREEN_TARGET_NORTH_LABEL_BIAS_PX = 8;
-const OFFSCREEN_TARGET_SOUTH_ARROW_BIAS_PX = 20;
 const OFFSCREEN_TARGET_NORTH_ARROW_BIAS_PX = 20;
 const LABEL_EDGE_CENTER_OFFSET_PX = 40;
 const MAX_BACKGROUND_RING_RADIUS_PX = 12000;
@@ -70,6 +69,9 @@ const ASSET_BASE_URL = import.meta.env.BASE_URL || '/';
 const NORMALIZED_ASSET_BASE_URL = ASSET_BASE_URL.endsWith('/') ? ASSET_BASE_URL : `${ASSET_BASE_URL}/`;
 const STARFIELD_CATALOG_URL = `${NORMALIZED_ASSET_BASE_URL}assets/astronomy/stars-bright-v1.json`;
 const IMPERIAL_DISTANCE_REGIONS = new Set(['US', 'LR', 'MM']);
+const TARGET_SLOT_BADGE_SCALE = 0.81;
+const TARGET_SLOT_BADGE_HORIZONTAL_PADDING_PX = 2.5;
+const TARGET_SLOT_BADGE_FONT_HEIGHT_RATIO = 0.8;
 const DEFAULT_DISPLAY_OPTIONS = {
     showGrid: true,
     showPlanets: true,
@@ -95,6 +97,9 @@ const formatAu = (value) => {
     if (value >= 1) return `${value.toFixed(value >= 10 ? 0 : 1)} AU`;
     return `${value.toFixed(2)} AU`;
 };
+const resolveGridStepAu = (zoom) => (
+    zoom > 80 ? 0.5 : zoom > 30 ? 1 : zoom > 12 ? 2 : 5
+);
 const resolveLocaleRegion = (localeTag) => {
     const normalized = String(localeTag || '').trim();
     if (!normalized) return '';
@@ -211,6 +216,71 @@ const hasFiniteXYZ = (position) =>
     && Number.isFinite(Number(position[1]))
     && Number.isFinite(Number(position[2]));
 
+const normalizeBodyId = (value) => String(value || '').trim().toLowerCase();
+
+const computeMedian = (values) => {
+    const sorted = values
+        .map((value) => Number(value))
+        .filter((value) => Number.isFinite(value))
+        .sort((a, b) => a - b);
+    if (!sorted.length) return null;
+    const middle = Math.floor(sorted.length / 2);
+    if (sorted.length % 2 === 1) return sorted[middle];
+    return (sorted[middle - 1] + sorted[middle]) / 2;
+};
+
+const computeParentRelativeRadiusAu = (moon, parent) => {
+    if (!hasFiniteXYZ(moon?.position_xyz_au) || !hasFiniteXYZ(parent?.position_xyz_au)) {
+        return null;
+    }
+
+    const radii = [];
+    const moonSamples = Array.isArray(moon?.orbit_samples_xyz_au) ? moon.orbit_samples_xyz_au : [];
+    const parentSamples = Array.isArray(parent?.orbit_samples_xyz_au) ? parent.orbit_samples_xyz_au : [];
+    const moonTimes = Array.isArray(moon?.orbit_sample_times_utc) ? moon.orbit_sample_times_utc : [];
+    const parentTimes = Array.isArray(parent?.orbit_sample_times_utc) ? parent.orbit_sample_times_utc : [];
+
+    if (moonSamples.length >= 2 && parentSamples.length >= 2) {
+        if (moonTimes.length && parentTimes.length) {
+            const parentSampleByTime = new Map();
+            parentTimes.forEach((time, index) => {
+                if (hasFiniteXYZ(parentSamples[index])) {
+                    parentSampleByTime.set(String(time), parentSamples[index]);
+                }
+            });
+            moonTimes.forEach((time, index) => {
+                const moonSample = moonSamples[index];
+                const parentSample = parentSampleByTime.get(String(time));
+                if (!hasFiniteXYZ(moonSample) || !hasFiniteXYZ(parentSample)) return;
+                radii.push(Math.hypot(
+                    Number(moonSample[0]) - Number(parentSample[0]),
+                    Number(moonSample[1]) - Number(parentSample[1]),
+                ));
+            });
+        } else if (moonSamples.length === parentSamples.length) {
+            moonSamples.forEach((moonSample, index) => {
+                const parentSample = parentSamples[index];
+                if (!hasFiniteXYZ(moonSample) || !hasFiniteXYZ(parentSample)) return;
+                radii.push(Math.hypot(
+                    Number(moonSample[0]) - Number(parentSample[0]),
+                    Number(moonSample[1]) - Number(parentSample[1]),
+                ));
+            });
+        }
+    }
+
+    const sampledRadius = computeMedian(radii.filter((radius) => radius > 0));
+    if (Number.isFinite(sampledRadius) && sampledRadius > 0) {
+        return sampledRadius;
+    }
+
+    const currentRadius = Math.hypot(
+        Number(moon.position_xyz_au[0]) - Number(parent.position_xyz_au[0]),
+        Number(moon.position_xyz_au[1]) - Number(parent.position_xyz_au[1]),
+    );
+    return Number.isFinite(currentRadius) && currentRadius > 0 ? currentRadius : null;
+};
+
 const HELIOCENTRIC_ORIGIN_EPSILON_AU = 1e-9;
 const SUN_LABEL_SINGLE_MODE_OFFSET_PX = 5;
 const isNearHeliocentricOriginXYZ = (position) => {
@@ -242,52 +312,8 @@ const hasFiniteXY = (position) =>
     && Number.isFinite(Number(position[0]))
     && Number.isFinite(Number(position[1]));
 
-const computeMedian = (values) => {
-    if (!Array.isArray(values) || values.length === 0) return null;
-    const sorted = values
-        .map((value) => Number(value))
-        .filter((value) => Number.isFinite(value))
-        .sort((a, b) => a - b);
-    if (!sorted.length) return null;
-    const mid = Math.floor(sorted.length / 2);
-    if (sorted.length % 2 === 0) {
-        return (sorted[mid - 1] + sorted[mid]) / 2;
-    }
-    return sorted[mid];
-};
-
-const computeRelativeMedianRadiusAu = (childSamples, parentSamples) => {
-    if (!Array.isArray(childSamples) || !Array.isArray(parentSamples)) return null;
-    const limit = Math.min(childSamples.length, parentSamples.length);
-    if (limit <= 0) return null;
-
-    const radii = [];
-    for (let index = 0; index < limit; index += 1) {
-        const child = childSamples[index];
-        const parent = parentSamples[index];
-        if (!hasFiniteXY(child) || !hasFiniteXY(parent)) continue;
-
-        const dx = Number(child[0]) - Number(parent[0]);
-        const dy = Number(child[1]) - Number(parent[1]);
-        const radius = Math.hypot(dx, dy);
-        if (Number.isFinite(radius) && radius > 0) {
-            radii.push(radius);
-        }
-    }
-
-    return computeMedian(radii);
-};
-
 const resolveTargetKey = (body) => {
-    const explicit = String(body?.target_key || '').trim();
-    if (explicit) return explicit;
-    const type = String(body?.target_type || 'mission').toLowerCase();
-    if (type === 'body') {
-        const bodyId = String(body?.body_id || body?.command || '').toLowerCase();
-        return bodyId ? `body:${bodyId}` : '';
-    }
-    const command = String(body?.command || '').trim();
-    return command ? `mission:${command}` : '';
+    return buildTargetKeyFromCelestialRow(body);
 };
 
 const resolvePastSegmentEndIndex = (samples, sampleTimesUtc, sceneTimestampUtc) => {
@@ -523,6 +549,7 @@ const projectToViewportEdge = ({
 const SolarSystemCanvas = ({
     scene,
     selectedTargetKeys = [],
+    targetNumberByTargetKey = {},
     fitAllSignal = 0,
     focusTargetSignal = 0,
     focusTargetKey = '',
@@ -535,10 +562,11 @@ const SolarSystemCanvas = ({
     enableMapDragging = true,
     enableMapZooming = true,
     onViewportCommit = null,
+    onStatusBarInfoChange = null,
     displayOptions = DEFAULT_DISPLAY_OPTIONS,
 }) => {
     const theme = useTheme();
-    const { i18n } = useTranslation();
+    const { i18n, t } = useTranslation('celestial');
     const { locale } = useUserTimeSettings();
     const containerRef = useRef(null);
     const canvasRef = useRef(null);
@@ -641,42 +669,37 @@ const SolarSystemCanvas = ({
 
         const bodyById = new Map();
         renderablePlanets.forEach((body) => {
-            const bodyId = String(body?.id || '').trim().toLowerCase();
+            const bodyId = normalizeBodyId(body?.id);
             if (!bodyId) return;
             bodyById.set(bodyId, body);
         });
 
-        const rings = [];
-        renderablePlanets.forEach((body) => {
-            const bodyId = String(body?.id || '').trim().toLowerCase();
-            const bodyType = String(body?.body_type || '').trim().toLowerCase();
-            const parentId = String(body?.parent_id || '').trim().toLowerCase();
-            if (!bodyId || bodyType !== 'moon' || !parentId) return;
+        const rings = renderablePlanets
+            .filter((body) => normalizeBodyId(body?.body_type) === 'moon')
+            .map((moon) => {
+                const moonId = normalizeBodyId(moon?.id);
+                const parentId = normalizeBodyId(moon?.parent_id || moon?.parent_body_id);
+                if (!moonId || !parentId) return null;
 
-            const parent = bodyById.get(parentId);
-            if (!parent) return;
-            if (!hasFiniteXYZ(body.position_xyz_au) || !hasFiniteXYZ(parent.position_xyz_au)) return;
+                const parent = bodyById.get(parentId);
+                if (!parent || !hasFiniteXYZ(parent.position_xyz_au)) return null;
 
-            // Prefer a stable radius estimate from sample pairs, then fall back to current distance.
-            let radiusAu = computeRelativeMedianRadiusAu(
-                body.orbit_samples_xyz_au,
-                parent.orbit_samples_xyz_au,
-            );
-            if (!Number.isFinite(radiusAu) || radiusAu <= 0) {
-                const dx = Number(body.position_xyz_au[0]) - Number(parent.position_xyz_au[0]);
-                const dy = Number(body.position_xyz_au[1]) - Number(parent.position_xyz_au[1]);
-                radiusAu = Math.hypot(dx, dy);
-            }
-            if (!Number.isFinite(radiusAu) || radiusAu <= 0) return;
+                const radiusAu = computeParentRelativeRadiusAu(moon, parent);
+                if (!Number.isFinite(radiusAu) || radiusAu <= 0) return null;
 
-            rings.push({
-                key: `${parentId}:${bodyId}`,
-                parentId,
-                parentPositionXyAu: [Number(parent.position_xyz_au[0]), Number(parent.position_xyz_au[1])],
-                radiusAu,
-                color: PLANET_COLORS[bodyId] || PLANET_COLORS.moon || '#cfd8dc',
-            });
-        });
+                return {
+                    key: `${parentId}:${moonId}`,
+                    parentId,
+                    moonId,
+                    parentPositionXyAu: [
+                        Number(parent.position_xyz_au[0]),
+                        Number(parent.position_xyz_au[1]),
+                    ],
+                    radiusAu,
+                    color: PLANET_COLORS[moonId] || PLANET_COLORS.moon || '#cfd8dc',
+                };
+            })
+            .filter(Boolean);
 
         rings.sort((a, b) => {
             if (a.parentId === b.parentId) return a.radiusAu - b.radiusAu;
@@ -951,6 +974,7 @@ const SolarSystemCanvas = ({
         const cx = width / 2 + viewport.panX;
         const cy = height / 2 + viewport.panY;
         const scale = viewport.zoom;
+        const gridStepAu = resolveGridStepAu(scale);
         const viewportCenterWorldXAu = (width / 2 - cx) / scale;
         const viewportCenterWorldYAu = (cy - height / 2) / scale;
         const distanceKmFromViewportCenter = (worldXAu, worldYAu) => {
@@ -977,6 +1001,50 @@ const SolarSystemCanvas = ({
                 .map((body) => String(body?.id || '').trim().toLowerCase())
                 .filter(Boolean),
         );
+        const normalizeSolarBodyId = (value) => String(value || '').trim().toLowerCase();
+        const targetSlotNumberByBodyId = new Map();
+        const registerTargetSlotNumberForBodyId = (bodyIdValue, slotNumberValue) => {
+            const bodyId = normalizeSolarBodyId(bodyIdValue);
+            const slotNumber = Number(slotNumberValue);
+            if (!bodyId || !solarBodyIds.has(bodyId)) return;
+            if (!Number.isFinite(slotNumber) || slotNumber <= 0) return;
+            const existing = targetSlotNumberByBodyId.get(bodyId);
+            if (!Number.isFinite(existing) || slotNumber < existing) {
+                targetSlotNumberByBodyId.set(bodyId, slotNumber);
+            }
+        };
+        const targetSlotEntries = Object.entries(targetNumberByTargetKey || {});
+        targetSlotEntries.forEach(([targetKey, slotNumber]) => {
+            const normalizedTargetKey = String(targetKey || '').trim();
+            if (normalizedTargetKey.startsWith('body:')) {
+                registerTargetSlotNumberForBodyId(normalizedTargetKey.slice('body:'.length), slotNumber);
+            }
+        });
+        (Array.isArray(tracked) ? tracked : []).forEach((body) => {
+            const targetKey = resolveTargetKey(body);
+            const slotNumber = Number(targetNumberByTargetKey?.[targetKey]);
+            if (!Number.isFinite(slotNumber) || slotNumber <= 0) return;
+            registerTargetSlotNumberForBodyId(body?.body_id, slotNumber);
+            registerTargetSlotNumberForBodyId(body?.command, slotNumber);
+            registerTargetSlotNumberForBodyId(body?.name, slotNumber);
+        });
+        const resolveTargetSlotNumber = (body, targetKey) => {
+            const directSlotNumber = Number(targetNumberByTargetKey?.[targetKey]);
+            if (Number.isFinite(directSlotNumber) && directSlotNumber > 0) return directSlotNumber;
+            const normalizedTargetKey = String(targetKey || '').trim();
+            if (normalizedTargetKey.startsWith('body:')) {
+                const bodyIdFromKey = normalizeSolarBodyId(normalizedTargetKey.slice('body:'.length));
+                const mappedSlotNumber = Number(targetSlotNumberByBodyId.get(bodyIdFromKey));
+                if (Number.isFinite(mappedSlotNumber) && mappedSlotNumber > 0) return mappedSlotNumber;
+            }
+            const mappedBodySlot = Number(targetSlotNumberByBodyId.get(normalizeSolarBodyId(body?.body_id)));
+            if (Number.isFinite(mappedBodySlot) && mappedBodySlot > 0) return mappedBodySlot;
+            const mappedCommandSlot = Number(targetSlotNumberByBodyId.get(normalizeSolarBodyId(body?.command)));
+            if (Number.isFinite(mappedCommandSlot) && mappedCommandSlot > 0) return mappedCommandSlot;
+            const mappedNameSlot = Number(targetSlotNumberByBodyId.get(normalizeSolarBodyId(body?.name)));
+            if (Number.isFinite(mappedNameSlot) && mappedNameSlot > 0) return mappedNameSlot;
+            return NaN;
+        };
         const shouldHideTrackedLabelAsDuplicate = (body) => {
             const bodyId = String(body?.body_id || '').trim().toLowerCase();
             if (bodyId && solarBodyIds.has(bodyId)) return true;
@@ -991,7 +1059,6 @@ const SolarSystemCanvas = ({
         const LABEL_FONT = '11px monospace';
         const LABEL_LINE_HEIGHT = 10;
         const LABEL_ROW_STEP = 8;
-        const LABEL_INDENT_STEP = 6;
         const LABEL_PADDING = 1;
 
         const boxesOverlap = (a, b) => !(
@@ -1013,7 +1080,7 @@ const SolarSystemCanvas = ({
             const maxRows = 10;
             for (let row = 0; row <= maxRows; row += 1) {
                 const y = baseY + row * LABEL_ROW_STEP;
-                const x = row > 0 ? baseX + LABEL_INDENT_STEP : baseX;
+                const x = baseX;
                 const box = {
                     x: x - LABEL_PADDING,
                     y: y - LABEL_PADDING,
@@ -1026,7 +1093,7 @@ const SolarSystemCanvas = ({
             }
 
             const y = baseY + maxRows * LABEL_ROW_STEP;
-            const x = maxRows > 0 ? baseX + LABEL_INDENT_STEP : baseX;
+            const x = baseX;
             return {
                 x,
                 y,
@@ -1090,18 +1157,27 @@ const SolarSystemCanvas = ({
             const boxHeight = 16;
 
             const horizontalBias = sideHint === 'past' ? -1 : 1;
+            // Keep endpoint time labels noticeably farther from path endpoints.
+            const primaryOffsetX = 28;
+            const secondaryOffsetX = 34;
+            const primaryOffsetY = 24;
+            const alternateOffsetY = 28;
             const candidates = [
                 {
-                    centerX: anchorX + horizontalBias * 18,
-                    centerY: anchorY - 16,
+                    centerX: anchorX + horizontalBias * primaryOffsetX,
+                    centerY: anchorY - primaryOffsetY,
                 },
                 {
-                    centerX: anchorX + horizontalBias * 20,
-                    centerY: anchorY + 16,
+                    centerX: anchorX + horizontalBias * secondaryOffsetX,
+                    centerY: anchorY + primaryOffsetY,
                 },
                 {
-                    centerX: anchorX - horizontalBias * 18,
-                    centerY: anchorY - 16,
+                    centerX: anchorX - horizontalBias * primaryOffsetX,
+                    centerY: anchorY - alternateOffsetY,
+                },
+                {
+                    centerX: anchorX + horizontalBias * (secondaryOffsetX + 6),
+                    centerY: anchorY - 6,
                 },
             ];
 
@@ -1270,7 +1346,6 @@ const SolarSystemCanvas = ({
 
         // World-space grid (moves with pan/zoom).
         if (effectiveDisplayOptions.showGrid) {
-            const gridStepAu = scale > 80 ? 0.5 : scale > 30 ? 1 : scale > 12 ? 2 : 5;
             const worldMinX = (0 - cx) / scale;
             const worldMaxX = (width - cx) / scale;
             const worldMaxY = (cy - 0) / scale;
@@ -1372,7 +1447,8 @@ const SolarSystemCanvas = ({
         ctx.stroke();
 
         if (effectiveDisplayOptions.showPlanets && effectiveDisplayOptions.showPlanetOrbits) {
-            // Moon orbit guides around their parent planets (drawn as concentric reference rings).
+            // Parent-centered moon orbit rings are derived from Horizons-backed
+            // moon and parent vectors already present in the scene payload.
             if (moonOrbitRings.length > 0) {
                 ctx.save();
                 ctx.lineWidth = 1;
@@ -1381,7 +1457,7 @@ const SolarSystemCanvas = ({
                 moonOrbitRings.forEach((ring) => {
                     const [parentX, parentY] = toScreen(ring.parentPositionXyAu);
                     const radiusPx = ring.radiusAu * scale;
-                    if (!Number.isFinite(radiusPx) || radiusPx <= 2) return;
+                    if (!Number.isFinite(radiusPx) || radiusPx <= 0.75) return;
                     if (radiusPx > MAX_BACKGROUND_RING_RADIUS_PX) return;
 
                     const nearestX = clamp(parentX, 0, width);
@@ -1406,6 +1482,7 @@ const SolarSystemCanvas = ({
             // Planet orbits (sampled paths).
             ctx.lineWidth = 1;
             renderablePlanets.forEach((planet) => {
+                if (normalizeBodyId(planet?.body_type) === 'moon') return;
                 const samples = planet.orbit_samples_xyz_au || [];
                 if (!samples.length) return;
                 const sampleTimesUtc = planet.orbit_sample_times_utc || [];
@@ -1445,18 +1522,6 @@ const SolarSystemCanvas = ({
                     drawArrowHead(ctx, endPrevX, endPrevY, endX, endY, orbitStrokeColor);
                 }
 
-                // Mark the oldest endpoint of the past segment when timestamped samples are available.
-                if (pastEndIndex >= 1) {
-                    const [oldestX, oldestY] = toScreen(samples[0]);
-                    const [nextX, nextY] = toScreen(samples[1]);
-                    const dx = nextX - oldestX;
-                    const dy = nextY - oldestY;
-                    const length = Math.hypot(dx, dy);
-                    if (length > 0.001) {
-                        // Keep the tip on the past endpoint while orienting the arrow forward in time.
-                        drawArrowHead(ctx, oldestX - dx, oldestY - dy, oldestX, oldestY, orbitStrokeColor);
-                    }
-                }
             });
         }
 
@@ -1476,9 +1541,51 @@ const SolarSystemCanvas = ({
                 ctx.fill();
 
                 if (shouldShowBodyLabels) {
+                    const isMoon = normalizeBodyId(planet?.body_type) === 'moon';
+                    // Keep moon labels readable by only drawing them once each grid square
+                    // represents 1 AU or less (higher zoom levels).
+                    if (isMoon && gridStepAu > 1) return;
                     // Keep the Sun label clear of the larger center icon.
                     const labelAnchorX = id === 'sun' ? sx + 12 : sx;
-                    drawLabelWithAutoOffset(planet.name || id, labelAnchorX, sy, theme.palette.text.secondary);
+                    const bodyTargetKey = `body:${id}`;
+                    const bodyTargetSlotNumber = resolveTargetSlotNumber(
+                        { body_id: id, command: id, name: planet?.name || id },
+                        bodyTargetKey
+                    );
+                    const hasBodyTargetSlotNumber = Number.isFinite(bodyTargetSlotNumber) && bodyTargetSlotNumber > 0;
+                    let labelOptions;
+                    if (hasBodyTargetSlotNumber) {
+                        // Mirror tracked-marker badge geometry so body labels do not start underneath T# badges.
+                        const bodyTargetSlotLabel = `T${Math.round(bodyTargetSlotNumber)}`;
+                        const isBodySelected = hasTrackedSelection && selectedTargetKeySet.has(bodyTargetKey);
+                        const targetBadgeHeight = (isBodySelected ? 17 : 15) * TARGET_SLOT_BADGE_SCALE;
+                        const targetBadgeHorizontalPadding = TARGET_SLOT_BADGE_HORIZONTAL_PADDING_PX
+                            * TARGET_SLOT_BADGE_SCALE;
+                        const targetLabelRenderFontSize = Math.max(
+                            Math.round(11 * TARGET_SLOT_BADGE_SCALE),
+                            Math.round(targetBadgeHeight * TARGET_SLOT_BADGE_FONT_HEIGHT_RATIO)
+                        );
+                        const targetLabelFontFamily = theme.typography?.fontFamily || 'Arial';
+                        ctx.save();
+                        ctx.font = `900 ${targetLabelRenderFontSize}px ${targetLabelFontFamily}`;
+                        const textWidth = Math.ceil(Math.max(6, ctx.measureText(bodyTargetSlotLabel).width));
+                        ctx.restore();
+                        const badgeWidth = Math.max(
+                            Math.round(targetBadgeHeight * 1.05),
+                            textWidth + (targetBadgeHorizontalPadding * 2)
+                        );
+                        labelOptions = {
+                            offsetX: Math.max(8, Math.ceil(badgeWidth / 2) + 4),
+                            offsetY: isBodySelected ? -4 : -6,
+                        };
+                    }
+                    drawLabelWithAutoOffset(
+                        planet.name || id,
+                        labelAnchorX,
+                        sy,
+                        theme.palette.text.secondary,
+                        labelOptions
+                    );
                 }
             });
         }
@@ -1522,25 +1629,8 @@ const SolarSystemCanvas = ({
             drawOrbitSegment(futureSegmentStartIndex, lastSampleIndex, [3, 4]);
             ctx.setLineDash([]);
 
-            // Direction arrows at both endpoints in forward time direction.
+            // Direction arrow at the latest endpoint in forward time direction.
             if (samples.length >= 2) {
-                const [startX, startY] = toScreen(samples[0]);
-                const [startNextX, startNextY] = toScreen(samples[1]);
-                const startDx = startNextX - startX;
-                const startDy = startNextY - startY;
-                const startLen = Math.hypot(startDx, startDy);
-                if (startLen > 0.001) {
-                    // Keep the tip on the past endpoint while orienting the arrow forward in time.
-                    drawArrowHead(
-                        ctx,
-                        startX - startDx,
-                        startY - startDy,
-                        startX,
-                        startY,
-                        trackedStrokeColor,
-                    );
-                }
-
                 const lastIndex = samples.length - 1;
                 const [endPrevX, endPrevY] = toScreen(samples[lastIndex - 1]);
                 const [endX, endY] = toScreen(samples[lastIndex]);
@@ -1583,6 +1673,7 @@ const SolarSystemCanvas = ({
         }
 
         // Tracked object markers from Horizons.
+        const pendingTargetSlotBadges = [];
         if (effectiveDisplayOptions.showTrackedObjects) {
             tracked.forEach((body) => {
                 if (!hasFiniteXYZ(body.position_xyz_au)) return;
@@ -1591,15 +1682,61 @@ const SolarSystemCanvas = ({
                 const isSelected = hasTrackedSelection && selectedTargetKeySet.has(targetKey);
                 const isDimmed = hasTrackedSelection && !isSelected;
                 const trackedHexColor = resolveTrackedColor(body, body.stale ? '#EF476F' : '#06D6A0');
+                const targetSlotNumber = resolveTargetSlotNumber(body, targetKey);
+                const hasTargetSlotNumber = Number.isFinite(targetSlotNumber) && targetSlotNumber > 0;
+                const targetSlotLabel = hasTargetSlotNumber ? `T${Math.round(targetSlotNumber)}` : '';
+                const targetSlotBadgePalette = theme.palette.badge?.targetSlot || {};
 
                 ctx.fillStyle = isDimmed ? hexToRgba(trackedHexColor, 0.28) : trackedHexColor;
-                const markerSize = isSelected ? 8 : 6;
-                ctx.fillRect(sx - markerSize / 2, sy - markerSize / 2, markerSize, markerSize);
-                if (isSelected) {
-                    ctx.strokeStyle = hexToRgba('#ffffff', theme.palette.mode === 'dark' ? 0.9 : 0.75);
-                    ctx.lineWidth = 1.25;
-                    ctx.strokeRect(sx - markerSize / 2 - 1, sy - markerSize / 2 - 1, markerSize + 2, markerSize + 2);
+                let markerSize = isSelected ? 8 : 6;
+                let targetSlotBadgeSpec = null;
+                // Keep the target-slot badge in the Solar System canvas slightly more compact.
+                const targetBadgeHeight = (isSelected ? 17 : 15) * TARGET_SLOT_BADGE_SCALE;
+                const targetBadgeHorizontalPadding = TARGET_SLOT_BADGE_HORIZONTAL_PADDING_PX
+                    * TARGET_SLOT_BADGE_SCALE;
+                const targetLabelRenderFontSize = Math.max(
+                    Math.round(11 * TARGET_SLOT_BADGE_SCALE),
+                    Math.round(targetBadgeHeight * TARGET_SLOT_BADGE_FONT_HEIGHT_RATIO)
+                );
+                const targetLabelFontFamily = theme.typography?.fontFamily || 'Arial';
+                if (hasTargetSlotNumber) {
+                    ctx.save();
+                    ctx.font = `900 ${targetLabelRenderFontSize}px ${targetLabelFontFamily}`;
+                    const textWidth = Math.ceil(Math.max(6, ctx.measureText(targetSlotLabel).width));
+                    ctx.restore();
+                    const badgeWidth = Math.max(
+                        Math.round(targetBadgeHeight * 1.05),
+                        textWidth + (targetBadgeHorizontalPadding * 2)
+                    );
+                    targetSlotBadgeSpec = {
+                        sx,
+                        sy,
+                        badgeWidth,
+                        targetBadgeHeight,
+                        badgeRadius: 3 * TARGET_SLOT_BADGE_SCALE,
+                        targetSlotLabel,
+                        targetSlotBadgePalette,
+                        isDimmed,
+                        targetLabelRenderFontSize,
+                        targetLabelFontFamily,
+                    };
+                    markerSize = Math.max(
+                        markerSize,
+                        badgeWidth + (2 * TARGET_SLOT_BADGE_SCALE),
+                        targetBadgeHeight + (2 * TARGET_SLOT_BADGE_SCALE)
+                    );
                 }
+                // Keep the classic square marker only for non-slot targets.
+                // When we have a target slot badge (T#), render just the badge itself.
+                if (!hasTargetSlotNumber) {
+                    ctx.fillRect(sx - markerSize / 2, sy - markerSize / 2, markerSize, markerSize);
+                    if (isSelected) {
+                        ctx.strokeStyle = hexToRgba('#ffffff', theme.palette.mode === 'dark' ? 0.9 : 0.75);
+                        ctx.lineWidth = 1.25;
+                        ctx.strokeRect(sx - markerSize / 2 - 1, sy - markerSize / 2 - 1, markerSize + 2, markerSize + 2);
+                    }
+                }
+                if (targetSlotBadgeSpec) pendingTargetSlotBadges.push(targetSlotBadgeSpec);
 
                 if (effectiveDisplayOptions.showTrackedLabels) {
                     if (shouldHideTrackedLabelAsDuplicate(body)) return;
@@ -1611,12 +1748,18 @@ const SolarSystemCanvas = ({
                     const labelAnchorX = (isSingleTrackedMode && isSunLabelTarget(body))
                         ? sx + SUN_LABEL_SINGLE_MODE_OFFSET_PX
                         : sx;
+                    const labelOffsetX = hasTargetSlotNumber
+                        ? Math.max(8, Math.ceil(markerSize / 2) + 4)
+                        : undefined;
+                    const labelOptions = labelOffsetX != null
+                        ? { offsetX: labelOffsetX, offsetY: isSelected ? -4 : -6 }
+                        : (isSelected ? { offsetX: 8, offsetY: -4 } : undefined);
                     drawLabelWithAutoOffset(
                         body.name || body.command || 'object',
                         labelAnchorX,
                         sy,
                         labelColor,
-                        isSelected ? { offsetX: 8, offsetY: -4 } : undefined,
+                        labelOptions,
                     );
                 }
             });
@@ -1661,10 +1804,9 @@ const SolarSystemCanvas = ({
             const perpX = -uy;
             const perpY = ux;
             const stagger = offsetIndex * OFFSCREEN_TARGET_STAGGER_PX;
-            // Keep bottom/top-pointing indicators clear of persistent overlays.
-            const southArrowBias = uy > 0 ? uy * OFFSCREEN_TARGET_SOUTH_ARROW_BIAS_PX : 0;
+            // Keep top-pointing indicators clear of persistent overlays.
             const northArrowBias = uy < 0 ? (-uy) * OFFSCREEN_TARGET_NORTH_ARROW_BIAS_PX : 0;
-            const verticalArrowBias = northArrowBias - southArrowBias;
+            const verticalArrowBias = northArrowBias;
 
             const tipX = clamp(
                 edgePoint.x,
@@ -1697,10 +1839,9 @@ const SolarSystemCanvas = ({
                 ctx.font = '11px monospace';
                 const textWidth = Math.max(8, ctx.measureText(text).width);
                 const textHeight = 10;
-                // Keep labels away from top/bottom overlays based on arrow direction.
-                const southBias = uy > 0 ? uy * OFFSCREEN_TARGET_SOUTH_LABEL_BIAS_PX : 0;
+                // Keep labels away from top overlays based on arrow direction.
                 const northBias = uy < 0 ? (-uy) * OFFSCREEN_TARGET_NORTH_LABEL_BIAS_PX : 0;
-                const verticalLabelBias = northBias - southBias;
+                const verticalLabelBias = northBias;
                 const labelPlacement = findOffscreenLabelPlacement({
                     baseX,
                     baseY,
@@ -1740,7 +1881,7 @@ const SolarSystemCanvas = ({
 
         const offscreenAnchors = [];
         offscreenAnchors.push({
-            label: 'Sun',
+            label: t('canvas.solar.anchor_sun'),
             color: '#f9c74f',
             x: cx,
             y: cy,
@@ -1754,7 +1895,7 @@ const SolarSystemCanvas = ({
             const earthWorldXAu = Number(earthPlanet.position_xyz_au[0]);
             const earthWorldYAu = Number(earthPlanet.position_xyz_au[1]);
             offscreenAnchors.push({
-                label: 'Earth',
+                label: t('canvas.solar.anchor_earth'),
                 color: PLANET_COLORS.earth,
                 x: earthX,
                 y: earthY,
@@ -1766,7 +1907,9 @@ const SolarSystemCanvas = ({
         const galacticCenterDirectionY = -Math.sin(galacticCenterLongitudeRad);
         // Galactic Center is a sky direction, so keep it fixed to the starfield projection.
         offscreenAnchors.push({
-            label: width < 300 ? 'Galactic Ctr' : 'Galactic Center',
+            label: width < 300
+                ? t('canvas.solar.anchor_galactic_center_short')
+                : t('canvas.solar.anchor_galactic_center'),
             color: theme.palette.mode === 'dark' ? GALACTIC_CENTER_COLOR_DARK : GALACTIC_CENTER_COLOR_LIGHT,
             x: width / 2 + galacticCenterDirectionX * GALACTIC_CENTER_DIRECTION_DISTANCE_PX,
             y: height / 2 + galacticCenterDirectionY * GALACTIC_CENTER_DIRECTION_DISTANCE_PX,
@@ -1785,6 +1928,37 @@ const SolarSystemCanvas = ({
             const offsetIndex = index - (hiddenAnchors.length - 1) / 2;
             drawOffscreenDirectionIndicator(target, offsetIndex);
         });
+
+        // Render all target-slot badges last so they always stay topmost in the canvas stack.
+        pendingTargetSlotBadges.forEach((badge) => {
+            const badgeLeft = badge.sx - (badge.badgeWidth / 2);
+            const badgeTop = badge.sy - (badge.targetBadgeHeight / 2);
+
+            ctx.save();
+            ctx.font = `900 ${badge.targetLabelRenderFontSize}px ${badge.targetLabelFontFamily}`;
+            ctx.beginPath();
+            ctx.roundRect(
+                badgeLeft,
+                badgeTop,
+                badge.badgeWidth,
+                badge.targetBadgeHeight,
+                badge.badgeRadius
+            );
+            ctx.fillStyle = badge.targetSlotBadgePalette.background || theme.palette.warning.main;
+            ctx.globalAlpha = badge.isDimmed ? 0.7 : 1.0;
+            ctx.shadowColor = badge.targetSlotBadgePalette.shadow || 'rgba(0, 0, 0, 0.2)';
+            ctx.shadowBlur = 3;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 1;
+            ctx.fill();
+
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = badge.targetSlotBadgePalette.text || theme.palette.common.black;
+            ctx.globalAlpha = badge.isDimmed ? 0.9 : 1.0;
+            ctx.fillText(badge.targetSlotLabel, badge.sx, badge.sy + 0.35);
+            ctx.restore();
+        });
     }, [
         asteroidResonanceGaps,
         asteroidZones,
@@ -1795,6 +1969,7 @@ const SolarSystemCanvas = ({
         hasTrackedRows,
         moonOrbitRings,
         selectedTargetKeySet,
+        targetNumberByTargetKey,
         hasTrackedSelection,
         isSingleTrackedMode,
         theme.palette.background.default,
@@ -1802,6 +1977,7 @@ const SolarSystemCanvas = ({
         theme.palette.text.primary,
         theme.palette.text.secondary,
         formatDistanceLabel,
+        t,
         viewport.panX,
         viewport.panY,
         viewport.zoom,
@@ -2136,19 +2312,62 @@ const SolarSystemCanvas = ({
     };
 
     const timestampText = useMemo(() => {
-        if (!scene?.timestamp_utc) return 'No epoch';
-        return `Epoch: ${scene.timestamp_utc}`;
-    }, [scene?.timestamp_utc]);
+        if (!scene?.timestamp_utc) return t('canvas.solar.no_epoch');
+        return t('canvas.solar.epoch', { timestamp: scene.timestamp_utc });
+    }, [scene?.timestamp_utc, t]);
 
     const scaleIndicator = useMemo(() => {
         const zoom = viewport.zoom;
-        const gridStepAu = zoom > 80 ? 0.5 : zoom > 30 ? 1 : zoom > 12 ? 2 : 5;
+        const gridStepAu = resolveGridStepAu(zoom);
         const pixels = gridStepAu * zoom;
         return {
-            label: `Scale: ${formatAu(gridStepAu)} / square`,
+            label: t('canvas.solar.scale', { value: formatAu(gridStepAu) }),
             barWidthPx: clamp(pixels, 40, 180),
         };
-    }, [viewport.zoom]);
+    }, [viewport.zoom, t]);
+    const gestureHintText = useMemo(() => {
+        if (!isDragInteractionEnabled && !isZoomInteractionEnabled) {
+            return t('canvas.solar.gesture_disabled');
+        }
+
+        let touchLabel = '';
+        if (isDragInteractionEnabled && isZoomInteractionEnabled) {
+            touchLabel = t('canvas.solar.touch_pan_zoom');
+        } else if (isDragInteractionEnabled) {
+            touchLabel = t('canvas.solar.touch_pan');
+        } else if (isZoomInteractionEnabled) {
+            touchLabel = t('canvas.solar.touch_pinch_zoom');
+        }
+
+        let mouseLabel = '';
+        if (isDragInteractionEnabled && isZoomInteractionEnabled) {
+            mouseLabel = t('canvas.solar.mouse_drag_plus_wheel');
+        } else if (isDragInteractionEnabled) {
+            mouseLabel = t('canvas.solar.mouse_drag');
+        } else if (isZoomInteractionEnabled) {
+            mouseLabel = t('canvas.solar.mouse_wheel');
+        }
+
+        return t('canvas.solar.gesture_hint', {
+            touch: touchLabel,
+            mouse: mouseLabel,
+        });
+    }, [isDragInteractionEnabled, isZoomInteractionEnabled, t]);
+
+    useEffect(() => {
+        if (!onStatusBarInfoChange) return;
+        // Keep status-bar text in sync with the same toggles used by canvas overlays.
+        onStatusBarInfoChange({
+            gestureHintText: effectiveDisplayOptions.showGestureHint ? gestureHintText : '',
+            scaleLabel: effectiveDisplayOptions.showScaleIndicator ? scaleIndicator.label : '',
+        });
+    }, [
+        onStatusBarInfoChange,
+        effectiveDisplayOptions.showGestureHint,
+        effectiveDisplayOptions.showScaleIndicator,
+        gestureHintText,
+        scaleIndicator.label,
+    ]);
 
     return (
         <Box sx={{ width: '100%', height: '100%', position: 'relative' }}>
@@ -2189,47 +2408,6 @@ const SolarSystemCanvas = ({
                 >
                     {timestampText}
                 </Typography>
-            ) : null}
-            {effectiveDisplayOptions.showGestureHint ? (
-                <Box
-                    sx={{
-                        position: 'absolute',
-                        left: 10,
-                        bottom: 8,
-                        color: 'text.secondary',
-                        backgroundColor: theme.palette.mode === 'dark' ? 'rgba(0,0,0,0.28)' : 'rgba(255,255,255,0.52)',
-                        px: 0.8,
-                        py: 0.35,
-                        borderRadius: 0.5,
-                        fontFamily: 'monospace',
-                        opacity: 0.9,
-                    }}
-                >
-                    <Typography variant="caption" sx={{ fontFamily: 'inherit', lineHeight: 1.1 }}>
-                        {(isDragInteractionEnabled || isZoomInteractionEnabled)
-                            ? `Touch: ${isDragInteractionEnabled ? '2-finger pan' : ''}${isDragInteractionEnabled && isZoomInteractionEnabled ? '/zoom' : ''}${!isDragInteractionEnabled && isZoomInteractionEnabled ? 'pinch zoom' : ''} | Mouse: ${isDragInteractionEnabled ? 'drag' : ''}${isDragInteractionEnabled && isZoomInteractionEnabled ? ' + ' : ''}${isZoomInteractionEnabled ? 'wheel' : ''}`
-                            : 'Map gestures disabled; use toolbar controls.'}
-                    </Typography>
-                </Box>
-            ) : null}
-            {effectiveDisplayOptions.showScaleIndicator ? (
-                <Box
-                    sx={{
-                        position: 'absolute',
-                        right: 10,
-                        bottom: 8,
-                        color: 'text.secondary',
-                        backgroundColor: theme.palette.mode === 'dark' ? 'rgba(0,0,0,0.35)' : 'rgba(255,255,255,0.6)',
-                        px: 0.8,
-                        py: 0.5,
-                        borderRadius: 0.5,
-                        fontFamily: 'monospace',
-                    }}
-                >
-                    <Typography variant="caption" sx={{ fontFamily: 'inherit', lineHeight: 1.1 }}>
-                        {scaleIndicator.label}
-                    </Typography>
-                </Box>
             ) : null}
         </Box>
     );

@@ -68,6 +68,7 @@ HTMLCanvasElement.prototype.getContext = vi.fn(() => ({
   lineTo: vi.fn(),
   closePath: vi.fn(),
   stroke: vi.fn(),
+  fillText: vi.fn(),
   translate: vi.fn(),
   scale: vi.fn(),
   rotate: vi.fn(),

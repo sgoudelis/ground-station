@@ -17,6 +17,7 @@ dist-ssr
 !.vscode/extensions.json
 .idea
 .DS_Store
+out/
 *.suo
 *.ntvs*
 *.njsproj
@@ -99,3 +100,6 @@ backend/data/
 /frontend/e2e/.auth/
 /backend/images/satellites/full2/
 /backend/images/satellites/wip/
+
+# Temporary files
+tmp/

@@ -33,6 +33,7 @@ from sqlalchemy import (
     MetaData,
     String,
     TypeDecorator,
+    UniqueConstraint,
     text,
 )
 from sqlalchemy.dialects.postgresql import UUID
@@ -89,15 +90,18 @@ class JsonField(TypeDecorator):
         # Some dialects/DB drivers already return JSON columns as Python
         # objects (dict/list). Only decode when we receive a JSON string.
         if isinstance(value, (str, bytes, bytearray)):
-            return json.loads(value)
+            try:
+                return json.loads(value)
+            except (TypeError, ValueError):
+                return value
         return value
 
     def process_bind_param(self, value, dialect):
         """
-        When writing to DB, serialize Python object to JSON string.
+        When writing to DB, pass Python objects through to SQLAlchemy's JSON
+        serializer. Returning json.dumps(value) here double-encodes arrays on
+        SQLite, which makes cached vector rows unreadable as scene arrays.
         """
-        if value is not None:
-            return json.dumps(value)
         return value
 
 
@@ -117,6 +121,8 @@ class SDRType(str, PyEnum):
     RTLSDRTCPV3 = "rtlsdrtcpv3"
     RTLSDRUSBV4 = "rtlsdrusbv4"
     RTLSDRTCPV4 = "rtlsdrtcpv4"
+    AIRSPY = "airspy"
+    AIRSPYHF = "airspyhf"
     SOAPYSDRLOCAL = "soapysdrlocal"
     SOAPYSDRREMOTE = "soapysdrremote"
     UHD = "uhd"
@@ -232,12 +238,14 @@ class Transmitters(Base):
     invert = Column(Boolean, nullable=True)
     baud = Column(Integer, nullable=True)
     sat_id = Column(String, nullable=True)
-    norad_cat_id = Column(Integer, ForeignKey("satellites.norad_id"), nullable=False)
+    norad_cat_id = Column(Integer, ForeignKey("satellites.norad_id"), nullable=True)
+    target_key = Column(String, nullable=True, index=True)
     norad_follow_id = Column(Integer, nullable=True)
     status = Column(String, nullable=False)
     citation = Column(String, nullable=True)
     service = Column(String, nullable=True)
     source = Column(String, nullable=True)
+    source_transmitter_id = Column(String, nullable=True, index=True)
     iaru_coordination = Column(String, nullable=True)
     iaru_coordination_url = Column(String, nullable=True)
     itu_notification = Column(JSON, nullable=True)
@@ -249,6 +257,15 @@ class Transmitters(Base):
         nullable=True,
         default=datetime.now(timezone.utc),
         onupdate=datetime.now(timezone.utc),
+    )
+
+    __table_args__ = (
+        CheckConstraint(
+            "(norad_cat_id IS NOT NULL AND target_key IS NULL) OR "
+            "(norad_cat_id IS NULL AND target_key IS NOT NULL)",
+            name="ck_transmitters_owner_scope",
+        ),
+        UniqueConstraint("source", "source_transmitter_id", name="uq_transmitters_source_ext_id"),
     )
 
 
@@ -282,6 +299,7 @@ class SDRs(Base):
     port = Column(Integer, nullable=True)
     type = Column(Enum(SDRType), nullable=True)
     driver = Column(String, nullable=True)
+    antenna_labels = Column(JsonField, nullable=True)
     frequency_min = Column(Integer, nullable=True)
     frequency_max = Column(Integer, nullable=True)
     added = Column(AwareDateTime, nullable=False, default=datetime.now(timezone.utc))

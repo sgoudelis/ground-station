@@ -214,15 +214,15 @@ def _build_partial_row_emitter(
 async def get_celestial_scene(
     sio: Any, data: Optional[Dict], logger: Any, sid: str
 ) -> Dict[str, Any]:
-    """Fetch current celestial scene for one-time UI render data."""
+    """Fetch current celestial scene, cache-only unless explicitly allowed."""
     logger.debug(f"Fetching celestial scene, data: {data}")
     payload = await _build_scene_payload(data, logger)
+    allow_network_fetch = bool(payload.get("allow_network_fetch"))
     scene = await build_celestial_scene(
         data=payload,
         logger=logger,
         force_refresh=False,
-        # Scene reads should resolve the requested projection window, not only cache-only fallbacks.
-        allow_network_fetch=True,
+        allow_network_fetch=allow_network_fetch,
     )
     return cast(Dict[str, Any], scene)
 
@@ -230,30 +230,40 @@ async def get_celestial_scene(
 async def get_solar_system_scene(
     sio: Any, data: Optional[Dict], logger: Any, sid: str
 ) -> Dict[str, Any]:
-    """Fetch fast offline solar system scene."""
+    """Fetch solar system scene, cache-only unless the caller explicitly allows network."""
     logger.debug(f"Fetching solar system scene, data: {data}")
-    scene = await build_solar_system_scene(data=cast(Optional[Dict[str, Any]], data), logger=logger)
+    payload = cast(Optional[Dict[str, Any]], data)
+    allow_network_fetch = bool(
+        payload.get("allow_network_fetch") if isinstance(payload, dict) else False
+    )
+    scene = await build_solar_system_scene(
+        data=payload,
+        logger=logger,
+        allow_network_fetch=allow_network_fetch,
+    )
     return cast(Dict[str, Any], scene)
 
 
 async def get_celestial_tracks(
     sio: Any, data: Optional[Dict], logger: Any, sid: str
 ) -> Dict[str, Any]:
-    """Fetch Horizons-backed celestial tracks only."""
+    """Fetch celestial tracks, cache-only unless explicitly allowed."""
     logger.debug(f"Fetching celestial tracks, data: {data}")
     payload = await _build_scene_payload(data, logger)
-    observer_location = await _load_stream_observer_location()
-    emit_partial_row = _build_partial_row_emitter(
-        sio=sio,
-        payload=payload,
-        observer_location=observer_location,
-    )
+    allow_network_fetch = bool(payload.get("allow_network_fetch"))
+    emit_partial_row = None
+    if allow_network_fetch:
+        observer_location = await _load_stream_observer_location()
+        emit_partial_row = _build_partial_row_emitter(
+            sio=sio,
+            payload=payload,
+            observer_location=observer_location,
+        )
     tracks = await build_celestial_tracks(
         data=payload,
         logger=logger,
         force_refresh=False,
-        # Projection changes (e.g. 1d -> 1m) must fetch matching vectors on cache miss.
-        allow_network_fetch=True,
+        allow_network_fetch=allow_network_fetch,
         per_row_callback=emit_partial_row,
     )
     return cast(Dict[str, Any], tracks)

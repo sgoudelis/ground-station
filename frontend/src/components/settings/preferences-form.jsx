@@ -64,7 +64,6 @@ const USER_EDITABLE_KEYS = [
     'locale',
     'language',
     'theme',
-    'celestial_enabled',
     'toast_position',
 ];
 
@@ -285,6 +284,13 @@ const PreferencesForm = ({ mode = 'preferences' }) => {
 
     const themeChanged =
         !isIntegrationsMode && (draft.theme ?? '') !== (savedSnapshot.theme ?? '');
+
+    useEffect(() => {
+        // Normalize stale persisted theme values that are no longer available.
+        if (!isIntegrationsMode && draft.theme && !themesOptions.some((option) => option.id === draft.theme)) {
+            setDraft((prev) => ({ ...prev, theme: 'auto' }));
+        }
+    }, [draft.theme, isIntegrationsMode, themesOptions]);
 
     useEffect(() => {
         const normalized = normalizePreferences(activePreferences, activeKeys);
@@ -542,38 +548,6 @@ const PreferencesForm = ({ mode = 'preferences' }) => {
                             </Grid>
                                 </SettingsSection>
 
-                                <SettingsSection
-                                    title={t('preferences.group_experimental', { defaultValue: 'Experimental' })}
-                                    description={t('preferences.group_experimental_help', {
-                                        defaultValue: 'Feature flags for pages and flows that are still under active development.',
-                                    })}
-                                >
-                            <Grid container spacing={2} columns={12}>
-                                <Grid size={{ xs: 12, md: 6 }}>
-                                    <Box sx={preferenceCardSx}>
-                                        <PreferenceFieldHeading
-                                            title={t('preferences.celestial_page')}
-                                            subtitle={t('preferences.celestial_page_help', { defaultValue: 'Show or hide the Solar System page while it is under development.' })}
-                                        />
-                                        <FormControl fullWidth size="small" disabled={isSaving || isLoading}>
-                                            <InputLabel>{t('preferences.celestial_page')}</InputLabel>
-                                            <Select
-                                                value={draft.celestial_enabled || 'false'}
-                                                label={t('preferences.celestial_page')}
-                                                onChange={(event) => handleDraftChange('celestial_enabled', event.target.value)}
-                                            >
-                                                <MenuItem value="false">
-                                                    {t('preferences.celestial_hidden', { defaultValue: 'Hidden (default)' })}
-                                                </MenuItem>
-                                                <MenuItem value="true">
-                                                    {t('preferences.celestial_visible', { defaultValue: 'Visible' })}
-                                                </MenuItem>
-                                            </Select>
-                                        </FormControl>
-                                    </Box>
-                                </Grid>
-                            </Grid>
-                                </SettingsSection>
                             </>
                         ) : null}
 

@@ -7,6 +7,14 @@ import pytest
 from tracker.rotatorhandler import RotatorHandler
 
 
+class _Queue:
+    def __init__(self):
+        self.items = []
+
+    def put(self, item):
+        self.items.append(item)
+
+
 class _DummyTracker:
     def __init__(self, azimuth_mode: str):
         self.rotator_controller = object()
@@ -18,8 +26,14 @@ class _DummyTracker:
             "az": 0.0,
             "el": 0.0,
             "slewing": False,
+            "error": False,
         }
-        self.azimuth_limits = (-180, 180) if azimuth_mode == "-180_180" else (0, 360)
+        if azimuth_mode == "-180_180":
+            self.azimuth_limits = (-180, 180)
+        elif azimuth_mode == "0_450":
+            self.azimuth_limits = (0, 450)
+        else:
+            self.azimuth_limits = (0, 360)
         self.elevation_limits = (0, 90)
         self.rotator_command_state = {
             "in_flight": False,
@@ -34,6 +48,7 @@ class _DummyTracker:
         self.rotator_retarget_threshold_deg = 2.0
         self.rotator_command_refresh_sec = 6.0
         self.rotator_settle_hits_required = 2
+        self.queue_out = _Queue()
 
 
 @pytest.mark.asyncio
@@ -68,6 +83,23 @@ async def test_tracking_command_stays_0_to_360_in_default_mode():
     assert sent == [(270.0, 45.0)]
 
 
+@pytest.mark.asyncio
+async def test_tracking_command_uses_overlap_candidate_when_mode_is_0_450():
+    tracker = _DummyTracker("0_450")
+    tracker.rotator_data["az"] = 430.0
+    handler = RotatorHandler(tracker)
+    sent = []
+
+    async def _capture_issue(target_az, target_el):
+        sent.append((target_az, target_el))
+
+    handler._issue_rotator_command = _capture_issue
+
+    await handler.control_rotator_position((20.0, 45.0))
+
+    assert sent == [(380.0, 45.0)]
+
+
 def test_target_within_tolerance_handles_wraparound():
     tracker = _DummyTracker("0_360")
     handler = RotatorHandler(tracker)
@@ -86,6 +118,17 @@ def test_target_within_tolerance_handles_mixed_azimuth_representations():
     tracker.el_tolerance = 2.0
 
     assert handler._target_within_tolerance(270.0, 20.0, -90.0, 20.0)
+
+
+def test_target_within_tolerance_in_overlap_mode_uses_absolute_distance():
+    tracker = _DummyTracker("0_450")
+    handler = RotatorHandler(tracker)
+
+    tracker.az_tolerance = 2.0
+    tracker.el_tolerance = 2.0
+
+    assert not handler._target_within_tolerance(85.0, 20.0, 445.0, 20.0)
+    assert handler._target_within_tolerance(444.5, 20.0, 445.0, 20.0)
 
 
 @pytest.mark.asyncio
@@ -213,3 +256,82 @@ async def test_state_change_to_tracking_does_not_force_connected_flags_on_connec
 
     assert tracker.rotator_data["connected"] is False
     assert tracker.rotator_data["tracking"] is False
+
+
+@pytest.mark.asyncio
+async def test_update_hardware_position_unwraps_overlap_reading_to_absolute_turn():
+    tracker = _DummyTracker("0_450")
+    tracker.rotator_data["az"] = 430.0
+
+    class _Controller:
+        async def get_position(self):
+            return 10.0, 35.0
+
+    tracker.rotator_controller = _Controller()
+    handler = RotatorHandler(tracker)
+
+    await handler.update_hardware_position()
+
+    assert tracker.rotator_data["az"] == 370.0
+    assert tracker.rotator_data["el"] == 35.0
+
+
+@pytest.mark.asyncio
+async def test_update_hardware_position_preserves_absolute_overlap_reading():
+    tracker = _DummyTracker("0_450")
+    tracker.rotator_data["az"] = 10.0
+
+    class _Controller:
+        async def get_position(self):
+            return 370.0, 35.0
+
+    tracker.rotator_controller = _Controller()
+    handler = RotatorHandler(tracker)
+
+    await handler.update_hardware_position()
+
+    assert tracker.rotator_data["az"] == 370.0
+    assert tracker.rotator_data["el"] == 35.0
+
+
+@pytest.mark.asyncio
+async def test_update_hardware_position_keeps_wrapped_overlap_reading_on_cold_start():
+    tracker = _DummyTracker("0_450")
+    tracker.rotator_data["az"] = None
+
+    class _Controller:
+        async def get_position(self):
+            return 20.0, 35.0
+
+    tracker.rotator_controller = _Controller()
+    handler = RotatorHandler(tracker)
+
+    await handler.update_hardware_position()
+
+    assert tracker.rotator_data["az"] == 20.0
+    assert tracker.rotator_data["el"] == 35.0
+
+
+@pytest.mark.asyncio
+async def test_overlap_mode_reports_error_when_extended_command_is_rejected():
+    tracker = _DummyTracker("0_450")
+    tracker.rotator_data["az"] = 430.0
+    sent = []
+
+    class _Controller:
+        async def set_position(self, target_az, target_el):
+            sent.append((target_az, target_el))
+            raise RuntimeError("Failed to set position: RPRT -17")
+            yield
+
+    tracker.rotator_controller = _Controller()
+    handler = RotatorHandler(tracker)
+
+    await handler.control_rotator_position((20.0, 45.0))
+
+    assert sent == [(380.0, 45.0)]
+    assert tracker.rotator_data["error"] is True
+    assert tracker.rotator_data["stopped"] is True
+    assert tracker.rotator_data["outofbounds"] is True
+    assert tracker.rotator_command_state["in_flight"] is False
+    assert len(tracker.queue_out.items) == 1

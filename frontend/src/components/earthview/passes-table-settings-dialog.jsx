@@ -38,9 +38,47 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import {
+    resetPassesTableSettings,
     setPassesTableColumnVisibility,
     setPassesTablePageSize,
 } from './earthview-slice.jsx';
+const DIALOG_PAPER_SX = {
+    bgcolor: 'background.paper',
+    border: (theme) => `1px solid ${theme.palette.divider}`,
+    borderRadius: 2,
+};
+const DIALOG_TITLE_SX = {
+    bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'grey.900' : 'grey.100'),
+    borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
+    fontSize: '1.125rem',
+    fontWeight: 'bold',
+    py: 2.2,
+};
+const DIALOG_CONTENT_SX = {
+    px: 2,
+    pt: 2,
+    pb: 1.5,
+};
+const DIALOG_ACTIONS_SX = {
+    px: 2,
+    py: 1.5,
+    bgcolor: 'background.paper',
+    borderTop: (theme) => `1px solid ${theme.palette.divider}`,
+};
+const FOOTER_ACTION_ROW_SX = {
+    width: '100%',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 1,
+    overflowX: 'auto',
+    msOverflowStyle: 'none',
+    scrollbarWidth: 'none',
+    '&::-webkit-scrollbar': { display: 'none' },
+    '& > *': {
+        flexShrink: 0,
+        whiteSpace: 'nowrap',
+    },
+};
 
 const PassesTableSettingsDialog = ({ open, onClose }) => {
     const { t } = useTranslation('earthview');
@@ -61,6 +99,10 @@ const PassesTableSettingsDialog = ({ open, onClose }) => {
         dispatch(setPassesTablePageSize(event.target.value));
     };
 
+    const handleResetValues = () => {
+        dispatch(resetPassesTableSettings());
+    };
+
     const columns = [
         { name: 'status', label: 'Status', category: 'basic', alwaysVisible: true },
         { name: 'name', label: t('passes_table.name'), category: 'basic', alwaysVisible: true },
@@ -68,6 +110,7 @@ const PassesTableSettingsDialog = ({ open, onClose }) => {
         { name: 'name_other', label: t('passes_table.name_other'), category: 'names' },
         { name: 'peak_altitude', label: t('passes_table.peak_elevation'), category: 'basic' },
         { name: 'elevation', label: t('passes_table.current_elevation'), category: 'basic' },
+        { name: 'pass_tags', label: t('passes_table.pass_types', { defaultValue: 'Pass Types' }), category: 'basic' },
         { name: 'progress', label: t('passes_table.progress'), category: 'basic', alwaysVisible: true },
         { name: 'duration', label: t('passes_table.duration'), category: 'basic' },
         { name: 'transmitter_links', label: t('passes_table.transmitter_links', { defaultValue: 'Links' }), category: 'basic' },
@@ -97,9 +140,9 @@ const PassesTableSettingsDialog = ({ open, onClose }) => {
     };
 
     return (
-        <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-            <DialogTitle>{t('passes_table_settings.title')}</DialogTitle>
-            <DialogContent>
+        <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth PaperProps={{ sx: DIALOG_PAPER_SX }}>
+            <DialogTitle sx={DIALOG_TITLE_SX}>{t('passes_table_settings.title')}</DialogTitle>
+            <DialogContent sx={DIALOG_CONTENT_SX}>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                     {t('passes_table_settings.description')}
                 </Typography>
@@ -158,10 +201,16 @@ const PassesTableSettingsDialog = ({ open, onClose }) => {
                     </Box>
                 ))}
             </DialogContent>
-            <DialogActions>
-                <Button onClick={onClose} variant="contained">
-                    {t('passes_table_settings.close')}
-                </Button>
+            <DialogActions sx={DIALOG_ACTIONS_SX}>
+                <Box sx={FOOTER_ACTION_ROW_SX}>
+                    <Button onClick={handleResetValues} variant="outlined">
+                        Reset Values
+                    </Button>
+                    <Box sx={{ flex: 1, minWidth: 8 }} />
+                    <Button onClick={onClose} variant="contained">
+                        {t('passes_table_settings.close')}
+                    </Button>
+                </Box>
             </DialogActions>
         </Dialog>
     );

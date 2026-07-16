@@ -35,14 +35,8 @@ class RecorderManager(ConsumerManager):
         self.logger = logging.getLogger("recorder-manager")
         self.sio = sio  # Socket.IO instance for emitting notifications
 
-        # Load waterfall configuration
-        waterfall_config = self._load_waterfall_config()
-        self.waterfall_generator = WaterfallGenerator(waterfall_config)
-
-    def _load_waterfall_config(self) -> WaterfallConfig:
-        """Load waterfall configuration from file or use defaults."""
-        config_path = Path("backend/data/configs/waterfall_config.json")
-        return WaterfallConfig.load_from_file(config_path)
+        # Internal/fallback generation always uses built-in defaults.
+        self.waterfall_generator = WaterfallGenerator(WaterfallConfig())
 
     def start_recorder(self, sdr_id, session_id, recorder_class, recorder_id=None, **kwargs):
         """

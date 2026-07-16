@@ -28,7 +28,7 @@ def test_mission_target_normalization_preserves_rig_control_fields():
     assert payload["target_type"] == "mission"
     assert payload["rig_id"] == "rig-123"
     assert payload["rig_state"] == RigStates.CONNECTED
-    assert payload["transmitter_id"] == "none"
+    assert payload["transmitter_id"] == "tx-123"
     assert payload["rig_vfo"] == "1"
 
 
@@ -51,11 +51,12 @@ def test_body_target_normalization_preserves_rig_control_fields():
     assert payload["body_id"] == "jupiter"
     assert payload["rig_id"] == "rig-abc"
     assert payload["rig_state"] == RigStates.TRACKING
-    assert payload["transmitter_id"] == "none"
+    assert payload["transmitter_id"] == "tx-abc"
     assert payload["rig_vfo"] == "2"
 
 
 def test_tracker_target_type_inference_uses_command_and_body_id():
+    assert _normalize_tracker_target_type({"mission_id": "mission:command_id"}) == "mission"
     assert _normalize_tracker_target_type({"command": "Voyager 1"}) == "mission"
     assert _normalize_tracker_target_type({"body_id": "rhea"}) == "body"
     assert _normalize_tracker_target_type({"norad_id": "25544"}) == "satellite"

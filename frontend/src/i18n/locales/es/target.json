@@ -119,6 +119,9 @@
   "satellite_map": {
     "title": "Seguimiento del objetivo"
   },
+  "target_retarget_dialog": {
+    "title": "Reasignar ranura o crear un nuevo objetivo"
+  },
   "pass_timeline": {
     "title": "Línea de tiempo de pasadas para {{name}} - Próximas {{hours}} horas"
   },

@@ -220,6 +220,7 @@
       },
       "add": "Add",
       "edit": "Edit",
+      "duplicate": "Duplicate",
       "delete": "Delete",
       "delete_confirm_title": "Confirm Deletion",
       "delete_confirm_message": "Are you sure you want to delete the selected transmitter(s)?",

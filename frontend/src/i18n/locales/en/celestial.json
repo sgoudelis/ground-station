@@ -1,0 +1,484 @@
+{
+  "common": {
+    "body": "Body",
+    "mission": "Mission",
+    "error": "Error",
+    "stale": "Stale",
+    "ok": "OK",
+    "yes": "Yes",
+    "no": "No",
+    "unknown": "Unknown",
+    "never": "Never",
+    "loading": "Loading..."
+  },
+  "units": {
+    "deg": "deg",
+    "au": "AU",
+    "km_per_s": "km/s",
+    "min": "min"
+  },
+  "errors": {
+    "unknown_error": "Unknown error"
+  },
+  "statusbar": {
+    "planets": "Planets",
+    "moons": "Moons",
+    "tracked": "Tracked"
+  },
+  "toolbar": {
+    "fit_all": "Fit all",
+    "zoom_in": "Zoom in",
+    "zoom_out": "Zoom out",
+    "reset_zoom": "Reset zoom",
+    "center_on_sun": "Center on Sun",
+    "refresh_scene": "Refresh celestial scene",
+    "layout_options": "Layout options",
+    "table_settings": "Table settings",
+    "go_fullscreen": "Go fullscreen",
+    "exit_fullscreen": "Exit fullscreen"
+  },
+  "main_layout": {
+    "planetarium_title": "Planetarium",
+    "solar_system_layout_title": "Solar System Layout",
+    "monitored_title": "Monitored Celestial",
+    "loading": "Loading...",
+    "loading_planetarium_vectors": "Loading planetarium vectors...",
+    "loading_solar_vectors": "Loading solar system vectors...",
+    "updating": "Updating..."
+  },
+  "layout_options": {
+    "title": "Solar System Layout Options",
+    "apply": "Apply",
+    "reset_defaults": "Reset Defaults",
+    "view_mode": {
+      "title": "View Mode",
+      "subtitle": "Choose the primary celestial visualization for this island.",
+      "label": "View",
+      "solar_system": "Solar System",
+      "planetarium": "Planetarium"
+    },
+    "map_interaction": {
+      "title": "Map Interaction",
+      "solar_subtitle": "Enable gesture-driven panning and zooming on the solar-system map.",
+      "planetarium_subtitle": "Enable gesture-driven panning and zooming in the planetarium viewport."
+    },
+    "sections": {
+      "solar_scene_elements": {
+        "title": "Scene Elements",
+        "subtitle": "Primary solar system layers and labels."
+      },
+      "solar_tracked_targets": {
+        "title": "Tracked Targets",
+        "subtitle": "Tracked objects and their orbit/label overlays."
+      },
+      "solar_astronomy_background": {
+        "title": "Astronomy Background",
+        "subtitle": "Reference layers behind the map."
+      },
+      "solar_guides_and_metadata": {
+        "title": "Guides and Metadata",
+        "subtitle": "Contextual markers, labels, and scene metadata."
+      },
+      "planetarium_sky_layers": {
+        "title": "Sky Layers",
+        "subtitle": "Primary overlays for the planetarium viewport."
+      },
+      "planetarium_target_overlays": {
+        "title": "Target Overlays",
+        "subtitle": "Tracking overlays and labels for planets and targets."
+      }
+    },
+    "options": {
+      "enable_map_dragging": {
+        "label": "Enable map dragging",
+        "description": "Allow click-and-drag panning on the map. When off, use controls."
+      },
+      "enable_map_zooming": {
+        "label": "Enable map zooming",
+        "description": "Allow wheel and pinch zoom gestures. When off, use zoom buttons."
+      },
+      "show_grid": {
+        "label": "Show grid",
+        "description": "Display a reference grid for quick spatial orientation."
+      },
+      "show_planets": {
+        "label": "Show planets",
+        "description": "Render planets and major solar-system bodies in the viewport."
+      },
+      "show_planet_labels": {
+        "label": "Show planet labels",
+        "description": "Show body names next to visible planets."
+      },
+      "show_planet_labels_for_planetarium": {
+        "description": "Show labels for planetary bodies."
+      },
+      "show_planet_orbits": {
+        "label": "Show planet orbits",
+        "description": "Draw orbital rings/paths for planetary motion context."
+      },
+      "show_tracked_objects": {
+        "label": "Show tracked objects",
+        "description": "Display currently tracked mission/body markers."
+      },
+      "show_tracked_orbits": {
+        "label": "Show tracked orbits",
+        "description": "Overlay sampled trajectory paths for tracked targets."
+      },
+      "show_tracked_labels": {
+        "label": "Show tracked labels",
+        "description": "Show labels and telemetry context for tracked targets."
+      },
+      "show_bright_star_field": {
+        "label": "Show bright-star field",
+        "description": "Render a vector ecliptic projection from the Bright Star Catalogue."
+      },
+      "show_asteroid_zones": {
+        "label": "Show asteroid zones",
+        "description": "Display major asteroid-belt region overlays."
+      },
+      "show_asteroid_zone_labels": {
+        "label": "Show asteroid zone labels",
+        "description": "Annotate asteroid regions with zone names."
+      },
+      "show_resonance_markers": {
+        "label": "Show resonance markers",
+        "description": "Render key orbital resonance reference markers."
+      },
+      "show_epoch_label": {
+        "label": "Show epoch label",
+        "description": "Show the scene timestamp used for current positions."
+      },
+      "show_scale_label": {
+        "label": "Show scale label",
+        "description": "Show the current viewport distance scale reference."
+      },
+      "show_gesture_hint": {
+        "label": "Show gesture hint",
+        "description": "Show a short help hint for map interaction controls."
+      },
+      "show_sky_grid": {
+        "label": "Show sky grid",
+        "description": "Draw azimuth/elevation guide lines."
+      },
+      "show_horizon_compass": {
+        "label": "Show horizon compass",
+        "description": "Draw the horizon line with N/E/S/W ticks."
+      },
+      "show_star_field": {
+        "label": "Show star field",
+        "description": "Render bright stars from the loaded sky catalog."
+      },
+      "show_star_names": {
+        "label": "Show star names",
+        "description": "Label bright named stars when zoom allows."
+      },
+      "show_constellation_labels": {
+        "label": "Show constellation labels",
+        "description": "Render constellation names in the sky background."
+      },
+      "show_pass_curves": {
+        "label": "Show pass curves",
+        "description": "Draw predicted pass arcs for visible targets."
+      },
+      "show_target_labels": {
+        "label": "Show target labels",
+        "description": "Show labels for tracked targets."
+      },
+      "show_rotator_crosshair": {
+        "label": "Show rotator crosshair",
+        "description": "Render the live rotator crosshair when available."
+      },
+      "show_hud_labels": {
+        "label": "Show HUD labels",
+        "description": "Show viewport and observer/timestamp readouts."
+      }
+    }
+  },
+  "topbar": {
+    "projection": {
+      "past": "Past",
+      "future": "Future"
+    },
+    "actions": {
+      "manage": "Manage",
+      "refresh": "Refresh",
+      "refresh_all": "Refresh All",
+      "enable_target": "Enable target",
+      "disable_target": "Disable target",
+      "clear_color": "Clear"
+    },
+    "dialogs": {
+      "add_title": "Add Monitored Celestial Target",
+      "manage_title": "Manage Monitored Celestial Targets",
+      "delete_title": "Delete Monitored Target",
+      "edit_title": "Edit Monitored Celestial Target"
+    },
+    "fields": {
+      "target_type": "Target Type",
+      "mission_spacecraft": "Mission / Spacecraft",
+      "solar_body": "Solar Body",
+      "target": "Target",
+      "target_placeholder": "Type command or pick from catalog",
+      "target_body": "Target Body",
+      "horizons_command": "Horizons Command",
+      "display_name": "Display Name",
+      "color": "Color",
+      "color_placeholder": "#06D6A0",
+      "pick_color": "Pick color"
+    },
+    "helper": {
+      "using_static_catalog": "Using static catalog entry.",
+      "using_exact_command": "Using exact Horizons command.",
+      "selected_mission_not_active": "Selected mission is not active; Horizons data may be limited.",
+      "loading_spacecraft_catalog": "Loading spacecraft catalog...",
+      "loading_body_catalog": "Loading body catalog..."
+    },
+    "labels": {
+      "already_monitored": "Already monitored",
+      "static_body": "Static Body"
+    },
+    "table": {
+      "type": "Type",
+      "mission": "Mission",
+      "last_refresh": "Last Refresh"
+    },
+    "delete": {
+      "confirm": "Are you sure you want to delete this monitored target?",
+      "unknown_target": "Unknown target"
+    },
+    "empty": {
+      "no_targets": "No monitored celestial targets yet."
+    },
+    "errors": {
+      "failed_load_spacecraft_catalog": "Failed to load spacecraft catalog.",
+      "failed_load_body_catalog": "Failed to load celestial body catalog.",
+      "socket_unavailable": "Socket connection is not available.",
+      "display_name_command_required": "Display name and command are required.",
+      "command_already_monitored": "This command is already in the monitored list.",
+      "select_body_target": "Select a body target.",
+      "body_already_monitored": "This body is already in the monitored list.",
+      "display_name_required": "Display name is required.",
+      "command_required_for_mission": "Command is required for mission targets.",
+      "body_required_for_body_target": "Body target is required for body targets.",
+      "invalid_hex_color": "Color must be a valid hex value like #1A2B3C.",
+      "failed_update_target": "Failed to update monitored target."
+    },
+    "feedback": {
+      "added_mission": "Added \"{{name}}\" using command \"{{command}}\".",
+      "added_body": "Added body target \"{{name}}\"."
+    },
+    "mission_status": {
+      "active": "Active",
+      "completed": "Completed",
+      "failed": "Failed"
+    },
+    "fallback": {
+      "target": "target"
+    }
+  },
+  "passes": {
+    "title": "Celestial Passes",
+    "count_label_single": "pass",
+    "count_label_plural": "passes",
+    "table_settings": "Table settings",
+    "refresh": "Refresh passes",
+    "timeline_default_target_name": "Celestial target",
+    "status": {
+      "visible": "Visible",
+      "passed": "Passed",
+      "upcoming": "Upcoming"
+    },
+    "columns": {
+      "status": "Status",
+      "name": "Name",
+      "type": "Type",
+      "peak_elevation": "Peak Elevation",
+      "progress": "Progress",
+      "duration": "Duration",
+      "start": "Start",
+      "end": "End",
+      "start_azimuth": "Start Azimuth",
+      "end_azimuth": "End Azimuth",
+      "peak_azimuth": "Peak Azimuth",
+      "cache": "Cache",
+      "stale": "Stale",
+      "source": "Source"
+    },
+    "summary": {
+      "start": "Start",
+      "end": "End"
+    },
+    "quick_filters": {
+      "all_tooltip": "All passes (Alt+1)",
+      "all_aria": "All passes",
+      "all_short": "All",
+      "live_tooltip": "Live passes (Alt+2)",
+      "live_aria": "Live passes",
+      "live_short": "Live",
+      "next_30_tooltip": "Live or next 30 minutes (Alt+3)",
+      "next_30_aria": "Next 30 minutes",
+      "next_30_short": "Next 30m",
+      "highest_elevation_tooltip": "Highest elevation first (Alt+4)",
+      "highest_elevation_aria": "Highest elevation first",
+      "high_el_short": "High El"
+    },
+    "settings": {
+      "title": "Celestial Passes Table Settings",
+      "rows_per_page": "Rows per page",
+      "reset_values": "Reset Values",
+      "close": "Close",
+      "categories": {
+        "basic": "Basic",
+        "time": "Time",
+        "metrics": "Metrics",
+        "source": "Source"
+      }
+    }
+  },
+  "monitored": {
+    "no_color": "No color",
+    "columns": {
+      "name": "Name",
+      "type": "Type",
+      "target_id": "Target ID",
+      "source": "Source",
+      "source_mode": "Source Mode",
+      "elevation": "Elevation (deg)",
+      "azimuth": "Azimuth (deg)",
+      "distance_from_sun_au": "Distance from Sun (AU)",
+      "speed_km_s": "Speed (km/s)",
+      "light_time_min": "Light Time (min)",
+      "last_refresh": "Last Refresh",
+      "refresh_age": "Refresh Age",
+      "projection_span": "Projection Span",
+      "cache": "Cache",
+      "stale": "Stale",
+      "samples": "Samples",
+      "last_error": "Last Error"
+    },
+    "settings": {
+      "title": "Monitored Celestial Table Settings",
+      "rows_per_page": "Rows per page",
+      "reset_values": "Reset Values",
+      "close": "Close",
+      "categories": {
+        "identity": "Identity",
+        "state": "State",
+        "metrics": "Metrics",
+        "projection": "Projection"
+      }
+    },
+    "summary": {
+      "source": "Source",
+      "mode": "Mode"
+    }
+  },
+  "info": {
+    "title": "Celestial Info",
+    "empty_hint": "Select a body or mission from Monitored Celestial or Celestial Passes.",
+    "edit_transmitters": "Edit Transmitters",
+    "no_upcoming_pass": "No upcoming pass",
+    "status": {
+      "visible": "Visible",
+      "below_horizon": "Below Horizon"
+    },
+    "sections": {
+      "pass_window": "Pass Window",
+      "data_source": "Data Source"
+    },
+    "metrics": {
+      "target_type": "Target Type",
+      "body_id": "Body ID",
+      "mission_command": "Mission Command",
+      "elevation": "Elevation",
+      "azimuth": "Azimuth",
+      "distance_from_sun_au": "Distance from Sun",
+      "distance_from_sun_km": "Distance from Sun (km)",
+      "speed": "Speed",
+      "light_time": "Light Time",
+      "total_passes": "Total Passes",
+      "active_pass": "Active Pass",
+      "active_since": "Active Since",
+      "next_start": "Next Start",
+      "ends": "Ends",
+      "next_peak": "Next Peak",
+      "source": "Source",
+      "cache": "Cache",
+      "stale": "Stale",
+      "last_refresh": "Last Refresh"
+    }
+  },
+  "context": {
+    "copy_body_id": "Copy body ID",
+    "copy_mission_command": "Copy mission command",
+    "copy_target_key": "Copy target key",
+    "copy_target_summary": "Copy target summary",
+    "copy_pass_summary": "Copy pass summary"
+  },
+  "time": {
+    "relative": {
+      "in_less_than_minute": "in <1m",
+      "less_than_minute_ago": "<1m ago",
+      "in_minutes": "in {{count}}m",
+      "minutes_ago": "{{count}}m ago",
+      "in_hours": "in {{count}}h",
+      "hours_ago": "{{count}}h ago",
+      "in_days": "in {{count}}d",
+      "days_ago": "{{count}}d ago"
+    },
+    "duration": {
+      "minutes_seconds": "{{minutes}}m {{seconds}}s"
+    },
+    "age": {
+      "seconds": "{{count}}s",
+      "minutes": "{{count}}m",
+      "hours": "{{count}}h",
+      "days": "{{count}}d"
+    },
+    "projection_span": "{{past}}h / {{future}}h @ {{step}}m"
+  },
+  "canvas": {
+    "solar": {
+      "anchor_sun": "Sun",
+      "anchor_earth": "Earth",
+      "anchor_galactic_center": "Galactic Center",
+      "anchor_galactic_center_short": "Galactic Ctr",
+      "no_epoch": "No epoch",
+      "epoch": "Epoch: {{timestamp}}",
+      "scale": "Scale: {{value}} / square",
+      "touch_pan": "2-finger pan",
+      "touch_pan_zoom": "2-finger pan/zoom",
+      "touch_pinch_zoom": "pinch zoom",
+      "mouse_drag": "drag",
+      "mouse_wheel": "wheel",
+      "mouse_drag_plus_wheel": "drag + wheel",
+      "gesture_hint": "Touch: {{touch}} | Mouse: {{mouse}}",
+      "gesture_disabled": "Map gestures disabled; use toolbar controls."
+    },
+    "planetarium": {
+      "aria_label": "Planetarium sky map",
+      "configure_location": "Configure a ground-station location to render the local sky.",
+      "fallback_target": "Target",
+      "target_below_horizon": "Target below horizon",
+      "hud_view_label": "Az {{az}} / El {{el}} / FOV {{fov}}",
+      "cardinal": {
+        "north": "N",
+        "east": "E",
+        "south": "S",
+        "west": "W"
+      }
+    },
+    "moon_phase": {
+      "new_moon": "New Moon",
+      "waxing_crescent": "Waxing Crescent",
+      "first_quarter": "First Quarter",
+      "waxing_gibbous": "Waxing Gibbous",
+      "full_moon": "Full Moon",
+      "waning_gibbous": "Waning Gibbous",
+      "last_quarter": "Last Quarter",
+      "waning_crescent": "Waning Crescent",
+      "fallback": "Moon Phase",
+      "description": "{{label}}, {{percent}}% illuminated"
+    }
+  }
+}

@@ -119,6 +119,9 @@
   "satellite_map": {
     "title": "Doel volgen"
   },
+  "target_retarget_dialog": {
+    "title": "Wijs een slot opnieuw toe of maak een nieuw doel"
+  },
   "pass_timeline": {
     "title": "Passage Tijdlijn voor {{name}} - Volgende {{hours}} uur"
   },

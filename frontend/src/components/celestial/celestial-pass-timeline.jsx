@@ -1,6 +1,11 @@
 import React, { useMemo } from 'react';
 import { useSelector } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import PassTimeline from '../passes/timeline/pass-timeline.jsx';
+import {
+    buildTargetKeyFromCelestialRow,
+    buildTargetSlotNumberByTargetKey,
+} from '../target/celestial-target-utils.js';
 
 const CelestialPassTimeline = ({
     passes = [],
@@ -10,13 +15,19 @@ const CelestialPassTimeline = ({
     selectedTargetKey = '',
     onRefresh = null,
 }) => {
+    const { t } = useTranslation('celestial');
     const groundStationLocation = useSelector((state) => state.location.location);
+    const trackerInstances = useSelector((state) => state.trackerInstances?.instances || []);
     const timezone = useSelector(
         (state) => {
             const timezonePref = state.preferences.preferences.find((pref) => pref.name === 'timezone');
             return timezonePref ? timezonePref.value : 'UTC';
         },
         (prev, next) => prev === next,
+    );
+    const targetNumberByTargetKey = useMemo(
+        () => buildTargetSlotNumberByTargetKey(trackerInstances),
+        [trackerInstances],
     );
 
     const normalizedPasses = useMemo(() => {
@@ -33,23 +44,29 @@ const CelestialPassTimeline = ({
 
                 const peakElevation = Number(pass?.peak_elevation_deg);
                 const peakAltitude = Number.isFinite(peakElevation) ? Math.max(0, peakElevation) : 0;
-                const targetKey = String(pass?.target_key || '').trim();
+                // Backend rows can miss `target_key` for some sources; derive the canonical key locally.
+                const targetKey = buildTargetKeyFromCelestialRow(pass);
+                const mappedTargetNumber = Number(targetNumberByTargetKey?.[targetKey]);
                 const defaultId = `${targetKey || 'celestial-target'}_${eventStart}_${index}`;
 
                 return {
                     ...pass,
                     id: String(pass?.id || defaultId),
-                    name: String(pass?.name || targetKey || 'Celestial target'),
+                    name: String(pass?.name || targetKey || t('passes.timeline_default_target_name')),
+                    target_key: targetKey,
                     event_start: eventStart,
                     event_end: eventEnd,
                     peak_altitude: peakAltitude,
+                    targetNumber: Number.isFinite(mappedTargetNumber) && mappedTargetNumber > 0
+                        ? mappedTargetNumber
+                        : null,
                     distance_at_peak: Number.isFinite(Number(pass?.distance_at_peak)) ? Number(pass.distance_at_peak) : 0,
                     elevation_curve: Array.isArray(pass?.elevation_curve) ? pass.elevation_curve : [],
                 };
             })
             .filter(Boolean)
             .sort((left, right) => new Date(left.event_start).getTime() - new Date(right.event_start).getTime());
-    }, [passes]);
+    }, [passes, targetNumberByTargetKey, t]);
     const normalizedSelectedTargetKey = useMemo(
         () => String(selectedTargetKey || '').trim(),
         [selectedTargetKey],

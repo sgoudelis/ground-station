@@ -6,7 +6,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Preferences Settings', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/admin/system/preferences');
+    await page.goto('/preferences');
     await page.waitForLoadState('domcontentloaded');
   });
 
@@ -105,9 +105,9 @@ test.describe('About Page', () => {
 test.describe('Settings Navigation Flow', () => {
   test('should navigate between different settings pages', async ({ page }) => {
     // Start at preferences
-    await page.goto('/admin/system/preferences');
+    await page.goto('/preferences');
     await page.waitForLoadState('networkidle');
-    expect(page.url()).toContain('/admin/system/preferences');
+    expect(page.url()).toContain('/preferences');
 
     // Navigate to location
     await page.goto('/admin/system/location');
@@ -128,7 +128,7 @@ test.describe('Settings Navigation Flow', () => {
 
 test.describe('Preferences Persistence', () => {
   test('should persist theme preference after refresh', async ({ page }) => {
-    await page.goto('/admin/system/preferences');
+    await page.goto('/preferences');
     await page.waitForLoadState('domcontentloaded');
 
     const themeSelect = page.locator('#theme-selector');

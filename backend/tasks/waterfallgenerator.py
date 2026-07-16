@@ -9,7 +9,7 @@ import logging
 import multiprocessing
 from multiprocessing import Queue
 from pathlib import Path
-from typing import Optional
+from typing import Any, Dict, Optional
 
 try:
     import setproctitle
@@ -24,14 +24,16 @@ logger = logging.getLogger("waterfall-task")
 
 
 def generate_waterfall_task(
-    recording_path: str, config_path: Optional[str] = None, _progress_queue: Optional[Queue] = None
+    recording_path: str,
+    options: Optional[Dict[str, Any]] = None,
+    _progress_queue: Optional[Queue] = None,
 ):
     """
     Generate waterfall spectrogram from a SigMF recording.
 
     Args:
         recording_path: Path to the recording (without extension)
-        config_path: Optional path to waterfall config JSON file
+        options: Optional manual waterfall generation options (UI-provided)
         _progress_queue: Queue for sending progress updates (injected by manager)
 
     Returns:
@@ -67,13 +69,8 @@ def generate_waterfall_task(
                 }
             )
 
-        # Load configuration
-        if config_path:
-            config = WaterfallConfig.load_from_file(Path(config_path))
-        else:
-            # Use default config path
-            default_config_path = Path("backend/data/configs/waterfall_config.json")
-            config = WaterfallConfig.load_from_file(default_config_path)
+        # Load default config and merge validated UI overrides.
+        config = WaterfallConfig.from_overrides(options)
 
         # Create generator
         generator = WaterfallGenerator(config)

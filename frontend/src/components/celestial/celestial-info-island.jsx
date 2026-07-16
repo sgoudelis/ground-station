@@ -1,11 +1,12 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Box, Button, CircularProgress, Divider, Tooltip, Typography } from '@mui/material';
+import { Box, Button, CircularProgress, Divider, IconButton, Tooltip, Typography } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import RadioButtonCheckedIcon from '@mui/icons-material/RadioButtonChecked';
 import { useTranslation } from 'react-i18next';
 import { getClassNamesBasedOnGridEditing, islandTitleBarSx, TitleBar } from '../common/common.jsx';
 import { useSocket } from '../common/socket.jsx';
@@ -15,6 +16,7 @@ import { useTargetRotatorSelectionDialog } from '../target/use-target-rotator-se
 import { toast } from '../../utils/toast-with-timestamp.jsx';
 import TargetIcon from './target-icon.jsx';
 import { resolveTargetDisplayName } from '../target/celestial-target-utils.js';
+import TransmittersDialog from '../satellites/transmitters-dialog.jsx';
 
 const AU_IN_KM = 149597870.7;
 const SECONDS_PER_DAY = 86400;
@@ -54,23 +56,29 @@ const formatDateTime = (isoValue, timezone, locale) => {
     return parsed.toLocaleString(locale, options);
 };
 
-const formatRelative = (isoValue, nowMs) => {
+const formatRelative = (isoValue, nowMs, t) => {
     if (!isoValue) return '-';
     const parsed = new Date(isoValue).getTime();
     if (!Number.isFinite(parsed)) return '-';
     const deltaSec = Math.round((parsed - nowMs) / 1000);
     const absSec = Math.abs(deltaSec);
-    if (absSec < 60) return deltaSec >= 0 ? 'in <1m' : '<1m ago';
+    if (absSec < 60) return deltaSec >= 0 ? t('time.relative.in_less_than_minute') : t('time.relative.less_than_minute_ago');
     if (absSec < 3600) {
         const minutes = Math.floor(absSec / 60);
-        return deltaSec >= 0 ? `in ${minutes}m` : `${minutes}m ago`;
+        return deltaSec >= 0
+            ? t('time.relative.in_minutes', { count: minutes })
+            : t('time.relative.minutes_ago', { count: minutes });
     }
     if (absSec < 86400) {
         const hours = Math.floor(absSec / 3600);
-        return deltaSec >= 0 ? `in ${hours}h` : `${hours}h ago`;
+        return deltaSec >= 0
+            ? t('time.relative.in_hours', { count: hours })
+            : t('time.relative.hours_ago', { count: hours });
     }
     const days = Math.floor(absSec / 86400);
-    return deltaSec >= 0 ? `in ${days}d` : `${days}d ago`;
+    return deltaSec >= 0
+        ? t('time.relative.in_days', { count: days })
+        : t('time.relative.days_ago', { count: days });
 };
 
 const MetricPair = ({ label, value }) => (
@@ -116,12 +124,15 @@ const CelestialInfoIsland = ({
     const dispatch = useDispatch();
     const { socket } = useSocket();
     const { t } = useTranslation('earthview');
+    const { t: tCelestial } = useTranslation('celestial');
+    const { t: tSat } = useTranslation('satellites');
     const { timezone, locale } = useUserTimeSettings();
     const trackerInstances = useSelector((state) => state.trackerInstances?.instances || []);
     const { trackingState, trackerViews } = useSelector((state) => state.targetSatTrack || {});
     const { requestRotatorForTarget, dialog: rotatorSelectionDialog } = useTargetRotatorSelectionDialog();
     const normalizedTargetKey = String(selectedTargetKey || '').trim();
     const nowMs = Date.now();
+    const [transmittersDialogOpen, setTransmittersDialogOpen] = useState(false);
 
     const trackByTargetKey = useMemo(() => {
         const map = {};
@@ -187,6 +198,14 @@ const CelestialInfoIsland = ({
         celestialRows: tracks,
     });
     const targetIdentifier = targetType === 'body' ? (bodyTargetId || '-') : (missionCommand || '-');
+    const targetTransmitters = Array.isArray(selectedTrack?.transmitters)
+        ? selectedTrack.transmitters
+        : (Array.isArray(selectedMonitored?.transmitters) ? selectedMonitored.transmitters : []);
+    const transmittersDialogData = {
+        name: targetName || targetIdentifier || '',
+        target_key: normalizedTargetKey,
+        transmitters: targetTransmitters,
+    };
     const selectedColor = normalizeHexColor(selectedTrack?.color || selectedMonitored?.color || '');
     const isTargetable = Boolean(
         normalizedTargetKey
@@ -211,7 +230,7 @@ const CelestialInfoIsland = ({
         if (selectedTrack?.error) {
             return {
                 icon: ErrorOutlineIcon,
-                label: 'Error',
+                label: tCelestial('common.error'),
                 color: 'error.main',
                 paletteKey: 'error',
             };
@@ -219,7 +238,7 @@ const CelestialInfoIsland = ({
         if (visible === true) {
             return {
                 icon: VisibilityIcon,
-                label: 'Visible',
+                label: tCelestial('info.status.visible'),
                 color: 'success.main',
                 paletteKey: 'success',
             };
@@ -227,14 +246,14 @@ const CelestialInfoIsland = ({
         if (visible === false) {
             return {
                 icon: VisibilityOffIcon,
-                label: 'Below Horizon',
+                label: tCelestial('info.status.below_horizon'),
                 color: 'info.main',
                 paletteKey: 'info',
             };
         }
         return {
             icon: HelpOutlineIcon,
-            label: 'Unknown',
+            label: tCelestial('common.unknown'),
             color: 'text.secondary',
             paletteKey: 'text',
         };
@@ -321,7 +340,7 @@ const CelestialInfoIsland = ({
         dispatch(setTrackingStateInBackend({ socket, data: newTrackingState }))
             .unwrap()
             .catch((error) => {
-                toast.error(`${t('satellite_info.failed_tracking')}: ${error?.message || error?.error || 'Unknown error'}`);
+                toast.error(`${t('satellite_info.failed_tracking')}: ${error?.message || error?.error || tCelestial('errors.unknown_error')}`);
             });
     };
 
@@ -335,7 +354,7 @@ const CelestialInfoIsland = ({
                 >
                     <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
                         <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                            {t('celestial.info_title', { defaultValue: 'Celestial Info' })}
+                            {tCelestial('info.title')}
                         </Typography>
                     </Box>
                 </TitleBar>
@@ -344,9 +363,7 @@ const CelestialInfoIsland = ({
                     {!normalizedTargetKey ? (
                         <Box sx={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', px: 2, py: 1.5 }}>
                             <Typography variant="body2" sx={{ color: 'text.secondary', fontStyle: 'italic', textAlign: 'center' }}>
-                                {t('celestial.info_empty_hint', {
-                                    defaultValue: 'Select a body or mission from Monitored Celestial or Celestial Passes.',
-                                })}
+                                {tCelestial('info.empty_hint')}
                             </Typography>
                         </Box>
                     ) : loading && !selectedTrack ? (
@@ -360,7 +377,7 @@ const CelestialInfoIsland = ({
                         }}>
                             <CircularProgress color="secondary" />
                             <Typography variant="body2" sx={{ mt: 2, color: 'text.secondary' }}>
-                                Loading...
+                                {tCelestial('common.loading')}
                             </Typography>
                         </Box>
                     ) : (
@@ -392,15 +409,28 @@ const CelestialInfoIsland = ({
                                             targetType={targetType}
                                             bodyId={targetIdentifier}
                                             size={44}
-                                            alt={targetName || 'Body'}
+                                            alt={targetName || tCelestial('common.body')}
                                             showMoonPhase={targetType === 'body'}
                                         />
                                         <Box sx={{ minWidth: 0 }}>
-                                            <Typography variant="subtitle1" sx={{ fontWeight: 700, lineHeight: 1.15 }}>
-                                                {targetName || '-'}
-                                            </Typography>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
+                                                <Typography variant="subtitle1" sx={{ fontWeight: 700, lineHeight: 1.15 }}>
+                                                    {targetName || '-'}
+                                                </Typography>
+                                                <Tooltip title={tCelestial('info.edit_transmitters')}>
+                                                    <span>
+                                                        <IconButton
+                                                            size="small"
+                                                            onClick={() => setTransmittersDialogOpen(true)}
+                                                            disabled={!normalizedTargetKey || isCardLoading}
+                                                        >
+                                                            <RadioButtonCheckedIcon fontSize="small" />
+                                                        </IconButton>
+                                                    </span>
+                                                </Tooltip>
+                                            </Box>
                                             <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                                                {targetType === 'body' ? 'Body' : 'Mission'} · {targetIdentifier}
+                                                {targetType === 'body' ? tCelestial('common.body') : tCelestial('common.mission')} · {targetIdentifier}
                                             </Typography>
                                         </Box>
                                     </Box>
@@ -437,40 +467,43 @@ const CelestialInfoIsland = ({
 
                             <Box sx={{ p: 1.5 }}>
                                 <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 1.25 }}>
-                                    <MetricPair label="Target Type" value={targetType === 'body' ? 'Body' : 'Mission'} />
                                     <MetricPair
-                                        label={targetType === 'body' ? 'Body ID' : 'Mission Command'}
+                                        label={tCelestial('info.metrics.target_type')}
+                                        value={targetType === 'body' ? tCelestial('common.body') : tCelestial('common.mission')}
+                                    />
+                                    <MetricPair
+                                        label={targetType === 'body' ? tCelestial('info.metrics.body_id') : tCelestial('info.metrics.mission_command')}
                                         value={targetIdentifier || '-'}
                                     />
-                                    <MetricPair label="Elevation" value={formatNumber(elevationDeg, 1, ' deg')} />
-                                    <MetricPair label="Azimuth" value={formatNumber(azimuthDeg, 1, ' deg')} />
-                                    <MetricPair label="Distance from Sun" value={formatNumber(distanceFromSunAu, 4, ' AU')} />
-                                    <MetricPair label="Distance from Sun (km)" value={formatNumber(distanceKm, 0)} />
-                                    <MetricPair label="Speed" value={formatNumber(speedKmS, 3, ' km/s')} />
-                                    <MetricPair label="Light Time" value={formatNumber(lightTimeMinutes, 2, ' min')} />
+                                    <MetricPair label={tCelestial('info.metrics.elevation')} value={formatNumber(elevationDeg, 1, ` ${tCelestial('units.deg')}`)} />
+                                    <MetricPair label={tCelestial('info.metrics.azimuth')} value={formatNumber(azimuthDeg, 1, ` ${tCelestial('units.deg')}`)} />
+                                    <MetricPair label={tCelestial('info.metrics.distance_from_sun_au')} value={formatNumber(distanceFromSunAu, 4, ` ${tCelestial('units.au')}`)} />
+                                    <MetricPair label={tCelestial('info.metrics.distance_from_sun_km')} value={formatNumber(distanceKm, 0)} />
+                                    <MetricPair label={tCelestial('info.metrics.speed')} value={formatNumber(speedKmS, 3, ` ${tCelestial('units.km_per_s')}`)} />
+                                    <MetricPair label={tCelestial('info.metrics.light_time')} value={formatNumber(lightTimeMinutes, 2, ` ${tCelestial('units.min')}`)} />
                                 </Box>
 
                                 <Divider sx={{ my: 1.25 }} />
 
                                 <Typography variant="overline" sx={{ color: 'secondary.main', fontWeight: 700 }}>
-                                    Pass Window
+                                    {tCelestial('info.sections.pass_window')}
                                 </Typography>
                                 <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 1.25, mt: 0.5 }}>
-                                    <MetricPair label="Total Passes" value={String(selectedPasses.length)} />
-                                    <MetricPair label="Active Pass" value={activePass ? 'Yes' : 'No'} />
+                                    <MetricPair label={tCelestial('info.metrics.total_passes')} value={String(selectedPasses.length)} />
+                                    <MetricPair label={tCelestial('info.metrics.active_pass')} value={activePass ? tCelestial('common.yes') : tCelestial('common.no')} />
                                     <MetricPair
-                                        label={activePass ? 'Active Since' : 'Next Start'}
+                                        label={activePass ? tCelestial('info.metrics.active_since') : tCelestial('info.metrics.next_start')}
                                         value={
                                             activePass
-                                                ? formatRelative(activePass.event_start, nowMs)
-                                                : (nextPass ? formatRelative(nextPass.event_start, nowMs) : 'No upcoming pass')
+                                                ? formatRelative(activePass.event_start, nowMs, tCelestial)
+                                                : (nextPass ? formatRelative(nextPass.event_start, nowMs, tCelestial) : tCelestial('info.no_upcoming_pass'))
                                         }
                                     />
                                     <MetricPair
-                                        label={activePass ? 'Ends' : 'Next Peak'}
+                                        label={activePass ? tCelestial('info.metrics.ends') : tCelestial('info.metrics.next_peak')}
                                         value={
                                             activePass
-                                                ? formatRelative(activePass.event_end, nowMs)
+                                                ? formatRelative(activePass.event_end, nowMs, tCelestial)
                                                 : (nextPass ? formatDateTime(nextPass.peak_time || nextPass.event_end, timezone, locale) : '-')
                                         }
                                     />
@@ -479,14 +512,14 @@ const CelestialInfoIsland = ({
                                 <Divider sx={{ my: 1.25 }} />
 
                                 <Typography variant="overline" sx={{ color: 'secondary.main', fontWeight: 700 }}>
-                                    Data Source
+                                    {tCelestial('info.sections.data_source')}
                                 </Typography>
                                 <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 1.25, mt: 0.5 }}>
-                                    <MetricPair label="Source" value={String(selectedTrack?.source || '-')} />
-                                    <MetricPair label="Cache" value={String(selectedTrack?.cache || '-')} />
-                                    <MetricPair label="Stale" value={selectedTrack?.stale ? 'Yes' : 'No'} />
+                                    <MetricPair label={tCelestial('info.metrics.source')} value={String(selectedTrack?.source || '-')} />
+                                    <MetricPair label={tCelestial('info.metrics.cache')} value={String(selectedTrack?.cache || '-')} />
+                                    <MetricPair label={tCelestial('info.metrics.stale')} value={selectedTrack?.stale ? tCelestial('common.yes') : tCelestial('common.no')} />
                                     <MetricPair
-                                        label="Last Refresh"
+                                        label={tCelestial('info.metrics.last_refresh')}
                                         value={formatDateTime(selectedMonitored?.lastRefreshAt, timezone, locale)}
                                     />
                                 </Box>
@@ -527,6 +560,16 @@ const CelestialInfoIsland = ({
                     </Button>
                 </Box>
             </Box>
+            <TransmittersDialog
+                open={transmittersDialogOpen}
+                onClose={() => setTransmittersDialogOpen(false)}
+                title={tSat('satellite_database.edit_transmitters_title', {
+                    name: targetName || normalizedTargetKey || '',
+                })}
+                satelliteData={transmittersDialogData}
+                variant="paper"
+                widthOffsetPx={20}
+            />
         </>
     );
 };

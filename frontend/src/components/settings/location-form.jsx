@@ -775,52 +775,59 @@ const LocationPage = ({
             sx={locationCardSx}
         >
             <Stack spacing={1.2}>
-                <Button
-                    variant="contained"
-                    color="secondary"
-                    fullWidth
-                    disabled={locationLoading || locationSaving}
-                    aria-label={t('location.get_current_location')}
-                    onClick={getCurrentLocation}
+                {/* Keep actions in a desktop row, and collapse for tablet/mobile widths. */}
+                <Stack
+                    spacing={1.2}
+                    direction={{ xs: 'column', lg: 'row' }}
+                    sx={{ alignItems: 'stretch' }}
                 >
-                    {locationLoading
-                        ? t('location.state_locating', { defaultValue: 'Locating...' })
-                        : t('location.get_current_location')}
-                </Button>
+                    <Button
+                        variant="contained"
+                        color="secondary"
+                        sx={{ width: { xs: '100%', lg: 'auto' }, flex: { lg: '1 1 0' } }}
+                        disabled={locationLoading || locationSaving}
+                        aria-label={t('location.get_current_location')}
+                        onClick={getCurrentLocation}
+                    >
+                        {locationLoading
+                            ? t('location.state_locating', { defaultValue: 'Locating...' })
+                            : t('location.get_current_location')}
+                    </Button>
 
-                <Button
-                    variant="outlined"
-                    color="primary"
-                    fullWidth
-                    disabled={locationLoading || locationSaving}
-                    aria-label={t('location.enter_coordinates', { defaultValue: 'Enter Coordinates' })}
-                    onClick={handleOpenManualCoordinatesDialog}
-                >
-                    {t('location.enter_coordinates', { defaultValue: 'Enter Coordinates' })}
-                </Button>
+                    <Button
+                        variant="outlined"
+                        color="primary"
+                        sx={{ width: { xs: '100%', lg: 'auto' }, flex: { lg: '1 1 0' } }}
+                        disabled={locationLoading || locationSaving}
+                        aria-label={t('location.enter_coordinates', { defaultValue: 'Enter Coordinates' })}
+                        onClick={handleOpenManualCoordinatesDialog}
+                    >
+                        {t('location.enter_coordinates', { defaultValue: 'Enter Coordinates' })}
+                    </Button>
 
-                <Button
-                    variant="outlined"
-                    color="primary"
-                    fullWidth
-                    disabled={!hasLocation}
-                    aria-label={t('location.copy_coordinates')}
-                    onClick={handleCopyCoordinates}
-                >
-                    {t('location.copy_coordinates')}
-                </Button>
+                    <Button
+                        variant="outlined"
+                        color="primary"
+                        sx={{ width: { xs: '100%', lg: 'auto' }, flex: { lg: '1 1 0' } }}
+                        disabled={!hasLocation}
+                        aria-label={t('location.copy_coordinates')}
+                        onClick={handleCopyCoordinates}
+                    >
+                        {t('location.copy_coordinates')}
+                    </Button>
 
-                <Button
-                    variant="outlined"
-                    fullWidth
-                    disabled={!hasLocation}
-                    aria-label={t('location.map_recenter', { defaultValue: 'Recenter map' })}
-                    onClick={() => {
-                        if (hasLocation) reCenterMap(normalizedLocation.lat, normalizedLocation.lon);
-                    }}
-                >
-                    {t('location.map_recenter', { defaultValue: 'Recenter' })}
-                </Button>
+                    <Button
+                        variant="outlined"
+                        sx={{ width: { xs: '100%', lg: 'auto' }, flex: { lg: '1 1 0' } }}
+                        disabled={!hasLocation}
+                        aria-label={t('location.map_recenter', { defaultValue: 'Recenter map' })}
+                        onClick={() => {
+                            if (hasLocation) reCenterMap(normalizedLocation.lat, normalizedLocation.lon);
+                        }}
+                    >
+                        {t('location.map_recenter', { defaultValue: 'Recenter' })}
+                    </Button>
+                </Stack>
 
                 {!hasLocation && (
                     <Typography variant="caption" color="warning.main">
@@ -921,12 +928,22 @@ const LocationPage = ({
             description={t('location.map_instruction', {
                 defaultValue: 'Click anywhere on the map to set your station coordinates.',
             })}
-            sx={locationCardSx}
+            sx={{
+                ...locationCardSx,
+                // When the layout is two-column, stretch this section to match the left column height.
+                width: '100%',
+                height: { lg: '100%' },
+                '& > .MuiStack-root': {
+                    height: { lg: '100%' },
+                },
+            }}
         >
             <Box
                 sx={{
                     width: '100%',
-                    height: { xs: 380, sm: 420, md: 500 },
+                    height: { xs: 360, sm: 400, md: 480, lg: '100%' },
+                    minHeight: { lg: 0 },
+                    flex: { lg: '1 1 auto' },
                     borderRadius: 1,
                     border: '1px solid',
                     borderColor: 'divider',
@@ -961,7 +978,7 @@ const LocationPage = ({
                 sx={{
                     position: 'relative',
                     width: '100%',
-                    height: { xs: 370, sm: 410, md: 470 },
+                    height: { xs: 350, sm: 390, md: 450 },
                     borderRadius: 1,
                     border: '1px solid',
                     borderColor: 'divider',
@@ -1117,11 +1134,13 @@ const LocationPage = ({
                     <Stack spacing={2}>
                         {stationIdentitySection}
                         {stationCoordinatesSection}
-                        {stationActionsSection}
                     </Stack>
                 </Grid>
-                <Grid size={{ xs: 1, md: 1 }}>
+                <Grid size={{ xs: 1, md: 1 }} sx={{ display: { lg: 'flex' } }}>
                     {mapSection}
+                </Grid>
+                <Grid size={{ xs: 1, lg: 2 }}>
+                    {stationActionsSection}
                 </Grid>
             </Grid>
 
@@ -1166,6 +1185,25 @@ const LocationPage = ({
         }),
         [stationCallsignLabel, stationHorizonMask, stationName, stationType]
     );
+    const wizardSetupLocationPayload = React.useMemo(() => {
+        if (!hasLocation || !location) {
+            return null;
+        }
+
+        const payload = {
+            lat: Number(location.lat),
+            lon: Number(location.lon),
+            alt: Number(altitude || 0),
+            name: normalizeStationName(location.name || 'home') || 'home',
+            callsign: normalizeCallsign(location.callsign || '') || null,
+            station_type: normalizeStationType(location.station_type),
+            horizon_mask: normalizeHorizonMask(location.horizon_mask),
+        };
+        if (locationId != null) {
+            payload.id = locationId;
+        }
+        return payload;
+    }, [altitude, hasLocation, location, locationId]);
 
     return (
         <SettingsSurface
@@ -1203,6 +1241,7 @@ const LocationPage = ({
                         canSave={canSave}
                         isDifferentFromSaved={isDifferentFromSaved}
                         locationSaving={locationSaving}
+                        setupLocationPayload={wizardSetupLocationPayload}
                         onPersistLocation={handleSetLocation}
                         onWizardCompleted={onWizardCompleted}
                         stationIdentitySection={stationIdentitySection}

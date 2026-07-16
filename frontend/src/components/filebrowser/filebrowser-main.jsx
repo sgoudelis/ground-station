@@ -34,6 +34,7 @@ import {
     Tooltip,
     Button,
     FormControl,
+    FormControlLabel,
     InputLabel,
     Select,
     MenuItem,
@@ -48,7 +49,9 @@ import {
     OutlinedInput,
     Pagination,
     LinearProgress,
+    TextField,
     Stack,
+    Switch,
     ToggleButton,
     ToggleButtonGroup,
     useMediaQuery,
@@ -179,6 +182,60 @@ function getLanguageFlag(langCode) {
     return flagMap[langCode] || '🌐';
 }
 
+const WATERFALL_FFT_OPTIONS = [512, 1024, 2048, 4096, 8192, 16384, 32768, 65536];
+const WATERFALL_WINDOW_OPTIONS = ['hann', 'hamming', 'blackman'];
+const WATERFALL_OVERLAP_OPTIONS = [
+    { value: 0, label: '0%' },
+    { value: 0.1, label: '10%' },
+    { value: 0.2, label: '20%' },
+    { value: 0.25, label: '25%' },
+    { value: 0.4, label: '40%' },
+    { value: 0.5, label: '50%' },
+    { value: 0.6, label: '60%' },
+    { value: 0.75, label: '75%' },
+];
+const DEFAULT_WATERFALL_TASK_OPTIONS = Object.freeze({
+    fft_size: 16384,
+    max_height: 6000,
+    window: 'hann',
+    overlap: 0.5,
+    auto_scale_db_range: true,
+    db_min: -80,
+    db_max: 0,
+});
+
+const buildWaterfallDialogDefaults = () => ({ ...DEFAULT_WATERFALL_TASK_OPTIONS });
+
+const clampNumber = (value, min, max, fallback) => {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) {
+        return fallback;
+    }
+    return Math.min(Math.max(numeric, min), max);
+};
+
+const buildWaterfallTaskOptionsPayload = (options) => {
+    const fftSize = Number(options.fft_size);
+    const overlap = clampNumber(options.overlap, 0, 0.75, 0.5);
+    const maxHeight = Math.round(clampNumber(options.max_height, 64, 12000, 6000));
+    const dbMin = clampNumber(options.db_min, -220, 80, -80);
+    const dbMax = clampNumber(options.db_max, -220, 80, 0);
+
+    const payload = {
+        fft_size: WATERFALL_FFT_OPTIONS.includes(fftSize) ? fftSize : 16384,
+        max_height: maxHeight,
+        window: WATERFALL_WINDOW_OPTIONS.includes(options.window) ? options.window : 'hann',
+        overlap,
+        auto_scale_db_range: Boolean(options.auto_scale_db_range),
+    };
+
+    if (!payload.auto_scale_db_range) {
+        payload.db_range = dbMin < dbMax ? [dbMin, dbMax] : [-80, 0];
+    }
+
+    return payload;
+};
+
 export default function FileBrowserMain() {
     const dispatch = useDispatch();
     const { socket } = useSocket();
@@ -299,6 +356,11 @@ export default function FileBrowserMain() {
     const [processingRecording, setProcessingRecording] = useState(null);
     const [processingMenuAnchorEl, setProcessingMenuAnchorEl] = useState(null);
     const [processingMenuRecording, setProcessingMenuRecording] = useState(null);
+    const [waterfallDialogOpen, setWaterfallDialogOpen] = useState(false);
+    const [waterfallDialogRecording, setWaterfallDialogRecording] = useState(null);
+    const [waterfallTaskOptions, setWaterfallTaskOptions] = useState(() =>
+        buildWaterfallDialogDefaults()
+    );
 
     // Mark file browser as visited after list refreshes while on the page
     useEffect(() => {
@@ -625,30 +687,63 @@ export default function FileBrowserMain() {
         setProcessingMenuRecording(null);
     };
 
-    const handleGenerateWaterfall = async (item) => {
+    const handleOpenWaterfallDialog = (item) => {
         if (item.type !== 'recording') return;
+        setWaterfallDialogRecording(item);
+        setWaterfallTaskOptions(buildWaterfallDialogDefaults());
+        setWaterfallDialogOpen(true);
+    };
+
+    const handleCloseWaterfallDialog = () => {
+        setWaterfallDialogOpen(false);
+        setWaterfallDialogRecording(null);
+        setWaterfallTaskOptions(buildWaterfallDialogDefaults());
+    };
+
+    const handleWaterfallOptionChange = (key, value) => {
+        setWaterfallTaskOptions((prev) => ({
+            ...prev,
+            [key]: value,
+        }));
+    };
+
+    const handleGenerateWaterfall = async (item, optionsOverride = null) => {
+        if (item.type !== 'recording') return false;
 
         if (!socket) {
             toast.error('Not connected to server');
-            return;
+            return false;
         }
 
         try {
             const baseName = getRecordingBaseName(item.name);
             const recordingPath = `/recordings/${baseName}`;
+            const kwargs = optionsOverride ? { options: optionsOverride } : {};
 
             const response = await dispatch(startBackgroundTask({
                 socket,
                 task_name: 'generate_waterfall',
                 args: [recordingPath],
-                kwargs: {},
+                kwargs,
                 name: `Waterfall: ${item.name}`,
             })).unwrap();
 
             toast.success(`Waterfall generation started: ${response.task_id}`);
+            return true;
         } catch (error) {
             console.error('Error starting waterfall task:', error);
             toast.error(`Failed to start waterfall task: ${error.message}`);
+            return false;
+        }
+    };
+
+    const handleSubmitWaterfallDialog = async () => {
+        if (!waterfallDialogRecording) return;
+
+        const optionsPayload = buildWaterfallTaskOptionsPayload(waterfallTaskOptions);
+        const started = await handleGenerateWaterfall(waterfallDialogRecording, optionsPayload);
+        if (started) {
+            handleCloseWaterfallDialog();
         }
     };
 
@@ -1039,6 +1134,8 @@ export default function FileBrowserMain() {
                                                     height="200"
                                                     image={item.image}
                                                     alt={item.displayName}
+                                                    loading="lazy"
+                                                    decoding="async"
                                                     sx={{
                                                         objectFit: 'cover',
                                                     }}
@@ -1765,7 +1862,7 @@ export default function FileBrowserMain() {
                         const target = processingMenuRecording;
                         handleCloseProcessingMenu();
                         if (target) {
-                            handleGenerateWaterfall(target);
+                            handleOpenWaterfallDialog(target);
                         }
                     }}
                 >
@@ -1789,6 +1886,155 @@ export default function FileBrowserMain() {
                     <ListItemText primary="Process IQ Recording" />
                 </MenuItem>
             </Menu>
+
+            <Dialog
+                open={waterfallDialogOpen}
+                onClose={handleCloseWaterfallDialog}
+                maxWidth="sm"
+                fullWidth
+            >
+                <DialogTitle>Generate Waterfall Image</DialogTitle>
+                <DialogContent
+                    sx={{
+                        display: 'grid',
+                        gap: 2,
+                        '&.MuiDialogContent-root:first-of-type': {
+                            pt: 3,
+                        },
+                    }}
+                >
+                    <Typography variant="body2" color="text.secondary">
+                        Recording: {waterfallDialogRecording?.name || ''}
+                    </Typography>
+
+                    <Grid container spacing={2}>
+                        <Grid size={{ xs: 12, sm: 6 }}>
+                            <FormControl fullWidth size="small">
+                                <InputLabel>FFT Size</InputLabel>
+                                <Select
+                                    value={waterfallTaskOptions.fft_size}
+                                    label="FFT Size"
+                                    onChange={(event) =>
+                                        handleWaterfallOptionChange(
+                                            'fft_size',
+                                            Number(event.target.value)
+                                        )
+                                    }
+                                >
+                                    {WATERFALL_FFT_OPTIONS.map((size) => (
+                                        <MenuItem key={size} value={size}>
+                                            {size}
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
+                        </Grid>
+                        <Grid size={{ xs: 12, sm: 6 }}>
+                            <FormControl fullWidth size="small">
+                                <InputLabel>Window</InputLabel>
+                                <Select
+                                    value={waterfallTaskOptions.window}
+                                    label="Window"
+                                    onChange={(event) =>
+                                        handleWaterfallOptionChange('window', event.target.value)
+                                    }
+                                >
+                                    {WATERFALL_WINDOW_OPTIONS.map((windowName) => (
+                                        <MenuItem key={windowName} value={windowName}>
+                                            {windowName}
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
+                        </Grid>
+                        <Grid size={{ xs: 12, sm: 6 }}>
+                            <FormControl fullWidth size="small">
+                                <InputLabel>Overlap</InputLabel>
+                                <Select
+                                    value={waterfallTaskOptions.overlap}
+                                    label="Overlap"
+                                    onChange={(event) =>
+                                        handleWaterfallOptionChange(
+                                            'overlap',
+                                            Number(event.target.value)
+                                        )
+                                    }
+                                >
+                                    {WATERFALL_OVERLAP_OPTIONS.map((option) => (
+                                        <MenuItem key={option.label} value={option.value}>
+                                            {option.label}
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
+                        </Grid>
+                        <Grid size={{ xs: 12, sm: 6 }}>
+                            <TextField
+                                label="Max Height"
+                                type="number"
+                                size="small"
+                                fullWidth
+                                inputProps={{ min: 64, max: 12000, step: 1 }}
+                                value={waterfallTaskOptions.max_height}
+                                onChange={(event) =>
+                                    handleWaterfallOptionChange('max_height', event.target.value)
+                                }
+                            />
+                        </Grid>
+                    </Grid>
+
+                    <FormControlLabel
+                        control={
+                            <Switch
+                                checked={waterfallTaskOptions.auto_scale_db_range}
+                                onChange={(event) =>
+                                    handleWaterfallOptionChange(
+                                        'auto_scale_db_range',
+                                        event.target.checked
+                                    )
+                                }
+                            />
+                        }
+                        label="Auto-scale dB range"
+                    />
+
+                    {!waterfallTaskOptions.auto_scale_db_range && (
+                        <Grid container spacing={2}>
+                            <Grid size={{ xs: 12, sm: 6 }}>
+                                <TextField
+                                    label="dB Min"
+                                    type="number"
+                                    size="small"
+                                    fullWidth
+                                    value={waterfallTaskOptions.db_min}
+                                    onChange={(event) =>
+                                        handleWaterfallOptionChange('db_min', event.target.value)
+                                    }
+                                />
+                            </Grid>
+                            <Grid size={{ xs: 12, sm: 6 }}>
+                                <TextField
+                                    label="dB Max"
+                                    type="number"
+                                    size="small"
+                                    fullWidth
+                                    value={waterfallTaskOptions.db_max}
+                                    onChange={(event) =>
+                                        handleWaterfallOptionChange('db_max', event.target.value)
+                                    }
+                                />
+                            </Grid>
+                        </Grid>
+                    )}
+
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={handleCloseWaterfallDialog}>Cancel</Button>
+                    <Button onClick={handleSubmitWaterfallDialog} variant="contained">
+                        Start Generation
+                    </Button>
+                </DialogActions>
+            </Dialog>
 
             {/* Recording Details Dialog */}
             {selectedItem?.type === 'recording' && (
@@ -1840,8 +2086,10 @@ export default function FileBrowserMain() {
                     <DialogContent
                         sx={{
                             bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'rgba(0, 0, 0, 0.36)' : 'grey.100'),
-                            px: 3,
-                            py: 3,
+                            p: 3,
+                            '&.MuiDialogContent-root:first-of-type': {
+                                pt: 3,
+                            },
                         }}
                     >
                         {selectedItem && (
@@ -1895,12 +2143,19 @@ export default function FileBrowserMain() {
                         )}
                     </DialogContent>
                     <DialogActions
+                        disableSpacing
                         sx={{
                             bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'grey.900' : 'grey.100'),
                             borderTop: (theme) => `1px solid ${theme.palette.divider}`,
                             px: 3,
                             py: 2.5,
                             gap: 1,
+                            flexDirection: { xs: 'column', sm: 'row' },
+                            alignItems: { xs: 'stretch', sm: 'center' },
+                            justifyContent: { xs: 'stretch', sm: 'flex-end' },
+                            '& .MuiButton-root': {
+                                width: { xs: '100%', sm: 'auto' },
+                            },
                         }}
                     >
                         <Button onClick={() => handleDownload(selectedItem)} startIcon={<DownloadIcon />} variant="outlined">
@@ -2073,12 +2328,19 @@ export default function FileBrowserMain() {
                         )}
                     </DialogContent>
                     <DialogActions
+                        disableSpacing
                         sx={{
                             bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'grey.900' : 'grey.100'),
                             borderTop: (theme) => `1px solid ${theme.palette.divider}`,
                             px: 3,
                             py: 2.5,
                             gap: 1,
+                            flexDirection: { xs: 'column', sm: 'row' },
+                            alignItems: { xs: 'stretch', sm: 'center' },
+                            justifyContent: { xs: 'stretch', sm: 'flex-end' },
+                            '& .MuiButton-root': {
+                                width: { xs: '100%', sm: 'auto' },
+                            },
                         }}
                     >
                         <Button onClick={() => handleDownload(selectedItem)} startIcon={<DownloadIcon />} variant="outlined">

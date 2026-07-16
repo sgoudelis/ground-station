@@ -596,9 +596,14 @@ const TargetSelectorBar = React.memo(function TargetSelectorBar() {
         const targetType = target?.targetType || TARGET_TYPES.SATELLITE;
         const targetName = String(target?.targetName || '').trim();
         if (targetType === TARGET_TYPES.MISSION) {
+            const mission_id_value = String(target?.mission_id || '').trim().toLowerCase();
+            const normalizedMissionId = mission_id_value.startsWith('mission:')
+                ? mission_id_value.slice('mission:'.length)
+                : (mission_id_value.includes(':') ? '' : mission_id_value);
             return {
                 target_type: TARGET_TYPES.MISSION,
                 target_name: targetName || String(target?.command || '').trim(),
+                mission_id: normalizedMissionId || null,
                 command: String(target?.command || '').trim(),
                 body_id: null,
                 norad_id: null,
@@ -609,6 +614,7 @@ const TargetSelectorBar = React.memo(function TargetSelectorBar() {
             return {
                 target_type: TARGET_TYPES.BODY,
                 target_name: targetName || String(target?.bodyId || '').trim().toLowerCase(),
+                mission_id: null,
                 body_id: String(target?.bodyId || '').trim().toLowerCase(),
                 command: null,
                 norad_id: null,
@@ -618,6 +624,7 @@ const TargetSelectorBar = React.memo(function TargetSelectorBar() {
         return {
             target_type: TARGET_TYPES.SATELLITE,
             target_name: targetName || String(target?.noradId || '').trim(),
+            mission_id: null,
             norad_id: target?.noradId,
             group_id: target?.groupId || '',
             command: null,
@@ -659,9 +666,7 @@ const TargetSelectorBar = React.memo(function TargetSelectorBar() {
                 const selectedGroupId = targetType === TARGET_TYPES.SATELLITE
                     ? (target?.groupId || selectedTrackerState?.group_id || trackingState?.group_id || '')
                     : null;
-                const nextTransmitters = targetType === TARGET_TYPES.SATELLITE
-                    ? (target?.transmitters || [])
-                    : [];
+                const nextTransmitters = Array.isArray(target?.transmitters) ? target.transmitters : [];
                 const nextRigId = isCreateNewSlot
                     ? assignmentRigId
                     : String(
@@ -776,12 +781,19 @@ const TargetSelectorBar = React.memo(function TargetSelectorBar() {
             payloadTarget = buildTargetTrackingPatch({
                 targetType: TARGET_TYPES.MISSION,
                 command: missionCommand,
+                mission_id: String(createSelectedMission?.mission_id || '')
+                    .replace(/^mission:/i, '')
+                    .trim()
+                    .toLowerCase(),
                 targetName: String(
                     createSelectedMission?.target_name
                     || createSelectedMission?.display_name
                     || missionCommand
                 ).trim(),
             });
+            nextTransmitters = Array.isArray(createSelectedMission?.transmitters)
+                ? createSelectedMission.transmitters
+                : [];
         } else {
             const bodyId = String(createSelectedBodyId || '').trim().toLowerCase();
             if (!bodyId) {
@@ -861,7 +873,12 @@ const TargetSelectorBar = React.memo(function TargetSelectorBar() {
             await handleRetargetTargetRef.current({
                 targetType: TARGET_TYPES.MISSION,
                 targetName: String(targetOption?.target_name || targetOption?.display_name || command).trim(),
+                mission_id: String(targetOption?.mission_id || '')
+                    .replace(/^mission:/i, '')
+                    .trim()
+                    .toLowerCase(),
                 command,
+                transmitters: Array.isArray(targetOption?.transmitters) ? targetOption.transmitters : [],
             });
             return;
         }
@@ -875,6 +892,7 @@ const TargetSelectorBar = React.memo(function TargetSelectorBar() {
                 targetType: TARGET_TYPES.BODY,
                 targetName: String(targetOption?.target_name || targetOption?.name || normalizedBodyId).trim(),
                 bodyId: normalizedBodyId,
+                transmitters: Array.isArray(targetOption?.transmitters) ? targetOption.transmitters : [],
             });
             return;
         }

@@ -259,6 +259,48 @@ def _collect_capabilities(device: Any, channel_index: int) -> Dict[str, Any]:
     return _postprocess_caps(_normalize_value(caps))
 
 
+def _build_local_device_open_args_candidates(device_dict: Dict[str, Any]) -> List[Any]:
+    """
+    Build progressively simpler SoapySDR open arguments for local USB devices.
+
+    Some drivers only open with the full enumerate kwargs, while others are more
+    reliable with reduced args such as driver+serial.
+    """
+    candidates: List[Any] = []
+
+    full_args = dict(device_dict)
+    candidates.append(full_args)
+
+    driver = str(device_dict.get("driver", "") or "").strip()
+    serial = str(device_dict.get("serial", "") or "").strip()
+    if serial.lower() in ("", "unknown", "none", "null"):
+        serial = ""
+
+    if driver:
+        reduced_args: Dict[str, str] = {"driver": driver}
+        if serial:
+            reduced_args["serial"] = serial
+        candidates.append(reduced_args)
+
+        args_string = f"driver={driver}"
+        if serial:
+            args_string += f",serial={serial}"
+        candidates.append(args_string)
+
+    unique_candidates: List[Any] = []
+    seen = set()
+    for candidate in candidates:
+        fingerprint = (
+            json.dumps(candidate, sort_keys=True) if isinstance(candidate, dict) else str(candidate)
+        )
+        if fingerprint in seen:
+            continue
+        seen.add(fingerprint)
+        unique_candidates.append(candidate)
+
+    return unique_candidates
+
+
 class SoapySDRDirection(Enum):
     """Enumeration for SoapySDR direction types"""
 
@@ -358,6 +400,7 @@ def probe_available_usb_sdrs() -> str:
                     "serial": device_dict.get("serial", "Unknown"),
                     "is_usb": True,
                     "frequency_ranges": {},
+                    "antennas": {"rx": [], "tx": []},
                 }
 
                 # Add other useful information if available
@@ -369,16 +412,30 @@ def probe_available_usb_sdrs() -> str:
 
                 if check_freq_range:
                     # Probe device for frequency ranges
+                    sdr = None
                     try:
-                        # Make a device instance to query its capabilities
-                        simple_args = {"driver": device_dict["driver"]}
-                        if "serial" in device_dict:
-                            simple_args["serial"] = device_dict["serial"]
+                        # Retry with progressively simpler args to avoid silently
+                        # losing antenna data for devices that reject one arg shape.
+                        for candidate_args in _build_local_device_open_args_candidates(device_dict):
+                            try:
+                                sdr = SoapySDR.Device(candidate_args)
+                                break
+                            except Exception as open_error:
+                                log_messages.append(
+                                    "Warning: Failed to open local SoapySDR device with args "
+                                    f"{candidate_args}: {str(open_error)}"
+                                )
 
-                        sdr = SoapySDR.Device(simple_args)
+                        if sdr is None:
+                            raise Exception(
+                                "Failed to open SoapySDR device with available argument candidates"
+                            )
 
                         # Get frequency ranges for all available channels (both RX and TX)
                         frequency_ranges: Dict[str, Any] = {}
+
+                        num_rx_channels = 0
+                        num_tx_channels = 0
 
                         # Check RX capabilities
                         try:
@@ -440,12 +497,41 @@ def probe_available_usb_sdrs() -> str:
                         # Add capability information to device entry
                         device_entry["capabilities"] = _collect_capabilities(sdr, 0)
 
-                        # Close the device
-                        sdr.close()
+                        # Include antenna ports for the add/edit SDR probe flow.
+                        # Keep this contract explicit and inspect failures via logs.
+                        try:
+                            device_entry["antennas"]["rx"] = [
+                                str(port)
+                                for port in sdr.listAntennas(SoapySDRDirection.RX.value, 0)
+                                if str(port).strip()
+                            ]
+                        except Exception as exc:
+                            logger.debug(
+                                "Could not probe RX antennas for %s: %s", device_entry["label"], exc
+                            )
+                            device_entry["antennas"]["rx"] = []
+
+                        try:
+                            device_entry["antennas"]["tx"] = [
+                                str(port)
+                                for port in sdr.listAntennas(SoapySDRDirection.TX.value, 0)
+                                if str(port).strip()
+                            ]
+                        except Exception as exc:
+                            logger.debug(
+                                "Could not probe TX antennas for %s: %s", device_entry["label"], exc
+                            )
+                            device_entry["antennas"]["tx"] = []
 
                     except Exception as e:
                         log_messages.append(f"Warning: Error probing device capabilities: {str(e)}")
                         device_entry["frequency_ranges"] = {"error": str(e)}
+                    finally:
+                        try:
+                            if sdr is not None and hasattr(sdr, "close"):
+                                sdr.close()
+                        except Exception:
+                            pass
 
                 usb_devices.append(device_entry)
 

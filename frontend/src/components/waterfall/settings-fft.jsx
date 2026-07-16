@@ -38,6 +38,9 @@ const FftAccordion = ({
                           onColorMapChange,
                       }) => {
     const { t } = useTranslation('waterfall');
+    const selectedColorMap = colorMaps.some((map) => map.id === localColorMap)
+        ? localColorMap
+        : (colorMaps[0]?.id || '');
 
     return (
         <Accordion expanded={expanded} onChange={onAccordionChange}>
@@ -166,7 +169,7 @@ const FftAccordion = ({
                             <Select
                                 disabled={gettingSDRParameters}
                                 size="small"
-                                value={localColorMap}
+                                value={selectedColorMap}
                                 onChange={(e) => onColorMapChange(e.target.value)}
                                 label={t('fft.color_map')} variant={'outlined'}>
                                 {colorMaps.map(map => (

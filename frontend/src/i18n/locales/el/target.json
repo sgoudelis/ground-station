@@ -15,10 +15,28 @@
     "end": "Λήξη",
     "duration": "Διάρκεια",
     "progress": "Πρόοδος",
+    "direction": "Κατεύθυνση",
+    "direction_values": {
+      "cw": "Δεξιόστροφα",
+      "ccw": "Αριστερόστροφα",
+      "mixed": "Μικτή"
+    },
     "distance_aos": "Απόσταση στο AOS",
     "distance_los": "Απόσταση στο LOS",
     "distance_peak": "Απόσταση στην κορυφή",
     "max_el": "Μέγ. Υψ.",
+    "pass_types": "Τύποι διέλευσης",
+    "pass_tag_labels": {
+      "north_crossing": "Διέλευση από βορρά",
+      "south_crossing": "Διέλευση από νότο",
+      "direction_cw": "Δεξιόστροφα",
+      "direction_ccw": "Αριστερόστροφα",
+      "direction_mixed": "Μικτή",
+      "elevation_low": "Χαμηλή ύψωση",
+      "elevation_medium": "Μέτρια ύψωση",
+      "elevation_high": "Υψηλή ύψωση",
+      "elevation_overhead": "Πέρασμα zenith"
+    },
     "geo_stat": "Γεωστατικός",
     "geo_sync": "Γεωσύγχρονος",
     "no_satellite_selected": "Παρακαλώ επιλέξτε έναν δορυφόρο για να δείτε τις διελεύσεις"
@@ -118,6 +136,9 @@
   },
   "satellite_map": {
     "title": "Παρακολούθηση στόχου"
+  },
+  "target_retarget_dialog": {
+    "title": "Αλλαγή στόχευσης θέσης ή δημιουργία νέου στόχου"
   },
   "pass_timeline": {
     "title": "Χρονοδιάγραμμα Διελεύσεων για {{name}} - Επόμενες {{hours}} ώρες"

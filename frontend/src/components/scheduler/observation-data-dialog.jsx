@@ -273,11 +273,19 @@ const ObservationDataDialog = ({ open, onClose, observation }) => {
             fullWidth
             PaperProps={{
                 sx: {
-                    bgcolor: 'background.default'
-                }
+                    bgcolor: 'background.paper',
+                    border: (theme) => `1px solid ${theme.palette.divider}`,
+                    borderRadius: 2,
+                },
             }}
         >
-            <DialogTitle>
+            <DialogTitle
+                sx={{
+                    bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.100',
+                    borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
+                    py: 2.5,
+                }}
+            >
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <Box>
                         <Typography variant="h6">
@@ -304,7 +312,12 @@ const ObservationDataDialog = ({ open, onClose, observation }) => {
             <Tabs 
                 value={activeTab} 
                 onChange={(e, newValue) => setActiveTab(newValue)}
-                sx={{ borderBottom: 1, borderColor: 'divider', px: 3 }}
+                sx={{
+                    borderBottom: 1,
+                    borderColor: 'divider',
+                    px: 3,
+                    bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.100',
+                }}
             >
                 <Tab label="Execution Timeline" />
                 <Tab label="Downloaded Data" />
@@ -312,12 +325,15 @@ const ObservationDataDialog = ({ open, onClose, observation }) => {
             </Tabs>
 
             <DialogContent
+                dividers
                 sx={{
                     bgcolor: (theme) => (
                         theme.palette.mode === 'dark'
                             ? theme.palette.background.elevated
                             : theme.palette.background.paper
                     ),
+                    px: 3,
+                    py: 3,
                     minHeight: 400,
                 }}
             >
@@ -528,8 +544,26 @@ const ObservationDataDialog = ({ open, onClose, observation }) => {
                 )}
             </DialogContent>
             
-            <DialogActions>
-                <Button onClick={onClose} variant="contained">
+            <DialogActions
+                sx={{
+                    bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.100',
+                    borderTop: (theme) => `1px solid ${theme.palette.divider}`,
+                    px: 3,
+                    py: 2.5,
+                    gap: 2,
+                }}
+            >
+                <Button
+                    onClick={onClose}
+                    variant="outlined"
+                    sx={{
+                        borderColor: (theme) => theme.palette.mode === 'dark' ? 'grey.700' : 'grey.400',
+                        '&:hover': {
+                            borderColor: (theme) => theme.palette.mode === 'dark' ? 'grey.600' : 'grey.500',
+                            bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.800' : 'grey.200',
+                        },
+                    }}
+                >
                     Close
                 </Button>
             </DialogActions>
@@ -579,17 +613,33 @@ const ObservationDataDialog = ({ open, onClose, observation }) => {
                     onClose={() => setFileDetailsOpen(false)}
                     maxWidth="lg"
                     fullWidth
+                    PaperProps={{
+                        sx: {
+                            bgcolor: 'background.paper',
+                            border: (theme) => `1px solid ${theme.palette.divider}`,
+                            borderRadius: 2,
+                        },
+                    }}
                 >
-                    <DialogTitle>
+                    <DialogTitle
+                        sx={{
+                            bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.100',
+                            borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
+                            py: 2.5,
+                        }}
+                    >
                         {selectedFile?.name || selectedFile?.filename}
                     </DialogTitle>
                     <DialogContent
+                        dividers
                         sx={{
                             bgcolor: (theme) => (
                                 theme.palette.mode === 'dark'
                                     ? theme.palette.background.elevated
                                     : theme.palette.background.paper
                             ),
+                            px: 3,
+                            py: 3,
                         }}
                     >
                         {selectedFile?.url && (selectedFile.url.endsWith('.png') || selectedFile.url.endsWith('.jpg') || selectedFile.url.endsWith('.jpeg')) ? (
@@ -606,11 +656,32 @@ const ObservationDataDialog = ({ open, onClose, observation }) => {
                             </Typography>
                         )}
                     </DialogContent>
-                    <DialogActions>
-                        <Button onClick={() => window.open(selectedFile.url, '_blank')}>
+                    <DialogActions
+                        sx={{
+                            bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.100',
+                            borderTop: (theme) => `1px solid ${theme.palette.divider}`,
+                            px: 3,
+                            py: 2.5,
+                            gap: 2,
+                        }}
+                    >
+                        <Button
+                            onClick={() => window.open(selectedFile.url, '_blank')}
+                            variant="contained"
+                        >
                             Download
                         </Button>
-                        <Button onClick={() => setFileDetailsOpen(false)} variant="contained">
+                        <Button
+                            onClick={() => setFileDetailsOpen(false)}
+                            variant="outlined"
+                            sx={{
+                                borderColor: (theme) => theme.palette.mode === 'dark' ? 'grey.700' : 'grey.400',
+                                '&:hover': {
+                                    borderColor: (theme) => theme.palette.mode === 'dark' ? 'grey.600' : 'grey.500',
+                                    bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.800' : 'grey.200',
+                                },
+                            }}
+                        >
                             Close
                         </Button>
                     </DialogActions>

@@ -17,7 +17,7 @@
 
 import json
 import logging
-from typing import Dict, Union
+from typing import Dict, List, Union
 
 import numpy as np
 from skyfield.api import EarthSatellite, Loader, Topos
@@ -26,6 +26,136 @@ from common.common import ModelEncoder
 from orbits import CentralBody, OrbitServiceError, get_propagation_input
 
 logger = logging.getLogger("passes-worker")
+
+
+def _normalize_azimuth(azimuth: float) -> float:
+    """Normalize azimuth values into the [0, 360) range."""
+    return float(azimuth) % 360.0
+
+
+def _signed_circular_delta(start: float, end: float) -> float:
+    """
+    Return the shortest signed delta from start -> end in degrees.
+
+    The result is constrained to (-180, 180].
+    """
+    delta = (end - start + 180.0) % 360.0 - 180.0
+    if delta == -180.0:
+        return 180.0
+    return delta
+
+
+def _unwrap_azimuths(azimuths: List[float]) -> List[float]:
+    """Unwrap normalized azimuth samples into a continuous sequence."""
+    if not azimuths:
+        return []
+    normalized = [_normalize_azimuth(azimuth) for azimuth in azimuths]
+    unwrapped = [normalized[0]]
+    for index in range(1, len(normalized)):
+        previous = normalized[index - 1]
+        current = normalized[index]
+        unwrapped.append(unwrapped[-1] + _signed_circular_delta(previous, current))
+    return unwrapped
+
+
+def _path_crosses_reference(unwrapped_azimuths: List[float], reference_angle: float) -> bool:
+    """
+    Detect whether an unwrapped path crosses a reference azimuth.
+
+    Reference checks are periodic every 360 degrees:
+      - north crossing -> reference_angle=0
+      - south crossing -> reference_angle=180
+    """
+    if len(unwrapped_azimuths) < 2:
+        return False
+
+    epsilon = 1e-6
+    for start, end in zip(unwrapped_azimuths, unwrapped_azimuths[1:]):
+        segment_min = min(start, end)
+        segment_max = max(start, end)
+        minimum_k = int(np.floor((segment_min - reference_angle) / 360.0))
+        maximum_k = int(np.ceil((segment_max - reference_angle) / 360.0))
+        for multiplier in range(minimum_k, maximum_k + 1):
+            candidate = reference_angle + 360.0 * multiplier
+            if segment_min - epsilon <= candidate <= segment_max + epsilon:
+                return True
+    return False
+
+
+def classify_pass_geometry(
+    start_azimuth: float,
+    peak_azimuth: float,
+    end_azimuth: float,
+    peak_altitude: float,
+    azimuth_samples: Union[List[float], None] = None,
+) -> Dict[str, Union[bool, str, List[str]]]:
+    """
+    Classify a pass into stable geometry metadata for UI filtering/badges.
+
+    The north/south crossing detection is based on circular unwrapping so the
+    359° -> 1° transition is treated as a small, continuous movement.
+    """
+    candidate_samples = azimuth_samples or [start_azimuth, peak_azimuth, end_azimuth]
+    normalized_samples = []
+    for sample in candidate_samples:
+        try:
+            normalized_samples.append(_normalize_azimuth(float(sample)))
+        except (TypeError, ValueError):
+            continue
+    if len(normalized_samples) < 2:
+        normalized_samples = [
+            _normalize_azimuth(float(start_azimuth)),
+            _normalize_azimuth(float(end_azimuth)),
+        ]
+
+    unwrapped = _unwrap_azimuths(normalized_samples)
+    deltas = [next_az - current_az for current_az, next_az in zip(unwrapped, unwrapped[1:])]
+    direction_threshold = 0.5
+    has_positive_movement = any(delta > direction_threshold for delta in deltas)
+    has_negative_movement = any(delta < -direction_threshold for delta in deltas)
+    total_movement = float(sum(deltas))
+
+    if has_positive_movement and has_negative_movement:
+        if abs(total_movement) <= direction_threshold:
+            pass_direction = "MIXED"
+        else:
+            # Keep direction stable for most mixed samples by following net movement.
+            pass_direction = "CCW" if total_movement > 0 else "CW"
+    elif has_positive_movement:
+        pass_direction = "CCW"
+    elif has_negative_movement:
+        pass_direction = "CW"
+    else:
+        pass_direction = "MIXED"
+
+    peak_alt = float(peak_altitude)
+    if peak_alt >= 80.0:
+        elevation_class = "overhead"
+    elif peak_alt >= 60.0:
+        elevation_class = "high"
+    elif peak_alt >= 30.0:
+        elevation_class = "medium"
+    else:
+        elevation_class = "low"
+
+    crosses_north = _path_crosses_reference(unwrapped, reference_angle=0.0)
+    crosses_south = _path_crosses_reference(unwrapped, reference_angle=180.0)
+
+    pass_tags: List[str] = []
+    if crosses_north:
+        pass_tags.append("north_crossing")
+    if crosses_south:
+        pass_tags.append("south_crossing")
+    pass_tags.append(f"direction_{pass_direction.lower()}")
+    pass_tags.append(f"elevation_{elevation_class}")
+
+    return {
+        "crosses_north": crosses_north,
+        "crosses_south": crosses_south,
+        "pass_direction": pass_direction,
+        "elevation_class": elevation_class,
+        "pass_tags": pass_tags,
+    }
 
 
 def calculate_next_events(
@@ -247,6 +377,12 @@ def calculate_next_events(
                     topocentric = difference.at(current_pass["end_time"])
                     alt_end, az_end, dist_end = topocentric.altaz()
                     end_az_value = float(az_end.degrees)
+                    pass_classification = classify_pass_geometry(
+                        start_azimuth=start_az_value,
+                        peak_azimuth=float(az_peak_value),
+                        end_azimuth=end_az_value,
+                        peak_altitude=float(alt_peak_value),
+                    )
 
                     duration = (
                         current_pass["end_time"].utc_datetime()
@@ -269,6 +405,7 @@ def calculate_next_events(
                             "start_azimuth": start_az_value,
                             "end_azimuth": end_az_value,
                             "peak_azimuth": float(az_peak_value),
+                            **pass_classification,
                         }
                     )
 
@@ -326,6 +463,12 @@ def calculate_next_events(
                 topocentric = difference.at(current_pass["end_time"])
                 alt_end, az_end, dist_end = topocentric.altaz()
                 end_az_value = float(az_end.degrees)
+                pass_classification = classify_pass_geometry(
+                    start_azimuth=start_az_value,
+                    peak_azimuth=float(az_peak_value),
+                    end_azimuth=end_az_value,
+                    peak_altitude=float(alt_peak_value),
+                )
 
                 duration = (
                     current_pass["end_time"].utc_datetime()
@@ -348,6 +491,7 @@ def calculate_next_events(
                         "start_azimuth": start_az_value,
                         "end_azimuth": end_az_value,
                         "peak_azimuth": float(az_peak_value),
+                        **pass_classification,
                         "estimated_end": True,
                     }
                 )
@@ -413,6 +557,13 @@ def calculate_next_events(
                     # Find the index of maximum elevation within this pass
                     peak_i = int(np.argmax(pass_altitudes))
                     peak_time = t_points[start_i + peak_i]
+                    pass_classification = classify_pass_geometry(
+                        start_azimuth=float(azimuths[start_i]),
+                        peak_azimuth=float(pass_azimuths[peak_i]),
+                        end_azimuth=float(azimuths[end_i]),
+                        peak_altitude=float(pass_altitudes[peak_i]),
+                        azimuth_samples=[float(value) for value in pass_azimuths],
+                    )
 
                     duration = end_time.utc_datetime() - start_time.utc_datetime()
 
@@ -432,6 +583,7 @@ def calculate_next_events(
                             "start_azimuth": float(azimuths[start_i]),
                             "end_azimuth": float(azimuths[end_i]),
                             "peak_azimuth": float(pass_azimuths[peak_i]),
+                            **pass_classification,
                         }
                     )
 

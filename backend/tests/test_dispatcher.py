@@ -191,3 +191,76 @@ async def test_dispatch_request_handler_exception_uses_canonical_error_shape():
     assert result["success"] is False
     assert result["data"] is None
     assert result["error"] == "boom"
+
+
+async def test_dispatch_request_rejects_non_setup_command_during_setup(monkeypatch):
+    async def _is_setup_required(force_refresh: bool = False):
+        del force_refresh
+        return True
+
+    def _is_command_allowed_during_setup(command: str) -> bool:
+        del command
+        return False
+
+    monkeypatch.setattr(dispatcher.auth, "is_setup_required", _is_setup_required)
+    monkeypatch.setattr(
+        dispatcher.auth,
+        "is_command_allowed_during_setup",
+        _is_command_allowed_during_setup,
+    )
+
+    async def _handler(sio, data, logger, sid):
+        del sio, data, logger, sid
+        return {"success": True}
+
+    registry = _Registry(_Route(_handler))
+
+    result = await dispatch_request(
+        None,
+        "background-task.start",
+        None,
+        _Logger(),
+        "sid-7",
+        registry,
+        auth_context=None,
+    )
+
+    assert result["success"] is False
+    assert result["data"] is None
+    assert result["error"] == "Setup required. Complete admin registration first."
+
+
+async def test_dispatch_request_allows_setup_command_without_auth(monkeypatch):
+    async def _is_setup_required(force_refresh: bool = False):
+        del force_refresh
+        return True
+
+    def _is_command_allowed_during_setup(command: str) -> bool:
+        return command == "setup.status"
+
+    monkeypatch.setattr(dispatcher.auth, "is_setup_required", _is_setup_required)
+    monkeypatch.setattr(
+        dispatcher.auth,
+        "is_command_allowed_during_setup",
+        _is_command_allowed_during_setup,
+    )
+
+    async def _handler(sio, data, logger, sid):
+        del sio, data, logger, sid
+        return {"success": True, "data": {"state": "running"}}
+
+    registry = _Registry(_Route(_handler))
+
+    result = await dispatch_request(
+        None,
+        "setup.status",
+        None,
+        _Logger(),
+        "sid-8",
+        registry,
+        auth_context=None,
+    )
+
+    assert result["success"] is True
+    assert result["data"] == {"state": "running"}
+    assert result["error"] is None

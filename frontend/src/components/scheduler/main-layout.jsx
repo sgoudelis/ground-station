@@ -21,8 +21,6 @@ import React from 'react';
 import { Box } from '@mui/material';
 import ObservationsTable from './observations-table.jsx';
 import MonitoredSatellitesTable from './monitored-satellites-table.jsx';
-import ObservationFormDialog from './observation-form-dialog.jsx';
-import MonitoredSatelliteDialog from './monitored-satellite-dialog.jsx';
 import ObservationStatusBanner from './observation-status-banner.jsx';
 
 export default function ScheduledObservationsLayout() {
@@ -70,9 +68,6 @@ export default function ScheduledObservationsLayout() {
                     <ObservationsTable />
                 </Box>
             </Box>
-
-            <ObservationFormDialog />
-            <MonitoredSatelliteDialog />
         </Box>
     );
 }

@@ -158,9 +158,16 @@ jobs:
               ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.tag_version }}
             ```
 
-            > **Note:** Replace `/path/to/data` with your desired data directory path. Option 1 (host networking) is required for automatic mDNS discovery of SoapySDR remote servers. Option 2 works for local SDRs and all other features. For ARM64, using `-v /dev:/dev` ensures all USB devices are accessible.
+            > **Note:** Replace `/path/to/data` with your desired data directory path. For ARM64, using `-v /dev:/dev` ensures all USB devices are accessible.
 
             After starting the container, access the web interface at `http://<YOUR_HOST>:7000`
+
+            > **First startup note:** On first run, it can take up to ~30 seconds after container startup for the frontend to become available.
+            >
+            > You can watch startup progress with:
+            > ```bash
+            > docker logs -f --tail=100 ground-station
+            > ```
 
             ### Upgrading an existing container:
             ```bash

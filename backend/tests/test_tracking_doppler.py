@@ -17,10 +17,17 @@
 Tests for tracking/doppler.py Doppler shift calculation functions.
 """
 
+from datetime import datetime, timezone
+
 import pytest
 from skyfield.api import load
 
-from tracking.doppler import calculate_doppler_shift
+from tracking.doppler import (
+    calculate_doppler_shift,
+    calculate_doppler_shift_from_range_rate,
+    calculate_observer_velocity_due_to_earth_rotation,
+    calculate_range_rate_from_heliocentric_vectors,
+)
 
 
 # Test fixtures with real TLE data
@@ -306,3 +313,85 @@ class TestCalculateDopplerShift:
         # Check that values are whole numbers (rounded)
         assert observed_freq == round(observed_freq)
         assert doppler_shift == round(doppler_shift)
+
+
+class TestVectorBasedDoppler:
+    """Tests for vector/range-rate based Doppler helpers."""
+
+    def test_doppler_from_range_rate_receding_lowers_frequency(self):
+        transmitted_freq = 145_800_000
+        observed_freq, doppler_shift = calculate_doppler_shift_from_range_rate(
+            range_rate_km_s=7.5,
+            transmitted_freq_hz=transmitted_freq,
+        )
+        assert observed_freq < transmitted_freq
+        assert doppler_shift < 0
+
+    def test_doppler_from_range_rate_approaching_raises_frequency(self):
+        transmitted_freq = 145_800_000
+        observed_freq, doppler_shift = calculate_doppler_shift_from_range_rate(
+            range_rate_km_s=-7.5,
+            transmitted_freq_hz=transmitted_freq,
+        )
+        assert observed_freq > transmitted_freq
+        assert doppler_shift > 0
+
+    def test_range_rate_from_heliocentric_vectors_receding(self):
+        range_rate = calculate_range_rate_from_heliocentric_vectors(
+            target_position_xyz_au=[1.0, 0.0, 0.0],
+            target_velocity_xyz_au_per_day=[0.01, 0.0, 0.0],
+            earth_position_xyz_au=[0.0, 0.0, 0.0],
+            earth_velocity_xyz_au_per_day=[0.0, 0.0, 0.0],
+        )
+        assert range_rate == pytest.approx(17.314568368055554, rel=1e-9)
+
+    def test_range_rate_from_heliocentric_vectors_approaching(self):
+        range_rate = calculate_range_rate_from_heliocentric_vectors(
+            target_position_xyz_au=[1.0, 0.0, 0.0],
+            target_velocity_xyz_au_per_day=[-0.01, 0.0, 0.0],
+            earth_position_xyz_au=[0.0, 0.0, 0.0],
+            earth_velocity_xyz_au_per_day=[0.0, 0.0, 0.0],
+        )
+        assert range_rate == pytest.approx(-17.314568368055554, rel=1e-9)
+
+    def test_observer_rotation_velocity_is_near_zero_at_pole(self):
+        observer_velocity = calculate_observer_velocity_due_to_earth_rotation(
+            observer_lat_deg=90.0,
+            observer_lon_deg=0.0,
+            observer_elevation_m=0.0,
+            epoch=datetime(2026, 1, 1, tzinfo=timezone.utc),
+        )
+        assert float(abs(observer_velocity[0])) < 1e-6
+        assert float(abs(observer_velocity[1])) < 1e-6
+
+    def test_range_rate_includes_observer_rotation_component(self):
+        epoch = datetime(2026, 1, 1, tzinfo=timezone.utc)
+        observer_velocity = calculate_observer_velocity_due_to_earth_rotation(
+            observer_lat_deg=0.0,
+            observer_lon_deg=45.0,
+            observer_elevation_m=0.0,
+            epoch=epoch,
+        )
+        range_rate_no_observer = calculate_range_rate_from_heliocentric_vectors(
+            target_position_xyz_au=[1.0, 0.0, 0.0],
+            target_velocity_xyz_au_per_day=[0.0, 0.0, 0.0],
+            earth_position_xyz_au=[0.0, 0.0, 0.0],
+            earth_velocity_xyz_au_per_day=[0.0, 0.0, 0.0],
+        )
+        range_rate_with_observer = calculate_range_rate_from_heliocentric_vectors(
+            target_position_xyz_au=[1.0, 0.0, 0.0],
+            target_velocity_xyz_au_per_day=[0.0, 0.0, 0.0],
+            earth_position_xyz_au=[0.0, 0.0, 0.0],
+            earth_velocity_xyz_au_per_day=[0.0, 0.0, 0.0],
+            observer_lat_deg=0.0,
+            observer_lon_deg=45.0,
+            observer_elevation_m=0.0,
+            epoch=epoch,
+        )
+
+        # For line-of-sight along +X, range-rate offset equals -observer_vx.
+        assert range_rate_no_observer == pytest.approx(0.0, abs=1e-12)
+        assert range_rate_with_observer == pytest.approx(
+            -float(observer_velocity[0]),
+            rel=1e-9,
+        )

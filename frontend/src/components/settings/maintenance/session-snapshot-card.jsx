@@ -179,6 +179,11 @@ const SessionSnapshotCard = () => {
                         const connectedAt = metadata.connected_at
                             ? formatDateTime(metadata.connected_at * 1000, { timezone, locale })
                             : '—';
+                        const ownerName = metadata.username
+                            || (info?.is_internal ? 'Internal observation' : 'Unauthenticated');
+                        const accountType = metadata.role
+                            ? `${metadata.role}`.charAt(0).toUpperCase() + `${metadata.role}`.slice(1)
+                            : (info?.is_internal ? 'System' : '—');
                         const duration = metadata.connected_at
                             ? Math.floor((Date.now() - metadata.connected_at * 1000) / 1000)
                             : null;
@@ -275,6 +280,8 @@ const SessionSnapshotCard = () => {
                                         <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1, fontWeight: 600, textTransform: 'uppercase' }}>
                                             Connection Details
                                         </Typography>
+                                        <KeyValue label="Owner" value={ownerName} />
+                                        <KeyValue label="Account Type" value={accountType} />
                                         <KeyValue label="IP Address" value={metadata.ip} />
                                         <KeyValue label="Origin" value={metadata.origin} />
                                         <KeyValue label="Connected" value={connectedAt} />

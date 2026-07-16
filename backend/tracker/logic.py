@@ -41,6 +41,7 @@ from tracker.ipc import (
 from tracker.righandler import RigHandler
 from tracker.rotatorhandler import RotatorHandler
 from tracker.statemanager import StateManager
+from tracking.doppler import calculate_range_rate_from_heliocentric_vectors
 
 logger = logging.getLogger("tracker-worker")
 
@@ -359,6 +360,99 @@ class SatelliteTracker:
             return None
 
     @staticmethod
+    def _parse_velocity_vector(value: Any) -> Optional[List[float]]:
+        if not isinstance(value, list) or len(value) < 3:
+            return None
+        try:
+            return [float(value[0]), float(value[1]), float(value[2])]
+        except (TypeError, ValueError):
+            return None
+
+    @classmethod
+    def _interpolate_orbit_velocity(
+        cls,
+        payload: Dict[str, Any],
+        *,
+        samples_key: str,
+        times_key: str,
+        epoch: datetime,
+    ) -> Optional[List[float]]:
+        positions_obj = payload.get(samples_key)
+        raw_times_obj = payload.get(times_key)
+        if not isinstance(positions_obj, list) or not isinstance(raw_times_obj, list):
+            return None
+        if len(positions_obj) < 2 or len(raw_times_obj) < 2:
+            return None
+
+        paired_samples: List[tuple[datetime, List[float]]] = []
+        for index, raw_time in enumerate(raw_times_obj):
+            if index >= len(positions_obj):
+                break
+            parsed_time = cls._parse_iso_utc(raw_time)
+            parsed_position = cls._parse_position_vector(positions_obj[index])
+            if parsed_time is None or parsed_position is None:
+                continue
+            paired_samples.append((parsed_time, parsed_position))
+
+        if len(paired_samples) < 2:
+            return None
+
+        ordered = sorted(paired_samples, key=lambda item: item[0])
+        left_time: Optional[datetime]
+        right_time: Optional[datetime]
+        left_pos: Optional[List[float]]
+        right_pos: Optional[List[float]]
+        if epoch <= ordered[0][0]:
+            left_time, left_pos = ordered[0]
+            right_time, right_pos = ordered[1]
+        elif epoch >= ordered[-1][0]:
+            left_time, left_pos = ordered[-2]
+            right_time, right_pos = ordered[-1]
+        else:
+            left_time = right_time = None
+            left_pos = right_pos = None
+            for index in range(1, len(ordered)):
+                candidate_left_time, candidate_left_pos = ordered[index - 1]
+                candidate_right_time, candidate_right_pos = ordered[index]
+                if epoch > candidate_right_time:
+                    continue
+                left_time, left_pos = candidate_left_time, candidate_left_pos
+                right_time, right_pos = candidate_right_time, candidate_right_pos
+                break
+            if left_time is None or right_time is None or left_pos is None or right_pos is None:
+                return None
+
+        if left_time is None or right_time is None or left_pos is None or right_pos is None:
+            return None
+
+        span_seconds = (right_time - left_time).total_seconds()
+        if span_seconds <= 1e-9:
+            return None
+
+        span_days = span_seconds / 86400.0
+        return [(float(right_pos[axis]) - float(left_pos[axis])) / span_days for axis in range(3)]
+
+    @classmethod
+    def _resolve_orbit_velocity(
+        cls,
+        payload: Dict[str, Any],
+        *,
+        velocity_key: str,
+        samples_key: str,
+        times_key: str,
+        epoch: datetime,
+    ) -> Optional[List[float]]:
+        velocity = cls._parse_velocity_vector(payload.get(velocity_key))
+        if velocity:
+            return velocity
+        return cls._interpolate_orbit_velocity(
+            payload,
+            samples_key=samples_key,
+            times_key=times_key,
+            epoch=epoch,
+        )
+
+    @staticmethod
     def _build_non_satellite_data(
         *,
         target_type: str,
@@ -367,6 +461,7 @@ class SatelliteTracker:
         el_deg: float,
         command: Optional[str] = None,
         body_id: Optional[str] = None,
+        transmitters: Optional[List[Dict[str, Any]]] = None,
     ) -> Dict[str, Any]:
         return {
             "details": {
@@ -386,7 +481,7 @@ class SatelliteTracker:
             },
             "paths": {"past": [], "future": []},
             "coverage": [],
-            "transmitters": [],
+            "transmitters": list(transmitters or []),
             "error": False,
         }
 
@@ -403,6 +498,10 @@ class SatelliteTracker:
         except (TypeError, ValueError, KeyError):
             logger.warning("Invalid observer location in tracker loop")
             return None
+        try:
+            observer_alt_m = float(location.get("alt") or 0.0)
+        except (TypeError, ValueError):
+            observer_alt_m = 0.0
 
         now_epoch = datetime.now(timezone.utc)
         input_payload = dict(self.input_target_ephemeris or {})
@@ -452,11 +551,52 @@ class SatelliteTracker:
                 "satellite_tles": satellite_tles,
             }
 
+        target_identifier = str(
+            tracking_state.get("command")
+            or tracking_state.get("body_id")
+            or tracking_state.get("target_name")
+            or "unknown"
+        ).strip()
+        if not target_identifier:
+            target_identifier = "unknown"
+
         earth_position = self._interpolate_earth_position(input_payload, now_epoch)
         if not earth_position:
             earth_position = self._parse_position_vector(input_payload.get("earth_position_xyz_au"))
         if not earth_position:
-            logger.warning("Missing earth ephemeris in tracker worker context")
+            if not input_payload:
+                logger.warning(
+                    "Missing %s ephemeris payload in tracker worker context "
+                    "(tracker_id=%s target=%s). The manager may not have a valid cached "
+                    "vector snapshot for this target yet.",
+                    target_type,
+                    self.tracker_id,
+                    target_identifier,
+                )
+                return None
+
+            payload_target_type = str(input_payload.get("target_type") or "unknown").strip()
+            payload_identifier = str(
+                input_payload.get("command")
+                or input_payload.get("body_id")
+                or input_payload.get("norad_id")
+                or input_payload.get("name")
+                or "unknown"
+            ).strip()
+            if not payload_identifier:
+                payload_identifier = "unknown"
+            logger.warning(
+                "Missing earth ephemeris in tracker worker payload "
+                "(tracker_id=%s target_type=%s target=%s payload_target_type=%s "
+                "payload_target=%s earth_samples=%s payload_keys=%s)",
+                self.tracker_id,
+                target_type,
+                target_identifier,
+                payload_target_type or "unknown",
+                payload_identifier,
+                len(input_payload.get("earth_orbit_samples_xyz_au") or []),
+                sorted(input_payload.keys()),
+            )
             return None
 
         if target_type == "mission":
@@ -493,6 +633,32 @@ class SatelliteTracker:
                 ).strip()
                 or command
             )
+            target_velocity = self._resolve_orbit_velocity(
+                input_payload,
+                velocity_key="velocity_xyz_au_per_day",
+                samples_key="orbit_samples_xyz_au",
+                times_key="orbit_sample_times_utc",
+                epoch=now_epoch,
+            )
+            earth_velocity = self._resolve_orbit_velocity(
+                input_payload,
+                velocity_key="earth_velocity_xyz_au_per_day",
+                samples_key="earth_orbit_samples_xyz_au",
+                times_key="earth_orbit_sample_times_utc",
+                epoch=now_epoch,
+            )
+            range_rate_km_s = None
+            if target_velocity and earth_velocity:
+                range_rate_km_s = calculate_range_rate_from_heliocentric_vectors(
+                    target_position_xyz_au=position_xyz_au,
+                    target_velocity_xyz_au_per_day=target_velocity,
+                    earth_position_xyz_au=earth_position,
+                    earth_velocity_xyz_au_per_day=earth_velocity,
+                    observer_lat_deg=observer_lat,
+                    observer_lon_deg=observer_lon,
+                    observer_elevation_m=observer_alt_m,
+                    epoch=now_epoch,
+                )
             return {
                 "target_type": "mission",
                 "target_name": target_name,
@@ -504,8 +670,10 @@ class SatelliteTracker:
                     az_deg=az_deg,
                     el_deg=el_deg,
                     command=command,
+                    transmitters=self.input_transmitters,
                 ),
                 "satellite_tles": None,
+                "range_rate_km_s": range_rate_km_s,
             }
 
         body_id = (
@@ -537,6 +705,32 @@ class SatelliteTracker:
             str(tracking_state.get("target_name") or input_payload.get("name") or body_id).strip()
             or body_id
         )
+        target_velocity = self._resolve_orbit_velocity(
+            input_payload,
+            velocity_key="velocity_xyz_au_per_day",
+            samples_key="orbit_samples_xyz_au",
+            times_key="orbit_sample_times_utc",
+            epoch=now_epoch,
+        )
+        earth_velocity = self._resolve_orbit_velocity(
+            input_payload,
+            velocity_key="earth_velocity_xyz_au_per_day",
+            samples_key="earth_orbit_samples_xyz_au",
+            times_key="earth_orbit_sample_times_utc",
+            epoch=now_epoch,
+        )
+        range_rate_km_s = None
+        if target_velocity and earth_velocity:
+            range_rate_km_s = calculate_range_rate_from_heliocentric_vectors(
+                target_position_xyz_au=body_position,
+                target_velocity_xyz_au_per_day=target_velocity,
+                earth_position_xyz_au=earth_position,
+                earth_velocity_xyz_au_per_day=earth_velocity,
+                observer_lat_deg=observer_lat,
+                observer_lon_deg=observer_lon,
+                observer_elevation_m=observer_alt_m,
+                epoch=now_epoch,
+            )
         return {
             "target_type": "body",
             "target_name": target_name,
@@ -548,8 +742,10 @@ class SatelliteTracker:
                 az_deg=az_deg,
                 el_deg=el_deg,
                 body_id=body_id,
+                transmitters=self.input_transmitters,
             ),
             "satellite_tles": None,
+            "range_rate_km_s": range_rate_km_s,
         }
 
     async def run(self):
@@ -648,9 +844,7 @@ class SatelliteTracker:
                 )
                 self.current_rotator_id = tracker.get("rotator_id", "none")
                 self.current_rig_id = tracker.get("rig_id", "none")
-                self.current_transmitter_id = (
-                    tracker.get("transmitter_id", "none") if target_type == "satellite" else "none"
-                )
+                self.current_transmitter_id = tracker.get("transmitter_id", "none")
                 self.current_rig_vfo = tracker.get("rig_vfo", "none")
                 self.current_vfo1 = tracker.get("vfo1", "uplink")
                 self.current_vfo2 = tracker.get("vfo2", "downlink")
@@ -702,7 +896,10 @@ class SatelliteTracker:
                     # Control rig frequency
                     await self.rig_handler.control_rig_frequency()
                 else:
-                    self.rig_handler.apply_non_satellite_target_idle()
+                    await self.rig_handler.handle_non_satellite_transmitter_tracking(
+                        range_rate_km_s=target_context.get("range_rate_km_s")
+                    )
+                    await self.rig_handler.control_rig_frequency()
                     logger.debug(
                         "Target %s:%s az=%.4f el=%.4f (non-satellite mode)",
                         target_type,

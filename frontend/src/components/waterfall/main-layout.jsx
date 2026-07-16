@@ -44,7 +44,7 @@ export const handleSetGridEditableWaterfall = function (value) {
 };
 
 export const gridLayoutStoreName = 'waterfall-view-layouts';
-const LAYOUT_SCHEMA_VERSION = 6;
+const LAYOUT_SCHEMA_VERSION = 7;
 const SHARED_RESIZE_HANDLES = ['s', 'sw', 'w', 'se', 'nw', 'ne', 'e'];
 
 // load / save layouts from localStorage
@@ -118,26 +118,26 @@ const MainLayout = React.memo(function MainLayout() {
             "i": "waterfall",
             "x": 0,
             "y": 0,
-            "w": 10,
-            "h": 19,
+            "w": 39,
+            "h": 43,
             "moved": false,
             "static": false,
             "resizeHandles": ["s", "sw", "w", "se", "nw", "ne", "e"]
         }, {
             "i": "settings",
-            "x": 10,
+            "x": 39,
             "y": 0,
-            "w": 2,
-            "h": 19,
+            "w": 9,
+            "h": 43,
             "moved": false,
             "static": false,
             "resizeHandles": ["s", "sw", "w", "se", "nw", "ne", "e"]
         }, {
             "i": "decoding",
             "x": 0,
-            "y": 19,
-            "w": 12,
-            "h": 8,
+            "y": 43,
+            "w": 48,
+            "h": 15,
             "moved": false,
             "static": false,
             "resizeHandles": ["s", "sw", "w", "se", "nw", "ne", "e"]
@@ -146,26 +146,26 @@ const MainLayout = React.memo(function MainLayout() {
             "i": "waterfall",
             "x": 0,
             "y": 0,
-            "w": 7,
-            "h": 25,
+            "w": 28,
+            "h": 42,
             "moved": false,
             "static": false,
             "resizeHandles": ["s", "sw", "w", "se", "nw", "ne", "e"]
         }, {
             "i": "settings",
-            "x": 7,
+            "x": 28,
             "y": 0,
-            "w": 3,
-            "h": 25,
+            "w": 12,
+            "h": 42,
             "moved": false,
             "static": false,
             "resizeHandles": ["s", "sw", "w", "se", "nw", "ne", "e"]
         }, {
             "i": "decoding",
             "x": 0,
-            "y": 25,
-            "w": 10,
-            "h": 10,
+            "y": 42,
+            "w": 40,
+            "h": 17,
             "moved": false,
             "static": false,
             "resizeHandles": ["s", "sw", "w", "se", "nw", "ne", "e"]
@@ -174,26 +174,26 @@ const MainLayout = React.memo(function MainLayout() {
             "i": "waterfall",
             "x": 0,
             "y": 0,
-            "w": 6,
-            "h": 22,
+            "w": 17,
+            "h": 41,
             "moved": false,
             "static": false,
             "resizeHandles": ["s", "sw", "w", "se", "nw", "ne", "e"]
         }, {
             "i": "settings",
-            "x": 0,
-            "y": 22,
-            "w": 6,
-            "h": 14,
+            "x": 17,
+            "y": 0,
+            "w": 7,
+            "h": 41,
             "moved": false,
             "static": false,
             "resizeHandles": ["s", "sw", "w", "se", "nw", "ne", "e"]
         }, {
             "i": "decoding",
             "x": 0,
-            "y": 36,
-            "w": 6,
-            "h": 10,
+            "y": 41,
+            "w": 24,
+            "h": 15,
             "moved": false,
             "static": false,
             "resizeHandles": ["s", "sw", "w", "se", "nw", "ne", "e"]
@@ -202,26 +202,26 @@ const MainLayout = React.memo(function MainLayout() {
             "i": "waterfall",
             "x": 0,
             "y": 0,
-            "w": 2,
-            "h": 22,
+            "w": 8,
+            "h": 42,
             "moved": false,
             "static": false,
             "resizeHandles": ["s", "sw", "w", "se", "nw", "ne", "e"]
         }, {
             "i": "settings",
             "x": 0,
-            "y": 22,
-            "w": 2,
-            "h": 13,
+            "y": 42,
+            "w": 8,
+            "h": 33,
             "moved": false,
             "static": false,
             "resizeHandles": ["s", "sw", "w", "se", "nw", "ne", "e"]
         }, {
             "i": "decoding",
             "x": 0,
-            "y": 35,
-            "w": 2,
-            "h": 10,
+            "y": 75,
+            "w": 8,
+            "h": 16,
             "moved": false,
             "static": false,
             "resizeHandles": ["s", "sw", "w", "se", "nw", "ne", "e"]
@@ -230,26 +230,26 @@ const MainLayout = React.memo(function MainLayout() {
             "i": "waterfall",
             "x": 0,
             "y": 0,
-            "w": 2,
-            "h": 20,
+            "w": 8,
+            "h": 33,
             "moved": false,
             "static": false,
             "resizeHandles": ["s", "sw", "w", "se", "nw", "ne", "e"]
         }, {
             "i": "settings",
             "x": 0,
-            "y": 20,
-            "w": 2,
-            "h": 12,
+            "y": 33,
+            "w": 8,
+            "h": 16,
             "moved": false,
             "static": false,
             "resizeHandles": ["s", "sw", "w", "se", "nw", "ne", "e"]
         }, {
             "i": "decoding",
             "x": 0,
-            "y": 32,
-            "w": 2,
-            "h": 10,
+            "y": 49,
+            "w": 8,
+            "h": 19,
             "moved": false,
             "static": false,
             "resizeHandles": ["s", "sw", "w", "se", "nw", "ne", "e"]
@@ -309,8 +309,8 @@ const MainLayout = React.memo(function MainLayout() {
             layouts={layouts}
             onLayoutChange={handleLayoutsChange}
             breakpoints={{lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0}}
-            cols={{lg: 12, md: 10, sm: 6, xs: 2, xxs: 2}}
-            rowHeight={30}
+            cols={{lg: 48, md: 40, sm: 24, xs: 8, xxs: 8}}
+            rowHeight={8}
             dragConfig={{enabled: gridEditable, handle: '.react-grid-draggable'}}
             resizeConfig={{enabled: gridEditable}}
         >

@@ -119,6 +119,9 @@
   "satellite_map": {
     "title": "Zielverfolgung"
   },
+  "target_retarget_dialog": {
+    "title": "Slot neu zuweisen oder ein neues Ziel erstellen"
+  },
   "pass_timeline": {
     "title": "Überflugzeitleiste für {{name}} - Nächste {{hours}} Stunden"
   },

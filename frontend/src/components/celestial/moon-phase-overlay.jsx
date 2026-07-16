@@ -1,22 +1,24 @@
 import React from 'react';
 import { Box } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import { buildMoonShadowPath, getMoonIllumination } from './moonphase.js';
 
 const REFRESH_INTERVAL_MS = 10 * 60 * 1000;
 
 const MoonPhaseOverlay = ({ enabled = false }) => {
+    const { t } = useTranslation('celestial');
     const reactId = React.useId();
     const clipPathId = `moon-phase-${reactId.replace(/:/g, '')}`;
-    const [illumination, setIllumination] = React.useState(() => getMoonIllumination());
+    const [illumination, setIllumination] = React.useState(() => getMoonIllumination(new Date(), t));
 
     React.useEffect(() => {
         if (!enabled) return undefined;
 
-        const refresh = () => setIllumination(getMoonIllumination());
+        const refresh = () => setIllumination(getMoonIllumination(new Date(), t));
         refresh();
         const interval = window.setInterval(refresh, REFRESH_INTERVAL_MS);
         return () => window.clearInterval(interval);
-    }, [enabled]);
+    }, [enabled, t]);
 
     if (!enabled) return null;
 

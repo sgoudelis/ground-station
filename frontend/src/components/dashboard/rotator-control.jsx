@@ -780,8 +780,8 @@ const RotatorControl = React.memo(function RotatorControl({ trackerId: trackerId
                         alignItems: "stretch",
                     }}>
                         <Grid size="grow"
-                              style={{paddingRight: '0.5rem', flex: 1, paddingBottom: '0.5rem', paddingTop: '0.2rem'}}
-                              container spacing={1} justifyContent="center">
+                              style={{paddingRight: '0.35rem', flex: 1, paddingBottom: '0.5rem', paddingTop: '0.2rem'}}
+                              container spacing={0.5} justifyContent="center">
                             <Grid>
                                 <Button
                                     size="small"
@@ -789,7 +789,7 @@ const RotatorControl = React.memo(function RotatorControl({ trackerId: trackerId
                                     fullWidth={true}
                                     variant="contained"
                                     color="primary"
-                                    style={{height: '30px', fontSize: '0.9rem', padding: 0}}
+                                    style={{minHeight: '30px', fontSize: '0.82rem', padding: '1px 0', lineHeight: 1.1}}
                                     onClick={() => {
                                         handleNudgeCommand("nudge_counter_clockwise");
                                     }}>
@@ -804,7 +804,7 @@ const RotatorControl = React.memo(function RotatorControl({ trackerId: trackerId
                                     variant="contained"
                                     color="primary"
                                     sx={{}}
-                                    style={{height: '30px', fontSize: '0.9rem', padding: 0}}
+                                    style={{minHeight: '30px', fontSize: '0.82rem', padding: '1px 0', lineHeight: 1.1}}
                                     onClick={() => {
                                         handleNudgeCommand("nudge_clockwise");
                                     }}>
@@ -815,7 +815,7 @@ const RotatorControl = React.memo(function RotatorControl({ trackerId: trackerId
                         <Grid size="grow"
                               style={{paddingRight: '0rem', flex: 1, paddingBottom: '0.5rem', paddingTop: '0.2rem'}}
                               container
-                              spacing={1} justifyContent="center">
+                              spacing={0.5} justifyContent="center">
                             <Grid>
                                 <Button
                                     size="small"
@@ -823,7 +823,7 @@ const RotatorControl = React.memo(function RotatorControl({ trackerId: trackerId
                                     fullWidth={true}
                                     variant="contained"
                                     color="primary"
-                                    style={{height: '30px', fontSize: '0.9rem', padding: 0}}
+                                    style={{minHeight: '30px', fontSize: '0.82rem', padding: '1px 0', lineHeight: 1.1}}
                                     onClick={() => {
                                         handleNudgeCommand("nudge_up");
                                     }}>
@@ -837,7 +837,7 @@ const RotatorControl = React.memo(function RotatorControl({ trackerId: trackerId
                                     fullWidth={true}
                                     variant="contained"
                                     color="primary"
-                                    style={{height: '30px', fontSize: '0.9rem', padding: 0}}
+                                    style={{minHeight: '30px', fontSize: '0.82rem', padding: '1px 0', lineHeight: 1.1}}
                                     onClick={() => {
                                         handleNudgeCommand("nudge_down");
                                     }}>

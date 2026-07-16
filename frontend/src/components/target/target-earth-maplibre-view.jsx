@@ -85,6 +85,7 @@ const MAPLIBRE_GLOBE_LOCK_ON_COVERAGE_PADDING = Object.freeze({
     bottom: 88,
     left: 48,
 });
+const MAPLIBRE_MAX_FIT_BOUNDS_LAT = 85.051129;
 const MAPLIBRE_GLOBE_TRACK_DURATION_MS = 280;
 // MapLibre anchor names describe the popup side attached to the point, so they are inverse
 // of Leaflet's tooltip direction names (which describe where the tooltip appears).
@@ -183,17 +184,28 @@ function projectTerminatorForMapLibre(points) {
 }
 
 function normalizeCoveragePoint(point) {
+    let lat;
+    let lon;
+
     if (Array.isArray(point) && point.length >= 2) {
-        return [Number(point[0]), Number(point[1])];
+        lat = Number(point[0]);
+        lon = Number(point[1]);
+    } else if (point && typeof point === 'object') {
+        lat = Number(point.lat);
+        lon = Number(point.lon ?? point.lng);
+    } else {
+        return null;
     }
-    if (point && typeof point === 'object') {
-        const lat = Number(point.lat);
-        const lon = Number(point.lon ?? point.lng);
-        if (Number.isFinite(lat) && Number.isFinite(lon)) {
-            return [lat, lon];
-        }
-    }
-    return null;
+
+    // Reject malformed coverage coordinates before they reach maplibre's LngLat/LngLatBounds constructors.
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+    if (lat < -90 || lat > 90) return null;
+
+    return [lat, lon];
+}
+
+function clampFitBoundsLatitude(latitude) {
+    return Math.max(-MAPLIBRE_MAX_FIT_BOUNDS_LAT, Math.min(MAPLIBRE_MAX_FIT_BOUNDS_LAT, latitude));
 }
 
 function buildGridGeoJSON(latInterval = 15, lngInterval = 15) {
@@ -500,17 +512,28 @@ const TargetEarthMapLibreView = ({projection = MAPLIBRE_PROJECTION_MERCATOR, eff
             : [];
 
         if (showSatelliteCoverage && coveragePoints.length > 1) {
-            const bounds = coveragePoints.reduce(
-                (acc, point) => acc.extend([point[1], point[0]]),
-                new maplibregl.LngLatBounds([coveragePoints[0][1], coveragePoints[0][0]], [coveragePoints[0][1], coveragePoints[0][0]])
-            );
-            // Keep a visible margin around the footprint and bias it slightly upward.
-            liveMap.fitBounds(bounds, {
-                padding: isGlobeProjection ? MAPLIBRE_GLOBE_LOCK_ON_COVERAGE_PADDING : MAPLIBRE_LOCK_ON_COVERAGE_PADDING,
-                animate: isGlobeProjection,
-                duration: isGlobeProjection ? MAPLIBRE_GLOBE_TRACK_DURATION_MS : 0,
-            });
-            return;
+            // Keep fitBounds away from the mercator poles to avoid invalid camera math.
+            const fitBoundsPoints = coveragePoints
+                .map(([coverageLat, coverageLon]) => [Number(coverageLon), clampFitBoundsLatitude(Number(coverageLat))])
+                .filter(([coverageLon, coverageLat]) => Number.isFinite(coverageLon) && Number.isFinite(coverageLat));
+
+            if (fitBoundsPoints.length > 1) {
+                try {
+                    const bounds = fitBoundsPoints.reduce(
+                        (acc, point) => acc.extend(point),
+                        new maplibregl.LngLatBounds(fitBoundsPoints[0], fitBoundsPoints[0])
+                    );
+                    // Keep a visible margin around the footprint and bias it slightly upward.
+                    liveMap.fitBounds(bounds, {
+                        padding: isGlobeProjection ? MAPLIBRE_GLOBE_LOCK_ON_COVERAGE_PADDING : MAPLIBRE_LOCK_ON_COVERAGE_PADDING,
+                        animate: isGlobeProjection,
+                        duration: isGlobeProjection ? MAPLIBRE_GLOBE_TRACK_DURATION_MS : 0,
+                    });
+                    return;
+                } catch (error) {
+                    console.warn('Target map coverage fitBounds skipped due to invalid bounds:', error);
+                }
+            }
         }
 
         if (isGlobeProjection) {
@@ -920,9 +943,6 @@ const TargetEarthMapLibreView = ({projection = MAPLIBRE_PROJECTION_MERCATOR, eff
                                         prefix="T"
                                         size={15}
                                         sx={{mr: 0.7, verticalAlign: 'middle', position: 'relative', top: -1}}
-                                        iconColor="common.white"
-                                        badgeBgColor="warning.main"
-                                        badgeTextColor="common.black"
                                     />
                                 ) : null}
                                 {satelliteDetails?.name || '-'} - {altitudeLabel}, {velocityLabel}

@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Box, Chip, IconButton, Stack, Tooltip, Typography } from '@mui/material';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
-import TargetBadge from './target-badge.jsx';
+import TargetNumberIcon from './target-number-icon.jsx';
 
 const FleetTargetRow = React.memo(function FleetTargetRow({
     targetNumber,
@@ -17,6 +17,7 @@ const FleetTargetRow = React.memo(function FleetTargetRow({
     actions = null,
 }) {
     const hasElevation = elevation !== null && elevation !== undefined && Number.isFinite(Number(elevation));
+    const isBadgeClickable = Boolean(onFocus);
 
     return (
         <Box
@@ -33,12 +34,35 @@ const FleetTargetRow = React.memo(function FleetTargetRow({
             }}
         >
             <Stack direction="row" spacing={0.6} alignItems="center" useFlexGap flexWrap="wrap">
-                <TargetBadge
-                    targetNumber={targetNumber}
-                    tracking={trackingActive}
-                    clickable={Boolean(onFocus)}
-                    onClick={onFocus}
-                />
+                <Box
+                    component={isBadgeClickable ? 'button' : 'span'}
+                    type={isBadgeClickable ? 'button' : undefined}
+                    onClick={isBadgeClickable ? onFocus : undefined}
+                    sx={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        p: 0,
+                        m: 0,
+                        border: 'none',
+                        bgcolor: 'transparent',
+                        cursor: isBadgeClickable ? 'pointer' : 'default',
+                        lineHeight: 0,
+                        font: 'inherit',
+                        appearance: 'none',
+                        WebkitTapHighlightColor: 'transparent',
+                        '&:focus-visible': {
+                            outline: 'none',
+                        },
+                    }}
+                >
+                    <TargetNumberIcon
+                        targetNumber={targetNumber}
+                        prefix="T"
+                        size={15}
+                        variant={trackingActive ? 'filled' : 'muted'}
+                        sx={{ flexShrink: 0, opacity: trackingActive ? 0.9 : undefined }}
+                    />
+                </Box>
                 <Typography
                     variant="caption"
                     color="text.secondary"

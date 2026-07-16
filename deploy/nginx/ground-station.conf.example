@@ -1,0 +1,64 @@
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    ''      close;
+}
+
+upstream ground_station_backend {
+    server 127.0.0.1:7000;
+    keepalive 32;
+}
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name gs.example.com;
+
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    # Optional alternate TLS listener:
+    # listen 8078 ssl http2;
+    # listen [::]:8078 ssl http2;
+
+    server_name gs.example.com;
+
+    # Replace with your certificate paths.
+    ssl_certificate /etc/nginx/gs.example.com.cert.pem;
+    ssl_certificate_key /etc/nginx/gs.example.com.key.pem;
+
+    ssl_session_timeout 1d;
+    ssl_session_cache shared:MozSSL:10m;
+    ssl_session_tickets off;
+    ssl_protocols TLSv1.2 TLSv1.3;
+
+    # Ground Station uses:
+    # - HTTP API endpoints
+    # - Socket.IO/WebSocket upgrades
+    # - authenticated static files under /recordings, /decoded, /audio, /transcriptions
+    # Keep cookie and forwarded headers intact.
+    location / {
+        proxy_pass http://ground_station_backend;
+        proxy_http_version 1.1;
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Port $server_port;
+
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+
+        proxy_read_timeout 86400s;
+        client_max_body_size 0;
+        client_body_buffer_size 512k;
+
+        # Optional basic auth at proxy edge.
+        # auth_basic "Authentication required";
+        # auth_basic_user_file /etc/nginx/htpasswd;
+    }
+}

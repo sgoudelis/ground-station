@@ -21,6 +21,11 @@ import re
 from datetime import datetime
 from typing import Optional
 
+from common.filenames import (
+    looks_like_path_input,
+    resolve_base_path_within_root,
+    sanitize_filename_component,
+)
 from demodulators.iqrecorder import IQRecorder
 from pipeline.orchestration.processmanager import process_manager
 
@@ -63,6 +68,14 @@ def start_recording(
     # Use default name if not provided
     if not recording_name or not recording_name.strip():
         recording_name = "unknown_recording"
+    recording_name = str(recording_name).strip()
+    if looks_like_path_input(recording_name):
+        logger.warning(
+            "Path-like recording name received from client %s: %r",
+            client_id,
+            recording_name,
+        )
+    recording_name = sanitize_filename_component(recording_name, default="unknown_recording")
 
     # Append timestamp to recording name
     recording_name_with_timestamp = f"{recording_name}_{timestamp}"
@@ -71,9 +84,9 @@ def start_recording(
     # Get the backend directory (parent of server/)
     backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     recordings_dir = os.path.join(backend_dir, "data", "recordings")
-    os.makedirs(recordings_dir, exist_ok=True)
-
-    recording_path = os.path.join(recordings_dir, recording_name_with_timestamp)
+    recording_path = str(
+        resolve_base_path_within_root(recordings_dir, recording_name_with_timestamp)
+    )
 
     # Start recorder
     result = process_manager.start_recorder(

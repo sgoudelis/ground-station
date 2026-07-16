@@ -11,7 +11,6 @@ import {
     InputLabel,
     Select,
     MenuItem,
-    Link,
     Alert,
     Dialog,
     DialogTitle,
@@ -265,35 +264,6 @@ export const TransmitterLockSelect = ({
                 </DialogActions>
             </Dialog>
         </>
-    );
-};
-
-/**
- * Transmitter Edit Link Component
- */
-export const TransmitterEditLink = ({ targetSatelliteName, onOpenDialog }) => {
-    if (!targetSatelliteName) return null;
-
-    return (
-        <Box sx={{ mt: 0.5, textAlign: 'center' }}>
-            <Link
-                component="button"
-                variant="caption"
-                onClick={onOpenDialog}
-                sx={{
-                    fontSize: '0.7rem',
-                    color: 'text.disabled',
-                    textDecoration: 'none',
-                    '&:hover': {
-                        color: 'text.secondary',
-                        textDecoration: 'underline',
-                    },
-                    cursor: 'pointer',
-                }}
-            >
-                Edit {targetSatelliteName} transmitters here
-            </Link>
-        </Box>
     );
 };
 

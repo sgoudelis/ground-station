@@ -19,6 +19,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import {
     Dialog,
     DialogTitle,
@@ -82,32 +83,34 @@ import { SATDUMP_PIPELINES, getDecoderParameters, getDecoderDefaultParameters } 
 import { DecoderConfigSuggestion } from './decoder-config-suggestion.jsx';
 
 const DECODER_TYPES = [
-    { value: 'none', label: 'None' },
-    { value: 'fsk', label: 'FSK' },
-    { value: 'gmsk', label: 'GMSK' },
-    { value: 'gfsk', label: 'GFSK' },
-    { value: 'bpsk', label: 'BPSK' },
-    { value: 'sstv', label: 'SSTV' },
+    { value: 'none', labelKey: 'decoder_type_none' },
+    { value: 'fsk', labelKey: 'decoder_type_fsk' },
+    { value: 'gmsk', labelKey: 'decoder_type_gmsk' },
+    { value: 'gfsk', labelKey: 'decoder_type_gfsk' },
+    { value: 'bpsk', labelKey: 'decoder_type_bpsk' },
+    { value: 'sstv', labelKey: 'decoder_type_sstv' },
 ];
 
 const SSTV_DEFAULT_BANDWIDTH = 12500;
 
 const DEMODULATOR_TYPES = [
-    { value: 'fm', label: 'FM (Frequency Modulation)' },
-    { value: 'am', label: 'AM (Amplitude Modulation)' },
-    { value: 'usb', label: 'USB (Upper Sideband)' },
-    { value: 'lsb', label: 'LSB (Lower Sideband)' },
-    { value: 'cw', label: 'CW (Continuous Wave)' },
+    { value: 'fm', labelKey: 'demodulator_fm' },
+    { value: 'am', labelKey: 'demodulator_am' },
+    { value: 'usb', labelKey: 'demodulator_usb' },
+    { value: 'lsb', labelKey: 'demodulator_lsb' },
+    { value: 'cw', labelKey: 'demodulator_cw' },
 ];
 
 const MODULATION_TYPES = [
-    { value: 'fm', label: 'FM (Frequency Modulation)' },
-    { value: 'am', label: 'AM (Amplitude Modulation)' },
-    { value: 'ssb', label: 'SSB (Single Sideband)' },
-    { value: 'cw', label: 'CW (Continuous Wave)' },
-    { value: 'fsk', label: 'FSK (Frequency Shift Keying)' },
-    { value: 'psk', label: 'PSK (Phase Shift Keying)' },
+    { value: 'fm', labelKey: 'modulation_fm' },
+    { value: 'am', labelKey: 'modulation_am' },
+    { value: 'ssb', labelKey: 'modulation_ssb' },
+    { value: 'cw', labelKey: 'modulation_cw' },
+    { value: 'fsk', labelKey: 'modulation_fsk' },
+    { value: 'psk', labelKey: 'modulation_psk' },
 ];
+
+const BAND_ORDER = ['hf', 'vhf', 'uhf', 'l_band', 's_band', 'c_band', 'x_band', 'other'];
 
 const SAMPLE_RATES = [
     { value: 500000, label: '500 kHz' },
@@ -122,6 +125,41 @@ const SAMPLE_RATES = [
     { value: 10000000, label: '10 MHz' },
     { value: 12000000, label: '12 MHz' },
     { value: 16000000, label: '16 MHz' },
+];
+
+const TRANSCRIPTION_LANGUAGE_OPTIONS = [
+    { value: 'en', icon: '🇬🇧', labelKey: 'language_english' },
+    { value: 'el', icon: '🇬🇷', labelKey: 'language_greek' },
+    { value: 'es', icon: '🇪🇸', labelKey: 'language_spanish' },
+    { value: 'fr', icon: '🇫🇷', labelKey: 'language_french' },
+    { value: 'de', icon: '🇩🇪', labelKey: 'language_german' },
+    { value: 'it', icon: '🇮🇹', labelKey: 'language_italian' },
+    { value: 'pt', icon: '🇵🇹', labelKey: 'language_portuguese' },
+    { value: 'pt-BR', icon: '🇧🇷', labelKey: 'language_portuguese_brazil' },
+    { value: 'ru', icon: '🇷🇺', labelKey: 'language_russian' },
+    { value: 'uk', icon: '🇺🇦', labelKey: 'language_ukrainian' },
+    { value: 'ja', icon: '🇯🇵', labelKey: 'language_japanese' },
+    { value: 'zh', icon: '🇨🇳', labelKey: 'language_chinese' },
+    { value: 'ar', icon: '🇸🇦', labelKey: 'language_arabic' },
+    { value: 'tl', icon: '🇵🇭', labelKey: 'language_filipino' },
+    { value: 'tr', icon: '🇹🇷', labelKey: 'language_turkish' },
+    { value: 'sk', icon: '🇸🇰', labelKey: 'language_slovak' },
+    { value: 'hr', icon: '🇭🇷', labelKey: 'language_croatian' },
+];
+
+const SOURCE_LANGUAGE_OPTIONS = [
+    { value: 'auto', icon: '🌐', labelKey: 'language_auto_detect' },
+    ...TRANSCRIPTION_LANGUAGE_OPTIONS,
+];
+
+const TRANSLATION_TARGET_OPTIONS = [
+    { value: 'none', icon: '⭕', labelKey: 'no_translation' },
+    ...TRANSCRIPTION_LANGUAGE_OPTIONS,
+];
+
+const TRANSCRIPTION_PROVIDER_OPTIONS = [
+    { value: 'gemini', labelKey: 'provider_gemini' },
+    { value: 'deepgram', labelKey: 'provider_deepgram' },
 ];
 
 const createEmptySession = () => ({
@@ -167,19 +205,18 @@ const getDefaultSatdumpPipeline = () => {
 // Helper function to determine band from frequency in Hz
 const getBand = (frequencyHz) => {
     const freqMHz = frequencyHz / 1000000;
-    if (freqMHz >= 30 && freqMHz < 300) return 'VHF';
-    if (freqMHz >= 300 && freqMHz < 1000) return 'UHF';
-    if (freqMHz >= 1000 && freqMHz < 2000) return 'L-Band';
-    if (freqMHz >= 2000 && freqMHz < 4000) return 'S-Band';
-    if (freqMHz >= 4000 && freqMHz < 8000) return 'C-Band';
-    if (freqMHz >= 8000 && freqMHz < 12000) return 'X-Band';
-    if (freqMHz < 30) return 'HF';
-    return 'Other';
+    if (freqMHz >= 30 && freqMHz < 300) return 'vhf';
+    if (freqMHz >= 300 && freqMHz < 1000) return 'uhf';
+    if (freqMHz >= 1000 && freqMHz < 2000) return 'l_band';
+    if (freqMHz >= 2000 && freqMHz < 4000) return 's_band';
+    if (freqMHz >= 4000 && freqMHz < 8000) return 'c_band';
+    if (freqMHz >= 8000 && freqMHz < 12000) return 'x_band';
+    if (freqMHz < 30) return 'hf';
+    return 'other';
 };
 
 // Helper function to group transmitters by band
 const groupTransmittersByBand = (transmitters) => {
-    const bandOrder = ['HF', 'VHF', 'UHF', 'L-Band', 'S-Band', 'C-Band', 'X-Band', 'Other'];
     const grouped = {};
 
     transmitters.forEach(transmitter => {
@@ -196,13 +233,14 @@ const groupTransmittersByBand = (transmitters) => {
     });
 
     // Return bands in order
-    return bandOrder
+    return BAND_ORDER
         .filter(band => grouped[band])
         .map(band => ({ band, transmitters: grouped[band] }));
 };
 
 const ObservationFormDialog = () => {
     const dispatch = useDispatch();
+    const { t } = useTranslation('common');
     const { socket } = useSocket();
 
     const open = useSelector((state) => state.scheduler?.dialogOpen || false);
@@ -274,6 +312,32 @@ const ObservationFormDialog = () => {
     const [transmitterMenuAnchor, setTransmitterMenuAnchor] = useState(null);
     const sdrParamsForSelected = formData.sdr.id ? sdrParameters?.[formData.sdr.id] : null;
     const biasTSupported = Boolean(sdrParamsForSelected?.has_bias_t || sdrParamsForSelected?.capabilities?.bias_t?.supported);
+    const selectedSdrRecord = useMemo(
+        () => sdrs.find((sdr) => String(sdr?.id) === String(formData.sdr.id)),
+        [sdrs, formData.sdr.id]
+    );
+    const selectedSdrRxAntennaLabels = useMemo(() => {
+        const rawLabels = selectedSdrRecord?.antenna_labels;
+        const rxLabels =
+            rawLabels && typeof rawLabels === 'object' && rawLabels.rx && typeof rawLabels.rx === 'object'
+                ? rawLabels.rx
+                : {};
+
+        const normalized = {};
+        Object.entries(rxLabels).forEach(([portName, userLabel]) => {
+            const key = String(portName || '').trim();
+            const value = String(userLabel || '').trim();
+            if (!key || !value) return;
+            normalized[key] = value;
+        });
+        return normalized;
+    }, [selectedSdrRecord]);
+    const formatAntennaPortOptionLabel = (port) => {
+        const key = String(port || '').trim();
+        if (!key) return String(port || '');
+        const userLabel = selectedSdrRxAntennaLabels[key];
+        return userLabel ? `${userLabel} (${key})` : key;
+    };
 
     // Determine if form should be disabled based on observation status
     const isFormDisabled = selectedObservation && 
@@ -705,16 +769,36 @@ const ObservationFormDialog = () => {
         }));
     };
 
+    const getTaskSummaryOptionLabel = (options, value, fallback = value) => {
+        const option = options.find((item) => item.value === value);
+        if (!option) return fallback;
+        return t(`scheduler_dialogs.shared.${option.labelKey}`);
+    };
+
+    const getTranscriptionLanguageSummary = (sourceLanguage, targetLanguage) => {
+        const sourceLabel = getTaskSummaryOptionLabel(SOURCE_LANGUAGE_OPTIONS, sourceLanguage || 'auto', sourceLanguage || 'auto');
+        if (targetLanguage && targetLanguage !== 'none') {
+            const targetLabel = getTaskSummaryOptionLabel(TRANSLATION_TARGET_OPTIONS, targetLanguage, targetLanguage);
+            return t('scheduler_dialogs.shared.language_pair_summary', { source: sourceLabel, target: targetLabel });
+        }
+        return sourceLabel;
+    };
+
+    const getProviderSummaryLabel = (provider) => {
+        const normalized = provider || 'gemini';
+        return t(`scheduler_dialogs.shared.provider_${normalized}`, { defaultValue: normalized });
+    };
+
     const getTaskSummary = (task) => {
         if (task.type === 'decoder') {
             const transmitter = availableTransmitters.find(t => t.id === task.config.transmitter_id);
-            const transmitterName = transmitter?.description || 'No transmitter';
+            const transmitterName = transmitter?.description || t('scheduler_dialogs.shared.no_transmitter');
             const freqMHz = transmitter?.downlink_low ? `${(transmitter.downlink_low / 1000000).toFixed(3)} MHz` : '';
-            const decoderType = DECODER_TYPES.find(d => d.value === task.config.decoder_type)?.label || task.config.decoder_type;
+            const decoderType = getTaskSummaryOptionLabel(DECODER_TYPES, task.config.decoder_type, task.config.decoder_type);
 
             // If decoder type is 'none', show simpler summary
             if (task.config.decoder_type === 'none') {
-                const parts = [transmitterName, freqMHz, 'No decoder'].filter(Boolean);
+                const parts = [transmitterName, freqMHz, t('scheduler_dialogs.shared.no_decoder')].filter(Boolean);
                 return parts.join(' • ');
             }
 
@@ -728,54 +812,56 @@ const ObservationFormDialog = () => {
                 if (params.lora_cr) paramSummary.push(`CR4/${params.lora_cr + 4}`);
             } else if (['fsk', 'gmsk', 'gfsk'].includes(task.config.decoder_type)) {
                 const prefix = task.config.decoder_type;
-                if (params[`${prefix}_baudrate`]) paramSummary.push(`${params[`${prefix}_baudrate`]} baud`);
+                if (params[`${prefix}_baudrate`]) paramSummary.push(t('scheduler_dialogs.shared.baud_suffix', { value: params[`${prefix}_baudrate`] }));
                 if (params[`${prefix}_framing`]) paramSummary.push(params[`${prefix}_framing`].toUpperCase());
             } else if (task.config.decoder_type === 'bpsk') {
-                if (params.bpsk_baudrate) paramSummary.push(`${params.bpsk_baudrate} baud`);
+                if (params.bpsk_baudrate) paramSummary.push(t('scheduler_dialogs.shared.baud_suffix', { value: params.bpsk_baudrate }));
                 if (params.bpsk_differential) paramSummary.push('DBPSK');
                 if (params.bpsk_framing) paramSummary.push(params.bpsk_framing.toUpperCase());
             } else if (task.config.decoder_type === 'afsk') {
-                if (params.afsk_baudrate) paramSummary.push(`${params.afsk_baudrate} baud`);
-                if (params.afsk_af_carrier) paramSummary.push(`${params.afsk_af_carrier}Hz carrier`);
+                if (params.afsk_baudrate) paramSummary.push(t('scheduler_dialogs.shared.baud_suffix', { value: params.afsk_baudrate }));
+                if (params.afsk_af_carrier) paramSummary.push(t('scheduler_dialogs.shared.carrier_hz_suffix', { value: params.afsk_af_carrier }));
             }
 
             const parts = [transmitterName, freqMHz, decoderType, ...paramSummary].filter(Boolean);
             return parts.join(' • ');
         } else if (task.type === 'audio_recording') {
             const transmitter = availableTransmitters.find(t => t.id === task.config.transmitter_id);
-            const transmitterName = transmitter?.description || 'No transmitter';
+            const transmitterName = transmitter?.description || t('scheduler_dialogs.shared.no_transmitter');
             const freqMHz = transmitter?.downlink_low ? `${(transmitter.downlink_low / 1000000).toFixed(3)} MHz` : '';
-            const demodType = DEMODULATOR_TYPES.find(d => d.value === task.config.demodulator)?.label || task.config.demodulator?.toUpperCase();
+            const demodType = getTaskSummaryOptionLabel(DEMODULATOR_TYPES, task.config.demodulator, task.config.demodulator?.toUpperCase());
 
-            const parts = [transmitterName, freqMHz, demodType, 'WAV'].filter(Boolean);
+            const parts = [transmitterName, freqMHz, demodType, t('scheduler_dialogs.shared.audio_format_wav')].filter(Boolean);
             return parts.join(' • ');
         } else if (task.type === 'transcription') {
             const transmitter = availableTransmitters.find(t => t.id === task.config.transmitter_id);
-            const transmitterName = transmitter?.description || 'No transmitter';
+            const transmitterName = transmitter?.description || t('scheduler_dialogs.shared.no_transmitter');
             const freqMHz = transmitter?.downlink_low ? `${(transmitter.downlink_low / 1000000).toFixed(3)} MHz` : '';
-            const modType = MODULATION_TYPES.find(d => d.value === task.config.modulation)?.label || task.config.modulation?.toUpperCase();
-            const provider = (task.config.provider || 'gemini').charAt(0).toUpperCase() + (task.config.provider || 'gemini').slice(1);
-            const sourceLang = task.config.language || 'auto';
-            const targetLang = task.config.translate_to && task.config.translate_to !== 'none' ? `→${task.config.translate_to}` : '';
+            const modType = getTaskSummaryOptionLabel(MODULATION_TYPES, task.config.modulation, task.config.modulation?.toUpperCase());
+            const provider = getProviderSummaryLabel(task.config.provider);
+            const languageSummary = getTranscriptionLanguageSummary(task.config.language, task.config.translate_to);
 
-            const parts = [transmitterName, freqMHz, modType, provider, sourceLang + targetLang, 'Transcription'].filter(Boolean);
+            const parts = [transmitterName, freqMHz, modType, provider, languageSummary, t('scheduler_dialogs.shared.task_transcription')].filter(Boolean);
             return parts.join(' • ');
         } else if (task.type === 'iq_recording') {
             const transmitter = availableTransmitters.find(t => t.id === task.config.transmitter_id);
-            const transmitterName = transmitter?.description || 'No transmitter';
+            const transmitterName = transmitter?.description || t('scheduler_dialogs.shared.no_transmitter');
             const freqMHz = transmitter?.downlink_low ? `${(transmitter.downlink_low / 1000000).toFixed(3)} MHz` : '';
             const extraInfo = [];
             if (task.config.enable_frequency_shift && task.config.target_center_freq) {
                 const targetMHz = (task.config.target_center_freq / 1000000).toFixed(3);
-                extraInfo.push(`Centered@${targetMHz}MHz`);
+                extraInfo.push(t('scheduler_dialogs.shared.centered_at_mhz', { value: targetMHz }));
             }
             const decimationFactor = task.config.decimation_factor || 1;
             if (decimationFactor > 1 && formData.sdr.sample_rate) {
                 extraInfo.push(
-                    `Decim x${decimationFactor} (${formatSampleRate(formData.sdr.sample_rate / decimationFactor)})`
+                    t('scheduler_dialogs.shared.decimation_summary', {
+                        factor: decimationFactor,
+                        rate: formatSampleRate(formData.sdr.sample_rate / decimationFactor),
+                    })
                 );
             }
-            const parts = [transmitterName, freqMHz, ...extraInfo, 'SigMF (cf32_le)'].filter(Boolean);
+            const parts = [transmitterName, freqMHz, ...extraInfo, t('scheduler_dialogs.shared.iq_format_sigmf')].filter(Boolean);
             return parts.join(' • ');
         }
         return '';
@@ -930,7 +1016,7 @@ const ObservationFormDialog = () => {
 
                     details.push({
                         taskIndex: index,
-                        name: transmitter.description || 'Unknown',
+                        name: transmitter.description || t('unknown'),
                         freq: transmitter.downlink_low,
                         bandwidth: bandwidth
                     });
@@ -953,7 +1039,10 @@ const ObservationFormDialog = () => {
             valid,
             message: valid
                 ? ''
-                : `Required bandwidth for the combination of transmitters you chose (${(requiredBandwidth / 1000000).toFixed(2)} MHz) exceeds the selected SDR sample rate (${(sampleRate / 1000000).toFixed(2)} MHz). Please increase sample rate or select transmitters closer in frequency.`,
+                : t('scheduler_dialogs.shared.bandwidth_validation_error', {
+                    required: (requiredBandwidth / 1000000).toFixed(2),
+                    sampleRate: (sampleRate / 1000000).toFixed(2),
+                }),
             requiredBandwidth,
             sampleRate,
             details,
@@ -1056,12 +1145,31 @@ const ObservationFormDialog = () => {
                 sx={{
                     bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.100',
                     borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
-                    fontSize: '1.25rem',
-                    fontWeight: 'bold',
                     py: 2.5,
                 }}
             >
-                {selectedObservation?.id ? `Edit Observation: ${formData.name || 'Unnamed'}` : 'New Observation'}
+                <Box>
+                    <Typography variant="h6" sx={{ fontWeight: 'bold', lineHeight: 1.2 }}>
+                        {selectedObservation?.id
+                            ? t('scheduler_dialogs.observation.edit_title', {
+                                name: formData.name || t('scheduler_dialogs.observation.unnamed'),
+                            })
+                            : t('scheduler_dialogs.observation.new_title')}
+                    </Typography>
+                    {!selectedObservation?.id && (
+                        <Typography
+                            variant="body2"
+                            sx={{
+                                mt: 0.65,
+                                color: 'text.secondary',
+                                fontWeight: 400,
+                                lineHeight: 1.35,
+                            }}
+                        >
+                            {t('scheduler_dialogs.observation.new_subtitle')}
+                        </Typography>
+                    )}
+                </Box>
             </DialogTitle>
 
             <DialogContent
@@ -1076,7 +1184,7 @@ const ObservationFormDialog = () => {
                     py: 3,
                 }}
             >
-                <Stack spacing={3} sx={{ mt: 2 }}>
+                <Stack spacing={3}>
                     {/* Enabled Checkbox */}
                     <Box>
                         <FormControlLabel
@@ -1094,9 +1202,9 @@ const ObservationFormDialog = () => {
                             }
                             label={
                                 <Box>
-                                    <Typography variant="body2">Enabled</Typography>
+                                    <Typography variant="body2">{t('scheduler_dialogs.shared.enabled_label')}</Typography>
                                     <Typography variant="caption" color="text.secondary">
-                                        When enabled, this observation will be executed at the scheduled time
+                                        {t('scheduler_dialogs.observation.enabled_help')}
                                     </Typography>
                                 </Box>
                             }
@@ -1108,10 +1216,10 @@ const ObservationFormDialog = () => {
                     {/* Basic Info */}
                     <Box>
                         <Typography variant="subtitle2" gutterBottom sx={{ color: 'primary.main', fontWeight: 'bold' }}>
-                            Basic Information
+                            {t('scheduler_dialogs.observation.basic_information_title')}
                         </Typography>
                         <TextField
-                            label="Observation Name"
+                            label={t('scheduler_dialogs.observation.observation_name_label')}
                             fullWidth
                             size="small"
                             value={formData.name}
@@ -1128,10 +1236,10 @@ const ObservationFormDialog = () => {
                     {/* Satellite Selection */}
                     <Box>
                         <Typography variant="subtitle2" gutterBottom sx={{ color: 'primary.main', fontWeight: 'bold' }}>
-                            Satellite
+                            {t('scheduler_dialogs.shared.satellite_title')}
                         </Typography>
                         <Typography variant="caption" color="text.secondary" paragraph>
-                            Select a satellite using search or browse by group.
+                            {t('scheduler_dialogs.observation.satellite_help')}
                         </Typography>
                         <SatelliteSelector
                             initialSatellite={selectedObservation?.satellite}
@@ -1177,11 +1285,11 @@ const ObservationFormDialog = () => {
                     {/* Rotator Selection */}
                     <Box>
                         <Typography variant="subtitle2" gutterBottom sx={{ color: 'primary.main', fontWeight: 'bold' }}>
-                            Rotator
+                            {t('scheduler_dialogs.shared.rotator_title')}
                         </Typography>
                         <Stack spacing={2}>
                             <FormControl fullWidth size="small" disabled={isFormDisabled}>
-                                <InputLabel>Rotator</InputLabel>
+                                <InputLabel>{t('scheduler_dialogs.shared.rotator_label')}</InputLabel>
                                 <Select
                                     value={formData.rotator.id || '__none__'}
                                     onChange={(e) => {
@@ -1206,10 +1314,10 @@ const ObservationFormDialog = () => {
                                             },
                                         }));
                                     }}
-                                    label="Rotator"
+                                    label={t('scheduler_dialogs.shared.rotator_label')}
                                 >
                                     <MenuItem value="__none__">
-                                        <em>None</em>
+                                        <em>{t('scheduler_dialogs.shared.none')}</em>
                                     </MenuItem>
                                     {rotators.map((rotator) => (
                                         <MenuItem key={rotator.id} value={rotator.id}>
@@ -1225,11 +1333,11 @@ const ObservationFormDialog = () => {
                                                             if (trackerInfo?.targetNumber) {
                                                                 return `Target ${trackerInfo.targetNumber}`;
                                                             }
-                                                            return 'Target resolved at runtime';
+                                                            return t('scheduler_dialogs.shared.target_resolved_runtime');
                                                         })(),
                                                         rotator.min_azimuth != null && rotator.max_azimuth != null ? `Az: ${rotator.min_azimuth}° - ${rotator.max_azimuth}°` : null,
                                                         rotator.min_elevation != null && rotator.max_elevation != null ? `El: ${rotator.min_elevation}° - ${rotator.max_elevation}°` : null,
-                                                    ].filter(Boolean).join(' • ') || 'No additional details'}
+                                                    ].filter(Boolean).join(' • ') || t('scheduler_dialogs.shared.no_additional_details')}
                                                 </Typography>
                                             </Box>
                                         </MenuItem>
@@ -1237,7 +1345,7 @@ const ObservationFormDialog = () => {
                                 </Select>
                             </FormControl>
                             <Typography variant="caption" color="text.secondary">
-                                Target assignment is resolved at runtime from current rotator ownership.
+                                {t('scheduler_dialogs.shared.rotator_assignment_runtime')}
                             </Typography>
                             <FormControlLabel
                                 control={
@@ -1255,7 +1363,7 @@ const ObservationFormDialog = () => {
                                         disabled={isFormDisabled || !formData.rotator?.id}
                                     />
                                 }
-                                label="Unpark before observation start (if currently parked)"
+                                label={t('scheduler_dialogs.shared.unpark_before_observation')}
                             />
                             <FormControlLabel
                                 control={
@@ -1273,7 +1381,7 @@ const ObservationFormDialog = () => {
                                         disabled={isFormDisabled || !formData.rotator?.id}
                                     />
                                 }
-                                label="Park rotator after observation end"
+                                label={t('scheduler_dialogs.shared.park_after_observation')}
                             />
                         </Stack>
                     </Box>
@@ -1283,7 +1391,7 @@ const ObservationFormDialog = () => {
                     {/* Sessions */}
                     <Box>
                         <Typography variant="subtitle2" gutterBottom sx={{ color: 'primary.main', fontWeight: 'bold' }}>
-                            SDR Sessions
+                            {t('scheduler_dialogs.shared.sdr_sessions_title')}
                         </Typography>
                         <Stack direction="row" spacing={2} alignItems="center">
                             <Tabs
@@ -1326,7 +1434,7 @@ const ObservationFormDialog = () => {
                                 onClick={handleAddSession}
                                 disabled={isFormDisabled}
                             >
-                                Add SDR
+                                {t('scheduler_dialogs.shared.add_sdr')}
                             </Button>
                         </Stack>
                     </Box>
@@ -1336,7 +1444,7 @@ const ObservationFormDialog = () => {
                     {/* SDR */}
                     <Box sx={{ position: 'relative' }}>
                         <Typography variant="subtitle2" gutterBottom sx={{ color: 'primary.main', fontWeight: 'bold' }}>
-                            SDR Configuration
+                            {t('scheduler_dialogs.shared.sdr_configuration_title')}
                         </Typography>
                         {sdrParametersLoading && (
                             <Box
@@ -1375,7 +1483,7 @@ const ObservationFormDialog = () => {
                                 </Box>
                             )}
                             <FormControl fullWidth size="small" required error={!!sdrParametersError[formData.sdr.id]} disabled={isFormDisabled}>
-                                <InputLabel>SDR</InputLabel>
+                                <InputLabel>{t('scheduler_dialogs.shared.sdr_label')}</InputLabel>
                                 <Select
                                     value={formData.sdr.id}
                                     onChange={(e) => {
@@ -1391,7 +1499,7 @@ const ObservationFormDialog = () => {
                                             },
                                         }));
                                     }}
-                                    label="SDR"
+                                    label={t('scheduler_dialogs.shared.sdr_label')}
                                 >
                                     {sdrs.filter(sdr => sdr.id !== 'sigmf-playback').map((sdr) => (
                                         <MenuItem key={sdr.id} value={sdr.id}>
@@ -1403,7 +1511,7 @@ const ObservationFormDialog = () => {
                                                     {[
                                                         sdr.driver ? `Driver: ${sdr.driver}` : null,
                                                         sdr.serial ? `Serial: ${sdr.serial}` : null,
-                                                    ].filter(Boolean).join(' • ') || 'No additional details'}
+                                                    ].filter(Boolean).join(' • ') || t('scheduler_dialogs.shared.no_additional_details')}
                                                 </Typography>
                                             </Box>
                                         </MenuItem>
@@ -1412,7 +1520,7 @@ const ObservationFormDialog = () => {
                             </FormControl>
 
                             <FormControl fullWidth size="small" required error={!bandwidthValidation.valid} disabled={isFormDisabled || !formData.sdr.id || sdrParametersLoading}>
-                                <InputLabel>Sample Rate</InputLabel>
+                                <InputLabel>{t('scheduler_dialogs.shared.sample_rate_label')}</InputLabel>
                                 <Select
                                     value={formData.sdr.sample_rate}
                                     onChange={(e) => {
@@ -1424,7 +1532,7 @@ const ObservationFormDialog = () => {
                                             },
                                         }));
                                     }}
-                                    label="Sample Rate"
+                                    label={t('scheduler_dialogs.shared.sample_rate_label')}
                                 >
                                     {(sdrParameters[formData.sdr.id]?.sample_rate_values || SAMPLE_RATES.map(r => r.value)).map((rate) => {
                                         const rateValue = typeof rate === 'number' ? rate : rate.value;
@@ -1450,13 +1558,13 @@ const ObservationFormDialog = () => {
                                 )}
                                 {bandwidthValidation.valid && bandwidthValidation.requiredBandwidth > 0 && (
                                     <Typography variant="caption" color="success.main" sx={{ mt: 0.5 }}>
-                                        ✓ All tasks fit within bandwidth
+                                        {t('scheduler_dialogs.shared.all_tasks_fit_within_bandwidth')}
                                     </Typography>
                                 )}
                             </FormControl>
 
                             <FormControl fullWidth size="small" required disabled={isFormDisabled || !formData.sdr.id || sdrParametersLoading} error={!!sdrParametersError[formData.sdr.id]}>
-                                <InputLabel>Gain</InputLabel>
+                                <InputLabel>{t('scheduler_dialogs.shared.gain_label')}</InputLabel>
                                 <Select
                                     value={
                                         formData.sdr.id && sdrParameters[formData.sdr.id]?.gain_values?.includes(formData.sdr.gain)
@@ -1472,7 +1580,7 @@ const ObservationFormDialog = () => {
                                             },
                                         }));
                                     }}
-                                    label="Gain"
+                                    label={t('scheduler_dialogs.shared.gain_label')}
                                 >
                                     {sdrParameters[formData.sdr.id]?.gain_values?.map((gain) => (
                                         <MenuItem key={gain} value={gain}>
@@ -1483,7 +1591,7 @@ const ObservationFormDialog = () => {
                             </FormControl>
 
                             <FormControl fullWidth size="small" required disabled={isFormDisabled || !formData.sdr.id || sdrParametersLoading} error={!!sdrParametersError[formData.sdr.id]}>
-                                <InputLabel>Antenna Port</InputLabel>
+                                <InputLabel>{t('scheduler_dialogs.shared.antenna_port_label')}</InputLabel>
                                 <Select
                                     value={
                                         formData.sdr.id && sdrParameters[formData.sdr.id]?.antennas?.rx?.includes(formData.sdr.antenna_port)
@@ -1499,11 +1607,11 @@ const ObservationFormDialog = () => {
                                             },
                                         }));
                                     }}
-                                    label="Antenna Port"
+                                    label={t('scheduler_dialogs.shared.antenna_port_label')}
                                 >
                                     {sdrParameters[formData.sdr.id]?.antennas?.rx?.map((port) => (
                                         <MenuItem key={port} value={port}>
-                                            {port}
+                                            {formatAntennaPortOptionLabel(port)}
                                         </MenuItem>
                                     )) || []}
                                 </Select>
@@ -1529,9 +1637,9 @@ const ObservationFormDialog = () => {
                                     }
                                     label={
                                         <Box>
-                                            <Typography variant="body2">Enable Bias-T</Typography>
+                                            <Typography variant="body2">{t('scheduler_dialogs.shared.enable_bias_t')}</Typography>
                                             <Typography variant="caption" color="text.secondary">
-                                                Turns Bias-T on during the observation; it will be switched off at the end.
+                                                {t('scheduler_dialogs.shared.enable_bias_t_help')}
                                             </Typography>
                                         </Box>
                                     }
@@ -1557,9 +1665,9 @@ const ObservationFormDialog = () => {
                                     }
                                     label={
                                         <Box>
-                                            <Typography variant="body2">Auto-calculate Center Frequency</Typography>
+                                            <Typography variant="body2">{t('scheduler_dialogs.shared.auto_center_frequency')}</Typography>
                                             <Typography variant="caption" color="text.secondary">
-                                                Automatically optimize frequency to cover all transmitters and avoid DC spike
+                                                {t('scheduler_dialogs.shared.auto_center_frequency_help')}
                                             </Typography>
                                         </Box>
                                     }
@@ -1569,7 +1677,7 @@ const ObservationFormDialog = () => {
                             <Box sx={{ display: 'flex', gap: 2 }}>
                                 <TextField
                                     size="small"
-                                    label="Center Frequency (Hz)"
+                                    label={t('scheduler_dialogs.shared.center_frequency_hz')}
                                     type="number"
                                     value={formData.sdr.center_frequency || ''}
                                     onChange={(e) => {
@@ -1585,8 +1693,10 @@ const ObservationFormDialog = () => {
                                     disabled={isFormDisabled || formData.sdr.auto_center_frequency}
                                     helperText={
                                         formData.sdr.auto_center_frequency
-                                            ? `Auto-calculated: ${formData.sdr.center_frequency ? (formData.sdr.center_frequency / 1000000).toFixed(6) + ' MHz' : 'N/A'}`
-                                            : 'Enter center frequency in Hz'
+                                            ? t('scheduler_dialogs.shared.auto_calculated_center', {
+                                                value: formData.sdr.center_frequency ? `${(formData.sdr.center_frequency / 1000000).toFixed(6)} MHz` : t('not_available'),
+                                            })
+                                            : t('scheduler_dialogs.shared.enter_center_frequency_hz')
                                     }
                                     sx={{ flex: '1' }}
                                 />
@@ -1614,7 +1724,7 @@ const ObservationFormDialog = () => {
                                             }
                                         }}
                                     >
-                                        ← Select from transmitter list
+                                        {t('scheduler_dialogs.shared.select_from_transmitter_list')}
                                     </Button>
                                     <Menu
                                         anchorEl={transmitterMenuAnchor}
@@ -1629,11 +1739,11 @@ const ObservationFormDialog = () => {
                                     >
                                         {availableTransmitters.length === 0 ? (
                                             <MenuItem disabled>
-                                                No transmitters available
+                                                {t('scheduler_dialogs.shared.no_transmitters_available')}
                                             </MenuItem>
                                         ) : (
                                             groupTransmittersByBand(availableTransmitters).map(({ band, transmitters }) => [
-                                                <ListSubheader key={`header-${band}`}>{band}</ListSubheader>,
+                                                <ListSubheader key={`header-${band}`}>{t(`scheduler_dialogs.shared.band_${band}`)}</ListSubheader>,
                                                 ...transmitters.map((transmitter) => {
                                                     const freqMHz = transmitter.downlink_low
                                                         ? (transmitter.downlink_low / 1000000).toFixed(3)
@@ -1669,10 +1779,13 @@ const ObservationFormDialog = () => {
                                                                 />
                                                                 <Box sx={{ flexGrow: 1 }}>
                                                                     <Typography variant="body2">
-                                                                        {transmitter.description || 'Unknown'}
+                                                                        {transmitter.description || t('unknown')}
                                                                     </Typography>
                                                                     <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                                                                        {`Source: ${transmitter.source || 'Unknown'} • ${freqMHz} MHz`}
+                                                                        {t('scheduler_dialogs.shared.source_with_frequency', {
+                                                                            source: transmitter.source || t('unknown'),
+                                                                            frequency: freqMHz,
+                                                                        })}
                                                                     </Typography>
                                                                 </Box>
                                                             </Box>
@@ -1692,7 +1805,7 @@ const ObservationFormDialog = () => {
                     {/* Tasks */}
                     <Box>
                         <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-                            <Typography variant="subtitle2" sx={{ color: 'primary.main', fontWeight: 'bold' }}>Tasks</Typography>
+                            <Typography variant="subtitle2" sx={{ color: 'primary.main', fontWeight: 'bold' }}>{t('scheduler_dialogs.shared.tasks_title')}</Typography>
                             <Stack direction="row" spacing={1}>
                                 <Button
                                     size="small"
@@ -1701,7 +1814,7 @@ const ObservationFormDialog = () => {
                                     onClick={() => handleAddTask('decoder')}
                                     disabled={isFormDisabled}
                                 >
-                                    Decoder
+                                    {t('scheduler_dialogs.shared.task_decoder')}
                                 </Button>
                                 <Button
                                     size="small"
@@ -1710,7 +1823,7 @@ const ObservationFormDialog = () => {
                                     onClick={() => handleAddTask('audio_recording')}
                                     disabled={isFormDisabled}
                                 >
-                                    Audio Recording
+                                    {t('scheduler_dialogs.shared.task_audio_recording')}
                                 </Button>
                                 <Button
                                     size="small"
@@ -1719,7 +1832,7 @@ const ObservationFormDialog = () => {
                                     onClick={() => handleAddTask('transcription')}
                                     disabled={isFormDisabled}
                                 >
-                                    Transcription
+                                    {t('scheduler_dialogs.shared.task_transcription')}
                                 </Button>
                                 <Button
                                     size="small"
@@ -1728,14 +1841,14 @@ const ObservationFormDialog = () => {
                                     onClick={() => handleAddTask('iq_recording')}
                                     disabled={isFormDisabled}
                                 >
-                                    IQ Recording
+                                    {t('scheduler_dialogs.shared.task_iq_recording')}
                                 </Button>
                             </Stack>
                         </Box>
 
                         {formData.tasks.length === 0 ? (
                             <Typography variant="caption" color="text.secondary">
-                                No tasks added. Add decoders, audio recording, transcription, or IQ recording tasks.
+                                {t('scheduler_dialogs.observation.no_tasks_added')}
                             </Typography>
                         ) : (
                             <Stack spacing={2}>
@@ -1832,7 +1945,7 @@ const ObservationFormDialog = () => {
                                                 return (
                                                     <>
                                                         <FormControl fullWidth size="small" disabled={isFormDisabled}>
-                                                            <InputLabel>Transmitter</InputLabel>
+                                                            <InputLabel>{t('scheduler_dialogs.shared.transmitter_label')}</InputLabel>
                                                             <Select
                                                                 value={getSafeTransmitterValue(task.config.transmitter_id)}
                                                                 onChange={(e) =>
@@ -1842,16 +1955,16 @@ const ObservationFormDialog = () => {
                                                                         e.target.value
                                                                     )
                                                                 }
-                                                                label="Transmitter"
+                                                                label={t('scheduler_dialogs.shared.transmitter_label')}
                                                                 disabled={isFormDisabled || availableTransmitters.length === 0}
                                                             >
                                                                 {availableTransmitters.length === 0 ? (
                                                                     <MenuItem disabled value="">
-                                                                        No transmitters available
+                                                                        {t('scheduler_dialogs.shared.no_transmitters_available')}
                                                                     </MenuItem>
                                                                 ) : (
                                                                     groupTransmittersByBand(availableTransmitters).map(({ band, transmitters }) => [
-                                                                        <ListSubheader key={`header-${band}`}>{band}</ListSubheader>,
+                                                                        <ListSubheader key={`header-${band}`}>{t(`scheduler_dialogs.shared.band_${band}`)}</ListSubheader>,
                                                                         ...transmitters.map((transmitter) => {
                                                                             const freqMHz = transmitter.downlink_low
                                                                                 ? (transmitter.downlink_low / 1000000).toFixed(3)
@@ -1873,16 +1986,16 @@ const ObservationFormDialog = () => {
                                                                                         />
                                                                                         <Box sx={{ flexGrow: 1 }}>
                                                                                             <Typography variant="body2">
-                                                                                                {transmitter.description || 'Unknown'} - {freqMHz} MHz
+                                                                                                {transmitter.description || t('unknown')} - {freqMHz} MHz
                                                                                             </Typography>
                                                                                             <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
                                                                                                 {[
-                                                                                                    `Source: ${transmitter.source || 'Unknown'}`,
-                                                                                                    transmitter.mode ? `Mode: ${transmitter.mode}` : null,
-                                                                                                    transmitter.baud ? `Baud: ${transmitter.baud}` : null,
-                                                                                                    transmitter.baudrate ? `Baudrate: ${transmitter.baudrate}` : null,
-                                                                                                    transmitter.drift != null ? `Drift: ${transmitter.drift} Hz` : null,
-                                                                                                ].filter(Boolean).join(' • ') || 'No additional details'}
+                                                                                                    t('scheduler_dialogs.shared.source_value', { value: transmitter.source || t('unknown') }),
+                                                                                                    transmitter.mode ? t('scheduler_dialogs.shared.mode_value', { value: transmitter.mode }) : null,
+                                                                                                    transmitter.baud ? t('scheduler_dialogs.shared.baud_value', { value: transmitter.baud }) : null,
+                                                                                                    transmitter.baudrate ? t('scheduler_dialogs.shared.baudrate_value', { value: transmitter.baudrate }) : null,
+                                                                                                    transmitter.drift != null ? t('scheduler_dialogs.shared.drift_hz_value', { value: transmitter.drift }) : null,
+                                                                                                ].filter(Boolean).join(' • ') || t('scheduler_dialogs.shared.no_additional_details')}
                                                                                             </Typography>
                                                                                         </Box>
                                                                                     </Box>
@@ -1895,7 +2008,7 @@ const ObservationFormDialog = () => {
                                                         </FormControl>
 
                                                         <FormControl fullWidth size="small" disabled={isFormDisabled}>
-                                                            <InputLabel>Decoder Type</InputLabel>
+                                                            <InputLabel>{t('scheduler_dialogs.shared.decoder_type_label')}</InputLabel>
                                                             <Select
                                                                 value={decoderType}
                                                                 onChange={(e) =>
@@ -1905,11 +2018,11 @@ const ObservationFormDialog = () => {
                                                                         e.target.value
                                                                     )
                                                                 }
-                                                                label="Decoder Type"
+                                                                label={t('scheduler_dialogs.shared.decoder_type_label')}
                                                             >
                                                                 {DECODER_TYPES.map((type) => (
                                                                     <MenuItem key={type.value} value={type.value}>
-                                                                        {type.label}
+                                                                        {t(`scheduler_dialogs.shared.${type.labelKey}`)}
                                                                     </MenuItem>
                                                                 ))}
                                                             </Select>
@@ -1982,7 +2095,7 @@ const ObservationFormDialog = () => {
                                                         {Object.keys(decoderParams).length > 0 && (
                                                             <>
                                                                 <Divider sx={{ my: 1 }}>
-                                                                    <Chip label="Decoder Parameters" size="small" />
+                                                                    <Chip label={t('scheduler_dialogs.shared.decoder_parameters_label')} size="small" />
                                                                 </Divider>
                                                                 {Object.entries(decoderParams).map(([paramKey, paramDef]) =>
                                                                     renderDecoderParameter(index, paramKey, paramDef, currentParams)
@@ -1996,7 +2109,7 @@ const ObservationFormDialog = () => {
                                             {task.type === 'audio_recording' && (
                                                 <>
                                                     <FormControl fullWidth size="small" disabled={isFormDisabled}>
-                                                        <InputLabel>Transmitter</InputLabel>
+                                                        <InputLabel>{t('scheduler_dialogs.shared.transmitter_label')}</InputLabel>
                                                         <Select
                                                             value={getSafeTransmitterValue(task.config.transmitter_id)}
                                                             onChange={(e) =>
@@ -2006,16 +2119,16 @@ const ObservationFormDialog = () => {
                                                                     e.target.value
                                                                 )
                                                             }
-                                                            label="Transmitter"
+                                                            label={t('scheduler_dialogs.shared.transmitter_label')}
                                                             disabled={isFormDisabled || availableTransmitters.length === 0}
                                                         >
                                                             {availableTransmitters.length === 0 ? (
                                                                 <MenuItem disabled value="">
-                                                                    No transmitters available
+                                                                    {t('scheduler_dialogs.shared.no_transmitters_available')}
                                                                 </MenuItem>
                                                             ) : (
                                                                 groupTransmittersByBand(availableTransmitters).map(({ band, transmitters }) => [
-                                                                    <ListSubheader key={`header-${band}`}>{band}</ListSubheader>,
+                                                                    <ListSubheader key={`header-${band}`}>{t(`scheduler_dialogs.shared.band_${band}`)}</ListSubheader>,
                                                                     ...transmitters.map((transmitter) => {
                                                                         const freqMHz = transmitter.downlink_low
                                                                             ? (transmitter.downlink_low / 1000000).toFixed(3)
@@ -2037,15 +2150,15 @@ const ObservationFormDialog = () => {
                                                                                     />
                                                                                     <Box sx={{ flexGrow: 1 }}>
                                                                                         <Typography variant="body2">
-                                                                                            {transmitter.description || 'Unknown'} - {freqMHz} MHz
+                                                                                            {transmitter.description || t('unknown')} - {freqMHz} MHz
                                                                                         </Typography>
                                                                                         <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
                                                                                             {[
-                                                                                                `Source: ${transmitter.source || 'Unknown'}`,
-                                                                                                transmitter.mode ? `Mode: ${transmitter.mode}` : null,
-                                                                                                transmitter.baud ? `Baud: ${transmitter.baud}` : null,
-                                                                                                transmitter.drift != null ? `Drift: ${transmitter.drift} Hz` : null,
-                                                                                            ].filter(Boolean).join(' • ') || 'No additional details'}
+                                                                                                t('scheduler_dialogs.shared.source_value', { value: transmitter.source || t('unknown') }),
+                                                                                                transmitter.mode ? t('scheduler_dialogs.shared.mode_value', { value: transmitter.mode }) : null,
+                                                                                                transmitter.baud ? t('scheduler_dialogs.shared.baud_value', { value: transmitter.baud }) : null,
+                                                                                                transmitter.drift != null ? t('scheduler_dialogs.shared.drift_hz_value', { value: transmitter.drift }) : null,
+                                                                                            ].filter(Boolean).join(' • ') || t('scheduler_dialogs.shared.no_additional_details')}
                                                                                         </Typography>
                                                                                     </Box>
                                                                                 </Box>
@@ -2058,7 +2171,7 @@ const ObservationFormDialog = () => {
                                                     </FormControl>
 
                                                     <FormControl fullWidth size="small" disabled={isFormDisabled}>
-                                                        <InputLabel>Demodulator</InputLabel>
+                                                        <InputLabel>{t('scheduler_dialogs.shared.demodulator_label')}</InputLabel>
                                                         <Select
                                                             value={task.config.demodulator || 'fm'}
                                                             onChange={(e) =>
@@ -2068,18 +2181,18 @@ const ObservationFormDialog = () => {
                                                                     e.target.value
                                                                 )
                                                             }
-                                                            label="Demodulator"
+                                                            label={t('scheduler_dialogs.shared.demodulator_label')}
                                                         >
                                                             {DEMODULATOR_TYPES.map((type) => (
                                                                 <MenuItem key={type.value} value={type.value}>
-                                                                    {type.label}
+                                                                    {t(`scheduler_dialogs.shared.${type.labelKey}`)}
                                                                 </MenuItem>
                                                             ))}
                                                         </Select>
                                                     </FormControl>
 
                                                     <Typography variant="caption" color="text.secondary">
-                                                        Audio will be recorded in WAV format (16-bit PCM, mono, 48kHz) after demodulation.
+                                                        {t('scheduler_dialogs.shared.audio_recording_help')}
                                                     </Typography>
                                                 </>
                                             )}
@@ -2087,7 +2200,7 @@ const ObservationFormDialog = () => {
                                             {task.type === 'transcription' && (
                                                 <>
                                                     <FormControl fullWidth size="small" disabled={isFormDisabled}>
-                                                        <InputLabel>Transmitter</InputLabel>
+                                                        <InputLabel>{t('scheduler_dialogs.shared.transmitter_label')}</InputLabel>
                                                         <Select
                                                             value={getSafeTransmitterValue(task.config.transmitter_id)}
                                                             onChange={(e) =>
@@ -2097,16 +2210,16 @@ const ObservationFormDialog = () => {
                                                                     e.target.value
                                                                 )
                                                             }
-                                                            label="Transmitter"
+                                                            label={t('scheduler_dialogs.shared.transmitter_label')}
                                                             disabled={isFormDisabled || availableTransmitters.length === 0}
                                                         >
                                                             {availableTransmitters.length === 0 ? (
                                                                 <MenuItem disabled value="">
-                                                                    No transmitters available
+                                                                    {t('scheduler_dialogs.shared.no_transmitters_available')}
                                                                 </MenuItem>
                                                             ) : (
                                                                 groupTransmittersByBand(availableTransmitters).map(({ band, transmitters }) => [
-                                                                    <ListSubheader key={`header-${band}`}>{band}</ListSubheader>,
+                                                                    <ListSubheader key={`header-${band}`}>{t(`scheduler_dialogs.shared.band_${band}`)}</ListSubheader>,
                                                                     ...transmitters.map((transmitter) => {
                                                                         const freqMHz = transmitter.downlink_low
                                                                             ? (transmitter.downlink_low / 1000000).toFixed(3)
@@ -2115,16 +2228,16 @@ const ObservationFormDialog = () => {
                                                                             <MenuItem key={transmitter.id} value={transmitter.id}>
                                                                                 <Box>
                                                                                     <Typography variant="body2">
-                                                                                        {transmitter.description || 'Unknown'} - {freqMHz} MHz
+                                                                                        {transmitter.description || t('unknown')} - {freqMHz} MHz
                                                                                     </Typography>
                                                                                     <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
                                                                                         {[
-                                                                                            `Source: ${transmitter.source || 'Unknown'}`,
-                                                                                            transmitter.mode ? `Mode: ${transmitter.mode}` : null,
-                                                                                            transmitter.baud ? `Baud: ${transmitter.baud}` : null,
-                                                                                            transmitter.baudrate ? `Baudrate: ${transmitter.baudrate}` : null,
-                                                                                            transmitter.drift != null ? `Drift: ${transmitter.drift} Hz` : null,
-                                                                                        ].filter(Boolean).join(' • ') || 'No additional details'}
+                                                                                            t('scheduler_dialogs.shared.source_value', { value: transmitter.source || t('unknown') }),
+                                                                                            transmitter.mode ? t('scheduler_dialogs.shared.mode_value', { value: transmitter.mode }) : null,
+                                                                                            transmitter.baud ? t('scheduler_dialogs.shared.baud_value', { value: transmitter.baud }) : null,
+                                                                                            transmitter.baudrate ? t('scheduler_dialogs.shared.baudrate_value', { value: transmitter.baudrate }) : null,
+                                                                                            transmitter.drift != null ? t('scheduler_dialogs.shared.drift_hz_value', { value: transmitter.drift }) : null,
+                                                                                        ].filter(Boolean).join(' • ') || t('scheduler_dialogs.shared.no_additional_details')}
                                                                                     </Typography>
                                                                                 </Box>
                                                                             </MenuItem>
@@ -2136,7 +2249,7 @@ const ObservationFormDialog = () => {
                                                     </FormControl>
 
                                                     <FormControl fullWidth size="small" disabled={isFormDisabled}>
-                                                        <InputLabel>Modulation</InputLabel>
+                                                        <InputLabel>{t('scheduler_dialogs.shared.modulation_label')}</InputLabel>
                                                         <Select
                                                             value={task.config.modulation || 'fm'}
                                                             onChange={(e) =>
@@ -2146,18 +2259,18 @@ const ObservationFormDialog = () => {
                                                                     e.target.value
                                                                 )
                                                             }
-                                                            label="Modulation"
+                                                            label={t('scheduler_dialogs.shared.modulation_label')}
                                                         >
                                                             {MODULATION_TYPES.map((type) => (
                                                                 <MenuItem key={type.value} value={type.value}>
-                                                                    {type.label}
+                                                                    {t(`scheduler_dialogs.shared.${type.labelKey}`)}
                                                                 </MenuItem>
                                                             ))}
                                                         </Select>
                                                     </FormControl>
 
                                                     <FormControl fullWidth size="small" disabled={isFormDisabled}>
-                                                        <InputLabel>Provider</InputLabel>
+                                                        <InputLabel>{t('scheduler_dialogs.shared.provider_label')}</InputLabel>
                                                         <Select
                                                             value={task.config.provider || 'gemini'}
                                                             onChange={(e) =>
@@ -2167,15 +2280,18 @@ const ObservationFormDialog = () => {
                                                                     e.target.value
                                                                 )
                                                             }
-                                                            label="Provider"
+                                                            label={t('scheduler_dialogs.shared.provider_label')}
                                                         >
-                                                            <MenuItem value="gemini">Gemini</MenuItem>
-                                                            <MenuItem value="deepgram">Deepgram</MenuItem>
+                                                            {TRANSCRIPTION_PROVIDER_OPTIONS.map((option) => (
+                                                                <MenuItem key={option.value} value={option.value}>
+                                                                    {t(`scheduler_dialogs.shared.${option.labelKey}`)}
+                                                                </MenuItem>
+                                                            ))}
                                                         </Select>
                                                     </FormControl>
 
                                                     <FormControl fullWidth size="small" disabled={isFormDisabled}>
-                                                        <InputLabel>Source Language</InputLabel>
+                                                        <InputLabel>{t('scheduler_dialogs.shared.source_language_label')}</InputLabel>
                                                         <Select
                                                             value={task.config.language || 'auto'}
                                                             onChange={(e) =>
@@ -2185,31 +2301,18 @@ const ObservationFormDialog = () => {
                                                                     e.target.value
                                                                 )
                                                             }
-                                                            label="Source Language"
+                                                            label={t('scheduler_dialogs.shared.source_language_label')}
                                                         >
-                                                            <MenuItem value="auto">🌐 Auto-detect</MenuItem>
-                                                            <MenuItem value="en">🇬🇧 English</MenuItem>
-                                                            <MenuItem value="el">🇬🇷 Greek</MenuItem>
-                                                            <MenuItem value="es">🇪🇸 Spanish</MenuItem>
-                                                            <MenuItem value="fr">🇫🇷 French</MenuItem>
-                                                            <MenuItem value="de">🇩🇪 German</MenuItem>
-                                                            <MenuItem value="it">🇮🇹 Italian</MenuItem>
-                                                            <MenuItem value="pt">🇵🇹 Portuguese</MenuItem>
-                                                            <MenuItem value="pt-BR">🇧🇷 Portuguese (Brazil)</MenuItem>
-                                                            <MenuItem value="ru">🇷🇺 Russian</MenuItem>
-                                                            <MenuItem value="uk">🇺🇦 Ukrainian</MenuItem>
-                                                            <MenuItem value="ja">🇯🇵 Japanese</MenuItem>
-                                                            <MenuItem value="zh">🇨🇳 Chinese</MenuItem>
-                                                            <MenuItem value="ar">🇸🇦 Arabic</MenuItem>
-                                                            <MenuItem value="tl">🇵🇭 Filipino</MenuItem>
-                                                            <MenuItem value="tr">🇹🇷 Turkish</MenuItem>
-                                                            <MenuItem value="sk">🇸🇰 Slovak</MenuItem>
-                                                            <MenuItem value="hr">🇭🇷 Croatian</MenuItem>
+                                                            {SOURCE_LANGUAGE_OPTIONS.map((option) => (
+                                                                <MenuItem key={option.value} value={option.value}>
+                                                                    {`${option.icon} ${t(`scheduler_dialogs.shared.${option.labelKey}`)}`}
+                                                                </MenuItem>
+                                                            ))}
                                                         </Select>
                                                     </FormControl>
 
                                                     <FormControl fullWidth size="small" disabled={isFormDisabled}>
-                                                        <InputLabel>Translate To</InputLabel>
+                                                        <InputLabel>{t('scheduler_dialogs.shared.translate_to_label')}</InputLabel>
                                                         <Select
                                                             value={task.config.translate_to || 'none'}
                                                             onChange={(e) =>
@@ -2219,26 +2322,13 @@ const ObservationFormDialog = () => {
                                                                     e.target.value
                                                                 )
                                                             }
-                                                            label="Translate To"
+                                                            label={t('scheduler_dialogs.shared.translate_to_label')}
                                                         >
-                                                            <MenuItem value="none">⭕ No Translation</MenuItem>
-                                                            <MenuItem value="en">🇬🇧 English</MenuItem>
-                                                            <MenuItem value="el">🇬🇷 Greek</MenuItem>
-                                                            <MenuItem value="es">🇪🇸 Spanish</MenuItem>
-                                                            <MenuItem value="fr">🇫🇷 French</MenuItem>
-                                                            <MenuItem value="de">🇩🇪 German</MenuItem>
-                                                            <MenuItem value="it">🇮🇹 Italian</MenuItem>
-                                                            <MenuItem value="pt">🇵🇹 Portuguese</MenuItem>
-                                                            <MenuItem value="pt-BR">🇧🇷 Portuguese (Brazil)</MenuItem>
-                                                            <MenuItem value="ru">🇷🇺 Russian</MenuItem>
-                                                            <MenuItem value="uk">🇺🇦 Ukrainian</MenuItem>
-                                                            <MenuItem value="ja">🇯🇵 Japanese</MenuItem>
-                                                            <MenuItem value="zh">🇨🇳 Chinese</MenuItem>
-                                                            <MenuItem value="ar">🇸🇦 Arabic</MenuItem>
-                                                            <MenuItem value="tl">🇵🇭 Filipino</MenuItem>
-                                                            <MenuItem value="tr">🇹🇷 Turkish</MenuItem>
-                                                            <MenuItem value="sk">🇸🇰 Slovak</MenuItem>
-                                                            <MenuItem value="hr">🇭🇷 Croatian</MenuItem>
+                                                            {TRANSLATION_TARGET_OPTIONS.map((option) => (
+                                                                <MenuItem key={option.value} value={option.value}>
+                                                                    {`${option.icon} ${t(`scheduler_dialogs.shared.${option.labelKey}`)}`}
+                                                                </MenuItem>
+                                                            ))}
                                                         </Select>
                                                     </FormControl>
 
@@ -2258,10 +2348,10 @@ const ObservationFormDialog = () => {
                                                                     disabled={isFormDisabled}
                                                                 />
                                                             }
-                                                            label="Enable Frequency Shift"
+                                                            label={t('scheduler_dialogs.shared.enable_frequency_shift_label')}
                                                         />
                                                         <Typography variant="caption" color="text.secondary" sx={{ display: 'block', ml: 4, mt: -0.5 }}>
-                                                            Centers the signal at the target frequency. Some SDRs have center spikes that can contaminate a centered signal, so shifting will move the target transmitter signal to the center to improve decoding. Some applications require the target to be centered.
+                                                            {t('scheduler_dialogs.shared.enable_frequency_shift_help')}
                                                         </Typography>
                                                     </Box>
 
@@ -2285,13 +2375,13 @@ const ObservationFormDialog = () => {
                                                                     disabled={isFormDisabled || !task.config.enable_frequency_shift}
                                                                 />
                                                             }
-                                                            label="Auto-fill from Transmitter Frequency"
+                                                            label={t('scheduler_dialogs.shared.auto_fill_from_transmitter_frequency_label')}
                                                         />
 
                                                         <TextField
                                                             fullWidth
                                                             size="small"
-                                                            label="Target Center Frequency (Hz)"
+                                                            label={t('scheduler_dialogs.shared.target_center_frequency_hz_label')}
                                                             type="number"
                                                             value={task.config.target_center_freq || ''}
                                                             onChange={(e) =>
@@ -2306,7 +2396,7 @@ const ObservationFormDialog = () => {
                                                     </>
 
                                                     <Typography variant="caption" color="text.secondary">
-                                                        Audio transcription will be performed using the selected modulation type.
+                                                        {t('scheduler_dialogs.shared.transcription_help')}
                                                     </Typography>
                                                 </>
                                             )}
@@ -2314,7 +2404,7 @@ const ObservationFormDialog = () => {
                                             {task.type === 'iq_recording' && (
                                                 <>
                                                     <FormControl fullWidth size="small" disabled={isFormDisabled}>
-                                                        <InputLabel>Transmitter</InputLabel>
+                                                        <InputLabel>{t('scheduler_dialogs.shared.transmitter_label')}</InputLabel>
                                                         <Select
                                                             value={getSafeTransmitterValue(task.config.transmitter_id)}
                                                             onChange={(e) => {
@@ -2329,15 +2419,15 @@ const ObservationFormDialog = () => {
                                                                     }
                                                                 }
                                                             }}
-                                                            label="Transmitter"
+                                                            label={t('scheduler_dialogs.shared.transmitter_label')}
                                                         >
                                                             {availableTransmitters.length === 0 ? (
                                                                 <MenuItem disabled value="">
-                                                                    No transmitters available
+                                                                    {t('scheduler_dialogs.shared.no_transmitters_available')}
                                                                 </MenuItem>
                                                             ) : (
                                                                 groupTransmittersByBand(availableTransmitters).map(({ band, transmitters }) => [
-                                                                    <ListSubheader key={`header-${band}`}>{band}</ListSubheader>,
+                                                                    <ListSubheader key={`header-${band}`}>{t(`scheduler_dialogs.shared.band_${band}`)}</ListSubheader>,
                                                                     ...transmitters.map((transmitter) => {
                                                                         const freqMHz = transmitter.downlink_low
                                                                             ? (transmitter.downlink_low / 1000000).toFixed(3)
@@ -2346,16 +2436,16 @@ const ObservationFormDialog = () => {
                                                                             <MenuItem key={transmitter.id} value={transmitter.id}>
                                                                                 <Box>
                                                                                     <Typography variant="body2">
-                                                                                        {transmitter.description || 'Unknown'} - {freqMHz} MHz
+                                                                                        {transmitter.description || t('unknown')} - {freqMHz} MHz
                                                                                     </Typography>
                                                                                     <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
                                                                                         {[
-                                                                                            `Source: ${transmitter.source || 'Unknown'}`,
-                                                                                            transmitter.mode ? `Mode: ${transmitter.mode}` : null,
-                                                                                            transmitter.baud ? `Baud: ${transmitter.baud}` : null,
-                                                                                            transmitter.baudrate ? `Baudrate: ${transmitter.baudrate}` : null,
-                                                                                            transmitter.drift != null ? `Drift: ${transmitter.drift} Hz` : null,
-                                                                                        ].filter(Boolean).join(' • ') || 'No additional details'}
+                                                                                            t('scheduler_dialogs.shared.source_value', { value: transmitter.source || t('unknown') }),
+                                                                                            transmitter.mode ? t('scheduler_dialogs.shared.mode_value', { value: transmitter.mode }) : null,
+                                                                                            transmitter.baud ? t('scheduler_dialogs.shared.baud_value', { value: transmitter.baud }) : null,
+                                                                                            transmitter.baudrate ? t('scheduler_dialogs.shared.baudrate_value', { value: transmitter.baudrate }) : null,
+                                                                                            transmitter.drift != null ? t('scheduler_dialogs.shared.drift_hz_value', { value: transmitter.drift }) : null,
+                                                                                        ].filter(Boolean).join(' • ') || t('scheduler_dialogs.shared.no_additional_details')}
                                                                                     </Typography>
                                                                                 </Box>
                                                                             </MenuItem>
@@ -2382,10 +2472,10 @@ const ObservationFormDialog = () => {
                                                                     disabled={isFormDisabled}
                                                                 />
                                                             }
-                                                            label="Enable Frequency Shift"
+                                                            label={t('scheduler_dialogs.shared.enable_frequency_shift_label')}
                                                         />
                                                         <Typography variant="caption" color="text.secondary" sx={{ display: 'block', ml: 4, mt: -0.5 }}>
-                                                            Centers the signal at the target frequency. Some SDRs have center spikes that can contaminate a centered signal, so shifting will move the target transmitter signal to the center to improve decoding. Some applications require the target to be centered.
+                                                            {t('scheduler_dialogs.shared.enable_frequency_shift_help')}
                                                         </Typography>
                                                     </Box>
 
@@ -2410,13 +2500,13 @@ const ObservationFormDialog = () => {
                                                                         disabled={isFormDisabled}
                                                                     />
                                                                 }
-                                                                label="Auto-fill from Transmitter Frequency"
+                                                                label={t('scheduler_dialogs.shared.auto_fill_from_transmitter_frequency_label')}
                                                             />
 
                                                             <TextField
                                                                 fullWidth
                                                                 size="small"
-                                                                label="Target Center Frequency (Hz)"
+                                                                label={t('scheduler_dialogs.shared.target_center_frequency_hz_label')}
                                                                 type="number"
                                                                 value={task.config.target_center_freq || ''}
                                                                 onChange={(e) =>
@@ -2428,10 +2518,10 @@ const ObservationFormDialog = () => {
                                                     )}
 
                                                     <Typography variant="caption" color="text.secondary">
-                                                        IQ data will be recorded in SigMF format (cf32_le).
+                                                        {t('scheduler_dialogs.shared.iq_recording_help')}
                                                         {task.config.enable_frequency_shift
-                                                            ? ' Frequency shifting will center the signal at the target frequency, avoiding DC offset issues.'
-                                                            : ' The recording uses the SDR sample rate configured above.'}
+                                                            ? ` ${t('scheduler_dialogs.shared.iq_recording_help_shifted')}`
+                                                            : ` ${t('scheduler_dialogs.shared.iq_recording_help_sample_rate')}`}
                                                         {formData.sdr.sample_rate && (task.config.decimation_factor || 1) > 1
                                                             ? ` Decimated to ${formatSampleRate(formData.sdr.sample_rate / (task.config.decimation_factor || 1))}.`
                                                             : ''}
@@ -2445,7 +2535,7 @@ const ObservationFormDialog = () => {
 
                                                         return (
                                                             <FormControl fullWidth size="small" disabled={isFormDisabled || !formData.sdr.sample_rate}>
-                                                                <InputLabel>Decimation</InputLabel>
+                                                                <InputLabel>{t('scheduler_dialogs.shared.decimation_label')}</InputLabel>
                                                                 <Select
                                                                     value={decimationFactor}
                                                                     onChange={(e) =>
@@ -2455,7 +2545,7 @@ const ObservationFormDialog = () => {
                                                                             parseInt(e.target.value, 10)
                                                                         )
                                                                     }
-                                                                    label="Decimation"
+                                                                    label={t('scheduler_dialogs.shared.decimation_label')}
                                                                 >
                                                                     {decimationOptions.map((factor) => (
                                                                         <MenuItem key={factor} value={factor}>
@@ -2466,10 +2556,12 @@ const ObservationFormDialog = () => {
                                                                     ))}
                                                                 </Select>
                                                                 <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-                                                                    Output sample rate: {outputRate ? formatSampleRate(outputRate) : 'N/A'}
+                                                                    {t('scheduler_dialogs.shared.output_sample_rate_line', {
+                                                                        rate: outputRate ? formatSampleRate(outputRate) : t('not_available'),
+                                                                    })}
                                                                 </Typography>
                                                                 <Typography variant="caption" color="warning.main" sx={{ mt: 0.5, display: 'block' }}>
-                                                                    Decimation assumes the target signal is centered. Enable Frequency Shift to center your signal before decimating.
+                                                                    {t('scheduler_dialogs.shared.decimation_center_hint')}
                                                                 </Typography>
                                                             </FormControl>
                                                         );
@@ -2492,7 +2584,7 @@ const ObservationFormDialog = () => {
                                                                     disabled={isFormDisabled}
                                                                 />
                                                             }
-                                                            label="Run SatDump post-processing after IQ recording"
+                                                            label={t('scheduler_dialogs.shared.run_satdump_post_processing_label')}
                                                         />
                                                         <FormControl
                                                             fullWidth
@@ -2500,13 +2592,13 @@ const ObservationFormDialog = () => {
                                                             disabled={isFormDisabled || !task.config.enable_post_processing}
                                                             sx={{ mt: 1 }}
                                                         >
-                                                            <InputLabel>SatDump Pipeline</InputLabel>
+                                                            <InputLabel>{t('scheduler_dialogs.shared.satdump_pipeline_label')}</InputLabel>
                                                             <Select
                                                                 value={task.config.post_process_pipeline || getDefaultSatdumpPipeline()}
                                                                 onChange={(e) =>
                                                                     handleTaskConfigChange(index, 'post_process_pipeline', e.target.value)
                                                                 }
-                                                                label="SatDump Pipeline"
+                                                                label={t('scheduler_dialogs.shared.satdump_pipeline_label')}
                                                             >
                                                                 {Object.entries(SATDUMP_PIPELINES).map(([key, group]) => {
                                                                     const pipelines = group?.pipelines || [];
@@ -2539,7 +2631,7 @@ const ObservationFormDialog = () => {
                                                                     }
                                                                 />
                                                             }
-                                                            label="Delete IQ recording after SatDump completes"
+                                                            label={t('scheduler_dialogs.shared.delete_iq_after_satdump_label')}
                                                         />
                                                     </Box>
                                                 </>
@@ -2577,7 +2669,7 @@ const ObservationFormDialog = () => {
                                 startIcon={<DeleteIcon />}
                                 size="small"
                             >
-                                Delete
+                                {t('delete')}
                             </Button>
                             <Button
                                 onClick={handleCancelClick}
@@ -2587,7 +2679,7 @@ const ObservationFormDialog = () => {
                                 size="small"
                                 disabled={formData.status !== 'running' && formData.status !== 'scheduled'}
                             >
-                                Cancel
+                                {t('cancel')}
                             </Button>
                             <Button
                                 onClick={handleEnable}
@@ -2597,7 +2689,7 @@ const ObservationFormDialog = () => {
                                 size="small"
                                 disabled={formData.status === 'running' || formData.enabled}
                             >
-                                Enable
+                                {t('scheduler_dialogs.shared.enable_button')}
                             </Button>
                             <Button
                                 onClick={handleDisable}
@@ -2607,7 +2699,7 @@ const ObservationFormDialog = () => {
                                 size="small"
                                 disabled={formData.status === 'running' || !formData.enabled}
                             >
-                                Disable
+                                {t('scheduler_dialogs.shared.disable_button')}
                             </Button>
                         </>
                     )}
@@ -2626,7 +2718,7 @@ const ObservationFormDialog = () => {
                             },
                         }}
                     >
-                        Cancel
+                        {t('cancel')}
                     </Button>
                     <Button
                         onClick={handleSave}
@@ -2640,14 +2732,16 @@ const ObservationFormDialog = () => {
                             },
                         }}
                     >
-                        {isSaving ? 'Saving...' : (selectedObservation ? 'Update' : 'Create')}
+                        {isSaving
+                            ? t('scheduler_dialogs.shared.saving')
+                            : (selectedObservation ? t('scheduler_dialogs.shared.update_button') : t('scheduler_dialogs.shared.create_button'))}
                     </Button>
                 </Box>
             </DialogActions>
 
             {/* Delete Confirmation Dialog */}
             <Dialog open={openDeleteConfirm} onClose={() => setOpenDeleteConfirm(false)}>
-                <DialogTitle>Confirm Deletion</DialogTitle>
+                <DialogTitle>{t('scheduler_dialogs.observation.confirm_delete_title')}</DialogTitle>
                 <DialogContent
                     sx={{
                         bgcolor: (theme) => (
@@ -2657,23 +2751,25 @@ const ObservationFormDialog = () => {
                         ),
                     }}
                 >
-                    Are you sure you want to delete the observation <strong>{selectedObservation?.satellite?.name || 'Unknown'}</strong>?
+                    {t('scheduler_dialogs.observation.confirm_delete_message', {
+                        name: selectedObservation?.satellite?.name || t('unknown'),
+                    })}
                     <br /><br />
-                    This action cannot be undone.
+                    {t('scheduler_dialogs.observation.confirm_delete_warning')}
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={() => setOpenDeleteConfirm(false)} variant="outlined">
-                        Cancel
+                        {t('cancel')}
                     </Button>
                     <Button onClick={handleDeleteConfirm} variant="contained" color="error">
-                        Delete
+                        {t('delete')}
                     </Button>
                 </DialogActions>
             </Dialog>
 
             {/* Cancel Confirmation Dialog */}
             <Dialog open={openCancelConfirm} onClose={() => setOpenCancelConfirm(false)}>
-                <DialogTitle>Cancel Observation</DialogTitle>
+                <DialogTitle>{t('scheduler_dialogs.observation.cancel_observation_title')}</DialogTitle>
                 <DialogContent
                     sx={{
                         bgcolor: (theme) => (
@@ -2683,23 +2779,25 @@ const ObservationFormDialog = () => {
                         ),
                     }}
                 >
-                    Are you sure you want to cancel the observation <strong>{selectedObservation?.satellite?.name || 'Unknown'}</strong>?
+                    {t('scheduler_dialogs.observation.cancel_observation_message', {
+                        name: selectedObservation?.satellite?.name || t('unknown'),
+                    })}
                     <br /><br />
-                    This will immediately cancel the observation and remove all scheduled jobs.
+                    {t('scheduler_dialogs.observation.cancel_observation_warning')}
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={() => setOpenCancelConfirm(false)} variant="outlined">
-                        Close
+                        {t('close')}
                     </Button>
                     <Button onClick={handleCancelConfirm} variant="contained" color="warning">
-                        Cancel Observation
+                        {t('scheduler_dialogs.observation.cancel_observation_button')}
                     </Button>
                 </DialogActions>
             </Dialog>
 
             {/* Remove Session Confirmation Dialog */}
             <Dialog open={openRemoveSessionConfirm} onClose={() => setOpenRemoveSessionConfirm(false)}>
-                <DialogTitle>Remove SDR Session</DialogTitle>
+                <DialogTitle>{t('scheduler_dialogs.shared.remove_sdr_session_title')}</DialogTitle>
                 <DialogContent
                     sx={{
                         bgcolor: (theme) => (
@@ -2709,14 +2807,14 @@ const ObservationFormDialog = () => {
                         ),
                     }}
                 >
-                    Are you sure you want to remove this SDR session?
+                    {t('scheduler_dialogs.shared.remove_sdr_session_confirm')}
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={() => setOpenRemoveSessionConfirm(false)} variant="outlined">
-                        Cancel
+                        {t('cancel')}
                     </Button>
                     <Button onClick={handleRemoveSessionConfirm} variant="contained" color="error">
-                        Remove
+                        {t('scheduler_dialogs.shared.remove_button')}
                     </Button>
                 </DialogActions>
             </Dialog>

@@ -181,6 +181,30 @@ const IconWithOverlay = ({ children, showOverlay = false, overlayType = 'spinner
                                 }}
                             />
                         </Box>
+                    ) : overlayType === 'error' ? (
+                        <Box
+                            sx={{
+                                backgroundColor: 'rgba(244, 67, 54, 0.3) !important',
+                                borderRadius: '50%',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                padding: '3px',
+                            }}
+                        >
+                            <FiberManualRecordIcon
+                                sx={{
+                                    fontSize: 10,
+                                    color: '#F44336 !important',
+                                    fill: '#F44336 !important',
+                                    animation: 'pulse 1.5s ease-in-out infinite',
+                                    '@keyframes pulse': {
+                                        '0%, 100%': { opacity: 1 },
+                                        '50%': { opacity: 0.4 },
+                                    }
+                                }}
+                            />
+                        </Box>
                     ) : null}
                 </Box>
             )}
@@ -208,10 +232,49 @@ const WaterfallIconWithStatus = () => {
 // Wrapper component for orbital sources icon that reads Redux state
 const OrbitalSourcesIconWithStatus = () => {
     const isSynchronizing = useSelector((state) => state.syncSatellite?.synchronizing);
+    const syncState = useSelector((state) => state.syncSatellite?.syncState);
+    const normalizedStatus = String(syncState?.status || '').toLowerCase();
+    const hasSyncErrors = Array.isArray(syncState?.errors) && syncState.errors.length > 0;
+    // Show a persistent red LED when the latest completed sync reported errors.
+    const hasCompletedWithErrors = normalizedStatus === 'complete' && hasSyncErrors && !isSynchronizing;
+    const showOverlay = isSynchronizing || hasCompletedWithErrors;
+    const overlayType = isSynchronizing ? 'sync' : 'error';
 
     return (
-        <IconWithOverlay showOverlay={isSynchronizing} overlayType="sync">
+        <IconWithOverlay showOverlay={showOverlay} overlayType={overlayType}>
             <TleIcon />
+        </IconWithOverlay>
+    );
+};
+
+// Wrapper component for celestial icon that reads Redux state
+const CelestialIconWithStatus = () => {
+    const solarLoading = useSelector((state) => state.celestial?.solarLoading);
+    const tracksLoading = useSelector((state) => state.celestial?.tracksLoading);
+    const showOverlay = Boolean(solarLoading || tracksLoading);
+
+    return (
+        <IconWithOverlay showOverlay={showOverlay} overlayType="sync">
+            <CelestialSolarIcon />
+        </IconWithOverlay>
+    );
+};
+
+// Wrapper component for earth view icon that reads Redux state
+const EarthViewIconWithStatus = () => {
+    const loadingSatellites = useSelector((state) => state.earthViewTrack?.loadingSatellites);
+    const passesLoading = useSelector((state) => state.earthViewTrack?.passesLoading);
+    const selectedSatGroupId = useSelector((state) => state.earthViewTrack?.selectedSatGroupId);
+    const normalizedSelectedSatGroupId = String(selectedSatGroupId || '').trim();
+    // Ignore initial/default state before any valid group is selected to avoid persistent false-positive spinner.
+    const hasSelectedSatGroup = Boolean(
+        normalizedSelectedSatGroupId && normalizedSelectedSatGroupId !== 'none'
+    );
+    const showOverlay = Boolean(hasSelectedSatGroup && (loadingSatellites || passesLoading));
+
+    return (
+        <IconWithOverlay showOverlay={showOverlay} overlayType="sync">
+            <PublicIcon />
         </IconWithOverlay>
     );
 };
@@ -246,23 +309,21 @@ const SchedulerIconWithStatus = () => {
     );
 };
 
-export const getNavigation = ({ showCelestial = false, isAdmin = false } = {}) => {
+export const getNavigation = ({ isAdmin = false } = {}) => {
     const operationsSection = [
         {
             kind: 'header',
             title: i18n.t('operations', { ns: 'navigation', defaultValue: 'Operations' }),
         },
-        ...(showCelestial
-            ? [{
-                segment: 'solarsystem',
-                title: i18n.t('solar_system', { ns: 'navigation', defaultValue: 'Solar System' }),
-                icon: <CelestialSolarIcon />,
-            }]
-            : []),
+        {
+            segment: 'solarsystem',
+            title: i18n.t('solar_system', { ns: 'navigation', defaultValue: 'Solar System' }),
+            icon: <CelestialIconWithStatus />,
+        },
         {
             segment: 'earthview',
             title: i18n.t('earthview', { ns: 'navigation', defaultValue: 'Earth view' }),
-            icon: <PublicIcon/>,
+            icon: <EarthViewIconWithStatus />,
         },
         {
             segment: 'tracking',
@@ -295,7 +356,7 @@ export const getNavigation = ({ showCelestial = false, isAdmin = false } = {}) =
         },
         {
             segment: 'admin/satellites/sources',
-            title: i18n.t('orbital_sources', { ns: 'navigation' }),
+            title: i18n.t('orbital_sources', { ns: 'navigation', defaultValue: 'Orbital Data' }),
             icon: <OrbitalSourcesIconWithStatus />,
         },
         {

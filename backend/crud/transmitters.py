@@ -19,17 +19,95 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Union
 
-from sqlalchemy import delete, insert, select, update
+from sqlalchemy import delete, insert, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from common.common import logger, serialize_object
 from db.models import Transmitters
 
 NULL_MARKERS = {"", "-", None}
+UNSET = object()
+TRANSMITTER_ID_ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
+TRANSMITTER_ID_BASE = len(TRANSMITTER_ID_ALPHABET)
+TRANSMITTER_ID_LENGTH = 22
+
+
+def _uuid_to_short_transmitter_id(value: uuid.UUID | str) -> str:
+    """Encode a UUID as a SatNOGS-style 22-char transmitter id."""
+    uid = value if isinstance(value, uuid.UUID) else uuid.UUID(str(value).strip())
+    number = uid.int
+    encoded = []
+
+    while number:
+        number, remainder = divmod(number, TRANSMITTER_ID_BASE)
+        encoded.append(TRANSMITTER_ID_ALPHABET[remainder])
+
+    if not encoded:
+        encoded.append(TRANSMITTER_ID_ALPHABET[0])
+
+    return "".join(reversed(encoded)).rjust(
+        TRANSMITTER_ID_LENGTH,
+        TRANSMITTER_ID_ALPHABET[0],
+    )
 
 
 def _is_null_marker(value: Any) -> bool:
     return value in NULL_MARKERS or (isinstance(value, str) and value.strip() in NULL_MARKERS)
+
+
+def _normalize_identifier(value: Any) -> str:
+    if _is_null_marker(value):
+        return ""
+    return " ".join(str(value).strip().split()).lower()
+
+
+def _normalize_command_key(value: Any) -> str:
+    return _normalize_identifier(value)
+
+
+def normalize_target_key(value: Any) -> str | None:
+    if _is_null_marker(value):
+        return None
+    text = str(value).strip()
+    if not text or ":" not in text:
+        return None
+
+    prefix, raw_suffix = text.split(":", 1)
+    normalized_prefix = str(prefix or "").strip().lower()
+    suffix = ""
+
+    if normalized_prefix == "body":
+        suffix = _normalize_identifier(raw_suffix)
+    elif normalized_prefix == "mission":
+        suffix = _normalize_identifier(raw_suffix)
+    elif normalized_prefix == "missioncmd":
+        suffix = _normalize_command_key(raw_suffix)
+    else:
+        return None
+
+    if not suffix:
+        return None
+    return f"{normalized_prefix}:{suffix}"
+
+
+def build_target_key(
+    *,
+    target_type: Any,
+    mission_id: Any = None,
+    command: Any = None,
+    body_id: Any = None,
+) -> str | None:
+    normalized_target_type = str(target_type or "").strip().lower()
+    if normalized_target_type == "body":
+        normalized_body_id = _normalize_identifier(body_id)
+        return f"body:{normalized_body_id}" if normalized_body_id else None
+    if normalized_target_type == "mission":
+        normalized_mission_id = _normalize_identifier(mission_id)
+        if normalized_mission_id:
+            return f"mission:{normalized_mission_id}"
+        normalized_command = _normalize_command_key(command)
+        return f"missioncmd:{normalized_command}" if normalized_command else None
+    return None
 
 
 def _coerce_required_int(value: Any, field_name: str) -> int:
@@ -101,10 +179,44 @@ def _coerce_optional_json(value: Any, field_name: str) -> Any | None:
     raise ValueError(f"{field_name} must be valid JSON")
 
 
+def _normalize_owner_fields(payload: dict, *, for_edit: bool = False) -> dict:
+    satellite_id_value = payload.pop("satelliteId", UNSET)
+    norad_cat_id_value = payload.pop("norad_cat_id", UNSET)
+    target_key_value = payload.pop("target_key", UNSET)
+
+    satellite_owner_provided = satellite_id_value is not UNSET or norad_cat_id_value is not UNSET
+    target_owner_provided = target_key_value is not UNSET
+
+    if for_edit and not satellite_owner_provided and not target_owner_provided:
+        return payload
+
+    if satellite_owner_provided and target_owner_provided:
+        raise ValueError("Provide either satelliteId/norad_cat_id or target_key, not both")
+
+    if satellite_owner_provided:
+        satellite_owner_value = (
+            satellite_id_value if satellite_id_value is not UNSET else norad_cat_id_value
+        )
+        payload["norad_cat_id"] = _coerce_required_int(satellite_owner_value, "satelliteId")
+        payload["target_key"] = None
+        return payload
+
+    if target_owner_provided:
+        normalized_target_key = normalize_target_key(target_key_value)
+        if not normalized_target_key:
+            raise ValueError(
+                "target_key must be in one of: mission:<id>, missioncmd:<command>, body:<id>"
+            )
+        payload["norad_cat_id"] = None
+        payload["target_key"] = normalized_target_key
+        return payload
+
+    raise ValueError("Either satelliteId/norad_cat_id or target_key is required")
+
+
 def _normalize_transmitter_payload(data: dict, for_edit: bool = False) -> dict:
     payload = dict(data)
-
-    payload["norad_cat_id"] = _coerce_required_int(payload.pop("satelliteId", None), "satelliteId")
+    payload = _normalize_owner_fields(payload, for_edit=for_edit)
 
     optional_int_fields = {
         "uplinkLow": "uplink_low",
@@ -163,6 +275,56 @@ async def fetch_transmitters_for_satellite(session: AsyncSession, norad_id: int)
         return {"success": False, "error": str(e)}
 
 
+async def fetch_transmitters_for_target_key(session: AsyncSession, target_key: str) -> dict:
+    """Fetch all transmitters associated with a non-satellite target key."""
+    try:
+        normalized_target_key = normalize_target_key(target_key)
+        if not normalized_target_key:
+            return {"success": True, "data": [], "error": None}
+
+        stmt = select(Transmitters).filter(Transmitters.target_key == normalized_target_key)
+        result = await session.execute(stmt)
+        transmitters = serialize_object(result.scalars().all())
+        return {"success": True, "data": transmitters, "error": None}
+    except Exception as e:
+        logger.error(f"Error fetching transmitters for target key {target_key}: {e}")
+        logger.error(traceback.format_exc())
+        return {"success": False, "error": str(e)}
+
+
+async def fetch_transmitters_for_target_keys(session: AsyncSession, target_keys: list[str]) -> dict:
+    """Fetch transmitters for multiple non-satellite target keys."""
+    try:
+        normalized_keys = []
+        seen = set()
+        for target_key in target_keys:
+            normalized_key = normalize_target_key(target_key)
+            if not normalized_key or normalized_key in seen:
+                continue
+            seen.add(normalized_key)
+            normalized_keys.append(normalized_key)
+
+        if not normalized_keys:
+            return {"success": True, "data": {}, "error": None}
+
+        stmt = select(Transmitters).filter(Transmitters.target_key.in_(normalized_keys))
+        result = await session.execute(stmt)
+        transmitters = serialize_object(result.scalars().all())
+
+        grouped: dict[str, list[dict]] = {target_key: [] for target_key in normalized_keys}
+        for row in transmitters:
+            row_target_key = normalize_target_key(row.get("target_key"))
+            if not row_target_key:
+                continue
+            grouped.setdefault(row_target_key, []).append(row)
+
+        return {"success": True, "data": grouped, "error": None}
+    except Exception as e:
+        logger.error(f"Error fetching transmitters for target keys: {e}")
+        logger.error(traceback.format_exc())
+        return {"success": False, "error": str(e)}
+
+
 async def fetch_transmitter(session: AsyncSession, transmitter_id: Union[uuid.UUID, str]) -> dict:
     """
     Fetch a single transmitter record by its UUID or string representation.
@@ -172,7 +334,12 @@ async def fetch_transmitter(session: AsyncSession, transmitter_id: Union[uuid.UU
         if isinstance(transmitter_id, uuid.UUID):
             transmitter_id = str(transmitter_id)
 
-        stmt = select(Transmitters).filter(Transmitters.id == transmitter_id)
+        stmt = select(Transmitters).filter(
+            or_(
+                Transmitters.id == transmitter_id,
+                Transmitters.source_transmitter_id == transmitter_id,
+            )
+        )
         result = await session.execute(stmt)
         transmitter = result.scalar_one_or_none()
         transmitter = serialize_object(transmitter)
@@ -190,9 +357,9 @@ async def add_transmitter(session: AsyncSession, data: dict) -> dict:
     """
     try:
         data = _normalize_transmitter_payload(data)
-        new_id = uuid.uuid4()
+        new_id = _uuid_to_short_transmitter_id(uuid.uuid4())
         now = datetime.now(timezone.utc)
-        data["id"] = str(new_id)
+        data["id"] = new_id
         data["added"] = now
         data["updated"] = now
 
@@ -231,7 +398,12 @@ async def edit_transmitter(session: AsyncSession, data: dict) -> dict:
         data = _normalize_transmitter_payload(data, for_edit=True)
 
         # Ensure the record exists first
-        stmt = select(Transmitters).filter(Transmitters.id == transmitter_id)
+        stmt = select(Transmitters).filter(
+            or_(
+                Transmitters.id == transmitter_id,
+                Transmitters.source_transmitter_id == transmitter_id,
+            )
+        )
         result = await session.execute(stmt)
         existing = result.scalar_one_or_none()
         if not existing:
@@ -242,7 +414,7 @@ async def edit_transmitter(session: AsyncSession, data: dict) -> dict:
 
         upd_stmt = (
             update(Transmitters)
-            .where(Transmitters.id == transmitter_id)
+            .where(Transmitters.id == existing.id)
             .values(**data)
             .returning(Transmitters)
         )
@@ -267,7 +439,14 @@ async def delete_transmitter(session: AsyncSession, transmitter_id: Union[uuid.U
         logger.info(transmitter_id)
 
         del_stmt = (
-            delete(Transmitters).where(Transmitters.id == transmitter_id).returning(Transmitters)
+            delete(Transmitters)
+            .where(
+                or_(
+                    Transmitters.id == transmitter_id,
+                    Transmitters.source_transmitter_id == transmitter_id,
+                )
+            )
+            .returning(Transmitters)
         )
         result = await session.execute(del_stmt)
         deleted = result.scalar_one_or_none()

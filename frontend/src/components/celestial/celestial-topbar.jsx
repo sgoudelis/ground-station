@@ -28,6 +28,7 @@ import {
     useMediaQuery,
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
+import { useTranslation } from 'react-i18next';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import ListAltIcon from '@mui/icons-material/ListAlt';
@@ -109,31 +110,31 @@ const DIALOG_CANCEL_BUTTON_SX = {
     },
 };
 
-const getStatusMeta = (entry) => {
+const getStatusMeta = (entry, t) => {
     if (entry?.lastError) {
-        return { label: 'Error', color: 'error' };
+        return { label: t('common.error'), color: 'error' };
     }
 
     if (!entry?.lastRefreshAt) {
-        return { label: 'Stale', color: 'warning' };
+        return { label: t('common.stale'), color: 'warning' };
     }
 
     const ageMs = Date.now() - new Date(entry.lastRefreshAt).getTime();
     if (Number.isNaN(ageMs) || ageMs > STALE_MS) {
-        return { label: 'Stale', color: 'warning' };
+        return { label: t('common.stale'), color: 'warning' };
     }
 
-    return { label: 'OK', color: 'success' };
+    return { label: t('common.ok'), color: 'success' };
 };
 
-const formatLastRefresh = (value, timezone, locale) => {
+const formatLastRefresh = (value, timezone, locale, t) => {
     if (!value) {
-        return 'Never';
+        return t('common.never');
     }
 
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) {
-        return 'Unknown';
+        return t('common.unknown');
     }
 
     const options = timezone ? { timeZone: timezone } : undefined;
@@ -150,12 +151,12 @@ const normalizeHexColor = (value) => {
     return prefixed.toUpperCase();
 };
 
-const getMissionStatusMeta = (status, statusLabel = '') => {
+const getMissionStatusMeta = (status, statusLabel = '', t) => {
     const normalized = String(status || 'unknown').trim().toLowerCase();
-    if (normalized === 'active') return { label: statusLabel || 'Active', color: 'success' };
-    if (normalized === 'completed') return { label: statusLabel || 'Completed', color: 'default' };
-    if (normalized === 'failed') return { label: statusLabel || 'Failed', color: 'error' };
-    return { label: statusLabel || 'Unknown', color: 'warning' };
+    if (normalized === 'active') return { label: statusLabel || t('topbar.mission_status.active'), color: 'success' };
+    if (normalized === 'completed') return { label: statusLabel || t('topbar.mission_status.completed'), color: 'default' };
+    if (normalized === 'failed') return { label: statusLabel || t('topbar.mission_status.failed'), color: 'error' };
+    return { label: statusLabel || t('common.unknown'), color: 'warning' };
 };
 
 const CelestialTopBar = ({
@@ -166,6 +167,8 @@ const CelestialTopBar = ({
 }) => {
     const dispatch = useDispatch();
     const theme = useTheme();
+    const { t: tCelestial } = useTranslation('celestial');
+    const { t: tCommon } = useTranslation('common');
     const { socket } = useSocket();
     const { timezone, locale } = useUserTimeSettings();
     const monitoredState = useSelector((state) => state.celestialMonitored);
@@ -216,11 +219,11 @@ const CelestialTopBar = ({
             .filter((entry) => entry && typeof entry === 'object')
             .map((entry) => ({
                 ...entry,
-                id: entry.id || entry.command || `${entry.display_name || 'target'}`,
-                display_name: entry.display_name || entry.command || 'Unknown',
+                id: entry.id || entry.command || `${entry.display_name || tCelestial('topbar.fallback.target')}`,
+                display_name: entry.display_name || entry.command || tCelestial('common.unknown'),
                 command: entry.command || '',
             })),
-        [catalogEntries],
+        [catalogEntries, tCelestial],
     );
     const safeBodyCatalogEntries = useMemo(
         () => (Array.isArray(bodyCatalogEntries) ? bodyCatalogEntries : [])
@@ -228,30 +231,16 @@ const CelestialTopBar = ({
             .map((entry) => ({
                 ...entry,
                 body_id: String(entry.body_id || '').toLowerCase(),
-                name: entry.name || entry.body_id || 'Unknown',
+                name: entry.name || entry.body_id || tCelestial('common.unknown'),
             }))
             .filter((entry) => entry.body_id),
-        [bodyCatalogEntries],
+        [bodyCatalogEntries, tCelestial],
     );
 
     const enabledCount = useMemo(
         () => monitored.filter((entry) => entry.enabled).length,
         [monitored],
     );
-
-    useEffect(() => {
-        if (!socket) {
-            return undefined;
-        }
-
-        const fetchData = () => dispatch(fetchMonitoredCelestial({ socket }));
-        fetchData();
-
-        socket.on('connect', fetchData);
-        return () => {
-            socket.off('connect', fetchData);
-        };
-    }, [socket, dispatch]);
 
     useEffect(() => {
         if (!socket) {
@@ -314,7 +303,7 @@ const CelestialTopBar = ({
     setCatalogEntries(response.data || []);
   } else {
     setCatalogEntries([]);
-    setCatalogError(response?.error || 'Failed to load spacecraft catalog.');
+    setCatalogError(response?.error || tCelestial('topbar.errors.failed_load_spacecraft_catalog'));
   }
   setCatalogLoading(false);
 });
@@ -322,7 +311,7 @@ const CelestialTopBar = ({
         return () => {
             active = false;
         };
-    }, [addDialogOpen, socket]);
+    }, [addDialogOpen, socket, tCelestial]);
 
     useEffect(() => {
         if (!addDialogOpen || !socket) {
@@ -343,7 +332,7 @@ const CelestialTopBar = ({
     setBodyCatalogEntries(response.data || []);
   } else {
     setBodyCatalogEntries([]);
-    setBodyCatalogError(response?.error || 'Failed to load celestial body catalog.');
+    setBodyCatalogError(response?.error || tCelestial('topbar.errors.failed_load_body_catalog'));
   }
   setBodyCatalogLoading(false);
 });
@@ -351,7 +340,7 @@ const CelestialTopBar = ({
         return () => {
             active = false;
         };
-    }, [addDialogOpen, socket]);
+    }, [addDialogOpen, socket, tCelestial]);
 
     useEffect(() => {
         if (addDialogOpen) {
@@ -413,7 +402,7 @@ const CelestialTopBar = ({
     const handleAdd = async () => {
         setAddFeedback('');
         if (!socket) {
-            dispatch(setMonitoredFormError('Socket connection is not available.'));
+            dispatch(setMonitoredFormError(tCelestial('topbar.errors.socket_unavailable')));
             return;
         }
 
@@ -424,7 +413,7 @@ const CelestialTopBar = ({
 
         if (targetType === 'mission') {
             if (!name || !cmd) {
-                dispatch(setMonitoredFormError('Display name and command are required.'));
+                dispatch(setMonitoredFormError(tCelestial('topbar.errors.display_name_command_required')));
                 return;
             }
             const exists = monitored.some(
@@ -433,12 +422,12 @@ const CelestialTopBar = ({
                     && String(entry.command || '').toLowerCase() === cmd.toLowerCase(),
             );
             if (exists) {
-                dispatch(setMonitoredFormError('This command is already in the monitored list.'));
+                dispatch(setMonitoredFormError(tCelestial('topbar.errors.command_already_monitored')));
                 return;
             }
         } else {
             if (!bodyId) {
-                dispatch(setMonitoredFormError('Select a body target.'));
+                dispatch(setMonitoredFormError(tCelestial('topbar.errors.select_body_target')));
                 return;
             }
             const exists = monitored.some(
@@ -447,7 +436,7 @@ const CelestialTopBar = ({
                     && String(entry.bodyId || '').toLowerCase() === bodyId,
             );
             if (exists) {
-                dispatch(setMonitoredFormError('This body is already in the monitored list.'));
+                dispatch(setMonitoredFormError(tCelestial('topbar.errors.body_already_monitored')));
                 return;
             }
         }
@@ -469,8 +458,8 @@ const CelestialTopBar = ({
             const createdId = String(result?.payload?.id || '').trim();
             setAddFeedback(
                 targetType === 'mission'
-                    ? `Added "${name}" using command "${cmd}".`
-                    : `Added body target "${name}".`,
+                    ? tCelestial('topbar.feedback.added_mission', { name, command: cmd })
+                    : tCelestial('topbar.feedback.added_body', { name }),
             );
             setSelectedCatalogEntry(null);
 
@@ -532,7 +521,7 @@ const CelestialTopBar = ({
 
     const handleSaveEdit = async () => {
         if (!socket) {
-            setEditError('Socket connection is not available.');
+            setEditError(tCelestial('topbar.errors.socket_unavailable'));
             return;
         }
 
@@ -542,19 +531,19 @@ const CelestialTopBar = ({
         const targetType = editForm.targetType || 'mission';
         const normalizedColor = normalizeHexColor(editForm.color);
         if (!name) {
-            setEditError('Display name is required.');
+            setEditError(tCelestial('topbar.errors.display_name_required'));
             return;
         }
         if (targetType === 'mission' && !cmd) {
-            setEditError('Command is required for mission targets.');
+            setEditError(tCelestial('topbar.errors.command_required_for_mission'));
             return;
         }
         if (targetType === 'body' && !bodyId) {
-            setEditError('Body target is required for body targets.');
+            setEditError(tCelestial('topbar.errors.body_required_for_body_target'));
             return;
         }
         if (normalizedColor && !HEX_COLOR_PATTERN.test(normalizedColor)) {
-            setEditError('Color must be a valid hex value like #1A2B3C.');
+            setEditError(tCelestial('topbar.errors.invalid_hex_color'));
             return;
         }
 
@@ -569,7 +558,11 @@ const CelestialTopBar = ({
             },
         );
         if (exists) {
-            setEditError(targetType === 'mission' ? 'This command is already in the monitored list.' : 'This body is already in the monitored list.');
+            setEditError(
+                targetType === 'mission'
+                    ? tCelestial('topbar.errors.command_already_monitored')
+                    : tCelestial('topbar.errors.body_already_monitored')
+            );
             return;
         }
 
@@ -594,7 +587,7 @@ const CelestialTopBar = ({
             return;
         }
 
-        setEditError(result.payload || result.error?.message || 'Failed to update monitored target.');
+        setEditError(result.payload || result.error?.message || tCelestial('topbar.errors.failed_update_target'));
     };
 
     const handleRequestDelete = (entry) => {
@@ -636,7 +629,7 @@ const CelestialTopBar = ({
                 <Stack direction="row" spacing={1} alignItems="center">
                     <Stack direction="row" spacing={0.5} alignItems="center">
                         <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
-                            Past
+                            {tCelestial('topbar.projection.past')}
                         </Typography>
                         <FormControl size="small" sx={{ minWidth: 72 }}>
                             <Select
@@ -662,7 +655,7 @@ const CelestialTopBar = ({
                     </Stack>
                     <Stack direction="row" spacing={0.5} alignItems="center">
                         <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
-                            Future
+                            {tCelestial('topbar.projection.future')}
                         </Typography>
                         <FormControl size="small" sx={{ minWidth: 72 }}>
                             <Select
@@ -689,14 +682,14 @@ const CelestialTopBar = ({
                 </Stack>
 
                 <Stack direction="row" spacing={0.5} sx={{ ml: 'auto' }}>
-                    <Tooltip title="Add">
+                    <Tooltip title={tCommon('add')}>
                         <span>
                             {compactActionButtons ? (
                                 <IconButton
                                     size="small"
                                     onClick={() => dispatch(openAddDialog())}
                                     disabled={!socket || celestialLoading}
-                                    aria-label="Add"
+                                    aria-label={tCommon('add')}
                                 >
                                     <AddIcon fontSize="small" />
                                 </IconButton>
@@ -708,18 +701,18 @@ const CelestialTopBar = ({
                                     onClick={() => dispatch(openAddDialog())}
                                     disabled={!socket || celestialLoading}
                                 >
-                                    Add
+                                    {tCommon('add')}
                                 </Button>
                             )}
                         </span>
                     </Tooltip>
-                    <Tooltip title="Manage">
+                    <Tooltip title={tCelestial('topbar.actions.manage')}>
                         <span>
                             {compactActionButtons ? (
                                 <IconButton
                                     size="small"
                                     onClick={() => dispatch(openManageDialog())}
-                                    aria-label="Manage"
+                                    aria-label={tCelestial('topbar.actions.manage')}
                                 >
                                     <ListAltIcon fontSize="small" />
                                 </IconButton>
@@ -730,19 +723,19 @@ const CelestialTopBar = ({
                                     startIcon={<ListAltIcon />}
                                     onClick={() => dispatch(openManageDialog())}
                                 >
-                                    Manage
+                                    {tCelestial('topbar.actions.manage')}
                                 </Button>
                             )}
                         </span>
                     </Tooltip>
-                    <Tooltip title="Refresh All">
+                    <Tooltip title={tCelestial('topbar.actions.refresh_all')}>
                         <span>
                             {compactActionButtons ? (
                                 <IconButton
                                     size="small"
                                     disabled={!socket || celestialLoading || enabledCount === 0}
                                     onClick={handleRefreshAll}
-                                    aria-label="Refresh All"
+                                    aria-label={tCelestial('topbar.actions.refresh_all')}
                                 >
                                     <RefreshIcon fontSize="small" />
                                 </IconButton>
@@ -754,7 +747,7 @@ const CelestialTopBar = ({
                                     disabled={!socket || celestialLoading || enabledCount === 0}
                                     onClick={handleRefreshAll}
                                 >
-                                    Refresh All
+                                    {tCelestial('topbar.actions.refresh_all')}
                                 </Button>
                             )}
                         </span>
@@ -769,14 +762,14 @@ const CelestialTopBar = ({
                 fullWidth
                 PaperProps={{ sx: DIALOG_PAPER_SX }}
             >
-                <DialogTitle sx={DIALOG_TITLE_SX}>Add Monitored Celestial Target</DialogTitle>
+                <DialogTitle sx={DIALOG_TITLE_SX}>{tCelestial('topbar.dialogs.add_title')}</DialogTitle>
                 <DialogContent sx={DIALOG_CONTENT_SX}>
                     <Stack spacing={2} sx={{ pt: 3 }}>
                         <FormControl size="small" fullWidth>
-                            <InputLabel id="add-target-type-label">Target Type</InputLabel>
+                            <InputLabel id="add-target-type-label">{tCelestial('topbar.fields.target_type')}</InputLabel>
                             <Select
                                 labelId="add-target-type-label"
-                                label="Target Type"
+                                label={tCelestial('topbar.fields.target_type')}
                                 value={form.targetType || 'mission'}
                                 onChange={(event) => {
                                     const nextType = event.target.value;
@@ -790,8 +783,8 @@ const CelestialTopBar = ({
                                     dispatch(setMonitoredFormError(''));
                                 }}
                             >
-                                <MenuItem value="mission">Mission / Spacecraft</MenuItem>
-                                <MenuItem value="body">Solar Body</MenuItem>
+                                <MenuItem value="mission">{tCelestial('topbar.fields.mission_spacecraft')}</MenuItem>
+                                <MenuItem value="body">{tCelestial('topbar.fields.solar_body')}</MenuItem>
                             </Select>
                         </FormControl>
 
@@ -867,21 +860,21 @@ const CelestialTopBar = ({
                                             <Box component="li" {...props} key={option?.id || option?.command || 'target'}>
                                                 <Stack spacing={0.35} sx={{ width: '100%' }}>
                                                     <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between">
-                                                        <Typography variant="body2">{option?.display_name || option?.command || 'Unknown'}</Typography>
+                                                        <Typography variant="body2">{option?.display_name || option?.command || tCelestial('common.unknown')}</Typography>
                                                         <Stack direction="row" spacing={0.75} alignItems="center">
                                                             {monitoredCommands.has(String(option?.command || '').trim().toLowerCase()) ? (
                                                                 <Chip
                                                                     size="small"
                                                                     variant="outlined"
                                                                     color="default"
-                                                                    label="Already monitored"
+                                                                    label={tCelestial('topbar.labels.already_monitored')}
                                                                 />
                                                             ) : null}
                                                             <Chip
                                                                 size="small"
                                                                 variant="outlined"
-                                                                color={getMissionStatusMeta(option?.mission_status, option?.status_label).color}
-                                                                label={getMissionStatusMeta(option?.mission_status, option?.status_label).label}
+                                                                color={getMissionStatusMeta(option?.mission_status, option?.status_label, tCelestial).color}
+                                                                label={getMissionStatusMeta(option?.mission_status, option?.status_label, tCelestial).label}
                                                             />
                                                         </Stack>
                                                     </Stack>
@@ -894,13 +887,13 @@ const CelestialTopBar = ({
                                         renderInput={(params) => (
                                             <TextField
                                                 {...params}
-                                                label="Target"
-                                                placeholder="Type command or pick from catalog"
+                                                label={tCelestial('topbar.fields.target')}
+                                                placeholder={tCelestial('topbar.fields.target_placeholder')}
                                                 size="small"
                                                 helperText={
                                                     inferredSourceMode === 'catalog'
-                                                        ? 'Using static catalog entry.'
-                                                        : 'Using exact Horizons command.'
+                                                        ? tCelestial('topbar.helper.using_static_catalog')
+                                                        : tCelestial('topbar.helper.using_exact_command')
                                                 }
                                             />
                                         )}
@@ -908,16 +901,16 @@ const CelestialTopBar = ({
                                 </Box>
                                 {selectedCatalogEntry && String(selectedCatalogEntry?.mission_status || '').toLowerCase() !== 'active' ? (
                                     <Typography variant="caption" color="warning.main">
-                                        Selected mission is not active; Horizons data may be limited.
+                                        {tCelestial('topbar.helper.selected_mission_not_active')}
                                     </Typography>
                                 ) : null}
                                 {catalogLoading ? (
                                     <Typography variant="caption" color="text.secondary">
-                                        Loading spacecraft catalog...
+                                        {tCelestial('topbar.helper.loading_spacecraft_catalog')}
                                     </Typography>
                                 ) : null}
                                 <TextField
-                                    label="Horizons Command"
+                                    label={tCelestial('topbar.fields.horizons_command')}
                                     value={form.command}
                                     onChange={(event) =>
                                         {
@@ -937,10 +930,10 @@ const CelestialTopBar = ({
                         ) : (
                             <>
                                 <FormControl size="small" fullWidth sx={{ mt: 0.5 }}>
-                                    <InputLabel id="body-target-label">Target Body</InputLabel>
+                                    <InputLabel id="body-target-label">{tCelestial('topbar.fields.target_body')}</InputLabel>
                                     <Select
                                         labelId="body-target-label"
-                                        label="Target Body"
+                                        label={tCelestial('topbar.fields.target_body')}
                                         value={form.bodyId || ''}
                                         onChange={(event) => {
                                             const bodyId = String(event.target.value || '').toLowerCase();
@@ -968,7 +961,7 @@ const CelestialTopBar = ({
                                 </FormControl>
                                 {bodyCatalogLoading ? (
                                     <Typography variant="caption" color="text.secondary">
-                                        Loading body catalog...
+                                        {tCelestial('topbar.helper.loading_body_catalog')}
                                     </Typography>
                                 ) : null}
                                 {bodyCatalogError ? (
@@ -980,7 +973,7 @@ const CelestialTopBar = ({
                         )}
 
                         <TextField
-                            label="Display Name"
+                            label={tCelestial('topbar.fields.display_name')}
                             value={form.displayName}
                             onChange={(event) =>
                                 dispatch(setMonitoredFormField({ field: 'displayName', value: event.target.value }))
@@ -1011,10 +1004,10 @@ const CelestialTopBar = ({
                         variant="outlined"
                         sx={DIALOG_CANCEL_BUTTON_SX}
                     >
-                        Cancel
+                        {tCommon('cancel')}
                     </Button>
                     <Button onClick={handleAdd} color="success" variant="contained" disabled={saveLoading || !socket || celestialLoading}>
-                        Add
+                        {tCommon('add')}
                     </Button>
                 </DialogActions>
             </Dialog>
@@ -1026,7 +1019,7 @@ const CelestialTopBar = ({
                 fullWidth
                 PaperProps={{ sx: DIALOG_PAPER_SX }}
             >
-                <DialogTitle sx={DIALOG_TITLE_SX}>Manage Monitored Celestial Targets</DialogTitle>
+                <DialogTitle sx={DIALOG_TITLE_SX}>{tCelestial('topbar.dialogs.manage_title')}</DialogTitle>
                 <DialogContent sx={DIALOG_CONTENT_SX}>
                     <TableContainer
                         component={Paper}
@@ -1039,18 +1032,18 @@ const CelestialTopBar = ({
                         <Table size="small" stickyHeader>
                             <TableHead>
                                 <TableRow>
-                                    <TableCell sx={{ fontWeight: 700, bgcolor: 'background.paper' }}>Name</TableCell>
-                                    <TableCell sx={{ fontWeight: 700, bgcolor: 'background.paper' }}>Type</TableCell>
-                                    <TableCell sx={{ fontWeight: 700, bgcolor: 'background.paper' }}>Mission</TableCell>
-                                    <TableCell sx={{ fontWeight: 700, bgcolor: 'background.paper' }}>Status</TableCell>
-                                    <TableCell sx={{ fontWeight: 700, bgcolor: 'background.paper' }}>Last Refresh</TableCell>
-                                    <TableCell sx={{ fontWeight: 700, bgcolor: 'background.paper' }}>Actions</TableCell>
+                                    <TableCell sx={{ fontWeight: 700, bgcolor: 'background.paper' }}>{tCommon('name')}</TableCell>
+                                    <TableCell sx={{ fontWeight: 700, bgcolor: 'background.paper' }}>{tCelestial('topbar.table.type')}</TableCell>
+                                    <TableCell sx={{ fontWeight: 700, bgcolor: 'background.paper' }}>{tCelestial('topbar.table.mission')}</TableCell>
+                                    <TableCell sx={{ fontWeight: 700, bgcolor: 'background.paper' }}>{tCommon('status')}</TableCell>
+                                    <TableCell sx={{ fontWeight: 700, bgcolor: 'background.paper' }}>{tCelestial('topbar.table.last_refresh')}</TableCell>
+                                    <TableCell sx={{ fontWeight: 700, bgcolor: 'background.paper' }}>{tCommon('actions')}</TableCell>
                                 </TableRow>
                             </TableHead>
                             <TableBody>
                                 {monitored.length ? (
                                     monitored.map((entry) => {
-                                        const statusMeta = getStatusMeta(entry);
+                                        const statusMeta = getStatusMeta(entry, tCelestial);
                                         const targetType = entry.targetType || 'mission';
                                         const mission = targetType === 'mission'
                                             ? (catalogByCommand[String(entry.command || '').toLowerCase()] || null)
@@ -1058,6 +1051,7 @@ const CelestialTopBar = ({
                                         const missionStatusMeta = getMissionStatusMeta(
                                             mission?.mission_status,
                                             mission?.status_label,
+                                            tCelestial,
                                         );
                                         return (
                                             <TableRow
@@ -1077,7 +1071,7 @@ const CelestialTopBar = ({
                                                     <Chip
                                                         size="small"
                                                         variant="outlined"
-                                                        label={targetType === 'body' ? 'Body' : 'Mission'}
+                                                        label={targetType === 'body' ? tCelestial('common.body') : tCelestial('common.mission')}
                                                     />
                                                 </TableCell>
                                                 <TableCell>
@@ -1085,7 +1079,7 @@ const CelestialTopBar = ({
                                                         size="small"
                                                         variant="outlined"
                                                         color={targetType === 'body' ? 'info' : missionStatusMeta.color}
-                                                        label={targetType === 'body' ? 'Static Body' : missionStatusMeta.label}
+                                                        label={targetType === 'body' ? tCelestial('topbar.labels.static_body') : missionStatusMeta.label}
                                                     />
                                                 </TableCell>
                                                 <TableCell>
@@ -1098,7 +1092,7 @@ const CelestialTopBar = ({
                                                 </TableCell>
                                                 <TableCell>
                                                     <Typography variant="caption" sx={{ fontFamily: 'monospace' }}>
-                                                        {formatLastRefresh(entry.lastRefreshAt, timezone, locale)}
+                                                        {formatLastRefresh(entry.lastRefreshAt, timezone, locale, tCelestial)}
                                                     </Typography>
                                                     {entry.lastError ? (
                                                         <Typography variant="caption" color="error" sx={{ display: 'block', mt: 0.25 }}>
@@ -1108,7 +1102,7 @@ const CelestialTopBar = ({
                                                 </TableCell>
                                                 <TableCell>
                                                     <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
-                                                        <Tooltip title={entry.enabled ? 'Disable target' : 'Enable target'}>
+                                                        <Tooltip title={entry.enabled ? tCelestial('topbar.actions.disable_target') : tCelestial('topbar.actions.enable_target')}>
                                                             <span>
                                                                 <IconButton
                                                                     size="small"
@@ -1126,7 +1120,7 @@ const CelestialTopBar = ({
                                                                 </IconButton>
                                                             </span>
                                                         </Tooltip>
-                                                        <Tooltip title="Edit">
+                                                        <Tooltip title={tCommon('edit')}>
                                                             <span>
                                                                 <IconButton
                                                                     size="small"
@@ -1137,7 +1131,7 @@ const CelestialTopBar = ({
                                                                 </IconButton>
                                                             </span>
                                                         </Tooltip>
-                                                        <Tooltip title="Delete">
+                                                        <Tooltip title={tCommon('delete')}>
                                                             <span>
                                                                 <IconButton
                                                                     size="small"
@@ -1158,7 +1152,7 @@ const CelestialTopBar = ({
                                     <TableRow>
                                         <TableCell colSpan={6} sx={{ py: 4 }}>
                                             <Typography variant="body2" color="text.secondary" textAlign="center">
-                                                No monitored celestial targets yet.
+                                                {tCelestial('topbar.empty.no_targets')}
                                             </Typography>
                                         </TableCell>
                                     </TableRow>
@@ -1175,7 +1169,7 @@ const CelestialTopBar = ({
                         disabled={!socket || celestialLoading || enabledCount === 0}
                         sx={DIALOG_CANCEL_BUTTON_SX}
                     >
-                        Refresh
+                        {tCelestial('topbar.actions.refresh')}
                     </Button>
                     <Button
                         onClick={() => {
@@ -1186,14 +1180,14 @@ const CelestialTopBar = ({
                         startIcon={<AddIcon />}
                         disabled={!socket || celestialLoading}
                     >
-                        Add
+                        {tCommon('add')}
                     </Button>
                     <Button
                         onClick={() => dispatch(closeManageDialog())}
                         variant="outlined"
                         sx={DIALOG_CANCEL_BUTTON_SX}
                     >
-                        Close
+                        {tCommon('close')}
                     </Button>
                 </DialogActions>
             </Dialog>
@@ -1209,14 +1203,14 @@ const CelestialTopBar = ({
                 fullWidth
                 PaperProps={{ sx: DIALOG_PAPER_SX }}
             >
-                <DialogTitle sx={DIALOG_TITLE_SX}>Delete Monitored Target</DialogTitle>
+                <DialogTitle sx={DIALOG_TITLE_SX}>{tCelestial('topbar.dialogs.delete_title')}</DialogTitle>
                 <DialogContent sx={DIALOG_CONTENT_SX}>
                     <Box sx={{ pt: 2 }}>
                         <Typography variant="body2" sx={{ mb: 1 }}>
-                            Are you sure you want to delete this monitored target?
+                            {tCelestial('topbar.delete.confirm')}
                         </Typography>
                         <Typography variant="subtitle2">
-                            {deleteCandidate?.displayName || 'Unknown target'}
+                            {deleteCandidate?.displayName || tCelestial('topbar.delete.unknown_target')}
                         </Typography>
                         <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
                             {String(deleteCandidate?.targetType || 'mission').toLowerCase() === 'body'
@@ -1235,7 +1229,7 @@ const CelestialTopBar = ({
                         sx={DIALOG_CANCEL_BUTTON_SX}
                         disabled={celestialLoading}
                     >
-                        Cancel
+                        {tCommon('cancel')}
                     </Button>
                     <Button
                         onClick={handleConfirmDelete}
@@ -1243,7 +1237,7 @@ const CelestialTopBar = ({
                         variant="contained"
                         disabled={!socket || celestialLoading || !deleteCandidate?.id}
                     >
-                        Delete
+                        {tCommon('delete')}
                     </Button>
                 </DialogActions>
             </Dialog>
@@ -1255,14 +1249,14 @@ const CelestialTopBar = ({
                 fullWidth
                 PaperProps={{ sx: DIALOG_PAPER_SX }}
             >
-                <DialogTitle sx={DIALOG_TITLE_SX}>Edit Monitored Celestial Target</DialogTitle>
+                <DialogTitle sx={DIALOG_TITLE_SX}>{tCelestial('topbar.dialogs.edit_title')}</DialogTitle>
                 <DialogContent sx={DIALOG_CONTENT_SX}>
                     <Stack spacing={2} sx={{ pt: 3 }}>
                         <FormControl size="small" fullWidth>
-                            <InputLabel id="edit-target-type-label">Target Type</InputLabel>
+                            <InputLabel id="edit-target-type-label">{tCelestial('topbar.fields.target_type')}</InputLabel>
                             <Select
                                 labelId="edit-target-type-label"
-                                label="Target Type"
+                                label={tCelestial('topbar.fields.target_type')}
                                 value={editForm.targetType || 'mission'}
                                 onChange={(event) =>
                                     setEditForm((prev) => ({
@@ -1273,12 +1267,12 @@ const CelestialTopBar = ({
                                     }))
                                 }
                             >
-                                <MenuItem value="mission">Mission / Spacecraft</MenuItem>
-                                <MenuItem value="body">Solar Body</MenuItem>
+                                <MenuItem value="mission">{tCelestial('topbar.fields.mission_spacecraft')}</MenuItem>
+                                <MenuItem value="body">{tCelestial('topbar.fields.solar_body')}</MenuItem>
                             </Select>
                         </FormControl>
                         <TextField
-                            label="Display Name"
+                            label={tCelestial('topbar.fields.display_name')}
                             value={editForm.displayName}
                             onChange={(event) =>
                                 setEditForm((prev) => ({ ...prev, displayName: event.target.value }))
@@ -1288,7 +1282,7 @@ const CelestialTopBar = ({
                         />
                         {(editForm.targetType || 'mission') === 'mission' ? (
                             <TextField
-                                label="Horizons Command"
+                                label={tCelestial('topbar.fields.horizons_command')}
                                 value={editForm.command}
                                 onChange={(event) =>
                                     setEditForm((prev) => ({ ...prev, command: event.target.value }))
@@ -1298,10 +1292,10 @@ const CelestialTopBar = ({
                             />
                         ) : (
                             <FormControl size="small" fullWidth>
-                                <InputLabel id="edit-body-target-label">Target Body</InputLabel>
+                                <InputLabel id="edit-body-target-label">{tCelestial('topbar.fields.target_body')}</InputLabel>
                                 <Select
                                     labelId="edit-body-target-label"
-                                    label="Target Body"
+                                    label={tCelestial('topbar.fields.target_body')}
                                     value={editForm.bodyId || ''}
                                     onChange={(event) => {
                                         const bodyId = String(event.target.value || '').toLowerCase();
@@ -1330,18 +1324,18 @@ const CelestialTopBar = ({
                         )}
                         <Stack direction="row" spacing={1.5} alignItems="center">
                             <TextField
-                                label="Color"
+                                label={tCelestial('topbar.fields.color')}
                                 value={editForm.color}
                                 onChange={(event) =>
                                     setEditForm((prev) => ({ ...prev, color: normalizeHexColor(event.target.value) }))
                                 }
-                                placeholder="#06D6A0"
+                                placeholder={tCelestial('topbar.fields.color_placeholder')}
                                 fullWidth
                                 size="small"
                             />
                             <input
                                 type="color"
-                                aria-label="Pick color"
+                                aria-label={tCelestial('topbar.fields.pick_color')}
                                 value={HEX_COLOR_PATTERN.test(normalizeHexColor(editForm.color)) ? normalizeHexColor(editForm.color) : '#06D6A0'}
                                 onChange={(event) =>
                                     setEditForm((prev) => ({ ...prev, color: normalizeHexColor(event.target.value) }))
@@ -1359,7 +1353,7 @@ const CelestialTopBar = ({
                                 size="small"
                                 onClick={() => setEditForm((prev) => ({ ...prev, color: '' }))}
                             >
-                                Clear
+                                {tCelestial('topbar.actions.clear_color')}
                             </Button>
                         </Stack>
                         {editError ? (
@@ -1375,7 +1369,7 @@ const CelestialTopBar = ({
                         variant="outlined"
                         sx={DIALOG_CANCEL_BUTTON_SX}
                     >
-                        Cancel
+                        {tCommon('cancel')}
                     </Button>
                     <Button
                         onClick={handleSaveEdit}
@@ -1383,7 +1377,7 @@ const CelestialTopBar = ({
                         variant="contained"
                         disabled={saveLoading || !socket || celestialLoading}
                     >
-                        Save
+                        {tCommon('save')}
                     </Button>
                 </DialogActions>
             </Dialog>

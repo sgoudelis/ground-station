@@ -24,7 +24,7 @@ import time
 from common.constants import DictKeys, SocketEvents, TrackingEvents
 from controllers.rig import RigController
 from controllers.sdr import SDRController
-from tracking.doppler import calculate_doppler_shift
+from tracking.doppler import calculate_doppler_shift, calculate_doppler_shift_from_range_rate
 
 logger = logging.getLogger("tracker-worker")
 
@@ -67,8 +67,7 @@ class RigHandler:
     def apply_non_satellite_target_idle(self) -> None:
         """Reset rig telemetry when tracking a non-satellite target.
 
-        Mission/body tracking currently drives only rotator control and never writes
-        frequency commands to rig hardware.
+        Called when the active non-satellite target has no selected transmitter.
         """
         self.tracker.rig_data["transmitter_id"] = "none"
         self.tracker.rig_data["original_freq"] = 0
@@ -80,6 +79,100 @@ class RigHandler:
         self.tracker.rig_data["transmitters"] = []
         self.tracker.rig_data["tracking"] = False
         self.tracker.rig_data["tuning"] = False
+        self.tracker.rig_data["stopped"] = True
+
+    async def handle_non_satellite_transmitter_tracking(
+        self, *, range_rate_km_s: float | None = None
+    ) -> None:
+        """Build non-satellite transmitter telemetry using vector-based Doppler."""
+        transmitters: list[dict] = []
+        for transmitter in self.tracker.input_transmitters:
+            downlink_freq = self._normalize_frequency(transmitter.get("downlink_low", 0))
+            uplink_freq = self._normalize_frequency(transmitter.get("uplink_low", 0))
+            if downlink_freq <= 0 and uplink_freq <= 0:
+                continue
+
+            if downlink_freq > 0:
+                downlink_observed_freq, doppler_shift = calculate_doppler_shift_from_range_rate(
+                    range_rate_km_s=range_rate_km_s,
+                    transmitted_freq_hz=downlink_freq,
+                )
+            else:
+                downlink_observed_freq, doppler_shift = 0, 0
+
+            if uplink_freq > 0:
+                uplink_observed_rx, uplink_doppler = calculate_doppler_shift_from_range_rate(
+                    range_rate_km_s=range_rate_km_s,
+                    transmitted_freq_hz=uplink_freq,
+                )
+                # Keep the same uplink correction convention used in satellite tracking.
+                uplink_observed_freq = (2 * uplink_freq) - uplink_observed_rx
+                uplink_doppler_shift = -uplink_doppler
+            else:
+                uplink_observed_freq, uplink_doppler_shift = 0, 0
+
+            transmitters.append(
+                {
+                    "id": transmitter.get("id"),
+                    "description": transmitter.get("description"),
+                    "type": transmitter.get("type"),
+                    "mode": transmitter.get("mode"),
+                    "invert": transmitter.get("invert", False),
+                    "source": transmitter.get("source"),
+                    "alive": transmitter.get("alive"),
+                    "downlink_low": downlink_freq,
+                    "downlink_high": transmitter.get("downlink_high"),
+                    "uplink_low": uplink_freq,
+                    "uplink_high": transmitter.get("uplink_high"),
+                    "downlink_observed_freq": downlink_observed_freq,
+                    "doppler_shift": doppler_shift,
+                    "uplink_observed_freq": uplink_observed_freq,
+                    "uplink_doppler_shift": uplink_doppler_shift,
+                }
+            )
+
+        self.tracker.rig_data["transmitters"] = transmitters
+        self.tracker.rig_data["transmitter_id"] = self.tracker.current_transmitter_id
+
+        current_transmitter = next(
+            (
+                item
+                for item in transmitters
+                if item.get("id") == self.tracker.current_transmitter_id
+            ),
+            None,
+        )
+        if not current_transmitter:
+            self.tracker.rig_data["original_freq"] = 0
+            self.tracker.rig_data["downlink_observed_freq"] = 0
+            self.tracker.rig_data["doppler_shift"] = 0
+            self.tracker.rig_data["uplink_freq"] = 0
+            self.tracker.rig_data["uplink_observed_freq"] = 0
+            self.tracker.rig_data["uplink_doppler_shift"] = 0
+            self.tracker.rig_data["tracking"] = False
+            self.tracker.rig_data["tuning"] = False
+            self.tracker.rig_data["stopped"] = True
+            return
+
+        self.tracker.rig_data["original_freq"] = current_transmitter.get("downlink_low", 0)
+        self.tracker.rig_data["downlink_observed_freq"] = current_transmitter.get(
+            "downlink_observed_freq", 0
+        )
+        self.tracker.rig_data["doppler_shift"] = current_transmitter.get("doppler_shift", 0)
+        self.tracker.rig_data["uplink_freq"] = current_transmitter.get("uplink_low", 0)
+        self.tracker.rig_data["uplink_observed_freq"] = current_transmitter.get(
+            "uplink_observed_freq", 0
+        )
+        self.tracker.rig_data["uplink_doppler_shift"] = current_transmitter.get(
+            "uplink_doppler_shift", 0
+        )
+
+        if self.tracker.current_rig_state == "tracking":
+            self.tracker.rig_data["tracking"] = True
+            self.tracker.rig_data["stopped"] = False
+            return
+
+        self.tracker.rig_data["tracking"] = False
         self.tracker.rig_data["stopped"] = True
 
     def _apply_radio_mode_to_targets(

@@ -48,6 +48,7 @@ export default defineConfig({
       name: 'setup-wizard',
       testMatch: '**/setup-wizard.spec.js',
       workers: 1,
+      retries: 0,
       use: {
         ...devices['Desktop Chrome'],
         storageState: undefined,

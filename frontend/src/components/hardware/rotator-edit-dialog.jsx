@@ -68,8 +68,6 @@ export default function RotatorEditDialog({
                     <TextField name="name" label={t("rotator.name")} fullWidth size="small" onChange={onChange} value={formValues.name} error={Boolean(validationErrors.name)} required />
                     <TextField name="host" label={t("rotator.host")} fullWidth size="small" onChange={onChange} value={formValues.host} error={Boolean(validationErrors.host)} required />
                     <TextField name="port" label={t("rotator.port")} type="number" fullWidth size="small" onChange={onChange} value={formValues.port} error={Boolean(validationErrors.port)} required />
-                    <TextField name="minaz" label={t("rotator.min_az")} type="number" fullWidth size="small" onChange={onChange} value={formValues.minaz} error={Boolean(validationErrors.minaz)} required InputProps={{ endAdornment: <InputAdornment position="end">°</InputAdornment> }} />
-                    <TextField name="maxaz" label={t("rotator.max_az")} type="number" fullWidth size="small" onChange={onChange} value={formValues.maxaz} error={Boolean(validationErrors.maxaz)} required InputProps={{ endAdornment: <InputAdornment position="end">°</InputAdornment> }} />
                     <TextField
                         name="azimuth_mode"
                         label={t("rotator.azimuth_range")}
@@ -79,12 +77,24 @@ export default function RotatorEditDialog({
                         onChange={onChange}
                         value={formValues.azimuth_mode ?? "0_360"}
                         error={Boolean(validationErrors.azimuth_mode)}
-                        helperText={validationErrors.azimuth_mode || ((formValues.azimuth_mode ?? "0_360") === "-180_180" ? t("rotator.azimuth_mode_help_neg180_180") : t("rotator.azimuth_mode_help_0_360"))}
+                        helperText={
+                            validationErrors.azimuth_mode
+                            || (
+                                (formValues.azimuth_mode ?? "0_360") === "-180_180"
+                                    ? t("rotator.azimuth_mode_help_neg180_180")
+                                    : (formValues.azimuth_mode ?? "0_360") === "0_450"
+                                        ? t("rotator.azimuth_mode_help_0_450")
+                                        : t("rotator.azimuth_mode_help_0_360")
+                            )
+                        }
                         required
                     >
                         <MenuItem value="0_360">{t("rotator.azimuth_mode_0_360")}</MenuItem>
                         <MenuItem value="-180_180">{t("rotator.azimuth_mode_neg180_180")}</MenuItem>
+                        <MenuItem value="0_450">{t("rotator.azimuth_mode_0_450")}</MenuItem>
                     </TextField>
+                    <TextField name="minaz" label={t("rotator.min_az")} type="number" fullWidth size="small" onChange={onChange} value={formValues.minaz} error={Boolean(validationErrors.minaz)} required InputProps={{ endAdornment: <InputAdornment position="end">°</InputAdornment> }} />
+                    <TextField name="maxaz" label={t("rotator.max_az")} type="number" fullWidth size="small" onChange={onChange} value={formValues.maxaz} error={Boolean(validationErrors.maxaz)} required InputProps={{ endAdornment: <InputAdornment position="end">°</InputAdornment> }} />
                     <TextField name="minel" label={t("rotator.min_el")} type="number" fullWidth size="small" onChange={onChange} value={formValues.minel} error={Boolean(validationErrors.minel)} required InputProps={{ endAdornment: <InputAdornment position="end">°</InputAdornment> }} />
                     <TextField name="maxel" label={t("rotator.max_el")} type="number" fullWidth size="small" onChange={onChange} value={formValues.maxel} error={Boolean(validationErrors.maxel)} required InputProps={{ endAdornment: <InputAdornment position="end">°</InputAdornment> }} />
                     <Alert severity="warning">{t("rotator.tolerance_warning")}</Alert>

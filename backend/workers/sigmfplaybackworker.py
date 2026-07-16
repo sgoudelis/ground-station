@@ -108,6 +108,8 @@ def sigmf_playback_worker_process(
         if not captures:
             logger.warning("No capture segments found, using default frequency")
             captures = [{"core:sample_start": 0, "core:frequency": 100e6}]
+        else:
+            captures = sorted(captures, key=lambda c: int(c.get("core:sample_start", 0) or 0))
 
         # Open data file
         data_path = resolve_sigmf_data_path(meta_path, allowed_roots=allowed_roots)
@@ -139,9 +141,12 @@ def sigmf_playback_worker_process(
         )
 
         # Track current capture segment
-        current_capture_idx = 0
-        current_freq = captures[0].get("core:frequency", 100e6)
         total_samples_read = 0
+        current_capture_idx, current_freq = resolve_capture_segment(
+            captures,
+            sample_index=total_samples_read,
+            default_frequency=captures[0].get("core:frequency", 100e6),
+        )
 
         # Extract recording start datetime from first capture segment
         recording_start_datetime = None
@@ -263,7 +268,52 @@ def sigmf_playback_worker_process(
                             loop_playback = new_config["loop_playback"]
                             logger.info(f"Updated loop playback: {loop_playback}")
 
-                    old_config = new_config
+                    # Seek requests are best-effort runtime jumps expressed in seconds.
+                    # We clamp them inside file bounds, then reposition both file cursor
+                    # and playback accounting state so timing fields stay coherent.
+                    if "seek_seconds" in new_config and data_file is not None:
+                        requested_seek_seconds_raw = new_config.get("seek_seconds")
+                        if requested_seek_seconds_raw is None:
+                            logger.warning("Ignoring empty seek_seconds value")
+                        else:
+                            try:
+                                requested_seek_seconds = float(str(requested_seek_seconds_raw))
+                            except (TypeError, ValueError):
+                                logger.warning(
+                                    f"Ignoring invalid seek_seconds value: {requested_seek_seconds_raw}"
+                                )
+                            else:
+                                if requested_seek_seconds < 0:
+                                    requested_seek_seconds = 0.0
+
+                                if total_samples_in_file <= 0:
+                                    logger.warning(
+                                        "Cannot seek playback because recording has zero samples"
+                                    )
+                                else:
+                                    target_sample_index = int(requested_seek_seconds * sample_rate)
+                                    max_sample_index = max(total_samples_in_file - 1, 0)
+                                    if target_sample_index > max_sample_index:
+                                        target_sample_index = max_sample_index
+
+                                    target_byte_offset = target_sample_index * bytes_per_sample
+                                    data_file.seek(target_byte_offset)
+                                    total_samples_read = target_sample_index
+                                    current_capture_idx, current_freq = resolve_capture_segment(
+                                        captures,
+                                        sample_index=target_sample_index,
+                                        default_frequency=captures[0].get("core:frequency", 100e6),
+                                    )
+                                    logger.info(
+                                        "Seeked playback to %.2fs (sample %s/%s, capture idx %s)",
+                                        requested_seek_seconds,
+                                        target_sample_index,
+                                        total_samples_in_file,
+                                        current_capture_idx,
+                                    )
+
+                    # Keep a merged view because runtime updates are usually partial payloads.
+                    old_config = {**old_config, **new_config}
 
             except Exception as e:
                 logger.error(f"Error processing configuration: {str(e)}")
@@ -474,6 +524,23 @@ def sigmf_playback_worker_process(
 
 # Target blocks per second for constant rate streaming
 TARGET_BLOCKS_PER_SEC = 15
+
+
+def resolve_capture_segment(captures, sample_index: int, default_frequency: float):
+    """
+    Resolve active capture segment and its center frequency for a sample position.
+    """
+    active_index = 0
+    active_frequency = default_frequency
+
+    for idx, capture in enumerate(captures):
+        capture_start = int(capture.get("core:sample_start", 0) or 0)
+        if sample_index < capture_start:
+            break
+        active_index = idx
+        active_frequency = capture.get("core:frequency", active_frequency)
+
+    return active_index, active_frequency
 
 
 def calculate_samples_per_scan(sample_rate, fft_size):

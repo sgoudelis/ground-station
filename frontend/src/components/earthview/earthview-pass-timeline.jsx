@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useSocket } from '../common/socket.jsx';
 import {
@@ -20,6 +20,7 @@ const EarthViewPassTimeline = () => {
     const showGeostationarySatellites = useSelector((state) => state.earthViewTrack.showGeostationarySatellites);
     const passesRangeStart = useSelector((state) => state.earthViewTrack.passesRangeStart);
     const passesRangeEnd = useSelector((state) => state.earthViewTrack.passesRangeEnd);
+    const trackerInstances = useSelector((state) => state.trackerInstances?.instances || []);
     const groundStationLocation = useSelector((state) => state.location.location);
     const timezone = useSelector(
         (state) => {
@@ -28,6 +29,48 @@ const EarthViewPassTimeline = () => {
         },
         (prev, next) => prev === next,
     );
+    const targetNumberByNorad = useMemo(() => {
+        const mapping = {};
+
+        // Keep slot assignment deterministic if multiple trackers temporarily point to the same satellite.
+        trackerInstances.forEach((instance, index) => {
+            const groupId = instance?.tracking_state?.group_id;
+            if (selectedSatGroupId && groupId && String(groupId) !== String(selectedSatGroupId)) return;
+
+            const noradId = instance?.tracking_state?.norad_id;
+            if (noradId == null) return;
+
+            const key = String(noradId);
+            const targetNumber = Number(instance?.target_number || (index + 1));
+            if (!Number.isFinite(targetNumber) || targetNumber <= 0) return;
+
+            if (mapping[key] == null || targetNumber < mapping[key]) {
+                mapping[key] = targetNumber;
+            }
+        });
+
+        return mapping;
+    }, [trackerInstances, selectedSatGroupId]);
+    const passesWithTargetNumber = useMemo(() => {
+        const sourcePasses = Array.isArray(passes) ? passes : [];
+        return sourcePasses.map((pass) => {
+            const existingTargetNumber = Number(pass?.targetNumber);
+            if (Number.isFinite(existingTargetNumber) && existingTargetNumber > 0) {
+                return pass;
+            }
+
+            const noradKey = String(pass?.norad_id ?? '').trim();
+            const mappedTargetNumber = Number(targetNumberByNorad?.[noradKey]);
+            if (!Number.isFinite(mappedTargetNumber) || mappedTargetNumber <= 0) {
+                return pass;
+            }
+
+            return {
+                ...pass,
+                targetNumber: mappedTargetNumber,
+            };
+        });
+    }, [passes, targetNumberByNorad]);
 
     const handleRefreshPasses = () => {
         if (selectedSatGroupId) {
@@ -48,7 +91,7 @@ const EarthViewPassTimeline = () => {
         <PassTimeline
             timeWindowHours={nextPassesHours}
             satelliteName={null}
-            passes={passes}
+            passes={passesWithTargetNumber}
             activePass={null}
             gridEditable={gridEditable}
             cachedOverride={passesAreCached}

@@ -46,6 +46,20 @@ const DIALOG_CONTENT_SX = {
     display: 'flex',
     flexDirection: 'column',
 };
+const FOOTER_ACTION_ROW_SX = {
+    width: '100%',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 1,
+    overflowX: 'auto',
+    msOverflowStyle: 'none',
+    scrollbarWidth: 'none',
+    '&::-webkit-scrollbar': { display: 'none' },
+    '& > *': {
+        flexShrink: 0,
+        whiteSpace: 'nowrap',
+    },
+};
 
 const SOLAR_SETTING_KEYS = Object.keys(DEFAULT_SOLAR_SYSTEM_DISPLAY_OPTIONS);
 const PLANETARIUM_SETTING_KEYS = Object.keys(DEFAULT_PLANETARIUM_DISPLAY_OPTIONS);
@@ -57,96 +71,96 @@ const normalizeViewMode = (value) => (
 
 const SOLAR_SYSTEM_SECTION_DEFS = [
     {
-        title: 'Scene Elements',
-        subtitle: 'Primary solar system layers and labels.',
+        titleKey: 'layout_options.sections.solar_scene_elements.title',
+        subtitleKey: 'layout_options.sections.solar_scene_elements.subtitle',
         options: [
             {
                 key: 'showGrid',
-                label: 'Show grid',
-                description: 'Display a reference grid for quick spatial orientation.',
+                labelKey: 'layout_options.options.show_grid.label',
+                descriptionKey: 'layout_options.options.show_grid.description',
             },
             {
                 key: 'showPlanets',
-                label: 'Show planets',
-                description: 'Render planets and major solar-system bodies in the viewport.',
+                labelKey: 'layout_options.options.show_planets.label',
+                descriptionKey: 'layout_options.options.show_planets.description',
             },
             {
                 key: 'showPlanetLabels',
-                label: 'Show planet labels',
-                description: 'Show body names next to visible planets.',
+                labelKey: 'layout_options.options.show_planet_labels.label',
+                descriptionKey: 'layout_options.options.show_planet_labels.description',
             },
             {
                 key: 'showPlanetOrbits',
-                label: 'Show planet orbits',
-                description: 'Draw orbital rings/paths for planetary motion context.',
+                labelKey: 'layout_options.options.show_planet_orbits.label',
+                descriptionKey: 'layout_options.options.show_planet_orbits.description',
             },
         ],
     },
     {
-        title: 'Tracked Targets',
-        subtitle: 'Tracked objects and their orbit/label overlays.',
+        titleKey: 'layout_options.sections.solar_tracked_targets.title',
+        subtitleKey: 'layout_options.sections.solar_tracked_targets.subtitle',
         options: [
             {
                 key: 'showTrackedObjects',
-                label: 'Show tracked objects',
-                description: 'Display currently tracked mission/body markers.',
+                labelKey: 'layout_options.options.show_tracked_objects.label',
+                descriptionKey: 'layout_options.options.show_tracked_objects.description',
             },
             {
                 key: 'showTrackedOrbits',
-                label: 'Show tracked orbits',
-                description: 'Overlay sampled trajectory paths for tracked targets.',
+                labelKey: 'layout_options.options.show_tracked_orbits.label',
+                descriptionKey: 'layout_options.options.show_tracked_orbits.description',
             },
             {
                 key: 'showTrackedLabels',
-                label: 'Show tracked labels',
-                description: 'Show labels and telemetry context for tracked targets.',
+                labelKey: 'layout_options.options.show_tracked_labels.label',
+                descriptionKey: 'layout_options.options.show_tracked_labels.description',
             },
         ],
     },
     {
-        title: 'Astronomy Background',
-        subtitle: 'Reference layers behind the map.',
+        titleKey: 'layout_options.sections.solar_astronomy_background.title',
+        subtitleKey: 'layout_options.sections.solar_astronomy_background.subtitle',
         options: [
             {
                 key: 'showStarfieldBackground',
-                label: 'Show bright-star field',
-                description: 'Render a vector ecliptic projection from the Bright Star Catalogue.',
+                labelKey: 'layout_options.options.show_bright_star_field.label',
+                descriptionKey: 'layout_options.options.show_bright_star_field.description',
             },
         ],
     },
     {
-        title: 'Guides and Metadata',
-        subtitle: 'Contextual markers, labels, and scene metadata.',
+        titleKey: 'layout_options.sections.solar_guides_and_metadata.title',
+        subtitleKey: 'layout_options.sections.solar_guides_and_metadata.subtitle',
         options: [
             {
                 key: 'showAsteroidZones',
-                label: 'Show asteroid zones',
-                description: 'Display major asteroid-belt region overlays.',
+                labelKey: 'layout_options.options.show_asteroid_zones.label',
+                descriptionKey: 'layout_options.options.show_asteroid_zones.description',
             },
             {
                 key: 'showZoneLabels',
-                label: 'Show asteroid zone labels',
-                description: 'Annotate asteroid regions with zone names.',
+                labelKey: 'layout_options.options.show_asteroid_zone_labels.label',
+                descriptionKey: 'layout_options.options.show_asteroid_zone_labels.description',
             },
             {
                 key: 'showResonanceMarkers',
-                label: 'Show resonance markers',
-                description: 'Render key orbital resonance reference markers.',
+                labelKey: 'layout_options.options.show_resonance_markers.label',
+                descriptionKey: 'layout_options.options.show_resonance_markers.description',
             },
             {
                 key: 'showTimestamp',
-                label: 'Show epoch label',
-                description: 'Show the scene timestamp used for current positions.',
+                labelKey: 'layout_options.options.show_epoch_label.label',
+                descriptionKey: 'layout_options.options.show_epoch_label.description',
             },
             {
                 key: 'showScaleIndicator',
-                label: 'Show scale label',
-                description: 'Show the current viewport distance scale reference.',
+                labelKey: 'layout_options.options.show_scale_label.label',
+                descriptionKey: 'layout_options.options.show_scale_label.description',
             },
             {
                 key: 'showGestureHint',
-                label: 'Show gesture hint',
-                description: 'Show a short help hint for map interaction controls.',
+                labelKey: 'layout_options.options.show_gesture_hint.label',
+                descriptionKey: 'layout_options.options.show_gesture_hint.description',
             },
         ],
     },
@@ -154,64 +168,64 @@ const SOLAR_SYSTEM_SECTION_DEFS = [
 
 const PLANETARIUM_SECTION_DEFS = [
     {
-        title: 'Sky Layers',
-        subtitle: 'Primary overlays for the planetarium viewport.',
+        titleKey: 'layout_options.sections.planetarium_sky_layers.title',
+        subtitleKey: 'layout_options.sections.planetarium_sky_layers.subtitle',
         options: [
             {
                 key: 'showGrid',
-                label: 'Show sky grid',
-                description: 'Draw azimuth/elevation guide lines.',
+                labelKey: 'layout_options.options.show_sky_grid.label',
+                descriptionKey: 'layout_options.options.show_sky_grid.description',
             },
             {
                 key: 'showHorizonCompass',
-                label: 'Show horizon compass',
-                description: 'Draw the horizon line with N/E/S/W ticks.',
+                labelKey: 'layout_options.options.show_horizon_compass.label',
+                descriptionKey: 'layout_options.options.show_horizon_compass.description',
             },
             {
                 key: 'showStarField',
-                label: 'Show star field',
-                description: 'Render bright stars from the loaded sky catalog.',
+                labelKey: 'layout_options.options.show_star_field.label',
+                descriptionKey: 'layout_options.options.show_star_field.description',
             },
             {
                 key: 'showStarNames',
-                label: 'Show star names',
-                description: 'Label bright named stars when zoom allows.',
+                labelKey: 'layout_options.options.show_star_names.label',
+                descriptionKey: 'layout_options.options.show_star_names.description',
             },
             {
                 key: 'showConstellationLabels',
-                label: 'Show constellation labels',
-                description: 'Render constellation names in the sky background.',
+                labelKey: 'layout_options.options.show_constellation_labels.label',
+                descriptionKey: 'layout_options.options.show_constellation_labels.description',
             },
         ],
     },
     {
-        title: 'Target Overlays',
-        subtitle: 'Tracking overlays and labels for planets and targets.',
+        titleKey: 'layout_options.sections.planetarium_target_overlays.title',
+        subtitleKey: 'layout_options.sections.planetarium_target_overlays.subtitle',
         options: [
             {
                 key: 'showPassCurves',
-                label: 'Show pass curves',
-                description: 'Draw predicted pass arcs for visible targets.',
+                labelKey: 'layout_options.options.show_pass_curves.label',
+                descriptionKey: 'layout_options.options.show_pass_curves.description',
             },
             {
                 key: 'showPlanetLabels',
-                label: 'Show planet labels',
-                description: 'Show labels for planetary bodies.',
+                labelKey: 'layout_options.options.show_planet_labels.label',
+                descriptionKey: 'layout_options.options.show_planet_labels_for_planetarium.description',
             },
             {
                 key: 'showTargetLabels',
-                label: 'Show target labels',
-                description: 'Show labels for tracked targets.',
+                labelKey: 'layout_options.options.show_target_labels.label',
+                descriptionKey: 'layout_options.options.show_target_labels.description',
             },
             {
                 key: 'showRotatorCrosshair',
-                label: 'Show rotator crosshair',
-                description: 'Render the live rotator crosshair when available.',
+                labelKey: 'layout_options.options.show_rotator_crosshair.label',
+                descriptionKey: 'layout_options.options.show_rotator_crosshair.description',
             },
             {
                 key: 'showHud',
-                label: 'Show HUD labels',
-                description: 'Show viewport and observer/timestamp readouts.',
+                labelKey: 'layout_options.options.show_hud_labels.label',
+                descriptionKey: 'layout_options.options.show_hud_labels.description',
             },
         ],
     },
@@ -284,7 +298,8 @@ function SolarSystemLayoutOptionsDialog({
     onClose,
 }) {
     const dispatch = useDispatch();
-    const { t } = useTranslation('common');
+    const { t } = useTranslation('celestial');
+    const { t: tCommon } = useTranslation('common');
 
     const initialSolarSettings = useMemo(
         () => buildSettings(initialSolarSystemOptions, DEFAULT_SOLAR_SYSTEM_DISPLAY_OPTIONS, SOLAR_SETTING_KEYS),
@@ -380,42 +395,40 @@ function SolarSystemLayoutOptionsDialog({
             PaperProps={{ sx: DIALOG_PAPER_SX }}
         >
             <DialogTitle sx={DIALOG_TITLE_SX}>
-                {t('map_settings.solar_system_layout_options_title', { defaultValue: 'Solar System Layout Options' })}
+                {t('layout_options.title')}
             </DialogTitle>
             <DialogContent sx={DIALOG_CONTENT_SX}>
                 <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
                     <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto', px: 2, pt: 2, pb: 1.5 }}>
                         <Stack spacing={1.5}>
                             <SectionBlock
-                                title="View Mode"
-                                subtitle="Choose the primary celestial visualization for this island."
+                                title={t('layout_options.view_mode.title')}
+                                subtitle={t('layout_options.view_mode.subtitle')}
                             >
                                 <FormControl fullWidth size="small">
-                                    <InputLabel id="celestial-view-mode-label">View</InputLabel>
+                                    <InputLabel id="celestial-view-mode-label">{t('layout_options.view_mode.label')}</InputLabel>
                                     <Select
                                         labelId="celestial-view-mode-label"
                                         value={draftViewMode}
-                                        label="View"
+                                        label={t('layout_options.view_mode.label')}
                                         onChange={(event) => setDraftViewMode(normalizeViewMode(event.target.value))}
                                     >
-                                        <MenuItem value={VIEW_MODE_SOLAR_SYSTEM}>Solar System</MenuItem>
-                                        <MenuItem value={VIEW_MODE_PLANETARIUM}>Planetarium</MenuItem>
+                                        <MenuItem value={VIEW_MODE_SOLAR_SYSTEM}>{t('layout_options.view_mode.solar_system')}</MenuItem>
+                                        <MenuItem value={VIEW_MODE_PLANETARIUM}>{t('layout_options.view_mode.planetarium')}</MenuItem>
                                     </Select>
                                 </FormControl>
                             </SectionBlock>
                             <SectionBlock
-                                title="Map Interaction"
+                                title={t('layout_options.map_interaction.title')}
                                 subtitle={
                                     isSolarSystemViewMode
-                                        ? 'Enable gesture-driven panning and zooming on the solar-system map.'
-                                        : 'Enable gesture-driven panning and zooming in the planetarium viewport.'
+                                        ? t('layout_options.map_interaction.solar_subtitle')
+                                        : t('layout_options.map_interaction.planetarium_subtitle')
                                 }
                             >
                                 <ToggleRowWithDescription
-                                    label={t('map_settings.enable_map_dragging', { defaultValue: 'Enable map dragging' })}
-                                    description={t('map_settings.enable_map_dragging_desc', {
-                                        defaultValue: 'Allow click-and-drag panning on the map. When off, use controls.',
-                                    })}
+                                    label={t('layout_options.options.enable_map_dragging.label')}
+                                    description={t('layout_options.options.enable_map_dragging.description')}
                                     checked={draftInteraction.enableMapDragging}
                                     onChange={(value) => {
                                         setDraftInteraction((current) => ({
@@ -425,10 +438,8 @@ function SolarSystemLayoutOptionsDialog({
                                     }}
                                 />
                                 <ToggleRowWithDescription
-                                    label={t('map_settings.enable_map_zooming', { defaultValue: 'Enable map zooming' })}
-                                    description={t('map_settings.enable_map_zooming_desc', {
-                                        defaultValue: 'Allow wheel and pinch zoom gestures. When off, use zoom buttons.',
-                                    })}
+                                    label={t('layout_options.options.enable_map_zooming.label')}
+                                    description={t('layout_options.options.enable_map_zooming.description')}
                                     checked={draftInteraction.enableMapZooming}
                                     onChange={(value) => {
                                         setDraftInteraction((current) => ({
@@ -439,12 +450,16 @@ function SolarSystemLayoutOptionsDialog({
                                 />
                             </SectionBlock>
                             {activeSectionDefs.map((section) => (
-                                <SectionBlock key={section.title} title={section.title} subtitle={section.subtitle}>
+                                <SectionBlock
+                                    key={section.titleKey}
+                                    title={t(section.titleKey)}
+                                    subtitle={t(section.subtitleKey)}
+                                >
                                     {section.options.map((option) => (
                                         <ToggleRowWithDescription
                                             key={option.key}
-                                            label={option.label}
-                                            description={option.description}
+                                            label={t(option.labelKey)}
+                                            description={t(option.descriptionKey)}
                                             checked={Boolean(activeDraftSettings[option.key])}
                                             onChange={(value) => {
                                                 setActiveDraftSettings((current) => ({
@@ -469,14 +484,9 @@ function SolarSystemLayoutOptionsDialog({
                             borderColor: 'divider',
                         }}
                     >
-                        <Stack
-                            direction={{ xs: 'column', sm: 'row' }}
-                            spacing={1}
-                            alignItems={{ xs: 'stretch', sm: 'center' }}
-                            justifyContent="space-between"
-                        >
+                        <Box sx={FOOTER_ACTION_ROW_SX}>
                             <Button
-                                variant="text"
+                                variant="outlined"
                                 onClick={() => {
                                     setDraftSolarSettings({ ...DEFAULT_SOLAR_SYSTEM_DISPLAY_OPTIONS });
                                     setDraftPlanetariumSettings({ ...DEFAULT_PLANETARIUM_DISPLAY_OPTIONS });
@@ -484,18 +494,17 @@ function SolarSystemLayoutOptionsDialog({
                                     setDraftViewMode(VIEW_MODE_SOLAR_SYSTEM);
                                 }}
                             >
-                                {t('map_settings.reset_defaults', { defaultValue: 'Reset Defaults' })}
+                                {t('layout_options.reset_defaults')}
                             </Button>
 
-                            <Stack direction="row" spacing={1} alignItems="center" justifyContent="flex-end">
-                                <Button variant="outlined" onClick={handleCancel}>
-                                    {t('close', { defaultValue: 'Close' })}
-                                </Button>
-                                <Button variant="contained" onClick={handleApply} disabled={!isDirty}>
-                                    {t('map_settings.apply', { defaultValue: 'Apply' })}
-                                </Button>
-                            </Stack>
-                        </Stack>
+                            <Box sx={{ flex: 1, minWidth: 8 }} />
+                            <Button variant="outlined" onClick={handleCancel}>
+                                {tCommon('close')}
+                            </Button>
+                            <Button variant="contained" onClick={handleApply} disabled={!isDirty}>
+                                {t('layout_options.apply')}
+                            </Button>
+                        </Box>
                     </Box>
                 </Box>
             </DialogContent>

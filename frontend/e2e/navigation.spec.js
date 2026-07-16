@@ -13,7 +13,7 @@ test.describe('Navigation State', () => {
     await page.reload();
     await page.waitForLoadState('networkidle');
 
-    // Should still be on preferences page
-    expect(page.url()).toContain('/admin/system/preferences');
+    // Preferences route is canonicalized to /preferences.
+    await expect(page).toHaveURL(/\/preferences$/);
   });
 });

@@ -34,6 +34,7 @@ import {
     fetchTrackerInstances,
     setTrackerInstances,
 } from './tracker-instances-slice.jsx';
+import { buildTargetKeyFromTrackingState } from './celestial-target-utils.js';
 
 const MAP_ENGINE_LEAFLET = 'leaflet';
 const MAP_ENGINE_MAPLIBRE = 'maplibre';
@@ -362,6 +363,9 @@ const normalizeTargetType = (trackingState = {}) => {
     if (explicitTargetType === 'satellite' || explicitTargetType === 'mission' || explicitTargetType === 'body') {
         return explicitTargetType;
     }
+    if (String(trackingState?.mission_id || '').trim()) {
+        return 'mission';
+    }
     if (String(trackingState?.command || '').trim()) {
         return 'mission';
     }
@@ -526,6 +530,7 @@ export const setTrackingStateInBackend = createAsyncThunk(
             norad_id,
             target_type,
             target_name,
+            mission_id,
             command,
             body_id,
             rotator_state,
@@ -548,6 +553,7 @@ export const setTrackingStateInBackend = createAsyncThunk(
                 'norad_id': norad_id,
                 'target_type': target_type,
                 'target_name': resolvedTargetName,
+                'mission_id': mission_id,
                 'command': command,
                 'body_id': body_id,
                 'rotator_state': rotator_state,
@@ -566,7 +572,7 @@ export const setTrackingStateInBackend = createAsyncThunk(
         );
         const rotatorKeys = ['rotator_state', 'rotator_id'];
         const rigKeys = ['rig_state', 'rig_id', 'transmitter_id', 'rig_vfo', 'vfo1', 'vfo2'];
-        const targetKeys = ['norad_id', 'group_id', 'target_type', 'target_name', 'command', 'body_id'];
+        const targetKeys = ['norad_id', 'group_id', 'target_type', 'target_name', 'mission_id', 'command', 'body_id'];
         const hasRotatorChanges = changedKeys.some((key) => rotatorKeys.includes(key));
         const hasRigChanges = changedKeys.some((key) => rigKeys.includes(key));
         const hasTargetChanges = changedKeys.some((key) => targetKeys.includes(key));
@@ -838,6 +844,7 @@ const targetSatTrackSlice = createSlice({
             event_end: true,
             duration: true,
             progress: true,
+            pass_tags: true,
             distance_at_start: false,
             distance_at_end: false,
             distance_at_peak: false,
@@ -853,6 +860,7 @@ const targetSatTrackSlice = createSlice({
         availableTransmitters: [],
         transmitterSyncLock: {
             noradId: null,
+            targetKey: null,
             expiresAtMs: 0,
         },
         rotatorData: cloneDefaultRotatorData(),
@@ -980,10 +988,6 @@ const targetSatTrackSlice = createSlice({
                 // consumers (e.g. earth view map crosshair) follow target changes immediately.
                 state.satelliteId = resolveSatelliteIdFromTrackingState(action.payload['tracking_state']);
                 state.groupId = resolveGroupIdFromTrackingState(action.payload['tracking_state']);
-                if (normalizeTargetType(action.payload['tracking_state']) !== 'satellite') {
-                    state.availableTransmitters = [];
-                    state.selectedTransmitter = 'none';
-                }
             }
 
             if (action.payload['satellite_data']) {
@@ -1014,27 +1018,56 @@ const targetSatTrackSlice = createSlice({
 
                 if (hasTransmitters) {
                     const incomingTransmitters = normalizedSatelliteData.transmitters;
+                    const effectiveTrackingState = action.payload['tracking_state'] || state.trackingState || {};
                     const incomingNoradId = hasDetails
                         ? normalizedSatelliteData?.details?.norad_id
                         : state.satelliteData?.details?.norad_id;
-                    const lockMatchesSatellite = (
-                        state.transmitterSyncLock?.noradId != null
-                        && String(state.transmitterSyncLock.noradId) === String(incomingNoradId)
-                    );
-                    const lockActive = lockMatchesSatellite
+                    const incomingTargetKey = String(
+                        buildTargetKeyFromTrackingState({
+                            target_type: hasDetails
+                                ? normalizedSatelliteData?.details?.target_type
+                                : effectiveTrackingState?.target_type,
+                            mission_id: hasDetails
+                                ? normalizedSatelliteData?.details?.mission_id
+                                : effectiveTrackingState?.mission_id,
+                            command: hasDetails
+                                ? normalizedSatelliteData?.details?.command
+                                : effectiveTrackingState?.command,
+                            body_id: hasDetails
+                                ? normalizedSatelliteData?.details?.body_id
+                                : effectiveTrackingState?.body_id,
+                            target_key: hasDetails
+                                ? normalizedSatelliteData?.details?.target_key
+                                : effectiveTrackingState?.target_key,
+                            targetKey: hasDetails
+                                ? normalizedSatelliteData?.details?.targetKey
+                                : effectiveTrackingState?.targetKey,
+                        })
+                        || ''
+                    ).trim();
+                    const lockMatchesOwner = incomingTargetKey
+                        ? (
+                            state.transmitterSyncLock?.targetKey != null
+                            && String(state.transmitterSyncLock.targetKey) === incomingTargetKey
+                        )
+                        : (
+                            state.transmitterSyncLock?.noradId != null
+                            && String(state.transmitterSyncLock.noradId) === String(incomingNoradId)
+                        );
+                    const lockActive = lockMatchesOwner
                         && Number(state.transmitterSyncLock.expiresAtMs || 0) > Date.now();
 
                     if (!lockActive) {
                         state.satelliteData.transmitters = incomingTransmitters;
-                        if (lockMatchesSatellite) {
-                            state.transmitterSyncLock = { noradId: null, expiresAtMs: 0 };
+                        if (lockMatchesOwner) {
+                            state.transmitterSyncLock = { noradId: null, targetKey: null, expiresAtMs: 0 };
                         }
                     } else if (
                         sameTransmitterSet(incomingTransmitters, state.satelliteData.transmitters || [])
                     ) {
                         // Backend caught up with the latest manual edits; unlock and accept updates.
                         state.satelliteData.transmitters = incomingTransmitters;
-                        state.transmitterSyncLock = { noradId: null, expiresAtMs: 0 };
+                        state.transmitterSyncLock = { noradId: null, targetKey: null, expiresAtMs: 0 };
                     }
                 }
 
@@ -1053,10 +1086,6 @@ const targetSatTrackSlice = createSlice({
                     state.satelliteId = detailTargetType === 'satellite'
                         ? (normalizedSatelliteData?.details?.norad_id ?? '')
                         : '';
-                    if (detailTargetType !== 'satellite') {
-                        state.availableTransmitters = [];
-                        state.selectedTransmitter = 'none';
-                    }
                 }
             }
 
@@ -1367,20 +1396,31 @@ const targetSatTrackSlice = createSlice({
         },
         setTargetTransmitters(state, action) {
             const noradId = action.payload?.noradId;
+            const targetKey = String(action.payload?.targetKey || '').trim();
             const transmitters = normalizeTransmitters(action.payload?.transmitters || []);
             const lockDurationMs = Number(action.payload?.lockDurationMs ?? 5000);
             const updatedAtMs = Number(action.payload?.updatedAtMs ?? Date.now());
+            const activeTargetKey = String(buildTargetKeyFromTrackingState(state.trackingState || {}) || '').trim();
             if (
-                state.satelliteData?.details?.norad_id != null
-                && String(state.satelliteData.details.norad_id) === String(noradId)
+                targetKey
+                    ? activeTargetKey === targetKey
+                    : (
+                        state.satelliteData?.details?.norad_id != null
+                        && String(state.satelliteData.details.norad_id) === String(noradId)
+                    )
             ) {
                 state.satelliteData.transmitters = transmitters;
             }
-            if (state.satelliteId != null && String(state.satelliteId) === String(noradId)) {
+            if (
+                targetKey
+                    ? activeTargetKey === targetKey
+                    : (state.satelliteId != null && String(state.satelliteId) === String(noradId))
+            ) {
                 state.availableTransmitters = transmitters;
             }
             state.transmitterSyncLock = {
-                noradId: noradId ?? null,
+                noradId: targetKey ? null : (noradId ?? null),
+                targetKey: targetKey || null,
                 expiresAtMs: updatedAtMs + Math.max(lockDurationMs, 0),
             };
         },
@@ -1519,10 +1559,6 @@ const targetSatTrackSlice = createSlice({
                 state.trackingState = action.payload?.trackingState || state.trackingState;
                 state.satelliteId = resolveSatelliteIdFromTrackingState(state.trackingState);
                 state.groupId = resolveGroupIdFromTrackingState(state.trackingState);
-                if (normalizeTargetType(state.trackingState) !== 'satellite') {
-                    state.availableTransmitters = [];
-                    state.selectedTransmitter = 'none';
-                }
                 state.trackerId = resolveTrackerId(action.payload?.trackerId, state.trackerId);
                 if (action.payload?.commandId) {
                     const submittedAt = Date.now();
@@ -1678,10 +1714,6 @@ const targetSatTrackSlice = createSlice({
                     state.selectedVFO2 = incomingTrackingState.vfo2 ?? state.selectedVFO2;
                     state.groupId = resolveGroupIdFromTrackingState(incomingTrackingState);
                     state.satelliteId = resolveSatelliteIdFromTrackingState(incomingTrackingState);
-                    if (normalizeTargetType(incomingTrackingState) !== 'satellite') {
-                        state.availableTransmitters = [];
-                        state.selectedTransmitter = 'none';
-                    }
                 }
 
                 state.error = null;

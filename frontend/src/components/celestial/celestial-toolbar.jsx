@@ -1,5 +1,6 @@
 import React from 'react';
 import { Box, CircularProgress, IconButton, Paper, Stack, Tooltip, Typography } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import FitScreenIcon from '@mui/icons-material/FitScreen';
 import ZoomInIcon from '@mui/icons-material/ZoomIn';
@@ -7,6 +8,8 @@ import ZoomOutIcon from '@mui/icons-material/ZoomOut';
 import WbSunnyIcon from '@mui/icons-material/WbSunny';
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
+import PanToolIcon from '@mui/icons-material/PanTool';
+import ZoomInMapIcon from '@mui/icons-material/ZoomInMap';
 import { ResetZoomIcon } from '../common/custom-icons.jsx';
 
 const CelestialToolbar = ({
@@ -20,11 +23,19 @@ const CelestialToolbar = ({
     loading,
     loadingText = '',
     fullscreen = false,
-    fullscreenLabel = 'Go fullscreen',
-    exitFullscreenLabel = 'Exit fullscreen',
+    fullscreenLabel,
+    exitFullscreenLabel,
+    mapDraggingEnabled = true,
+    mapZoomingEnabled = true,
+    onToggleMapDragging,
+    onToggleMapZooming,
     showZoomButtons = true,
     disabled = false,
 }) => {
+    const { t } = useTranslation('celestial');
+    const effectiveFullscreenLabel = fullscreenLabel || t('toolbar.go_fullscreen');
+    const effectiveExitFullscreenLabel = exitFullscreenLabel || t('toolbar.exit_fullscreen');
+
     return (
         <Paper
             elevation={1}
@@ -51,7 +62,7 @@ const CelestialToolbar = ({
             >
                 <Box sx={{ overflowX: 'auto', minWidth: 0, flex: 1 }}>
                     <Stack direction="row" spacing={0} sx={{ minWidth: 'min-content', flexWrap: 'nowrap' }}>
-                        <Tooltip title="Fit all">
+                        <Tooltip title={t('toolbar.fit_all')}>
                             <span>
                                 <IconButton
                                     onClick={onFitAll}
@@ -63,9 +74,35 @@ const CelestialToolbar = ({
                                 </IconButton>
                             </span>
                         </Tooltip>
+                        <Tooltip title={t('layout_options.options.enable_map_dragging.label')}>
+                            <span>
+                                <IconButton
+                                    onClick={onToggleMapDragging}
+                                    disabled={disabled || !onToggleMapDragging}
+                                    color={mapDraggingEnabled ? 'warning' : 'primary'}
+                                    sx={{ borderRadius: 0 }}
+                                    aria-pressed={mapDraggingEnabled}
+                                >
+                                    <PanToolIcon fontSize="small" />
+                                </IconButton>
+                            </span>
+                        </Tooltip>
+                        <Tooltip title={t('layout_options.options.enable_map_zooming.label')}>
+                            <span>
+                                <IconButton
+                                    onClick={onToggleMapZooming}
+                                    disabled={disabled || !onToggleMapZooming}
+                                    color={mapZoomingEnabled ? 'warning' : 'primary'}
+                                    sx={{ borderRadius: 0 }}
+                                    aria-pressed={mapZoomingEnabled}
+                                >
+                                    <ZoomInMapIcon />
+                                </IconButton>
+                            </span>
+                        </Tooltip>
                         {showZoomButtons ? (
                             <>
-                                <Tooltip title="Zoom in">
+                                <Tooltip title={t('toolbar.zoom_in')}>
                                     <span>
                                         <IconButton
                                             onClick={onZoomIn}
@@ -77,7 +114,7 @@ const CelestialToolbar = ({
                                         </IconButton>
                                     </span>
                                 </Tooltip>
-                                <Tooltip title="Zoom out">
+                                <Tooltip title={t('toolbar.zoom_out')}>
                                     <span>
                                         <IconButton
                                             onClick={onZoomOut}
@@ -89,7 +126,7 @@ const CelestialToolbar = ({
                                         </IconButton>
                                     </span>
                                 </Tooltip>
-                                <Tooltip title="Reset zoom">
+                                <Tooltip title={t('toolbar.reset_zoom')}>
                                     <span>
                                         <IconButton
                                             onClick={onZoomReset}
@@ -103,7 +140,7 @@ const CelestialToolbar = ({
                                 </Tooltip>
                             </>
                         ) : null}
-                        <Tooltip title="Center on Sun">
+                        <Tooltip title={t('toolbar.center_on_sun')}>
                             <span>
                                 <IconButton
                                     onClick={onCenterSun}
@@ -115,7 +152,7 @@ const CelestialToolbar = ({
                                 </IconButton>
                             </span>
                         </Tooltip>
-                        <Tooltip title="Refresh celestial scene">
+                        <Tooltip title={t('toolbar.refresh_scene')}>
                             <span>
                                 <IconButton
                                     onClick={onRefresh}
@@ -127,14 +164,14 @@ const CelestialToolbar = ({
                                 </IconButton>
                             </span>
                         </Tooltip>
-                        <Tooltip title={fullscreen ? exitFullscreenLabel : fullscreenLabel}>
+                        <Tooltip title={fullscreen ? effectiveExitFullscreenLabel : effectiveFullscreenLabel}>
                             <span>
                                 <IconButton
                                     onClick={onToggleFullscreen}
                                     disabled={!onToggleFullscreen}
                                     color="primary"
                                     sx={{ borderRadius: 0 }}
-                                    aria-label={fullscreen ? exitFullscreenLabel : fullscreenLabel}
+                                    aria-label={fullscreen ? effectiveExitFullscreenLabel : effectiveFullscreenLabel}
                                 >
                                     {fullscreen ? <FullscreenExitIcon /> : <FullscreenIcon />}
                                 </IconButton>

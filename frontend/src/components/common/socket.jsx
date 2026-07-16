@@ -33,7 +33,9 @@ export const SocketProvider = ({ children }) => {
     const [socket, setSocket] = useState(null);
     //const [collectStats, setCollectStats] = useState(import.meta.env.PROD);
     const [collectStats, setCollectStats] = useState(true);
-    const [token, setToken] = useState(null);
+    // Authentication now relies on HttpOnly cookies. We still track an epoch key so
+    // the socket reconnects after login/logout/setup transitions.
+    const [authEpoch, setAuthEpoch] = useState('anonymous');
 
     // Replace state with ref for traffic stats
     const trafficStatsRef = useRef({
@@ -105,8 +107,8 @@ export const SocketProvider = ({ children }) => {
         };
     }, []);
 
-    const handleTokenChange = useCallback((token) => {
-        setToken(token);
+    const handleAuthEpochChange = useCallback((nextAuthEpoch) => {
+        setAuthEpoch(String(nextAuthEpoch || 'anonymous'));
     }, []);
 
     // Simplified helper for Socket.IO binary streams
@@ -423,11 +425,9 @@ export const SocketProvider = ({ children }) => {
         const manager = new Manager(backendURL, {
             // Increase max HTTP buffer size (default is 1e6 = 1MB, increase to 30MB)
             maxHttpBufferSize: 30 * 1024 * 1024,
+            withCredentials: true,
         });
-        const authPayload = token ? { token } : {};
-        const newSocket = manager.socket("/", {
-            auth: authPayload,
-        });
+        const newSocket = manager.socket("/", {});
         setSocket(newSocket);
         setSocketForMiddleware(newSocket);
 
@@ -526,11 +526,11 @@ export const SocketProvider = ({ children }) => {
             console.info('Closing socket connection');
             newSocket.close();
         };
-    }, [collectStats, token]);
+    }, [collectStats, authEpoch]);
 
     const providerValue = {
         socket,
-        handleTokenChange,
+        handleAuthEpochChange,
         trafficStatsRef,
         getSocketIOEngineStats,
         setCollectStats,

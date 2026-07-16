@@ -36,8 +36,10 @@ from handlers.entities.transmitterimport import (
 )
 from pipeline.orchestration.processmanager import process_manager
 from server import runtimestate
+from server.schedulerstate import get_orbital_sync_next_run_time
 from server.shutdown import cleanup_everything
 from tasks.registry import get_task
+from tlesync.persist import save_orbital_sync_state
 from tlesync.state import sync_state_manager
 
 _ORBITAL_SYNC_TASK_PATTERNS = (
@@ -116,7 +118,14 @@ async def _stop_orbital_sync_before_restore(sio: Any, logger: Any) -> Dict[str, 
             }
         )
         sync_state_manager.set_state(current_state)
-        await sio.emit("sat-sync-events", sync_state_manager.get_state())
+        payload_state = dict(sync_state_manager.get_state() or {})
+        payload_state["next_scheduled_sync_at"] = get_orbital_sync_next_run_time()
+        await sio.emit("sat-sync-events", payload_state)
+        try:
+            async with AsyncSessionLocal() as dbsession:
+                await save_orbital_sync_state(dbsession, sync_state_manager.get_state())
+        except Exception:
+            logger.exception("Failed to persist cancelled orbital sync state before restore")
 
     logger.info(
         "Stopped orbital sync task(s) before database restore: %s",

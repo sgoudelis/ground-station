@@ -19,6 +19,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import { DataGrid, gridClasses } from '@mui/x-data-grid';
 import {
     Box,
@@ -62,6 +63,7 @@ import { getFlattenedTasks, getSessionSdrs } from './session-utils.js';
 
 const MonitoredSatellitesTable = () => {
     const dispatch = useDispatch();
+    const { t } = useTranslation('common');
     const { socket } = useSocket();
     const [selectedIds, setSelectedIds] = useState([]);
     const [openDeleteConfirm, setOpenDeleteConfirm] = useState(false);
@@ -194,10 +196,25 @@ const MonitoredSatellitesTable = () => {
         }
     };
 
+    const getTaskLabel = (task) => {
+        if (task.type === 'decoder') {
+            const decoderType = task.config.decoder_type || 'unknown';
+            const typeMap = {
+                lora: t('scheduler_tables.shared.tasks.lora'),
+                none: t('scheduler_tables.shared.tasks.no_decoder'),
+            };
+            return typeMap[decoderType] || decoderType.toUpperCase();
+        }
+        if (task.type === 'audio_recording') return t('scheduler_tables.shared.tasks.audio');
+        if (task.type === 'transcription') return t('scheduler_tables.shared.tasks.transcription');
+        if (task.type === 'iq_recording') return t('scheduler_tables.shared.tasks.iq');
+        return '';
+    };
+
     const columns = [
         {
             field: 'enabled',
-            headerName: 'Enabled',
+            headerName: t('scheduler_tables.shared.columns.enabled'),
             width: 90,
             renderCell: (params) => (
                 <Switch
@@ -210,14 +227,14 @@ const MonitoredSatellitesTable = () => {
         },
         {
             field: 'satellite',
-            headerName: 'Satellite',
+            headerName: t('scheduler_tables.shared.columns.satellite'),
             flex: 1,
             minWidth: 150,
             valueGetter: (value, row) => row.satellite?.name || '-',
         },
         {
             field: 'min_elevation',
-            headerName: 'Peak El.',
+            headerName: t('scheduler_tables.monitored.columns.peak_el'),
             width: 90,
             renderCell: (params) => (
                 <Typography variant="body2">{params.value}°</Typography>
@@ -225,7 +242,7 @@ const MonitoredSatellitesTable = () => {
         },
         {
             field: 'task_start_elevation',
-            headerName: 'Start El.',
+            headerName: t('scheduler_tables.monitored.columns.start_el'),
             width: 90,
             renderCell: (params) => (
                 <Typography variant="body2">{params.value !== undefined ? `${params.value}°` : '-'}</Typography>
@@ -233,15 +250,15 @@ const MonitoredSatellitesTable = () => {
         },
         {
             field: 'lookahead_hours',
-            headerName: 'Lookahead',
+            headerName: t('scheduler_tables.monitored.columns.lookahead'),
             width: 110,
             renderCell: (params) => (
-                <Typography variant="body2">{params.value}h</Typography>
+                <Typography variant="body2">{t('scheduler_tables.monitored.lookahead_hours_value', { value: params.value })}</Typography>
             ),
         },
         {
             field: 'sdr',
-            headerName: 'SDR',
+            headerName: t('scheduler_tables.shared.columns.sdr'),
             flex: 1.5,
             minWidth: 200,
             renderCell: (params) => {
@@ -252,7 +269,7 @@ const MonitoredSatellitesTable = () => {
                     const freqMHz = sdr.center_frequency ? (sdr.center_frequency / 1000000).toFixed(2) : '?';
                     const gain = (sdr.gain !== undefined && sdr.gain !== null && sdr.gain !== '') ? sdr.gain : '?';
                     const antenna = sdr.antenna_port || '?';
-                    return `${sdr.name || 'SDR'} • ${freqMHz}MHz • ${gain}dB • ${antenna}`;
+                    return `${sdr.name || t('scheduler_tables.shared.sdr_default_name')} • ${freqMHz}MHz • ${gain}dB • ${antenna}`;
                 };
 
                 if (sdrs.length === 1) {
@@ -276,7 +293,7 @@ const MonitoredSatellitesTable = () => {
         },
         {
             field: 'rotator',
-            headerName: 'Rotator',
+            headerName: t('scheduler_tables.shared.columns.rotator'),
             minWidth: 180,
             flex: 1,
             cellClassName: 'target-rotator-nowrap-cell',
@@ -285,10 +302,18 @@ const MonitoredSatellitesTable = () => {
                 const rotator = params.value || {};
                 const rotatorId = rotator?.id || '';
                 const rotatorName = rotator?.name || (rotatorId ? rotatorNameById[String(rotatorId)] : '');
-                const primaryLabel = rotatorName || (rotatorId ? 'Configured rotator' : 'No rotator');
+                const primaryLabel = rotatorName || (
+                    rotatorId
+                        ? t('scheduler_tables.shared.rotator_configured')
+                        : t('scheduler_tables.shared.rotator_none')
+                );
                 const secondaryLabel = rotatorId
-                    ? (rotator?.tracking_enabled ? 'Tracking enabled' : 'Tracking disabled')
-                    : 'Not configured';
+                    ? (
+                        rotator?.tracking_enabled
+                            ? t('scheduler_tables.shared.tracking_enabled')
+                            : t('scheduler_tables.shared.tracking_disabled')
+                    )
+                    : t('scheduler_tables.shared.not_configured');
                 return (
                     <Stack
                         direction="row"
@@ -312,7 +337,7 @@ const MonitoredSatellitesTable = () => {
         },
         {
             field: 'tasks',
-            headerName: 'Tasks',
+            headerName: t('scheduler_tables.shared.columns.tasks'),
             flex: 1,
             minWidth: 180,
             renderCell: (params) => {
@@ -321,27 +346,11 @@ const MonitoredSatellitesTable = () => {
                 return (
                     <Stack direction="row" spacing={0.5} flexWrap="wrap" sx={{ py: 0.5 }}>
                         {tasks.map((task, idx) => {
-                            let label = '';
+                            let label = getTaskLabel(task);
                             let color = 'default';
-
-                            if (task.type === 'decoder') {
-                                const decoderType = task.config.decoder_type || 'unknown';
-                                const typeMap = {
-                                    'lora': 'LoRa',
-                                    'none': 'No Decoder'
-                                };
-                                label = typeMap[decoderType] || decoderType.toUpperCase();
-                                color = 'primary';
-                            } else if (task.type === 'audio_recording') {
-                                label = 'Audio';
-                                color = 'secondary';
-                            } else if (task.type === 'transcription') {
-                                label = 'Transcription';
-                                color = 'info';
-                            } else if (task.type === 'iq_recording') {
-                                label = 'IQ';
-                                color = 'default';
-                            }
+                            if (task.type === 'decoder') color = 'primary';
+                            else if (task.type === 'audio_recording') color = 'secondary';
+                            else if (task.type === 'transcription') color = 'info';
 
                             return (
                                 <Chip
@@ -359,14 +368,14 @@ const MonitoredSatellitesTable = () => {
         },
         {
             field: 'actions',
-            headerName: 'Actions',
+            headerName: t('scheduler_tables.shared.columns.actions'),
             width: 80,
             align: 'center',
             headerAlign: 'center',
             sortable: false,
             filterable: false,
             renderCell: (params) => (
-                <Tooltip title="Edit">
+                <Tooltip title={t('edit')}>
                     <IconButton
                         size="small"
                         onClick={(e) => {
@@ -384,12 +393,12 @@ const MonitoredSatellitesTable = () => {
     return (
         <Paper elevation={3} sx={{ p: 2, display: 'flex', flexDirection: 'column' }}>
             <Typography variant="h6" sx={{ fontWeight: 700, mb: 1.5 }}>
-                Monitored Satellites
+                {t('scheduler_tables.monitored.title')}
             </Typography>
 
             <Alert severity="success" sx={{ mb: 2, flexShrink: 0 }}>
-                <AlertTitle>Automatic Observation Generation</AlertTitle>
-                Satellites in this list will automatically generate scheduled observations for all upcoming passes that meet the specified criteria (minimum elevation, lookahead window).
+                <AlertTitle>{t('scheduler_tables.monitored.auto_generation_title')}</AlertTitle>
+                {t('scheduler_tables.monitored.auto_generation_body')}
             </Alert>
 
             <Box sx={{ width: '100%', minWidth: 0, overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
@@ -412,9 +421,9 @@ const MonitoredSatellitesTable = () => {
                             sortModel: [{ field: 'satellite', sort: 'asc' }],
                         },
                     }}
-                    pageSizeOptions={[10, 25, 50, {value: -1, label: 'All'}]}
+                    pageSizeOptions={[10, 25, 50, {value: -1, label: t('scheduler_tables.shared.all')}]}
                     localeText={{
-                        noRowsLabel: 'No monitored satellites'
+                        noRowsLabel: t('scheduler_tables.monitored.no_rows')
                     }}
                     sx={{
                         border: 0,
@@ -480,7 +489,7 @@ const MonitoredSatellitesTable = () => {
                     <AddIcon sx={{ display: { xs: 'block', md: 'none' } }} />
                     <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center' }}>
                         <AddIcon sx={{ mr: 1 }} />
-                        Add
+                        {t('add')}
                     </Box>
                 </Button>
                 <Button
@@ -500,7 +509,7 @@ const MonitoredSatellitesTable = () => {
                     <EditIcon sx={{ display: { xs: 'block', md: 'none' } }} />
                     <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center' }}>
                         <EditIcon sx={{ mr: 1 }} />
-                        Edit
+                        {t('edit')}
                     </Box>
                 </Button>
                 <Button
@@ -516,7 +525,7 @@ const MonitoredSatellitesTable = () => {
                     <EnableIcon sx={{ display: { xs: 'block', md: 'none' } }} />
                     <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center' }}>
                         <EnableIcon sx={{ mr: 1 }} />
-                        Enable
+                        {t('scheduler_tables.shared.enable')}
                     </Box>
                 </Button>
                 <Button
@@ -532,14 +541,14 @@ const MonitoredSatellitesTable = () => {
                     <DisableIcon sx={{ display: { xs: 'block', md: 'none' } }} />
                     <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center' }}>
                         <DisableIcon sx={{ mr: 1 }} />
-                        Disable
+                        {t('scheduler_tables.shared.disable')}
                     </Box>
                 </Button>
                 <Tooltip
                     title={
                         selectedIds.length === 1
-                            ? "Regenerate observations for the selected satellite only"
-                            : "Please select exactly one satellite to regenerate observations"
+                            ? t('scheduler_tables.monitored.regenerate_selected_tooltip')
+                            : t('scheduler_tables.monitored.regenerate_select_one_tooltip')
                     }
                     arrow
                 >
@@ -557,7 +566,7 @@ const MonitoredSatellitesTable = () => {
                             <RefreshIcon sx={{ display: { xs: 'block', md: 'none' } }} />
                             <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center' }}>
                                 <RefreshIcon sx={{ mr: 1 }} />
-                                {isLoadingPreview ? 'Loading Preview...' : 'Regenerate'}
+                                {isLoadingPreview ? t('scheduler_tables.monitored.loading_preview') : t('scheduler_tables.monitored.regenerate')}
                             </Box>
                         </Button>
                     </span>
@@ -575,13 +584,13 @@ const MonitoredSatellitesTable = () => {
                     <DeleteIcon sx={{ display: { xs: 'block', md: 'none' } }} />
                     <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center' }}>
                         <DeleteIcon sx={{ mr: 1 }} />
-                        Delete
+                        {t('delete')}
                     </Box>
                 </Button>
                 <Box sx={{ flexGrow: 1 }} />
                 <Box sx={{ display: 'flex' }}>
                     <Tooltip
-                        title="Regenerate observations for ALL enabled satellites"
+                        title={t('scheduler_tables.monitored.regenerate_all_enabled_tooltip')}
                         arrow
                     >
                         <span>
@@ -598,7 +607,7 @@ const MonitoredSatellitesTable = () => {
                                 <RefreshIcon sx={{ display: { xs: 'block', md: 'none' } }} />
                                 <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center' }}>
                                     <RefreshIcon sx={{ mr: 1 }} />
-                                    Regenerate All Enabled
+                                    {t('scheduler_tables.monitored.regenerate_all_enabled')}
                                 </Box>
                             </Button>
                         </span>
@@ -648,7 +657,7 @@ const MonitoredSatellitesTable = () => {
                     >
                         !
                     </Box>
-                    Confirm Deletion
+                    {t('scheduler_tables.shared.confirm_deletion')}
                 </DialogTitle>
                 <DialogContent
                     sx={{
@@ -663,7 +672,7 @@ const MonitoredSatellitesTable = () => {
                     }}
                 >
                     <Typography variant="body1" sx={{ mt: 2, mb: 2, color: 'text.primary' }}>
-                        Are you sure you want to delete {selectedIds.length} monitored satellite(s)? This will stop automatic observation generation for these satellites.
+                        {t('scheduler_tables.monitored.delete_confirm_message', { count: selectedIds.length })}
                     </Typography>
                     <FormControlLabel
                         control={
@@ -673,11 +682,11 @@ const MonitoredSatellitesTable = () => {
                                 color="error"
                             />
                         }
-                        label="Also delete all scheduled observations for these satellites"
+                        label={t('scheduler_tables.monitored.delete_observations_checkbox')}
                         sx={{ mb: 2 }}
                     />
                     <Typography variant="body2" sx={{ mb: 2, fontWeight: 600, color: 'text.secondary' }}>
-                        {selectedIds.length === 1 ? 'Monitored satellite to be deleted:' : `${selectedIds.length} Monitored satellites to be deleted:`}
+                        {t('scheduler_tables.monitored.delete_list_title', { count: selectedIds.length })}
                     </Typography>
                     <Box sx={{
                         maxHeight: 300,
@@ -698,18 +707,18 @@ const MonitoredSatellitesTable = () => {
                                     }}
                                 >
                                     <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, color: 'text.primary' }}>
-                                        {monSat.satellite?.name || 'Unknown Satellite'}
+                                        {monSat.satellite?.name || t('scheduler_tables.monitored.unknown_satellite')}
                                     </Typography>
                                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
                                         <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary' }}>
-                                            NORAD ID: <Typography component="span" sx={{ fontSize: '0.813rem', color: 'text.primary', fontWeight: 500 }}>{monSat.satellite?.norad_id || 'N/A'}</Typography>
+                                            {t('scheduler_tables.monitored.norad_id_label')}: <Typography component="span" sx={{ fontSize: '0.813rem', color: 'text.primary', fontWeight: 500 }}>{monSat.satellite?.norad_id || t('not_available')}</Typography>
                                         </Typography>
                                         <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary' }}>
-                                            Status: <Typography component="span" sx={{ fontSize: '0.813rem', color: 'text.primary', fontWeight: 500 }}>{monSat.enabled ? 'Enabled' : 'Disabled'}</Typography>
+                                            {t('scheduler_tables.shared.columns.status')}: <Typography component="span" sx={{ fontSize: '0.813rem', color: 'text.primary', fontWeight: 500 }}>{monSat.enabled ? t('scheduler_tables.shared.enable') : t('scheduler_tables.shared.disable')}</Typography>
                                         </Typography>
                                         {monSat.min_elevation != null && (
                                             <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary' }}>
-                                                Min Elevation: <Typography component="span" sx={{ fontSize: '0.813rem', color: 'text.primary', fontWeight: 500 }}>{monSat.min_elevation}°</Typography>
+                                                {t('scheduler_tables.monitored.min_elevation_label')}: <Typography component="span" sx={{ fontSize: '0.813rem', color: 'text.primary', fontWeight: 500 }}>{monSat.min_elevation}°</Typography>
                                             </Typography>
                                         )}
                                     </Box>
@@ -740,7 +749,7 @@ const MonitoredSatellitesTable = () => {
                             fontWeight: 500,
                         }}
                     >
-                        Cancel
+                        {t('cancel')}
                     </Button>
                     <Button
                         variant="contained"
@@ -752,7 +761,7 @@ const MonitoredSatellitesTable = () => {
                             fontWeight: 600,
                         }}
                     >
-                        Delete
+                        {t('delete')}
                     </Button>
                 </DialogActions>
             </Dialog>
@@ -776,7 +785,7 @@ const MonitoredSatellitesTable = () => {
                 maxWidth="xs"
                 fullWidth
             >
-                <DialogTitle>No Enabled Monitors</DialogTitle>
+                <DialogTitle>{t('scheduler_tables.monitored.no_enabled_title')}</DialogTitle>
                 <DialogContent
                     sx={{
                         bgcolor: (theme) => (
@@ -787,12 +796,12 @@ const MonitoredSatellitesTable = () => {
                     }}
                 >
                     <Typography variant="body2">
-                        There are no enabled monitored satellites. Enable at least one monitor to regenerate observations.
+                        {t('scheduler_tables.monitored.no_enabled_message')}
                     </Typography>
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={() => setOpenNoEnabledDialog(false)} variant="contained">
-                        OK
+                        {t('scheduler_tables.shared.ok')}
                     </Button>
                 </DialogActions>
             </Dialog>

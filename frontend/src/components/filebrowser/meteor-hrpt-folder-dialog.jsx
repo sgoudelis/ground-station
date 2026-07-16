@@ -401,12 +401,19 @@ export default function MeteorHrptFolderDialog({ open, onClose, folder }) {
                 </DialogContent>
 
                 <DialogActions
+                    disableSpacing
                     sx={{
                         bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'grey.900' : 'grey.100'),
                         borderTop: (theme) => `1px solid ${theme.palette.divider}`,
                         px: 3,
                         py: 2.5,
                         gap: 1,
+                        flexDirection: { xs: 'column', sm: 'row' },
+                        alignItems: { xs: 'stretch', sm: 'center' },
+                        justifyContent: { xs: 'stretch', sm: 'flex-end' },
+                        '& .MuiButton-root': {
+                            width: { xs: '100%', sm: 'auto' },
+                        },
                     }}
                 >
                     {folder.images && folder.images.length > 0 && (
@@ -501,12 +508,19 @@ export default function MeteorHrptFolderDialog({ open, onClose, folder }) {
                         />
                     </DialogContent>
                     <DialogActions
+                        disableSpacing
                         sx={{
                             bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'grey.900' : 'grey.100'),
                             borderTop: (theme) => `1px solid ${theme.palette.divider}`,
                             px: 3,
                             py: 2.5,
                             gap: 1,
+                            flexDirection: { xs: 'column', sm: 'row' },
+                            alignItems: { xs: 'stretch', sm: 'center' },
+                            justifyContent: { xs: 'stretch', sm: 'flex-end' },
+                            '& .MuiButton-root': {
+                                width: { xs: '100%', sm: 'auto' },
+                            },
                         }}
                     >
                         <Button

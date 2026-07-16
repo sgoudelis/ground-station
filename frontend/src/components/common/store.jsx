@@ -32,7 +32,7 @@ import synchronizeReducer from '../satellites/synchronize-slice.jsx';
 import preferencesReducer from '../settings/preferences-slice.jsx';
 import targetSatTrackReducer from '../target/target-slice.jsx'
 import trackerInstancesReducer from '../target/tracker-instances-slice.jsx';
-import earthViewTrackReducer from '../earthview/earthview-slice.jsx';
+import earthViewTrackReducer, { EARTHVIEW_SATELLITES_TABLE_DEFAULTS_VERSION } from '../earthview/earthview-slice.jsx';
 import dashboardReducer from '../dashboard/dashboard-slice.jsx';
 import waterfallReducer from '../waterfall/waterfall-slice.jsx';
 import gnssReducer from '../waterfall/gnss-slice.jsx';
@@ -49,7 +49,7 @@ import sessionsReducer from '../settings/sessions-slice.jsx';
 import transcriptionReducer from '../waterfall/transcription-slice.jsx';
 import schedulerReducer from '../scheduler/scheduler-slice.jsx';
 import tasksReducer from '../tasks/tasks-slice.jsx';
-import celestialReducer from '../celestial/celestial-slice.jsx';
+import celestialReducer, { CELESTIAL_PASSES_DEFAULTS_VERSION } from '../celestial/celestial-slice.jsx';
 import celestialMonitoredReducer from '../celestial/monitored-slice.jsx';
 import celestialDisplayReducer from '../celestial/celestial-display-slice.jsx';
 import authReducer from '../auth/auth-slice.jsx';
@@ -175,7 +175,45 @@ const targetSatTrackPersistConfig = {
 const earthViewTrackPersistConfig = {
     key: 'earthViewTrack',
     storage,
-    whitelist: ['selectedSatGroupId', 'selectedSatelliteId', 'satellitesTableColumnVisibility', 'passesTablePageSize', 'satellitesTablePageSize', 'passesTableSortModel', 'satellitesTableSortModel', 'showGeostationarySatellites', 'mapEngine', 'mapZoomByEngine']
+    stateReconciler: (inboundState, originalState) => {
+        if (!inboundState) {
+            return originalState;
+        }
+        const inboundDefaultsVersion = Number(inboundState.satellitesTableDefaultsVersion || 0);
+        // Apply updated Earthview satellites-table defaults once for older persisted payloads.
+        const shouldApplyLatestSatellitesTableDefaults = (
+            inboundDefaultsVersion < EARTHVIEW_SATELLITES_TABLE_DEFAULTS_VERSION
+        );
+        return {
+            ...originalState,
+            ...inboundState,
+            satellitesTableDefaultsVersion: shouldApplyLatestSatellitesTableDefaults
+                ? originalState.satellitesTableDefaultsVersion
+                : (inboundState.satellitesTableDefaultsVersion ?? originalState.satellitesTableDefaultsVersion),
+            satellitesTableColumnVisibility: shouldApplyLatestSatellitesTableDefaults
+                ? originalState.satellitesTableColumnVisibility
+                : (inboundState.satellitesTableColumnVisibility ?? originalState.satellitesTableColumnVisibility),
+            satellitesTablePageSize: shouldApplyLatestSatellitesTableDefaults
+                ? originalState.satellitesTablePageSize
+                : (inboundState.satellitesTablePageSize ?? originalState.satellitesTablePageSize),
+            satellitesTableSortModel: shouldApplyLatestSatellitesTableDefaults
+                ? originalState.satellitesTableSortModel
+                : (inboundState.satellitesTableSortModel ?? originalState.satellitesTableSortModel),
+        };
+    },
+    whitelist: [
+        'selectedSatGroupId',
+        'selectedSatelliteId',
+        'satellitesTableDefaultsVersion',
+        'satellitesTableColumnVisibility',
+        'passesTablePageSize',
+        'satellitesTablePageSize',
+        'passesTableSortModel',
+        'satellitesTableSortModel',
+        'showGeostationarySatellites',
+        'mapEngine',
+        'mapZoomByEngine'
+    ]
 };
 
 // Persist configuration for the dashboard slice
@@ -267,13 +305,60 @@ const tasksPersistConfig = {
 const celestialPersistConfig = {
     key: 'celestial',
     storage,
-    whitelist: ['mapSettings', 'passesTableColumnVisibility', 'passesTablePageSize', 'passesTableSortModel']
+    stateReconciler: (inboundState, originalState) => {
+        if (!inboundState) {
+            return originalState;
+        }
+        const inboundDefaultsVersion = Number(inboundState.passesTableDefaultsVersion || 0);
+        const shouldApplyLatestDefaults = inboundDefaultsVersion < CELESTIAL_PASSES_DEFAULTS_VERSION;
+        // Apply passes-table defaults once when loading older persisted payloads.
+        // After migration, user customizations continue to persist normally.
+        return {
+            ...originalState,
+            ...inboundState,
+            passesTableDefaultsVersion: shouldApplyLatestDefaults
+                ? originalState.passesTableDefaultsVersion
+                : (inboundState.passesTableDefaultsVersion ?? originalState.passesTableDefaultsVersion),
+            passesTableColumnVisibility: shouldApplyLatestDefaults
+                ? originalState.passesTableColumnVisibility
+                : (inboundState.passesTableColumnVisibility ?? originalState.passesTableColumnVisibility),
+            passesTablePageSize: shouldApplyLatestDefaults
+                ? originalState.passesTablePageSize
+                : (inboundState.passesTablePageSize ?? originalState.passesTablePageSize),
+            passesTableSortModel: shouldApplyLatestDefaults
+                ? originalState.passesTableSortModel
+                : (inboundState.passesTableSortModel ?? originalState.passesTableSortModel),
+        };
+    },
+    whitelist: ['mapSettings', 'passesTableDefaultsVersion', 'passesTableColumnVisibility', 'passesTablePageSize', 'passesTableSortModel']
 };
 
 const celestialMonitoredPersistConfig = {
     key: 'celestialMonitored',
     storage,
-    whitelist: ['selectedIds', 'tableColumnVisibility', 'tablePageSize', 'tableSortModel']
+    stateReconciler: (inboundState, originalState) => {
+        if (!inboundState) {
+            return originalState;
+        }
+        const inboundDefaultsVersion = Number(inboundState.tableDefaultsVersion || 0);
+        const shouldApplyLatestDefaults = inboundDefaultsVersion < 4;
+        // Apply monitored-table defaults once when loading older persisted payloads.
+        // After this migration, user customizations continue to persist normally.
+        return {
+            ...originalState,
+            ...inboundState,
+            tableDefaultsVersion: shouldApplyLatestDefaults
+                ? originalState.tableDefaultsVersion
+                : (inboundState.tableDefaultsVersion ?? originalState.tableDefaultsVersion),
+            tableColumnVisibility: shouldApplyLatestDefaults
+                ? originalState.tableColumnVisibility
+                : (inboundState.tableColumnVisibility ?? originalState.tableColumnVisibility),
+            tableSortModel: shouldApplyLatestDefaults
+                ? originalState.tableSortModel
+                : (inboundState.tableSortModel ?? originalState.tableSortModel),
+        };
+    },
+    whitelist: ['selectedIds', 'tableDefaultsVersion', 'tableColumnVisibility', 'tablePageSize', 'tableSortModel']
 };
 
 const celestialDisplayPersistConfig = {
@@ -294,13 +379,12 @@ const authPersistConfig = {
         }
         return {
             ...originalState,
-            token: inboundState.token ?? null,
             user: inboundState.user ?? null,
             showLogoutConfirmation:
                 inboundState.showLogoutConfirmation ?? originalState.showLogoutConfirmation,
         };
     },
-    whitelist: ['token', 'user', 'showLogoutConfirmation'],
+    whitelist: ['user', 'showLogoutConfirmation'],
 };
 
 

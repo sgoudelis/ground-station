@@ -14,6 +14,16 @@
     "decayed": "Decayed",
     "updated": "Updated",
     "launched": "Launched",
+    "context_menu": {
+      "set_as_target": "Set as target...",
+      "edit_properties": "Edit properties...",
+      "edit_transmitters": "Edit transmitters...",
+      "schedule_observation": "Schedule observation...",
+      "monitor_satellite": "Monitor this satellite...",
+      "copy_norad": "Copy NORAD ID",
+      "copy_summary": "Copy Satellite Summary",
+      "edit_transmitters_title": "Edit transmitters: {{name}}"
+    },
     "no_alternative_names": "No alternative names",
     "status_unknown": "Unknown",
     "status_active": "Active",
@@ -41,6 +51,24 @@
     "name_other": "Other Name",
     "peak_elevation": "Peak elevation",
     "current_elevation": "Current Elevation",
+    "direction": "Direction",
+    "direction_values": {
+      "cw": "CW",
+      "ccw": "CCW",
+      "mixed": "Mixed"
+    },
+    "pass_types": "Pass Types",
+    "pass_tag_labels": {
+      "north_crossing": "North crossing",
+      "south_crossing": "South crossing",
+      "direction_cw": "CW",
+      "direction_ccw": "CCW",
+      "direction_mixed": "Mixed",
+      "elevation_low": "Low elevation",
+      "elevation_medium": "Medium elevation",
+      "elevation_high": "High elevation",
+      "elevation_overhead": "Overhead"
+    },
     "progress": "Progress",
     "duration": "Duration",
     "bands": "Bands",
@@ -56,6 +84,10 @@
     "status_upcoming": "Upcoming",
     "status_passed": "Passed",
     "status_dead": "Dead",
+    "context_menu": {
+      "copy_pass_window": "Copy Pass Window",
+      "copy_pass_summary": "Copy Pass Summary"
+    },
     "no_value": "no value",
     "no_data": "No data",
     "no_passes": "No passes detected for the next {{hours}} hours"

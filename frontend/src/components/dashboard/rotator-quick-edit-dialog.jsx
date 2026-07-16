@@ -6,6 +6,7 @@ import { toast } from "../../utils/toast-with-timestamp.jsx";
 import { useTranslation } from "react-i18next";
 import RotatorEditDialog from "../hardware/rotator-edit-dialog.jsx";
 import {
+    applyAzimuthModeDefaults,
     DEFAULT_ROTATOR,
     prepareRotatorPayload,
     validateRotatorForm,
@@ -29,8 +30,9 @@ export default function RotatorQuickEditDialog({ open, onClose, rotator }) {
     const handleChange = React.useCallback((event) => {
         const { name, value } = event.target;
         setFormValues((previous) => ({
-            ...previous,
-            [name]: value,
+            ...(name === "azimuth_mode"
+                ? applyAzimuthModeDefaults(previous, value)
+                : { ...previous, [name]: value }),
         }));
     }, []);
 

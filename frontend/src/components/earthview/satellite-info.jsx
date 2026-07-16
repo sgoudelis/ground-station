@@ -14,6 +14,8 @@ import ArrowUpwardRoundedIcon from '@mui/icons-material/ArrowUpwardRounded';
 import ArrowDownwardRoundedIcon from '@mui/icons-material/ArrowDownwardRounded';
 import MyLocationIcon from '@mui/icons-material/MyLocation';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import EditIcon from '@mui/icons-material/Edit';
+import RadioButtonCheckedIcon from '@mui/icons-material/RadioButtonChecked';
 import { getModulationDisplay } from '../../constants/modulations';
 import {
     Box,
@@ -22,7 +24,8 @@ import {
     Button,
     CircularProgress,
     Divider,
-    IconButton
+    IconButton,
+    Tooltip
 } from '@mui/material';
 import {
     betterDateTimes,
@@ -46,6 +49,8 @@ import SettingsInputAntennaIcon from "@mui/icons-material/SettingsInputAntenna";
 import PublicIcon from "@mui/icons-material/Public";
 import { useTranslation } from 'react-i18next';
 import { SatelliteInfoDialog } from '../satellites/satellite-info-page.jsx';
+import SatelliteEditDialog from "../satellites/satellite-edit-dialog.jsx";
+import TransmittersDialog from "../satellites/transmitters-dialog.jsx";
 import { useTargetRotatorSelectionDialog } from '../target/use-target-rotator-selection-dialog.jsx';
 // ElevationDisplay removed per request; display raw value instead
 
@@ -54,7 +59,10 @@ const EarthViewSatelliteInfoCard = () => {
     const navigate = useNavigate();
     const {socket} = useSocket();
     const [dialogOpen, setDialogOpen] = useState(false);
+    const [satelliteEditDialogOpen, setSatelliteEditDialogOpen] = useState(false);
+    const [transmittersDialogOpen, setTransmittersDialogOpen] = useState(false);
     const { t } = useTranslation('earthview');
+    const { t: tSat } = useTranslation('satellites');
     const {
         satelliteData,
         selectedSatelliteId,
@@ -71,6 +79,15 @@ const EarthViewSatelliteInfoCard = () => {
     } = useSelector(state => state.targetSatTrack);
     const trackerInstances = useSelector((state) => state.trackerInstances?.instances || []);
     const { requestRotatorForTarget, dialog: rotatorSelectionDialog } = useTargetRotatorSelectionDialog();
+    const selectedNoradId = satelliteData?.details?.norad_id || selectedSatelliteId || null;
+    const selectedSatelliteName = satelliteData?.details?.name || '';
+    const transmitters = satelliteData?.transmitters || [];
+    const satelliteDialogData = {
+        ...(satelliteData?.details || {}),
+        norad_id: selectedNoradId,
+        name: selectedSatelliteName,
+        transmitters,
+    };
 
     // Get timezone preference
     const timezone = useSelector((state) => {
@@ -170,6 +187,13 @@ const EarthViewSatelliteInfoCard = () => {
                     + `: ${error?.message || error?.error || 'Unknown error'}`
                 );
             });
+    };
+
+    const handleSatelliteSaved = () => {
+        if (!selectedNoradId) {
+            return;
+        }
+        dispatch(fetchSatelliteData({ socket, noradId: selectedNoradId }));
     };
 
     const upDownDetails = satelliteData && satelliteData['transmitters']
@@ -393,10 +417,34 @@ const EarthViewSatelliteInfoCard = () => {
                                         }
                                     })() : (theme) => `0 0 8px ${theme.palette.info.main}40`
                             }}/>
-                            <Box sx={{ flex: 1 }}>
-                                <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
-                                    {satelliteData && satelliteData['details'] ? satelliteData['details']['name'] : "- - - - - - - - - - -"}
-                                </Typography>
+                            <Box sx={{ flex: 1, minWidth: 0 }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0 }}>
+                                    <Typography variant="subtitle1" noWrap sx={{ fontWeight: 'bold', minWidth: 0 }}>
+                                        {satelliteData && satelliteData['details'] ? satelliteData['details']['name'] : "- - - - - - - - - - -"}
+                                    </Typography>
+                                    <Tooltip title="Edit Details">
+                                        <span>
+                                            <IconButton
+                                                size="small"
+                                                onClick={() => setSatelliteEditDialogOpen(true)}
+                                                disabled={!selectedNoradId}
+                                            >
+                                                <EditIcon fontSize="small" />
+                                            </IconButton>
+                                        </span>
+                                    </Tooltip>
+                                    <Tooltip title="Edit Transmitters">
+                                        <span>
+                                            <IconButton
+                                                size="small"
+                                                onClick={() => setTransmittersDialogOpen(true)}
+                                                disabled={!selectedNoradId}
+                                            >
+                                                <RadioButtonCheckedIcon fontSize="small" />
+                                            </IconButton>
+                                        </span>
+                                    </Tooltip>
+                                </Box>
                                 {satelliteData && satelliteData['details'] && satelliteData['details']['name_other'] && (
                                     <Typography variant="caption" sx={{ color: 'text.disabled', fontSize: '0.65rem', display: 'block', mt: -0.5 }}>
                                         {satelliteData['details']['name_other']}
@@ -669,6 +717,22 @@ const EarthViewSatelliteInfoCard = () => {
                     }}
                 />
             )}
+            <SatelliteEditDialog
+                open={satelliteEditDialogOpen}
+                onClose={() => setSatelliteEditDialogOpen(false)}
+                satelliteData={satelliteDialogData}
+                onSaved={handleSatelliteSaved}
+            />
+            <TransmittersDialog
+                open={transmittersDialogOpen}
+                onClose={() => setTransmittersDialogOpen(false)}
+                title={tSat('satellite_database.edit_transmitters_title', {
+                    name: selectedSatelliteName || selectedNoradId || '',
+                })}
+                satelliteData={satelliteDialogData}
+                variant="paper"
+                widthOffsetPx={20}
+            />
         </Box>
         </>
     );

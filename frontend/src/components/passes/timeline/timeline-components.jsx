@@ -2,6 +2,7 @@ import React, { useRef, useEffect } from 'react';
 import { Box, Typography, useTheme } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { Y_AXIS_WIDTH, X_AXIS_HEIGHT, Y_AXIS_TOP_MARGIN, elevationToYPercent } from './timeline-constants.jsx';
+import TargetNumberIcon from '../../common/target-number-icon.jsx';
 
 const normalizeHexColor = (value) => {
   const text = String(value || '').trim();
@@ -43,6 +44,8 @@ export const PassCurve = ({
   const shouldEmphasizeForSelection = isTargetSelectionActive && isSelectedTarget;
   const shouldForceSelectedLabel = shouldEmphasizeForSelection;
   const shouldRenderLabel = !suppressCurveLabels && (Boolean(labelType) || shouldForceSelectedLabel);
+  const normalizedTargetNumber = Number(pass?.targetNumber);
+  const hasTargetNumber = Number.isFinite(normalizedTargetNumber) && normalizedTargetNumber > 0;
   // Celestial passes carry an assigned mission/body color in `pass.color`; use it when enabled by parent.
   const assignedPassColor = usePassAssignedColor ? normalizeHexColor(pass?.color) : '';
 
@@ -339,7 +342,7 @@ export const PassCurve = ({
               fontWeight: 'bold',
               color: hasElevationCurve ? passColor : estimatedStrokeColor,
               backgroundColor: theme.palette.background.paper,
-              padding: '2px 6px',
+              padding: '2px',
               borderRadius: '3px',
               border: (pass.isCurrent || shouldEmphasizeForSelection)
                 ? `1px solid ${hasElevationCurve ? passColor : estimatedStrokeColor}`
@@ -347,6 +350,9 @@ export const PassCurve = ({
               whiteSpace: 'nowrap',
               pointerEvents: 'none',
               zIndex: 25,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 0.5,
               opacity: (
                 isTargetSelectionActive
                   ? (isSelectedTarget ? 0.95 : 0.32)
@@ -356,7 +362,15 @@ export const PassCurve = ({
               transition: 'opacity 260ms ease-out, color 260ms ease-out, border-color 260ms ease-out',
             }}
           >
-            {labelContent}
+            {hasTargetNumber ? (
+              <TargetNumberIcon
+                targetNumber={normalizedTargetNumber}
+                prefix="T"
+                size={13}
+                sx={{ flexShrink: 0 }}
+              />
+            ) : null}
+            <Box component="span">{labelContent}</Box>
           </Box>
         );
       })()}

@@ -18,6 +18,7 @@ from handlers.entities import (
     scheduler,
     sdr,
     sessions,
+    setup,
     systeminfo,
     tracking,
     transmitters,
@@ -39,6 +40,7 @@ def _register_all_handlers():
     hardware.register_handlers(handler_registry)
     locations.register_handlers(handler_registry)
     preferences.register_handlers(handler_registry)
+    setup.register_handlers(handler_registry)
     transmitters.register_handlers(handler_registry)
     tracking.register_handlers(handler_registry)
     vfo.register_handlers(handler_registry)
@@ -57,10 +59,23 @@ _register_all_handlers()
 
 # Auth context keyed by socket session id.
 SOCKET_AUTH: Dict[str, Dict[str, Any]] = {}
+# Raw session token keyed by socket session id (used for per-request revalidation).
+SOCKET_TOKENS: Dict[str, str] = {}
 
 
 def register_socketio_handlers(sio):
     """Register Socket.IO event handlers."""
+
+    async def _sync_authenticated_room(sid: str, auth_context: Optional[Dict[str, Any]]) -> None:
+        """Keep authenticated broadcast-room membership aligned with live auth state."""
+        is_authenticated = bool(auth_context)
+        try:
+            if is_authenticated:
+                await sio.enter_room(sid, authsvc.AUTHENTICATED_SOCKET_ROOM)
+            else:
+                await sio.leave_room(sid, authsvc.AUTHENTICATED_SOCKET_ROOM)
+        except Exception:
+            logger.debug("Failed to sync authenticated room for sid=%s", sid, exc_info=True)
 
     @sio.on("connect")
     async def connect(sid, environ, auth=None):
@@ -81,12 +96,22 @@ def register_socketio_handlers(sio):
 
         setup_required = await authsvc.is_setup_required()
         token = authsvc.extract_socket_token(auth)
+        if not token:
+            # Browser clients now rely on HttpOnly auth cookies and cannot pass session tokens via JS.
+            token = authsvc.extract_session_cookie_token(environ.get("HTTP_COOKIE"))
         auth_context = await authsvc.authenticate_token(token)
         if not setup_required and auth_context is None:
             logger.warning(f"Rejecting unauthenticated socket connection sid={sid}")
             return False
 
         if auth_context:
+            # Keep token cache only for sessions that have been successfully authenticated.
+            # Setup-mode sockets can arrive with stale cookies from deleted users; retaining
+            # those invalid tokens would cause forced disconnects once setup completes.
+            if token:
+                SOCKET_TOKENS[sid] = token
+            else:
+                SOCKET_TOKENS.pop(sid, None)
             SOCKET_AUTH[sid] = auth_context
             logger.info(
                 "Authenticated socket sid=%s as user=%s role=%s",
@@ -95,12 +120,19 @@ def register_socketio_handlers(sio):
                 auth_context.get("role"),
             )
         else:
+            # No valid auth context for this socket session.
+            SOCKET_TOKENS.pop(sid, None)
             # Setup mode allows temporary unauthenticated access for onboarding-only commands.
             SOCKET_AUTH[sid] = {}
 
         SESSIONS[sid] = environ
 
-        # Persist client metadata into SessionTracker so snapshots can include it.
+        # Keep session owner identity in tracker metadata for runtime auditing/diagnostics.
+        auth_user_id = str((auth_context or {}).get("user_id") or "").strip() or None
+        auth_username = str((auth_context or {}).get("username") or "").strip() or None
+        auth_role = str((auth_context or {}).get("role") or "").strip() or None
+
+        # Persist client metadata in SessionTracker for operational diagnostics.
         try:
             session_tracker.set_session_metadata(
                 sid,
@@ -109,9 +141,15 @@ def register_socketio_handlers(sio):
                 origin=origin,
                 referer=referer,
                 connected_at=time.time(),
+                user_id=auth_user_id,
+                username=auth_username,
+                role=auth_role,
             )
         except Exception:
             logger.debug("Failed to set session metadata in tracker", exc_info=True)
+
+        # Restrict runtime snapshot broadcasts to authenticated sockets only.
+        await _sync_authenticated_room(sid, auth_context)
 
         # Send current running tasks to newly connected client.
         if runtimestate.background_task_manager:
@@ -124,6 +162,7 @@ def register_socketio_handlers(sio):
         del environ
         session_env = SESSIONS.pop(sid, {})
         SOCKET_AUTH.pop(sid, None)
+        SOCKET_TOKENS.pop(sid, None)
         remote_addr = session_env.get("REMOTE_ADDR", "unknown")
         logger.info(f"Client {sid} from {remote_addr} disconnected")
         # Clean up session via SessionService (stops processes and clears tracker including metadata).
@@ -142,7 +181,56 @@ def register_socketio_handlers(sio):
 
         normalized_cmd = cmd.strip()
         logger.debug(f"Received api.call from sid={sid}, cmd={normalized_cmd}")
-        auth_context = SOCKET_AUTH.get(sid) or None
+        setup_required = await authsvc.is_setup_required()
+
+        # Re-authenticate on every RPC so logout/disable/role changes apply immediately.
+        socket_token = SOCKET_TOKENS.get(sid)
+        auth_context = None
+        if socket_token:
+            auth_context = await authsvc.authenticate_token(socket_token)
+            if auth_context:
+                SOCKET_AUTH[sid] = auth_context
+            else:
+                SOCKET_AUTH.pop(sid, None)
+
+        if not setup_required and auth_context is None:
+            # Re-authenticated sessions that became invalid (logout/revoke/disable) should be
+            # disconnected immediately so stale authenticated sockets cannot continue.
+            #
+            # Setup-mode sockets have no token by design; they may still be connected when setup
+            # flips to completed. For those sockets, return auth required without disconnecting so
+            # setup UI can proceed to explicit login.
+            if socket_token:
+                logger.warning(
+                    "Disconnecting socket sid=%s due to invalid session during api.call cmd=%s",
+                    sid,
+                    normalized_cmd,
+                )
+                SOCKET_AUTH.pop(sid, None)
+                SOCKET_TOKENS.pop(sid, None)
+                try:
+                    await sio.disconnect(sid)
+                except Exception:
+                    logger.debug(
+                        "Failed to disconnect sid=%s after auth invalidation", sid, exc_info=True
+                    )
+            return {"success": False, "data": None, "error": "Authentication required."}
+
+        # Re-authentication can update role/identity; mirror those in session metadata.
+        if auth_context:
+            try:
+                session_tracker.set_session_metadata(
+                    sid,
+                    user_id=str(auth_context.get("user_id") or "").strip() or None,
+                    username=str(auth_context.get("username") or "").strip() or None,
+                    role=str(auth_context.get("role") or "").strip() or None,
+                )
+            except Exception:
+                logger.debug("Failed to refresh session owner metadata", exc_info=True)
+
+        # Keep stream room membership synchronized with token revalidation outcomes.
+        await _sync_authenticated_room(sid, auth_context)
+
         reply = await dispatch_request(
             sio,
             normalized_cmd,

@@ -47,16 +47,21 @@ const AboutPage = () => {
     const versionInfo = useSelector((state) => state.version?.data);
 
     const featureItems = [
-        'Real-time Satellite Tracking: Track hundreds of satellites with high-precision orbital models. Orbital data is automatically updated from CelesTrak and SatNOGS.',
-        'Automated Antenna Rotator Control: Interface with popular antenna rotators to automatically track satellites as they pass overhead.',
-        'SDR Integration: Stream and record live radio signals from a wide range of SDR devices, including RTL-SDR, SoapySDR, and UHD/USRP radios.',
-        'IQ Recording and Playback: Record raw IQ data in SigMF format with complete metadata and replay recordings through a virtual SDR device for analysis.',
-        'Data Decoding: Decode SSTV, FSK, GFSK, GMSK, and BPSK with AX25 USP Geoscan framing.',
-        'AI-Powered Transcription: Real-time speech-to-text for demodulated audio via Gemini Live or Deepgram, with optional translation and output storage.',
-        'Scheduled Observations: Define observation tasks that automatically listen, decode, transcribe, and record during satellite passes.',
-        'SatDump Integration: Decode weather satellite images from METEOR-M2 (LRPT and HRPT) via SatDump workflows.',
-        'Performance Monitoring: Visualize signal processing flow, queue health, throughput, and component statistics.',
-        'Responsive Web Interface: Control the full station from desktop, tablet, or phone through a unified web interface.',
+        'Real-time Orbit Tracking: Track Earth-orbiting targets using Skyfield/SGP4 propagation from stored orbital elements.',
+        'Configurable Orbital Sources + Metadata Enrichment: Sync orbital data from configured sources (default CelesTrak feeds) and enrich satellites/transmitters from SatNOGS APIs.',
+        'Multi-Target Tracker Instances: Run multiple tracker instances in parallel (target-N slots), each with independent runtime state.',
+        'Automated Antenna Rotator Control: Drive connected rotators with continuous az/el updates, limit checks, and anti-thrashing retarget logic.',
+        'Rig Control with Doppler Correction: Control compatible rigs (rigctld/Hamlib paths) with RX/TX Doppler-corrected tuning during tracking.',
+        'SDR Hardware Support: RTL-SDR (USB/rtl_tcp), SoapySDR (local/remote), UHD/USRP, plus a virtual SigMF Playback SDR.',
+        'Live DSP Pipeline: Stream IQ to FFT/waterfall, demodulators, decoders, recorders, and browser consumers through queue-based worker orchestration.',
+        'IQ Recording + SigMF Playback: Record IQ as .sigmf-data/.sigmf-meta with metadata, then replay through the same processing pipeline used for live SDR operation.',
+        'Data Decoding + Framing Protocols: Decode SSTV, FSK, GFSK, GMSK, BPSK, and GNSS paths with AX.25/USP/GEOSCAN framing support in packet pipelines.',
+        'Transcription Services: Real-time demodulated-audio transcription via Gemini Live or Deepgram, with optional translation and file output.',
+        'Scheduled Observations: APScheduler-driven AOS/LOS orchestration for automatic start/stop of tracking, SDR, decoding, recording, and transcription tasks.',
+        'SatDump Post-Processing: Optional SatDump processing for IQ recordings, including METEOR LRPT/HRPT workflows.',
+        'Performance Monitoring: Stream live pipeline metrics including queue utilization, throughput, drops, and component health.',
+        'Authentication + User Management: Built-in login with role-based access control for admins and operators.',
+        'Interactive Solar System + Mission Targeting: Track selected solar-system bodies and deep-space mission targets through NASA/JPL Horizons-backed vectors.',
     ];
 
     const backendTechnologies = [
@@ -70,6 +75,7 @@ const AboutPage = () => {
         { name: 'SoapySDR', description: 'Vendor-neutral SDR support library.', url: 'https://pypi.org/project/SoapySDR/' },
         { name: 'SatDump', description: 'Satellite decoder suite for weather image workflows.', url: 'https://github.com/SatDump/SatDump' },
         { name: 'gr-satellites', description: 'GNU Radio modules for satellite communications.', url: 'https://github.com/daniestevez/gr-satellites' },
+        { name: 'GNSS-SDR', description: 'Open-source software-defined GNSS receiver used by the GNSS decoder path.', url: 'https://github.com/gnss-sdr/gnss-sdr' },
     ];
 
     const frontendTechnologies = [
@@ -79,13 +85,26 @@ const AboutPage = () => {
         { name: 'Vite', description: 'Fast frontend bundler and dev server.', url: 'https://vitejs.dev/' },
         { name: 'Socket.IO Client', description: 'Client runtime for realtime Socket.IO communications.', url: 'https://socket.io/docs/v4/client-api/' },
         { name: 'Leaflet', description: 'Interactive map library.', url: 'https://leafletjs.com/' },
+        { name: 'MapLibre Maps', description: 'Open-source map rendering engine used for 2D and globe map views.', url: 'https://maplibre.org/' },
         { name: 'satellite.js', description: 'JavaScript library for orbit propagation.', url: 'https://github.com/shashwatak/satellite-js' },
+    ];
+
+    const externalApis = [
+        { name: 'CelesTrak', description: 'Orbital element feeds used for target synchronization.', url: 'https://celestrak.org/' },
+        { name: 'SatNOGS API', description: 'Satellite and transmitter metadata synchronization.', url: 'https://db.satnogs.org/api/' },
+        { name: 'NASA/JPL Horizons API', description: 'Ephemeris vectors and observer geometry for solar-system targets.', url: 'https://ssd-api.jpl.nasa.gov/doc/horizons.html' },
+        { name: 'Deepgram Streaming API', description: 'Realtime speech-to-text provider for demodulated audio.', url: 'https://developers.deepgram.com/' },
+        { name: 'Google Gemini Live API', description: 'Realtime transcription provider with optional translation workflows.', url: 'https://ai.google.dev/gemini-api/docs/live' },
+        { name: 'Google Cloud Translation API', description: 'Optional translation for Deepgram transcription outputs.', url: 'https://cloud.google.com/translate/docs/reference/rest' },
     ];
 
     const sdrSupport = [
         'RTL-SDR (USB or rtl_tcp) workers',
-        'SoapySDR devices locally or through SoapyRemote (Airspy, HackRF, LimeSDR, etc.)',
+        'Airspy / AirspyHF+ native worker support (AirspyHF+ currently untested)',
+        'SoapySDR devices locally or through SoapyRemote: RTL-SDR, Airspy, HackRF, HydraSDR, LimeSDR, PlutoSDR, UHD/USRP, and SDRplay (RSP series)',
         'UHD/USRP radios via a UHD worker',
+        'GNSS-SDR integration for GNSS decoding workflows (requires gnss-sdr available in PATH)',
+        'Need another SoapySDR device? Open a GitHub issue and request support.',
     ];
 
     return (
@@ -101,7 +120,7 @@ const AboutPage = () => {
                                         Ground Station
                                     </Typography>
                                     <Typography variant="body2" color="text.secondary">
-                                        {t('about.intro', { defaultValue: 'Open-source software platform for satellite tracking, SDR operations, and automated observation workflows.' })}
+                                        {t('about.intro', { defaultValue: 'Open-source, browser-based application for tracking satellites and celestial targets, controlling station hardware, and receiving, decoding, and recording SDR signals.' })}
                                     </Typography>
                                 </Box>
                             </Stack>
@@ -212,36 +231,12 @@ const AboutPage = () => {
                 <Accordion defaultExpanded>
                     <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                         <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                            {t('about.architecture_title', { defaultValue: 'System Architecture' })}
-                        </Typography>
-                    </AccordionSummary>
-                    <AccordionDetails>
-                        <Stack spacing={1.2}>
-                            <Typography variant="body2">
-                                <strong>{t('about.frontend_label', { defaultValue: 'Frontend' })}:</strong>{' '}
-                                {t('about.frontend_desc', { defaultValue: 'React single-page application with Redux Toolkit and Material UI, connected to backend through Socket.IO for real-time updates.' })}
-                            </Typography>
-                            <Typography variant="body2">
-                                <strong>{t('about.backend_label', { defaultValue: 'Backend' })}:</strong>{' '}
-                                {t('about.backend_desc', { defaultValue: 'Python/FastAPI service exposing REST and Socket.IO endpoints and orchestrating station workers.' })}
-                            </Typography>
-                            <Typography variant="body2">
-                                <strong>{t('about.workers_label', { defaultValue: 'Workers' })}:</strong>{' '}
-                                {t('about.workers_desc', { defaultValue: 'Dedicated worker processes for tracking, hardware control, SDR streaming, and discovery tasks.' })}
-                            </Typography>
-                        </Stack>
-                    </AccordionDetails>
-                </Accordion>
-
-                <Accordion>
-                    <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                        <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                            {t('about.technologies_title', { defaultValue: 'Third-Party Libraries and Technologies' })}
+                            {t('about.technologies_title', { defaultValue: 'Third-Party Libraries and APIs' })}
                         </Typography>
                     </AccordionSummary>
                     <AccordionDetails>
                         <Grid container spacing={2} columns={12}>
-                            <Grid size={{ xs: 12, md: 6 }}>
+                            <Grid size={{ xs: 12, md: 4 }}>
                                 <Card variant="outlined" sx={{ p: 1.5, height: '100%' }}>
                                     <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
                                         {t('about.backend_stack', { defaultValue: 'Backend Stack' })}
@@ -268,7 +263,7 @@ const AboutPage = () => {
                                 </Card>
                             </Grid>
 
-                            <Grid size={{ xs: 12, md: 6 }}>
+                            <Grid size={{ xs: 12, md: 4 }}>
                                 <Card variant="outlined" sx={{ p: 1.5, height: '100%' }}>
                                     <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
                                         {t('about.frontend_stack', { defaultValue: 'Frontend Stack' })}
@@ -288,6 +283,33 @@ const AboutPage = () => {
                                                 </Link>
                                                 <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary' }}>
                                                     {tech.description}
+                                                </Typography>
+                                            </Box>
+                                        ))}
+                                    </Stack>
+                                </Card>
+                            </Grid>
+
+                            <Grid size={{ xs: 12, md: 4 }}>
+                                <Card variant="outlined" sx={{ p: 1.5, height: '100%' }}>
+                                    <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                                        {t('about.external_apis', { defaultValue: 'External APIs and Data Sources' })}
+                                    </Typography>
+                                    <Divider sx={{ my: 1 }} />
+                                    <Stack spacing={1}>
+                                        {externalApis.map((api) => (
+                                            <Box key={api.name}>
+                                                <Link
+                                                    href={api.url}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    aria-label={`${api.name} (opens in new tab)`}
+                                                    sx={{ fontWeight: 600 }}
+                                                >
+                                                    {api.name}
+                                                </Link>
+                                                <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary' }}>
+                                                    {api.description}
                                                 </Typography>
                                             </Box>
                                         ))}

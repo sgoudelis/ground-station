@@ -165,6 +165,20 @@ const ToggleRowWithDescription = ({ label, description, checked, onChange }) => 
         ) : null}
     </Box>
 );
+const FOOTER_ACTION_ROW_SX = {
+    width: '100%',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 1,
+    overflowX: 'auto',
+    msOverflowStyle: 'none',
+    scrollbarWidth: 'none',
+    '&::-webkit-scrollbar': { display: 'none' },
+    '& > *': {
+        flexShrink: 0,
+        whiteSpace: 'nowrap',
+    },
+};
 
 const ColorSetting = ({ label, value, disabled = false, onChange }) => {
     const colorInputRef = useRef(null);
@@ -725,14 +739,9 @@ const MapSettingsIsland = ({ initialLockOnTarget, initialEnableMapDragging, init
                     borderColor: 'divider',
                 }}
             >
-                <Stack
-                    direction={{ xs: 'column', sm: 'row' }}
-                    spacing={1}
-                    alignItems={{ xs: 'stretch', sm: 'center' }}
-                    justifyContent="space-between"
-                >
+                <Box sx={FOOTER_ACTION_ROW_SX}>
                     <Button
-                        variant="text"
+                        variant="outlined"
                         onClick={() => {
                             setDraftSettings(defaults);
                             setSaveState('idle');
@@ -741,26 +750,25 @@ const MapSettingsIsland = ({ initialLockOnTarget, initialEnableMapDragging, init
                         {t('map_settings.reset_defaults', { defaultValue: 'Reset Defaults' })}
                     </Button>
 
-                        <Stack direction="row" spacing={1} alignItems="center" justifyContent="flex-end">
-                            {saveFeedbackLabel ? (
-                                <Chip
-                                    size="small"
-                                    color={saveState === 'error' ? 'error' : saveState === 'saved' ? 'success' : 'default'}
-                                    label={saveFeedbackLabel}
-                                />
-                            ) : null}
-                            <Button variant="outlined" onClick={cancelChanges}>
-                                {t('close', { defaultValue: 'Close' })}
-                            </Button>
-                            <Button
-                                variant="contained"
-                                onClick={applySettings}
-                                disabled={!isDirty || saveState === 'saving'}
-                        >
-                            {t('map_settings.apply', { defaultValue: 'Apply' })}
-                        </Button>
-                    </Stack>
-                </Stack>
+                    <Box sx={{ flex: 1, minWidth: 8 }} />
+                    {saveFeedbackLabel ? (
+                        <Chip
+                            size="small"
+                            color={saveState === 'error' ? 'error' : saveState === 'saved' ? 'success' : 'default'}
+                            label={saveFeedbackLabel}
+                        />
+                    ) : null}
+                    <Button variant="outlined" onClick={cancelChanges}>
+                        {t('close', { defaultValue: 'Close' })}
+                    </Button>
+                    <Button
+                        variant="contained"
+                        onClick={applySettings}
+                        disabled={!isDirty || saveState === 'saving'}
+                    >
+                        {t('map_settings.apply', { defaultValue: 'Apply' })}
+                    </Button>
+                </Box>
             </Box>
         </Box>
     );

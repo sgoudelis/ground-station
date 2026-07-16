@@ -37,6 +37,9 @@ class ClientMetadata(TypedDict, total=False):
     origin: Optional[str]
     referer: Optional[str]
     connected_at: Optional[float]
+    user_id: Optional[str]
+    username: Optional[str]
+    role: Optional[str]
 
 
 class SessionTracker:
@@ -120,6 +123,9 @@ class SessionTracker:
         origin: Optional[str] = None,
         referer: Optional[str] = None,
         connected_at: Optional[float] = None,
+        user_id: Optional[str] = None,
+        username: Optional[str] = None,
+        role: Optional[str] = None,
     ) -> None:
         """
         Set client metadata for a session.
@@ -131,6 +137,9 @@ class SessionTracker:
             origin: HTTP Origin header
             referer: HTTP Referer header
             connected_at: Unix timestamp of connection
+            user_id: Authenticated user UUID (string), when available
+            username: Authenticated username, when available
+            role: Authenticated role, when available
         """
         if session_id not in self._session_metadata:
             self._session_metadata[session_id] = {}
@@ -148,6 +157,12 @@ class SessionTracker:
             metadata["referer"] = referer
         if connected_at is not None:
             metadata["connected_at"] = connected_at
+        if user_id is not None:
+            metadata["user_id"] = user_id
+        if username is not None:
+            metadata["username"] = username
+        if role is not None:
+            metadata["role"] = role
 
         logger.debug(f"Updated metadata for session {session_id}: {metadata}")
 

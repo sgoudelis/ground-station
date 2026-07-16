@@ -12,11 +12,13 @@ export function buildFileBrowserDisplayItem(item, formatDurationFn) {
 
     let image = null;
     if (item.type === 'recording') {
-        image = item.recording_in_progress ? null : item.snapshot?.url;
+        image = item.recording_in_progress
+            ? null
+            : item.snapshot?.thumbnail_url || item.snapshot?.url;
     } else if (item.type === 'decoded_folder') {
         image = item.thumbnail_url || null;
     } else if (item.type === 'snapshot' || isDecodedImage) {
-        image = item.url;
+        image = item.type === 'snapshot' ? item.thumbnail_url || item.url : item.url;
     }
 
     return {

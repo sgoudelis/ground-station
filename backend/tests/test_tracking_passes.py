@@ -21,7 +21,12 @@ import numpy as np
 import pytest
 from skyfield.api import EarthSatellite, load
 
-from tracking.passes import analyze_satellite_orbit, calculate_azimuth_path, calculate_next_events
+from tracking.passes import (
+    analyze_satellite_orbit,
+    calculate_azimuth_path,
+    calculate_next_events,
+    classify_pass_geometry,
+)
 
 
 # Test fixtures with real TLE data
@@ -317,6 +322,70 @@ class TestCalculateAzimuthPath:
         assert 0 <= arc_angle <= 360
 
 
+class TestClassifyPassGeometry:
+    """Test cases for classify_pass_geometry helper."""
+
+    def test_detects_north_crossing(self):
+        result = classify_pass_geometry(
+            start_azimuth=350.0,
+            peak_azimuth=0.0,
+            end_azimuth=15.0,
+            peak_altitude=42.0,
+            azimuth_samples=[350.0, 355.0, 359.0, 1.0, 10.0, 15.0],
+        )
+
+        assert result["crosses_north"] is True
+        assert "north_crossing" in result["pass_tags"]
+        assert result["crosses_south"] is False
+        assert result["pass_direction"] == "CCW"
+        assert "direction_ccw" in result["pass_tags"]
+        assert result["elevation_class"] == "medium"
+
+    def test_detects_south_crossing(self):
+        result = classify_pass_geometry(
+            start_azimuth=120.0,
+            peak_azimuth=180.0,
+            end_azimuth=260.0,
+            peak_altitude=25.0,
+            azimuth_samples=[120.0, 150.0, 180.0, 210.0, 240.0, 260.0],
+        )
+
+        assert result["crosses_south"] is True
+        assert "south_crossing" in result["pass_tags"]
+        assert result["crosses_north"] is False
+        assert result["pass_direction"] == "CCW"
+        assert "direction_ccw" in result["pass_tags"]
+        assert result["elevation_class"] == "low"
+
+    def test_detects_overhead_elevation_tag(self):
+        result = classify_pass_geometry(
+            start_azimuth=280.0,
+            peak_azimuth=180.0,
+            end_azimuth=80.0,
+            peak_altitude=84.5,
+            azimuth_samples=[280.0, 240.0, 200.0, 160.0, 120.0, 80.0],
+        )
+
+        assert result["pass_direction"] == "CW"
+        assert "direction_cw" in result["pass_tags"]
+        assert result["elevation_class"] == "overhead"
+        assert "elevation_overhead" in result["pass_tags"]
+
+    def test_no_azimuth_trend_tags_emitted(self):
+        result = classify_pass_geometry(
+            start_azimuth=180.0,
+            peak_azimuth=182.0,
+            end_azimuth=181.0,
+            peak_altitude=61.0,
+            azimuth_samples=[180.0, 182.0, 181.0, 183.0, 181.0],
+        )
+
+        assert result["elevation_class"] == "high"
+        assert result["pass_direction"] in {"CW", "CCW", "MIXED"}
+        assert any(tag.startswith("direction_") for tag in result["pass_tags"])
+        assert all(not tag.startswith("az_") for tag in result["pass_tags"])
+
+
 class TestCalculateNextEventsIntegration:
     """Integration tests for calculate_next_events function.
 
@@ -416,6 +485,11 @@ class TestCalculateNextEventsIntegration:
                 "start_azimuth",
                 "end_azimuth",
                 "peak_azimuth",
+                "crosses_north",
+                "crosses_south",
+                "pass_direction",
+                "elevation_class",
+                "pass_tags",
                 "distance_at_start",
                 "distance_at_end",
                 "distance_at_peak",
@@ -432,3 +506,8 @@ class TestCalculateNextEventsIntegration:
             assert 0 <= event["end_azimuth"] < 360
             assert 0 <= event["peak_azimuth"] < 360
             assert event["distance_at_peak"] > 0
+            assert isinstance(event["crosses_north"], bool)
+            assert isinstance(event["crosses_south"], bool)
+            assert event["pass_direction"] in {"CW", "CCW", "MIXED"}
+            assert event["elevation_class"] in {"low", "medium", "high", "overhead"}
+            assert isinstance(event["pass_tags"], list)

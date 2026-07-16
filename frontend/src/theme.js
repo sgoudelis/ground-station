@@ -49,6 +49,15 @@ function buildSemanticPalette(config) {
             warning: isDark ? alpha(config.warning.main, 0.2) : alpha(config.warning.main, 0.12),
             error: isDark ? alpha(config.error.main, 0.2) : alpha(config.error.main, 0.12),
         },
+        // Shared badge semantics used by target-slot markers (T1/T2/...) across views.
+        badge: {
+            targetSlot: {
+                background: isDark ? '#ffcc66' : '#f2b84b',
+                text: isDark ? '#111213' : '#111213',
+                outlined: isDark ? '#ffd98a' : '#8a5200',
+                shadow: alpha('#000000', 0.2),
+            },
+        },
     };
 }
 

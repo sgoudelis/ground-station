@@ -17,7 +17,7 @@
  *
  */
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useCallback, useEffect, useState, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
     Accordion,
@@ -131,6 +131,19 @@ const PlaybackAccordion = ({
     // Track playback countdown from ref
     const [playbackCountdown, setPlaybackCountdown] = useState(0);
 
+    const getPlaybackFilesRequest = useCallback(() => {
+        const currentFilters = store.getState().filebrowser.filters || {};
+        return {
+            socket,
+            // Always include recordings for SigMF playback dropdown/options.
+            showRecordings: true,
+            showSnapshots: currentFilters.showSnapshots ?? true,
+            showDecoded: currentFilters.showDecoded ?? true,
+            showAudio: currentFilters.showAudio ?? true,
+            showTranscriptions: currentFilters.showTranscriptions ?? true,
+        };
+    }, [socket]);
+
     useEffect(() => {
         if (!expanded || !isStreaming || !playbackRemainingSecondsRef) {
             setPlaybackCountdown(0);
@@ -210,15 +223,9 @@ const PlaybackAccordion = ({
             // Refresh SDRs to ensure SigMF Playback SDR is available
             dispatch(fetchSDRs({ socket }));
 
-            // Fetch files with current global filters to avoid corrupting file browser state
-            const currentFilters = store.getState().filebrowser.filters;
-            dispatch(fetchFiles({
-                socket,
-                showRecordings: currentFilters.showRecordings,
-                showSnapshots: currentFilters.showSnapshots,
-            }));
+            dispatch(fetchFiles(getPlaybackFilesRequest()));
         }
-    }, [socket, dispatch, expanded]);
+    }, [socket, dispatch, expanded, getPlaybackFilesRequest]);
 
     // Listen for file browser updates and refresh the recordings list
     useEffect(() => {
@@ -229,13 +236,8 @@ const PlaybackAccordion = ({
             // Don't refresh on 'list-files' action as that's the response to our fetch
             const action = state?.action;
             if (action && action !== 'list-files') {
-                // Refresh files when recording starts/stops/deleted to show changes immediately
-                const currentFilters = store.getState().filebrowser.filters;
-                dispatch(fetchFiles({
-                    socket,
-                    showRecordings: currentFilters.showRecordings,
-                    showSnapshots: currentFilters.showSnapshots,
-                }));
+                // Refresh files when recording starts/stops/deleted to show changes immediately.
+                dispatch(fetchFiles(getPlaybackFilesRequest()));
             }
         };
 
@@ -244,17 +246,11 @@ const PlaybackAccordion = ({
         return () => {
             socket.off('file_browser_state', handleFileBrowserState);
         };
-    }, [socket, dispatch]);
+    }, [socket, dispatch, getPlaybackFilesRequest]);
 
     const handleRefresh = () => {
         if (socket) {
-            // Refresh with current global filters to avoid corrupting file browser state
-            const currentFilters = store.getState().filebrowser.filters;
-            dispatch(fetchFiles({
-                socket,
-                showRecordings: currentFilters.showRecordings,
-                showSnapshots: currentFilters.showSnapshots,
-            }));
+            dispatch(fetchFiles(getPlaybackFilesRequest()));
         }
     };
 

@@ -273,6 +273,64 @@ const RigControl = React.memo(function RigControl({ trackerId: trackerIdOverride
 
     const lastUpdateAge = Math.max(0, Math.floor((now - lastRigUpdateAt) / 1000));
 
+    const resolvedTargetType = React.useMemo(() => {
+        const explicitTargetType = String(effectiveTrackingState?.target_type || '').trim().toLowerCase();
+        if (explicitTargetType === 'satellite' || explicitTargetType === 'mission' || explicitTargetType === 'body') {
+            return explicitTargetType;
+        }
+        if (String(effectiveTrackingState?.mission_id || '').trim() || String(effectiveTrackingState?.command || '').trim()) {
+            return 'mission';
+        }
+        if (String(effectiveTrackingState?.body_id || '').trim()) {
+            return 'body';
+        }
+        return 'satellite';
+    }, [effectiveTrackingState]);
+
+    const hasSelectedTarget = React.useMemo(() => {
+        if (resolvedTargetType === 'mission') {
+            return Boolean(
+                String(effectiveTrackingState?.mission_id || '').trim()
+                || String(effectiveTrackingState?.command || '').trim()
+            );
+        }
+        if (resolvedTargetType === 'body') {
+            return Boolean(String(effectiveTrackingState?.body_id || '').trim());
+        }
+        const noradCandidate = effectiveTrackingState?.norad_id ?? effectiveSatelliteId;
+        const parsedNorad = Number(noradCandidate);
+        return Number.isFinite(parsedNorad) && parsedNorad > 0;
+    }, [effectiveTrackingState, effectiveSatelliteId, resolvedTargetType]);
+
+    const buildTrackingPayload = React.useCallback((overrides = {}) => {
+        const base = {
+            ...effectiveTrackingState,
+            tracker_id: scopedTrackerId,
+            target_type: resolvedTargetType,
+            norad_id: resolvedTargetType === 'satellite' ? effectiveSatelliteId : null,
+            group_id: resolvedTargetType === 'satellite' ? effectiveGroupId : null,
+            mission_id: resolvedTargetType === 'mission'
+                ? (effectiveTrackingState?.mission_id ?? null)
+                : null,
+            command: resolvedTargetType === 'mission'
+                ? (effectiveTrackingState?.command ?? null)
+                : null,
+            body_id: resolvedTargetType === 'body'
+                ? (effectiveTrackingState?.body_id ?? null)
+                : null,
+        };
+        return {
+            ...base,
+            ...overrides,
+        };
+    }, [
+        effectiveGroupId,
+        effectiveSatelliteId,
+        effectiveTrackingState,
+        resolvedTargetType,
+        scopedTrackerId,
+    ]);
+
     const connectRigDisabled =
         !hasTargets ||
         isRigCommandBusy ||
@@ -302,7 +360,7 @@ const RigControl = React.memo(function RigControl({ trackerId: trackerIdOverride
         isRigCommandBusy ||
         effectiveTrackingState['rig_state'] === RIG_STATES.TRACKING ||
         effectiveTrackingState['rig_state'] === RIG_STATES.DISCONNECTED ||
-        effectiveSatelliteId === "" ||
+        !hasSelectedTarget ||
         ["none", ""].includes(effectiveSelectedRadioRigValue) ||
         ["none", ""].includes(effectiveSelectedTransmitterValue);
     const trackRigDisabledReason = !hasTargets
@@ -313,8 +371,8 @@ const RigControl = React.memo(function RigControl({ trackerId: trackerIdOverride
             ? 'Rig is already tracking'
             : effectiveTrackingState['rig_state'] === RIG_STATES.DISCONNECTED
                 ? 'Connect the rig first'
-                : effectiveSatelliteId === ""
-                    ? 'Select a satellite first'
+                : !hasSelectedTarget
+                    ? 'Select a target first'
                     : ["none", ""].includes(effectiveSelectedRadioRigValue)
                         ? 'Select a rig first'
                         : ["none", ""].includes(effectiveSelectedTransmitterValue)
@@ -325,7 +383,7 @@ const RigControl = React.memo(function RigControl({ trackerId: trackerIdOverride
         !hasTargets ||
         isRigCommandBusy ||
         [RIG_STATES.STOPPED, RIG_STATES.DISCONNECTED, RIG_STATES.CONNECTED].includes(effectiveTrackingState['rig_state']) ||
-        effectiveSatelliteId === "" ||
+        !hasSelectedTarget ||
         ["none", ""].includes(effectiveSelectedRadioRigValue);
     const stopRigDisabledReason = !hasTargets
         ? 'No targets configured'
@@ -333,8 +391,8 @@ const RigControl = React.memo(function RigControl({ trackerId: trackerIdOverride
         ? 'Command in progress'
         : [RIG_STATES.STOPPED, RIG_STATES.DISCONNECTED, RIG_STATES.CONNECTED].includes(effectiveTrackingState['rig_state'])
             ? 'Rig is not currently tracking'
-            : effectiveSatelliteId === ""
-                ? 'Select a satellite first'
+            : !hasSelectedTarget
+                ? 'Select a target first'
                 : ["none", ""].includes(effectiveSelectedRadioRigValue)
                     ? 'Select a rig first'
                     : null;
@@ -365,14 +423,16 @@ const RigControl = React.memo(function RigControl({ trackerId: trackerIdOverride
     }, [effectiveAvailableTransmitters]);
 
     const handleTrackingStop = () => {
-        const newTrackingState = {
-            ...effectiveTrackingState,
-            tracker_id: scopedTrackerId,
-            'rig_state': RIG_STATES.STOPPED,
-            'vfo1': effectiveSelectedVFO1,
-            'vfo2': effectiveSelectedVFO2,
-        };
-        dispatch(setTrackingStateInBackend({socket, data: newTrackingState}));
+        dispatch(
+            setTrackingStateInBackend({
+                socket,
+                data: buildTrackingPayload({
+                    rig_state: RIG_STATES.STOPPED,
+                    vfo1: effectiveSelectedVFO1,
+                    vfo2: effectiveSelectedVFO2,
+                }),
+            })
+        );
     };
 
     function getConnectionStatusofRig() {
@@ -386,19 +446,16 @@ const RigControl = React.memo(function RigControl({ trackerId: trackerIdOverride
     }
 
     const handleTrackingStart = () => {
-        const newTrackingState = {
-            'tracker_id': scopedTrackerId,
-            'norad_id': effectiveSatelliteId,
-            'group_id': effectiveGroupId,
-            'rotator_state': effectiveTrackingState['rotator_state'],
-            'rig_state': RIG_STATES.TRACKING,
-            'rig_id': effectiveSelectedRadioRig,
-            'rotator_id': effectiveSelectedRotator,
-            'transmitter_id': effectiveSelectedTransmitter,
-            'rig_vfo': effectiveSelectedRigVFO,
-            'vfo1': effectiveSelectedVFO1,
-            'vfo2': effectiveSelectedVFO2,
-        };
+        const newTrackingState = buildTrackingPayload({
+            rotator_state: effectiveTrackingState['rotator_state'],
+            rig_state: RIG_STATES.TRACKING,
+            rig_id: effectiveSelectedRadioRig,
+            rotator_id: effectiveSelectedRotator,
+            transmitter_id: effectiveSelectedTransmitter,
+            rig_vfo: effectiveSelectedRigVFO,
+            vfo1: effectiveSelectedVFO1,
+            vfo2: effectiveSelectedVFO2,
+        });
 
         dispatch(setTrackingStateInBackend({socket, data: newTrackingState}))
             .unwrap()
@@ -444,20 +501,16 @@ const RigControl = React.memo(function RigControl({ trackerId: trackerIdOverride
         const transmitterId = event.target.value;
         dispatch(setSelectedTransmitter({ value: transmitterId, trackerId: scopedTrackerId }));
 
-        const data = {
-            ...effectiveTrackingState,
-            'tracker_id': scopedTrackerId,
-            'norad_id': effectiveSatelliteId,
-            'rotator_state': effectiveTrackingState['rotator_state'],
-            'rig_state': effectiveTrackingState['rig_state'],
-            'group_id': effectiveGroupId,
-            'rig_id': effectiveSelectedRadioRig,
-            'rotator_id': effectiveSelectedRotator,
-            'transmitter_id': event.target.value,
-            'rig_vfo': effectiveSelectedRigVFO,
-            'vfo1': effectiveSelectedVFO1,
-            'vfo2': effectiveSelectedVFO2,
-        };
+        const data = buildTrackingPayload({
+            rotator_state: effectiveTrackingState['rotator_state'],
+            rig_state: effectiveTrackingState['rig_state'],
+            rig_id: effectiveSelectedRadioRig,
+            rotator_id: effectiveSelectedRotator,
+            transmitter_id: event.target.value,
+            rig_vfo: effectiveSelectedRigVFO,
+            vfo1: effectiveSelectedVFO1,
+            vfo2: effectiveSelectedVFO2,
+        });
 
         dispatch(setTrackingStateInBackend({ socket: socket, data: data}))
             .unwrap()
@@ -473,20 +526,16 @@ const RigControl = React.memo(function RigControl({ trackerId: trackerIdOverride
         const vfoValue = event.target.value;
         dispatch(setRigVFO({ value: vfoValue, trackerId: scopedTrackerId }));
 
-        const data = {
-            ...effectiveTrackingState,
-            'tracker_id': scopedTrackerId,
-            'norad_id': effectiveSatelliteId,
-            'rotator_state': effectiveTrackingState['rotator_state'],
-            'rig_state': effectiveTrackingState['rig_state'],
-            'group_id': effectiveGroupId,
-            'rig_id': effectiveSelectedRadioRig,
-            'rotator_id': effectiveSelectedRotator,
-            'transmitter_id': effectiveSelectedTransmitter,
-            'rig_vfo': event.target.value,
-            'vfo1': effectiveSelectedVFO1,
-            'vfo2': effectiveSelectedVFO2,
-        };
+        const data = buildTrackingPayload({
+            rotator_state: effectiveTrackingState['rotator_state'],
+            rig_state: effectiveTrackingState['rig_state'],
+            rig_id: effectiveSelectedRadioRig,
+            rotator_id: effectiveSelectedRotator,
+            transmitter_id: effectiveSelectedTransmitter,
+            rig_vfo: event.target.value,
+            vfo1: effectiveSelectedVFO1,
+            vfo2: effectiveSelectedVFO2,
+        });
 
         dispatch(setTrackingStateInBackend({ socket: socket, data: data}))
             .unwrap()
@@ -502,20 +551,16 @@ const RigControl = React.memo(function RigControl({ trackerId: trackerIdOverride
         const vfo1Value = event.target.value;
         dispatch(setVFO1({ value: vfo1Value, trackerId: scopedTrackerId }));
 
-        const data = {
-            ...effectiveTrackingState,
-            'tracker_id': scopedTrackerId,
-            'norad_id': effectiveSatelliteId,
-            'rotator_state': effectiveTrackingState['rotator_state'],
-            'rig_state': effectiveTrackingState['rig_state'],
-            'group_id': effectiveGroupId,
-            'rig_id': effectiveSelectedRadioRig,
-            'rotator_id': effectiveSelectedRotator,
-            'transmitter_id': effectiveSelectedTransmitter,
-            'rig_vfo': effectiveSelectedRigVFO,
-            'vfo1': vfo1Value,
-            'vfo2': effectiveSelectedVFO2,
-        };
+        const data = buildTrackingPayload({
+            rotator_state: effectiveTrackingState['rotator_state'],
+            rig_state: effectiveTrackingState['rig_state'],
+            rig_id: effectiveSelectedRadioRig,
+            rotator_id: effectiveSelectedRotator,
+            transmitter_id: effectiveSelectedTransmitter,
+            rig_vfo: effectiveSelectedRigVFO,
+            vfo1: vfo1Value,
+            vfo2: effectiveSelectedVFO2,
+        });
 
         dispatch(setTrackingStateInBackend({ socket: socket, data: data}))
             .unwrap()
@@ -531,20 +576,16 @@ const RigControl = React.memo(function RigControl({ trackerId: trackerIdOverride
         const vfo2Value = event.target.value;
         dispatch(setVFO2({ value: vfo2Value, trackerId: scopedTrackerId }));
 
-        const data = {
-            ...effectiveTrackingState,
-            'tracker_id': scopedTrackerId,
-            'norad_id': effectiveSatelliteId,
-            'rotator_state': effectiveTrackingState['rotator_state'],
-            'rig_state': effectiveTrackingState['rig_state'],
-            'group_id': effectiveGroupId,
-            'rig_id': effectiveSelectedRadioRig,
-            'rotator_id': effectiveSelectedRotator,
-            'transmitter_id': effectiveSelectedTransmitter,
-            'rig_vfo': effectiveSelectedRigVFO,
-            'vfo1': effectiveSelectedVFO1,
-            'vfo2': vfo2Value,
-        };
+        const data = buildTrackingPayload({
+            rotator_state: effectiveTrackingState['rotator_state'],
+            rig_state: effectiveTrackingState['rig_state'],
+            rig_id: effectiveSelectedRadioRig,
+            rotator_id: effectiveSelectedRotator,
+            transmitter_id: effectiveSelectedTransmitter,
+            rig_vfo: effectiveSelectedRigVFO,
+            vfo1: effectiveSelectedVFO1,
+            vfo2: vfo2Value,
+        });
 
         dispatch(setTrackingStateInBackend({ socket: socket, data: data}))
             .unwrap()
@@ -564,20 +605,16 @@ const RigControl = React.memo(function RigControl({ trackerId: trackerIdOverride
         dispatch(setVFO1({ value: tempVFO2, trackerId: scopedTrackerId }));
         dispatch(setVFO2({ value: tempVFO1, trackerId: scopedTrackerId }));
 
-        const data = {
-            ...effectiveTrackingState,
-            'tracker_id': scopedTrackerId,
-            'norad_id': effectiveSatelliteId,
-            'rotator_state': effectiveTrackingState['rotator_state'],
-            'rig_state': effectiveTrackingState['rig_state'],
-            'group_id': effectiveGroupId,
-            'rig_id': effectiveSelectedRadioRig,
-            'rotator_id': effectiveSelectedRotator,
-            'transmitter_id': effectiveSelectedTransmitter,
-            'rig_vfo': effectiveSelectedRigVFO,
-            'vfo1': tempVFO2,
-            'vfo2': tempVFO1,
-        };
+        const data = buildTrackingPayload({
+            rotator_state: effectiveTrackingState['rotator_state'],
+            rig_state: effectiveTrackingState['rig_state'],
+            rig_id: effectiveSelectedRadioRig,
+            rotator_id: effectiveSelectedRotator,
+            transmitter_id: effectiveSelectedTransmitter,
+            rig_vfo: effectiveSelectedRigVFO,
+            vfo1: tempVFO2,
+            vfo2: tempVFO1,
+        });
 
         dispatch(setTrackingStateInBackend({ socket: socket, data: data}))
             .unwrap()
@@ -590,28 +627,24 @@ const RigControl = React.memo(function RigControl({ trackerId: trackerIdOverride
     }
 
     function connectRig() {
-        const data = {
-            ...effectiveTrackingState,
-            'tracker_id': scopedTrackerId,
-            'rig_state': RIG_STATES.CONNECTED,
-            'rig_id': effectiveSelectedRadioRig,
-            'rig_vfo': effectiveSelectedRigVFO,
-            'vfo1': effectiveSelectedVFO1,
-            'vfo2': effectiveSelectedVFO2,
-        };
+        const data = buildTrackingPayload({
+            rig_state: RIG_STATES.CONNECTED,
+            rig_id: effectiveSelectedRadioRig,
+            rig_vfo: effectiveSelectedRigVFO,
+            vfo1: effectiveSelectedVFO1,
+            vfo2: effectiveSelectedVFO2,
+        });
         dispatch(setTrackingStateInBackend({ socket, data: data}));
     }
 
     function disconnectRig() {
-        const data = {
-            ...effectiveTrackingState,
-            'tracker_id': scopedTrackerId,
-            'rig_state': RIG_STATES.DISCONNECTED,
-            'rig_id': effectiveSelectedRadioRig,
-            'rig_vfo': effectiveSelectedRigVFO,
-            'vfo1': effectiveSelectedVFO1,
-            'vfo2': effectiveSelectedVFO2,
-        };
+        const data = buildTrackingPayload({
+            rig_state: RIG_STATES.DISCONNECTED,
+            rig_id: effectiveSelectedRadioRig,
+            rig_vfo: effectiveSelectedRigVFO,
+            vfo1: effectiveSelectedVFO1,
+            vfo2: effectiveSelectedVFO2,
+        });
         dispatch(setTrackingStateInBackend({ socket, data: data}));
     }
 

@@ -103,7 +103,7 @@ import {
     taskCompleted,
     taskStopped,
     taskError,
-    setTaskList,
+    reconcileTaskSnapshot,
 } from '../components/tasks/tasks-slice.jsx';
 import {
     setCelestialSceneLive,
@@ -127,6 +127,23 @@ export const useSocketEventHandlers = (socket, enabled = true) => {
     useEffect(() => {
         if (!socket || !enabled) return;
         let lastBootstrappedSocketId = null;
+        const syncBackgroundTaskSnapshot = async () => {
+            try {
+                const taskListReply = await socket.emitWithAck("api.call", {
+                    cmd: "background-task.list",
+                    data: {
+                        only_running: false,
+                    },
+                });
+                if (taskListReply?.success) {
+                    dispatch(reconcileTaskSnapshot({ tasks: taskListReply.tasks || [] }));
+                } else {
+                    console.warn('Failed to fetch background task snapshot:', taskListReply?.error);
+                }
+            } catch (error) {
+                console.warn('Error fetching background task snapshot:', error);
+            }
+        };
 
         const handleConnect = async () => {
             // Avoid duplicate bootstrap for the same socket session when listeners
@@ -170,13 +187,9 @@ export const useSocketEventHandlers = (socket, enabled = true) => {
                 store.dispatch(cleanupStaleDecoders());
             }, 1000);
 
-            // Request current background tasks list (in case tasks started before we connected)
-            socket.emit("api.call", {
-  cmd: "background-task.list",
-  data: {
-    filter: 'all'
-  }
-});
+            // Reconcile task state after reconnect so missed completion events
+            // (during setup/login socket turnover) cannot leave stale running tasks.
+            await syncBackgroundTaskSnapshot();
 
             // toast.success(
             //     <ToastMessage
@@ -222,7 +235,7 @@ export const useSocketEventHandlers = (socket, enabled = true) => {
             }
         });
 
-        // Session runtime snapshot stream
+        // Authenticated-only runtime snapshot stream.
         socket.on('session-runtime-snapshot', (snapshot) => {
             try {
                 store.dispatch(setRuntimeSnapshot(snapshot));
@@ -258,14 +271,14 @@ export const useSocketEventHandlers = (socket, enabled = true) => {
             dispatch(setConnecting(false));
             dispatch(setConnected(false));
             dispatch(setDisconnected(true));
-            dispatch(setConnectionError(error?.message || 'Unable to connect to backend'));
+            dispatch(setConnectionError(error?.message || t('notifications.connection.unable_to_connect_backend')));
         });
 
         socket.on('reconnect_error', (error) => {
             dispatch(setConnecting(true));
             dispatch(setConnected(false));
             dispatch(setDisconnected(true));
-            dispatch(setConnectionError(error?.message || 'Reconnection failed'));
+            dispatch(setConnectionError(error?.message || t('notifications.connection.reconnection_failed')));
         });
 
         // Satellite sync events
@@ -300,8 +313,7 @@ export const useSocketEventHandlers = (socket, enabled = true) => {
         });
 
         // File browser state updates (pub/sub model)
-        socket.on("file_browser_state", (state) => {
-
+        const handleFileBrowserState = (state) => {
             switch (state.action) {
                 case 'list-files':
                     // Manually dispatch fulfilled action with actual data (not pending)
@@ -346,7 +358,8 @@ export const useSocketEventHandlers = (socket, enabled = true) => {
                 default:
                     console.warn('Unknown file browser action:', state.action);
             }
-        });
+        };
+        socket.on("file_browser_state", handleFileBrowserState);
 
         // File browser errors
         socket.on("file_browser_error", (errorData) => {
@@ -395,7 +408,7 @@ export const useSocketEventHandlers = (socket, enabled = true) => {
             store.dispatch(setErrorMessage(error.message));
             store.dispatch(setErrorDialogOpen(true));
             store.dispatch(setStartStreamingLoading(false));
-            toast.error(`Failed to configure SDR: ${error.message}`);
+            toast.error(t('notifications.sdr.configure_failed', { error: error.message }));
         });
 
         // SDR error events
@@ -444,7 +457,7 @@ export const useSocketEventHandlers = (socket, enabled = true) => {
                         // Intentionally silent: suppress rig disconnect toast.
                     } else if (event.name === 'min_elevation_out_of_bounds') {
                         const satelliteData = message['data']?.['satellite_data'];
-                        const satName = satelliteData?.details?.name || 'Unknown';
+                        const satName = satelliteData?.details?.name || t('unknown');
                         const noradId = satelliteData?.details?.norad_id || '';
                         toast.error(
                             <ToastMessage
@@ -457,7 +470,7 @@ export const useSocketEventHandlers = (socket, enabled = true) => {
                         );
                     } else if (event.name === 'max_elevation_out_of_bounds') {
                         const satelliteData = message['data']?.['satellite_data'];
-                        const satName = satelliteData?.details?.name || 'Unknown';
+                        const satName = satelliteData?.details?.name || t('unknown');
                         const noradId = satelliteData?.details?.norad_id || '';
                         toast.error(
                             <ToastMessage
@@ -470,7 +483,7 @@ export const useSocketEventHandlers = (socket, enabled = true) => {
                         );
                     } else if (event.name === 'min_azimuth_out_of_bounds') {
                         const satelliteData = message['data']?.['satellite_data'];
-                        const satName = satelliteData?.details?.name || 'Unknown';
+                        const satName = satelliteData?.details?.name || t('unknown');
                         const noradId = satelliteData?.details?.norad_id || '';
                         toast.error(
                             <ToastMessage
@@ -483,7 +496,7 @@ export const useSocketEventHandlers = (socket, enabled = true) => {
                         );
                     } else if (event.name === 'max_azimuth_out_of_bounds') {
                         const satelliteData = message['data']?.['satellite_data'];
-                        const satName = satelliteData?.details?.name || 'Unknown';
+                        const satName = satelliteData?.details?.name || t('unknown');
                         const noradId = satelliteData?.details?.norad_id || '';
                         toast.error(
                             <ToastMessage
@@ -551,7 +564,7 @@ export const useSocketEventHandlers = (socket, enabled = true) => {
 
             toast.error(
                 <ToastMessage
-                    title={`${errorIcon} Transcription Error`}
+                    title={t('notifications.transcription.error_title', { icon: errorIcon })}
                     body={data.message}
                 />,
                 {
@@ -569,7 +582,7 @@ export const useSocketEventHandlers = (socket, enabled = true) => {
             const observation = state.scheduler.observations.find(obs => obs.id === data.id);
 
             if (observation && observation.enabled) {
-                const satName = observation.satellite?.name || 'Unknown';
+                const satName = observation.satellite?.name || t('unknown');
                 const obsName = observation.name || satName;
 
                 if (data.status === 'running') {
@@ -588,14 +601,16 @@ export const useSocketEventHandlers = (socket, enabled = true) => {
                     }
 
                     const details = [
-                        `Satellite: ${satName}`,
-                        duration ? `Duration: ${duration}` : null,
-                        observation.tasks?.length > 0 ? `Completed ${observation.tasks.length} task${observation.tasks.length > 1 ? 's' : ''}` : null,
+                        t('notifications.observation.satellite_line', { name: satName }),
+                        duration ? t('notifications.observation.duration_line', { duration }) : null,
+                        observation.tasks?.length > 0
+                            ? t('notifications.observation.tasks_completed', { count: observation.tasks.length })
+                            : null,
                     ].filter(Boolean).join('\n');
 
                     toast.success(
                         <ToastMessage
-                            title={`Observation Completed: ${obsName}`}
+                            title={t('notifications.observation.completed_title', { name: obsName })}
                             body={details}
                         />,
                         {
@@ -608,8 +623,8 @@ export const useSocketEventHandlers = (socket, enabled = true) => {
                     // Observation failed
                     toast.error(
                         <ToastMessage
-                            title={`Observation Failed: ${obsName}`}
-                            body={`Satellite: ${satName}`}
+                            title={t('notifications.observation.failed_title', { name: obsName })}
+                            body={t('notifications.observation.satellite_line', { name: satName })}
                         />,
                         {
                             icon: () => <ErrorOutlineIcon />,
@@ -621,8 +636,8 @@ export const useSocketEventHandlers = (socket, enabled = true) => {
                     // Observation cancelled
                     toast.warning(
                         <ToastMessage
-                            title={`Observation Cancelled: ${obsName}`}
-                            body={`Satellite: ${satName}`}
+                            title={t('notifications.observation.cancelled_title', { name: obsName })}
+                            body={t('notifications.observation.satellite_line', { name: satName })}
                         />,
                         {
                             icon: () => <CancelIcon />,
@@ -648,7 +663,7 @@ export const useSocketEventHandlers = (socket, enabled = true) => {
             observations.forEach(obs => {
                 if (!obs.enabled || obs.status !== 'scheduled' || !obs.pass) return;
 
-                const satName = obs.satellite?.name || 'Unknown';
+                const satName = obs.satellite?.name || t('unknown');
                 const eventStart = new Date(obs.pass.event_start); // AOS
                 const taskStart = new Date(obs.task_start || obs.pass.event_start);
 
@@ -664,17 +679,19 @@ export const useSocketEventHandlers = (socket, enabled = true) => {
                     notifiedVisibility.current.add(obs.id);
 
                     const minutesUntilStart = Math.ceil(timeUntilStart / 60000);
-                    const peakElevation = obs.pass.peak_altitude ? `${obs.pass.peak_altitude.toFixed(0)}°` : 'N/A';
+                    const peakElevation = obs.pass.peak_altitude ? `${obs.pass.peak_altitude.toFixed(0)}°` : t('not_available');
 
                     const details = [
-                        `Peak elevation: ${peakElevation}`,
-                        minutesUntilStart > 0 ? `Observation starts in ${minutesUntilStart} minute${minutesUntilStart !== 1 ? 's' : ''}` : 'Observation starting now',
+                        t('notifications.observation.peak_elevation_line', { peakElevation }),
+                        minutesUntilStart > 0
+                            ? t('notifications.observation.starts_in', { count: minutesUntilStart })
+                            : t('notifications.observation.starts_now'),
                         obs.sdr?.name ? `SDR: ${obs.sdr.name}` : null,
                     ].filter(Boolean).join('\n');
 
                     toast.info(
                         <ToastMessage
-                            title={`Satellite Visible: ${satName}`}
+                            title={t('notifications.observation.visible_title', { name: satName })}
                             body={details}
                         />,
                         {
@@ -806,8 +823,8 @@ export const useSocketEventHandlers = (socket, enabled = true) => {
             dispatch(taskStopped(data));
             toast.warning(
                 <ToastMessage
-                    title={`Task stopped: ${data.name}`}
-                    body={`Duration: ${Math.floor(data.duration / 1000)}s`}
+                    title={t('notifications.tasks.stopped_title', { name: data.name })}
+                    body={t('notifications.tasks.duration_seconds', { seconds: Math.floor(data.duration / 1000) })}
                 />,
                 {
                     icon: () => <CancelIcon />,
@@ -820,7 +837,7 @@ export const useSocketEventHandlers = (socket, enabled = true) => {
             dispatch(taskError(data));
             toast.error(
                 <ToastMessage
-                    title={`Task error: ${data.name}`}
+                    title={t('notifications.tasks.error_title', { name: data.name })}
                     body={data.error}
                 />,
                 {
@@ -831,7 +848,7 @@ export const useSocketEventHandlers = (socket, enabled = true) => {
         });
 
         socket.on('background_task:list', (data) => {
-            dispatch(setTaskList(data));
+            dispatch(reconcileTaskSnapshot(data));
         });
 
         socket.on('celestial-scene-update', (data) => {
@@ -853,8 +870,8 @@ export const useSocketEventHandlers = (socket, enabled = true) => {
             // Show notification that discovery is running
             toast.info(
                 <ToastMessage
-                    title="SoapySDR Discovery Started"
-                    body={`Searching for servers (${data.duration}s)...`}
+                    title={t('notifications.soapysdr.discovery_started_title')}
+                    body={t('notifications.soapysdr.discovery_started_body', { duration: data.duration })}
                 />,
                 {
                     icon: () => <RadioIcon />,
@@ -867,14 +884,18 @@ export const useSocketEventHandlers = (socket, enabled = true) => {
             console.log('SoapySDR discovery completed:', data);
             // Refresh the server list in Redux store
             dispatch(fetchSoapySDRServers({ socket }));
+            void syncBackgroundTaskSnapshot();
 
             const sdrCount = data.sdr_count ?? data.active_count ?? 0;
 
             // Show notification
             toast.success(
                 <ToastMessage
-                    title="SoapySDR Discovery Complete"
-                    body={`Found ${data.server_count} server(s), ${sdrCount} SDR(s) active`}
+                    title={t('notifications.soapysdr.discovery_complete_title')}
+                    body={t('notifications.soapysdr.discovery_complete_body', {
+                        servers: data.server_count,
+                        sdrs: sdrCount,
+                    })}
                 />,
                 {
                     icon: () => <RadioIcon />,
@@ -887,13 +908,15 @@ export const useSocketEventHandlers = (socket, enabled = true) => {
             console.log('SoapySDR refresh completed:', data);
             // Refresh the server list in Redux store
             dispatch(fetchSoapySDRServers({ socket }));
+            void syncBackgroundTaskSnapshot();
         });
 
         socket.on('soapysdr:discovery_error', (data) => {
             console.error('SoapySDR discovery error:', data);
+            void syncBackgroundTaskSnapshot();
             toast.error(
                 <ToastMessage
-                    title="SoapySDR Discovery Error"
+                    title={t('notifications.soapysdr.discovery_error_title')}
                     body={data.error}
                 />,
                 {
@@ -919,7 +942,7 @@ export const useSocketEventHandlers = (socket, enabled = true) => {
             socket.off("ui-tracker-state");
             socket.off("tracker-command-status");
             socket.off("tracker-instances");
-            socket.off("file_browser_state");
+            socket.off("file_browser_state", handleFileBrowserState);
             socket.off("file_browser_error");
             socket.off("recording_state");
             socket.off("vfo-states");

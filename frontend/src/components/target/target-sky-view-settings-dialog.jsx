@@ -74,6 +74,20 @@ const DIALOG_TITLE_SX = {
     fontWeight: 'bold',
     py: 2.2,
 };
+const FOOTER_ACTION_ROW_SX = {
+    width: '100%',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 1,
+    overflowX: 'auto',
+    msOverflowStyle: 'none',
+    scrollbarWidth: 'none',
+    '&::-webkit-scrollbar': { display: 'none' },
+    '& > *': {
+        flexShrink: 0,
+        whiteSpace: 'nowrap',
+    },
+};
 
 const normalizeTargetViewMode = (value) => (
     value === TARGET_VIEW_MODE_PLANETARIUM ? TARGET_VIEW_MODE_PLANETARIUM : TARGET_VIEW_MODE_SOLAR_SYSTEM
@@ -320,35 +334,29 @@ function TargetSkyViewSettingsDialog({ updateBackend }) {
                         borderColor: 'divider',
                     }}
                 >
-                    <Stack
-                        direction={{ xs: 'column', sm: 'row' }}
-                        spacing={1}
-                        alignItems={{ xs: 'stretch', sm: 'center' }}
-                        justifyContent="space-between"
-                    >
-                        <Button variant="text" onClick={handleReset}>
+                    <Box sx={FOOTER_ACTION_ROW_SX}>
+                        <Button variant="outlined" onClick={handleReset}>
                             {t('map_settings.reset_defaults', { defaultValue: 'Reset Defaults' })}
                         </Button>
-                        <Stack direction="row" spacing={1} justifyContent="flex-end" alignItems="center">
-                            {saveFeedbackLabel ? (
-                                <Chip
-                                    size="small"
-                                    color={saveState === 'error' ? 'error' : saveState === 'saved' ? 'success' : 'default'}
-                                    label={saveFeedbackLabel}
-                                />
-                            ) : null}
-                            <Button variant="outlined" onClick={handleClose}>
-                                {t('close', { defaultValue: 'Close' })}
-                            </Button>
-                            <Button
-                                variant="contained"
-                                onClick={handleApply}
-                                disabled={!isDirty || saveState === 'saving'}
-                            >
-                                {t('map_settings.apply', { defaultValue: 'Apply' })}
-                            </Button>
-                        </Stack>
-                    </Stack>
+                        <Box sx={{ flex: 1, minWidth: 8 }} />
+                        {saveFeedbackLabel ? (
+                            <Chip
+                                size="small"
+                                color={saveState === 'error' ? 'error' : saveState === 'saved' ? 'success' : 'default'}
+                                label={saveFeedbackLabel}
+                            />
+                        ) : null}
+                        <Button variant="outlined" onClick={handleClose}>
+                            {t('close', { defaultValue: 'Close' })}
+                        </Button>
+                        <Button
+                            variant="contained"
+                            onClick={handleApply}
+                            disabled={!isDirty || saveState === 'saving'}
+                        >
+                            {t('map_settings.apply', { defaultValue: 'Apply' })}
+                        </Button>
+                    </Box>
                 </Box>
             </DialogContent>
         </Dialog>

@@ -323,7 +323,7 @@ export function useTargetRotatorSelectionDialog() {
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
                     <Box sx={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
                         <Typography variant="subtitle1" sx={{ fontWeight: 800, lineHeight: 1.2 }}>
-                            {t('target_retarget_dialog.title', { defaultValue: 'Retarget Target' })}
+                            {t('target_retarget_dialog.title', { defaultValue: 'Retarget slot or create a new target' })}
                         </Typography>
                         <Typography variant="caption" color="text.secondary" sx={{ mt: 0.2 }}>
                             {t('target_retarget_dialog.subtitle', { defaultValue: 'Choose to retarget the active slot or create a new one' })}

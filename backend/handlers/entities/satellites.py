@@ -71,6 +71,15 @@ def _resolve_target_search_hints(query: str) -> Dict[str, Any]:
     }
 
 
+def _build_mission_transmitter_target_key(mission: Dict[str, Any]) -> str:
+    command = str(mission.get("command") or "").strip()
+    return f"mission:{command}" if command else ""
+
+
+def _build_body_transmitter_target_key(body_id: str) -> str:
+    return crud.transmitters.build_target_key(target_type="body", body_id=body_id) or ""
+
+
 async def get_satellites(
     sio: Any, data: Optional[Dict], logger: Any, sid: str
 ) -> Dict[str, Union[bool, list]]:
@@ -147,6 +156,20 @@ async def get_satellites_for_group_id(
             logger.debug(f"No satellites found for group id: {data}")
 
         return {"success": satellites["success"], "data": satellites.get("data", [])}
+
+
+async def get_satellite_catalog_stats(
+    sio: Any, data: Optional[Dict], logger: Any, sid: str
+) -> Dict[str, Union[bool, dict, str, None]]:
+    """Get aggregate satellite catalog stats for the admin catalog page."""
+    async with AsyncSessionLocal() as dbsession:
+        logger.debug("Getting satellite catalog stats")
+        stats = await crud.satellites.fetch_satellite_catalog_stats(dbsession)
+        return {
+            "success": bool(stats.get("success")),
+            "data": stats.get("data", {}),
+            "error": stats.get("error"),
+        }
 
 
 async def search_satellites(
@@ -253,6 +276,24 @@ async def search_targets(
         else:
             body_rows = search_celestial_bodies(query=query, limit=limit)
 
+        mission_target_keys = [
+            _build_mission_transmitter_target_key(mission) for mission in mission_rows
+        ]
+        body_target_keys = [
+            _build_body_transmitter_target_key(str(body.get("body_id") or "").strip().lower())
+            for body in body_rows
+        ]
+        target_keys = [key for key in [*mission_target_keys, *body_target_keys] if key]
+        transmitters_by_target_key: Dict[str, List[Dict[str, Any]]] = {}
+        if target_keys:
+            async with AsyncSessionLocal() as dbsession:
+                transmitters_reply = await crud.transmitters.fetch_transmitters_for_target_keys(
+                    dbsession,
+                    target_keys,
+                )
+            if transmitters_reply.get("success"):
+                transmitters_by_target_key = transmitters_reply.get("data", {}) or {}
+
         results = []
 
         for satellite in satellite_rows:
@@ -283,15 +324,20 @@ async def search_targets(
             command = str(mission.get("command") or "").strip()
             if not command:
                 continue
+            target_key = _build_mission_transmitter_target_key(mission)
+            mission_id = str(mission.get("id") or "").strip().lower()
             display_name = str(mission.get("display_name") or command).strip()
             results.append(
                 {
-                    "id": f"mission:{command.lower()}",
+                    "id": target_key,
                     "target_type": "mission",
+                    "target_key": target_key,
                     "target_name": display_name,
                     "target_identifier": command,
+                    "mission_id": mission_id or None,
                     "command": command,
                     "display_name": display_name,
+                    "transmitters": transmitters_by_target_key.get(target_key, []),
                     "mission_status": str(mission.get("mission_status") or "unknown")
                     .strip()
                     .lower(),
@@ -303,15 +349,18 @@ async def search_targets(
             body_id = str(body.get("body_id") or "").strip().lower()
             if not body_id:
                 continue
+            target_key = _build_body_transmitter_target_key(body_id)
             body_name = str(body.get("name") or body_id).strip()
             results.append(
                 {
-                    "id": f"body:{body_id}",
+                    "id": target_key or f"body:{body_id}",
                     "target_type": "body",
+                    "target_key": target_key,
                     "target_name": body_name,
                     "target_identifier": body_id,
                     "body_id": body_id,
                     "name": body_name,
+                    "transmitters": transmitters_by_target_key.get(target_key, []),
                     "body_type": str(body.get("body_type") or "").strip(),
                     "parent_body_id": str(body.get("parent_body_id") or "").strip().lower(),
                 }
@@ -477,6 +526,7 @@ def register_handlers(registry):
             "get-satellites": (get_satellites, "api_call"),
             "get-satellite": (get_satellite, "api_call"),
             "get-satellites-for-group-id": (get_satellites_for_group_id, "api_call"),
+            "get-satellite-catalog-stats": (get_satellite_catalog_stats, "api_call"),
             "get-satellite-search": (search_satellites, "api_call"),
             "get-target-search": (search_targets, "api_call"),
             "submit-satellite": (submit_satellite, "api_call"),

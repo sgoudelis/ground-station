@@ -96,7 +96,15 @@ const MODE_OPTIONS = [
 
 
 // Transmitter Edit/Add Modal Component
-const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = false }) => {
+const TransmitterModal = ({
+    open,
+    onClose,
+    onSavedTransmitters,
+    transmitter,
+    satelliteId,
+    targetKey,
+    isNew = false,
+}) => {
     const dispatch = useDispatch();
     const {socket} = useSocket();
     const { loading, error } = useSelector(state => state.satellites);
@@ -119,6 +127,8 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
     });
 
     const [validationErrors, setValidationErrors] = useState({});
+    const normalizedTargetKey = String(targetKey || '').trim();
+    const hasSatelliteOwner = satelliteId != null && String(satelliteId).trim() !== '';
 
     const fromNullableField = useCallback((value) => {
         if (value === "-" || value === null || value === undefined) {
@@ -253,9 +263,18 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
             baud: toNullableField(formData.baud),
         };
 
+        // Keep satellite payloads unchanged while enabling mission/body ownership via target_key.
+        const ownerPayload = normalizedTargetKey
+            ? { target_key: normalizedTargetKey }
+            : (hasSatelliteOwner ? { satelliteId } : null);
+        if (!ownerPayload) {
+            console.error('Missing transmitter owner. Expected satelliteId or target_key.');
+            return;
+        }
+
         const transmitterData = {
             ...processedData,
-            satelliteId: satelliteId,
+            ...ownerPayload,
             ...(isNew ? {} : { id: transmitter.id })
         };
 
@@ -267,15 +286,19 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
                 })).unwrap();
 
                 // Update the transmitters with the response
-                dispatch(setClickedSatelliteTransmitters(result));
+                if (!normalizedTargetKey) {
+                    dispatch(setClickedSatelliteTransmitters(result));
+                }
                 dispatch(
                     setTargetTransmitters({
-                        noradId: satelliteId,
+                        noradId: hasSatelliteOwner ? satelliteId : null,
+                        targetKey: normalizedTargetKey || null,
                         transmitters: result,
                         updatedAtMs: Date.now(),
                         lockDurationMs: 5000,
                     })
                 );
+                onSavedTransmitters?.(result);
             } else {
                 const result = await dispatch(editTransmitter({
                     socket,
@@ -283,15 +306,19 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
                 })).unwrap();
 
                 // Update the transmitters with the response
-                dispatch(setClickedSatelliteTransmitters(result));
+                if (!normalizedTargetKey) {
+                    dispatch(setClickedSatelliteTransmitters(result));
+                }
                 dispatch(
                     setTargetTransmitters({
-                        noradId: satelliteId,
+                        noradId: hasSatelliteOwner ? satelliteId : null,
+                        targetKey: normalizedTargetKey || null,
                         transmitters: result,
                         updatedAtMs: Date.now(),
                         lockDurationMs: 5000,
                     })
                 );
+                onSavedTransmitters?.(result);
             }
 
             // Close modal on successful submission

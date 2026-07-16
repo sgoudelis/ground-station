@@ -18,6 +18,11 @@ import logging
 import os
 from datetime import datetime
 
+from common.filenames import (
+    looks_like_path_input,
+    resolve_base_path_within_root,
+    sanitize_filename_component,
+)
 from demodulators.audiorecorder import AudioRecorder
 from pipeline.orchestration.processmanager import process_manager
 
@@ -78,9 +83,16 @@ def start_audio_recording(
     # Use default name if not provided
     if not recording_name or not recording_name.strip():
         recording_name = "audio_recording"
+    recording_name = str(recording_name).strip()
+    if looks_like_path_input(recording_name):
+        logger.warning(
+            "Path-like audio recording name received from client %s: %r",
+            client_id,
+            recording_name,
+        )
 
-    # Sanitize filename
-    recording_name = recording_name.replace(" ", "_").replace("/", "_")
+    # Sanitize filename before appending task metadata.
+    recording_name = sanitize_filename_component(recording_name, default="audio_recording")
 
     # Append VFO number and timestamp
     recording_name_full = f"{recording_name}_vfo{vfo_number}_{timestamp}"
@@ -88,9 +100,7 @@ def start_audio_recording(
     # Create audio recordings directory
     backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     audio_dir = os.path.join(backend_dir, "data", "audio")
-    os.makedirs(audio_dir, exist_ok=True)
-
-    recording_path = os.path.join(audio_dir, recording_name_full)
+    recording_path = str(resolve_base_path_within_root(audio_dir, recording_name_full))
 
     # Start recorder
     # Note: Demodulators output audio at 44.1kHz (see FMDemodulator.audio_sample_rate)

@@ -18,6 +18,7 @@
  */
 
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     Dialog,
     DialogTitle,
@@ -36,6 +37,7 @@ import { setColumnVisibility } from './scheduler-slice.jsx';
 
 const ObservationsTableSettingsDialog = ({ open, onClose }) => {
     const dispatch = useDispatch();
+    const { t } = useTranslation('common');
     const columnVisibility = useSelector(state => state.scheduler.columnVisibility);
 
     const handleColumnToggle = (columnName) => {
@@ -45,25 +47,25 @@ const ObservationsTableSettingsDialog = ({ open, onClose }) => {
     };
 
     const columns = [
-        { name: 'enabled', label: 'Enabled', category: 'basic', alwaysVisible: true },
-        { name: 'satellite', label: 'Satellite', category: 'basic', alwaysVisible: true },
-        { name: 'peak_elevation', label: 'Peak Elevation', category: 'pass_info' },
-        { name: 'pass_start', label: 'AOS', category: 'timing' },
-        { name: 'task_start', label: 'Task Start', category: 'timing' },
-        { name: 'task_end', label: 'Task End', category: 'timing' },
-        { name: 'pass_end', label: 'LOS', category: 'timing' },
-        { name: 'sdr', label: 'SDR', category: 'equipment' },
-        { name: 'tasks', label: 'Tasks', category: 'configuration' },
-        { name: 'status', label: 'Status', category: 'basic' },
-        { name: 'actions', label: 'Actions', category: 'basic', alwaysVisible: true },
+        { name: 'enabled', labelKey: 'enabled', category: 'basic', alwaysVisible: true },
+        { name: 'satellite', labelKey: 'satellite', category: 'basic', alwaysVisible: true },
+        { name: 'peak_elevation', labelKey: 'peak_elevation', category: 'pass_info' },
+        { name: 'pass_start', labelKey: 'aos', category: 'timing' },
+        { name: 'task_start', labelKey: 'task_start', category: 'timing' },
+        { name: 'task_end', labelKey: 'task_end', category: 'timing' },
+        { name: 'pass_end', labelKey: 'los', category: 'timing' },
+        { name: 'sdr', labelKey: 'sdr', category: 'equipment' },
+        { name: 'tasks', labelKey: 'tasks', category: 'configuration' },
+        { name: 'status', labelKey: 'status', category: 'basic' },
+        { name: 'actions', labelKey: 'actions', category: 'basic', alwaysVisible: true },
     ];
 
     const categories = {
-        basic: 'Basic Information',
-        pass_info: 'Pass Information',
-        timing: 'Timing',
-        equipment: 'Equipment',
-        configuration: 'Configuration',
+        basic: t('scheduler_tables.settings.categories.basic'),
+        pass_info: t('scheduler_tables.settings.categories.pass_info'),
+        timing: t('scheduler_tables.settings.categories.timing'),
+        equipment: t('scheduler_tables.settings.categories.equipment'),
+        configuration: t('scheduler_tables.settings.categories.configuration'),
     };
 
     const columnsByCategory = {
@@ -76,7 +78,7 @@ const ObservationsTableSettingsDialog = ({ open, onClose }) => {
 
     return (
         <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-            <DialogTitle>Observations Table Settings</DialogTitle>
+            <DialogTitle>{t('scheduler_tables.settings.title')}</DialogTitle>
             <DialogContent
                 sx={{
                     bgcolor: (theme) => (
@@ -87,7 +89,7 @@ const ObservationsTableSettingsDialog = ({ open, onClose }) => {
                 }}
             >
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                    Customize which columns are visible in the observations table.
+                    {t('scheduler_tables.settings.subtitle')}
                 </Typography>
 
                 {Object.entries(columnsByCategory).map(([category, cols]) => (
@@ -108,10 +110,10 @@ const ObservationsTableSettingsDialog = ({ open, onClose }) => {
                                     }
                                     label={
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                            {column.label}
+                                            {column.label || t(`scheduler_tables.shared.columns.${column.labelKey}`)}
                                             {column.alwaysVisible && (
                                                 <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                                                    (Always visible)
+                                                    ({t('scheduler_tables.settings.always_visible')})
                                                 </Typography>
                                             )}
                                         </Box>
@@ -125,7 +127,7 @@ const ObservationsTableSettingsDialog = ({ open, onClose }) => {
             </DialogContent>
             <DialogActions>
                 <Button onClick={onClose} variant="contained">
-                    Close
+                    {t('close')}
                 </Button>
             </DialogActions>
         </Dialog>

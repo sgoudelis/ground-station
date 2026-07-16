@@ -16,6 +16,7 @@
 
 import os
 
+from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from common.arguments import arguments
@@ -30,17 +31,50 @@ def _build_database_url(db_path: str) -> str:
 
 
 DATABASE_URL = _build_database_url(arguments.db)
-engine = create_async_engine(
-    DATABASE_URL,
-    echo=False,
-    pool_size=5,
-    max_overflow=10,
-    pool_recycle=3600,
-    connect_args={
-        "check_same_thread": False,
-        "timeout": 30,  # 30 second timeout for database locks
-    },
-)
+
+
+def _apply_sqlite_pragmas(async_engine) -> None:
+    """Apply SQLite concurrency pragmas on every new DBAPI connection."""
+
+    @event.listens_for(async_engine.sync_engine, "connect")
+    def _set_sqlite_pragmas(dbapi_connection, connection_record) -> None:
+        del connection_record
+        cursor = dbapi_connection.cursor()
+        try:
+            # busy_timeout lets SQLite wait for a writer lock before failing fast.
+            # WAL mode allows concurrent readers while one writer is active.
+            # synchronous=NORMAL reduces fsync pressure while remaining durable in WAL mode.
+            for statement in (
+                "PRAGMA busy_timeout = 30000",
+                "PRAGMA journal_mode = WAL",
+                "PRAGMA synchronous = NORMAL",
+            ):
+                try:
+                    cursor.execute(statement)
+                except Exception:
+                    # Keep connection startup resilient even if a pragma is unsupported.
+                    pass
+        finally:
+            cursor.close()
+
+
+def _create_engine(database_url: str):
+    async_engine = create_async_engine(
+        database_url,
+        echo=False,
+        pool_size=5,
+        max_overflow=10,
+        pool_recycle=3600,
+        connect_args={
+            "check_same_thread": False,
+            "timeout": 30,  # 30 second timeout for database locks
+        },
+    )
+    _apply_sqlite_pragmas(async_engine)
+    return async_engine
+
+
+engine = _create_engine(DATABASE_URL)
 
 AsyncSessionLocal = async_sessionmaker(bind=engine, expire_on_commit=False, class_=AsyncSession)
 
@@ -56,14 +90,4 @@ def create_subprocess_engine():
     Returns:
         A new AsyncEngine instance with the same configuration as the main engine
     """
-    return create_async_engine(
-        DATABASE_URL,
-        echo=False,
-        pool_size=5,
-        max_overflow=10,
-        pool_recycle=3600,
-        connect_args={
-            "check_same_thread": False,
-            "timeout": 30,
-        },
-    )
+    return _create_engine(DATABASE_URL)

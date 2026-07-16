@@ -1,0 +1,484 @@
+{
+  "common": {
+    "body": "Σώμα",
+    "mission": "Αποστολή",
+    "error": "Σφάλμα",
+    "stale": "Μπαγιάτικος",
+    "ok": "ΕΝΤΑΞΕΙ",
+    "yes": "Ναί",
+    "no": "Οχι",
+    "unknown": "Αγνωστος",
+    "never": "Ποτέ",
+    "loading": "Φόρτωση..."
+  },
+  "units": {
+    "deg": "deg",
+    "au": "AU",
+    "km_per_s": "km/s",
+    "min": "ελάχ"
+  },
+  "errors": {
+    "unknown_error": "Άγνωστο σφάλμα"
+  },
+  "statusbar": {
+    "planets": "Πλανήτες",
+    "moons": "Φεγγάρια",
+    "tracked": "Παρακολούθησαν"
+  },
+  "toolbar": {
+    "fit_all": "Ταιριάζει σε όλα",
+    "zoom_in": "Μεγέθυνση",
+    "zoom_out": "Σμίκρυνση",
+    "reset_zoom": "Επαναφορά ζουμ",
+    "center_on_sun": "Κέντρο στον Κυρ",
+    "refresh_scene": "Ανανεώστε την ουράνια σκηνή",
+    "layout_options": "Επιλογές διάταξης",
+    "table_settings": "Ρυθμίσεις πίνακα",
+    "go_fullscreen": "Μετάβαση σε πλήρη οθόνη",
+    "exit_fullscreen": "Έξοδος από πλήρη οθόνη"
+  },
+  "main_layout": {
+    "planetarium_title": "Πλανητάριο",
+    "solar_system_layout_title": "Διάταξη ηλιακού συστήματος",
+    "monitored_title": "Παρακολούθηση Ουράνιου",
+    "loading": "Φόρτωση...",
+    "loading_planetarium_vectors": "Φόρτωση διανυσμάτων πλανητάριου...",
+    "loading_solar_vectors": "Φόρτωση διανυσμάτων ηλιακού συστήματος...",
+    "updating": "Ενημέρωση..."
+  },
+  "layout_options": {
+    "title": "Επιλογές διάταξης ηλιακού συστήματος",
+    "apply": "Εφαρμόζω",
+    "reset_defaults": "Επαναφορά προεπιλογών",
+    "view_mode": {
+      "title": "Λειτουργία προβολής",
+      "subtitle": "Επιλέξτε την κύρια ουράνια απεικόνιση για αυτό το νησί.",
+      "label": "Θέα",
+      "solar_system": "Ηλιακό σύστημα",
+      "planetarium": "Πλανητάριο"
+    },
+    "map_interaction": {
+      "title": "Αλληλεπίδραση χάρτη",
+      "solar_subtitle": "Ενεργοποιήστε τη μετατόπιση και τη μεγέθυνση βάσει χειρονομιών στον χάρτη του ηλιακού συστήματος.",
+      "planetarium_subtitle": "Ενεργοποιήστε τη μετατόπιση και τη μεγέθυνση βάσει χειρονομιών στη θύρα προβολής του πλανητάριου."
+    },
+    "sections": {
+      "solar_scene_elements": {
+        "title": "Στοιχεία σκηνής",
+        "subtitle": "Πρωτογενή στρώματα και ετικέτες ηλιακού συστήματος."
+      },
+      "solar_tracked_targets": {
+        "title": "Παρακολουθούμενοι στόχοι",
+        "subtitle": "Τα παρακολουθούμενα αντικείμενα και οι επικαλύψεις τροχιάς/ετικέτας τους."
+      },
+      "solar_astronomy_background": {
+        "title": "Αστρονομία φόντο",
+        "subtitle": "Επίπεδα αναφοράς πίσω από τον χάρτη."
+      },
+      "solar_guides_and_metadata": {
+        "title": "Οδηγοί και Μεταδεδομένα",
+        "subtitle": "Δείκτες συμφραζομένων, ετικέτες και μεταδεδομένα σκηνής."
+      },
+      "planetarium_sky_layers": {
+        "title": "Στρώματα Ουρανού",
+        "subtitle": "Κύριες επικαλύψεις για το παράθυρο προβολής του πλανητάριου."
+      },
+      "planetarium_target_overlays": {
+        "title": "Επικαλύψεις στόχων",
+        "subtitle": "Παρακολούθηση επικαλύψεων και ετικετών για πλανήτες και στόχους."
+      }
+    },
+    "options": {
+      "enable_map_dragging": {
+        "label": "Ενεργοποίηση της μεταφοράς χάρτη",
+        "description": "Να επιτρέπεται η μετατόπιση με κλικ και μεταφορά στον χάρτη. Όταν είναι απενεργοποιημένο, χρησιμοποιήστε χειριστήρια."
+      },
+      "enable_map_zooming": {
+        "label": "Ενεργοποίηση μεγέθυνσης χάρτη",
+        "description": "Επιτρέψτε τις χειρονομίες ζουμ τροχού και τσιμπήματος. Όταν είναι απενεργοποιημένο, χρησιμοποιήστε τα κουμπιά ζουμ."
+      },
+      "show_grid": {
+        "label": "Εμφάνιση πλέγματος",
+        "description": "Εμφανίστε ένα πλέγμα αναφοράς για γρήγορο χωρικό προσανατολισμό."
+      },
+      "show_planets": {
+        "label": "Εμφάνιση πλανητών",
+        "description": "Αποδώστε πλανήτες και μεγάλα σώματα ηλιακών συστημάτων στο παράθυρο προβολής."
+      },
+      "show_planet_labels": {
+        "label": "Εμφάνιση ετικετών πλανητών",
+        "description": "Εμφάνιση ονομάτων σωμάτων δίπλα σε ορατούς πλανήτες."
+      },
+      "show_planet_labels_for_planetarium": {
+        "description": "Εμφάνιση ετικετών για πλανητικά σώματα."
+      },
+      "show_planet_orbits": {
+        "label": "Εμφάνιση τροχιών πλανητών",
+        "description": "Σχεδιάστε τροχιακούς δακτυλίους/μονοπάτια για πλανητική κίνηση."
+      },
+      "show_tracked_objects": {
+        "label": "Εμφάνιση αντικειμένων που παρακολουθούνται",
+        "description": "Εμφάνιση δεικτών αποστολής/σώματος που παρακολουθούνται αυτήν τη στιγμή."
+      },
+      "show_tracked_orbits": {
+        "label": "Εμφάνιση τροχιών παρακολούθησης",
+        "description": "Επικάλυψη δειγματοληπτικών μονοπατιών τροχιάς για στόχους που παρακολουθούνται."
+      },
+      "show_tracked_labels": {
+        "label": "Εμφάνιση ετικετών που παρακολουθούνται",
+        "description": "Εμφάνιση ετικετών και πλαισίου τηλεμετρίας για στόχους που παρακολουθούνται."
+      },
+      "show_bright_star_field": {
+        "label": "Εμφάνιση πεδίου με φωτεινό αστέρι",
+        "description": "Αποδώστε μια διανυσματική εκλειπτική προβολή από τον Κατάλογο Bright Star."
+      },
+      "show_asteroid_zones": {
+        "label": "Εμφάνιση ζωνών αστεροειδών",
+        "description": "Εμφάνιση μεγάλων επικαλύψεων περιοχής ζώνης αστεροειδών."
+      },
+      "show_asteroid_zone_labels": {
+        "label": "Εμφάνιση ετικετών ζώνης αστεροειδών",
+        "description": "Σημειώστε περιοχές αστεροειδών με ονόματα ζωνών."
+      },
+      "show_resonance_markers": {
+        "label": "Εμφάνιση δεικτών συντονισμού",
+        "description": "Απόδοση βασικών δεικτών αναφοράς τροχιακού συντονισμού."
+      },
+      "show_epoch_label": {
+        "label": "Εμφάνιση ετικέτας εποχής",
+        "description": "Εμφάνιση της χρονικής σφραγίδας σκηνής που χρησιμοποιείται για τις τρέχουσες θέσεις."
+      },
+      "show_scale_label": {
+        "label": "Εμφάνιση ετικέτας κλίμακας",
+        "description": "Εμφάνιση της τρέχουσας αναφοράς κλίμακας απόστασης θυρίδας προβολής."
+      },
+      "show_gesture_hint": {
+        "label": "Εμφάνιση υπόδειξης χειρονομίας",
+        "description": "Δείξτε μια σύντομη υπόδειξη βοήθειας για τα στοιχεία ελέγχου αλληλεπίδρασης χάρτη."
+      },
+      "show_sky_grid": {
+        "label": "Εμφάνιση πλέγματος ουρανού",
+        "description": "Σχεδιάστε κατευθυντήριες γραμμές αζιμουθίου/υψομέτρου."
+      },
+      "show_horizon_compass": {
+        "label": "Εμφάνιση πυξίδας ορίζοντα",
+        "description": "Σχεδιάστε τη γραμμή του ορίζοντα με τσιμπούρια Β/Α/Δ/Δ."
+      },
+      "show_star_field": {
+        "label": "Εμφάνιση πεδίου αστεριού",
+        "description": "Αποδώστε φωτεινά αστέρια από τον φορτωμένο κατάλογο του ουρανού."
+      },
+      "show_star_names": {
+        "label": "Εμφάνιση ονομάτων αστεριών",
+        "description": "Επισημάνετε τα φωτεινά αστέρια με το όνομα όταν το επιτρέπει το ζουμ."
+      },
+      "show_constellation_labels": {
+        "label": "Εμφάνιση ετικετών αστερισμών",
+        "description": "Αποδώστε ονόματα αστερισμών στο φόντο του ουρανού."
+      },
+      "show_pass_curves": {
+        "label": "Εμφάνιση καμπυλών περασμάτων",
+        "description": "Σχεδιάστε προβλεπόμενα τόξα περασμάτων για ορατούς στόχους."
+      },
+      "show_target_labels": {
+        "label": "Εμφάνιση ετικετών στόχων",
+        "description": "Εμφάνιση ετικετών για στόχους που παρακολουθούνται."
+      },
+      "show_rotator_crosshair": {
+        "label": "Εμφάνιση σταυρόνημα στροφέα",
+        "description": "Αποδώστε το σταυρόνημα του ζωντανού στροφέα όταν είναι διαθέσιμο."
+      },
+      "show_hud_labels": {
+        "label": "Εμφάνιση ετικετών HUD",
+        "description": "Εμφάνιση ενδείξεων θυρίδας προβολής και παρατηρητή/χρονοσήμανσης."
+      }
+    }
+  },
+  "topbar": {
+    "projection": {
+      "past": "Το παρελθόν",
+      "future": "Μελλοντικός"
+    },
+    "actions": {
+      "manage": "Διαχειρίζομαι",
+      "refresh": "Φρεσκάρω",
+      "refresh_all": "Ανανέωση όλων",
+      "enable_target": "Ενεργοποίηση στόχου",
+      "disable_target": "Απενεργοποίηση στόχου",
+      "clear_color": "Σαφής"
+    },
+    "dialogs": {
+      "add_title": "Προσθήκη Παρατηρούμενου Ουράνιου Στόχου",
+      "manage_title": "Διαχειριστείτε Παρατηρούμενους Ουράνιους Στόχους",
+      "delete_title": "Διαγραφή Παρακολούθησης Στόχου",
+      "edit_title": "Επεξεργασία Παρατηρούμενου Ουράνιου Στόχου"
+    },
+    "fields": {
+      "target_type": "Τύπος στόχου",
+      "mission_spacecraft": "Αποστολή / Διαστημικό σκάφος",
+      "solar_body": "Ηλιακό σώμα",
+      "target": "Στόχος",
+      "target_placeholder": "Πληκτρολογήστε εντολή ή επιλέξτε από τον κατάλογο",
+      "target_body": "Σώμα στόχος",
+      "horizons_command": "Εντολή Horizons",
+      "display_name": "Εμφανιζόμενο όνομα",
+      "color": "Χρώμα",
+      "color_placeholder": "#06D6A0",
+      "pick_color": "Διάλεξε χρώμα"
+    },
+    "helper": {
+      "using_static_catalog": "Χρήση στατικής καταχώρησης καταλόγου.",
+      "using_exact_command": "Χρήση ακριβούς εντολής Horizons.",
+      "selected_mission_not_active": "Η επιλεγμένη αποστολή δεν είναι ενεργή. Τα δεδομένα Horizons ενδέχεται να είναι περιορισμένα.",
+      "loading_spacecraft_catalog": "Φόρτωση καταλόγου διαστημόπλοιων...",
+      "loading_body_catalog": "Φόρτωση καταλόγου αμαξώματος..."
+    },
+    "labels": {
+      "already_monitored": "Ήδη παρακολουθείται",
+      "static_body": "Στατικό σώμα"
+    },
+    "table": {
+      "type": "Τύπος",
+      "mission": "Αποστολή",
+      "last_refresh": "Τελευταία ανανέωση"
+    },
+    "delete": {
+      "confirm": "Είστε βέβαιοι ότι θέλετε να διαγράψετε αυτόν τον παρακολουθούμενο στόχο;",
+      "unknown_target": "Άγνωστος στόχος"
+    },
+    "empty": {
+      "no_targets": "Δεν υπάρχουν ακόμη επιτηρούμενοι ουράνιοι στόχοι."
+    },
+    "errors": {
+      "failed_load_spacecraft_catalog": "Η φόρτωση του καταλόγου του διαστημικού σκάφους απέτυχε.",
+      "failed_load_body_catalog": "Η φόρτωση του καταλόγου ουράνιων σωμάτων απέτυχε.",
+      "socket_unavailable": "Η σύνδεση πρίζας δεν είναι διαθέσιμη.",
+      "display_name_command_required": "Απαιτούνται εμφανιζόμενο όνομα και εντολή.",
+      "command_already_monitored": "Αυτή η εντολή βρίσκεται ήδη στη λίστα παρακολούθησης.",
+      "select_body_target": "Επιλέξτε έναν στόχο σώματος.",
+      "body_already_monitored": "Αυτός ο φορέας βρίσκεται ήδη στον κατάλογο παρακολούθησης.",
+      "display_name_required": "Απαιτείται εμφανιζόμενο όνομα.",
+      "command_required_for_mission": "Απαιτείται εντολή για στόχους αποστολής.",
+      "body_required_for_body_target": "Ο στόχος σώματος απαιτείται για στόχους σώματος.",
+      "invalid_hex_color": "Το χρώμα πρέπει να είναι έγκυρη δεκαεξαδική τιμή όπως #1A2B3C.",
+      "failed_update_target": "Η ενημέρωση του παρακολουθούμενου στόχου απέτυχε."
+    },
+    "feedback": {
+      "added_mission": "Προστέθηκε το \"{{name}}\" χρησιμοποιώντας την εντολή \"{{command}}\".",
+      "added_body": "Προστέθηκε στόχος σώματος \"{{name}}\"."
+    },
+    "mission_status": {
+      "active": "Ενεργός",
+      "completed": "Ολοκληρώθηκε το",
+      "failed": "Αποτυχημένος"
+    },
+    "fallback": {
+      "target": "στόχος"
+    }
+  },
+  "passes": {
+    "title": "Ουράνια Περάσματα",
+    "count_label_single": "πέρασμα",
+    "count_label_plural": "περνάει",
+    "table_settings": "Ρυθμίσεις πίνακα",
+    "refresh": "Ανανέωση πάσες",
+    "timeline_default_target_name": "Ουράνιος στόχος",
+    "status": {
+      "visible": "Ορατός",
+      "passed": "Πέρασε",
+      "upcoming": "Ανερχόμενος"
+    },
+    "columns": {
+      "status": "Κατάσταση",
+      "name": "Ονομα",
+      "type": "Τύπος",
+      "peak_elevation": "Υψόμετρο Κορυφής",
+      "progress": "Πρόοδος",
+      "duration": "Διάρκεια",
+      "start": "Αρχή",
+      "end": "Τέλος",
+      "start_azimuth": "Ξεκινήστε το Azimuth",
+      "end_azimuth": "Τέλος Αζιμούθιο",
+      "peak_azimuth": "Κορυφή Αζιμούθιο",
+      "cache": "Κρύπτη",
+      "stale": "Μπαγιάτικος",
+      "source": "Πηγή"
+    },
+    "summary": {
+      "start": "Αρχή",
+      "end": "Τέλος"
+    },
+    "quick_filters": {
+      "all_tooltip": "Όλες οι πάσες (Alt+1)",
+      "all_aria": "Όλες οι πάσες",
+      "all_short": "Ολοι",
+      "live_tooltip": "Ζωντανά πάσο (Alt+2)",
+      "live_aria": "Ζωντανά περάσματα",
+      "live_short": "Ζω",
+      "next_30_tooltip": "Ζωντανά ή επόμενα 30 λεπτά (Alt+3)",
+      "next_30_aria": "Επόμενα 30 λεπτά",
+      "next_30_short": "Επόμενα 30μ",
+      "highest_elevation_tooltip": "Πρώτα το υψηλότερο υψόμετρο (Alt+4)",
+      "highest_elevation_aria": "Πρώτα το υψηλότερο υψόμετρο",
+      "high_el_short": "Υψηλό Ελ"
+    },
+    "settings": {
+      "title": "Ρυθμίσεις πίνακα Celestial Passes",
+      "rows_per_page": "Σειρές ανά σελίδα",
+      "reset_values": "Επαναφορά τιμών",
+      "close": "Κοντά",
+      "categories": {
+        "basic": "Βασικός",
+        "time": "Φορά",
+        "metrics": "Μετρήσεις",
+        "source": "Πηγή"
+      }
+    }
+  },
+  "monitored": {
+    "no_color": "Χωρίς χρώμα",
+    "columns": {
+      "name": "Ονομα",
+      "type": "Τύπος",
+      "target_id": "Αναγνωριστικό στόχου",
+      "source": "Πηγή",
+      "source_mode": "Λειτουργία πηγής",
+      "elevation": "Υψόμετρο (μοίρες)",
+      "azimuth": "Αζιμούθιο (μοίρες)",
+      "distance_from_sun_au": "Απόσταση από τον ήλιο (AU)",
+      "speed_km_s": "Ταχύτητα (km/s)",
+      "light_time_min": "Χρόνος φωτός (λεπτά)",
+      "last_refresh": "Τελευταία ανανέωση",
+      "refresh_age": "Refresh Age",
+      "projection_span": "Διάστημα προβολής",
+      "cache": "Κρύπτη",
+      "stale": "Μπαγιάτικος",
+      "samples": "Δείγματα",
+      "last_error": "Τελευταίο Σφάλμα"
+    },
+    "settings": {
+      "title": "Ρυθμίσεις Παρακολούθησης Ουράνιου Πίνακα",
+      "rows_per_page": "Σειρές ανά σελίδα",
+      "reset_values": "Επαναφορά τιμών",
+      "close": "Κοντά",
+      "categories": {
+        "identity": "Ταυτότητα",
+        "state": "Κατάσταση",
+        "metrics": "Μετρήσεις",
+        "projection": "Προβολή"
+      }
+    },
+    "summary": {
+      "source": "Πηγή",
+      "mode": "Τρόπος"
+    }
+  },
+  "info": {
+    "title": "Ουράνια Πληροφορίες",
+    "empty_hint": "Επιλέξτε ένα σώμα ή μια αποστολή από Παρακολούθηση Ουράνια ή Ουράνια Πάσα.",
+    "edit_transmitters": "Επεξεργασία πομπών",
+    "no_upcoming_pass": "Χωρίς επερχόμενο πάσο",
+    "status": {
+      "visible": "Ορατός",
+      "below_horizon": "Κάτω από τον Ορίζοντα"
+    },
+    "sections": {
+      "pass_window": "Παράθυρο Pass",
+      "data_source": "Πηγή δεδομένων"
+    },
+    "metrics": {
+      "target_type": "Τύπος στόχου",
+      "body_id": "Ταυτότητα σώματος",
+      "mission_command": "Διοίκηση αποστολής",
+      "elevation": "Ανύψωση",
+      "azimuth": "Αζιμούθιο",
+      "distance_from_sun_au": "Απόσταση από τον ήλιο",
+      "distance_from_sun_km": "Απόσταση από Ήλιο (χλμ)",
+      "speed": "Ταχύτητα",
+      "light_time": "Ώρα φωτός",
+      "total_passes": "Συνολικά περάσματα",
+      "active_pass": "Ενεργό πάσο",
+      "active_since": "Ενεργός Από",
+      "next_start": "Επόμενη Έναρξη",
+      "ends": "Τελειώνει",
+      "next_peak": "Επόμενη Κορυφή",
+      "source": "Πηγή",
+      "cache": "Κρύπτη",
+      "stale": "Μπαγιάτικος",
+      "last_refresh": "Τελευταία ανανέωση"
+    }
+  },
+  "context": {
+    "copy_body_id": "Αντιγραφή ταυτότητας σώματος",
+    "copy_mission_command": "Αντιγραφή εντολής αποστολής",
+    "copy_target_key": "Αντιγραφή κλειδιού στόχου",
+    "copy_target_summary": "Αντιγραφή περίληψης στόχου",
+    "copy_pass_summary": "Περίληψη αντιγραφής πάσου"
+  },
+  "time": {
+    "relative": {
+      "in_less_than_minute": "σε <1μ",
+      "less_than_minute_ago": "Πριν από <1 λεπτό",
+      "in_minutes": "σε {{count}}m",
+      "minutes_ago": "Πριν από {{count}}m",
+      "in_hours": "σε {{count}}h",
+      "hours_ago": "Πριν από {{count}}h",
+      "in_days": "σε {{count}}d",
+      "days_ago": "Πριν από {{count}}ημ"
+    },
+    "duration": {
+      "minutes_seconds": "{{minutes}}m {{seconds}}s"
+    },
+    "age": {
+      "seconds": "{{count}}s",
+      "minutes": "{{count}}μ",
+      "hours": "{{count}}h",
+      "days": "{{count}}ημ"
+    },
+    "projection_span": "{{past}}h / {{future}}h @ {{step}}m"
+  },
+  "canvas": {
+    "solar": {
+      "anchor_sun": "Ήλιος",
+      "anchor_earth": "Γη",
+      "anchor_galactic_center": "Γαλαξιακό Κέντρο",
+      "anchor_galactic_center_short": "Galactic Ctr",
+      "no_epoch": "Καμία εποχή",
+      "epoch": "Εποχή: {{timestamp}}",
+      "scale": "Κλίμακα: {{value}} / τετράγωνο",
+      "touch_pan": "Ταψί με 2 δάχτυλα",
+      "touch_pan_zoom": "Μετατόπιση/ζουμ με 2 δάχτυλα",
+      "touch_pinch_zoom": "τσίμπημα ζουμ",
+      "mouse_drag": "σέρνω",
+      "mouse_wheel": "τροχός",
+      "mouse_drag_plus_wheel": "σύρσιμο + τροχός",
+      "gesture_hint": "Αγγίξτε: {{touch}} | Ποντίκι: {{mouse}}",
+      "gesture_disabled": "Οι χειρονομίες χάρτη απενεργοποιήθηκαν. χρησιμοποιήστε τα στοιχεία ελέγχου της γραμμής εργαλείων."
+    },
+    "planetarium": {
+      "aria_label": "Πλανητάριο χάρτη του ουρανού",
+      "configure_location": "Διαμορφώστε μια τοποθεσία επίγειου σταθμού για απόδοση του τοπικού ουρανού.",
+      "fallback_target": "Στόχος",
+      "target_below_horizon": "Στόχος κάτω από τον ορίζοντα",
+      "hud_view_label": "Az {{az}} / El {{el}} / FOV {{fov}}",
+      "cardinal": {
+        "north": "Ν",
+        "east": "μι",
+        "south": "μικρό",
+        "west": "W"
+      }
+    },
+    "moon_phase": {
+      "new_moon": "Νέα Σελήνη",
+      "waxing_crescent": "Ημισέληνος με κερί",
+      "first_quarter": "Πρώτο τρίμηνο",
+      "waxing_gibbous": "Αποτρίχωση Gibbous",
+      "full_moon": "Πανσέληνος",
+      "waning_gibbous": "Waning Gibbous",
+      "last_quarter": "Τελευταίο τρίμηνο",
+      "waning_crescent": "Ημισέληνος που εξαφανίζεται",
+      "fallback": "Φάση Σελήνης",
+      "description": "{{label}}, {{percent}}% φωτισμένο"
+    }
+  }
+}

@@ -19,6 +19,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import {
     Dialog,
     DialogTitle,
@@ -66,32 +67,34 @@ import { SATDUMP_PIPELINES, getDecoderParameters, getDecoderDefaultParameters } 
 import { DecoderConfigSuggestion } from './decoder-config-suggestion.jsx';
 
 const DECODER_TYPES = [
-    { value: 'none', label: 'None' },
-    { value: 'fsk', label: 'FSK' },
-    { value: 'gmsk', label: 'GMSK' },
-    { value: 'gfsk', label: 'GFSK' },
-    { value: 'bpsk', label: 'BPSK' },
-    { value: 'sstv', label: 'SSTV' },
+    { value: 'none', labelKey: 'decoder_type_none' },
+    { value: 'fsk', labelKey: 'decoder_type_fsk' },
+    { value: 'gmsk', labelKey: 'decoder_type_gmsk' },
+    { value: 'gfsk', labelKey: 'decoder_type_gfsk' },
+    { value: 'bpsk', labelKey: 'decoder_type_bpsk' },
+    { value: 'sstv', labelKey: 'decoder_type_sstv' },
 ];
 
 const SSTV_DEFAULT_BANDWIDTH = 12500;
 
 const DEMODULATOR_TYPES = [
-    { value: 'fm', label: 'FM (Frequency Modulation)' },
-    { value: 'am', label: 'AM (Amplitude Modulation)' },
-    { value: 'usb', label: 'USB (Upper Sideband)' },
-    { value: 'lsb', label: 'LSB (Lower Sideband)' },
-    { value: 'cw', label: 'CW (Continuous Wave)' },
+    { value: 'fm', labelKey: 'demodulator_fm' },
+    { value: 'am', labelKey: 'demodulator_am' },
+    { value: 'usb', labelKey: 'demodulator_usb' },
+    { value: 'lsb', labelKey: 'demodulator_lsb' },
+    { value: 'cw', labelKey: 'demodulator_cw' },
 ];
 
 const MODULATION_TYPES = [
-    { value: 'fm', label: 'FM (Frequency Modulation)' },
-    { value: 'am', label: 'AM (Amplitude Modulation)' },
-    { value: 'ssb', label: 'SSB (Single Sideband)' },
-    { value: 'cw', label: 'CW (Continuous Wave)' },
-    { value: 'fsk', label: 'FSK (Frequency Shift Keying)' },
-    { value: 'psk', label: 'PSK (Phase Shift Keying)' },
+    { value: 'fm', labelKey: 'modulation_fm' },
+    { value: 'am', labelKey: 'modulation_am' },
+    { value: 'ssb', labelKey: 'modulation_ssb' },
+    { value: 'cw', labelKey: 'modulation_cw' },
+    { value: 'fsk', labelKey: 'modulation_fsk' },
+    { value: 'psk', labelKey: 'modulation_psk' },
 ];
+
+const BAND_ORDER = ['hf', 'vhf', 'uhf', 'l_band', 's_band', 'c_band', 'x_band', 'other'];
 
 const SAMPLE_RATES = [
     { value: 500000, label: '500 kHz' },
@@ -106,6 +109,41 @@ const SAMPLE_RATES = [
     { value: 10000000, label: '10 MHz' },
     { value: 12000000, label: '12 MHz' },
     { value: 16000000, label: '16 MHz' },
+];
+
+const TRANSCRIPTION_LANGUAGE_OPTIONS = [
+    { value: 'en', icon: '🇬🇧', labelKey: 'language_english' },
+    { value: 'el', icon: '🇬🇷', labelKey: 'language_greek' },
+    { value: 'es', icon: '🇪🇸', labelKey: 'language_spanish' },
+    { value: 'fr', icon: '🇫🇷', labelKey: 'language_french' },
+    { value: 'de', icon: '🇩🇪', labelKey: 'language_german' },
+    { value: 'it', icon: '🇮🇹', labelKey: 'language_italian' },
+    { value: 'pt', icon: '🇵🇹', labelKey: 'language_portuguese' },
+    { value: 'pt-BR', icon: '🇧🇷', labelKey: 'language_portuguese_brazil' },
+    { value: 'ru', icon: '🇷🇺', labelKey: 'language_russian' },
+    { value: 'uk', icon: '🇺🇦', labelKey: 'language_ukrainian' },
+    { value: 'ja', icon: '🇯🇵', labelKey: 'language_japanese' },
+    { value: 'zh', icon: '🇨🇳', labelKey: 'language_chinese' },
+    { value: 'ar', icon: '🇸🇦', labelKey: 'language_arabic' },
+    { value: 'tl', icon: '🇵🇭', labelKey: 'language_filipino' },
+    { value: 'tr', icon: '🇹🇷', labelKey: 'language_turkish' },
+    { value: 'sk', icon: '🇸🇰', labelKey: 'language_slovak' },
+    { value: 'hr', icon: '🇭🇷', labelKey: 'language_croatian' },
+];
+
+const SOURCE_LANGUAGE_OPTIONS = [
+    { value: 'auto', icon: '🌐', labelKey: 'language_auto_detect' },
+    ...TRANSCRIPTION_LANGUAGE_OPTIONS,
+];
+
+const TRANSLATION_TARGET_OPTIONS = [
+    { value: 'none', icon: '⭕', labelKey: 'no_translation' },
+    ...TRANSCRIPTION_LANGUAGE_OPTIONS,
+];
+
+const TRANSCRIPTION_PROVIDER_OPTIONS = [
+    { value: 'gemini', labelKey: 'provider_gemini' },
+    { value: 'deepgram', labelKey: 'provider_deepgram' },
 ];
 
 const createEmptySession = () => ({
@@ -151,19 +189,18 @@ const getDefaultSatdumpPipeline = () => {
 // Helper function to determine band from frequency in Hz
 const getBand = (frequencyHz) => {
     const freqMHz = frequencyHz / 1000000;
-    if (freqMHz >= 30 && freqMHz < 300) return 'VHF';
-    if (freqMHz >= 300 && freqMHz < 1000) return 'UHF';
-    if (freqMHz >= 1000 && freqMHz < 2000) return 'L-Band';
-    if (freqMHz >= 2000 && freqMHz < 4000) return 'S-Band';
-    if (freqMHz >= 4000 && freqMHz < 8000) return 'C-Band';
-    if (freqMHz >= 8000 && freqMHz < 12000) return 'X-Band';
-    if (freqMHz < 30) return 'HF';
-    return 'Other';
+    if (freqMHz >= 30 && freqMHz < 300) return 'vhf';
+    if (freqMHz >= 300 && freqMHz < 1000) return 'uhf';
+    if (freqMHz >= 1000 && freqMHz < 2000) return 'l_band';
+    if (freqMHz >= 2000 && freqMHz < 4000) return 's_band';
+    if (freqMHz >= 4000 && freqMHz < 8000) return 'c_band';
+    if (freqMHz >= 8000 && freqMHz < 12000) return 'x_band';
+    if (freqMHz < 30) return 'hf';
+    return 'other';
 };
 
 // Helper function to group transmitters by band
 const groupTransmittersByBand = (transmitters) => {
-    const bandOrder = ['HF', 'VHF', 'UHF', 'L-Band', 'S-Band', 'C-Band', 'X-Band', 'Other'];
     const grouped = {};
 
     transmitters.forEach(transmitter => {
@@ -180,16 +217,18 @@ const groupTransmittersByBand = (transmitters) => {
     });
 
     // Return bands in order
-    return bandOrder
+    return BAND_ORDER
         .filter(band => grouped[band])
         .map(band => ({ band, transmitters: grouped[band] }));
 };
 
 export default function MonitoredSatelliteDialog() {
     const dispatch = useDispatch();
+    const { t } = useTranslation('common');
     const { socket } = useSocket();
     const open = useSelector((state) => state.scheduler?.monitoredSatelliteDialogOpen || false);
     const selectedMonitoredSatellite = useSelector((state) => state.scheduler?.selectedMonitoredSatellite);
+    const isEditingMonitoredSatellite = Boolean(selectedMonitoredSatellite?.id);
     const sdrs = useSelector((state) => state.sdrs?.sdrs || []);
     const selectedSatelliteId = useSelector((state) => state.scheduler?.satelliteSelection?.satelliteId);
     const selectedGroupId = useSelector((state) => state.scheduler?.satelliteSelection?.groupId);
@@ -242,6 +281,32 @@ export default function MonitoredSatelliteDialog() {
     const [openRemoveSessionConfirm, setOpenRemoveSessionConfirm] = useState(false);
     const sdrParamsForSelected = formData.sdr.id ? sdrParameters?.[formData.sdr.id] : null;
     const biasTSupported = Boolean(sdrParamsForSelected?.has_bias_t || sdrParamsForSelected?.capabilities?.bias_t?.supported);
+    const selectedSdrRecord = useMemo(
+        () => sdrs.find((sdr) => String(sdr?.id) === String(formData.sdr.id)),
+        [sdrs, formData.sdr.id]
+    );
+    const selectedSdrRxAntennaLabels = useMemo(() => {
+        const rawLabels = selectedSdrRecord?.antenna_labels;
+        const rxLabels =
+            rawLabels && typeof rawLabels === 'object' && rawLabels.rx && typeof rawLabels.rx === 'object'
+                ? rawLabels.rx
+                : {};
+
+        const normalized = {};
+        Object.entries(rxLabels).forEach(([portName, userLabel]) => {
+            const key = String(portName || '').trim();
+            const value = String(userLabel || '').trim();
+            if (!key || !value) return;
+            normalized[key] = value;
+        });
+        return normalized;
+    }, [selectedSdrRecord]);
+    const formatAntennaPortOptionLabel = (port) => {
+        const key = String(port || '').trim();
+        if (!key) return String(port || '');
+        const userLabel = selectedSdrRxAntennaLabels[key];
+        return userLabel ? `${userLabel} (${key})` : key;
+    };
 
     const selectedSatellite = groupOfSats.find(sat => sat.norad_id === selectedSatelliteId);
     const availableTransmitters = selectedSatellite?.transmitters || [];
@@ -696,15 +761,35 @@ export default function MonitoredSatelliteDialog() {
         return null;
     };
 
+    const getTaskSummaryOptionLabel = (options, value, fallback = value) => {
+        const option = options.find((item) => item.value === value);
+        if (!option) return fallback;
+        return t(`scheduler_dialogs.shared.${option.labelKey}`);
+    };
+
+    const getTranscriptionLanguageSummary = (sourceLanguage, targetLanguage) => {
+        const sourceLabel = getTaskSummaryOptionLabel(SOURCE_LANGUAGE_OPTIONS, sourceLanguage || 'auto', sourceLanguage || 'auto');
+        if (targetLanguage && targetLanguage !== 'none') {
+            const targetLabel = getTaskSummaryOptionLabel(TRANSLATION_TARGET_OPTIONS, targetLanguage, targetLanguage);
+            return t('scheduler_dialogs.shared.language_pair_summary', { source: sourceLabel, target: targetLabel });
+        }
+        return sourceLabel;
+    };
+
+    const getProviderSummaryLabel = (provider) => {
+        const normalized = provider || 'gemini';
+        return t(`scheduler_dialogs.shared.provider_${normalized}`, { defaultValue: normalized });
+    };
+
     const getTaskSummary = (task) => {
         if (task.type === 'decoder') {
             const transmitter = availableTransmitters.find(t => t.id === task.config.transmitter_id);
-            const transmitterName = transmitter?.description || 'No transmitter';
+            const transmitterName = transmitter?.description || t('scheduler_dialogs.shared.no_transmitter');
             const freqMHz = transmitter?.downlink_low ? `${(transmitter.downlink_low / 1000000).toFixed(3)} MHz` : '';
-            const decoderType = DECODER_TYPES.find(d => d.value === task.config.decoder_type)?.label || task.config.decoder_type;
+            const decoderType = getTaskSummaryOptionLabel(DECODER_TYPES, task.config.decoder_type, task.config.decoder_type);
 
             if (task.config.decoder_type === 'none') {
-                const parts = [transmitterName, freqMHz, 'No decoder'].filter(Boolean);
+                const parts = [transmitterName, freqMHz, t('scheduler_dialogs.shared.no_decoder')].filter(Boolean);
                 return parts.join(' • ');
             }
 
@@ -712,39 +797,41 @@ export default function MonitoredSatelliteDialog() {
             return parts.join(' • ');
         } else if (task.type === 'audio_recording') {
             const transmitter = availableTransmitters.find(t => t.id === task.config.transmitter_id);
-            const transmitterName = transmitter?.description || 'No transmitter';
+            const transmitterName = transmitter?.description || t('scheduler_dialogs.shared.no_transmitter');
             const freqMHz = transmitter?.downlink_low ? `${(transmitter.downlink_low / 1000000).toFixed(3)} MHz` : '';
-            const demodType = DEMODULATOR_TYPES.find(d => d.value === task.config.demodulator)?.label || task.config.demodulator?.toUpperCase();
+            const demodType = getTaskSummaryOptionLabel(DEMODULATOR_TYPES, task.config.demodulator, task.config.demodulator?.toUpperCase());
 
-            const parts = [transmitterName, freqMHz, demodType, 'WAV'].filter(Boolean);
+            const parts = [transmitterName, freqMHz, demodType, t('scheduler_dialogs.shared.audio_format_wav')].filter(Boolean);
             return parts.join(' • ');
         } else if (task.type === 'transcription') {
             const transmitter = availableTransmitters.find(t => t.id === task.config.transmitter_id);
-            const transmitterName = transmitter?.description || 'No transmitter';
+            const transmitterName = transmitter?.description || t('scheduler_dialogs.shared.no_transmitter');
             const freqMHz = transmitter?.downlink_low ? `${(transmitter.downlink_low / 1000000).toFixed(3)} MHz` : '';
-            const modType = MODULATION_TYPES.find(d => d.value === task.config.modulation)?.label || task.config.modulation?.toUpperCase();
-            const provider = (task.config.provider || 'gemini').charAt(0).toUpperCase() + (task.config.provider || 'gemini').slice(1);
-            const sourceLang = task.config.language || 'auto';
-            const targetLang = task.config.translate_to && task.config.translate_to !== 'none' ? `→${task.config.translate_to}` : '';
+            const modType = getTaskSummaryOptionLabel(MODULATION_TYPES, task.config.modulation, task.config.modulation?.toUpperCase());
+            const provider = getProviderSummaryLabel(task.config.provider);
+            const languageSummary = getTranscriptionLanguageSummary(task.config.language, task.config.translate_to);
 
-            const parts = [transmitterName, freqMHz, modType, provider, sourceLang + targetLang, 'Transcription'].filter(Boolean);
+            const parts = [transmitterName, freqMHz, modType, provider, languageSummary, t('scheduler_dialogs.shared.task_transcription')].filter(Boolean);
             return parts.join(' • ');
         } else if (task.type === 'iq_recording') {
             const transmitter = availableTransmitters.find(t => t.id === task.config.transmitter_id);
-            const transmitterName = transmitter?.description || 'No transmitter';
+            const transmitterName = transmitter?.description || t('scheduler_dialogs.shared.no_transmitter');
             const freqMHz = transmitter?.downlink_low ? `${(transmitter.downlink_low / 1000000).toFixed(3)} MHz` : '';
             const extraInfo = [];
             if (task.config.enable_frequency_shift && task.config.target_center_freq) {
                 const targetMHz = (task.config.target_center_freq / 1000000).toFixed(3);
-                extraInfo.push(`Centered@${targetMHz}MHz`);
+                extraInfo.push(t('scheduler_dialogs.shared.centered_at_mhz', { value: targetMHz }));
             }
             const decimationFactor = task.config.decimation_factor || 1;
             if (decimationFactor > 1 && formData.sdr.sample_rate) {
                 extraInfo.push(
-                    `Decim x${decimationFactor} (${formatSampleRate(formData.sdr.sample_rate / decimationFactor)})`
+                    t('scheduler_dialogs.shared.decimation_summary', {
+                        factor: decimationFactor,
+                        rate: formatSampleRate(formData.sdr.sample_rate / decimationFactor),
+                    })
                 );
             }
-            const parts = [transmitterName, freqMHz, ...extraInfo, 'SigMF (cf32_le)'].filter(Boolean);
+            const parts = [transmitterName, freqMHz, ...extraInfo, t('scheduler_dialogs.shared.iq_format_sigmf')].filter(Boolean);
             return parts.join(' • ');
         }
         return '';
@@ -775,7 +862,7 @@ export default function MonitoredSatelliteDialog() {
 
                     details.push({
                         taskIndex: index,
-                        name: transmitter.description || 'Unknown',
+                        name: transmitter.description || t('unknown'),
                         freq: transmitter.downlink_low,
                         bandwidth: bandwidth
                     });
@@ -798,7 +885,10 @@ export default function MonitoredSatelliteDialog() {
             valid,
             message: valid
                 ? ''
-                : `Required bandwidth for the combination of transmitters you chose (${(requiredBandwidth / 1000000).toFixed(2)} MHz) exceeds the selected SDR sample rate (${(sampleRate / 1000000).toFixed(2)} MHz). Please increase sample rate or select transmitters closer in frequency.`,
+                : t('scheduler_dialogs.shared.bandwidth_validation_error', {
+                    required: (requiredBandwidth / 1000000).toFixed(2),
+                    sampleRate: (sampleRate / 1000000).toFixed(2),
+                }),
             requiredBandwidth,
             sampleRate,
             minFreq,
@@ -842,7 +932,7 @@ export default function MonitoredSatelliteDialog() {
             ? formData.sessions
             : [{ sdr: formData.sdr, tasks: formData.tasks }];
 
-        if (selectedMonitoredSatellite) {
+        if (isEditingMonitoredSatellite) {
             // Update existing monitored satellite
             dispatch(updateMonitoredSatelliteAsync({
                 socket,
@@ -887,12 +977,29 @@ export default function MonitoredSatelliteDialog() {
                 sx={{
                     bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.100',
                     borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
-                    fontSize: '1.25rem',
-                    fontWeight: 'bold',
                     py: 2.5,
                 }}
             >
-                {selectedMonitoredSatellite ? 'Edit Monitored Satellite' : 'Add Monitored Satellite'}
+                <Box>
+                    <Typography variant="h6" sx={{ fontWeight: 'bold', lineHeight: 1.2 }}>
+                        {isEditingMonitoredSatellite
+                            ? t('scheduler_dialogs.monitored.edit_title')
+                            : t('scheduler_dialogs.monitored.new_title')}
+                    </Typography>
+                    {!isEditingMonitoredSatellite && (
+                        <Typography
+                            variant="body2"
+                            sx={{
+                                mt: 0.65,
+                                color: 'text.secondary',
+                                fontWeight: 400,
+                                lineHeight: 1.35,
+                            }}
+                        >
+                            {t('scheduler_dialogs.monitored.new_subtitle')}
+                        </Typography>
+                    )}
+                </Box>
             </DialogTitle>
 
             <DialogContent
@@ -907,7 +1014,7 @@ export default function MonitoredSatelliteDialog() {
                     py: 3,
                 }}
             >
-                <Stack spacing={3} sx={{ mt: 2 }}>
+                <Stack spacing={3}>
                     {/* Error Alert */}
                     {saveError && (
                         <Box
@@ -944,9 +1051,9 @@ export default function MonitoredSatelliteDialog() {
                             }
                             label={
                                 <Box>
-                                    <Typography variant="body2">Enabled</Typography>
+                                    <Typography variant="body2">{t('scheduler_dialogs.shared.enabled_label')}</Typography>
                                     <Typography variant="caption" color="text.secondary">
-                                        When enabled, this satellite will automatically generate observations for matching passes
+                                        {t('scheduler_dialogs.monitored.enabled_help')}
                                     </Typography>
                                 </Box>
                             }
@@ -958,7 +1065,7 @@ export default function MonitoredSatelliteDialog() {
                     {/* Satellite Selection */}
                     <Box>
                         <Typography variant="subtitle2" gutterBottom sx={{ color: 'primary.main', fontWeight: 'bold' }}>
-                            Satellite
+                            {t('scheduler_dialogs.shared.satellite_title')}
                         </Typography>
                         <SatelliteSelector 
                             onSatelliteSelect={handleSatelliteSelect} 
@@ -972,12 +1079,12 @@ export default function MonitoredSatelliteDialog() {
                     {/* Monitoring Criteria */}
                     <Box>
                         <Typography variant="subtitle2" gutterBottom sx={{ color: 'primary.main', fontWeight: 'bold' }}>
-                            Monitoring Criteria
+                            {t('scheduler_dialogs.monitored.monitoring_criteria_title')}
                         </Typography>
                         <Stack spacing={2}>
                             <Box>
                                 <TextField
-                                    label="Minimum Peak Elevation (degrees)"
+                                    label={t('scheduler_dialogs.monitored.minimum_peak_elevation_label')}
                                     type="number"
                                     fullWidth
                                     size="small"
@@ -991,12 +1098,12 @@ export default function MonitoredSatelliteDialog() {
                                     required
                                 />
                                 <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-                                    Only passes with peak elevation above this threshold will be scheduled
+                                    {t('scheduler_dialogs.monitored.minimum_peak_elevation_help')}
                                 </Typography>
                             </Box>
                             <Box>
                                 <TextField
-                                    label="Task Start Elevation (degrees)"
+                                    label={t('scheduler_dialogs.monitored.task_start_elevation_label')}
                                     type="number"
                                     fullWidth
                                     size="small"
@@ -1011,17 +1118,17 @@ export default function MonitoredSatelliteDialog() {
                                     error={formData.task_start_elevation > formData.min_elevation}
                                     helperText={
                                         formData.task_start_elevation > formData.min_elevation
-                                            ? 'Must be less than or equal to Minimum Peak Elevation'
+                                            ? t('scheduler_dialogs.monitored.task_start_elevation_error')
                                             : ''
                                     }
                                 />
                                 <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-                                    Observation tasks will start executing when satellite reaches this elevation
+                                    {t('scheduler_dialogs.monitored.task_start_elevation_help')}
                                 </Typography>
                             </Box>
                             <Box>
                                 <TextField
-                                    label="Lookahead Window (hours)"
+                                    label={t('scheduler_dialogs.monitored.lookahead_window_label')}
                                     type="number"
                                     fullWidth
                                     size="small"
@@ -1035,7 +1142,7 @@ export default function MonitoredSatelliteDialog() {
                                     required
                                 />
                                 <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-                                    How far ahead to automatically generate observations
+                                    {t('scheduler_dialogs.monitored.lookahead_window_help')}
                                 </Typography>
                             </Box>
                         </Stack>
@@ -1046,11 +1153,11 @@ export default function MonitoredSatelliteDialog() {
                     {/* Rotator Selection */}
                     <Box>
                         <Typography variant="subtitle2" gutterBottom sx={{ color: 'primary.main', fontWeight: 'bold' }}>
-                            Rotator
+                            {t('scheduler_dialogs.shared.rotator_title')}
                         </Typography>
                         <Stack spacing={2}>
                             <FormControl fullWidth size="small">
-                                <InputLabel>Rotator</InputLabel>
+                                <InputLabel>{t('scheduler_dialogs.shared.rotator_label')}</InputLabel>
                                 <Select
                                     value={formData.rotator.id || '__none__'}
                                     onChange={(e) => {
@@ -1075,10 +1182,10 @@ export default function MonitoredSatelliteDialog() {
                                             },
                                         }));
                                     }}
-                                    label="Rotator"
+                                    label={t('scheduler_dialogs.shared.rotator_label')}
                                 >
                                     <MenuItem value="__none__">
-                                        <em>None</em>
+                                        <em>{t('scheduler_dialogs.shared.none')}</em>
                                     </MenuItem>
                                     {rotators.map((rotator) => (
                                         <MenuItem key={rotator.id} value={rotator.id}>
@@ -1094,11 +1201,11 @@ export default function MonitoredSatelliteDialog() {
                                                             if (trackerInfo?.targetNumber) {
                                                                 return `Target ${trackerInfo.targetNumber}`;
                                                             }
-                                                            return 'Target resolved at runtime';
+                                                            return t('scheduler_dialogs.shared.target_resolved_runtime');
                                                         })(),
                                                         rotator.min_azimuth != null && rotator.max_azimuth != null ? `Az: ${rotator.min_azimuth}° - ${rotator.max_azimuth}°` : null,
                                                         rotator.min_elevation != null && rotator.max_elevation != null ? `El: ${rotator.min_elevation}° - ${rotator.max_elevation}°` : null,
-                                                    ].filter(Boolean).join(' • ') || 'No additional details'}
+                                                    ].filter(Boolean).join(' • ') || t('scheduler_dialogs.shared.no_additional_details')}
                                                 </Typography>
                                             </Box>
                                         </MenuItem>
@@ -1106,7 +1213,7 @@ export default function MonitoredSatelliteDialog() {
                                 </Select>
                             </FormControl>
                             <Typography variant="caption" color="text.secondary">
-                                Target assignment is resolved at runtime from current rotator ownership.
+                                {t('scheduler_dialogs.shared.rotator_assignment_runtime')}
                             </Typography>
                             <FormControlLabel
                                 control={
@@ -1124,7 +1231,7 @@ export default function MonitoredSatelliteDialog() {
                                         disabled={!formData.rotator?.id}
                                     />
                                 }
-                                label="Unpark before observation start (if currently parked)"
+                                label={t('scheduler_dialogs.shared.unpark_before_observation')}
                             />
                             <FormControlLabel
                                 control={
@@ -1142,7 +1249,7 @@ export default function MonitoredSatelliteDialog() {
                                         disabled={!formData.rotator?.id}
                                     />
                                 }
-                                label="Park rotator after observation end"
+                                label={t('scheduler_dialogs.shared.park_after_observation')}
                             />
                         </Stack>
                     </Box>
@@ -1152,7 +1259,7 @@ export default function MonitoredSatelliteDialog() {
                     {/* Sessions */}
                     <Box>
                         <Typography variant="subtitle2" gutterBottom sx={{ color: 'primary.main', fontWeight: 'bold' }}>
-                            SDR Sessions
+                            {t('scheduler_dialogs.shared.sdr_sessions_title')}
                         </Typography>
                         <Stack direction="row" spacing={2} alignItems="center">
                             <Tabs
@@ -1192,7 +1299,7 @@ export default function MonitoredSatelliteDialog() {
                                 startIcon={<AddIcon />}
                                 onClick={handleAddSession}
                             >
-                                Add SDR
+                                {t('scheduler_dialogs.shared.add_sdr')}
                             </Button>
                         </Stack>
                     </Box>
@@ -1202,7 +1309,7 @@ export default function MonitoredSatelliteDialog() {
                     {/* SDR Configuration */}
                     <Box sx={{ position: 'relative' }}>
                         <Typography variant="subtitle2" gutterBottom sx={{ color: 'primary.main', fontWeight: 'bold' }}>
-                            SDR Configuration
+                            {t('scheduler_dialogs.shared.sdr_configuration_title')}
                         </Typography>
                         {sdrParametersLoading && (
                             <Box
@@ -1241,7 +1348,7 @@ export default function MonitoredSatelliteDialog() {
                                 </Box>
                             )}
                             <FormControl fullWidth size="small" required error={!!sdrParametersError[formData.sdr.id]}>
-                                <InputLabel>SDR</InputLabel>
+                                <InputLabel>{t('scheduler_dialogs.shared.sdr_label')}</InputLabel>
                                 <Select
                                     value={formData.sdr.id}
                                     onChange={(e) => {
@@ -1257,7 +1364,7 @@ export default function MonitoredSatelliteDialog() {
                                             },
                                         }));
                                     }}
-                                    label="SDR"
+                                    label={t('scheduler_dialogs.shared.sdr_label')}
                                 >
                                     {sdrs.filter(sdr => sdr.id !== 'sigmf-playback').map((sdr) => (
                                         <MenuItem key={sdr.id} value={sdr.id}>
@@ -1269,7 +1376,7 @@ export default function MonitoredSatelliteDialog() {
                                                     {[
                                                         sdr.driver ? `Driver: ${sdr.driver}` : null,
                                                         sdr.serial ? `Serial: ${sdr.serial}` : null,
-                                                    ].filter(Boolean).join(' • ') || 'No additional details'}
+                                                    ].filter(Boolean).join(' • ') || t('scheduler_dialogs.shared.no_additional_details')}
                                                 </Typography>
                                             </Box>
                                         </MenuItem>
@@ -1278,7 +1385,7 @@ export default function MonitoredSatelliteDialog() {
                             </FormControl>
 
                             <FormControl fullWidth size="small" required error={!bandwidthValidation.valid} disabled={!formData.sdr.id || sdrParametersLoading}>
-                                <InputLabel>Sample Rate</InputLabel>
+                                <InputLabel>{t('scheduler_dialogs.shared.sample_rate_label')}</InputLabel>
                                 <Select
                                     value={formData.sdr.sample_rate}
                                     onChange={(e) => {
@@ -1290,7 +1397,7 @@ export default function MonitoredSatelliteDialog() {
                                             },
                                         }));
                                     }}
-                                    label="Sample Rate"
+                                    label={t('scheduler_dialogs.shared.sample_rate_label')}
                                 >
                                     {(sdrParameters[formData.sdr.id]?.sample_rate_values || SAMPLE_RATES.map(r => r.value)).map((rate) => {
                                         const rateValue = typeof rate === 'number' ? rate : rate.value;
@@ -1316,13 +1423,13 @@ export default function MonitoredSatelliteDialog() {
                                 )}
                                 {bandwidthValidation.valid && bandwidthValidation.requiredBandwidth > 0 && (
                                     <Typography variant="caption" color="success.main" sx={{ mt: 0.5 }}>
-                                        ✓ All tasks fit within bandwidth
+                                        {t('scheduler_dialogs.shared.all_tasks_fit_within_bandwidth')}
                                     </Typography>
                                 )}
                             </FormControl>
 
                             <FormControl fullWidth size="small" required disabled={!formData.sdr.id || sdrParametersLoading} error={!!sdrParametersError[formData.sdr.id]}>
-                                <InputLabel>Gain</InputLabel>
+                                <InputLabel>{t('scheduler_dialogs.shared.gain_label')}</InputLabel>
                                 <Select
                                     value={
                                         formData.sdr.id && sdrParameters[formData.sdr.id]?.gain_values?.includes(formData.sdr.gain)
@@ -1338,7 +1445,7 @@ export default function MonitoredSatelliteDialog() {
                                             },
                                         }));
                                     }}
-                                    label="Gain"
+                                    label={t('scheduler_dialogs.shared.gain_label')}
                                 >
                                     {sdrParameters[formData.sdr.id]?.gain_values?.map((gain) => (
                                         <MenuItem key={gain} value={gain}>
@@ -1349,7 +1456,7 @@ export default function MonitoredSatelliteDialog() {
                             </FormControl>
 
                             <FormControl fullWidth size="small" required disabled={!formData.sdr.id || sdrParametersLoading} error={!!sdrParametersError[formData.sdr.id]}>
-                                <InputLabel>Antenna Port</InputLabel>
+                                <InputLabel>{t('scheduler_dialogs.shared.antenna_port_label')}</InputLabel>
                                 <Select
                                     value={
                                         formData.sdr.id && sdrParameters[formData.sdr.id]?.antennas?.rx?.includes(formData.sdr.antenna_port)
@@ -1365,11 +1472,11 @@ export default function MonitoredSatelliteDialog() {
                                             },
                                         }));
                                     }}
-                                    label="Antenna Port"
+                                    label={t('scheduler_dialogs.shared.antenna_port_label')}
                                 >
                                     {sdrParameters[formData.sdr.id]?.antennas?.rx?.map((port) => (
                                         <MenuItem key={port} value={port}>
-                                            {port}
+                                            {formatAntennaPortOptionLabel(port)}
                                         </MenuItem>
                                     )) || []}
                                 </Select>
@@ -1395,9 +1502,9 @@ export default function MonitoredSatelliteDialog() {
                                     }
                                     label={
                                         <Box>
-                                            <Typography variant="body2">Enable Bias-T</Typography>
+                                            <Typography variant="body2">{t('scheduler_dialogs.shared.enable_bias_t')}</Typography>
                                             <Typography variant="caption" color="text.secondary">
-                                                Turns Bias-T on during the observation; it will be switched off at the end.
+                                                {t('scheduler_dialogs.shared.enable_bias_t_help')}
                                             </Typography>
                                         </Box>
                                     }
@@ -1422,9 +1529,9 @@ export default function MonitoredSatelliteDialog() {
                                     }
                                     label={
                                         <Box>
-                                            <Typography variant="body2">Auto-calculate Center Frequency</Typography>
+                                            <Typography variant="body2">{t('scheduler_dialogs.shared.auto_center_frequency')}</Typography>
                                             <Typography variant="caption" color="text.secondary">
-                                                Automatically optimize frequency to cover all transmitters and avoid DC spike
+                                                {t('scheduler_dialogs.shared.auto_center_frequency_help')}
                                             </Typography>
                                         </Box>
                                     }
@@ -1434,7 +1541,7 @@ export default function MonitoredSatelliteDialog() {
                             <Box sx={{ display: 'flex', gap: 2 }}>
                                 <TextField
                                     size="small"
-                                    label="Center Frequency (Hz)"
+                                    label={t('scheduler_dialogs.shared.center_frequency_hz')}
                                     type="number"
                                     value={formData.sdr.center_frequency || ''}
                                     onChange={(e) => {
@@ -1450,8 +1557,10 @@ export default function MonitoredSatelliteDialog() {
                                     disabled={formData.sdr.auto_center_frequency}
                                     helperText={
                                         formData.sdr.auto_center_frequency
-                                            ? `Auto-calculated: ${formData.sdr.center_frequency ? (formData.sdr.center_frequency / 1000000).toFixed(6) + ' MHz' : 'N/A'}`
-                                            : 'Enter center frequency in Hz'
+                                            ? t('scheduler_dialogs.shared.auto_calculated_center', {
+                                                value: formData.sdr.center_frequency ? `${(formData.sdr.center_frequency / 1000000).toFixed(6)} MHz` : t('not_available'),
+                                            })
+                                            : t('scheduler_dialogs.shared.enter_center_frequency_hz')
                                     }
                                     sx={{ flex: '1' }}
                                 />
@@ -1479,7 +1588,7 @@ export default function MonitoredSatelliteDialog() {
                                             }
                                         }}
                                     >
-                                        ← Select from transmitter list
+                                        {t('scheduler_dialogs.shared.select_from_transmitter_list')}
                                     </Button>
                                     <Menu
                                         anchorEl={transmitterMenuAnchor}
@@ -1494,11 +1603,11 @@ export default function MonitoredSatelliteDialog() {
                                     >
                                         {availableTransmitters.length === 0 ? (
                                             <MenuItem disabled>
-                                                No transmitters available
+                                                {t('scheduler_dialogs.shared.no_transmitters_available')}
                                             </MenuItem>
                                         ) : (
                                             groupTransmittersByBand(availableTransmitters).map(({ band, transmitters }) => [
-                                                <ListSubheader key={`header-${band}`}>{band}</ListSubheader>,
+                                                <ListSubheader key={`header-${band}`}>{t(`scheduler_dialogs.shared.band_${band}`)}</ListSubheader>,
                                                 ...transmitters.map((transmitter) => {
                                                     const freqMHz = transmitter.downlink_low
                                                         ? (transmitter.downlink_low / 1000000).toFixed(3)
@@ -1534,10 +1643,13 @@ export default function MonitoredSatelliteDialog() {
                                                                 />
                                                                 <Box sx={{ flexGrow: 1 }}>
                                                                     <Typography variant="body2">
-                                                                        {transmitter.description || 'Unknown'}
+                                                                        {transmitter.description || t('unknown')}
                                                                     </Typography>
                                                                     <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                                                                        {`Source: ${transmitter.source || 'Unknown'} • ${freqMHz} MHz`}
+                                                                        {t('scheduler_dialogs.shared.source_with_frequency', {
+                                                                            source: transmitter.source || t('unknown'),
+                                                                            frequency: freqMHz,
+                                                                        })}
                                                                     </Typography>
                                                                 </Box>
                                                             </Box>
@@ -1558,7 +1670,7 @@ export default function MonitoredSatelliteDialog() {
                     <Box>
                         <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
                             <Typography variant="subtitle2" sx={{ color: 'primary.main', fontWeight: 'bold' }}>
-                                Tasks
+                                {t('scheduler_dialogs.shared.tasks_title')}
                             </Typography>
                             <Stack direction="row" spacing={1}>
                                 <Button
@@ -1567,7 +1679,7 @@ export default function MonitoredSatelliteDialog() {
                                     startIcon={<AddIcon />}
                                     onClick={() => handleAddTask('decoder')}
                                 >
-                                    Decoder
+                                    {t('scheduler_dialogs.shared.task_decoder')}
                                 </Button>
                                 <Button
                                     size="small"
@@ -1575,7 +1687,7 @@ export default function MonitoredSatelliteDialog() {
                                     startIcon={<AddIcon />}
                                     onClick={() => handleAddTask('audio_recording')}
                                 >
-                                    Audio Recording
+                                    {t('scheduler_dialogs.shared.task_audio_recording')}
                                 </Button>
                                 <Button
                                     size="small"
@@ -1583,7 +1695,7 @@ export default function MonitoredSatelliteDialog() {
                                     startIcon={<AddIcon />}
                                     onClick={() => handleAddTask('transcription')}
                                 >
-                                    Transcription
+                                    {t('scheduler_dialogs.shared.task_transcription')}
                                 </Button>
                                 <Button
                                     size="small"
@@ -1591,14 +1703,14 @@ export default function MonitoredSatelliteDialog() {
                                     startIcon={<AddIcon />}
                                     onClick={() => handleAddTask('iq_recording')}
                                 >
-                                    IQ Recording
+                                    {t('scheduler_dialogs.shared.task_iq_recording')}
                                 </Button>
                             </Stack>
                         </Box>
 
                         {formData.tasks.length === 0 ? (
                             <Typography variant="body2" color="text.secondary">
-                                No tasks added yet. Add decoders, audio recording, transcription, or IQ recording.
+                                {t('scheduler_dialogs.monitored.no_tasks_added')}
                             </Typography>
                         ) : (
                             <Stack spacing={2}>
@@ -1694,7 +1806,7 @@ export default function MonitoredSatelliteDialog() {
                                                         return (
                                                             <>
                                                                 <FormControl fullWidth size="small">
-                                                                    <InputLabel>Transmitter</InputLabel>
+                                                                    <InputLabel>{t('scheduler_dialogs.shared.transmitter_label')}</InputLabel>
                                                                     <Select
                                                                         value={getSafeTransmitterValue(task.config.transmitter_id)}
                                                                         onChange={(e) =>
@@ -1704,16 +1816,16 @@ export default function MonitoredSatelliteDialog() {
                                                                                 e.target.value
                                                                             )
                                                                         }
-                                                                        label="Transmitter"
+                                                                        label={t('scheduler_dialogs.shared.transmitter_label')}
                                                                         disabled={availableTransmitters.length === 0}
                                                                     >
                                                                         {availableTransmitters.length === 0 ? (
                                                                             <MenuItem disabled value="">
-                                                                                No transmitters available
+                                                                                {t('scheduler_dialogs.shared.no_transmitters_available')}
                                                                             </MenuItem>
                                                                         ) : (
                                                                             groupTransmittersByBand(availableTransmitters).map(({ band, transmitters }) => [
-                                                                                <ListSubheader key={`header-${band}`}>{band}</ListSubheader>,
+                                                                                <ListSubheader key={`header-${band}`}>{t(`scheduler_dialogs.shared.band_${band}`)}</ListSubheader>,
                                                                                 ...transmitters.map((transmitter) => {
                                                                                     const freqMHz = transmitter.downlink_low
                                                                                         ? (transmitter.downlink_low / 1000000).toFixed(3)
@@ -1735,16 +1847,16 @@ export default function MonitoredSatelliteDialog() {
                                                                                                 />
                                                                                                 <Box sx={{ flexGrow: 1 }}>
                                                                                                     <Typography variant="body2">
-                                                                                                        {transmitter.description || 'Unknown'} - {freqMHz} MHz
+                                                                                                        {transmitter.description || t('unknown')} - {freqMHz} MHz
                                                                                                     </Typography>
                                                                                                     <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
                                                                                                         {[
-                                                                                                            `Source: ${transmitter.source || 'Unknown'}`,
-                                                                                                            transmitter.mode ? `Mode: ${transmitter.mode}` : null,
-                                                                                                            transmitter.baud ? `Baud: ${transmitter.baud}` : null,
-                                                                                                            transmitter.baudrate ? `Baudrate: ${transmitter.baudrate}` : null,
-                                                                                                            transmitter.drift != null ? `Drift: ${transmitter.drift} Hz` : null,
-                                                                                                        ].filter(Boolean).join(' • ') || 'No additional details'}
+                                                                                                            t('scheduler_dialogs.shared.source_value', { value: transmitter.source || t('unknown') }),
+                                                                                                            transmitter.mode ? t('scheduler_dialogs.shared.mode_value', { value: transmitter.mode }) : null,
+                                                                                                            transmitter.baud ? t('scheduler_dialogs.shared.baud_value', { value: transmitter.baud }) : null,
+                                                                                                            transmitter.baudrate ? t('scheduler_dialogs.shared.baudrate_value', { value: transmitter.baudrate }) : null,
+                                                                                                            transmitter.drift != null ? t('scheduler_dialogs.shared.drift_hz_value', { value: transmitter.drift }) : null,
+                                                                                                        ].filter(Boolean).join(' • ') || t('scheduler_dialogs.shared.no_additional_details')}
                                                                                                     </Typography>
                                                                                                 </Box>
                                                                                             </Box>
@@ -1757,7 +1869,7 @@ export default function MonitoredSatelliteDialog() {
                                                                 </FormControl>
 
                                                                 <FormControl fullWidth size="small">
-                                                                    <InputLabel>Decoder Type</InputLabel>
+                                                                    <InputLabel>{t('scheduler_dialogs.shared.decoder_type_label')}</InputLabel>
                                                                     <Select
                                                                         value={decoderType}
                                                                         onChange={(e) =>
@@ -1767,11 +1879,11 @@ export default function MonitoredSatelliteDialog() {
                                                                                 e.target.value
                                                                             )
                                                                         }
-                                                                        label="Decoder Type"
+                                                                        label={t('scheduler_dialogs.shared.decoder_type_label')}
                                                                     >
                                                                         {DECODER_TYPES.map((type) => (
                                                                             <MenuItem key={type.value} value={type.value}>
-                                                                                {type.label}
+                                                                                {t(`scheduler_dialogs.shared.${type.labelKey}`)}
                                                                             </MenuItem>
                                                                         ))}
                                                                     </Select>
@@ -1844,7 +1956,7 @@ export default function MonitoredSatelliteDialog() {
                                                                 {Object.keys(decoderParams).length > 0 && (
                                                                     <>
                                                                         <Divider sx={{ my: 1 }}>
-                                                                            <Chip label="Decoder Parameters" size="small" />
+                                                                            <Chip label={t('scheduler_dialogs.shared.decoder_parameters_label')} size="small" />
                                                                         </Divider>
                                                                         {Object.entries(decoderParams).map(([paramKey, paramDef]) =>
                                                                             renderDecoderParameter(index, paramKey, paramDef, currentParams)
@@ -1858,7 +1970,7 @@ export default function MonitoredSatelliteDialog() {
                                                     {task.type === 'audio_recording' && (
                                                         <>
                                                             <FormControl fullWidth size="small">
-                                                                <InputLabel>Transmitter</InputLabel>
+                                                                <InputLabel>{t('scheduler_dialogs.shared.transmitter_label')}</InputLabel>
                                                                 <Select
                                                                     value={getSafeTransmitterValue(task.config.transmitter_id)}
                                                                     onChange={(e) =>
@@ -1868,16 +1980,16 @@ export default function MonitoredSatelliteDialog() {
                                                                             e.target.value
                                                                         )
                                                                     }
-                                                                    label="Transmitter"
+                                                                    label={t('scheduler_dialogs.shared.transmitter_label')}
                                                                     disabled={availableTransmitters.length === 0}
                                                                 >
                                                                     {availableTransmitters.length === 0 ? (
                                                                         <MenuItem disabled value="">
-                                                                            No transmitters available
+                                                                            {t('scheduler_dialogs.shared.no_transmitters_available')}
                                                                         </MenuItem>
                                                                     ) : (
                                                                         groupTransmittersByBand(availableTransmitters).map(({ band, transmitters }) => [
-                                                                            <ListSubheader key={`header-${band}`}>{band}</ListSubheader>,
+                                                                            <ListSubheader key={`header-${band}`}>{t(`scheduler_dialogs.shared.band_${band}`)}</ListSubheader>,
                                                                             ...transmitters.map((transmitter) => {
                                                                                 const freqMHz = transmitter.downlink_low
                                                                                     ? (transmitter.downlink_low / 1000000).toFixed(3)
@@ -1897,20 +2009,20 @@ export default function MonitoredSatelliteDialog() {
                                                                                                     flexShrink: 0,
                                                                                                 }}
                                                                                             />
-                                                                                            <Box sx={{ flexGrow: 1 }}>
-                                                                                                <Typography variant="body2">
-                                                                                                    {transmitter.description || 'Unknown'} - {freqMHz} MHz
-                                                                                                </Typography>
-                                                                                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                                                                                                    {[
-                                                                                                        `Source: ${transmitter.source || 'Unknown'}`,
-                                                                                                        transmitter.mode ? `Mode: ${transmitter.mode}` : null,
-                                                                                                        transmitter.baud ? `Baud: ${transmitter.baud}` : null,
-                                                                                                        transmitter.drift != null ? `Drift: ${transmitter.drift} Hz` : null,
-                                                                                                    ].filter(Boolean).join(' • ') || 'No additional details'}
-                                                                                                </Typography>
+                                                                                                <Box sx={{ flexGrow: 1 }}>
+                                                                                                    <Typography variant="body2">
+                                                                                                        {transmitter.description || t('unknown')} - {freqMHz} MHz
+                                                                                                    </Typography>
+                                                                                                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                                                                                                        {[
+                                                                                                            t('scheduler_dialogs.shared.source_value', { value: transmitter.source || t('unknown') }),
+                                                                                                            transmitter.mode ? t('scheduler_dialogs.shared.mode_value', { value: transmitter.mode }) : null,
+                                                                                                            transmitter.baud ? t('scheduler_dialogs.shared.baud_value', { value: transmitter.baud }) : null,
+                                                                                                            transmitter.drift != null ? t('scheduler_dialogs.shared.drift_hz_value', { value: transmitter.drift }) : null,
+                                                                                                        ].filter(Boolean).join(' • ') || t('scheduler_dialogs.shared.no_additional_details')}
+                                                                                                    </Typography>
+                                                                                                </Box>
                                                                                             </Box>
-                                                                                        </Box>
                                                                                     </MenuItem>
                                                                                 );
                                                                             })
@@ -1920,7 +2032,7 @@ export default function MonitoredSatelliteDialog() {
                                                             </FormControl>
 
                                                             <FormControl fullWidth size="small">
-                                                                <InputLabel>Demodulator</InputLabel>
+                                                                <InputLabel>{t('scheduler_dialogs.shared.demodulator_label')}</InputLabel>
                                                                 <Select
                                                                     value={task.config.demodulator || 'fm'}
                                                                     onChange={(e) =>
@@ -1930,18 +2042,18 @@ export default function MonitoredSatelliteDialog() {
                                                                             e.target.value
                                                                         )
                                                                     }
-                                                                    label="Demodulator"
+                                                                    label={t('scheduler_dialogs.shared.demodulator_label')}
                                                                 >
                                                                     {DEMODULATOR_TYPES.map((type) => (
                                                                         <MenuItem key={type.value} value={type.value}>
-                                                                            {type.label}
+                                                                            {t(`scheduler_dialogs.shared.${type.labelKey}`)}
                                                                         </MenuItem>
                                                                     ))}
                                                                 </Select>
                                                             </FormControl>
 
                                                             <Typography variant="caption" color="text.secondary">
-                                                                Audio will be recorded in WAV format (16-bit PCM, mono, 48kHz) after demodulation.
+                                                                {t('scheduler_dialogs.shared.audio_recording_help')}
                                                             </Typography>
                                                         </>
                                                     )}
@@ -1949,7 +2061,7 @@ export default function MonitoredSatelliteDialog() {
                                                     {task.type === 'transcription' && (
                                                         <>
                                                             <FormControl fullWidth size="small">
-                                                                <InputLabel>Transmitter</InputLabel>
+                                                                <InputLabel>{t('scheduler_dialogs.shared.transmitter_label')}</InputLabel>
                                                                 <Select
                                                                     value={getSafeTransmitterValue(task.config.transmitter_id)}
                                                                     onChange={(e) =>
@@ -1959,16 +2071,16 @@ export default function MonitoredSatelliteDialog() {
                                                                             e.target.value
                                                                         )
                                                                     }
-                                                                    label="Transmitter"
+                                                                    label={t('scheduler_dialogs.shared.transmitter_label')}
                                                                     disabled={availableTransmitters.length === 0}
                                                                 >
                                                                     {availableTransmitters.length === 0 ? (
                                                                         <MenuItem disabled value="">
-                                                                            No transmitters available
+                                                                            {t('scheduler_dialogs.shared.no_transmitters_available')}
                                                                         </MenuItem>
                                                                     ) : (
                                                                         groupTransmittersByBand(availableTransmitters).map(({ band, transmitters }) => [
-                                                                            <ListSubheader key={`header-${band}`}>{band}</ListSubheader>,
+                                                                            <ListSubheader key={`header-${band}`}>{t(`scheduler_dialogs.shared.band_${band}`)}</ListSubheader>,
                                                                             ...transmitters.map((transmitter) => {
                                                                                 const freqMHz = transmitter.downlink_low
                                                                                     ? (transmitter.downlink_low / 1000000).toFixed(3)
@@ -1990,15 +2102,15 @@ export default function MonitoredSatelliteDialog() {
                                                                                             />
                                                                                             <Box sx={{ flexGrow: 1 }}>
                                                                                             <Typography variant="body2">
-                                                                                                {transmitter.description || 'Unknown'} - {freqMHz} MHz
+                                                                                                {transmitter.description || t('unknown')} - {freqMHz} MHz
                                                                                             </Typography>
                                                                                             <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
                                                                                                 {[
-                                                                                                    `Source: ${transmitter.source || 'Unknown'}`,
-                                                                                                    transmitter.mode ? `Mode: ${transmitter.mode}` : null,
-                                                                                                    transmitter.baud ? `Baud: ${transmitter.baud}` : null,
-                                                                                                    transmitter.drift != null ? `Drift: ${transmitter.drift} Hz` : null,
-                                                                                                ].filter(Boolean).join(' • ') || 'No additional details'}
+                                                                                                    t('scheduler_dialogs.shared.source_value', { value: transmitter.source || t('unknown') }),
+                                                                                                    transmitter.mode ? t('scheduler_dialogs.shared.mode_value', { value: transmitter.mode }) : null,
+                                                                                                    transmitter.baud ? t('scheduler_dialogs.shared.baud_value', { value: transmitter.baud }) : null,
+                                                                                                    transmitter.drift != null ? t('scheduler_dialogs.shared.drift_hz_value', { value: transmitter.drift }) : null,
+                                                                                                ].filter(Boolean).join(' • ') || t('scheduler_dialogs.shared.no_additional_details')}
                                                                                             </Typography>
                                                                                         </Box>
                                                                                     </Box>
@@ -2011,7 +2123,7 @@ export default function MonitoredSatelliteDialog() {
                                                             </FormControl>
 
                                                             <FormControl fullWidth size="small">
-                                                                <InputLabel>Modulation</InputLabel>
+                                                                <InputLabel>{t('scheduler_dialogs.shared.modulation_label')}</InputLabel>
                                                                 <Select
                                                                     value={task.config.modulation || 'fm'}
                                                                     onChange={(e) =>
@@ -2021,18 +2133,18 @@ export default function MonitoredSatelliteDialog() {
                                                                             e.target.value
                                                                         )
                                                                     }
-                                                                    label="Modulation"
+                                                                    label={t('scheduler_dialogs.shared.modulation_label')}
                                                                 >
                                                                     {MODULATION_TYPES.map((type) => (
                                                                         <MenuItem key={type.value} value={type.value}>
-                                                                            {type.label}
+                                                                            {t(`scheduler_dialogs.shared.${type.labelKey}`)}
                                                                         </MenuItem>
                                                                     ))}
                                                                 </Select>
                                                             </FormControl>
 
                                                             <FormControl fullWidth size="small">
-                                                                <InputLabel>Provider</InputLabel>
+                                                                <InputLabel>{t('scheduler_dialogs.shared.provider_label')}</InputLabel>
                                                                 <Select
                                                                     value={task.config.provider || 'gemini'}
                                                                     onChange={(e) =>
@@ -2042,15 +2154,18 @@ export default function MonitoredSatelliteDialog() {
                                                                             e.target.value
                                                                         )
                                                                     }
-                                                                    label="Provider"
+                                                                    label={t('scheduler_dialogs.shared.provider_label')}
                                                                 >
-                                                                    <MenuItem value="gemini">Gemini</MenuItem>
-                                                                    <MenuItem value="deepgram">Deepgram</MenuItem>
+                                                                    {TRANSCRIPTION_PROVIDER_OPTIONS.map((option) => (
+                                                                        <MenuItem key={option.value} value={option.value}>
+                                                                            {t(`scheduler_dialogs.shared.${option.labelKey}`)}
+                                                                        </MenuItem>
+                                                                    ))}
                                                                 </Select>
                                                             </FormControl>
 
                                                             <FormControl fullWidth size="small">
-                                                                <InputLabel>Source Language</InputLabel>
+                                                                <InputLabel>{t('scheduler_dialogs.shared.source_language_label')}</InputLabel>
                                                                 <Select
                                                                     value={task.config.language || 'auto'}
                                                                     onChange={(e) =>
@@ -2060,31 +2175,18 @@ export default function MonitoredSatelliteDialog() {
                                                                             e.target.value
                                                                         )
                                                                     }
-                                                                    label="Source Language"
+                                                                    label={t('scheduler_dialogs.shared.source_language_label')}
                                                                 >
-                                                                    <MenuItem value="auto">🌐 Auto-detect</MenuItem>
-                                                                    <MenuItem value="en">🇬🇧 English</MenuItem>
-                                                                    <MenuItem value="el">🇬🇷 Greek</MenuItem>
-                                                                    <MenuItem value="es">🇪🇸 Spanish</MenuItem>
-                                                                    <MenuItem value="fr">🇫🇷 French</MenuItem>
-                                                                    <MenuItem value="de">🇩🇪 German</MenuItem>
-                                                                    <MenuItem value="it">🇮🇹 Italian</MenuItem>
-                                                                    <MenuItem value="pt">🇵🇹 Portuguese</MenuItem>
-                                                                    <MenuItem value="pt-BR">🇧🇷 Portuguese (Brazil)</MenuItem>
-                                                                    <MenuItem value="ru">🇷🇺 Russian</MenuItem>
-                                                                    <MenuItem value="uk">🇺🇦 Ukrainian</MenuItem>
-                                                                    <MenuItem value="ja">🇯🇵 Japanese</MenuItem>
-                                                                    <MenuItem value="zh">🇨🇳 Chinese</MenuItem>
-                                                                    <MenuItem value="ar">🇸🇦 Arabic</MenuItem>
-                                                                    <MenuItem value="tl">🇵🇭 Filipino</MenuItem>
-                                                                    <MenuItem value="tr">🇹🇷 Turkish</MenuItem>
-                                                                    <MenuItem value="sk">🇸🇰 Slovak</MenuItem>
-                                                                    <MenuItem value="hr">🇭🇷 Croatian</MenuItem>
+                                                                    {SOURCE_LANGUAGE_OPTIONS.map((option) => (
+                                                                        <MenuItem key={option.value} value={option.value}>
+                                                                            {`${option.icon} ${t(`scheduler_dialogs.shared.${option.labelKey}`)}`}
+                                                                        </MenuItem>
+                                                                    ))}
                                                                 </Select>
                                                             </FormControl>
 
                                                             <FormControl fullWidth size="small">
-                                                                <InputLabel>Translate To</InputLabel>
+                                                                <InputLabel>{t('scheduler_dialogs.shared.translate_to_label')}</InputLabel>
                                                                 <Select
                                                                     value={task.config.translate_to || 'none'}
                                                                     onChange={(e) =>
@@ -2094,31 +2196,18 @@ export default function MonitoredSatelliteDialog() {
                                                                             e.target.value
                                                                         )
                                                                     }
-                                                                    label="Translate To"
+                                                                    label={t('scheduler_dialogs.shared.translate_to_label')}
                                                                 >
-                                                                    <MenuItem value="none">⭕ No Translation</MenuItem>
-                                                                    <MenuItem value="en">🇬🇧 English</MenuItem>
-                                                                    <MenuItem value="el">🇬🇷 Greek</MenuItem>
-                                                                    <MenuItem value="es">🇪🇸 Spanish</MenuItem>
-                                                                    <MenuItem value="fr">🇫🇷 French</MenuItem>
-                                                                    <MenuItem value="de">🇩🇪 German</MenuItem>
-                                                                    <MenuItem value="it">🇮🇹 Italian</MenuItem>
-                                                                    <MenuItem value="pt">🇵🇹 Portuguese</MenuItem>
-                                                                    <MenuItem value="pt-BR">🇧🇷 Portuguese (Brazil)</MenuItem>
-                                                                    <MenuItem value="ru">🇷🇺 Russian</MenuItem>
-                                                                    <MenuItem value="uk">🇺🇦 Ukrainian</MenuItem>
-                                                                    <MenuItem value="ja">🇯🇵 Japanese</MenuItem>
-                                                                    <MenuItem value="zh">🇨🇳 Chinese</MenuItem>
-                                                                    <MenuItem value="ar">🇸🇦 Arabic</MenuItem>
-                                                                    <MenuItem value="tl">🇵🇭 Filipino</MenuItem>
-                                                                    <MenuItem value="tr">🇹🇷 Turkish</MenuItem>
-                                                                    <MenuItem value="sk">🇸🇰 Slovak</MenuItem>
-                                                                    <MenuItem value="hr">🇭🇷 Croatian</MenuItem>
+                                                                    {TRANSLATION_TARGET_OPTIONS.map((option) => (
+                                                                        <MenuItem key={option.value} value={option.value}>
+                                                                            {`${option.icon} ${t(`scheduler_dialogs.shared.${option.labelKey}`)}`}
+                                                                        </MenuItem>
+                                                                    ))}
                                                                 </Select>
                                                             </FormControl>
 
                                                             <Typography variant="caption" color="text.secondary">
-                                                                Audio transcription will be performed using the selected modulation type.
+                                                                {t('scheduler_dialogs.shared.transcription_help')}
                                                             </Typography>
                                                         </>
                                                     )}
@@ -2126,7 +2215,7 @@ export default function MonitoredSatelliteDialog() {
                                                     {task.type === 'iq_recording' && (
                                                         <>
                                                             <FormControl fullWidth size="small">
-                                                                <InputLabel>Transmitter</InputLabel>
+                                                                <InputLabel>{t('scheduler_dialogs.shared.transmitter_label')}</InputLabel>
                                                                 <Select
                                                                     value={getSafeTransmitterValue(task.config.transmitter_id)}
                                                                     onChange={(e) => {
@@ -2141,16 +2230,16 @@ export default function MonitoredSatelliteDialog() {
                                                                             }
                                                                         }
                                                                     }}
-                                                                    label="Transmitter"
+                                                                    label={t('scheduler_dialogs.shared.transmitter_label')}
                                                                     disabled={availableTransmitters.length === 0}
                                                                 >
                                                                     {availableTransmitters.length === 0 ? (
                                                                         <MenuItem disabled value="">
-                                                                            No transmitters available
+                                                                            {t('scheduler_dialogs.shared.no_transmitters_available')}
                                                                         </MenuItem>
                                                                     ) : (
                                                                         groupTransmittersByBand(availableTransmitters).map(({ band, transmitters }) => [
-                                                                            <ListSubheader key={`header-${band}`}>{band}</ListSubheader>,
+                                                                            <ListSubheader key={`header-${band}`}>{t(`scheduler_dialogs.shared.band_${band}`)}</ListSubheader>,
                                                                             ...transmitters.map((transmitter) => {
                                                                                 const freqMHz = transmitter.downlink_low
                                                                                     ? (transmitter.downlink_low / 1000000).toFixed(3)
@@ -2172,15 +2261,15 @@ export default function MonitoredSatelliteDialog() {
                                                                                             />
                                                                                             <Box sx={{ flexGrow: 1 }}>
                                                                                                 <Typography variant="body2">
-                                                                                                    {transmitter.description || 'Unknown'} - {freqMHz} MHz
+                                                                                                    {transmitter.description || t('unknown')} - {freqMHz} MHz
                                                                                                 </Typography>
                                                                                                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
                                                                                                     {[
-                                                                                                        `Source: ${transmitter.source || 'Unknown'}`,
-                                                                                                        transmitter.mode ? `Mode: ${transmitter.mode}` : null,
-                                                                                                        transmitter.baud ? `Baud: ${transmitter.baud}` : null,
-                                                                                                        transmitter.drift != null ? `Drift: ${transmitter.drift} Hz` : null,
-                                                                                                    ].filter(Boolean).join(' • ') || 'No additional details'}
+                                                                                                        t('scheduler_dialogs.shared.source_value', { value: transmitter.source || t('unknown') }),
+                                                                                                        transmitter.mode ? t('scheduler_dialogs.shared.mode_value', { value: transmitter.mode }) : null,
+                                                                                                        transmitter.baud ? t('scheduler_dialogs.shared.baud_value', { value: transmitter.baud }) : null,
+                                                                                                        transmitter.drift != null ? t('scheduler_dialogs.shared.drift_hz_value', { value: transmitter.drift }) : null,
+                                                                                                    ].filter(Boolean).join(' • ') || t('scheduler_dialogs.shared.no_additional_details')}
                                                                                                 </Typography>
                                                                                             </Box>
                                                                                         </Box>
@@ -2207,10 +2296,10 @@ export default function MonitoredSatelliteDialog() {
                                                                             }}
                                                                         />
                                                                     }
-                                                                    label="Enable Frequency Shift"
+                                                                    label={t('scheduler_dialogs.shared.enable_frequency_shift_label')}
                                                                 />
                                                                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block', ml: 4, mt: -0.5 }}>
-                                                                    Centers the signal at the target frequency. Some SDRs have center spikes that can contaminate a centered signal, so shifting will move the target transmitter signal to the center to improve decoding. Some applications require the target to be centered.
+                                                                    {t('scheduler_dialogs.shared.enable_frequency_shift_help')}
                                                                 </Typography>
                                                             </Box>
 
@@ -2234,13 +2323,13 @@ export default function MonitoredSatelliteDialog() {
                                                                             disabled={!task.config.enable_frequency_shift}
                                                                         />
                                                                     }
-                                                                    label="Auto-fill from Transmitter Frequency"
+                                                                    label={t('scheduler_dialogs.shared.auto_fill_from_transmitter_frequency_label')}
                                                                 />
 
                                                                 <TextField
                                                                     fullWidth
                                                                     size="small"
-                                                                    label="Target Center Frequency (Hz)"
+                                                                    label={t('scheduler_dialogs.shared.target_center_frequency_hz_label')}
                                                                     type="number"
                                                                     value={task.config.target_center_freq || ''}
                                                                     onChange={(e) =>
@@ -2251,10 +2340,10 @@ export default function MonitoredSatelliteDialog() {
                                                             </>
 
                                                             <Typography variant="caption" color="text.secondary">
-                                                                IQ data will be recorded in SigMF format (cf32_le).
+                                                                {t('scheduler_dialogs.shared.iq_recording_help')}
                                                                 {task.config.enable_frequency_shift
-                                                                    ? ' Frequency shifting will center the signal at the target frequency, avoiding DC offset issues.'
-                                                                    : ' The recording uses the SDR sample rate configured above.'}
+                                                                    ? ` ${t('scheduler_dialogs.shared.iq_recording_help_shifted')}`
+                                                                    : ` ${t('scheduler_dialogs.shared.iq_recording_help_sample_rate')}`}
                                                                 {formData.sdr.sample_rate && (task.config.decimation_factor || 1) > 1
                                                                     ? ` Decimated to ${formatSampleRate(formData.sdr.sample_rate / (task.config.decimation_factor || 1))}.`
                                                                     : ''}
@@ -2268,7 +2357,7 @@ export default function MonitoredSatelliteDialog() {
 
                                                                 return (
                                                                     <FormControl fullWidth size="small" disabled={!formData.sdr.sample_rate}>
-                                                                        <InputLabel>Decimation</InputLabel>
+                                                                        <InputLabel>{t('scheduler_dialogs.shared.decimation_label')}</InputLabel>
                                                                         <Select
                                                                             value={decimationFactor}
                                                                             onChange={(e) =>
@@ -2278,7 +2367,7 @@ export default function MonitoredSatelliteDialog() {
                                                                                     parseInt(e.target.value, 10)
                                                                                 )
                                                                             }
-                                                                            label="Decimation"
+                                                                            label={t('scheduler_dialogs.shared.decimation_label')}
                                                                         >
                                                                             {decimationOptions.map((factor) => (
                                                                                 <MenuItem key={factor} value={factor}>
@@ -2289,10 +2378,12 @@ export default function MonitoredSatelliteDialog() {
                                                                             ))}
                                                                         </Select>
                                                                         <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-                                                                            Output sample rate: {outputRate ? formatSampleRate(outputRate) : 'N/A'}
+                                                                            {t('scheduler_dialogs.shared.output_sample_rate_line', {
+                                                                                rate: outputRate ? formatSampleRate(outputRate) : t('not_available'),
+                                                                            })}
                                                                         </Typography>
                                                                         <Typography variant="caption" color="warning.main" sx={{ mt: 0.5, display: 'block' }}>
-                                                                            Decimation assumes the target signal is centered. Enable Frequency Shift to center your signal before decimating.
+                                                                            {t('scheduler_dialogs.shared.decimation_center_hint')}
                                                                         </Typography>
                                                                     </FormControl>
                                                                 );
@@ -2314,7 +2405,7 @@ export default function MonitoredSatelliteDialog() {
                                                                             }}
                                                                         />
                                                                     }
-                                                                    label="Run SatDump post-processing after IQ recording"
+                                                                    label={t('scheduler_dialogs.shared.run_satdump_post_processing_label')}
                                                                 />
                                                                 <FormControl
                                                                     fullWidth
@@ -2322,13 +2413,13 @@ export default function MonitoredSatelliteDialog() {
                                                                     disabled={!task.config.enable_post_processing}
                                                                     sx={{ mt: 1 }}
                                                                 >
-                                                                    <InputLabel>SatDump Pipeline</InputLabel>
+                                                                    <InputLabel>{t('scheduler_dialogs.shared.satdump_pipeline_label')}</InputLabel>
                                                                     <Select
                                                                         value={task.config.post_process_pipeline || getDefaultSatdumpPipeline()}
                                                                         onChange={(e) =>
                                                                             handleTaskConfigChange(index, 'post_process_pipeline', e.target.value)
                                                                         }
-                                                                        label="SatDump Pipeline"
+                                                                        label={t('scheduler_dialogs.shared.satdump_pipeline_label')}
                                                                     >
                                                                         {Object.entries(SATDUMP_PIPELINES).map(([key, group]) => {
                                                                             const pipelines = group?.pipelines || [];
@@ -2360,7 +2451,7 @@ export default function MonitoredSatelliteDialog() {
                                                                             }
                                                                         />
                                                                     }
-                                                                    label="Delete IQ recording after SatDump completes"
+                                                                    label={t('scheduler_dialogs.shared.delete_iq_after_satdump_label')}
                                                                 />
                                                             </Box>
                                                         </>
@@ -2398,7 +2489,7 @@ export default function MonitoredSatelliteDialog() {
                         },
                     }}
                 >
-                    Cancel
+                    {t('cancel')}
                 </Button>
                 <Button
                     variant="contained"
@@ -2412,13 +2503,15 @@ export default function MonitoredSatelliteDialog() {
                         },
                     }}
                 >
-                    {isSaving ? 'Saving...' : (selectedMonitoredSatellite ? 'Update' : 'Save')}
+                    {isSaving
+                        ? t('scheduler_dialogs.shared.saving')
+                        : (isEditingMonitoredSatellite ? t('scheduler_dialogs.shared.update_button') : t('save'))}
                 </Button>
             </DialogActions>
 
             {/* Remove Session Confirmation Dialog */}
             <Dialog open={openRemoveSessionConfirm} onClose={() => setOpenRemoveSessionConfirm(false)}>
-                <DialogTitle>Remove SDR Session</DialogTitle>
+                <DialogTitle>{t('scheduler_dialogs.shared.remove_sdr_session_title')}</DialogTitle>
                 <DialogContent
                     sx={{
                         bgcolor: (theme) => (
@@ -2428,14 +2521,14 @@ export default function MonitoredSatelliteDialog() {
                         ),
                     }}
                 >
-                    Are you sure you want to remove this SDR session?
+                    {t('scheduler_dialogs.shared.remove_sdr_session_confirm')}
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={() => setOpenRemoveSessionConfirm(false)} variant="outlined">
-                        Cancel
+                        {t('cancel')}
                     </Button>
                     <Button onClick={handleRemoveSessionConfirm} variant="contained" color="error">
-                        Remove
+                        {t('scheduler_dialogs.shared.remove_button')}
                     </Button>
                 </DialogActions>
             </Dialog>

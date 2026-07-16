@@ -1,15 +1,15 @@
 import SunCalc from 'suncalc';
 
 const MOON_PHASES = Object.freeze([
-    { limit: 0.03, label: 'New Moon' },
-    { limit: 0.22, label: 'Waxing Crescent' },
-    { limit: 0.28, label: 'First Quarter' },
-    { limit: 0.47, label: 'Waxing Gibbous' },
-    { limit: 0.53, label: 'Full Moon' },
-    { limit: 0.72, label: 'Waning Gibbous' },
-    { limit: 0.78, label: 'Last Quarter' },
-    { limit: 0.97, label: 'Waning Crescent' },
-    { limit: 1.01, label: 'New Moon' },
+    { limit: 0.03, key: 'canvas.moon_phase.new_moon', fallback: 'New Moon' },
+    { limit: 0.22, key: 'canvas.moon_phase.waxing_crescent', fallback: 'Waxing Crescent' },
+    { limit: 0.28, key: 'canvas.moon_phase.first_quarter', fallback: 'First Quarter' },
+    { limit: 0.47, key: 'canvas.moon_phase.waxing_gibbous', fallback: 'Waxing Gibbous' },
+    { limit: 0.53, key: 'canvas.moon_phase.full_moon', fallback: 'Full Moon' },
+    { limit: 0.72, key: 'canvas.moon_phase.waning_gibbous', fallback: 'Waning Gibbous' },
+    { limit: 0.78, key: 'canvas.moon_phase.last_quarter', fallback: 'Last Quarter' },
+    { limit: 0.97, key: 'canvas.moon_phase.waning_crescent', fallback: 'Waning Crescent' },
+    { limit: 1.01, key: 'canvas.moon_phase.new_moon', fallback: 'New Moon' },
 ]);
 
 export const normalizePhase = (phase) => {
@@ -18,21 +18,41 @@ export const normalizePhase = (phase) => {
     return ((numericPhase % 1) + 1) % 1;
 };
 
-export const getMoonPhaseLabel = (phase) => {
-    const normalizedPhase = normalizePhase(phase);
-    return MOON_PHASES.find((entry) => normalizedPhase < entry.limit)?.label || 'Moon Phase';
+const resolveTranslation = (translate, key, fallback, options = undefined) => {
+    if (typeof translate !== 'function') {
+        return fallback;
+    }
+    return translate(key, {
+        defaultValue: fallback,
+        ...(options || {}),
+    });
 };
 
-export const getMoonIllumination = (date = new Date()) => {
+export const getMoonPhaseLabel = (phase, translate = null) => {
+    const normalizedPhase = normalizePhase(phase);
+    const phaseEntry = MOON_PHASES.find((entry) => normalizedPhase < entry.limit);
+    if (!phaseEntry) {
+        return resolveTranslation(translate, 'canvas.moon_phase.fallback', 'Moon Phase');
+    }
+    return resolveTranslation(translate, phaseEntry.key, phaseEntry.fallback);
+};
+
+export const getMoonIllumination = (date = new Date(), translate = null) => {
     const illumination = SunCalc.getMoonIllumination(date);
     const phase = normalizePhase(illumination?.phase);
     const fraction = Math.max(0, Math.min(1, Number(illumination?.fraction) || 0));
-    const label = getMoonPhaseLabel(phase);
+    const label = getMoonPhaseLabel(phase, translate);
+    const percent = Math.round(fraction * 100);
     return {
         phase,
         fraction,
         label,
-        description: `${label}, ${Math.round(fraction * 100)}% illuminated`,
+        description: resolveTranslation(
+            translate,
+            'canvas.moon_phase.description',
+            `${label}, ${percent}% illuminated`,
+            { label, percent },
+        ),
     };
 };
 

@@ -88,6 +88,24 @@ class TestRotatorsCRUD:
         assert result["success"] is True
         assert result["data"]["azimuth_mode"] == "-180_180"
 
+    async def test_add_rotator_with_overlap_azimuth_mode(self, db_session):
+        """Test successful rotator creation with 0_450 azimuth mode."""
+        rotator_data = {
+            "name": "Overlap Rotator",
+            "host": "localhost",
+            "port": 4533,
+            "minaz": 0,
+            "maxaz": 450,
+            "minel": 0,
+            "maxel": 180,
+            "azimuth_mode": "0_450",
+        }
+
+        result = await add_rotator(db_session, rotator_data)
+
+        assert result["success"] is True
+        assert result["data"]["azimuth_mode"] == "0_450"
+
     async def test_fetch_rotators_all(self, db_session):
         """Test fetching all rotators."""
         # Add two rotators
@@ -454,6 +472,42 @@ class TestSDRsCRUD:
         assert result["success"] is True
         assert result["data"]["name"] == "RTL-SDR TCP"
         assert result["data"]["host"] == "192.168.1.100"
+
+    async def test_add_sdr_airspy_success(self, db_session):
+        """Test successful native Airspy SDR creation."""
+        sdr_data = {
+            "name": "Airspy R2",
+            "type": "airspy",
+            "driver": "airspy",
+            "serial": "B58069DC394C1413",
+            "frequency_min": 24,
+            "frequency_max": 1750,
+        }
+
+        result = await add_sdr(db_session, sdr_data)
+
+        assert result["success"] is True
+        assert str(result["data"]["type"]).lower() == "airspy"
+        assert result["data"]["driver"] == "airspy"
+        assert result["data"]["serial"] == "B58069DC394C1413"
+
+    async def test_add_sdr_airspyhf_success(self, db_session):
+        """Test successful native Airspy HF+ SDR creation."""
+        sdr_data = {
+            "name": "Airspy HF+ Discovery",
+            "type": "airspyhf",
+            "driver": "airspyhf",
+            "serial": "A000000000000001",
+            "frequency_min": 0,
+            "frequency_max": 260,
+        }
+
+        result = await add_sdr(db_session, sdr_data)
+
+        assert result["success"] is True
+        assert str(result["data"]["type"]).lower() == "airspyhf"
+        assert result["data"]["driver"] == "airspyhf"
+        assert result["data"]["serial"] == "A000000000000001"
 
     async def test_add_sdr_missing_name(self, db_session):
         """Test SDR creation fails without name."""

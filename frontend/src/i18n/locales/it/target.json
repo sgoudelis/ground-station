@@ -119,6 +119,9 @@
   "satellite_map": {
     "title": "Tracciamento target"
   },
+  "target_retarget_dialog": {
+    "title": "Riassegna slot o crea un nuovo bersaglio"
+  },
   "pass_timeline": {
     "title": "Cronologia dei passaggi per {{name}} - Prossime {{hours}} ore"
   },

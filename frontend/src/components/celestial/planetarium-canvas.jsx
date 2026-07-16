@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Box, Typography } from '@mui/material';
 import { alpha, useTheme } from '@mui/material/styles';
+import { useTranslation } from 'react-i18next';
 
 const ASSET_BASE_URL = import.meta.env.BASE_URL || '/';
 const NORMALIZED_ASSET_BASE_URL = ASSET_BASE_URL.endsWith('/') ? ASSET_BASE_URL : `${ASSET_BASE_URL}/`;
@@ -14,16 +15,16 @@ const MAX_FOV_DEG = 160;
 const NAMED_STAR_MAG_LIMIT = 4.2;
 const CONSTELLATION_LABEL_MAG_LIMIT = 4.2;
 const HORIZON_TICKS = [
-    { az: 0, label: 'N', degree: '0' },
+    { az: 0, labelKey: 'north', degree: '0' },
     { az: 30, degree: '30' },
     { az: 60, degree: '60' },
-    { az: 90, label: 'E', degree: '90' },
+    { az: 90, labelKey: 'east', degree: '90' },
     { az: 120, degree: '120' },
     { az: 150, degree: '150' },
-    { az: 180, label: 'S', degree: '180' },
+    { az: 180, labelKey: 'south', degree: '180' },
     { az: 210, degree: '210' },
     { az: 240, degree: '240' },
-    { az: 270, label: 'W', degree: '270' },
+    { az: 270, labelKey: 'west', degree: '270' },
     { az: 300, degree: '300' },
     { az: 330, degree: '330' },
 ];
@@ -134,7 +135,7 @@ const buildTargetKey = (entry = {}) => {
     return command ? `mission:${command}` : '';
 };
 
-const resolveName = (entry = {}) => {
+const resolveName = (entry = {}, fallbackLabel = 'Target') => {
     const name = String(
         entry.display_name
         || entry.displayName
@@ -145,7 +146,7 @@ const resolveName = (entry = {}) => {
         || entry.id
         || '',
     ).trim();
-    return name || 'Target';
+    return name || fallbackLabel;
 };
 
 const resolveCanvasSize = (node) => {
@@ -200,13 +201,13 @@ const equatorialToAltAz = ({ raDeg, decDeg }, observer, date) => {
     };
 };
 
-const normalizeSkyObject = (entry, kind) => {
+const normalizeSkyObject = (entry, kind, fallbackLabel = 'Target') => {
     const sky = entry?.sky_position || {};
     const az = toFiniteNumber(sky.az_deg);
     const el = toFiniteNumber(sky.el_deg);
     if (az == null || el == null) return null;
 
-    const key = buildTargetKey(entry) || `${kind}:${resolveName(entry).toLowerCase()}`;
+    const key = buildTargetKey(entry) || `${kind}:${resolveName(entry, fallbackLabel).toLowerCase()}`;
     const visible = typeof entry?.visibility?.visible === 'boolean'
         ? entry.visibility.visible
         : el > 0;
@@ -214,7 +215,7 @@ const normalizeSkyObject = (entry, kind) => {
     return {
         key,
         kind,
-        name: resolveName(entry),
+        name: resolveName(entry, fallbackLabel),
         az: normalizeDegrees(az),
         el,
         visible,
@@ -222,13 +223,13 @@ const normalizeSkyObject = (entry, kind) => {
     };
 };
 
-const buildSkyObjects = (scene = {}) => {
+const buildSkyObjects = (scene = {}, fallbackLabel = 'Target') => {
     const targetObjects = (Array.isArray(scene.celestial) ? scene.celestial : [])
-        .map((entry) => normalizeSkyObject(entry, 'target'))
+        .map((entry) => normalizeSkyObject(entry, 'target', fallbackLabel))
         .filter(Boolean);
     const existingTargetKeys = new Set(targetObjects.map((item) => item.key));
     const planetObjects = (Array.isArray(scene.planets) ? scene.planets : [])
-        .map((entry) => normalizeSkyObject(entry, 'planet'))
+        .map((entry) => normalizeSkyObject(entry, 'planet', fallbackLabel))
         .filter((item) => item && !existingTargetKeys.has(item.key));
 
     return [...planetObjects, ...targetObjects];
@@ -404,6 +405,7 @@ function PlanetariumCanvas({
     displayOptions = DEFAULT_DISPLAY_OPTIONS,
 }) {
     const theme = useTheme();
+    const { t } = useTranslation('celestial');
     const containerRef = useRef(null);
     const canvasRef = useRef(null);
     const dragRef = useRef(null);
@@ -421,7 +423,11 @@ function PlanetariumCanvas({
         [selectedTargetKeys],
     );
     const focusedKey = String(focusTargetKey || '').trim();
-    const skyObjects = useMemo(() => buildSkyObjects(scene), [scene]);
+    const fallbackTargetLabel = t('canvas.planetarium.fallback_target');
+    const skyObjects = useMemo(
+        () => buildSkyObjects(scene, fallbackTargetLabel),
+        [scene, fallbackTargetLabel],
+    );
     const passCurves = useMemo(() => buildPassCurves(scene), [scene]);
     const normalizedRotatorCrosshair = useMemo(() => {
         if (!rotatorCrosshair || rotatorCrosshair.visible === false) return null;
@@ -695,8 +701,8 @@ function PlanetariumCanvas({
                 ctx.lineTo(projected.x, projected.y + 5);
                 ctx.stroke();
 
-                if (tick.label) {
-                    drawText(ctx, tick.label, projected.x, projected.y - 17, {
+                if (tick.labelKey) {
+                    drawText(ctx, t(`canvas.planetarium.cardinal.${tick.labelKey}`), projected.x, projected.y - 17, {
                         color: textColor,
                         font: '700 13px sans-serif',
                     });
@@ -883,7 +889,7 @@ function PlanetariumCanvas({
                     align: 'left',
                 });
                 if (isSelected && isBelowHorizon && object.kind === 'target') {
-                    drawText(ctx, 'Target below horizon', labelX, labelY + 13, {
+                    drawText(ctx, t('canvas.planetarium.target_below_horizon'), labelX, labelY + 13, {
                         color: belowHorizonColor,
                         font: '700 10px sans-serif',
                         align: 'left',
@@ -945,7 +951,11 @@ function PlanetariumCanvas({
         }
 
         if (effectiveDisplayOptions.showHud) {
-            const viewLabel = `Az ${Math.round(view.centerAz)} / El ${Math.round(view.centerEl)} / FOV ${Math.round(view.fov)}`;
+            const viewLabel = t('canvas.planetarium.hud_view_label', {
+                az: Math.round(view.centerAz),
+                el: Math.round(view.centerEl),
+                fov: Math.round(view.fov),
+            });
             drawText(ctx, viewLabel, 10, 14, {
                 color: mutedTextColor,
                 font: '10px monospace',
@@ -973,6 +983,7 @@ function PlanetariumCanvas({
         starObjects,
         normalizedRotatorCrosshair,
         normalizedRotatorMinElevation,
+        t,
         theme,
         timestamp,
         view,
@@ -993,7 +1004,7 @@ function PlanetariumCanvas({
         >
             <canvas
                 ref={canvasRef}
-                aria-label="Planetarium sky map"
+                aria-label={t('canvas.planetarium.aria_label')}
                 onPointerDown={handlePointerDown}
                 onPointerMove={handlePointerMove}
                 onPointerUp={handlePointerUp}
@@ -1013,7 +1024,7 @@ function PlanetariumCanvas({
                     }}
                 >
                     <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center' }}>
-                        Configure a ground-station location to render the local sky.
+                        {t('canvas.planetarium.configure_location')}
                     </Typography>
                 </Box>
             ) : null}

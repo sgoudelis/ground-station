@@ -22,6 +22,7 @@
 import * as React from 'react';
 import {useMemo} from 'react';
 import {DataGrid, gridClasses} from '@mui/x-data-grid';
+import { tabsClasses } from '@mui/material/Tabs';
 import {
     Box,
     Button,
@@ -53,6 +54,7 @@ import {useSocket} from "../common/socket.jsx";
 import {setFormValues, setOpenAddDialog, setOpenDeleteConfirm, setSelected} from "./sources-slice.jsx"
 import SynchronizeOrbitalDataCard from "./synchronize-orbital-data-card.jsx";
 import {toRowSelectionModel, toSelectedIds} from '../../utils/datagrid-selection.js';
+import { AntTab, AntTabs } from '../common/common.jsx';
 
 const paginationModel = {page: 0, pageSize: 10};
 
@@ -62,6 +64,38 @@ const FORMAT_OPTIONS = ['3le', 'omm'];
 const CENTRAL_BODY_OPTIONS = ['earth', 'moon', 'mars'];
 const AUTH_TYPE_OPTIONS = ['none', 'basic', 'token'];
 const SPACE_TRACK_GP_BASE_URL = 'https://www.space-track.org/basicspacedata/query/class/gp';
+
+const getOrbitalSourcesTabsSx = (theme) => {
+    const isDark = theme.palette.mode === 'dark';
+    const fallbackDetailRow = isDark
+        ? { background: '#24292f', selected: '#323942' }
+        : { background: '#edf2f8', selected: '#ffffff' };
+
+    const detailRow = theme.palette.settingsTabs?.detailRow || {};
+    const borderColor = theme.palette.settingsTabs?.border
+        || (isDark ? '#50565f' : '#c5cfdd');
+
+    return {
+        backgroundColor: detailRow.background || fallbackDetailRow.background,
+        borderBottom: `1px solid ${borderColor}`,
+        '& .MuiTabs-indicator': {
+            display: 'none',
+        },
+        '& .MuiTab-root': {
+            color: theme.palette.text.secondary,
+            minHeight: 48,
+            padding: '12px 16px',
+            transition: 'background-color 140ms ease, color 140ms ease',
+        },
+        '& .MuiTab-root.Mui-selected': {
+            backgroundColor: detailRow.selected || fallbackDetailRow.selected,
+            color: theme.palette.text.primary,
+        },
+        [`& .${tabsClasses.scrollButtons}`]: {
+            '&.Mui-disabled': { opacity: 0.3 },
+        },
+    };
+};
 
 const normalizeProvider = (provider) => {
     const normalized = String(provider || 'generic_http').toLowerCase();
@@ -303,6 +337,7 @@ export default function SourcesTable() {
     const { t } = useTranslation('satellites');
     const {tleSources, loading, formValues, openDeleteConfirm, openAddDialog, selected} = useSelector((state) => state.tleSources);
     const rowSelectionModel = useMemo(() => toRowSelectionModel(selected), [selected]);
+    const [activeTab, setActiveTab] = React.useState('sync_now');
 
     // Get timezone preference
     const timezone = useSelector((state) => {
@@ -487,7 +522,30 @@ export default function SourcesTable() {
 
     return (
         <Box sx={{width: '100%', marginTop: 0}}>
-            <SynchronizeOrbitalDataCard/>
+            <AntTabs
+                value={activeTab}
+                onChange={(_event, nextTab) => setActiveTab(nextTab)}
+                variant="scrollable"
+                scrollButtons
+                allowScrollButtonsMobile
+                data-testid="orbital-data-tabs"
+                aria-label={t('orbital_sources.tabs.aria', { defaultValue: 'orbital source tabs' })}
+                sx={getOrbitalSourcesTabsSx}
+            >
+                <AntTab
+                    value="sync_now"
+                    data-testid="orbital-data-tab-sync-now"
+                    label={t('orbital_sources.tabs.sync_now', { defaultValue: 'Sync Now' })}
+                />
+                <AntTab
+                    value="sources"
+                    data-testid="orbital-data-tab-sources"
+                    label={t('orbital_sources.tabs.sources', { defaultValue: 'Sources' })}
+                />
+            </AntTabs>
+
+            {activeTab === 'sources' ? (
+            <Box sx={{ pt: 2, px: 2 }}>
             <Box>
                 <DataGrid
                     loading={loading}
@@ -503,7 +561,7 @@ export default function SourcesTable() {
                     rowSelectionModel={rowSelectionModel}
                     sx={{
                         border: 0,
-                        marginTop: 2,
+                        marginTop: 0,
                         [`& .${gridClasses.cell}:focus, & .${gridClasses.cell}:focus-within`]: {
                             outline: 'none',
                         },
@@ -1013,6 +1071,14 @@ export default function SourcesTable() {
                     </DialogActions>
                 </Dialog>
             </Box>
+            </Box>
+            ) : null}
+
+            {activeTab === 'sync_now' ? (
+                <Box sx={{ pt: 2, px: 2 }}>
+                    <SynchronizeOrbitalDataCard/>
+                </Box>
+            ) : null}
         </Box>
     );
 }

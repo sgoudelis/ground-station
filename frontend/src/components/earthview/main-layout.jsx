@@ -56,7 +56,7 @@ export const handleSetGridEditableEarthView = function (value) {
 };
 
 export const gridLayoutStoreName = 'global-earth-view-layouts';
-const LAYOUT_SCHEMA_VERSION = 2;
+const LAYOUT_SCHEMA_VERSION = 3;
 const SHARED_RESIZE_HANDLES = ['s', 'sw', 'w', 'se', 'nw', 'ne', 'e'];
 
 
@@ -135,46 +135,46 @@ const EarthViewLayout = React.memo(function EarthViewLayout() {
             "i": "map",
             "x": 0,
             "y": 0,
-            "w": 5,
-            "h": 13,
+            "w": 17,
+            "h": 28,
             "moved": false,
             "static": false,
             "resizeHandles": ["s", "sw", "w", "se", "nw", "ne", "e"]
         }, {
             "i": "passes",
             "x": 0,
-            "y": 18,
-            "w": 12,
-            "h": 8,
+            "y": 40,
+            "w": 48,
+            "h": 14,
             "minH": 7,
             "moved": false,
             "static": false,
             "resizeHandles": ["s", "sw", "w", "se", "nw", "ne", "e"]
         }, {
             "i": "sat-info",
-            "x": 10,
+            "x": 40,
             "y": 0,
-            "w": 2,
-            "h": 13,
+            "w": 8,
+            "h": 28,
             "minH": 7,
             "moved": false,
             "static": false,
             "resizeHandles": ["s", "sw", "w", "se", "nw", "ne", "e"]
         }, {
             "i": "satellite-group",
-            "x": 5,
+            "x": 17,
             "y": 0,
-            "w": 5,
-            "h": 13,
+            "w": 23,
+            "h": 28,
             "moved": false,
             "static": false,
             "resizeHandles": ["s", "sw", "w", "se", "nw", "ne", "e"]
         }, {
             "i": "timeline",
             "x": 0,
-            "y": 13,
-            "w": 12,
-            "h": 5,
+            "y": 28,
+            "w": 48,
+            "h": 12,
             "moved": false,
             "static": false,
             "resizeHandles": ["s", "sw", "w", "se", "nw", "ne", "e"]
@@ -183,27 +183,27 @@ const EarthViewLayout = React.memo(function EarthViewLayout() {
             "i": "map",
             "x": 0,
             "y": 0,
-            "w": 2,
-            "h": 17,
+            "w": 5,
+            "h": 23,
             "moved": false,
             "static": false,
             "resizeHandles": ["s", "sw", "w", "se", "nw", "ne", "e"]
         }, {
             "i": "passes",
             "x": 0,
-            "y": 35,
-            "w": 2,
-            "h": 8,
+            "y": 57,
+            "w": 8,
+            "h": 19,
             "minH": 7,
             "moved": false,
             "static": false,
             "resizeHandles": ["s", "sw", "w", "se", "nw", "ne", "e"]
         }, {
             "i": "sat-info",
-            "x": 0,
-            "y": 43,
-            "w": 2,
-            "h": 14,
+            "x": 5,
+            "y": 0,
+            "w": 3,
+            "h": 23,
             "minH": 7,
             "moved": false,
             "static": false,
@@ -212,17 +212,17 @@ const EarthViewLayout = React.memo(function EarthViewLayout() {
             "i": "satellite-group",
             "x": 0,
             "y": 23,
-            "w": 2,
-            "h": 12,
+            "w": 8,
+            "h": 21,
             "moved": false,
             "static": false,
             "resizeHandles": ["s", "sw", "w", "se", "nw", "ne", "e"]
         }, {
             "i": "timeline",
             "x": 0,
-            "y": 17,
-            "w": 2,
-            "h": 6,
+            "y": 44,
+            "w": 8,
+            "h": 13,
             "moved": false,
             "static": false,
             "resizeHandles": ["s", "sw", "w", "se", "nw", "ne", "e"]
@@ -231,27 +231,27 @@ const EarthViewLayout = React.memo(function EarthViewLayout() {
             "i": "map",
             "x": 0,
             "y": 0,
-            "w": 6,
-            "h": 17,
+            "w": 16,
+            "h": 26,
             "moved": false,
             "static": false,
             "resizeHandles": ["s", "sw", "w", "se", "nw", "ne", "e"]
         }, {
             "i": "passes",
             "x": 0,
-            "y": 32,
-            "w": 6,
-            "h": 8,
+            "y": 55,
+            "w": 24,
+            "h": 16,
             "minH": 7,
             "moved": false,
             "static": false,
             "resizeHandles": ["s", "sw", "w", "se", "nw", "ne", "e"]
         }, {
             "i": "sat-info",
-            "x": 0,
-            "y": 40,
-            "w": 6,
-            "h": 12,
+            "x": 16,
+            "y": 0,
+            "w": 8,
+            "h": 26,
             "minH": 7,
             "moved": false,
             "static": false,
@@ -259,66 +259,66 @@ const EarthViewLayout = React.memo(function EarthViewLayout() {
         }, {
             "i": "satellite-group",
             "x": 0,
-            "y": 23,
-            "w": 6,
-            "h": 9,
+            "y": 26,
+            "w": 24,
+            "h": 15,
             "moved": false,
             "static": false,
             "resizeHandles": ["s", "sw", "w", "se", "nw", "ne", "e"]
         }, {
             "i": "timeline",
             "x": 0,
-            "y": 17,
-            "w": 6,
-            "h": 6,
+            "y": 41,
+            "w": 24,
+            "h": 14,
             "moved": false,
             "static": false,
             "resizeHandles": ["s", "sw", "w", "se", "nw", "ne", "e"]
         }],
         "xxs": [{
-            "w": 2,
-            "h": 17,
+            "i": "map",
             "x": 0,
             "y": 0,
-            "i": "map",
+            "w": 8,
+            "h": 22,
             "moved": false,
             "static": false,
             "resizeHandles": ["s", "sw", "w", "se", "nw", "ne", "e"]
         }, {
-            "w": 2,
-            "h": 9,
-            "x": 0,
-            "y": 23,
             "i": "passes",
+            "x": 0,
+            "y": 93,
+            "w": 8,
+            "h": 20,
             "minH": 7,
             "moved": false,
             "static": false,
             "resizeHandles": ["s", "sw", "w", "se", "nw", "ne", "e"]
         }, {
-            "w": 2,
-            "h": 14,
-            "x": 0,
-            "y": 45,
             "i": "sat-info",
+            "x": 0,
+            "y": 22,
+            "w": 8,
+            "h": 29,
             "minH": 7,
             "moved": false,
             "static": false,
             "resizeHandles": ["s", "sw", "w", "se", "nw", "ne", "e"]
         }, {
-            "w": 2,
-            "h": 13,
-            "x": 0,
-            "y": 32,
             "i": "satellite-group",
+            "x": 0,
+            "y": 51,
+            "w": 8,
+            "h": 26,
             "moved": false,
             "static": false,
             "resizeHandles": ["s", "sw", "w", "se", "nw", "ne", "e"]
         }, {
-            "w": 2,
-            "h": 6,
-            "x": 0,
-            "y": 17,
             "i": "timeline",
+            "x": 0,
+            "y": 77,
+            "w": 8,
+            "h": 16,
             "moved": false,
             "static": false,
             "resizeHandles": ["s", "sw", "w", "se", "nw", "ne", "e"]
@@ -327,46 +327,46 @@ const EarthViewLayout = React.memo(function EarthViewLayout() {
             "i": "map",
             "x": 0,
             "y": 0,
-            "w": 7,
-            "h": 17,
+            "w": 16,
+            "h": 25,
             "moved": false,
             "static": false,
             "resizeHandles": ["s", "sw", "w", "se", "nw", "ne", "e"]
         }, {
             "i": "passes",
             "x": 0,
-            "y": 29,
-            "w": 10,
-            "h": 8,
+            "y": 39,
+            "w": 40,
+            "h": 15,
             "minH": 7,
             "moved": false,
             "static": false,
             "resizeHandles": ["s", "sw", "w", "se", "nw", "ne", "e"]
         }, {
             "i": "sat-info",
-            "x": 7,
+            "x": 31,
             "y": 0,
-            "w": 3,
-            "h": 17,
+            "w": 9,
+            "h": 25,
             "minH": 7,
             "moved": false,
             "static": false,
             "resizeHandles": ["s", "sw", "w", "se", "nw", "ne", "e"]
         }, {
             "i": "satellite-group",
-            "x": 0,
-            "y": 22,
-            "w": 10,
-            "h": 7,
+            "x": 16,
+            "y": 0,
+            "w": 15,
+            "h": 25,
             "moved": false,
             "static": false,
             "resizeHandles": ["s", "sw", "w", "se", "nw", "ne", "e"]
         }, {
             "i": "timeline",
             "x": 0,
-            "y": 17,
-            "w": 10,
-            "h": 5,
+            "y": 25,
+            "w": 40,
+            "h": 14,
             "moved": false,
             "static": false,
             "resizeHandles": ["s", "sw", "w", "se", "nw", "ne", "e"]
@@ -513,8 +513,8 @@ const EarthViewLayout = React.memo(function EarthViewLayout() {
             onLayoutChange={handleLayoutsChange}
             onWidthChange={handleLayoutWidthChange}
             breakpoints={{lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0}}
-            cols={{lg: 12, md: 10, sm: 6, xs: 2, xxs: 2}}
-            rowHeight={30}
+            cols={{lg: 48, md: 40, sm: 24, xs: 8, xxs: 8}}
+            rowHeight={8}
             dragConfig={{enabled: gridEditable, handle: '.react-grid-draggable'}}
             resizeConfig={{enabled: gridEditable}}
         >

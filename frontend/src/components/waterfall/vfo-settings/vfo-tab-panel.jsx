@@ -11,7 +11,7 @@ import VFOAudioRecorderButton from './vfo-audio-recorder-button.jsx';
 import { VfoLiveMeters } from './vfo-meters.jsx';
 import { SquelchSlider, VolumeSlider } from './vfo-sliders.jsx';
 import { DecoderStatusDisplay } from './vfo-decoder-status.jsx';
-import { TransmitterLockSelect, TransmitterEditLink, LockedTransmitterAlert } from './vfo-transmitter-lock.jsx';
+import { TransmitterLockSelect, LockedTransmitterAlert } from './vfo-transmitter-lock.jsx';
 import {
     StepSizeSelector,
     AudioDemodSelector,
@@ -32,14 +32,12 @@ const VfoTabPanelComponent = ({
     vfoActive,
     vfoMuted,
     transmitters,
-    targetSatelliteName,
     geminiConfigured,
     deepgramConfigured,
     onVFOActiveChange,
     onVFOPropertyChange,
     onMuteToggle,
     onTranscriptionToggle,
-    onOpenTransmittersDialog,
     onOpenDecoderParamsDialog,
     onOpenTranscriptionParamsDialog,
     getVFODecoderInfo,
@@ -117,16 +115,14 @@ const VfoTabPanelComponent = ({
                 sampleRate={sampleRate}
                 onCenterFrequencyChange={onCenterFrequencyChange}
             />
-            <TransmitterEditLink
-                targetSatelliteName={targetSatelliteName}
-                onOpenDialog={onOpenTransmittersDialog}
-            />
 
             {/* Locked Transmitter Alert */}
             <LockedTransmitterAlert lockedTransmitterId={vfo?.lockedTransmitterId} />
 
             {/* Rotary Encoder */}
-            <RotaryEncoder vfoNumber={vfoIndex} />
+            <Box sx={{ mt: 1 }}>
+                <RotaryEncoder vfoNumber={vfoIndex} />
+            </Box>
 
             {/* Step Size */}
             <StepSizeSelector
@@ -194,14 +190,12 @@ function areVfoTabPanelPropsEqual(prevProps, nextProps) {
         prevProps.vfoActive[idx] === nextProps.vfoActive[idx] &&
         prevProps.vfoMuted[idx] === nextProps.vfoMuted[idx] &&
         prevProps.transmitters === nextProps.transmitters &&
-        prevProps.targetSatelliteName === nextProps.targetSatelliteName &&
         prevProps.geminiConfigured === nextProps.geminiConfigured &&
         prevProps.deepgramConfigured === nextProps.deepgramConfigured &&
         prevProps.onVFOActiveChange === nextProps.onVFOActiveChange &&
         prevProps.onVFOPropertyChange === nextProps.onVFOPropertyChange &&
         prevProps.onMuteToggle === nextProps.onMuteToggle &&
         prevProps.onTranscriptionToggle === nextProps.onTranscriptionToggle &&
-        prevProps.onOpenTransmittersDialog === nextProps.onOpenTransmittersDialog &&
         prevProps.onOpenDecoderParamsDialog === nextProps.onOpenDecoderParamsDialog &&
         prevProps.onOpenTranscriptionParamsDialog === nextProps.onOpenTranscriptionParamsDialog &&
         prevProps.getVFODecoderInfo === nextProps.getVFODecoderInfo &&

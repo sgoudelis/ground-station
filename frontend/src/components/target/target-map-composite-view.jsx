@@ -228,9 +228,6 @@ const TargetSatelliteMarker = React.memo(function TargetSatelliteMarker({
                             prefix="T"
                             size={15}
                             sx={{ mr: 0.7, verticalAlign: 'middle', position: 'relative', top: -1 }}
-                            iconColor="common.white"
-                            badgeBgColor="warning.main"
-                            badgeTextColor="common.black"
                         />
                     )}
                     {satelliteName} - {`${altitudeLabel}, ${velocityLabel}`}

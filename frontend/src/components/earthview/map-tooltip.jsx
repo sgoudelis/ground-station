@@ -116,9 +116,6 @@ const SatelliteMarker = ({
                                 prefix="T"
                                 size={15}
                                 sx={{ mr: 0.7, verticalAlign: 'middle', position: 'relative', top: -1 }}
-                                iconColor="common.white"
-                                badgeBgColor="warning.main"
-                                badgeTextColor="common.black"
                             />
                         )}
                         {satellite.name} - {parseInt(altitude) + " km, " + velocity.toFixed(2) + " km/s"}

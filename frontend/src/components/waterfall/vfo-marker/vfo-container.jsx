@@ -451,7 +451,12 @@ const VFOMarkersContainer = ({
     }, [vfoActive, vfoMarkers, vfoColors, dispatch, centerFrequency, sampleRate, actualWidth, containerWidth, currentPositionX]);
 
     // Use VFO drag handlers
-    const { handleDragMovement } = useVFODragHandlers({
+    const {
+        handleDragMovement,
+        initializeDragState,
+        flushDragMovement,
+        resetDragMovementState,
+    } = useVFODragHandlers({
         activeMarker,
         vfoMarkers,
         actualWidth,
@@ -460,17 +465,17 @@ const VFOMarkersContainer = ({
         startFreq,
         endFreq,
         updateVFOProperty,
-        canvasRef,
-        getDecoderInfoForVFO
+        canvasRef
     });
 
     // End drag operation
     const endDragOperation = useCallback(() => {
+        resetDragMovementState();
         setIsDragging(false);
         isDraggingRef.current = false;
         setActiveMarker(null);
         setDragMode(null);
-    }, []);
+    }, [resetDragMovementState]);
 
     // Use VFO wheel handler
     useVFOWheelHandler({
@@ -962,7 +967,8 @@ const VFOMarkersContainer = ({
         setCursor,
         lastClientXRef,
         dispatch,
-        setSelectedVFO
+        setSelectedVFO,
+        initializeDragState
     });
 
     // Use VFO touch handlers
@@ -983,7 +989,8 @@ const VFOMarkersContainer = ({
         lastTouchXRef,
         touchStartTimeoutRef,
         dispatch,
-        setSelectedVFO
+        setSelectedVFO,
+        initializeDragState
     });
 
     // Wrap touch handlers to pass additional dependencies
@@ -1005,6 +1012,7 @@ const VFOMarkersContainer = ({
         activeMarker,
         handleDragMovement,
         endDragOperation,
+        flushDragMovement,
         lastClientXRef,
         lastTouchXRef
     });

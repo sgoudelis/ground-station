@@ -1,0 +1,484 @@
+{
+  "common": {
+    "body": "Lichaam",
+    "mission": "Missie",
+    "error": "Fout",
+    "stale": "Muf",
+    "ok": "OK",
+    "yes": "Ja",
+    "no": "Nee",
+    "unknown": "Onbekend",
+    "never": "Nooit",
+    "loading": "Laden..."
+  },
+  "units": {
+    "deg": "gr",
+    "au": "AU",
+    "km_per_s": "km/sec",
+    "min": "min"
+  },
+  "errors": {
+    "unknown_error": "Onbekende fout"
+  },
+  "statusbar": {
+    "planets": "Planeten",
+    "moons": "Manen",
+    "tracked": "Bijgehouden"
+  },
+  "toolbar": {
+    "fit_all": "Past allemaal",
+    "zoom_in": "Zoom in",
+    "zoom_out": "Uitzoomen",
+    "reset_zoom": "Zoom opnieuw instellen",
+    "center_on_sun": "Centrum op zo",
+    "refresh_scene": "Vernieuw de hemelse scène",
+    "layout_options": "Indelingsopties",
+    "table_settings": "Tafelinstellingen",
+    "go_fullscreen": "Ga naar volledig scherm",
+    "exit_fullscreen": "Volledig scherm afsluiten"
+  },
+  "main_layout": {
+    "planetarium_title": "Planetarium",
+    "solar_system_layout_title": "Indeling van het zonnestelsel",
+    "monitored_title": "Gecontroleerde hemel",
+    "loading": "Laden...",
+    "loading_planetarium_vectors": "Planetariumvectoren laden...",
+    "loading_solar_vectors": "Zonnestelselvectoren laden...",
+    "updating": "Updaten..."
+  },
+  "layout_options": {
+    "title": "Opties voor lay-out van het zonnestelsel",
+    "apply": "Toepassen",
+    "reset_defaults": "Standaardwaarden opnieuw instellen",
+    "view_mode": {
+      "title": "Bekijk modus",
+      "subtitle": "Kies de primaire hemelse visualisatie voor dit eiland.",
+      "label": "Weergave",
+      "solar_system": "Zonnestelsel",
+      "planetarium": "Planetarium"
+    },
+    "map_interaction": {
+      "title": "Kaartinteractie",
+      "solar_subtitle": "Schakel gebarengestuurd pannen en zoomen in op de kaart van het zonnestelsel.",
+      "planetarium_subtitle": "Schakel gebarengestuurd pannen en zoomen in de viewport van het planetarium in."
+    },
+    "sections": {
+      "solar_scene_elements": {
+        "title": "Scène-elementen",
+        "subtitle": "Primaire zonnestelsellagen en labels."
+      },
+      "solar_tracked_targets": {
+        "title": "Gevolgde doelen",
+        "subtitle": "Gevolgde objecten en hun baan/label-overlays."
+      },
+      "solar_astronomy_background": {
+        "title": "Astronomie Achtergrond",
+        "subtitle": "Referentielagen achter de kaart."
+      },
+      "solar_guides_and_metadata": {
+        "title": "Gidsen en metadata",
+        "subtitle": "Contextuele markeringen, labels en scènemetagegevens."
+      },
+      "planetarium_sky_layers": {
+        "title": "Luchtlagen",
+        "subtitle": "Primaire overlays voor de viewport van het planetarium."
+      },
+      "planetarium_target_overlays": {
+        "title": "Doeloverlays",
+        "subtitle": "Volgoverlays en labels voor planeten en doelen."
+      }
+    },
+    "options": {
+      "enable_map_dragging": {
+        "label": "Schakel kaartslepen in",
+        "description": "Sta panning door klikken en slepen op de kaart toe. Wanneer uitgeschakeld, gebruik de bedieningselementen."
+      },
+      "enable_map_zooming": {
+        "label": "Schakel kaartzoomen in",
+        "description": "Sta wiel- en knijpzoomgebaren toe. Wanneer uitgeschakeld, gebruik dan de zoomknoppen."
+      },
+      "show_grid": {
+        "label": "Raster tonen",
+        "description": "Geef een referentieraster weer voor een snelle ruimtelijke oriëntatie."
+      },
+      "show_planets": {
+        "label": "Planeten tonen",
+        "description": "Geef planeten en grote lichamen van het zonnestelsel weer in de viewport."
+      },
+      "show_planet_labels": {
+        "label": "Toon planeetlabels",
+        "description": "Toon lichaamsnamen naast zichtbare planeten."
+      },
+      "show_planet_labels_for_planetarium": {
+        "description": "Toon labels voor planetaire lichamen."
+      },
+      "show_planet_orbits": {
+        "label": "Toon planeetbanen",
+        "description": "Teken orbitale ringen/paden voor de context van planetaire beweging."
+      },
+      "show_tracked_objects": {
+        "label": "Toon gevolgde objecten",
+        "description": "Geef momenteel gevolgde missie-/lichaamsmarkeringen weer."
+      },
+      "show_tracked_orbits": {
+        "label": "Toon gevolgde banen",
+        "description": "Overlay bemonsterde trajectpaden voor gevolgde doelen."
+      },
+      "show_tracked_labels": {
+        "label": "Toon bijgehouden labels",
+        "description": "Toon labels en telemetriecontext voor gevolgde doelen."
+      },
+      "show_bright_star_field": {
+        "label": "Toon helder sterrenveld",
+        "description": "Render een vector-ecliptische projectie uit de Bright Star Catalog."
+      },
+      "show_asteroid_zones": {
+        "label": "Toon asteroïdezones",
+        "description": "Geef belangrijke overlays van asteroïdengordelgebieden weer."
+      },
+      "show_asteroid_zone_labels": {
+        "label": "Toon asteroïdezonelabels",
+        "description": "Annoteer asteroïdegebieden met zonenamen."
+      },
+      "show_resonance_markers": {
+        "label": "Toon resonantiemarkeringen",
+        "description": "Geef de belangrijkste referentiemarkeringen voor orbitale resonantie weer."
+      },
+      "show_epoch_label": {
+        "label": "Toon tijdperklabel",
+        "description": "Toon de tijdstempel van de scène die wordt gebruikt voor de huidige posities."
+      },
+      "show_scale_label": {
+        "label": "Toon schaallabel",
+        "description": "Toon de huidige afstandsschaalreferentie van het kijkvenster."
+      },
+      "show_gesture_hint": {
+        "label": "Gebaarhint tonen",
+        "description": "Toon een korte hulphint voor kaartinteractiebedieningen."
+      },
+      "show_sky_grid": {
+        "label": "Toon luchtraster",
+        "description": "Teken azimut-/elevatierichtlijnen."
+      },
+      "show_horizon_compass": {
+        "label": "Toon horizonkompas",
+        "description": "Teken de horizonlijn met N/E/S/W-tekens."
+      },
+      "show_star_field": {
+        "label": "Toon sterrenveld",
+        "description": "Render heldere sterren uit de geladen hemelcatalogus."
+      },
+      "show_star_names": {
+        "label": "Toon sternamen",
+        "description": "Label helder genoemde sterren wanneer zoom dit toelaat."
+      },
+      "show_constellation_labels": {
+        "label": "Toon sterrenbeeldlabels",
+        "description": "Geef sterrenbeeldnamen weer op de hemelachtergrond."
+      },
+      "show_pass_curves": {
+        "label": "Laat pascurven zien",
+        "description": "Teken voorspelde passbogen voor zichtbare doelen."
+      },
+      "show_target_labels": {
+        "label": "Doellabels tonen",
+        "description": "Toon labels voor gevolgde doelen."
+      },
+      "show_rotator_crosshair": {
+        "label": "Laat het rotatorkruis zien",
+        "description": "Geef het dradenkruis van de live rotator weer, indien beschikbaar."
+      },
+      "show_hud_labels": {
+        "label": "HUD-labels tonen",
+        "description": "Toon uitlezingen van viewport en waarnemer/tijdstempel."
+      }
+    }
+  },
+  "topbar": {
+    "projection": {
+      "past": "Verleden",
+      "future": "Toekomst"
+    },
+    "actions": {
+      "manage": "Beheren",
+      "refresh": "Vernieuwen",
+      "refresh_all": "Alles vernieuwen",
+      "enable_target": "Doel inschakelen",
+      "disable_target": "Doel uitschakelen",
+      "clear_color": "Duidelijk"
+    },
+    "dialogs": {
+      "add_title": "Voeg bewaakt hemeldoel toe",
+      "manage_title": "Beheer bewaakte hemeldoelen",
+      "delete_title": "Verwijder het bewaakte doel",
+      "edit_title": "Bewerk het bewaakte hemeldoel"
+    },
+    "fields": {
+      "target_type": "Doeltype",
+      "mission_spacecraft": "Missie / ruimtevaartuig",
+      "solar_body": "Zonnelichaam",
+      "target": "Doel",
+      "target_placeholder": "Typ opdracht of kies uit catalogus",
+      "target_body": "Doellichaam",
+      "horizons_command": "Horizon Commando",
+      "display_name": "Weergavenaam",
+      "color": "Kleur",
+      "color_placeholder": "#06D6A0",
+      "pick_color": "Kies kleur"
+    },
+    "helper": {
+      "using_static_catalog": "Statische catalogusinvoer gebruiken.",
+      "using_exact_command": "Met behulp van de exacte Horizons-opdracht.",
+      "selected_mission_not_active": "Geselecteerde missie is niet actief; Horizons-gegevens zijn mogelijk beperkt.",
+      "loading_spacecraft_catalog": "Ruimtevaartuigcatalogus laden...",
+      "loading_body_catalog": "Carrosseriecatalogus laden..."
+    },
+    "labels": {
+      "already_monitored": "Al gemonitord",
+      "static_body": "Statisch lichaam"
+    },
+    "table": {
+      "type": "Type",
+      "mission": "Missie",
+      "last_refresh": "Laatste vernieuwing"
+    },
+    "delete": {
+      "confirm": "Weet u zeker dat u dit bewaakte doel wilt verwijderen?",
+      "unknown_target": "Onbekend doelwit"
+    },
+    "empty": {
+      "no_targets": "Nog geen gemonitorde hemeldoelen."
+    },
+    "errors": {
+      "failed_load_spacecraft_catalog": "Kan ruimtevaartuigcatalogus niet laden.",
+      "failed_load_body_catalog": "Kan hemellichamencatalogus niet laden.",
+      "socket_unavailable": "Er is geen stopcontactaansluiting beschikbaar.",
+      "display_name_command_required": "Weergavenaam en opdracht zijn vereist.",
+      "command_already_monitored": "Deze opdracht staat al in de gecontroleerde lijst.",
+      "select_body_target": "Selecteer een lichaamsdoel.",
+      "body_already_monitored": "Deze instantie staat al in de gecontroleerde lijst.",
+      "display_name_required": "Weergavenaam is vereist.",
+      "command_required_for_mission": "Commando is vereist voor missiedoelen.",
+      "body_required_for_body_target": "Lichaamsdoel is vereist voor lichaamsdoelen.",
+      "invalid_hex_color": "De kleur moet een geldige hexadecimale waarde zijn, zoals #1A2B3C.",
+      "failed_update_target": "Kan het bewaakte doel niet updaten."
+    },
+    "feedback": {
+      "added_mission": "\"{{name}}\" toegevoegd met behulp van de opdracht \"{{command}}\".",
+      "added_body": "Lichaamsdoel \"{{name}}\" toegevoegd."
+    },
+    "mission_status": {
+      "active": "Actief",
+      "completed": "Voltooid",
+      "failed": "Mislukt"
+    },
+    "fallback": {
+      "target": "doel"
+    }
+  },
+  "passes": {
+    "title": "Hemelse passen",
+    "count_label_single": "doorgang ",
+    "count_label_plural": "gaat voorbij",
+    "table_settings": "Tafelinstellingen",
+    "refresh": "Verversingspassen",
+    "timeline_default_target_name": "Hemels doelwit",
+    "status": {
+      "visible": "Zichtbaar",
+      "passed": "Geslaagd",
+      "upcoming": "Aankomend"
+    },
+    "columns": {
+      "status": "Status",
+      "name": "Naam",
+      "type": "Type",
+      "peak_elevation": "Piekhoogte",
+      "progress": "Voortgang",
+      "duration": "Duur",
+      "start": "Begin",
+      "end": "Einde",
+      "start_azimuth": "Begin met Azimut",
+      "end_azimuth": "Einde Azimut",
+      "peak_azimuth": "Piek Azimut",
+      "cache": "Cache",
+      "stale": "Muf",
+      "source": "Bron"
+    },
+    "summary": {
+      "start": "Begin",
+      "end": "Einde"
+    },
+    "quick_filters": {
+      "all_tooltip": "Alle passen (Alt+1)",
+      "all_aria": "Alle passen",
+      "all_short": "Alle",
+      "live_tooltip": "Live passen (Alt+2)",
+      "live_aria": "Levende passen",
+      "live_short": "Live",
+      "next_30_tooltip": "Live of volgende 30 minuten (Alt+3)",
+      "next_30_aria": "Volgende 30 minuten",
+      "next_30_short": "Volgende 30 meter",
+      "highest_elevation_tooltip": "Hoogste hoogte eerst (Alt+4)",
+      "highest_elevation_aria": "Hoogste hoogte eerst",
+      "high_el_short": "Hoge El"
+    },
+    "settings": {
+      "title": "Celestial Passes-tabelinstellingen",
+      "rows_per_page": "Rijen per pagina",
+      "reset_values": "Waarden opnieuw instellen",
+      "close": "Dichtbij",
+      "categories": {
+        "basic": "Basis",
+        "time": "Tijd",
+        "metrics": "Statistieken",
+        "source": "Bron"
+      }
+    }
+  },
+  "monitored": {
+    "no_color": "Geen kleur",
+    "columns": {
+      "name": "Naam",
+      "type": "Type",
+      "target_id": "Doel-ID",
+      "source": "Bron",
+      "source_mode": "Bronmodus",
+      "elevation": "Hoogte (graden)",
+      "azimuth": "Azimut (graden)",
+      "distance_from_sun_au": "Afstand vanaf de zon (AU)",
+      "speed_km_s": "Snelheid (km/s)",
+      "light_time_min": "Lichttijd (min)",
+      "last_refresh": "Laatste vernieuwing",
+      "refresh_age": "Ververs de leeftijd",
+      "projection_span": "Projectiebereik",
+      "cache": "Cache",
+      "stale": "Muf",
+      "samples": "Monsters",
+      "last_error": "Laatste fout"
+    },
+    "settings": {
+      "title": "Bewaakte hemeltafelinstellingen",
+      "rows_per_page": "Rijen per pagina",
+      "reset_values": "Waarden opnieuw instellen",
+      "close": "Dichtbij",
+      "categories": {
+        "identity": "Identiteit",
+        "state": "Staat",
+        "metrics": "Statistieken",
+        "projection": "Projectie"
+      }
+    },
+    "summary": {
+      "source": "Bron",
+      "mode": "Modus"
+    }
+  },
+  "info": {
+    "title": "Hemelse informatie",
+    "empty_hint": "Selecteer een lichaam of missie uit Monitored Celestial of Celestial Passes.",
+    "edit_transmitters": "Zenders bewerken",
+    "no_upcoming_pass": "Geen komende pas",
+    "status": {
+      "visible": "Zichtbaar",
+      "below_horizon": "Onder de Horizon"
+    },
+    "sections": {
+      "pass_window": "Passeer venster",
+      "data_source": "Gegevensbron"
+    },
+    "metrics": {
+      "target_type": "Doeltype",
+      "body_id": "Lichaams-ID",
+      "mission_command": "Missie Commando",
+      "elevation": "Hoogte",
+      "azimuth": "Azimut",
+      "distance_from_sun_au": "Afstand vanaf zon",
+      "distance_from_sun_km": "Afstand vanaf de zon (km)",
+      "speed": "Snelheid",
+      "light_time": "Lichte tijd",
+      "total_passes": "Totaal aantal passen",
+      "active_pass": "Actieve pas",
+      "active_since": "Actief sinds",
+      "next_start": "Volgende begin",
+      "ends": "Eindigt",
+      "next_peak": "Volgende piek",
+      "source": "Bron",
+      "cache": "Cache",
+      "stale": "Muf",
+      "last_refresh": "Laatste vernieuwing"
+    }
+  },
+  "context": {
+    "copy_body_id": "Kopieer de body-ID",
+    "copy_mission_command": "Kopieer het missiecommando",
+    "copy_target_key": "Kopieer de doelsleutel",
+    "copy_target_summary": "Kopieer de doelsamenvatting",
+    "copy_pass_summary": "Kopieer het pasoverzicht"
+  },
+  "time": {
+    "relative": {
+      "in_less_than_minute": "binnen <1m",
+      "less_than_minute_ago": "<1m geleden",
+      "in_minutes": "over {{count}}m",
+      "minutes_ago": "{{count}}m geleden",
+      "in_hours": "over {{count}}u",
+      "hours_ago": "{{count}}u geleden",
+      "in_days": "over {{count}}d",
+      "days_ago": "{{count}}d geleden"
+    },
+    "duration": {
+      "minutes_seconds": "{{minutes}}m {{seconds}}s"
+    },
+    "age": {
+      "seconds": "{{count}}s",
+      "minutes": "{{count}}m",
+      "hours": "{{count}}u",
+      "days": "{{count}}d"
+    },
+    "projection_span": "{{past}}u / {{future}}u @ {{step}}m"
+  },
+  "canvas": {
+    "solar": {
+      "anchor_sun": "Zon",
+      "anchor_earth": "Aarde",
+      "anchor_galactic_center": "Galactisch Centrum",
+      "anchor_galactic_center_short": "Galactische Ctr",
+      "no_epoch": "Geen tijdperk",
+      "epoch": "Tijdperk: {{timestamp}}",
+      "scale": "Schaal: {{value}} / vierkant",
+      "touch_pan": "2-vingerpan",
+      "touch_pan_zoom": "Pannen/zoomen met 2 vingers",
+      "touch_pinch_zoom": "knijpzoom",
+      "mouse_drag": "sleuren",
+      "mouse_wheel": "wiel",
+      "mouse_drag_plus_wheel": "slepen + wiel",
+      "gesture_hint": "Aanraken: {{touch}} | Muis: {{mouse}}",
+      "gesture_disabled": "Kaartgebaren uitgeschakeld; werkbalkbesturingselementen gebruiken."
+    },
+    "planetarium": {
+      "aria_label": "Planetarium-hemelkaart",
+      "configure_location": "Configureer een grondstationlocatie om de lokale lucht weer te geven.",
+      "fallback_target": "Doel",
+      "target_below_horizon": "Doel onder de horizon",
+      "hud_view_label": "Az {{az}} / El {{el}} / FOV {{fov}}",
+      "cardinal": {
+        "north": "N",
+        "east": "E",
+        "south": "S",
+        "west": "W"
+      }
+    },
+    "moon_phase": {
+      "new_moon": "Nieuwe maan",
+      "waxing_crescent": "Wassende halve maan",
+      "first_quarter": "Eerste kwartaal",
+      "waxing_gibbous": "Gibbous in de was zetten",
+      "full_moon": "Volle maan",
+      "waning_gibbous": "Afnemende Gibbous",
+      "last_quarter": "Laatste kwartaal",
+      "waning_crescent": "Afnemende halve maan",
+      "fallback": "Maanfase",
+      "description": "{{label}}, {{percent}}% verlicht"
+    }
+  }
+}

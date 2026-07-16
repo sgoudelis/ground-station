@@ -15,10 +15,28 @@
     "end": "End",
     "duration": "Duration",
     "progress": "Progress",
+    "direction": "Direction",
+    "direction_values": {
+      "cw": "CW",
+      "ccw": "CCW",
+      "mixed": "Mixed"
+    },
     "distance_aos": "Distance at AOS",
     "distance_los": "Distance at LOS",
     "distance_peak": "Distance at peak",
     "max_el": "Max El",
+    "pass_types": "Pass Types",
+    "pass_tag_labels": {
+      "north_crossing": "North crossing",
+      "south_crossing": "South crossing",
+      "direction_cw": "CW",
+      "direction_ccw": "CCW",
+      "direction_mixed": "Mixed",
+      "elevation_low": "Low elevation",
+      "elevation_medium": "Medium elevation",
+      "elevation_high": "High elevation",
+      "elevation_overhead": "Overhead"
+    },
     "geo_stat": "GEO Stat",
     "geo_sync": "GEO Sync",
     "no_satellite_selected": "Please select a satellite to view passes"
@@ -151,6 +169,9 @@
   },
   "satellite_map": {
     "title": "Target tracking"
+  },
+  "target_retarget_dialog": {
+    "title": "Retarget slot or create a new target"
   },
   "satellite_transmitters": {
     "title": "Transmitters",

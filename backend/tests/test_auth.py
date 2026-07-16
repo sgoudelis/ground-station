@@ -20,7 +20,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from common import auth
-from db.models import Preferences, PreferenceScope
+from db.models import Locations, Preferences, PreferenceScope
 
 
 @pytest.fixture
@@ -49,6 +49,30 @@ async def test_bootstrap_admin_sets_up_first_user(patch_auth_session):
 
     after = await auth.is_setup_required(force_refresh=True)
     assert after is False
+
+
+@pytest.mark.asyncio
+async def test_resolve_setup_mode_uses_admin_recovery_when_location_exists(patch_auth_session):
+    async with patch_auth_session() as session:
+        session.add(
+            Locations(
+                name="home",
+                callsign="SV1ABC",
+                lat=37.0,
+                lon=23.0,
+                alt=120,
+            )
+        )
+        await session.commit()
+
+    setup_mode = await auth.resolve_setup_mode(force_refresh=True)
+    assert setup_mode == auth.SETUP_MODE_ADMIN_RECOVERY
+
+
+@pytest.mark.asyncio
+async def test_resolve_setup_mode_uses_full_setup_when_no_location_exists(patch_auth_session):
+    setup_mode = await auth.resolve_setup_mode(force_refresh=True)
+    assert setup_mode == auth.SETUP_MODE_FULL
 
 
 @pytest.mark.asyncio
@@ -123,3 +147,28 @@ def test_operator_cannot_run_admin_only_commands():
     assert auth.is_command_allowed_for_role("update-system-preferences", "operator") is False
     assert auth.is_command_allowed_for_role("update-app-config", "operator") is False
     assert auth.is_command_allowed_for_role("database-backup.full_backup", "operator") is False
+
+
+def test_setup_mode_only_allows_setup_scoped_commands():
+    assert auth.is_command_allowed_during_setup("get-locations") is True
+    assert auth.is_command_allowed_during_setup("setup.restore") is True
+    assert auth.is_command_allowed_during_setup("setup.finalize") is True
+    assert auth.is_command_allowed_during_setup("setup.status") is True
+
+    assert auth.is_command_allowed_during_setup("background-task.start") is False
+    assert auth.is_command_allowed_during_setup("background-task.list") is False
+    assert auth.is_command_allowed_during_setup("sync-satellite-data") is False
+    assert auth.is_command_allowed_during_setup("database-backup.full_restore") is False
+
+
+def test_extract_session_cookie_token_from_cookie_header():
+    cookie_header = f"foo=bar; {auth.AUTH_SESSION_COOKIE_NAME}=session-token-123; theme=dark"
+    assert auth.extract_session_cookie_token(cookie_header) == "session-token-123"
+
+
+def test_extract_session_cookie_token_returns_none_when_missing():
+    assert auth.extract_session_cookie_token("foo=bar; theme=dark") is None
+
+
+def test_extract_cookie_token_normalizes_blank_values():
+    assert auth.extract_cookie_token("   ") is None

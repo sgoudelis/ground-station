@@ -83,6 +83,8 @@ import VersionInfo from "./version-info.jsx";
 import VersionUpdateOverlay from "./version-update-overlay.jsx";
 import UpdateIndicator from "./update-indicator.jsx";
 import PerformanceMetricsDialog from "../performance/performance-metrics-dialog.jsx";
+import ObservationFormDialog from "../scheduler/observation-form-dialog.jsx";
+import MonitoredSatelliteDialog from "../scheduler/monitored-satellite-dialog.jsx";
 import BackgroundTasksPopover from "../tasks/tasks-popover.jsx";
 import LocationPage from "../settings/location-form.jsx";
 import MenuIcon from '@mui/icons-material/Menu';
@@ -869,15 +871,12 @@ export default function Layout() {
     const [userMenuAnchorEl, setUserMenuAnchorEl] = React.useState(null);
     const [logoutDialogOpen, setLogoutDialogOpen] = React.useState(false);
     const [skipLogoutConfirmChecked, setSkipLogoutConfirmChecked] = React.useState(false);
-    const preferences = useSelector((state) => state.preferences?.preferences || []);
     const authUser = useSelector((state) => state.auth?.user || null);
     const showLogoutConfirmation = useSelector(
         (state) => state.auth?.showLogoutConfirmation !== false
     );
     const userRole = String(authUser?.role || '').toLowerCase();
     const isAdmin = userRole === 'admin';
-    const celestialEnabledPreference = preferences.find((pref) => pref.name === 'celestial_enabled');
-    const showCelestial = String(celestialEnabledPreference?.value ?? 'false').toLowerCase() === 'true';
     const userMenuOpen = Boolean(userMenuAnchorEl);
     const roleLabel = resolveRoleLabel(userRole);
     const username = String(authUser?.username || '').trim() || 'Unknown user';
@@ -887,7 +886,7 @@ export default function Layout() {
     );
     const userMenuButtonId = 'sidebar-user-menu-button';
     const userMenuId = 'sidebar-user-menu';
-    const [navigation, setNavigation] = React.useState(getNavigation({ showCelestial, isAdmin }));
+    const [navigation, setNavigation] = React.useState(getNavigation({ isAdmin }));
     const { timezone, locale } = useUserTimeSettings();
 
     const {
@@ -918,8 +917,8 @@ export default function Layout() {
 
     // Update navigation when language changes or state changes
     React.useEffect(() => {
-        setNavigation(getNavigation({ showCelestial, isAdmin }));
-    }, [t, showCelestial, isAdmin]);
+        setNavigation(getNavigation({ isAdmin }));
+    }, [t, isAdmin]);
 
     useEffect(() => {
         console.info('Initializing audio...');
@@ -1525,6 +1524,10 @@ export default function Layout() {
                 {connected && !initialDataLoading ? <Outlet /> : <ConnectionOverlay />}
                 {hasVersionChanged && <VersionUpdateOverlay />}
                 <PerformanceMetricsDialog />
+                {/* Keep scheduler dialogs mounted at app-layout scope so other pages
+                    can open them without routing to /scheduler first. */}
+                <ObservationFormDialog />
+                <MonitoredSatelliteDialog />
             </Box>
 
             {/* Location Setup Dialog */}

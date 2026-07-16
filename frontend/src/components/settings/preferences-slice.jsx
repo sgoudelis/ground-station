@@ -22,7 +22,6 @@ import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 const USER_DEFAULT_PREFERENCES = [
     { id: null, name: 'language', value: 'en_US' },
     { id: null, name: 'theme', value: 'auto' },
-    { id: null, name: 'celestial_enabled', value: 'false' },
     { id: null, name: 'timezone', value: 'Europe/Athens' },
     { id: null, name: 'locale', value: 'browser' },
     { id: null, name: 'toast_position', value: 'bottom-center' },

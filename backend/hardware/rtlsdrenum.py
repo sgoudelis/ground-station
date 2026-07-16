@@ -87,6 +87,9 @@ def probe_available_rtl_sdrs() -> str:
                 "product": product,
                 "serial": serial,
                 "label": label,
+                # Keep probe payload shape aligned with Soapy/UHD probes.
+                # RTL-SDR devices expose a single effective RX input in this app.
+                "antennas": {"rx": ["RX"], "tx": []},
             }
 
             log_messages.append(f"Found RTL-SDR device: {label}")

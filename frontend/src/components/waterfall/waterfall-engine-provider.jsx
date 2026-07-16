@@ -230,6 +230,17 @@ export const WaterfallEngineProvider = ({ children }) => {
 
             return true;
         } catch (error) {
+            // In React dev StrictMode, passive effects can be setup-cleanup-setup cycled
+            // on the same mounted canvas node. Offscreen transfer is one-shot per canvas,
+            // so a second transfer throws InvalidStateError. In that case the worker
+            // should keep using the already-transferred canvases.
+            if (
+                error?.name === 'InvalidStateError' &&
+                /more than one time/i.test(String(error?.message || ''))
+            ) {
+                console.warn('OffscreenCanvas already transferred for current canvas; reusing existing worker binding');
+                return true;
+            }
             console.error('Failed to attach OffscreenCanvas instances to waterfall worker:', error);
             return false;
         }

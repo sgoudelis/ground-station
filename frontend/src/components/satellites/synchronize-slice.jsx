@@ -105,6 +105,14 @@ const syncSatelliteSlice = createSlice({
                 state.status = 'loading';
                 state.synchronizing = true;
                 state.error = null;
+                // Immediately reflect a running sync in the UI, even before the first backend progress event arrives.
+                state.syncState = {
+                    ...state.syncState,
+                    status: 'inprogress',
+                    progress: 0,
+                    success: null,
+                    message: state.syncState?.message || 'Starting orbital data synchronization...',
+                };
             })
             .addCase(startSatelliteSync.fulfilled, (state, action) => {
                 state.status = 'succeeded';

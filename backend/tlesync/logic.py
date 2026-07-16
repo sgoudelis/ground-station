@@ -49,6 +49,7 @@ from tlesync.utils import (
     detect_transmitter_modifications,
     get_satellite_by_norad_id,
     get_transmitter_info_by_norad_id,
+    normalize_external_transmitter_id,
     query_existing_data,
     resolve_sync_source_urls,
     update_satellite_group_with_removal_detection,
@@ -620,7 +621,9 @@ async def synchronize_satellite_data_internal(dbsession, logger, emit_callback):
                 )
 
                 for j, transmitter_info in enumerate(satnogs_transmitter_info):
-                    transmitter_uuid = transmitter_info.get("uuid", None)
+                    transmitter_uuid = normalize_external_transmitter_id(
+                        transmitter_info.get("uuid", None)
+                    )
 
                     # Check if this is a new transmitter
                     is_new_transmitter = transmitter_uuid not in processed_transmitter_uuids
@@ -690,7 +693,9 @@ async def synchronize_satellite_data_internal(dbsession, logger, emit_callback):
                 )
 
                 for transmitter_info in satnogs_transmitter_info:
-                    transmitter_uuid = transmitter_info.get("uuid", None)
+                    transmitter_uuid = normalize_external_transmitter_id(
+                        transmitter_info.get("uuid", None)
+                    )
                     is_new_transmitter = transmitter_uuid not in processed_transmitter_uuids
 
                     transmitter, transmitter_data_for_comparison = (

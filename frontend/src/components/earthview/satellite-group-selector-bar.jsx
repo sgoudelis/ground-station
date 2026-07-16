@@ -415,8 +415,8 @@ const SatelliteGroupSelectorBar = React.memo(function SatelliteGroupSelectorBar(
                                     component="span"
                                     sx={{
                                         ml: 1,
-                                        opacity: 0.7,
-                                        fontWeight: 'bold',
+                                        opacity: 1,
+                                        fontWeight: 800,
                                         fontSize: 'inherit',
                                     }}
                                 >

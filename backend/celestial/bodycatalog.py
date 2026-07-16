@@ -139,6 +139,41 @@ _BODY_CATALOG: List[Dict[str, object]] = [
         "sort_order": 70,
     },
     {
+        "body_id": "miranda",
+        "name": "Miranda",
+        "body_type": "moon",
+        "parent_body_id": "uranus",
+        "sort_order": 71,
+    },
+    {
+        "body_id": "ariel",
+        "name": "Ariel",
+        "body_type": "moon",
+        "parent_body_id": "uranus",
+        "sort_order": 72,
+    },
+    {
+        "body_id": "umbriel",
+        "name": "Umbriel",
+        "body_type": "moon",
+        "parent_body_id": "uranus",
+        "sort_order": 73,
+    },
+    {
+        "body_id": "titania",
+        "name": "Titania",
+        "body_type": "moon",
+        "parent_body_id": "uranus",
+        "sort_order": 74,
+    },
+    {
+        "body_id": "oberon",
+        "name": "Oberon",
+        "body_type": "moon",
+        "parent_body_id": "uranus",
+        "sort_order": 75,
+    },
+    {
         "body_id": "neptune",
         "name": "Neptune",
         "body_type": "planet",
@@ -146,11 +181,39 @@ _BODY_CATALOG: List[Dict[str, object]] = [
         "sort_order": 80,
     },
     {
+        "body_id": "triton",
+        "name": "Triton",
+        "body_type": "moon",
+        "parent_body_id": "neptune",
+        "sort_order": 81,
+    },
+    {
+        "body_id": "nereid",
+        "name": "Nereid",
+        "body_type": "moon",
+        "parent_body_id": "neptune",
+        "sort_order": 82,
+    },
+    {
+        "body_id": "proteus",
+        "name": "Proteus",
+        "body_type": "moon",
+        "parent_body_id": "neptune",
+        "sort_order": 83,
+    },
+    {
         "body_id": "pluto",
         "name": "Pluto",
         "body_type": "dwarf",
         "parent_body_id": None,
         "sort_order": 85,
+    },
+    {
+        "body_id": "charon",
+        "name": "Charon",
+        "body_type": "moon",
+        "parent_body_id": "pluto",
+        "sort_order": 851,
     },
     {
         "body_id": "haumea",
@@ -175,9 +238,53 @@ _BODY_CATALOG: List[Dict[str, object]] = [
     },
 ]
 
+# Bodies in this set are not just searchable targets; they are first-class
+# solar-system scene members that the Scene Manager keeps warm from Horizons.
+_SYSTEM_SCENE_BODY_IDS = {
+    "mercury",
+    "venus",
+    "earth",
+    "moon",
+    "mars",
+    "ceres",
+    "jupiter",
+    "io",
+    "europa",
+    "ganymede",
+    "callisto",
+    "saturn",
+    "enceladus",
+    "rhea",
+    "titan",
+    "iapetus",
+    "uranus",
+    "miranda",
+    "ariel",
+    "umbriel",
+    "titania",
+    "oberon",
+    "neptune",
+    "triton",
+    "nereid",
+    "proteus",
+    "pluto",
+    "charon",
+    "haumea",
+    "makemake",
+    "eris",
+}
+
 _BODY_BY_ID: Dict[str, Dict[str, object]] = {
     str(entry["body_id"]): entry for entry in _BODY_CATALOG
 }
+
+
+def _with_scene_metadata(entry: Dict[str, object]) -> Dict[str, object]:
+    row = dict(entry)
+    body_id = str(row.get("body_id") or "").strip().lower()
+    if body_id in _SYSTEM_SCENE_BODY_IDS:
+        row["scene_role"] = "system"
+    return row
 
 
 def list_celestial_bodies() -> List[Dict[str, object]]:
@@ -191,7 +298,7 @@ def list_celestial_bodies() -> List[Dict[str, object]]:
             return int(value)
         return 9999
 
-    return [dict(entry) for entry in sorted(_BODY_CATALOG, key=sort_key)]
+    return [_with_scene_metadata(entry) for entry in sorted(_BODY_CATALOG, key=sort_key)]
 
 
 def get_celestial_body(body_id: str) -> Optional[Dict[str, object]]:
@@ -200,7 +307,7 @@ def get_celestial_body(body_id: str) -> Optional[Dict[str, object]]:
     if not key:
         return None
     entry = _BODY_BY_ID.get(key)
-    return dict(entry) if entry else None
+    return _with_scene_metadata(entry) if entry else None
 
 
 def search_celestial_bodies(query: str, limit: int = 20) -> List[Dict[str, object]]:

@@ -19,6 +19,28 @@ DEFAULT_DB = Path("backend/data/db/gs.db")
 DEFAULT_SERVICE = "Unknown"
 DEFAULT_CITATION = "https://github.com/daniestevez/gr-satellites"
 DEFAULT_SOURCE = "gr-satellites"
+TRANSMITTER_ID_ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
+TRANSMITTER_ID_BASE = len(TRANSMITTER_ID_ALPHABET)
+TRANSMITTER_ID_LENGTH = 22
+
+
+def uuid_to_short_transmitter_id(value: uuid.UUID | str) -> str:
+    """Encode a UUID as a SatNOGS-style 22-char transmitter id."""
+    uid = value if isinstance(value, uuid.UUID) else uuid.UUID(str(value).strip())
+    number = uid.int
+    encoded = []
+
+    while number:
+        number, remainder = divmod(number, TRANSMITTER_ID_BASE)
+        encoded.append(TRANSMITTER_ID_ALPHABET[remainder])
+
+    if not encoded:
+        encoded.append(TRANSMITTER_ID_ALPHABET[0])
+
+    return "".join(reversed(encoded)).rjust(
+        TRANSMITTER_ID_LENGTH,
+        TRANSMITTER_ID_ALPHABET[0],
+    )
 
 
 def parse_args() -> argparse.Namespace:
@@ -170,7 +192,10 @@ def build_rows(yaml_files: Iterable[Path], satellites_in_db: set[int], args: arg
                 skipped_no_frequency.append((norad, sat_name, tx_name))
                 continue
 
-            tx_id = uuid.uuid5(uuid.NAMESPACE_URL, f"{args.service}:{norad}:{tx_name}")
+            source_transmitter_id = str(
+                uuid.uuid5(uuid.NAMESPACE_URL, f"{args.service}:{norad}:{tx_name}")
+            )
+            tx_id = uuid_to_short_transmitter_id(source_transmitter_id)
             mode = tx.get("modulation")
             decoder_summary = build_decoder_summary(tx)
             description = tx_name
@@ -178,7 +203,7 @@ def build_rows(yaml_files: Iterable[Path], satellites_in_db: set[int], args: arg
                 description = f"{tx_name} ({decoder_summary})"
 
             row = {
-                "id": str(tx_id),
+                "id": tx_id,
                 "description": description,
                 "alive": True,
                 "type": "Transmitter",
@@ -200,6 +225,7 @@ def build_rows(yaml_files: Iterable[Path], satellites_in_db: set[int], args: arg
                 "citation": args.citation,
                 "service": args.service,
                 "source": args.source,
+                "source_transmitter_id": source_transmitter_id,
                 "iaru_coordination": "N/A",
                 "iaru_coordination_url": "",
                 "itu_notification": '{"urls": []}',

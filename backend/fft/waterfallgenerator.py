@@ -18,7 +18,7 @@
 import json
 import logging
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Any, Mapping, Optional, Tuple
 
 import numpy as np
 from PIL import Image
@@ -31,22 +31,43 @@ class WaterfallConfig:
 
     # Default configuration
     DEFAULT_CONFIG = {
-        "fft_size": 2048,
-        "max_height": 2500,
+        "fft_size": 16384,
+        "max_height": 6000,
         "window": "hann",
         "overlap": 0.5,
         "db_range": [-80, 0],
+        "auto_scale_db_range": True,
         "generate_thumbnail": True,
         "thumbnail_size": [512, 256],
     }
+    SUPPORTED_FFT_SIZES = (512, 1024, 2048, 4096, 8192, 16384, 32768, 65536)
+    SUPPORTED_WINDOWS = {"hann", "hamming", "blackman"}
+    MAX_ALLOWED_HEIGHT = 12000
+
+    @staticmethod
+    def _parse_bool(value: Any, field_name: str) -> bool:
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, (int, float)):
+            if value in (0, 1):
+                return bool(value)
+            raise ValueError(f"{field_name} must be a boolean value")
+        if isinstance(value, str):
+            lowered = value.strip().lower()
+            if lowered in {"true", "1", "yes", "on"}:
+                return True
+            if lowered in {"false", "0", "no", "off"}:
+                return False
+        raise ValueError(f"{field_name} must be a boolean value")
 
     def __init__(
         self,
-        fft_size: int = 2048,
-        max_height: int = 2500,
+        fft_size: int = 16384,
+        max_height: int = 6000,
         window: str = "hann",
         overlap: float = 0.5,
         db_range: Tuple[float, float] = (-80, 0),
+        auto_scale_db_range: bool = True,
         generate_thumbnail: bool = True,
         thumbnail_size: Tuple[int, int] = (512, 256),
     ):
@@ -55,65 +76,87 @@ class WaterfallConfig:
         self.window = window
         self.overlap = overlap
         self.db_range = db_range
+        self.auto_scale_db_range = auto_scale_db_range
         self.generate_thumbnail = generate_thumbnail
         self.thumbnail_size = thumbnail_size
 
     @classmethod
-    def load_from_file(cls, config_path: Path) -> "WaterfallConfig":
+    def from_overrides(cls, overrides: Optional[Mapping[str, Any]] = None) -> "WaterfallConfig":
         """
-        Load configuration from JSON file.
+        Build a runtime config from validated override values.
 
         Args:
-            config_path: Path to JSON configuration file
+            overrides: User-provided options for manual waterfall generation
 
         Returns:
-            WaterfallConfig instance
+            WaterfallConfig instance with defaults + validated overrides
         """
-        try:
-            if config_path.exists():
-                with open(config_path, "r") as f:
-                    config_data = json.load(f)
-
-                # Filter out comment/documentation fields (starting with _)
-                config_data = {k: v for k, v in config_data.items() if not k.startswith("_")}
-
-                # Convert list to tuple for db_range and thumbnail_size
-                if "db_range" in config_data and isinstance(config_data["db_range"], list):
-                    config_data["db_range"] = tuple(config_data["db_range"])
-                if "thumbnail_size" in config_data and isinstance(
-                    config_data["thumbnail_size"], list
-                ):
-                    config_data["thumbnail_size"] = tuple(config_data["thumbnail_size"])
-
-                logger.info(f"Loaded waterfall config from {config_path}")
-                return cls(**config_data)
-            else:
-                logger.info(f"Config file not found at {config_path}, using default configuration")
-                return cls()
-        except Exception as e:
-            logger.warning(
-                f"Error loading waterfall config from {config_path}: {e}, using defaults"
-            )
+        if overrides is None:
             return cls()
+        if not isinstance(overrides, Mapping):
+            raise ValueError("Waterfall options must be an object")
 
-    @classmethod
-    def save_default_config(cls, config_path: Path):
-        """
-        Save default configuration to JSON file.
+        allowed_keys = {
+            "fft_size",
+            "max_height",
+            "window",
+            "overlap",
+            "db_range",
+            "auto_scale_db_range",
+        }
+        unknown_keys = [key for key in overrides if key not in allowed_keys]
+        if unknown_keys:
+            raise ValueError(f"Unsupported waterfall options: {', '.join(sorted(unknown_keys))}")
 
-        Args:
-            config_path: Path where to save the configuration
-        """
-        try:
-            # Create directory if it doesn't exist
-            config_path.parent.mkdir(parents=True, exist_ok=True)
+        config_data: dict[str, Any] = {}
 
-            with open(config_path, "w") as f:
-                json.dump(cls.DEFAULT_CONFIG, f, indent=2)
+        if "fft_size" in overrides:
+            fft_size = int(overrides["fft_size"])
+            if fft_size not in cls.SUPPORTED_FFT_SIZES:
+                raise ValueError(
+                    "fft_size must be one of: "
+                    + ", ".join(str(size) for size in cls.SUPPORTED_FFT_SIZES)
+                )
+            config_data["fft_size"] = fft_size
 
-            logger.info(f"Saved default waterfall config to {config_path}")
-        except Exception as e:
-            logger.error(f"Failed to save default config: {e}")
+        if "max_height" in overrides:
+            max_height = int(overrides["max_height"])
+            if max_height < 64 or max_height > cls.MAX_ALLOWED_HEIGHT:
+                raise ValueError(f"max_height must be between 64 and {cls.MAX_ALLOWED_HEIGHT}")
+            config_data["max_height"] = max_height
+
+        if "window" in overrides:
+            window = str(overrides["window"]).strip().lower()
+            if window == "hanning":
+                window = "hann"
+            if window not in cls.SUPPORTED_WINDOWS:
+                raise ValueError(
+                    "window must be one of: " + ", ".join(sorted(cls.SUPPORTED_WINDOWS))
+                )
+            config_data["window"] = window
+
+        if "overlap" in overrides:
+            overlap = float(overrides["overlap"])
+            if overlap < 0.0 or overlap > 0.75:
+                raise ValueError("overlap must be between 0.0 and 0.75")
+            config_data["overlap"] = overlap
+
+        if "db_range" in overrides:
+            db_range = overrides["db_range"]
+            if not isinstance(db_range, (list, tuple)) or len(db_range) != 2:
+                raise ValueError("db_range must contain exactly two values: [min, max]")
+            min_db = float(db_range[0])
+            max_db = float(db_range[1])
+            if min_db >= max_db:
+                raise ValueError("db_range minimum must be lower than maximum")
+            config_data["db_range"] = (min_db, max_db)
+
+        if "auto_scale_db_range" in overrides:
+            config_data["auto_scale_db_range"] = cls._parse_bool(
+                overrides["auto_scale_db_range"], "auto_scale_db_range"
+            )
+
+        return cls(**config_data)
 
     @staticmethod
     def get_colormap_lut():
@@ -299,6 +342,22 @@ class WaterfallGenerator:
 
             # Calculate dimensions
             dimensions = self._calculate_dimensions(duration_sec, sample_rate, total_samples)
+            output_path = Path(f"{recording_base}.png")
+
+            if dimensions["total_frames"] < 3:
+                self.logger.warning(
+                    "Recording is too short for a reliable waterfall "
+                    f"({dimensions['total_frames']} FFT frames); saving transparent placeholder"
+                )
+                self._save_transparent_waterfall_image(
+                    output_path, dimensions["width"], dimensions["height"]
+                )
+                if self.config.generate_thumbnail:
+                    thumbnail_path = recording_path.with_name(
+                        f"{recording_path.name}_waterfall_thumb.png"
+                    )
+                    self._generate_thumbnail(output_path, thumbnail_path)
+                return True
 
             sample_reader = self._build_sample_reader(data_file, dtype_info)
 
@@ -313,16 +372,22 @@ class WaterfallGenerator:
             else:
                 window = np.ones(fft_size)
 
-            # Auto-scale dB range by sampling FFTs from the recording
-            self.config.db_range = self._auto_scale_db_range(
-                sample_reader, total_samples, fft_size, window
-            )
+            if self.config.auto_scale_db_range:
+                # Auto-scale dB range by sampling FFTs from the recording
+                self.config.db_range = self._auto_scale_db_range(
+                    sample_reader, total_samples, fft_size, window
+                )
+            else:
+                self.logger.info(
+                    "Using manual dB range from waterfall options: [%.1f, %.1f]",
+                    self.config.db_range[0],
+                    self.config.db_range[1],
+                )
 
             # Generate full waterfall
             waterfall_data = self._generate_waterfall_data(sample_reader, total_samples, dimensions)
 
             # Apply colormap and save
-            output_path = Path(f"{recording_base}.png")
             self._save_waterfall_image(waterfall_data, output_path, metadata)
 
             self.logger.info(
@@ -440,16 +505,29 @@ class WaterfallGenerator:
         fft_size = self.config.fft_size
         hop_size = int(fft_size * (1 - self.config.overlap))
 
-        # Total possible FFT frames
-        total_frames = (total_samples - fft_size) // hop_size + 1
+        # Total possible FFT frames. Very short recordings can contain fewer
+        # samples than a single FFT window, so clamp to zero instead of letting
+        # negative dimensions reach the image writer.
+        total_frames = max(0, (total_samples - fft_size) // hop_size + 1)
 
-        # Adaptive height based on duration
+        if total_frames == 0:
+            return {
+                "width": fft_size,
+                "height": 1,
+                "frames_per_row": 1,
+                "time_per_row": hop_size / sample_rate,
+                "hop_size": hop_size,
+                "total_frames": total_frames,
+            }
+
+        # Adaptive height based on duration. The higher caps preserve more
+        # temporal texture from offline recordings instead of averaging it away.
         if duration_sec < 60:  # < 1 minute
-            target_height = min(total_frames, 1200)
+            target_height = min(total_frames, 2400)
         elif duration_sec < 600:  # 1-10 minutes
-            target_height = min(total_frames, 1500)
+            target_height = min(total_frames, 4000)
         elif duration_sec < 3600:  # 10-60 minutes
-            target_height = min(total_frames, 2000)
+            target_height = min(total_frames, 6000)
         else:  # > 1 hour
             target_height = min(total_frames, self.config.max_height)
 
@@ -552,6 +630,13 @@ class WaterfallGenerator:
         """
         # Normalize to dB range and clamp to [0, 1]
         db_min, db_max = self.config.db_range
+        if db_max <= db_min:
+            db_min, db_max = (-80.0, 0.0)
+            self.logger.warning(
+                "Invalid dB range detected while saving waterfall; falling back to [%s, %s]",
+                db_min,
+                db_max,
+            )
         normalized = np.clip((waterfall_data - db_min) / (db_max - db_min), 0, 1)
 
         # Convert to 0-255 range (already clamped, so no wrapping/magenta artifacts)
@@ -566,6 +651,17 @@ class WaterfallGenerator:
         # Create PIL Image and save
         # Flip vertically so newest is at bottom
         image = Image.fromarray(np.flipud(rgb_image), mode="RGB")
+        image.save(output_path, "PNG", optimize=True)
+
+    def _save_transparent_waterfall_image(self, output_path: Path, width: int, height: int):
+        """
+        Save a transparent placeholder when the IQ recording is too short to
+        produce a meaningful waterfall. This avoids misleading all-white images.
+        """
+        safe_width = max(1, int(width))
+        safe_height = max(1, int(height))
+        transparent = np.zeros((safe_height, safe_width, 4), dtype=np.uint8)
+        image = Image.fromarray(transparent, mode="RGBA")
         image.save(output_path, "PNG", optimize=True)
 
     def _generate_thumbnail(self, source_path: Path, thumbnail_path: Path):

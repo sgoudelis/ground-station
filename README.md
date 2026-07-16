@@ -3,24 +3,70 @@
 [![Tests](https://github.com/sgoudelis/ground-station/actions/workflows/tests.yml/badge.svg)](https://github.com/sgoudelis/ground-station/actions/workflows/tests.yml) [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0) [![Release](https://github.com/sgoudelis/ground-station/actions/workflows/release-from-images.yml/badge.svg?event=push)](https://github.com/sgoudelis/ground-station/actions/workflows/release-from-images.yml) [![Last Release](https://img.shields.io/github/release-date/sgoudelis/ground-station)](https://github.com/sgoudelis/ground-station/releases/latest) [![Last Commit](https://img.shields.io/github/last-commit/sgoudelis/ground-station)](https://github.com/sgoudelis/ground-station/commits/main)
 
 
-**Ground Station is a full-featured, open-source software solution for satellite tracking and radio communication.** Designed for amateur radio operators, satellite enthusiasts, and researchers, it provides
-a comprehensive and easy-to-use platform for monitoring spacecraft, controlling radio equipment, and receiving
-live radio signals from satellites.
-This project was built with the help of Claude Code and Codex.
+**Ground Station is an open-source, browser-based application for tracking satellites and celestial targets,
+controlling station hardware, and receiving, decoding, and recording SDR signals.** Built for amateur radio
+operators, satellite enthusiasts, and researchers, it brings orbit visualization, multi-target tracking consoles,
+SDR waterfall analysis, packet and telemetry decoding, scheduled observations, and hardware management into a
+single web interface.
 
+## Recent Releases
+
+* **v0.7.16 (2026-07-09):** Added pass geometry classification with extended azimuth mode support in pass/rotator flows, improved satellite transmitters table performance and column handling, and removed the legacy pass-direction column logic.
+* **v0.7.15 (2026-07-08):** Added SDR takeover confirmation dialogs with structured conflict/session details and forced-takeover handling across frontend/backend streaming flows, and introduced satellite catalog statistics retrieval with frontend UI integration.
+* **v0.7.14 (2026-07-07):** Optimized celestial offscreen label rendering and viewport/selection handling, improved dialog theming consistency, added a center-frequency marker line in the waterfall viewer, and introduced Redux-based Earth View navigation status overlays with corrected loading-state defaults.
+* **v0.7.13 (2026-07-07):** Added filename sanitization utilities and integrated them into recording paths, expanded waterfall FFT size options, raised default/fallback FFT size to 16384 for improved resolution, and refined dialog footer responsiveness/consistency.
+* **v0.7.12 (2026-07-06):** Added canvas-based waterfall rendering with optimized zoom/pan behavior, introduced snapshot-image loading indicators, and refined native max-zoom handling with simplified zoom-limit logic.
+* **v0.7.11 (2026-07-06):** Added configurable waterfall generation with a new viewer component and stronger touch/pointer interactions, expanded celestial tracking UX with interaction controls and elevation-trend integrations, and improved recording/file metadata presentation with image dimensions and shared thumbnails.
+* **v0.7.10 (2026-07-05):** Improved celestial module scene/caching behavior (including synthetic Sun origin handling for tracks-only payloads), added loading-state status indicators in the frontend navigation, expanded celestial translations (German/Greek), and refined monitored-grid unit formatting.
+* **v0.7.9 (2026-07-03):** Added context menus for EarthView/celestial targets in monitored grids and passes, introduced inline actions for tracking/transmitter workflows, and improved target-key handling plus transmitter identifier management.
+* **v0.7.8 (2026-06-30):** Isolated waterfall marker drag interactions from container pan handlers, upgraded target badges to `TargetNumberIcon` in fleet and popover views, and improved target popover tracking/navigation behavior to streamline jumps to tracker pages.
+* **v0.7.7 (2026-06-30):** Improved waterfall VFO drag behavior and movement state handling, enhanced playback overlay responsiveness, added runtime scheduler metadata with clearer terminal-observation visibility, and refined target-slot badges plus EarthView satellite/transmitter editing flows.
+* **v0.7.6 (2026-06-28):** Added SDR usage badges with cross-session utilization tracking, persisted orbital sync state with UI hydration support, improved active non-satellite tracker resync during celestial sync, and refined target layout/schema behavior.
+* **v0.7.5 (2026-06-28):** Added versioned EarthView defaults for satellite tables, improved state reconciliation and layout schema scaling, persisted orbital-sync state with UI hydration support, and introduced SDR cross-session utilization visibility.
+* **v0.7.4 (2026-06-27):** Added timeline scrubbing and improved IQ playback controls, refined SDR options/streaming behavior, introduced resettable table defaults with versioned migration logic for EarthView and celestial views, and added transmitter duplication support.
 ## Screenshots
 
 <div align="center">
 
 ### Global Satellite Overview
-<img src="frontend/public/ground station - overview page - amateur group.png" alt="Overview page with amateur satellite group" width="450"/>
+<p>
+  <img src="frontend/public/ground station - overview page - amateur group.png" alt="Overview page with amateur satellite group (desktop)" height="300"/>
+  &nbsp;&nbsp;&nbsp;
+  <img src="frontend/public/ground station - earth view - mobile.jpg" alt="Earth view page on mobile" height="300"/>
+</p>
 
 *Overview page with quick group selection and real-time satellite status indicators*
 
 ---
 
+### Solar System View
+<p>
+  <img src="frontend/public/ground station - solar system view.png" alt="Solar System view page (desktop)" height="300"/>
+  &nbsp;&nbsp;&nbsp;
+  <img src="frontend/public/ground station - solar system view - mobile.jpg" alt="Solar System view page on mobile" height="300"/>
+</p>
+
+*Solar System page for celestial-body tracking with live orbital context and interactive visualization*
+
+---
+
+### Login Screen
+<p>
+  <img src="frontend/public/ground station - login screen.png" alt="Ground Station login screen (desktop)" height="300"/>
+  &nbsp;&nbsp;&nbsp;
+  <img src="frontend/public/ground station - login - mobile.jpg" alt="Ground Station login screen on mobile" height="300"/>
+</p>
+
+*Login screen for user authentication before accessing the Ground Station interface*
+
+---
+
 ### Multi-Target Tracking Console
-<img src="frontend/public/ground station - tracking console - multitargets - iss.png" alt="Multi-target tracking console focused on ISS" width="450"/>
+<p>
+  <img src="frontend/public/ground station - tracking console - multitargets - iss.png" alt="Multi-target tracking console focused on ISS (desktop)" height="300"/>
+  &nbsp;&nbsp;&nbsp;
+  <img src="frontend/public/ground station - target console - mobile.jpg" alt="Target console on mobile" height="300"/>
+</p>
 
 *Multi-target tracking console view showing an active ISS target with per-target control and live tracking telemetry*
 
@@ -34,9 +80,9 @@ This project was built with the help of Claude Code and Codex.
 ---
 
 ### Waterfall Packet Decoding (GMSK)
-<img src="frontend/public/ground station - waterfall page - packet decoding gmsk.png" alt="Waterfall packet decoding view with GMSK" width="450"/>
+<img src="frontend/public/ground station - waterfall page - receiving GMSK and decoding with two VFOs.png" alt="Waterfall packet decoding view with GMSK and two VFOs" width="450"/>
 
-*Waterfall view with live GMSK packet decoding and decoded output details*
+*Waterfall view receiving GMSK and decoding with two VFOs*
 
 ---
 
@@ -55,7 +101,7 @@ This project was built with the help of Claude Code and Codex.
 ---
 
 ### SDR Hardware Management
-<img src="frontend/public/ground station - sdrs view - table list.png" alt="SDR device management" width="450"/>
+<img src="frontend/public/ground station - sdr page - index.png" alt="SDR page index" width="450"/>
 
 *Comprehensive SDR device management interface supporting RTL-SDR, SoapySDR, and UHD/USRP radios with remote capability*
 
@@ -101,7 +147,9 @@ This project was built with the help of Claude Code and Codex.
 *   **SatDump Post-Processing:** Optional SatDump processing for IQ recordings, including METEOR LRPT/HRPT pipelines.
 *   **Performance Monitoring:** Live pipeline metrics (queue utilization, throughput, drops, and component health) streamed to the frontend.
 *   **Responsive Web Interface:** Material-UI + Socket.IO frontend for desktop, tablet, and mobile operation.
-*   **Celestial Tracking Integration:** Solar-system/celestial vector support backed by the NASA/JPL Horizons API for non-TLE body tracking paths.
+*   **Authentication + User Management:** Built-in login screen with role-based access control for two user types: admins and operators.
+*   **Interactive Solar System View:** Dedicated Solar System page with live orbital context for planets and other supported bodies.
+*   **Celestial Body + Mission Targeting:** Track selected solar-system bodies and deep-space mission targets through NASA/JPL Horizons-backed vectors.
 
 ## Scheduled Observations & Automated Pass Recording
 
@@ -364,6 +412,7 @@ flowchart TB
 *   **[SoapySDR](https://pypi.org/project/SoapySDR/):** A vendor and platform neutral SDR support library.
 *   **[SatDump](https://github.com/SatDump/SatDump):** Satellite decoder suite used for weather image decoding workflows.
 *   **[gr-satellites](https://github.com/daniestevez/gr-satellites):** GNU Radio out-of-tree modules for satellite communications decoding.
+*   **[GNSS-SDR](https://github.com/gnss-sdr/gnss-sdr):** Open-source software-defined GNSS receiver used by the GNSS decoder path.
 
 ### Frontend
 
@@ -373,6 +422,7 @@ flowchart TB
 *   **[Vite](https://vitejs.dev/):** A build tool that aims to provide a faster and leaner development experience for modern web projects.
 *   **[Socket.IO Client](https://socket.io/docs/v4/client-api/):** The client-side library for Socket.IO.
 *   **[Leaflet](https://leafletjs.com/):** An open-source JavaScript library for mobile-friendly interactive maps.
+*   **[MapLibre Maps](https://maplibre.org/):** Open-source map rendering engine used for 2D and globe map views.
 *   **[satellite.js](https://github.com/shashwatak/satellite-js):** A JavaScript library to propagate satellite orbits.
 
 ## SDR Device Support
@@ -380,7 +430,8 @@ flowchart TB
 Dedicated worker processes provide IQ acquisition, FFT processing, and demodulation support for multiple receiver families:
 
 *   **RTL-SDR** (USB or `rtl_tcp`) workers
-*   **SoapySDR** devices locally or through SoapyRemote: RTL-SDR, Airspy, AirspyHF+, HackRF, HydraSDR, LimeSDR, PlutoSDR, UHD/USRP, and SDRplay (RSP series)
+*   **Airspy / Airspy HF+** native worker support (**Airspy HF+ currently untested**)
+*   **SoapySDR** devices locally or through SoapyRemote: RTL-SDR, Airspy, HackRF, HydraSDR, LimeSDR, PlutoSDR, UHD/USRP, and SDRplay (RSP series)
 *   **UHD/USRP** radios via a UHD worker
 *   **Need another SoapySDR device?** Open a GitHub issue and request support.
 
@@ -414,6 +465,7 @@ Ground Station includes comprehensive IQ recording and playback capabilities usi
 *   **Full Processing Pipeline:** Playback supports FFT display, demodulation, and all signal processing
 *   **Live-equivalent Decoding:** During playback, demodulators and decoders run exactly as they do with live SDR input
 *   **Recording Browser:** Sortable list of recordings with metadata preview (sample rate, duration, timestamp)
+*   **Timeline Scrubbing:** A playback position slider above the waterfall status bar shows elapsed/total time and supports seeking to a target time
 *   **Seamless Integration:** Switch between live SDR and playback without changing workflows
 
 ## Automated Observations
@@ -543,6 +595,7 @@ docker run -d \
 - For Raspberry Pi hardware, only the Raspberry Pi 5 is recommended
 - For ARM64, using `-v /dev:/dev` ensures all USB devices are accessible
 - Access the web interface at `http://<YOUR_HOST>:7000`
+- For TLS reverse-proxy deployments, see [deploy/nginx/README.md](deploy/nginx/README.md)
 
 ## Contributing
 

@@ -38,15 +38,23 @@ const normalizeTargetOption = (rawOption) => {
     if (targetType === TARGET_TYPES.MISSION) {
         const command = String(rawOption?.command || '').trim();
         if (!command) return null;
+        const mission_id_value = String(rawOption?.mission_id || '').trim().toLowerCase();
+        const normalizedMissionId = mission_id_value.startsWith('mission:')
+            ? mission_id_value.slice('mission:'.length)
+            : (mission_id_value.includes(':') ? '' : mission_id_value);
         const displayName = String(rawOption?.target_name || rawOption?.display_name || command).trim();
+        const missionTargetKey = `mission:${command}`;
         return {
             ...rawOption,
-            id: String(rawOption?.id || `mission:${command.toLowerCase()}`),
+            id: missionTargetKey,
             target_type: TARGET_TYPES.MISSION,
+            target_key: missionTargetKey,
             target_name: displayName,
             target_identifier: String(rawOption?.target_identifier || command).trim(),
+            mission_id: normalizedMissionId || null,
             command,
             display_name: String(rawOption?.display_name || displayName).trim(),
+            transmitters: Array.isArray(rawOption?.transmitters) ? rawOption.transmitters : [],
         };
     }
     if (targetType === TARGET_TYPES.BODY) {
@@ -61,6 +69,7 @@ const normalizeTargetOption = (rawOption) => {
             target_identifier: String(rawOption?.target_identifier || bodyId).trim().toLowerCase(),
             body_id: bodyId,
             name: String(rawOption?.name || displayName).trim(),
+            transmitters: Array.isArray(rawOption?.transmitters) ? rawOption.transmitters : [],
         };
     }
     const noradId = rawOption?.norad_id;

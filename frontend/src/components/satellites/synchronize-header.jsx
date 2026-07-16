@@ -1,135 +1,166 @@
 import React from 'react';
-import { Box, Typography, Button } from '@mui/material';
+import { Box, Typography, Button, Chip, Stack } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import SatelliteAltIcon from '@mui/icons-material/SatelliteAlt';
 import SyncIcon from '@mui/icons-material/Sync';
-import { humanizeDate } from '../common/common.jsx';
+import PendingActionsIcon from '@mui/icons-material/PendingActions';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import { humanizeDate, humanizeFutureDateInMinutes } from '../common/common.jsx';
+import { useUserTimeSettings } from '../../hooks/useUserTimeSettings.jsx';
+import { formatDateTime } from '../../utils/date-time.js';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
 const SyncCardHeader = ({ syncState, onSynchronize }) => {
     const { t } = useTranslation('satellites');
-    const isSyncing = syncState['progress'] > 0 && syncState['progress'] < 100;
+    const { timezone, locale } = useUserTimeSettings();
+    const normalizedStatus = String(syncState?.status || '').toLowerCase();
+    const progress = Number(syncState?.progress || 0);
+    const isSyncing = ['inprogress', 'in_progress', 'started', 'running'].includes(normalizedStatus)
+        || (progress > 0 && progress < 100);
+    const isCompleted = normalizedStatus === 'complete' && syncState?.success !== false;
+    const lastUpdateText = t('synchronize.header.last_update', { date: humanizeDate(syncState.last_update) });
+    const nextScheduledSyncRelative = syncState?.next_scheduled_sync_at
+        ? humanizeFutureDateInMinutes(syncState.next_scheduled_sync_at)
+        : '';
+    const formattedNextScheduledSync = formatDateTime(syncState?.next_scheduled_sync_at, {
+        timezone,
+        locale,
+    });
+    const nextScheduledSyncText = nextScheduledSyncRelative
+        ? t('synchronize.header.next_scheduled_sync', {
+            defaultValue: 'Next scheduled sync: {{when}}',
+            when: nextScheduledSyncRelative,
+        })
+        : t('synchronize.header.next_scheduled_sync_unknown', {
+            defaultValue: 'Next scheduled sync: Not available',
+        });
+    const nextScheduledSyncTooltipText = formattedNextScheduledSync
+        ? t('synchronize.header.next_scheduled_sync_exact', {
+            defaultValue: 'Next scheduled sync: {{date}}',
+            date: formattedNextScheduledSync,
+        })
+        : nextScheduledSyncText;
 
     return (
-        <Box sx={{
-            display: 'flex',
-            flexDirection: { xs: 'column', sm: 'row' },
-            justifyContent: 'space-between',
-            alignItems: { xs: 'flex-start', sm: 'center' },
-            mb: 2,
-        }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: { xs: 1.5, sm: 0 } }}>
-                <SatelliteAltIcon sx={{
-                    mr: 1,
-                    color: 'primary.light',
-                    filter: (theme) => `drop-shadow(0 0 3px ${theme.palette.primary.light}99)`,
-                    animation: 'pulse 3s infinite ease-in-out',
-                    '@keyframes pulse': {
-                        '0%': { opacity: 0.8 },
-                        '50%': { opacity: 1 },
-                        '100%': { opacity: 0.8 }
-                    }
-                }}/>
-                <Box>
-                    <Typography
-                        component="div"
-                        variant="h6"
+        <>
+            <Box
+                sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: 1.5,
+                }}
+            >
+                <Stack direction="row" spacing={1.5} alignItems="center">
+                    <Box
                         sx={{
-                            fontWeight: 700,
-                            color: 'text.primary',
-                            textShadow: '0 0 10px rgba(0,0,0,0.5)',
-                            letterSpacing: '0.5px',
-                            textTransform: 'uppercase',
-                            fontSize: { xs: '1rem', sm: '1.25rem' },
+                            width: 36,
+                            height: 36,
+                            borderRadius: 1.5,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: 'primary.main',
+                            backgroundColor: (theme) =>
+                                theme.palette.mode === 'dark'
+                                    ? alpha(theme.palette.primary.main, 0.22)
+                                    : alpha(theme.palette.primary.main, 0.12),
+                            flexShrink: 0,
                         }}
                     >
-                        {t('synchronize.header.title')}
-                    </Typography>
-                    <Typography
-                        variant="subtitle2"
-                        component="div"
-                        sx={{
-                            color: 'text.secondary',
-                            fontSize: '0.8rem',
-                            fontWeight: 300,
-                            letterSpacing: '0.3px',
-                            display: { xs: 'none', sm: 'block' },
-                        }}
-                    >
-                        {t('synchronize.header.subtitle')}
-                    </Typography>
-                </Box>
-            </Box>
+                        <SatelliteAltIcon sx={{ fontSize: 20 }} />
+                    </Box>
+                    <Box>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 700, lineHeight: 1.3 }}>
+                            {t('synchronize.header.title')}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.4 }}>
+                            {t('synchronize.header.subtitle')}
+                        </Typography>
+                    </Box>
+                </Stack>
 
-            <Box sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: { xs: 'flex-start', sm: 'center' }
-            }}>
                 <Button
                     disabled={isSyncing}
                     variant="contained"
                     color="primary"
                     onClick={onSynchronize}
                     size="small"
-                    sx={(theme) => ({
-                        background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
-                        boxShadow: `0 5px 15px ${theme.palette.primary.main}4D`,
-                        textTransform: 'uppercase',
-                        fontWeight: 600,
-                        letterSpacing: '1px',
-                        px: { xs: 2, sm: 3 },
-                        py: 1,
-                        borderRadius: '8px',
-                        position: 'relative',
-                        overflow: 'hidden',
-                        transition: 'all 0.3s ease',
-                        '&:hover': {
-                            background: `linear-gradient(135deg, ${theme.palette.primary.light} 0%, ${theme.palette.primary.main} 100%)`,
-                            boxShadow: `0 5px 20px ${theme.palette.primary.main}80`,
-                            transform: 'translateY(-2px)',
-                        },
-                        '&::before': {
-                            content: '""',
-                            position: 'absolute',
-                            top: 0,
-                            left: '-100%',
-                            width: '100%',
-                            height: '100%',
-                            background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)',
-                            transition: 'all 0.5s ease',
-                        },
-                        '&:hover::before': {
-                            left: '100%',
-                        },
-                    })}
+                    startIcon={<SyncIcon fontSize="small" />}
+                    sx={{ flexShrink: 0 }}
                 >
-                    <SyncIcon sx={{
-                        mr: 1,
-                        animation: isSyncing ? 'rotate 2s infinite linear' : 'none',
-                        '@keyframes rotate': {
-                            '0%': { transform: 'rotate(0deg)' },
-                            '100%': { transform: 'rotate(360deg)' }
-                        },
-                        fontSize: { xs: '1rem', sm: '1.25rem' }
-                    }}/>
-                    {t('synchronize.header.button')}
+                    {isSyncing
+                        ? t('synchronize.header.syncing_button', { defaultValue: 'Synchronizing...' })
+                        : t('synchronize.header.button')}
                 </Button>
+            </Box>
 
-                <Typography
-                    variant="caption"
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mt: 1 }}>
+                <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500, flexShrink: 0 }}>
+                    {t('synchronize.header.status', { defaultValue: 'Status' })}
+                </Typography>
+                {isSyncing ? (
+                    <Chip
+                        size="small"
+                        color="info"
+                        icon={<PendingActionsIcon />}
+                        label={t('synchronize.header.status_running', { defaultValue: 'Running' })}
+                    />
+                ) : isCompleted ? (
+                    <Chip
+                        size="small"
+                        color="success"
+                        icon={<CheckCircleOutlineIcon />}
+                        label={t('synchronize.header.status_completed', { defaultValue: 'Completed' })}
+                    />
+                ) : (
+                    <Chip
+                        size="small"
+                        variant="outlined"
+                        label={t('synchronize.header.status_idle', { defaultValue: 'Idle' })}
+                    />
+                )}
+                <Box
                     sx={{
-                        fontFamily: 'monospace',
-                        color: 'text.disabled',
-                        fontSize: '0.65rem',
-                        mt: 0.5,
-                        textAlign: { xs: 'left', sm: 'center' },
+                        ml: 'auto',
+                        minWidth: 0,
                     }}
                 >
-                    {t('synchronize.header.last_update', { date: humanizeDate(syncState.last_update) })}
-                </Typography>
+                    <Typography
+                        variant="caption"
+                        color="text.disabled"
+                        sx={{
+                            display: 'block',
+                            fontFamily: 'monospace',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            textAlign: 'right',
+                        }}
+                        title={lastUpdateText}
+                    >
+                        {lastUpdateText}
+                    </Typography>
+                    <Typography
+                        variant="caption"
+                        color="text.disabled"
+                        sx={{
+                            display: 'block',
+                            fontFamily: 'monospace',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            textAlign: 'right',
+                        }}
+                        title={nextScheduledSyncTooltipText}
+                    >
+                        {nextScheduledSyncText}
+                    </Typography>
+                </Box>
             </Box>
-        </Box>
+        </>
     );
 };
 

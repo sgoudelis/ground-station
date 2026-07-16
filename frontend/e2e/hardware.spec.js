@@ -40,6 +40,14 @@ const confirmDeleteInDialog = async (dialog) => {
   await confirmButton.click();
 };
 
+const clickSelectionEditButton = async (page) => {
+  // Scope to toolbar-style MUI buttons so row-level icon buttons (also named "Edit") are excluded.
+  const button = page.locator('.MuiButton-root').filter({ hasText: /^edit$/i }).first();
+  await expect(button).toBeVisible();
+  await expect(button).toBeEnabled();
+  await button.click();
+};
+
 test.describe('Rig Configuration', () => {
   const openRigDialog = async (page) => {
     return openAddDialogWithLocationFallback(page);
@@ -106,7 +114,7 @@ test.describe('Rig Configuration', () => {
     const row = page.locator('.MuiDataGrid-row').filter({ hasText: rigName });
     await expect(row).toBeVisible();
     await selectRigRowForDelete(page, row);
-    await page.getByRole('button', { name: /^edit$/i }).click();
+    await clickSelectionEditButton(page);
 
     const editDialog = page.getByRole('dialog');
     await editDialog.getByLabel('Name').fill(updatedName);
@@ -225,7 +233,7 @@ test.describe('Rotator Configuration', () => {
     const row = page.locator('.MuiDataGrid-row').filter({ hasText: rotatorName });
     await expect(row).toBeVisible();
     await selectRotatorRowForDelete(page, row);
-    await page.getByRole('button', { name: /^edit$/i }).click();
+    await clickSelectionEditButton(page);
 
     const editDialog = page.getByRole('dialog');
     await editDialog.getByLabel('Name').fill(updatedName);
@@ -403,7 +411,7 @@ test.describe('SDR Configuration', () => {
 
     const row = page.locator('.MuiDataGrid-row').filter({ hasText: initialName });
     await row.getByRole('checkbox').click();
-    await page.getByRole('button', { name: /^edit$/i }).click();
+    await clickSelectionEditButton(page);
 
     const dialog = page.getByRole('dialog');
     await dialog.getByLabel('Name').fill(updatedName);

@@ -19,6 +19,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import { DataGrid, gridClasses } from '@mui/x-data-grid';
 import {
     Box,
@@ -89,6 +90,9 @@ const getStatusColor = (status) => {
     }
 };
 
+// Terminal observations should look visually completed in the grid.
+const isTerminalStatus = (status) => ['completed', 'failed', 'cancelled', 'missed'].includes(status);
+
 // Time formatter component that updates every second
 const TimeFormatter = React.memo(function TimeFormatter({ value }) {
     const [, setForceUpdate] = useState(0);
@@ -111,6 +115,7 @@ const TimeFormatter = React.memo(function TimeFormatter({ value }) {
 
 const ObservationsTable = () => {
     const dispatch = useDispatch();
+    const { t } = useTranslation('common');
     const { socket } = useSocket();
     const [openDeleteConfirm, setOpenDeleteConfirm] = useState(false);
     const [openStopConfirm, setOpenStopConfirm] = useState(false);
@@ -198,7 +203,7 @@ const ObservationsTable = () => {
         const { id, created_at, updated_at, status, ...observationData } = observation;
         const clonedObservation = {
             ...observationData,
-            name: `${observation.name} (Copy)`,
+            name: `${observation.name} (${t('scheduler_tables.shared.copy_suffix')})`,
         };
         dispatch(setSelectedObservation(clonedObservation));
         dispatch(setDialogOpen(true));
@@ -271,10 +276,14 @@ const ObservationsTable = () => {
         });
     };
 
+    const getStatusLabel = (status) => (
+        t(`scheduler_tables.shared.statuses.${status}`, { defaultValue: status })
+    );
+
     const columns = [
         {
             field: 'enabled',
-            headerName: 'Enabled',
+            headerName: t('scheduler_tables.shared.columns.enabled'),
             width: 80,
             renderCell: (params) => (
                 <Switch
@@ -288,14 +297,14 @@ const ObservationsTable = () => {
         },
         {
             field: 'satellite',
-            headerName: 'Satellite',
+            headerName: t('scheduler_tables.shared.columns.satellite'),
             flex: 1.1,
             minWidth: 150,
             valueGetter: (value, row) => row.satellite?.name || '-',
         },
         {
             field: 'peak_elevation',
-            headerName: 'Peak Elevation',
+            headerName: t('scheduler_tables.shared.columns.peak_elevation'),
             width: 120,
             align: 'center',
             headerAlign: 'center',
@@ -307,18 +316,18 @@ const ObservationsTable = () => {
         },
         {
             field: 'pass_start',
-            headerName: 'AOS',
+            headerName: t('scheduler_tables.shared.columns.aos'),
             flex: 1.2,
             minWidth: 180,
             valueGetter: (value, row) => row.pass?.event_start || '-',
             renderCell: (params) => {
-                if (!params.row.pass) return 'Geostationary';
+                if (!params.row.pass) return t('scheduler_tables.observations.geostationary');
                 return <TimeFormatter value={params.value} />;
             },
         },
         {
             field: 'task_start',
-            headerName: 'Task Start',
+            headerName: t('scheduler_tables.shared.columns.task_start'),
             flex: 1.2,
             minWidth: 180,
             valueGetter: (value, row) => row.task_start || row.pass?.event_start || '-',
@@ -329,7 +338,7 @@ const ObservationsTable = () => {
         },
         {
             field: 'task_end',
-            headerName: 'Task End',
+            headerName: t('scheduler_tables.shared.columns.task_end'),
             flex: 1.2,
             minWidth: 180,
             valueGetter: (value, row) => row.task_end || row.pass?.event_end || '-',
@@ -340,18 +349,18 @@ const ObservationsTable = () => {
         },
         {
             field: 'pass_end',
-            headerName: 'LOS',
+            headerName: t('scheduler_tables.shared.columns.los'),
             flex: 1.2,
             minWidth: 180,
             valueGetter: (value, row) => row.pass?.event_end || '-',
             renderCell: (params) => {
-                if (!params.row.pass) return 'Always visible';
+                if (!params.row.pass) return t('scheduler_tables.observations.always_visible');
                 return <TimeFormatter value={params.value} />;
             },
         },
         {
             field: 'sdr',
-            headerName: 'SDR',
+            headerName: t('scheduler_tables.shared.columns.sdr'),
             flex: 1.8,
             minWidth: 220,
             renderCell: (params) => {
@@ -362,7 +371,7 @@ const ObservationsTable = () => {
                     const freqMHz = sdr.center_frequency ? (sdr.center_frequency / 1000000).toFixed(2) : '?';
                     const gain = (sdr.gain !== undefined && sdr.gain !== null && sdr.gain !== '') ? sdr.gain : '?';
                     const antenna = sdr.antenna_port || '?';
-                    return `${sdr.name || 'SDR'} • ${freqMHz}MHz • ${gain}dB • ${antenna}`;
+                    return `${sdr.name || t('scheduler_tables.shared.sdr_default_name')} • ${freqMHz}MHz • ${gain}dB • ${antenna}`;
                 };
 
                 if (sdrs.length === 1) {
@@ -386,7 +395,7 @@ const ObservationsTable = () => {
         },
         {
             field: 'tracker_assignment',
-            headerName: 'Rotator',
+            headerName: t('scheduler_tables.shared.columns.rotator'),
             minWidth: 190,
             flex: 1.2,
             sortable: false,
@@ -395,10 +404,18 @@ const ObservationsTable = () => {
                 const rotator = params.row?.rotator || {};
                 const rotatorId = rotator?.id || '';
                 const rotatorName = rotator?.name || (rotatorId ? rotatorNameById[String(rotatorId)] : '');
-                const primaryLabel = rotatorName || (rotatorId ? 'Configured rotator' : 'No rotator');
+                const primaryLabel = rotatorName || (
+                    rotatorId
+                        ? t('scheduler_tables.shared.rotator_configured')
+                        : t('scheduler_tables.shared.rotator_none')
+                );
                 const secondaryLabel = rotatorId
-                    ? (rotator?.tracking_enabled ? 'Tracking enabled' : 'Tracking disabled')
-                    : 'Not configured';
+                    ? (
+                        rotator?.tracking_enabled
+                            ? t('scheduler_tables.shared.tracking_enabled')
+                            : t('scheduler_tables.shared.tracking_disabled')
+                    )
+                    : t('scheduler_tables.shared.not_configured');
                 return (
                     <Stack
                         direction="row"
@@ -422,7 +439,7 @@ const ObservationsTable = () => {
         },
         {
             field: 'tasks',
-            headerName: 'Tasks',
+            headerName: t('scheduler_tables.shared.columns.tasks'),
             flex: 1.2,
             minWidth: 180,
             renderCell: (params) => {
@@ -437,19 +454,19 @@ const ObservationsTable = () => {
                             if (task.type === 'decoder') {
                                 const decoderType = task.config.decoder_type || 'unknown';
                                 const typeMap = {
-                                    'lora': 'LoRa',
-                                    'none': 'No Decoder'
+                                    lora: t('scheduler_tables.shared.tasks.lora'),
+                                    none: t('scheduler_tables.shared.tasks.no_decoder'),
                                 };
                                 label = typeMap[decoderType] || decoderType.toUpperCase();
                                 color = 'primary';
                             } else if (task.type === 'audio_recording') {
-                                label = 'Audio';
+                                label = t('scheduler_tables.shared.tasks.audio');
                                 color = 'secondary';
                             } else if (task.type === 'transcription') {
-                                label = 'Transcription';
+                                label = t('scheduler_tables.shared.tasks.transcription');
                                 color = 'info';
                             } else if (task.type === 'iq_recording') {
-                                label = 'IQ';
+                                label = t('scheduler_tables.shared.tasks.iq');
                                 color = 'default';
                             }
 
@@ -469,11 +486,11 @@ const ObservationsTable = () => {
         },
         {
             field: 'status',
-            headerName: 'Status',
+            headerName: t('scheduler_tables.shared.columns.status'),
             width: 120,
             renderCell: (params) => (
                 <Chip
-                    label={params.value}
+                    label={getStatusLabel(params.value)}
                     color={getStatusColor(params.value)}
                     size="small"
                 />
@@ -481,7 +498,7 @@ const ObservationsTable = () => {
         },
         {
             field: 'actions',
-            headerName: 'Actions',
+            headerName: t('scheduler_tables.shared.columns.actions'),
             width: 120,
             align: 'right',
             headerAlign: 'right',
@@ -489,7 +506,7 @@ const ObservationsTable = () => {
             filterable: false,
             renderCell: (params) => (
                 <Stack direction="row" spacing={0.5} justifyContent="flex-end">
-                    <Tooltip title="Edit">
+                    <Tooltip title={t('edit')}>
                         <IconButton
                             size="small"
                             onClick={(e) => {
@@ -500,7 +517,7 @@ const ObservationsTable = () => {
                             <EditIcon fontSize="small" />
                         </IconButton>
                     </Tooltip>
-                    <Tooltip title="View Downloaded Data">
+                    <Tooltip title={t('scheduler_tables.observations.view_downloaded_data')}>
                         <IconButton
                             size="small"
                             onClick={(e) => {
@@ -526,10 +543,10 @@ const ObservationsTable = () => {
             {/* Title and Status Filters */}
             <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mt: 2, mb: 2, flexWrap: 'wrap', gap: 1 }}>
                 <Typography variant="h6" sx={{ fontWeight: 700, color: 'text.primary' }}>
-                    Scheduled Observations
+                    {t('scheduler_tables.observations.title')}
                 </Typography>
                 <Stack direction="row" spacing={1} flexWrap="wrap" alignItems="center">
-                    <Tooltip title="Table Settings">
+                    <Tooltip title={t('scheduler_tables.observations.table_settings')}>
                         <IconButton
                             size="small"
                             onClick={handleOpenSettings}
@@ -541,7 +558,7 @@ const ObservationsTable = () => {
                     {Object.entries(statusFilters).map(([status, enabled]) => (
                         <Chip
                             key={status}
-                            label={status.charAt(0).toUpperCase() + status.slice(1)}
+                            label={getStatusLabel(status)}
                             color={enabled ? getStatusColor(status) : 'default'}
                             variant={enabled ? 'filled' : 'outlined'}
                             onClick={() => dispatch(toggleStatusFilter(status))}
@@ -561,11 +578,11 @@ const ObservationsTable = () => {
                     sx={{ mb: 2, flexShrink: 0 }}
                     action={
                         <Button color="inherit" size="small" onClick={() => socket && dispatch(fetchScheduledObservations({ socket }))}>
-                            Retry
+                            {t('scheduler_tables.shared.retry')}
                         </Button>
                     }
                 >
-                    Could not load scheduled observations. Check backend connection and retry.
+                    {t('scheduler_tables.observations.load_error')}
                 </Alert>
             )}
 
@@ -575,11 +592,11 @@ const ObservationsTable = () => {
                     sx={{ mb: 2, flexShrink: 0 }}
                     action={
                         <Button color="inherit" size="small" onClick={handleShowAllStatuses}>
-                            Show all
+                            {t('scheduler_tables.shared.show_all')}
                         </Button>
                     }
                 >
-                    All rows are hidden by status filters.
+                    {t('scheduler_tables.observations.all_rows_hidden')}
                 </Alert>
             )}
 
@@ -588,6 +605,7 @@ const ObservationsTable = () => {
                     rows={observations}
                     columns={columns}
                     loading={loading}
+                    getRowClassName={(params) => (isTerminalStatus(params.row?.status) ? 'observation-row-terminal' : '')}
                     checkboxSelection
                     disableRowSelectionExcludeModel
                     rowSelectionModel={rowSelectionModel}
@@ -605,9 +623,9 @@ const ObservationsTable = () => {
                             sortModel: [{ field: 'pass_start', sort: 'asc' }],
                         },
                     }}
-                    pageSizeOptions={[10, 25, 50, {value: -1, label: 'All'}]}
+                    pageSizeOptions={[10, 25, 50, {value: -1, label: t('scheduler_tables.shared.all')} ]}
                     localeText={{
-                        noRowsLabel: 'No scheduled observations'
+                        noRowsLabel: t('scheduler_tables.observations.no_rows')
                     }}
                     sx={{
                         border: 0,
@@ -649,6 +667,12 @@ const ObservationsTable = () => {
                             display: 'flex',
                             alignItems: 'center',
                         },
+                        '& .observation-row-terminal .MuiDataGrid-cell': {
+                            textDecoration: 'line-through',
+                            textDecorationThickness: '1px',
+                            textDecorationColor: 'currentColor',
+                            color: 'text.secondary',
+                        },
                     }}
                 />
             </Box>
@@ -666,7 +690,7 @@ const ObservationsTable = () => {
                     <AddIcon sx={{ display: { xs: 'block', md: 'none' } }} />
                     <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center' }}>
                         <AddIcon sx={{ mr: 1 }} />
-                        Add
+                        {t('add')}
                     </Box>
                 </Button>
                 <Button
@@ -686,7 +710,7 @@ const ObservationsTable = () => {
                     <EditIcon sx={{ display: { xs: 'block', md: 'none' } }} />
                     <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center' }}>
                         <EditIcon sx={{ mr: 1 }} />
-                        Edit
+                        {t('edit')}
                     </Box>
                 </Button>
                 <Button
@@ -707,7 +731,7 @@ const ObservationsTable = () => {
                     <ContentCopyIcon sx={{ display: { xs: 'block', md: 'none' } }} />
                     <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center' }}>
                         <ContentCopyIcon sx={{ mr: 1 }} />
-                        Duplicate
+                        {t('scheduler_tables.shared.duplicate')}
                     </Box>
                 </Button>
                 <Button
@@ -728,7 +752,7 @@ const ObservationsTable = () => {
                     <EnableIcon sx={{ display: { xs: 'block', md: 'none' } }} />
                     <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center' }}>
                         <EnableIcon sx={{ mr: 1 }} />
-                        Enable
+                        {t('scheduler_tables.shared.enable')}
                     </Box>
                 </Button>
                 <Button
@@ -749,7 +773,7 @@ const ObservationsTable = () => {
                     <DisableIcon sx={{ display: { xs: 'block', md: 'none' } }} />
                     <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center' }}>
                         <DisableIcon sx={{ mr: 1 }} />
-                        Disable
+                        {t('scheduler_tables.shared.disable')}
                     </Box>
                 </Button>
                 <Button
@@ -773,7 +797,7 @@ const ObservationsTable = () => {
                     <StopIcon sx={{ display: { xs: 'block', md: 'none' } }} />
                     <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center' }}>
                         <StopIcon sx={{ mr: 1 }} />
-                        Cancel
+                        {t('cancel')}
                     </Box>
                 </Button>
                 <Button
@@ -789,7 +813,7 @@ const ObservationsTable = () => {
                     <DeleteIcon sx={{ display: { xs: 'block', md: 'none' } }} />
                     <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center' }}>
                         <DeleteIcon sx={{ mr: 1 }} />
-                        Delete
+                        {t('delete')}
                     </Box>
                 </Button>
             </Stack>
@@ -836,7 +860,7 @@ const ObservationsTable = () => {
                     >
                         !
                     </Box>
-                    Confirm Deletion
+                    {t('scheduler_tables.shared.confirm_deletion')}
                 </DialogTitle>
                 <DialogContent
                     sx={{
@@ -851,10 +875,10 @@ const ObservationsTable = () => {
                     }}
                 >
                     <Typography variant="body1" sx={{ mt: 2, mb: 2, color: 'text.primary' }}>
-                        Are you sure you want to delete {selectedIds.length} observation(s)? This action cannot be undone.
+                        {t('scheduler_tables.observations.delete_confirm_message', { count: selectedIds.length })}
                     </Typography>
                     <Typography variant="body2" sx={{ mb: 2, fontWeight: 600, color: 'text.secondary' }}>
-                        {selectedIds.length === 1 ? 'Observation to be deleted:' : `${selectedIds.length} Observations to be deleted:`}
+                        {t('scheduler_tables.observations.delete_list_title', { count: selectedIds.length })}
                     </Typography>
                     <Box sx={{
                         maxHeight: 300,
@@ -879,20 +903,20 @@ const ObservationsTable = () => {
                                     </Typography>
                                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
                                         <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary' }}>
-                                            Satellite: <Typography component="span" sx={{ fontSize: '0.813rem', color: 'text.primary', fontWeight: 500 }}>{obs.satellite?.name || obs.satellite_name}</Typography>
+                                            {t('scheduler_tables.shared.columns.satellite')}: <Typography component="span" sx={{ fontSize: '0.813rem', color: 'text.primary', fontWeight: 500 }}>{obs.satellite?.name || obs.satellite_name}</Typography>
                                         </Typography>
                                         <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary' }}>
-                                            Start: <Typography component="span" sx={{ fontSize: '0.813rem', color: 'text.primary', fontWeight: 500 }}>{obs.pass?.event_start ? formatDateTime(obs.pass.event_start, { timezone, locale }) : 'N/A'}</Typography>
+                                            {t('scheduler_tables.observations.start_label')}: <Typography component="span" sx={{ fontSize: '0.813rem', color: 'text.primary', fontWeight: 500 }}>{obs.pass?.event_start ? formatDateTime(obs.pass.event_start, { timezone, locale }) : t('not_available')}</Typography>
                                         </Typography>
                                         <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary' }}>
-                                            End: <Typography component="span" sx={{ fontSize: '0.813rem', color: 'text.primary', fontWeight: 500 }}>{obs.pass?.event_end ? formatDateTime(obs.pass.event_end, { timezone, locale }) : 'N/A'}</Typography>
+                                            {t('scheduler_tables.observations.end_label')}: <Typography component="span" sx={{ fontSize: '0.813rem', color: 'text.primary', fontWeight: 500 }}>{obs.pass?.event_end ? formatDateTime(obs.pass.event_end, { timezone, locale }) : t('not_available')}</Typography>
                                         </Typography>
                                         <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary' }}>
-                                            Status: <Typography component="span" sx={{ fontSize: '0.813rem', color: 'text.primary', fontWeight: 500 }}>{obs.status}</Typography>
+                                            {t('scheduler_tables.shared.columns.status')}: <Typography component="span" sx={{ fontSize: '0.813rem', color: 'text.primary', fontWeight: 500 }}>{getStatusLabel(obs.status)}</Typography>
                                         </Typography>
                                         {obs.pass?.peak_altitude && (
                                             <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary' }}>
-                                                Max Elevation: <Typography component="span" sx={{ fontSize: '0.813rem', color: 'text.primary', fontWeight: 500 }}>{Math.round(obs.pass.peak_altitude)}°</Typography>
+                                                {t('scheduler_tables.observations.max_elevation_label')}: <Typography component="span" sx={{ fontSize: '0.813rem', color: 'text.primary', fontWeight: 500 }}>{Math.round(obs.pass.peak_altitude)}°</Typography>
                                             </Typography>
                                         )}
                                     </Box>
@@ -920,7 +944,7 @@ const ObservationsTable = () => {
                             fontWeight: 500,
                         }}
                     >
-                        Cancel
+                        {t('cancel')}
                     </Button>
                     <Button
                         variant="contained"
@@ -932,14 +956,14 @@ const ObservationsTable = () => {
                             fontWeight: 600,
                         }}
                     >
-                        Delete
+                        {t('delete')}
                     </Button>
                 </DialogActions>
             </Dialog>
 
             {/* Cancel Confirmation Dialog */}
             <Dialog open={openStopConfirm} onClose={() => setOpenStopConfirm(false)}>
-                <DialogTitle>Cancel Observation{selectedIds.length > 1 ? 's' : ''}</DialogTitle>
+                <DialogTitle>{t('scheduler_tables.observations.cancel_title', { count: selectedIds.length })}</DialogTitle>
                 <DialogContent
                     sx={{
                         bgcolor: (theme) => (
@@ -954,26 +978,28 @@ const ObservationsTable = () => {
                             const obs = allObservations.find(o => o.id === selectedIds[0]);
                             return obs ? (
                                 <>
-                                    Are you sure you want to cancel the observation <strong>{obs.satellite?.name || 'Unknown'}</strong>?
+                                    {t('scheduler_tables.observations.cancel_single_question', {
+                                        name: obs.satellite?.name || t('unknown'),
+                                    })}
                                     <br /><br />
-                                    This will immediately cancel the observation and remove all scheduled jobs.
+                                    {t('scheduler_tables.observations.cancel_single_warning')}
                                 </>
                             ) : null;
                         })()
                     ) : (
                         <>
-                            Are you sure you want to cancel {selectedIds.length} observation(s)?
+                            {t('scheduler_tables.observations.cancel_multiple_question', { count: selectedIds.length })}
                             <br /><br />
-                            This will immediately cancel all selected observations and remove their scheduled jobs.
+                            {t('scheduler_tables.observations.cancel_multiple_warning')}
                         </>
                     )}
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={() => setOpenStopConfirm(false)} variant="outlined">
-                        Close
+                        {t('close')}
                     </Button>
                     <Button variant="contained" onClick={handleStop} color="warning">
-                        Cancel
+                        {t('cancel')}
                     </Button>
                 </DialogActions>
             </Dialog>

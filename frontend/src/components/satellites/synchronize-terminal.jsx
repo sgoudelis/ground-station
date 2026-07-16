@@ -1,44 +1,38 @@
 import React from 'react';
-import { Box, Typography } from '@mui/material';
+import { Stack, Typography } from '@mui/material';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
 const SyncTerminal = ({ syncState }) => {
     const { t } = useTranslation('satellites');
+    const message = syncState['message'] || (
+        syncState['progress'] === 0
+            ? t('synchronize.terminal.ready')
+            : syncState['progress'] === 100
+                ? t('synchronize.terminal.complete')
+                : t('synchronize.terminal.syncing')
+    );
+
     return (
-        <>
-            <Box sx={{
-                height: '60px',
-            }}>
-                <Typography
-                    variant="body2"
-                    sx={{
-                        fontFamily: 'monospace',
-                        color: 'text.secondary',
-                        position: 'relative',
-                        zIndex: 1,
-                        fontSize: { xs: '0.8rem', sm: '0.875rem' },
-                        '&::after': (syncState['progress'] > 0 && syncState['progress'] < 100) ? {
-                            content: '"█"',
-                            animation: 'blink 1s infinite',
-                            '@keyframes blink': {
-                                '0%': { opacity: 0 },
-                                '50%': { opacity: 1 },
-                                '100%': { opacity: 0 }
-                            }
-                        } : {},
-                    }}
-                >
-                    {syncState['message'] || (
-                        syncState['progress'] === 0
-                            ? t('synchronize.terminal.ready')
-                            : syncState['progress'] === 100
-                                ? t('synchronize.terminal.complete')
-                                : t('synchronize.terminal.syncing')
-                    )}
-                </Typography>
-            </Box>
-        </>
+        <Stack direction="row" spacing={0.75} alignItems="baseline" sx={{ mb: 0.5 }}>
+            <Typography variant="caption" color="text.disabled" sx={{ fontWeight: 600, flexShrink: 0 }}>
+                {t('synchronize.terminal.output_label', { defaultValue: 'Output:' })}
+            </Typography>
+            <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{
+                    fontFamily: 'monospace',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    minWidth: 0,
+                }}
+                title={message}
+            >
+                {message}
+            </Typography>
+        </Stack>
     );
 };
 

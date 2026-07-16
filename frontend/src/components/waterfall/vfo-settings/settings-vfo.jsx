@@ -14,7 +14,7 @@ import VolumeMuteIcon from '@mui/icons-material/VolumeMute';
 import VolumeOffIcon from '@mui/icons-material/VolumeOff';
 import { useTranslation } from 'react-i18next';
 import { VfoTabPanel } from './vfo-tab-panel.jsx';
-import { TransmittersDialog, TranscriptionParamsDialog } from './vfo-dialogs.jsx';
+import { TranscriptionParamsDialog } from './vfo-dialogs.jsx';
 import DecoderParamsDialog from '../decoder-params-dialog.jsx';
 import { resolveVfoAudioStatus, VFO_AUDIO_STATUS } from '../vfo-audio-status.js';
 import {
@@ -54,9 +54,7 @@ const VfoAccordion = ({
     const { getVFODecoderInfo } = useVfoDecoderInfo();
 
     const {
-        transmitters,
-        targetSatelliteName,
-        targetSatelliteData
+        transmitters
     } = useVfoSatelliteData();
 
     const { streamingVFOs, vfoMutedRedux } = useVfoStreamingState();
@@ -66,7 +64,6 @@ const VfoAccordion = ({
     useVfoWheelHandlers(vfoMarkers, vfoActive, onVFOPropertyChange);
 
     // Dialog state management
-    const [transmittersDialogOpen, setTransmittersDialogOpen] = React.useState(false);
     const [decoderParamsDialogOpen, setDecoderParamsDialogOpen] = React.useState(false);
     const [decoderParamsVfoIndex, setDecoderParamsVfoIndex] = React.useState(null);
     const [transcriptionParamsDialogOpen, setTranscriptionParamsDialogOpen] = React.useState(false);
@@ -81,10 +78,6 @@ const VfoAccordion = ({
     const handleOpenTranscriptionParams = React.useCallback((vfoIndex) => {
         setTranscriptionParamsVfoIndex(vfoIndex);
         setTranscriptionParamsDialogOpen(true);
-    }, []);
-
-    const handleOpenTransmittersDialog = React.useCallback(() => {
-        setTransmittersDialogOpen(true);
     }, []);
 
     return (
@@ -229,14 +222,12 @@ const VfoAccordion = ({
                     vfoActive={vfoActive}
                     vfoMuted={vfoMuted}
                     transmitters={transmitters}
-                    targetSatelliteName={targetSatelliteName}
                     geminiConfigured={geminiConfigured}
                     deepgramConfigured={deepgramConfigured}
                     onVFOActiveChange={onVFOActiveChange}
                     onVFOPropertyChange={onVFOPropertyChange}
                     onMuteToggle={handleVfoMuteToggle}
                     onTranscriptionToggle={onTranscriptionToggle}
-                    onOpenTransmittersDialog={handleOpenTransmittersDialog}
                     onOpenDecoderParamsDialog={handleOpenDecoderParams}
                     onOpenTranscriptionParamsDialog={handleOpenTranscriptionParams}
                     getVFODecoderInfo={getVFODecoderInfo}
@@ -245,14 +236,6 @@ const VfoAccordion = ({
                     onCenterFrequencyChange={onCenterFrequencyChange}
                 />
             </AccordionDetails>
-
-            {/* Transmitters Dialog */}
-            <TransmittersDialog
-                open={transmittersDialogOpen}
-                onClose={() => setTransmittersDialogOpen(false)}
-                targetSatelliteName={targetSatelliteName}
-                targetSatelliteData={targetSatelliteData}
-            />
 
             {/* Decoder Parameters Dialog */}
             <DecoderParamsDialog

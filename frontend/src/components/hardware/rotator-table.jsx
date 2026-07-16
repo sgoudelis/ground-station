@@ -28,6 +28,7 @@ import {
     Button,
     Checkbox,
     FormControlLabel,
+    IconButton,
     InputAdornment,
     MenuItem,
     TextField,
@@ -40,6 +41,7 @@ import Dialog from "@mui/material/Dialog";
 import DialogContent from "@mui/material/DialogContent";
 import DialogActions from "@mui/material/DialogActions";
 import WarningAmberOutlinedIcon from '@mui/icons-material/WarningAmberOutlined';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import { alpha } from '@mui/material/styles';
 import {useSocket} from "../common/socket.jsx";
 import { toast } from '../../utils/toast-with-timestamp.jsx';
@@ -59,6 +61,7 @@ import SelectionActionBar from './selection-action-bar.jsx';
 import { useLocation, useNavigate } from 'react-router-dom';
 import RotatorEditDialog from './rotator-edit-dialog.jsx';
 import {
+    applyAzimuthModeDefaults,
     DEFAULT_ROTATOR,
     prepareRotatorPayload,
     validateRotatorForm,
@@ -150,7 +153,9 @@ export default function AntennaRotatorTable() {
             flex: 1,
             minWidth: 140,
             valueFormatter: (value) =>
-                value === '-180_180'
+                value === '0_450'
+                    ? t('rotator.azimuth_mode_0_450')
+                    : value === '-180_180'
                     ? t('rotator.azimuth_mode_neg180_180')
                     : t('rotator.azimuth_mode_0_360')
         },
@@ -202,6 +207,29 @@ export default function AntennaRotatorTable() {
             minWidth: 110,
             valueFormatter: (value) => formatDegrees(value)
         },
+        {
+            field: 'row_actions',
+            headerName: '',
+            width: 56,
+            sortable: false,
+            filterable: false,
+            disableColumnMenu: true,
+            align: 'center',
+            headerAlign: 'center',
+            renderCell: (params) => (
+                <IconButton
+                    size="small"
+                    aria-label={t('rotator.edit')}
+                    onClick={(event) => {
+                        event.stopPropagation();
+                        dispatch(setFormValues(params.row));
+                        dispatch(setOpenAddDialog(true));
+                    }}
+                >
+                    <EditOutlinedIcon fontSize="small" />
+                </IconButton>
+            ),
+        },
     ];
 
     // useEffect(() => {
@@ -213,6 +241,10 @@ export default function AntennaRotatorTable() {
 
     const handleChange = (e) => {
         const {name, value} = e.target;
+        if (name === 'azimuth_mode') {
+            dispatch(setFormValues(applyAzimuthModeDefaults(formValues, value)));
+            return;
+        }
         dispatch(setFormValues({...formValues, [name]: value}));
     };
 
@@ -244,12 +276,8 @@ export default function AntennaRotatorTable() {
     };
 
     return (
-        <Paper elevation={3} sx={{padding: 2, marginTop: 0, borderRadius: 0}}>
-            <Alert severity="info">
-                <AlertTitle>{t('rotator.title')}</AlertTitle>
-                {t('rotator.subtitle')}
-            </Alert>
-            <Box component="form" sx={{mt: 2}}>
+        <Paper elevation={3} sx={{ px: 2, pb: 2, pt: 1, marginTop: 0, borderRadius: 0 }}>
+            <Box component="form">
                 <Box sx={{width: '100%'}}>
                     <DataGrid
                         loading={loading}
@@ -277,7 +305,7 @@ export default function AntennaRotatorTable() {
                         }}
                         sx={{
                             border: 0,
-                            marginTop: 2,
+                            marginTop: 1,
                             [`& .${gridClasses.cell}:focus, & .${gridClasses.cell}:focus-within`]: {
                                 outline: 'none',
                             },
@@ -514,6 +542,10 @@ export default function AntennaRotatorTable() {
                     </Stack>
                 </Box>
             </Box>
+            <Alert severity="info" sx={{ mt: 2 }}>
+                <AlertTitle>{t('rotator.title')}</AlertTitle>
+                {t('rotator.subtitle')}
+            </Alert>
         </Paper>
 
     );

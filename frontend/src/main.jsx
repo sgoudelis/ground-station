@@ -49,7 +49,7 @@ import {WakeLockProvider} from "./components/dashboard/wake-lock-provider.jsx";
 import SatelliteInfoPage from "./components/satellites/satellite-info-page.jsx";
 import FileBrowserMain from "./components/filebrowser/filebrowser-main.jsx";
 import ScheduledObservationsLayout from "./components/scheduler/main-layout.jsx";
-import CelestialRouteGuard from "./components/celestial/celestial-route-guard.jsx";
+import CelestialMainLayout from "./components/celestial/main-layout.jsx";
 
 const enableStrictMode = import.meta.env.VITE_REACT_STRICT_MODE !== 'false';
 
@@ -109,7 +109,7 @@ const router = createBrowserRouter([
                     },
                     {
                         path: "solarsystem",
-                        Component: CelestialRouteGuard,
+                        Component: CelestialMainLayout,
                     },
                     {
                         // Backward-compatible alias for older links/bookmarks.
@@ -137,7 +137,7 @@ const router = createBrowserRouter([
                                 children: [
                                     {
                                         index: true,
-                                        element: <Navigate to="/admin/system/hardware/rigs" replace />,
+                                        element: <Navigate to="/admin/system/hardware/sdrs" replace />,
                                     },
                                     {
                                         path: "rigs",
@@ -206,7 +206,7 @@ const router = createBrowserRouter([
                                         children: [
                                             {
                                                 index: true,
-                                                element: <Navigate to="/admin/system/hardware/rigs" replace />,
+                                                element: <Navigate to="/admin/system/hardware/sdrs" replace />,
                                             },
                                             {
                                                 path: "rigs",
@@ -322,7 +322,7 @@ const router = createBrowserRouter([
                         children: [
                             {
                                 index: true,
-                                element: <Navigate to="/admin/system/hardware/rigs" replace />,
+                                element: <Navigate to="/admin/system/hardware/sdrs" replace />,
                             },
                             {
                                 path: "rigs",

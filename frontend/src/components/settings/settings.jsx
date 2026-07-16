@@ -124,15 +124,27 @@ export function SettingsTabAbout () {
 }
 
 export function AdminSatellitesSourcesPage() {
-    return <OrbitalSourcesForm />;
+    return (
+        <AdminSatellitesPageLayout activeTab="sources">
+            <OrbitalSourcesForm />
+        </AdminSatellitesPageLayout>
+    );
 }
 
 export function AdminSatellitesCatalogPage() {
-    return <SatellitesForm />;
+    return (
+        <AdminSatellitesPageLayout activeTab="catalog">
+            <SatellitesForm />
+        </AdminSatellitesPageLayout>
+    );
 }
 
 export function AdminSatellitesGroupsPage() {
-    return <SatelliteGroupsForm />;
+    return (
+        <AdminSatellitesPageLayout activeTab="groups">
+            <SatelliteGroupsForm />
+        </AdminSatellitesPageLayout>
+    );
 }
 
 export function UserPreferencesPage() {
@@ -203,10 +215,55 @@ const ADMIN_SYSTEM_TABS = [
     { key: "general", labelKey: "tabs.general", defaultLabel: "General", path: "/admin/system/general" },
     { key: "location", labelKey: "tabs.location", defaultLabel: "Location", path: "/admin/system/location" },
     { key: "users", labelKey: "tabs.users", defaultLabel: "Users", path: "/admin/system/users" },
-    { key: "hardware", labelKey: "tabs.hardware", defaultLabel: "Hardware", path: "/admin/system/hardware/rigs" },
+    { key: "hardware", labelKey: "tabs.hardware", defaultLabel: "Hardware", path: "/admin/system/hardware/sdrs" },
     { key: "maintenance", labelKey: "tabs.maintenance", defaultLabel: "Maintenance", path: "/admin/system/maintenance" },
     { key: "about", labelKey: "tabs.about", defaultLabel: "About", path: "/admin/system/about" },
 ];
+
+const ADMIN_SATELLITES_TABS = [
+    { key: "sources", labelKey: "tabs.orbital_sources", defaultLabel: "Orbital Data", path: "/admin/satellites/sources" },
+    { key: "catalog", labelKey: "tabs.catalog", defaultLabel: "Catalog", path: "/admin/satellites/catalog" },
+    { key: "groups", labelKey: "tabs.groups", defaultLabel: "Groups", path: "/admin/satellites/groups" },
+];
+
+const AdminSatellitesPageLayout = React.memo(function AdminSatellitesPageLayout({ activeTab, children }) {
+    const { t } = useTranslation('settings');
+    const navigate = useNavigate();
+
+    const handleTabChange = (_event, nextTab) => {
+        if (nextTab === activeTab) {
+            return;
+        }
+
+        const tabDefinition = ADMIN_SATELLITES_TABS.find((tab) => tab.key === nextTab);
+        if (tabDefinition) {
+            navigate(tabDefinition.path);
+        }
+    };
+
+    return (
+        <Box sx={{ flexGrow: 1, bgcolor: 'background.paper' }}>
+            <AntTabs
+                value={activeTab}
+                onChange={handleTabChange}
+                aria-label={t('tabs.satellites')}
+                scrollButtons={true}
+                variant="scrollable"
+                allowScrollButtonsMobile
+                sx={getSettingsTabRowSx('detailRow')}
+            >
+                {ADMIN_SATELLITES_TABS.map((tab) => (
+                    <AntTab
+                        key={tab.key}
+                        value={tab.key}
+                        label={t(tab.labelKey, { defaultValue: tab.defaultLabel })}
+                    />
+                ))}
+            </AntTabs>
+            {children}
+        </Box>
+    );
+});
 
 const AdminSystemPageLayout = React.memo(function AdminSystemPageLayout({ activeTab, children }) {
     const { t } = useTranslation('settings');
@@ -356,9 +413,9 @@ export const SettingsTabs = React.memo(function SettingsTabs({
     switch (activeMainTab) {
         case "hardware":
             tabsList = [
+                <AntTab key="sdrs" value="sdrs" label={t('tabs.sdrs')} to="/hardware/sdrs" component={Link}/>,
                 <AntTab key="rigcontrol" value="rigcontrol" label={t('tabs.rigs')} to="/hardware/rigs" component={Link} />,
                 <AntTab key="rotatorcontrol" value="rotatorcontrol" label={t('tabs.rotators')} to="/hardware/rotators" component={Link} />,
-                <AntTab key="sdrs" value="sdrs" label={t('tabs.sdrs')} to="/hardware/sdrs" component={Link}/>,
             ];
             break;
         case "satellites":
@@ -445,7 +502,7 @@ export const SettingsTabs = React.memo(function SettingsTabs({
                  variant="fullWidth"
                  allowScrollButtonsMobile
              >
-                 <AntTab value={"hardware"} label={t('tabs.hardware')} to="/hardware/rigs" component={Link}/>
+                 <AntTab value={"hardware"} label={t('tabs.hardware')} to="/hardware/sdrs" component={Link}/>
                  <AntTab value={"satellites"} label={t('tabs.satellites')} to="/satellites/catalog" component={Link}/>
                  <AntTab value={"settings"} label={t('tabs.settings')} to="/settings/general" component={Link}/>
              </AntTabs>
@@ -489,7 +546,7 @@ const SatelliteGroupsForm = () => {
 const OrbitalSourcesForm = () => {
 
     return (
-        <Paper elevation={3} sx={{ padding: 2, marginTop: 0, borderRadius: 0}} variant="elevation">
+        <Paper elevation={3} sx={{ pb: 2, pt: 0, marginTop: 0, borderRadius: 0}} variant="elevation">
             <SourcesTable/>
         </Paper>);
 };
@@ -543,9 +600,9 @@ const AdminSystemHardwareTabs = React.memo(function AdminSystemHardwareTabs() {
                 allowScrollButtonsMobile
                 sx={getSettingsTabRowSx('detailRow')}
             >
+                <AntTab key="sdrs" value="sdrs" label={t('tabs.sdrs')} />
                 <AntTab key="rigs" value="rigs" label={t('tabs.rigs')} />
                 <AntTab key="rotators" value="rotators" label={t('tabs.rotators')} />
-                <AntTab key="sdrs" value="sdrs" label={t('tabs.sdrs')} />
             </AntTabs>
             {content}
         </Box>

@@ -30,6 +30,11 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 from PIL import Image
 
 from common.decoded_thumbnails import get_decoded_thumbnail_url
+from common.thumbnails import (
+    delete_image_thumbnail,
+    get_image_thumbnail_path,
+    get_image_thumbnail_url,
+)
 
 
 def get_disk_usage(path: Path) -> Dict[str, Union[int, str]]:
@@ -116,6 +121,38 @@ def get_image_dimensions(image_path: str) -> Tuple[Any, ...]:
             return size
     except Exception:
         return (None, None)
+
+
+def build_recording_snapshot_info(snapshot_file: Path) -> Optional[Dict[str, Any]]:
+    """Build snapshot and generated-thumbnail metadata for a recording."""
+    if not snapshot_file.exists() or not snapshot_file.is_file():
+        return None
+
+    width, height = get_image_dimensions(str(snapshot_file))
+    thumbnail_url = get_image_thumbnail_url(snapshot_file, "/recordings")
+    thumbnail_info = None
+
+    if thumbnail_url:
+        thumbnail_path = get_image_thumbnail_path(snapshot_file)
+        if thumbnail_path.exists() and thumbnail_path.is_file():
+            thumbnail_width, thumbnail_height = get_image_dimensions(str(thumbnail_path))
+            thumbnail_info = {
+                "filename": thumbnail_path.name,
+                "url": thumbnail_url,
+                "size": thumbnail_path.stat().st_size,
+                "width": thumbnail_width,
+                "height": thumbnail_height,
+            }
+
+    return {
+        "filename": snapshot_file.name,
+        "url": f"/recordings/{snapshot_file.name}",
+        "thumbnail_url": thumbnail_url,
+        "thumbnail": thumbnail_info,
+        "size": snapshot_file.stat().st_size,
+        "width": width,
+        "height": height,
+    }
 
 
 def parse_transcription_metadata(transcription_file_path: str) -> Dict[str, Any]:
@@ -257,6 +294,10 @@ def delete_recording_files(recordings_dir: Path, recording_name: str, logger) ->
         snapshot_file.unlink()
         deleted_files.append(snapshot_file.name)
 
+    thumbnail_file = delete_image_thumbnail(snapshot_file)
+    if thumbnail_file:
+        deleted_files.append(str(thumbnail_file.relative_to(recordings_dir)))
+
     if deleted_files:
         logger.info(f"Deleted recording '{recording_name}': {', '.join(deleted_files)}")
 
@@ -281,6 +322,7 @@ def delete_snapshot_file(snapshots_dir: Path, snapshot_filename: str, logger) ->
         return False
 
     snapshot_file.unlink()
+    delete_image_thumbnail(snapshot_file)
     logger.info(f"Deleted snapshot: {snapshot_filename}")
     return True
 
@@ -463,6 +505,7 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
                         continue
 
                     data_stat = data_file.stat()
+                    meta_stat = meta_file.stat()
                     metadata = parse_sigmf_metadata(str(meta_file))
 
                     # Check if recording is in progress
@@ -470,15 +513,7 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
 
                     # Check for waterfall snapshot
                     snapshot_file = recordings_dir / f"{base_name}.png"
-                    snapshot_info = None
-                    if snapshot_file.exists():
-                        width, height = get_image_dimensions(str(snapshot_file))
-                        snapshot_info = {
-                            "filename": snapshot_file.name,
-                            "url": f"/recordings/{snapshot_file.name}",
-                            "width": width,
-                            "height": height,
-                        }
+                    snapshot_info = build_recording_snapshot_info(snapshot_file)
 
                     processed_items.append(
                         {
@@ -487,6 +522,7 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
                             "data_file": data_file.name,
                             "meta_file": meta_file.name,
                             "data_size": data_stat.st_size,
+                            "meta_size": meta_stat.st_size,
                             "created": datetime.fromtimestamp(
                                 data_stat.st_ctime, timezone.utc
                             ).isoformat(),
@@ -530,6 +566,7 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
                             "width": width,
                             "height": height,
                             "url": f"/snapshots/{png_file.name}",
+                            "thumbnail_url": get_image_thumbnail_url(png_file, "/snapshots"),
                         }
                     )
 
@@ -927,6 +964,7 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
 
                 # Get file stats
                 data_stat = data_file.stat()
+                meta_stat = meta_file.stat()
 
                 # Parse metadata
                 metadata = parse_sigmf_metadata(str(meta_file))
@@ -936,21 +974,14 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
 
                 # Check for waterfall snapshot
                 snapshot_file = recordings_dir / f"{base_name}.png"
-                snapshot_info = None
-                if snapshot_file.exists():
-                    width, height = get_image_dimensions(str(snapshot_file))
-                    snapshot_info = {
-                        "filename": snapshot_file.name,
-                        "url": f"/recordings/{snapshot_file.name}",
-                        "width": width,
-                        "height": height,
-                    }
+                snapshot_info = build_recording_snapshot_info(snapshot_file)
 
                 recording = {
                     "name": base_name,
                     "data_file": data_file.name,
                     "meta_file": meta_file.name,
                     "data_size": data_stat.st_size,
+                    "meta_size": meta_stat.st_size,
                     "created": datetime.fromtimestamp(data_stat.st_ctime, timezone.utc).isoformat(),
                     "modified": datetime.fromtimestamp(
                         data_stat.st_mtime, timezone.utc
@@ -984,6 +1015,7 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
 
             # Get file stats
             data_stat = data_file.stat()
+            meta_stat = meta_file.stat()
 
             # Parse metadata
             metadata = parse_sigmf_metadata(str(meta_file))
@@ -993,21 +1025,14 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
 
             # Check for waterfall snapshot
             snapshot_file = recordings_dir / f"{recording_name}.png"
-            snapshot_info = None
-            if snapshot_file.exists():
-                width, height = get_image_dimensions(str(snapshot_file))
-                snapshot_info = {
-                    "filename": snapshot_file.name,
-                    "url": f"/recordings/{snapshot_file.name}",
-                    "width": width,
-                    "height": height,
-                }
+            snapshot_info = build_recording_snapshot_info(snapshot_file)
 
             recording = {
                 "name": recording_name,
                 "data_file": data_file.name,
                 "meta_file": meta_file.name,
                 "data_size": data_stat.st_size,
+                "meta_size": meta_stat.st_size,
                 "created": datetime.fromtimestamp(data_stat.st_ctime, timezone.utc).isoformat(),
                 "modified": datetime.fromtimestamp(data_stat.st_mtime, timezone.utc).isoformat(),
                 "metadata": metadata,
@@ -1090,6 +1115,7 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
                     "width": width,
                     "height": height,
                     "url": f"/snapshots/{png_file.name}",
+                    "thumbnail_url": get_image_thumbnail_url(png_file, "/snapshots"),
                 }
                 snapshots.append(snapshot)
 

@@ -80,12 +80,14 @@ class SatelliteSyncState:
 
         return self.state
 
-    def set_state(self, new_state: Dict[str, Any]):
+    def set_state(self, new_state: Dict[str, Any], touch_timestamp: bool = True):
         """
         Replace the entire state with a new state object.
 
         Parameters:
             new_state (dict): The new state dictionary to use
+            touch_timestamp (bool): When True, refresh last_update to now.
+                When False, preserve the provided last_update value.
 
         Returns:
             dict: The updated state
@@ -95,8 +97,10 @@ class SatelliteSyncState:
             if key in self.state:
                 self.state[key] = new_state[key]
 
-        # Always update the timestamp when state changes
-        self.state["last_update"] = datetime.now(timezone.utc).isoformat()
+        # Runtime updates should stamp a fresh update time, while persisted-state
+        # hydration keeps the recorded timestamp from the previous process.
+        if touch_timestamp:
+            self.state["last_update"] = datetime.now(timezone.utc).isoformat()
 
         return self.state
 

@@ -9,6 +9,7 @@ registers an asyncio.Task into the provided `background_tasks` set.
 import asyncio
 from typing import Set
 
+from common import auth as authsvc
 from common.logger import logger
 from pipeline.orchestration.processmanager import process_manager
 from session.service import session_service
@@ -18,8 +19,7 @@ from session.tracker import session_tracker
 def start_session_runtime_emitter(sio, background_tasks: Set[asyncio.Task]) -> asyncio.Task:
     """Start the session runtime snapshot emitter loop and register it in background_tasks.
 
-    Emits 'session-runtime-snapshot' every 1 second to all connected clients.
-    The snapshot includes all active sessions, their metadata, and SDR consumer state.
+    Emits 'session-runtime-snapshot' every 1 second to authenticated clients only.
     """
 
     async def _session_snapshot_loop():
@@ -27,27 +27,30 @@ def start_session_runtime_emitter(sio, background_tasks: Set[asyncio.Task]) -> a
 
         while True:
             try:
-                # Build snapshot using SessionService if available, else fallback to tracker
+                # Build snapshot using SessionService if available, else fallback to tracker.
                 snapshot = None
                 try:
                     snapshot = session_service.get_runtime_snapshot()
-                except Exception as e:
-                    logger.debug(f"SessionService unavailable, using tracker fallback: {e}")
-                    # Fallback to tracker
+                except Exception as exc:
+                    logger.debug(f"SessionService unavailable, using tracker fallback: {exc}")
                     try:
                         snapshot = session_tracker.get_runtime_snapshot(process_manager)
-                    except Exception as e2:
-                        logger.debug(f"Tracker fallback also failed: {e2}")
+                    except Exception as fallback_exc:
+                        logger.debug(f"Tracker fallback also failed: {fallback_exc}")
 
-                # Emit the snapshot to all connected clients
+                # Emit snapshot to authenticated sockets only.
                 if snapshot is not None:
-                    await sio.emit("session-runtime-snapshot", snapshot)
+                    await sio.emit(
+                        "session-runtime-snapshot",
+                        snapshot,
+                        room=authsvc.AUTHENTICATED_SOCKET_ROOM,
+                    )
 
                 await asyncio.sleep(interval)
             except asyncio.CancelledError:
                 break
-            except Exception as e:
-                logger.error(f"Session runtime snapshot emitter error: {e}")
+            except Exception as exc:
+                logger.error(f"Session runtime snapshot emitter error: {exc}")
                 await asyncio.sleep(interval)
 
     task = asyncio.create_task(_session_snapshot_loop())

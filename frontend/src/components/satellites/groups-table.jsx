@@ -218,11 +218,6 @@ const GroupsTable = () => {
 
     return (
         <Box sx={{ width: '100%', marginTop: 0 }}>
-            <Alert severity="info">
-                <AlertTitle>{t('groups.title')}</AlertTitle>
-                {t('groups.subtitle')}
-            </Alert>
-
             <DataGrid
                 rows={groups}
                 columns={columns}
@@ -239,7 +234,7 @@ const GroupsTable = () => {
                 }}
                 sx={{
                     border: 0,
-                    marginTop: 2,
+                    marginTop: 0,
                     [`& .${gridClasses.cell}:focus, & .${gridClasses.cell}:focus-within`]: {
                         outline: 'none',
                     },
@@ -268,7 +263,6 @@ const GroupsTable = () => {
                     },
                 }}
             />
-
             <Stack spacing={2} direction="row" sx={{ my: 2 }}>
                 <Button variant="contained" onClick={handleAddClick}>
                     {t('groups.add')}
@@ -289,6 +283,20 @@ const GroupsTable = () => {
                     {t('groups.delete')}
                 </Button>
             </Stack>
+            <Alert severity="info" sx={{ mt: 2 }}>
+                <AlertTitle>{t('groups.title')}</AlertTitle>
+                {t('groups.subtitle')}
+            </Alert>
+            {error && (
+                <Alert severity="error" sx={{ mt: 2 }}>
+                    {error}
+                </Alert>
+            )}
+            {formErrorStatus && (
+                <Alert severity="error" sx={{ mt: 2 }}>
+                    {t('groups.error_message')}
+                </Alert>
+            )}
 
             {/* Example usage of Dialog */}
             {formDialogOpen && (
@@ -457,18 +465,6 @@ const GroupsTable = () => {
                     </Button>
                 </DialogActions>
             </Dialog>
-
-            {/* Example of an error alert */}
-            {error && (
-                <Alert severity="error" sx={{ mt: 2 }}>
-                    {error}
-                </Alert>
-            )}
-            {formErrorStatus && (
-                <Alert severity="error" sx={{ mt: 2 }}>
-                    {t('groups.error_message')}
-                </Alert>
-            )}
         </Box>
     );
 };

@@ -25,6 +25,54 @@ from sqlalchemy import delete, select
 
 from db.models import Groups, SatelliteGroupType, SatelliteOrbits, Satellites, Transmitters
 
+TRANSMITTER_ID_ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
+TRANSMITTER_ID_ALPHABET_SET = set(TRANSMITTER_ID_ALPHABET)
+TRANSMITTER_ID_BASE = len(TRANSMITTER_ID_ALPHABET)
+TRANSMITTER_ID_LENGTH = 22
+
+
+def uuid_to_short_transmitter_id(value: uuid.UUID | str) -> str:
+    """Encode a UUID as a SatNOGS-style 22-char transmitter id."""
+    uid = value if isinstance(value, uuid.UUID) else uuid.UUID(str(value).strip())
+    number = uid.int
+    encoded = []
+
+    while number:
+        number, remainder = divmod(number, TRANSMITTER_ID_BASE)
+        encoded.append(TRANSMITTER_ID_ALPHABET[remainder])
+
+    if not encoded:
+        encoded.append(TRANSMITTER_ID_ALPHABET[0])
+
+    return "".join(reversed(encoded)).rjust(
+        TRANSMITTER_ID_LENGTH,
+        TRANSMITTER_ID_ALPHABET[0],
+    )
+
+
+def normalize_external_transmitter_id(value: Any) -> Optional[str]:
+    """
+    Normalize external transmitter ids to the internal SatNOGS-style id scheme.
+
+    - Keep existing SatNOGS-style ids unchanged.
+    - Convert UUID strings to SatNOGS-style ids.
+    - Preserve unknown non-empty formats as-is for compatibility.
+    """
+    if value is None:
+        return None
+
+    text = str(value).strip()
+    if not text:
+        return None
+
+    if len(text) == TRANSMITTER_ID_LENGTH and set(text).issubset(TRANSMITTER_ID_ALPHABET_SET):
+        return text
+
+    try:
+        return uuid_to_short_transmitter_id(text)
+    except (ValueError, TypeError, AttributeError):
+        return text
+
 
 def create_initial_sync_state():
     """
@@ -539,7 +587,10 @@ def create_transmitter_from_satnogs_data(transmitter_info):
     Returns:
         tuple: (Transmitters object, comparison data dict)
     """
-    transmitter_uuid = transmitter_info.get("uuid", None)
+    source_transmitter_id = transmitter_info.get("uuid", None)
+    if source_transmitter_id is not None:
+        source_transmitter_id = str(source_transmitter_id).strip() or None
+    transmitter_uuid = normalize_external_transmitter_id(source_transmitter_id)
 
     transmitter_data_for_comparison = {
         "description": transmitter_info.get("description", None),
@@ -576,6 +627,7 @@ def create_transmitter_from_satnogs_data(transmitter_info):
         citation=transmitter_info.get("citation", None),
         service=transmitter_info.get("service", None),
         source="satnogs",
+        source_transmitter_id=source_transmitter_id,
         iaru_coordination=transmitter_info.get("iaru_coordination", None),
         iaru_coordination_url=transmitter_info.get("iaru_coordination_url", None),
         itu_notification=transmitter_info.get("itu_notification", None),

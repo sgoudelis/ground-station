@@ -8,6 +8,7 @@ import {
 import Typography from '@mui/material/Typography';
 import {
     Box,
+    Chip,
     FormControl,
     FormControlLabel,
     FormHelperText,
@@ -20,7 +21,48 @@ import {
     Tooltip,
 } from "@mui/material";
 import RefreshIcon from '@mui/icons-material/Refresh';
+import UsbIcon from '@mui/icons-material/Usb';
+import CloudQueueIcon from '@mui/icons-material/CloudQueue';
+import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline';
+import MemoryIcon from '@mui/icons-material/Memory';
+import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
+import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
+import AutorenewIcon from '@mui/icons-material/Autorenew';
+import SettingsInputAntennaIcon from '@mui/icons-material/SettingsInputAntenna';
 import { useTranslation } from 'react-i18next';
+
+const SDR_TYPE_GROUPS = [
+    {
+        key: 'rtlsdr',
+        label: 'RTL-SDR',
+        matches: (type) => type.startsWith('rtlsdr'),
+    },
+    {
+        key: 'airspy',
+        label: 'Airspy',
+        matches: (type) => type === 'airspy' || type === 'airspyhf',
+    },
+    {
+        key: 'uhd',
+        label: 'UHD',
+        matches: (type) => type === 'uhd',
+    },
+    {
+        key: 'soapysdrlocal',
+        label: 'SoapySDR (Local)',
+        matches: (type) => type === 'soapysdrlocal',
+    },
+    {
+        key: 'soapysdrremote',
+        label: 'SoapySDR (Remote)',
+        matches: (type) => type === 'soapysdrremote',
+    },
+    {
+        key: 'sigmfplayback',
+        label: 'SigMF Playback',
+        matches: (type) => type === 'sigmfplayback',
+    },
+];
 
 const SdrAccordion = ({
                           expanded,
@@ -57,11 +99,188 @@ const SdrAccordion = ({
                           hasRtlAgc,
                           rtlAgc,
                           onRtlAgcChange,
+                          sdrUsageByOtherSessions,
                           onGainElementChange,
                           isRecording,
                           startStreamValidationErrors,
+                          playbackRecordings,
+                          playbackRecordingsLoading,
+                          selectedPlaybackRecordingName,
+                          onPlaybackRecordingChange,
 }) => {
     const { t } = useTranslation('waterfall');
+    const getSdrOptionIcon = React.useCallback((type) => {
+        const normalizedType = String(type || '').trim().toLowerCase();
+        if (normalizedType.startsWith('rtlsdr')) return UsbIcon;
+        if (normalizedType === 'soapysdrlocal') return UsbIcon;
+        if (normalizedType === 'airspy' || normalizedType === 'airspyhf') return UsbIcon;
+        if (normalizedType === 'uhd') return UsbIcon;
+        if (normalizedType === 'soapysdrremote') return CloudQueueIcon;
+        if (normalizedType === 'sigmfplayback') return PlayCircleOutlineIcon;
+        return MemoryIcon;
+    }, []);
+
+    const renderSdrOption = React.useCallback((sdr) => {
+        const OptionIcon = getSdrOptionIcon(sdr?.type);
+        const sdrId = String(sdr?.id ?? '');
+        const usageCount = Number(sdrUsageByOtherSessions?.[sdrId] || 0);
+        return (
+            <Box
+                sx={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 1,
+                }}
+            >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
+                    <OptionIcon sx={{ fontSize: '1rem', opacity: 0.9 }} />
+                    <Typography variant="body2" sx={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {sdr?.name}
+                    </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    {usageCount > 0 && (
+                        <Chip
+                            size="small"
+                            color="warning"
+                            label={t('sdr.in_use_badge', { defaultValue: 'in use' })}
+                            sx={{ height: 20, borderRadius: '999px' }}
+                        />
+                    )}
+                    <Chip
+                        size="small"
+                        label={String(sdr?.type || '').trim() || 'unknown'}
+                        sx={{ height: 20, borderRadius: '999px' }}
+                    />
+                </Box>
+            </Box>
+        );
+    }, [getSdrOptionIcon, sdrUsageByOtherSessions, t]);
+    const renderSelectedSdrValue = React.useCallback((value) => {
+        const selectedValue = String(value ?? 'none');
+        if (selectedValue === 'none') {
+            return (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <RadioButtonUncheckedIcon sx={{ fontSize: '1rem', opacity: 0.8 }} />
+                    {t('sdr.no_sdr_selected')}
+                </Box>
+            );
+        }
+
+        const selectedSdr = sdrs.find((sdr) => String(sdr?.id) === selectedValue);
+        if (!selectedSdr) {
+            return selectedValue;
+        }
+
+        const OptionIcon = getSdrOptionIcon(selectedSdr?.type);
+        const usageCount = Number(sdrUsageByOtherSessions?.[selectedValue] || 0);
+
+        return (
+            <Box
+                sx={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 1,
+                    minWidth: 0,
+                }}
+            >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
+                    <OptionIcon sx={{ fontSize: '1rem', opacity: 0.9, flexShrink: 0 }} />
+                    <Typography
+                        variant="body2"
+                        sx={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                    >
+                        {selectedSdr?.name}
+                    </Typography>
+                </Box>
+                {usageCount > 0 && (
+                    <Chip
+                        size="small"
+                        color="warning"
+                        label={t('sdr.in_use_badge', { defaultValue: 'in use' })}
+                        sx={{ height: 20, borderRadius: '999px', flexShrink: 0 }}
+                    />
+                )}
+            </Box>
+        );
+    }, [sdrs, getSdrOptionIcon, sdrUsageByOtherSessions, t]);
+
+    const sdrOptionsByGroup = React.useMemo(() => {
+        const typedGroups = SDR_TYPE_GROUPS.map((group) => ({
+            ...group,
+            items: [],
+        }));
+        const otherGroup = {
+            key: 'other',
+            label: t('sdr.other_sdrs'),
+            items: [],
+        };
+
+        sdrs.forEach((sdr) => {
+            const normalizedType = String(sdr?.type || '').trim().toLowerCase();
+            const matchingGroup = typedGroups.find((group) => group.matches(normalizedType));
+            if (matchingGroup) {
+                matchingGroup.items.push(sdr);
+                return;
+            }
+            otherGroup.items.push(sdr);
+        });
+
+        return [...typedGroups, otherGroup].filter((group) => group.items.length > 0);
+    }, [sdrs, t]);
+    const sdrMenuItems = React.useMemo(() => {
+        const items = [];
+        sdrOptionsByGroup.forEach((group) => {
+            items.push(
+                <ListSubheader
+                    key={`header-${group.key}`}
+                    sx={{
+                        minHeight: 24,
+                        lineHeight: '24px',
+                        py: 0,
+                        px: 1.5,
+                        fontSize: '0.7rem',
+                        fontWeight: 600,
+                    }}
+                >
+                    {group.label}
+                </ListSubheader>
+            );
+            group.items.forEach((sdr) => {
+                items.push(
+                    <MenuItem value={String(sdr.id)} key={String(sdr.id)}>
+                        {renderSdrOption(sdr)}
+                    </MenuItem>
+                );
+            });
+        });
+        return items;
+    }, [sdrOptionsByGroup, renderSdrOption]);
+
+    const selectedSdrRecord = React.useMemo(
+        () => sdrs.find((sdr) => String(sdr?.id) === String(selectedSDRId)),
+        [sdrs, selectedSDRId]
+    );
+    const selectedSdrRxAntennaLabels = React.useMemo(() => {
+        const rawLabels = selectedSdrRecord?.antenna_labels;
+        const rxLabels =
+            rawLabels && typeof rawLabels === 'object' && rawLabels.rx && typeof rawLabels.rx === 'object'
+                ? rawLabels.rx
+                : {};
+
+        const normalized = {};
+        Object.entries(rxLabels).forEach(([internalName, userLabel]) => {
+            const key = String(internalName || '').trim();
+            const value = String(userLabel || '').trim();
+            if (!key || !value) return;
+            normalized[key] = value;
+        });
+        return normalized;
+    }, [selectedSdrRecord]);
     const selectedCapabilities = sdrCapabilities?.[selectedSDRId] || null;
     const biasTSupported = hasBiasT || selectedCapabilities?.bias_t?.supported;
     const isNoneSourceOption = (source) =>
@@ -76,6 +295,7 @@ const SdrAccordion = ({
         sdrSettings?.clockSource ?? selectedCapabilities?.clock_source ?? 'none';
     const selectedTimeSource =
         sdrSettings?.timeSource ?? selectedCapabilities?.time_source ?? 'none';
+    const playbackRecordingOptions = Array.isArray(playbackRecordings) ? playbackRecordings : [];
 
     const formatList = (values) => {
         if (!values || !Array.isArray(values) || values.length === 0) {
@@ -156,6 +376,25 @@ const SdrAccordion = ({
     const gainRequiredError = Boolean(startStreamValidationErrors?.gain);
     const sampleRateRequiredError = Boolean(startStreamValidationErrors?.sampleRate);
     const antennaRequiredError = Boolean(startStreamValidationErrors?.antenna);
+    const formatAntennaOptionLabel = (internalName) => {
+        const userLabel = selectedSdrRxAntennaLabels?.[internalName];
+        if (!userLabel) return internalName;
+        if (userLabel === internalName) return internalName;
+        // Show both user-facing label and stable hardware port key.
+        return `${userLabel} (${internalName})`;
+    };
+    const isSigmfPlaybackSelected = selectedSDRId === 'sigmf-playback';
+    const formatRecordingTimestamp = (recording) => {
+        const raw = recording?.modified || recording?.created || null;
+        if (!raw) {
+            return t('sdr.unknown_date', { defaultValue: 'Unknown date' });
+        }
+        const parsed = new Date(raw);
+        if (Number.isNaN(parsed.getTime())) {
+            return t('sdr.unknown_date', { defaultValue: 'Unknown date' });
+        }
+        return parsed.toLocaleString();
+    };
 
     return (
         <Accordion expanded={expanded} onChange={onAccordionChange}>
@@ -199,53 +438,70 @@ const SdrAccordion = ({
                             <InputLabel htmlFor="sdr-select">{t('sdr.sdr_label')}</InputLabel>
                             <Select
                                 id="sdr-select"
-                                value={sdrs.length > 0 ? selectedSDRId : "none"}
+                                value={sdrs.length > 0 ? String(selectedSDRId ?? "none") : "none"}
                                 onChange={onSDRChange}
                                 size="small"
+                                renderValue={renderSelectedSdrValue}
                                 label={t('sdr.sdr_label')}>
                                 <MenuItem value="none" disabled={isStreaming}>
-                                    {t('sdr.no_sdr_selected')}
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <RadioButtonUncheckedIcon sx={{ fontSize: '1rem', opacity: 0.8 }} />
+                                        {t('sdr.no_sdr_selected')}
+                                    </Box>
                                 </MenuItem>
-                                {/* Local SDRs */}
-                                {sdrs.filter(sdr => sdr.type.toLowerCase().includes('local')).length > 0 && (
-                                    <ListSubheader>{t('sdr.local_sdrs')}</ListSubheader>
-                                )}
-                                {sdrs
-                                    .filter(sdr => sdr.type.toLowerCase().includes('local'))
-                                    .map((sdr, index) => {
-                                        return <MenuItem value={sdr.id} key={`local-${index}`}>
-                                            {sdr.name} ({sdr.type})
-                                        </MenuItem>;
-                                    })
-                                }
-
-                                {/* Remote SDRs */}
-                                {sdrs.filter(sdr => sdr.type.toLowerCase().includes('remote')).length > 0 && (
-                                    <ListSubheader>{t('sdr.remote_sdrs')}</ListSubheader>
-                                )}
-                                {sdrs
-                                    .filter(sdr => sdr.type.toLowerCase().includes('remote'))
-                                    .map((sdr, index) => {
-                                        return <MenuItem value={sdr.id} key={`remote-${index}`}>
-                                            {sdr.name} ({sdr.type})
-                                        </MenuItem>;
-                                    })
-                                }
-
-                                {/* Other SDRs (neither local nor remote) */}
-                                {sdrs.filter(sdr => !sdr.type.toLowerCase().includes('local') && !sdr.type.toLowerCase().includes('remote')).length > 0 && (
-                                    <ListSubheader>{t('sdr.other_sdrs')}</ListSubheader>
-                                )}
-                                {sdrs
-                                    .filter(sdr => !sdr.type.toLowerCase().includes('local') && !sdr.type.toLowerCase().includes('remote'))
-                                    .map((sdr, index) => {
-                                        return <MenuItem value={sdr.id} key={`other-${index}`}>
-                                            {sdr.name} ({sdr.type})
-                                        </MenuItem>;
-                                    })
-                                }
+                                {sdrMenuItems}
                             </Select>
                         </FormControl>
+                        {isSigmfPlaybackSelected && (
+                            <FormControl
+                                disabled={gettingSDRParameters || isStreaming}
+                                sx={{minWidth: 200, marginTop: 0, marginBottom: 1}}
+                                fullWidth
+                                variant="outlined"
+                                size="small"
+                            >
+                                <InputLabel>{t('sdr.playback_recording', { defaultValue: 'IQ Recording' })}</InputLabel>
+                                <Select
+                                    size="small"
+                                    value={selectedPlaybackRecordingName || 'none'}
+                                    label={t('sdr.playback_recording', { defaultValue: 'IQ Recording' })}
+                                    onChange={(e) => onPlaybackRecordingChange?.(e.target.value)}
+                                >
+                                    <MenuItem value="none" disabled={isStreaming}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                            <DescriptionOutlinedIcon sx={{ fontSize: '1rem', opacity: 0.8 }} />
+                                            {t('sdr.no_playback_recording_selected', { defaultValue: '[no recording selected]' })}
+                                        </Box>
+                                    </MenuItem>
+                                    {playbackRecordingsLoading && playbackRecordingOptions.length === 0 && (
+                                        <MenuItem value="loading" disabled>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                <AutorenewIcon sx={{ fontSize: '1rem', opacity: 0.8 }} />
+                                                {t('sdr.loading_recordings', { defaultValue: 'Loading recordings...' })}
+                                            </Box>
+                                        </MenuItem>
+                                    )}
+                                    {playbackRecordingOptions.map((recording) => (
+                                        <MenuItem key={recording.name} value={recording.name}>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
+                                                <DescriptionOutlinedIcon sx={{ fontSize: '1rem', opacity: 0.9 }} />
+                                                <Typography
+                                                    variant="body2"
+                                                    sx={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}
+                                                >
+                                                    {recording.name} - {formatRecordingTimestamp(recording)}
+                                                </Typography>
+                                            </Box>
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                                {!playbackRecordingsLoading && playbackRecordingOptions.length === 0 && (
+                                    <FormHelperText>
+                                        {t('sdr.no_playback_recordings', { defaultValue: 'No IQ recordings found' })}
+                                    </FormHelperText>
+                                )}
+                            </FormControl>
+                        )}
 
                         <FormControl disabled={gettingSDRParameters || (selectedSDRId === 'sigmf-playback' && isStreaming)}
                                      error={gainRequiredError}
@@ -372,11 +628,22 @@ const SdrAccordion = ({
                                 onChange={(e) => onAntennaChange(e.target.value)}
                                 label={t('sdr.antenna')}>
                                 <MenuItem value="none" disabled={isStreaming}>
-                                    {t('sdr.no_antenna_selected')}
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <RadioButtonUncheckedIcon sx={{ fontSize: '1rem', opacity: 0.8 }} />
+                                        {t('sdr.no_antenna_selected')}
+                                    </Box>
                                 </MenuItem>
                                 {antennasList.rx && antennasList.rx.map(antenna => (
                                     <MenuItem key={antenna} value={antenna}>
-                                        {antenna}
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
+                                            <SettingsInputAntennaIcon sx={{ fontSize: '1rem', opacity: 0.9 }} />
+                                            <Typography
+                                                variant="body2"
+                                                sx={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}
+                                            >
+                                                {formatAntennaOptionLabel(antenna)}
+                                            </Typography>
+                                        </Box>
                                     </MenuItem>
                                 ))}
                             </Select>
@@ -665,9 +932,14 @@ function areSdrAccordionPropsEqual(prevProps, nextProps) {
         prevProps.hasRtlAgc === nextProps.hasRtlAgc &&
         prevProps.rtlAgc === nextProps.rtlAgc &&
         prevProps.onRtlAgcChange === nextProps.onRtlAgcChange &&
+        prevProps.sdrUsageByOtherSessions === nextProps.sdrUsageByOtherSessions &&
         prevProps.onGainElementChange === nextProps.onGainElementChange &&
         prevProps.isRecording === nextProps.isRecording &&
-        prevProps.startStreamValidationErrors === nextProps.startStreamValidationErrors
+        prevProps.startStreamValidationErrors === nextProps.startStreamValidationErrors &&
+        prevProps.playbackRecordings === nextProps.playbackRecordings &&
+        prevProps.playbackRecordingsLoading === nextProps.playbackRecordingsLoading &&
+        prevProps.selectedPlaybackRecordingName === nextProps.selectedPlaybackRecordingName &&
+        prevProps.onPlaybackRecordingChange === nextProps.onPlaybackRecordingChange
     );
 }
 

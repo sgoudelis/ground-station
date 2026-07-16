@@ -266,20 +266,15 @@ function UsersForm() {
 
     if (!isAdmin) {
         return (
-            <Paper elevation={3} sx={{ padding: 2, marginTop: 0, borderRadius: 0 }}>
+            <Paper elevation={3} sx={{ px: 2, pb: 2, pt: 1, marginTop: 0, borderRadius: 0 }}>
                 <Alert severity="warning">Only admins can manage users.</Alert>
             </Paper>
         );
     }
 
     return (
-        <Paper elevation={3} sx={{ padding: 2, marginTop: 0, borderRadius: 0 }}>
-            <Alert severity="info">
-                <AlertTitle>User Management</AlertTitle>
-                Manage admin and operator accounts for this station.
-            </Alert>
-
-            <Box component="form" sx={{ mt: 2 }}>
+        <Paper elevation={3} sx={{ px: 2, pb: 2, pt: 1, marginTop: 0, borderRadius: 0 }}>
+            <Box component="form">
                 <Box sx={{ width: '100%' }}>
                     <DataGrid
                         loading={isBusy}
@@ -303,7 +298,7 @@ function UsersForm() {
                         localeText={{ noRowsLabel: 'No users found' }}
                         sx={{
                             border: 0,
-                            marginTop: 2,
+                            marginTop: 1,
                             [`& .${gridClasses.cell}:focus, & .${gridClasses.cell}:focus-within`]: {
                                 outline: 'none',
                             },
@@ -362,6 +357,10 @@ function UsersForm() {
                     />
                 </Box>
             </Box>
+            <Alert severity="info" sx={{ mt: 2 }}>
+                <AlertTitle>User Management</AlertTitle>
+                Manage admin and operator accounts for this station.
+            </Alert>
 
             <Dialog
                 open={openUserDialog}

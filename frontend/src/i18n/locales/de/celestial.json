@@ -1,0 +1,484 @@
+{
+  "common": {
+    "body": "Körper",
+    "mission": "Mission",
+    "error": "Fehler",
+    "stale": "Abgestanden",
+    "ok": "OK",
+    "yes": "Ja",
+    "no": "NEIN",
+    "unknown": "Unbekannt",
+    "never": "Niemals",
+    "loading": "Laden..."
+  },
+  "units": {
+    "deg": "Grad",
+    "au": "AU",
+    "km_per_s": "km/s",
+    "min": "min"
+  },
+  "errors": {
+    "unknown_error": "Unbekannter Fehler"
+  },
+  "statusbar": {
+    "planets": "Planeten",
+    "moons": "Monde",
+    "tracked": "Verfolgt"
+  },
+  "toolbar": {
+    "fit_all": "Passt alles",
+    "zoom_in": "Vergrößern",
+    "zoom_out": "Herauszoomen",
+    "reset_zoom": "Zoom zurücksetzen",
+    "center_on_sun": "Zentrieren Sie die Sonne",
+    "refresh_scene": "Himmelsszene aktualisieren",
+    "layout_options": "Layoutoptionen",
+    "table_settings": "Tabelleneinstellungen",
+    "go_fullscreen": "Gehen Sie in den Vollbildmodus",
+    "exit_fullscreen": "Beenden Sie den Vollbildmodus"
+  },
+  "main_layout": {
+    "planetarium_title": "Planetarium",
+    "solar_system_layout_title": "Layout des Sonnensystems",
+    "monitored_title": "Überwachter Himmelskörper",
+    "loading": "Laden...",
+    "loading_planetarium_vectors": "Planetariumsvektoren werden geladen...",
+    "loading_solar_vectors": "Vektoren des Sonnensystems werden geladen...",
+    "updating": "Aktualisierung..."
+  },
+  "layout_options": {
+    "title": "Layoutoptionen für das Sonnensystem",
+    "apply": "Anwenden",
+    "reset_defaults": "Standardeinstellungen zurücksetzen",
+    "view_mode": {
+      "title": "Ansichtsmodus",
+      "subtitle": "Wählen Sie die primäre Himmelsvisualisierung für diese Insel.",
+      "label": "Sicht",
+      "solar_system": "Sonnensystem",
+      "planetarium": "Planetarium"
+    },
+    "map_interaction": {
+      "title": "Karteninteraktion",
+      "solar_subtitle": "Aktivieren Sie gestengesteuertes Schwenken und Zoomen auf der Karte des Sonnensystems.",
+      "planetarium_subtitle": "Aktivieren Sie gestengesteuertes Schwenken und Zoomen im Planetariums-Ansichtsfenster."
+    },
+    "sections": {
+      "solar_scene_elements": {
+        "title": "Szenenelemente",
+        "subtitle": "Primäre Schichten und Beschriftungen des Sonnensystems."
+      },
+      "solar_tracked_targets": {
+        "title": "Verfolgte Ziele",
+        "subtitle": "Verfolgte Objekte und ihre Umlaufbahn/Beschriftungsüberlagerungen."
+      },
+      "solar_astronomy_background": {
+        "title": "Astronomischer Hintergrund",
+        "subtitle": "Referenzebenen hinter der Karte."
+      },
+      "solar_guides_and_metadata": {
+        "title": "Leitfäden und Metadaten",
+        "subtitle": "Kontextbezogene Markierungen, Beschriftungen und Szenenmetadaten."
+      },
+      "planetarium_sky_layers": {
+        "title": "Himmelsschichten",
+        "subtitle": "Primäre Overlays für das Planetariums-Ansichtsfenster."
+      },
+      "planetarium_target_overlays": {
+        "title": "Zielüberlagerungen",
+        "subtitle": "Tracking-Overlays und Beschriftungen für Planeten und Ziele."
+      }
+    },
+    "options": {
+      "enable_map_dragging": {
+        "label": "Aktivieren Sie das Ziehen von Karten",
+        "description": "Ermöglichen Sie das Schwenken durch Klicken und Ziehen auf der Karte. Wenn diese Option deaktiviert ist, verwenden Sie die Steuerelemente."
+      },
+      "enable_map_zooming": {
+        "label": "Aktivieren Sie das Zoomen der Karte",
+        "description": "Ermöglichen Sie Zoom-Gesten mit dem Rad und durch Auf- und Zuziehen. Wenn diese Option deaktiviert ist, verwenden Sie die Zoomtasten."
+      },
+      "show_grid": {
+        "label": "Raster anzeigen",
+        "description": "Zeigen Sie ein Referenzgitter zur schnellen räumlichen Orientierung an."
+      },
+      "show_planets": {
+        "label": "Planeten anzeigen",
+        "description": "Rendern Sie Planeten und wichtige Körper des Sonnensystems im Ansichtsfenster."
+      },
+      "show_planet_labels": {
+        "label": "Planetenbeschriftungen anzeigen",
+        "description": "Körpernamen neben sichtbaren Planeten anzeigen."
+      },
+      "show_planet_labels_for_planetarium": {
+        "description": "Beschriftungen für Planetenkörper anzeigen."
+      },
+      "show_planet_orbits": {
+        "label": "Planetenbahnen anzeigen",
+        "description": "Zeichnen Sie Orbitalringe/-pfade für den Kontext der Planetenbewegung."
+      },
+      "show_tracked_objects": {
+        "label": "Verfolgte Objekte anzeigen",
+        "description": "Zeigt aktuell verfolgte Missions-/Körpermarkierungen an."
+      },
+      "show_tracked_orbits": {
+        "label": "Verfolgte Umlaufbahnen anzeigen",
+        "description": "Überlagern Sie abgetastete Flugbahnpfade für verfolgte Ziele."
+      },
+      "show_tracked_labels": {
+        "label": "Verfolgte Labels anzeigen",
+        "description": "Zeigen Sie Beschriftungen und Telemetriekontext für verfolgte Ziele an."
+      },
+      "show_bright_star_field": {
+        "label": "Helles Sternenfeld anzeigen",
+        "description": "Rendern Sie eine ekliptische Vektorprojektion aus dem Bright Star Catalogue."
+      },
+      "show_asteroid_zones": {
+        "label": "Asteroidenzonen anzeigen",
+        "description": "Zeigt Überlagerungen der wichtigsten Asteroidengürtelregionen an."
+      },
+      "show_asteroid_zone_labels": {
+        "label": "Asteroidenzonenbezeichnungen anzeigen",
+        "description": "Kommentieren Sie Asteroidenregionen mit Zonennamen."
+      },
+      "show_resonance_markers": {
+        "label": "Resonanzmarkierungen anzeigen",
+        "description": "Rendern Sie wichtige Orbitalresonanz-Referenzmarkierungen."
+      },
+      "show_epoch_label": {
+        "label": "Epochenbezeichnung anzeigen",
+        "description": "Zeigt den Szenenzeitstempel an, der für aktuelle Positionen verwendet wird."
+      },
+      "show_scale_label": {
+        "label": "Skalenbeschriftung anzeigen",
+        "description": "Zeigt die aktuelle Referenz für die Entfernungsskala des Ansichtsfensters an."
+      },
+      "show_gesture_hint": {
+        "label": "Gestenhinweis anzeigen",
+        "description": "Zeigt einen kurzen Hilfehinweis für Karteninteraktionssteuerelemente an."
+      },
+      "show_sky_grid": {
+        "label": "Himmelsgitter anzeigen",
+        "description": "Zeichnen Sie Azimut-/Elevations-Hilfslinien."
+      },
+      "show_horizon_compass": {
+        "label": "Horizontkompass anzeigen",
+        "description": "Zeichnen Sie die Horizontlinie mit N/E/S/W-Häkchen."
+      },
+      "show_star_field": {
+        "label": "Sternenfeld anzeigen",
+        "description": "Rendern Sie helle Sterne aus dem geladenen Himmelskatalog."
+      },
+      "show_star_names": {
+        "label": "Sternnamen anzeigen",
+        "description": "Beschriften Sie Sterne mit leuchtenden Namen, wenn der Zoom dies zulässt."
+      },
+      "show_constellation_labels": {
+        "label": "Konstellationsbeschriftungen anzeigen",
+        "description": "Sternbildnamen im Himmelshintergrund darstellen."
+      },
+      "show_pass_curves": {
+        "label": "Passkurven anzeigen",
+        "description": "Zeichnen Sie vorhergesagte Passbögen für sichtbare Ziele."
+      },
+      "show_target_labels": {
+        "label": "Zielbezeichnungen anzeigen",
+        "description": "Beschriftungen für verfolgte Ziele anzeigen."
+      },
+      "show_rotator_crosshair": {
+        "label": "Rotator-Fadenkreuz anzeigen",
+        "description": "Rendern Sie das Live-Rotator-Fadenkreuz, sofern verfügbar."
+      },
+      "show_hud_labels": {
+        "label": "HUD-Beschriftungen anzeigen",
+        "description": "Ansichtsfenster- und Beobachter-/Zeitstempelanzeigen anzeigen."
+      }
+    }
+  },
+  "topbar": {
+    "projection": {
+      "past": "Vergangenheit",
+      "future": "Zukunft"
+    },
+    "actions": {
+      "manage": "Verwalten",
+      "refresh": "Aktualisieren",
+      "refresh_all": "Alle aktualisieren",
+      "enable_target": "Ziel aktivieren",
+      "disable_target": "Ziel deaktivieren",
+      "clear_color": "Klar"
+    },
+    "dialogs": {
+      "add_title": "Überwachtes Himmelsziel hinzufügen",
+      "manage_title": "Verwalten Sie überwachte Himmelsziele",
+      "delete_title": "Überwachtes Ziel löschen",
+      "edit_title": "Überwachtes Himmelsziel bearbeiten"
+    },
+    "fields": {
+      "target_type": "Zieltyp",
+      "mission_spacecraft": "Mission / Raumschiff",
+      "solar_body": "Sonnenkörper",
+      "target": "Ziel",
+      "target_placeholder": "Geben Sie den Befehl ein oder wählen Sie aus dem Katalog aus",
+      "target_body": "Zielkörper",
+      "horizons_command": "Horizons-Kommando",
+      "display_name": "Anzeigename",
+      "color": "Farbe",
+      "color_placeholder": "#06D6A0",
+      "pick_color": "Farbe auswählen"
+    },
+    "helper": {
+      "using_static_catalog": "Verwendung eines statischen Katalogeintrags.",
+      "using_exact_command": "Verwenden des Befehls „Exact Horizons“.",
+      "selected_mission_not_active": "Die ausgewählte Mission ist nicht aktiv; Die Horizons-Daten können begrenzt sein.",
+      "loading_spacecraft_catalog": "Raumfahrzeugkatalog wird geladen...",
+      "loading_body_catalog": "Karosseriekatalog wird geladen..."
+    },
+    "labels": {
+      "already_monitored": "Bereits überwacht",
+      "static_body": "Statischer Körper"
+    },
+    "table": {
+      "type": "Typ",
+      "mission": "Mission",
+      "last_refresh": "Letzte Aktualisierung"
+    },
+    "delete": {
+      "confirm": "Sind Sie sicher, dass Sie dieses überwachte Ziel löschen möchten?",
+      "unknown_target": "Unbekanntes Ziel"
+    },
+    "empty": {
+      "no_targets": "Noch keine überwachten Himmelsziele."
+    },
+    "errors": {
+      "failed_load_spacecraft_catalog": "Der Raumfahrzeugkatalog konnte nicht geladen werden.",
+      "failed_load_body_catalog": "Der Himmelskörperkatalog konnte nicht geladen werden.",
+      "socket_unavailable": "Socket-Anschluss ist nicht verfügbar.",
+      "display_name_command_required": "Anzeigename und Befehl sind erforderlich.",
+      "command_already_monitored": "Dieser Befehl befindet sich bereits in der überwachten Liste.",
+      "select_body_target": "Wählen Sie ein Körperziel aus.",
+      "body_already_monitored": "Dieser Körper befindet sich bereits in der überwachten Liste.",
+      "display_name_required": "Anzeigename ist erforderlich.",
+      "command_required_for_mission": "Für Missionsziele ist ein Kommando erforderlich.",
+      "body_required_for_body_target": "Für Körperziele ist „Körperziel“ erforderlich.",
+      "invalid_hex_color": "Die Farbe muss ein gültiger Hexadezimalwert wie #1A2B3C sein.",
+      "failed_update_target": "Das überwachte Ziel konnte nicht aktualisiert werden."
+    },
+    "feedback": {
+      "added_mission": "„{{name}}“ mit dem Befehl „{{command}}“ hinzugefügt.",
+      "added_body": "Textziel „{{name}}“ hinzugefügt."
+    },
+    "mission_status": {
+      "active": "Aktiv",
+      "completed": "Vollendet",
+      "failed": "Fehlgeschlagen"
+    },
+    "fallback": {
+      "target": "Ziel"
+    }
+  },
+  "passes": {
+    "title": "Himmlische Pässe",
+    "count_label_single": "passieren",
+    "count_label_plural": "geht vorbei",
+    "table_settings": "Tabelleneinstellungen",
+    "refresh": "Pässe aktualisieren",
+    "timeline_default_target_name": "Himmlisches Ziel",
+    "status": {
+      "visible": "Sichtbar",
+      "passed": "Bestanden",
+      "upcoming": "Demnächst"
+    },
+    "columns": {
+      "status": "Status",
+      "name": "Name",
+      "type": "Typ",
+      "peak_elevation": "Gipfelhöhe",
+      "progress": "Fortschritt",
+      "duration": "Dauer",
+      "start": "Start",
+      "end": "Ende",
+      "start_azimuth": "Azimut starten",
+      "end_azimuth": "Azimut beenden",
+      "peak_azimuth": "Spitzenazimut",
+      "cache": "Cache",
+      "stale": "Abgestanden",
+      "source": "Quelle"
+    },
+    "summary": {
+      "start": "Start",
+      "end": "Ende"
+    },
+    "quick_filters": {
+      "all_tooltip": "Alle Durchgänge (Alt+1)",
+      "all_aria": "Alle Pässe",
+      "all_short": "Alle",
+      "live_tooltip": "Live-Pässe (Alt+2)",
+      "live_aria": "Live-Pässe",
+      "live_short": "Live",
+      "next_30_tooltip": "Live oder nächste 30 Minuten (Alt+3)",
+      "next_30_aria": "Nächste 30 Minuten",
+      "next_30_short": "Nächste 30m",
+      "highest_elevation_tooltip": "Höchste Erhebung zuerst (Alt+4)",
+      "highest_elevation_aria": "Höchste Erhebung zuerst",
+      "high_el_short": "Hoch El"
+    },
+    "settings": {
+      "title": "Tabelleneinstellungen für himmlische Pässe",
+      "rows_per_page": "Zeilen pro Seite",
+      "reset_values": "Werte zurücksetzen",
+      "close": "Schließen",
+      "categories": {
+        "basic": "Basic",
+        "time": "Zeit",
+        "metrics": "Metriken",
+        "source": "Quelle"
+      }
+    }
+  },
+  "monitored": {
+    "no_color": "Keine Farbe",
+    "columns": {
+      "name": "Name",
+      "type": "Typ",
+      "target_id": "Ziel-ID",
+      "source": "Quelle",
+      "source_mode": "Quellmodus",
+      "elevation": "Höhe (Grad)",
+      "azimuth": "Azimut (Grad)",
+      "distance_from_sun_au": "Entfernung von der Sonne (AU)",
+      "speed_km_s": "Geschwindigkeit (km/s)",
+      "light_time_min": "Lichtzeit (min)",
+      "last_refresh": "Letzte Aktualisierung",
+      "refresh_age": "Alter aktualisieren",
+      "projection_span": "Projektionsspanne",
+      "cache": "Cache",
+      "stale": "Abgestanden",
+      "samples": "Proben",
+      "last_error": "Letzter Fehler"
+    },
+    "settings": {
+      "title": "Überwachte Himmelstabelleneinstellungen",
+      "rows_per_page": "Zeilen pro Seite",
+      "reset_values": "Werte zurücksetzen",
+      "close": "Schließen",
+      "categories": {
+        "identity": "Identität",
+        "state": "Zustand",
+        "metrics": "Metriken",
+        "projection": "Vorsprung"
+      }
+    },
+    "summary": {
+      "source": "Quelle",
+      "mode": "Modus"
+    }
+  },
+  "info": {
+    "title": "Himmlische Informationen",
+    "empty_hint": "Wählen Sie einen Körper oder eine Mission aus „Überwachter Himmel“ oder „Himmlische Pässe“.",
+    "edit_transmitters": "Sender bearbeiten",
+    "no_upcoming_pass": "Kein bevorstehender Pass",
+    "status": {
+      "visible": "Sichtbar",
+      "below_horizon": "Unterhalb des Horizonts"
+    },
+    "sections": {
+      "pass_window": "Passfenster",
+      "data_source": "Datenquelle"
+    },
+    "metrics": {
+      "target_type": "Zieltyp",
+      "body_id": "Körper-ID",
+      "mission_command": "Missionskommando",
+      "elevation": "Elevation",
+      "azimuth": "Azimut",
+      "distance_from_sun_au": "Entfernung von der Sonne",
+      "distance_from_sun_km": "Entfernung von der Sonne (km)",
+      "speed": "Geschwindigkeit",
+      "light_time": "Lichtzeit",
+      "total_passes": "Gesamtzahl der Pässe",
+      "active_pass": "Aktiver Pass",
+      "active_since": "Aktiv seit",
+      "next_start": "Nächster Start",
+      "ends": "Endet",
+      "next_peak": "Nächster Gipfel",
+      "source": "Quelle",
+      "cache": "Cache",
+      "stale": "Abgestanden",
+      "last_refresh": "Letzte Aktualisierung"
+    }
+  },
+  "context": {
+    "copy_body_id": "Körper-ID kopieren",
+    "copy_mission_command": "Missionsbefehl kopieren",
+    "copy_target_key": "Zielschlüssel kopieren",
+    "copy_target_summary": "Zielzusammenfassung kopieren",
+    "copy_pass_summary": "Zusammenfassung des Kopierdurchlaufs"
+  },
+  "time": {
+    "relative": {
+      "in_less_than_minute": "in <1m",
+      "less_than_minute_ago": "Vor <1 Mio",
+      "in_minutes": "in {{count}}m",
+      "minutes_ago": "Vor {{count}}m",
+      "in_hours": "in {{count}}h",
+      "hours_ago": "Vor {{count}}h",
+      "in_days": "in {{count}}d",
+      "days_ago": "Vor {{count}}d"
+    },
+    "duration": {
+      "minutes_seconds": "{{minutes}}m {{seconds}}s"
+    },
+    "age": {
+      "seconds": "{{count}}s",
+      "minutes": "{{count}}m",
+      "hours": "{{count}}h",
+      "days": "{{count}}d"
+    },
+    "projection_span": "{{past}}h / {{future}}h @ {{step}}m"
+  },
+  "canvas": {
+    "solar": {
+      "anchor_sun": "Sonne",
+      "anchor_earth": "Erde",
+      "anchor_galactic_center": "Galaktisches Zentrum",
+      "anchor_galactic_center_short": "Galaktische Zentrale",
+      "no_epoch": "Keine Epoche",
+      "epoch": "Epoche: {{timestamp}}",
+      "scale": "Maßstab: {{value}} / Quadrat",
+      "touch_pan": "2-Finger-Pfannen",
+      "touch_pan_zoom": "2-Finger-Schwenken/Zoomen",
+      "touch_pinch_zoom": "Pinch-Zoom",
+      "mouse_drag": "ziehen",
+      "mouse_wheel": "Rad",
+      "mouse_drag_plus_wheel": "Ziehen + Rad",
+      "gesture_hint": "Berühren Sie: {{touch}} | Maus: {{mouse}}",
+      "gesture_disabled": "Kartengesten deaktiviert; Verwenden Sie Symbolleistensteuerelemente."
+    },
+    "planetarium": {
+      "aria_label": "Himmelskarte des Planetariums",
+      "configure_location": "Konfigurieren Sie einen Bodenstationsstandort, um den lokalen Himmel darzustellen.",
+      "fallback_target": "Ziel",
+      "target_below_horizon": "Ziel unterhalb des Horizonts",
+      "hud_view_label": "Az {{az}} / El {{el}} / FOV {{fov}}",
+      "cardinal": {
+        "north": "N",
+        "east": "E",
+        "south": "S",
+        "west": "W"
+      }
+    },
+    "moon_phase": {
+      "new_moon": "Neumond",
+      "waxing_crescent": "Wachsender Halbmond",
+      "first_quarter": "Erstes Viertel",
+      "waxing_gibbous": "Wachsender Gibbous",
+      "full_moon": "Vollmond",
+      "waning_gibbous": "Abnehmender Gibbous",
+      "last_quarter": "Letztes Viertel",
+      "waning_crescent": "Abnehmender Halbmond",
+      "fallback": "Mondphase",
+      "description": "{{label}}, {{percent}}% beleuchtet"
+    }
+  }
+}

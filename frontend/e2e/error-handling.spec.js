@@ -17,7 +17,7 @@ test.describe('404 Error Handling', () => {
     await page.goto('/invalid-page-12345');
     await page.waitForLoadState('domcontentloaded');
     await page.getByRole('button', { name: /back to home/i }).click();
-    await expect(page).toHaveURL(/\/$/);
+    await expect(page).toHaveURL(/\/earthview$/);
   });
 });
 

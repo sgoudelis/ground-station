@@ -19,6 +19,9 @@
 
 import * as React from 'react';
 import CloudOffIcon from '@mui/icons-material/CloudOff';
+import HttpsOutlinedIcon from '@mui/icons-material/HttpsOutlined';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import LockOpenOutlinedIcon from '@mui/icons-material/LockOpenOutlined';
 import SyncProblemIcon from '@mui/icons-material/SyncProblem';
 import { keyframes } from '@emotion/react';
 import {
@@ -30,11 +33,14 @@ import {
     Checkbox,
     CircularProgress,
     Dialog,
+    DialogActions,
     DialogContent,
     DialogTitle,
     FormControlLabel,
+    IconButton,
     Stack,
     TextField,
+    Tooltip,
     Typography,
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
@@ -68,6 +74,7 @@ const cardSx = {
 const loginCardSx = {
     ...cardSx,
     maxWidth: 350,
+    position: 'relative',
 };
 
 const stationPanelSx = {
@@ -93,6 +100,7 @@ const progressSweep = keyframes`
     0% { transform: translateX(-100%); }
     100% { transform: translateX(333%); }
 `;
+const SETUP_MODE_ADMIN_RECOVERY = 'admin_recovery';
 
 function normalizeStationIdentity(station) {
     if (!station || typeof station !== 'object') {
@@ -105,23 +113,21 @@ function normalizeStationIdentity(station) {
 
 function StationIdentityPanel({ station, showCallsign = true }) {
     const { name, callsign } = normalizeStationIdentity(station);
-    if (!name && (!showCallsign || !callsign)) {
-        return null;
-    }
+    const stationName = name || 'Ground Station';
+    const renderedCallsign = showCallsign ? callsign : null;
 
     return (
         <Box sx={stationPanelSx}>
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.25 }}>
-                Ground Station
+            <Typography variant="body2" align="center" fontWeight={700}>
+                {stationName}
             </Typography>
-            {name && (
-                <Typography variant="body2" fontWeight={600}>
-                    {name}
-                </Typography>
-            )}
-            {showCallsign && callsign && (
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                    Callsign: {callsign}
+            {renderedCallsign && (
+                <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{ display: 'block', textAlign: 'center', mt: 0.25 }}
+                >
+                    {renderedCallsign}
                 </Typography>
             )}
         </Box>
@@ -149,7 +155,57 @@ function AuthCardHeader({ title, description }) {
     );
 }
 
-export function AdminRegistrationForm({ title, description, station }) {
+function isHttpsPage() {
+    if (typeof window === 'undefined') {
+        return false;
+    }
+    return String(window.location?.protocol || '').trim().toLowerCase() === 'https:';
+}
+
+function LoginTransportSecurityIndicator({ isHttps, onOpenGuidance }) {
+    const StatusIcon = isHttps ? HttpsOutlinedIcon : LockOpenOutlinedIcon;
+    const indicatorColor = isHttps ? 'success.main' : 'warning.main';
+
+    return (
+        <Stack direction="row" spacing={0.5} alignItems="center">
+            <StatusIcon sx={{ fontSize: 16, color: indicatorColor }} />
+            <Typography
+                variant="caption"
+                component="span"
+                sx={{
+                    color: indicatorColor,
+                    fontWeight: 600,
+                    lineHeight: 1,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    transform: 'translateY(1px)',
+                }}
+            >
+                {isHttps ? 'HTTPS' : 'HTTP'}
+            </Typography>
+            {!isHttps && (
+                <Tooltip title="Transport security guidance">
+                    <IconButton
+                        size="small"
+                        sx={{ p: 0.35 }}
+                        aria-label="Open transport security guidance"
+                        onClick={onOpenGuidance}
+                    >
+                        <InfoOutlinedIcon sx={{ fontSize: 16 }} />
+                    </IconButton>
+                </Tooltip>
+            )}
+        </Stack>
+    );
+}
+
+export function AdminRegistrationForm({
+    title,
+    description,
+    station,
+    showCallsign = true,
+    cardMaxWidth = 500,
+}) {
     const dispatch = useDispatch();
     const { loadingAction, error } = useSelector((state) => state.auth);
 
@@ -184,11 +240,11 @@ export function AdminRegistrationForm({ title, description, station }) {
     };
 
     return (
-        <Card sx={cardSx}>
+        <Card sx={{ ...cardSx, maxWidth: cardMaxWidth }}>
             <CardContent sx={{ p: 3 }}>
                 <Stack spacing={2}>
                     <AuthCardHeader title={title} description={description} />
-                    <StationIdentityPanel station={station} />
+                    <StationIdentityPanel station={station} showCallsign={showCallsign} />
 
                     {(localError || error) && (
                         <Alert severity="error">{localError || error}</Alert>
@@ -233,12 +289,14 @@ export function AdminRegistrationForm({ title, description, station }) {
 export function LoginScreen() {
     const dispatch = useDispatch();
     const { loadingAction, error, station } = useSelector((state) => state.auth);
-    const stationName = normalizeStationIdentity(station).name || 'Ground Station';
 
+    // Keep UI protocol state aligned with backend Secure-cookie behavior.
+    const isHttps = React.useMemo(() => isHttpsPage(), []);
     const [username, setUsername] = React.useState('');
     const [password, setPassword] = React.useState('');
     const [keepSessionActive, setKeepSessionActive] = React.useState(false);
     const [localError, setLocalError] = React.useState('');
+    const [showTlsGuidance, setShowTlsGuidance] = React.useState(false);
 
     const handleSubmit = async (event) => {
         event.preventDefault();
@@ -261,17 +319,26 @@ export function LoginScreen() {
     return (
         <Box sx={shellSx}>
             <Card sx={loginCardSx}>
+                <Box
+                    sx={{
+                        position: 'absolute',
+                        top: 10,
+                        right: 10,
+                        zIndex: 2,
+                    }}
+                >
+                    <LoginTransportSecurityIndicator
+                        isHttps={isHttps}
+                        onOpenGuidance={() => setShowTlsGuidance(true)}
+                    />
+                </Box>
                 <CardContent sx={{ p: 3 }}>
                     <Stack spacing={2}>
                         <AuthCardHeader
                             title="Sign In"
                             description="Authentication is required to use this Ground Station instance."
                         />
-                        <Box sx={stationPanelSx}>
-                            <Typography variant="body2" align="center" fontWeight={700}>
-                                {stationName}
-                            </Typography>
-                        </Box>
+                        <StationIdentityPanel station={station} showCallsign={false} />
                         {(localError || error) && (
                             <Alert severity="error">{localError || error}</Alert>
                         )}
@@ -282,6 +349,7 @@ export function LoginScreen() {
                                     value={username}
                                     onChange={(event) => setUsername(event.target.value)}
                                     autoComplete="username"
+                                    size="small"
                                     required
                                 />
                                 <TextField
@@ -290,6 +358,7 @@ export function LoginScreen() {
                                     value={password}
                                     onChange={(event) => setPassword(event.target.value)}
                                     autoComplete="current-password"
+                                    size="small"
                                     required
                                 />
                                 <FormControlLabel
@@ -313,11 +382,65 @@ export function LoginScreen() {
                     </Stack>
                 </CardContent>
             </Card>
+            <Dialog
+                open={showTlsGuidance}
+                onClose={() => setShowTlsGuidance(false)}
+                aria-labelledby="login-transport-security-dialog-title"
+                maxWidth="xs"
+                fullWidth
+            >
+                <DialogTitle id="login-transport-security-dialog-title">
+                    HTTP connection detected
+                </DialogTitle>
+                <DialogContent
+                    sx={{
+                        // MUI zeroes top padding for DialogContent after DialogTitle.
+                        pt: '12px !important',
+                    }}
+                >
+                    <Stack spacing={1.25}>
+                        <Typography variant="body2">
+                            This sign-in page is currently served over HTTP.
+                        </Typography>
+                        <Typography variant="body2">
+                            For stronger transport security, put Ground Station behind a TLS
+                            reverse proxy (for example Nginx, Caddy, or Traefik) and access it via{' '}
+                            <Box component="span" sx={{ fontFamily: 'monospace' }}>
+                                https://
+                            </Box>
+                            .
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                            HTTPS also allows the backend to issue auth session cookies with the
+                            Secure flag.
+                        </Typography>
+                    </Stack>
+                </DialogContent>
+                <DialogActions sx={{ px: 3, pb: 2 }}>
+                    <Button onClick={() => setShowTlsGuidance(false)} autoFocus>
+                        Close
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </Box>
     );
 }
 
-export function SetupScreen() {
+function SetupAdminRecoveryScreen({ station }) {
+    return (
+        <Box sx={shellSx}>
+            <AdminRegistrationForm
+                title="Create Administrator Account"
+                description="User accounts are missing. Create a new admin account to restore access."
+                station={station}
+                showCallsign={false}
+                cardMaxWidth={350}
+            />
+        </Box>
+    );
+}
+
+function SetupWizardScreen() {
     const dispatch = useDispatch();
     const { socket } = useSocket();
 
@@ -600,4 +723,13 @@ export function SetupScreen() {
             </DialogContent>
         </Dialog>
     );
+}
+
+export function SetupScreen() {
+    const station = useSelector((state) => state.auth.station);
+    const setupMode = useSelector((state) => String(state.auth.setupMode || '').trim().toLowerCase());
+    if (setupMode === SETUP_MODE_ADMIN_RECOVERY) {
+        return <SetupAdminRecoveryScreen station={station} />;
+    }
+    return <SetupWizardScreen />;
 }
