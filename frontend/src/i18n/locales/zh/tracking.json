@@ -1,0 +1,18 @@
+﻿{
+    "title":  "跟踪",
+    "select_satellite":  "选择卫星",
+    "track":  "跟踪",
+    "stop_tracking":  "停止跟踪",
+    "passes":  "过境",
+    "next_pass":  "下次过境",
+    "current_pass":  "当前过境",
+    "aos":  "AOS",
+    "los":  "LOS",
+    "max_elevation":  "最高仰角",
+    "azimuth":  "方位角",
+    "elevation":  "仰角",
+    "range":  "距离",
+    "velocity":  "速度",
+    "doppler":  "多普勒",
+    "frequency":  "频率"
+}

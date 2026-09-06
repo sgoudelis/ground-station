@@ -1,0 +1,107 @@
+﻿{
+    "title":  "文件浏览器",
+    "sort_by":  "排序方式",
+    "sort":  {
+                 "created":  "创建日期",
+                 "modified":  "修改日期",
+                 "name":  "名称",
+                 "size":  "大小",
+                 "sample_rate":  "采样率"
+             },
+    "filter":  "筛选",
+    "filters":  {
+                    "recordings":  "录制",
+                    "snapshots":  "快照",
+                    "decoded":  "已解码",
+                    "audio":  "音频"
+                },
+    "sort_order":  {
+                       "ascending":  "升序",
+                       "descending":  "降序"
+                   },
+    "refresh":  "刷新",
+    "storage":  {
+                    "title":  "存储",
+                    "used":  "已用",
+                    "available":  "可用"
+                },
+    "no_files":  {
+                     "title":  "未找到文件",
+                     "message_filter":  "请至少启用一个筛选条件以查看文件",
+                     "message_empty":  "从瀑布图视图拍摄快照或录制 IQ 数据"
+                 },
+    "recording":  {
+                      "type":  "录制",
+                      "in_progress":  "录制中",
+                      "in_progress_message":  "录制正在进行中",
+                      "snapshot_message":  "停止时将保存瀑布图快照",
+                      "delete_message":  "这将删除数据文件、元数据文件和快照。"
+                  },
+    "snapshot":  {
+                     "type":  "快照",
+                     "description":  "地面站瀑布图快照"
+                 },
+    "audio":  {
+                  "type":  "音频录制",
+                  "description":  "VFO 音频录制",
+                  "in_progress":  "音频录制中",
+                  "in_progress_message":  "音频录制正在进行中"
+              },
+    "details":  {
+                    "title":  "录制详情",
+                    "name":  "名称",
+                    "files":  "文件",
+                    "metadata":  "元数据",
+                    "captures":  "捕获",
+                    "data_type":  "数据类型",
+                    "sample_rate":  "采样率",
+                    "version":  "SigMF 版本",
+                    "recorder":  "记录器",
+                    "description":  "描述",
+                    "created":  "创建时间",
+                    "modified":  "修改时间"
+                },
+    "actions":  {
+                    "view_details":  "查看详情",
+                    "download":  "下载",
+                    "download_data":  "下载数据",
+                    "download_metadata":  "下载元数据",
+                    "download_snapshot":  "下载快照",
+                    "delete":  "删除",
+                    "cannot_delete_active":  "无法删除正在进行的录制",
+                    "close":  "关闭"
+                },
+    "delete_dialog":  {
+                          "title_recording":  "删除录制",
+                          "title_snapshot":  "删除快照",
+                          "title_decoded":  "删除已解码文件",
+                          "title_audio":  "删除音频录制",
+                          "warning":  "此操作无法撤消！",
+                          "confirm":  "您确定要删除",
+                          "cancel":  "取消",
+                          "delete":  "删除"
+                      },
+    "batch_delete_dialog":  {
+                                "title":  "批量删除",
+                                "confirm":  "您确定要删除 {{count}} 个项目？",
+                                "message": "这将永久删除所有选中的录制和快照。"
+                            },
+    "selection":  {
+                      "select":  "选择",
+                      "exit":  "退出选择",
+                      "no_items":  "未选择任何项目",
+                      "count":  "已选择 {{count}} 个项目",
+                      "select_all":  "全选",
+                      "clear":  "清除",
+                      "delete":  "删除已选"
+                  },
+    "toast":  {
+                  "recording_deleted":  "录制 \"{{name}}\" 已成功删除",
+                  "snapshot_deleted":  "快照 \"{{name}}\" 已成功删除",
+                  "decoded_deleted":  "已解码文件 \"{{name}}\" 已成功删除",
+                  "audio_deleted":  "音频录制 \"{{name}}\" 已成功删除",
+                  "delete_failed":  "删除失败：{{error}}",
+                  "batch_delete_partial":  "部分项目无法删除",
+                  "batch_delete_failed":  "删除项目失败：{{error}}"
+              }
+}

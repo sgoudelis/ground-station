@@ -112,6 +112,18 @@ import waterfallIT from './locales/it/waterfall.json';
 import filebrowserIT from './locales/it/filebrowser.json';
 import celestialIT from './locales/it/celestial.json';
 
+import commonZH from './locales/zh/common.json';
+import navigationZH from './locales/zh/navigation.json';
+import hardwareZH from './locales/zh/hardware.json';
+import settingsZH from './locales/zh/settings.json';
+import satellitesZH from './locales/zh/satellites.json';
+import trackingZH from './locales/zh/tracking.json';
+import earthviewZH from './locales/zh/earthview.json';
+import targetZH from './locales/zh/target.json';
+import dashboardZH from './locales/zh/dashboard.json';
+import waterfallZH from './locales/zh/waterfall.json';
+import filebrowserZH from './locales/zh/filebrowser.json';
+
 const resources = {
     en: {
         common: commonEN,
@@ -210,6 +222,19 @@ const resources = {
         waterfall: waterfallIT,
         filebrowser: filebrowserIT,
         celestial: celestialIT,
+    },
+    zh: {
+        common: commonZH,
+        navigation: navigationZH,
+        hardware: hardwareZH,
+        settings: settingsZH,
+        satellites: satellitesZH,
+        tracking: trackingZH,
+        earthview: earthviewZH,
+        target: targetZH,
+        dashboard: dashboardZH,
+        waterfall: waterfallZH,
+        filebrowser: filebrowserZH,
     },
 };
 

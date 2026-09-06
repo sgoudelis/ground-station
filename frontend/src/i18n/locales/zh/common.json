@@ -1,0 +1,128 @@
+﻿{
+    "app_name":  "地面站",
+    "loading":  "正在加载...",
+    "error":  "错误",
+    "success":  "成功",
+    "save":  "保存",
+    "cancel":  "取消",
+    "delete":  "删除",
+    "edit":  "编辑",
+    "add":  "添加",
+    "close":  "关闭",
+    "confirm":  "确认",
+    "yes":  "是",
+    "no":  "否",
+    "search":  "搜索",
+    "filter":  "筛选",
+    "actions":  "操作",
+    "name":  "名称",
+    "description":  "描述",
+    "status":  "状态",
+    "connected":  "已连接",
+    "disconnected":  "已断开",
+    "online":  "在线",
+    "offline":  "离线",
+    "notifications":  {
+                          "connection":  {
+                                             "connected_to_backend":  "已连接到后端",
+                                             "reconnecting_to_backend":  "正在重新连接后端",
+                                             "attempt":  "尝试 {{attempt}}",
+                                             "connection_error":  "连接错误",
+                                             "lost_connection":  "与后端的连接已断开"
+                                         },
+                          "sync":  {
+                                       "tle_sync_complete":  "轨道数据同步完成！",
+                                       "new_items":  "新增：{{satellites}} 颗卫星，{{transmitters}} 个发射机",
+                                       "modified_items":  "修改：{{satellites}} 颗卫星，{{transmitters}} 个发射机",
+                                       "removed_items":  "移除：{{satellites}} 颗卫星，{{transmitters}} 个发射机",
+                                       "no_changes":  "未检测到变更"
+                                   },
+                          "rotator":  {
+                                          "connected":  "旋转器已连接",
+                                          "disconnected":  "旋转器已断开"
+                                      },
+                          "radio":  {
+                                        "connected":  "电台已连接",
+                                        "disconnected":  "电台已断开"
+                                    },
+                          "tracking":  {
+                                           "elevation_below_horizon":  "目标仰角低于地平线",
+                                           "azimuth_out_of_bounds":  "目标方位角超出范围",
+                                           "below_min_elevation":  "目标低于最小仰角",
+                                           "above_max_elevation":  "目标高于最大仰角",
+                                           "below_min_azimuth":  "目标低于最小方位角",
+                                           "above_max_azimuth":  "目标高于最大方位角",
+                                           "satellite_changed":  "目标卫星已更改",
+                                           "satellite_info":  "{{name}} (NORAD {{noradId}})"
+                                       },
+                          "decoder":  {
+                                          "output_received":  "已收到解码器输出"
+                                      }
+                      },
+    "humanize":  {
+                     "bytes":  {
+                                   "bytes":  "字节",
+                                   "kb":  "KB",
+                                   "mb":  "MB",
+                                   "gb":  "GB",
+                                   "tb":  "TB"
+                               },
+                     "date":  {
+                                  "just_now":  "刚刚",
+                                  "minute_ago":  "{{count}} 分钟前",
+                                  "minutes_ago":  "{{count}} 分钟前",
+                                  "hour_ago":  "{{count}} 小时前",
+                                  "hours_ago":  "{{count}} 小时前",
+                                  "day_ago":  "{{count}} 天前",
+                                  "days_ago":  "{{count}} 天前",
+                                  "week_ago":  "{{count}} 周前",
+                                  "weeks_ago":  "{{count}} 周前",
+                                  "month_ago":  "{{count}} 个月前",
+                                  "months_ago":  "{{count}} 个月前",
+                                  "year_ago":  "{{count}} 年前",
+                                  "years_ago":  "{{count}} 年前",
+                                  "never":  "从不"
+                              }
+                 },
+    "satellite_status":  {
+                             "alive":  "存活",
+                             "dead":  "失效",
+                             "re_entered":  "已再入",
+                             "future":  "未来",
+                             "not_available":  "n/a"
+                         },
+    "transmitter_status":  {
+                               "active":  "活跃",
+                               "inactive":  "非活跃",
+                               "invalid":  "无效"
+                           },
+    "map_settings":  {
+                         "orbit_projection_time":  "轨道投影时间",
+                         "tile_layer":  "瓦片图层",
+                         "time_options":  {
+                                              "1_hour":  "1 小时",
+                                              "2_hours":  "2 小时",
+                                              "4_hours":  "4 小时",
+                                              "8_hours":  "8 小时",
+                                              "12_hours":  "12 小时",
+                                              "24_hours":  "24 小时"
+                                          },
+                         "satellite_coverage":  "卫星覆盖范围",
+                         "past_orbit_path":  "历史轨道路径绘制",
+                         "future_orbit_path":  "未来轨道路径绘制",
+                         "show_sun":  "显示太阳",
+                         "show_moon":  "显示月球",
+                         "day_night_separator":  "昼夜分隔线",
+                         "satellite_tooltip":  "卫星工具提示",
+                         "coordinate_grid":  "坐标网格",
+                         "enable_map_dragging":  "启用地图拖拽",
+                         "enable_map_dragging_desc":  "允许点击拖拽平移地图。关闭时，请使用箭头按钮平移。",
+                         "enable_map_zooming":  "启用地图缩放",
+                         "enable_map_zooming_desc":  "允许鼠标滚轮、捏合和双击缩放地图。关闭时，请使用 +/- 按钮。",
+                         "auto_switch_planetarium_visibility":  "目标可见时自动切换天象仪",
+                         "auto_switch_planetarium_visibility_desc":  "对于卫星目标：在地平线以上使用天象仪视图，在地平线以下切换回地球视图。",
+                         "footprint_color":  "足迹颜色",
+                         "past_orbit_color":  "历史轨道线颜色",
+                         "future_orbit_color":  "未来轨道线颜色"
+                     }
+}
