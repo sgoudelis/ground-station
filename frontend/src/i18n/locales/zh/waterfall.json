@@ -24,7 +24,8 @@
     "bookmark_source_user_defined": "用户定义",
     "bookmark_source_satnogs": "SATNOGS",
     "bookmark_source_gr_satellites": "gr-satellites",
-    "bookmark_source_satdump": "Satdump"
+    "bookmark_source_satdump": "Satdump",
+    "leave_stream": "退出数据流"
   },
   "frequency": {
     "title": "频率控制",

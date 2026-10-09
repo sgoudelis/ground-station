@@ -133,5 +133,25 @@
   },
   "common": {
     "cancel": "取消"
+  },
+  "vfo_audio": {
+    "tooltip": "VFO 音频控制",
+    "title": "VFO 音频",
+    "no_active_vfos": "没有活动的 VFO",
+    "vfo": "VFO {{number}}",
+    "receiving": "正在接收音频",
+    "waiting": "等待音频",
+    "status_no_audio": "无音频",
+    "status_muted": "已静音",
+    "status_squelched": "静噪中",
+    "status_unmuted": "已取消静音",
+    "mute": "静音",
+    "unmute": "取消静音",
+    "mute_all": "全部 VFO 静音",
+    "unmute_all": "取消全部 VFO 静音",
+    "volume": "音量",
+    "volume_for": "VFO {{number}} 音量",
+    "audio_level": "音频电平",
+    "buffer": "音频缓冲"
   }
 }
