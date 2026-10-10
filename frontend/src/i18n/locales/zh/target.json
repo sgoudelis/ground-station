@@ -139,7 +139,9 @@
     "manual_azimuth": "方位角（{{min}}°–{{max}}°）",
     "manual_elevation": "仰角（{{min}}°–{{max}}°）",
     "move": "移动",
-    "close": "关闭"
+    "close": "关闭",
+    "tracking_lead": "卫星跟踪提前量",
+    "tracking_lead_short": "提前量"
   },
   "satellite_search": {
     "search_label": "搜索卫星（按名称或 NORAD ID）"
