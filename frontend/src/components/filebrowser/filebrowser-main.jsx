@@ -1092,7 +1092,7 @@ export default function FileBrowserMain() {
                     <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                         <StorageIcon sx={{ mr: 1, color: 'text.secondary' }} />
                         <Typography variant="body2" color="text.secondary">
-                            Storage: {formatBytes(diskUsage.used)} used of {formatBytes(diskUsage.total)} ({Math.round((diskUsage.used / diskUsage.total) * 100)}%)
+                            {t('filebrowser_main.storage', { defaultValue: 'Storage:' })} {formatBytes(diskUsage.used)} {t('filebrowser_main.used_of', { defaultValue: 'used of' })} {formatBytes(diskUsage.total)} ({Math.round((diskUsage.used / diskUsage.total) * 100)}%)
                         </Typography>
                         <Typography variant="body2" color="text.secondary" sx={{ ml: 'auto' }}>
                             {formatBytes(diskUsage.available)} available
@@ -1750,7 +1750,7 @@ export default function FileBrowserMain() {
                                                 <>
                                                     {item.observation_in_progress && (
                                                         <Chip
-                                                            label="In progress"
+                                                            label={t('filebrowser_main.in_progress', { defaultValue: 'In progress' })}
                                                             size="small"
                                                             color="warning"
                                                             sx={{ height: '20px', fontSize: '0.65rem', '& .MuiChip-label': { px: 0.75 } }}
@@ -1898,7 +1898,7 @@ export default function FileBrowserMain() {
                                             </IconButton>
                                         </Tooltip>
                                         {item.type === 'recording' && (
-                                            <Tooltip title="Recording Actions">
+                                            <Tooltip title={t('filebrowser_main.recording_actions', { defaultValue: 'Recording Actions' })}>
                                                 <IconButton
                                                     size="small"
                                                     color="primary"
@@ -2000,7 +2000,7 @@ export default function FileBrowserMain() {
                 maxWidth="sm"
                 fullWidth
             >
-                <DialogTitle>Generate Waterfall Image</DialogTitle>
+                <DialogTitle>{t('filebrowser_main.generate_waterfall_image', { defaultValue: 'Generate Waterfall Image' })}</DialogTitle>
                 <DialogContent
                     sx={{
                         display: 'grid',
@@ -2011,16 +2011,16 @@ export default function FileBrowserMain() {
                     }}
                 >
                     <Typography variant="body2" color="text.secondary">
-                        Recording: {waterfallDialogRecording?.name || ''}
+                        {t('filebrowser_main.recording', { defaultValue: 'Recording:' })} {waterfallDialogRecording?.name || ''}
                     </Typography>
 
                     <Grid container spacing={2}>
                         <Grid size={{ xs: 12, sm: 6 }}>
                             <FormControl fullWidth size="small">
-                                <InputLabel>FFT Size</InputLabel>
+                                <InputLabel>{t('filebrowser_main.fft_size', { defaultValue: 'FFT Size' })}</InputLabel>
                                 <Select
                                     value={waterfallTaskOptions.fft_size}
-                                    label="FFT Size"
+                                    label={t('filebrowser_main.fft_size', { defaultValue: 'FFT Size' })}
                                     onChange={(event) =>
                                         handleWaterfallOptionChange(
                                             'fft_size',
@@ -2038,10 +2038,10 @@ export default function FileBrowserMain() {
                         </Grid>
                         <Grid size={{ xs: 12, sm: 6 }}>
                             <FormControl fullWidth size="small">
-                                <InputLabel>Window</InputLabel>
+                                <InputLabel>{t('filebrowser_main.window', { defaultValue: 'Window' })}</InputLabel>
                                 <Select
                                     value={waterfallTaskOptions.window}
-                                    label="Window"
+                                    label={t('filebrowser_main.window', { defaultValue: 'Window' })}
                                     onChange={(event) =>
                                         handleWaterfallOptionChange('window', event.target.value)
                                     }
@@ -2056,10 +2056,10 @@ export default function FileBrowserMain() {
                         </Grid>
                         <Grid size={{ xs: 12, sm: 6 }}>
                             <FormControl fullWidth size="small">
-                                <InputLabel>Color Map</InputLabel>
+                                <InputLabel>{t('filebrowser_main.color_map', { defaultValue: 'Color Map' })}</InputLabel>
                                 <Select
                                     value={waterfallTaskOptions.color_map}
-                                    label="Color Map"
+                                    label={t('filebrowser_main.color_map', { defaultValue: 'Color Map' })}
                                     onChange={(event) =>
                                         handleWaterfallOptionChange('color_map', event.target.value)
                                     }
@@ -2074,10 +2074,10 @@ export default function FileBrowserMain() {
                         </Grid>
                         <Grid size={{ xs: 12, sm: 6 }}>
                             <FormControl fullWidth size="small">
-                                <InputLabel>Overlap</InputLabel>
+                                <InputLabel>{t('filebrowser_main.overlap', { defaultValue: 'Overlap' })}</InputLabel>
                                 <Select
                                     value={waterfallTaskOptions.overlap}
-                                    label="Overlap"
+                                    label={t('filebrowser_main.overlap', { defaultValue: 'Overlap' })}
                                     onChange={(event) =>
                                         handleWaterfallOptionChange(
                                             'overlap',
@@ -2095,7 +2095,7 @@ export default function FileBrowserMain() {
                         </Grid>
                         <Grid size={{ xs: 12, sm: 6 }}>
                             <TextField
-                                label="Max Height"
+                                label={t('filebrowser_main.max_height', { defaultValue: 'Max Height' })}
                                 type="number"
                                 size="small"
                                 fullWidth
@@ -2120,14 +2120,14 @@ export default function FileBrowserMain() {
                                 }
                             />
                         }
-                        label="Auto-scale dB range"
+                        label={t('filebrowser_main.auto_scale_db_range', { defaultValue: 'Auto-scale dB range' })}
                     />
 
                     {!waterfallTaskOptions.auto_scale_db_range && (
                         <Grid container spacing={2}>
                             <Grid size={{ xs: 12, sm: 6 }}>
                                 <TextField
-                                    label="dB Min"
+                                    label={t('filebrowser_main.db_min', { defaultValue: 'dB Min' })}
                                     type="number"
                                     size="small"
                                     fullWidth
@@ -2139,7 +2139,7 @@ export default function FileBrowserMain() {
                             </Grid>
                             <Grid size={{ xs: 12, sm: 6 }}>
                                 <TextField
-                                    label="dB Max"
+                                    label={t('filebrowser_main.db_max', { defaultValue: 'dB Max' })}
                                     type="number"
                                     size="small"
                                     fullWidth
@@ -2154,9 +2154,9 @@ export default function FileBrowserMain() {
 
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={handleCloseWaterfallDialog}>Cancel</Button>
+                    <Button onClick={handleCloseWaterfallDialog}>{t('filebrowser_main.cancel', { defaultValue: 'Cancel' })}</Button>
                     <Button onClick={handleSubmitWaterfallDialog} variant="contained">
-                        Start Generation
+                        {t('filebrowser_main.start_generation', { defaultValue: 'Start Generation' })}
                     </Button>
                 </DialogActions>
             </Dialog>
@@ -2244,12 +2244,12 @@ export default function FileBrowserMain() {
                                     />
                                 </Box>
                                 <Typography variant="subtitle2" gutterBottom>
-                                    Details
+                                    {t('filebrowser_main.details', { defaultValue: 'Details' })}
                                 </Typography>
                                 <Box sx={detailSectionSx}>
                                     <Box sx={detailRowSx}>
                                         <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                                            Created
+                                            {t('filebrowser_main.created', { defaultValue: 'Created' })}
                                         </Typography>
                                         <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
                                             {formatDate(selectedItem.created)}
@@ -2257,7 +2257,7 @@ export default function FileBrowserMain() {
                                     </Box>
                                     <Box sx={detailRowSx}>
                                         <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                                            Modified
+                                            {t('filebrowser_main.modified', { defaultValue: 'Modified' })}
                                         </Typography>
                                         <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
                                             {formatDate(selectedItem.modified)}
@@ -2284,7 +2284,7 @@ export default function FileBrowserMain() {
                         }}
                     >
                         <Button onClick={() => handleDownload(selectedItem)} startIcon={<DownloadIcon />} variant="outlined">
-                            Download
+                            {t('filebrowser_main.download', { defaultValue: 'Download' })}
                         </Button>
                         <Button
                             onClick={() => setDetailsOpen(false)}
@@ -2297,7 +2297,7 @@ export default function FileBrowserMain() {
                                 },
                             }}
                         >
-                            Close
+                            {t('filebrowser_main.close', { defaultValue: 'Close' })}
                         </Button>
                     </DialogActions>
                 </Dialog>
@@ -2383,13 +2383,13 @@ export default function FileBrowserMain() {
                                 {telemetryMetadata && (
                                     <Box sx={{ mt: 2 }}>
                                         <Typography variant="subtitle2" color="text.primary" gutterBottom>
-                                            Metadata
+                                            {t('filebrowser_main.metadata', { defaultValue: 'Metadata' })}
                                         </Typography>
                                         <Box sx={detailSectionSx}>
                                             {telemetryMetadata.decoder?.type && (
                                                 <Box sx={detailRowSx}>
                                                     <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                                                        Decoder Type
+                                                        {t('filebrowser_main.decoder_type', { defaultValue: 'Decoder Type' })}
                                                     </Typography>
                                                     <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
                                                         {telemetryMetadata.decoder.type.toUpperCase()}
@@ -2399,7 +2399,7 @@ export default function FileBrowserMain() {
                                             {telemetryMetadata.decoder?.mode && (
                                                 <Box sx={detailRowSx}>
                                                     <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                                                        SSTV Mode
+                                                        {t('filebrowser_main.sstv_mode', { defaultValue: 'SSTV Mode' })}
                                                     </Typography>
                                                     <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
                                                         {telemetryMetadata.decoder.mode}
@@ -2409,7 +2409,7 @@ export default function FileBrowserMain() {
                                             {telemetryMetadata.signal?.frequency_mhz && (
                                                 <Box sx={detailRowSx}>
                                                     <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                                                        Frequency
+                                                        {t('filebrowser_main.frequency', { defaultValue: 'Frequency' })}
                                                     </Typography>
                                                     <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
                                                         {telemetryMetadata.signal.frequency_mhz.toFixed(6)} MHz
@@ -2419,7 +2419,7 @@ export default function FileBrowserMain() {
                                             {telemetryMetadata.signal?.sample_rate_hz && (
                                                 <Box sx={detailRowSx}>
                                                     <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                                                        Sample Rate
+                                                        {t('filebrowser_main.sample_rate', { defaultValue: 'Sample Rate' })}
                                                     </Typography>
                                                     <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
                                                         {telemetryMetadata.signal.sample_rate_hz} Hz
@@ -2429,7 +2429,7 @@ export default function FileBrowserMain() {
                                             {telemetryMetadata.vfo?.bandwidth_khz && (
                                                 <Box sx={detailRowSx}>
                                                     <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                                                        VFO Bandwidth
+                                                        {t('filebrowser_main.vfo_bandwidth', { defaultValue: 'VFO Bandwidth' })}
                                                     </Typography>
                                                     <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
                                                         {telemetryMetadata.vfo.bandwidth_khz.toFixed(1)} kHz
@@ -2439,7 +2439,7 @@ export default function FileBrowserMain() {
                                             {telemetryMetadata.image?.timestamp_iso && (
                                                 <Box sx={detailRowSx}>
                                                     <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                                                        Decoded
+                                                        {t('filebrowser_main.decoded', { defaultValue: 'Decoded' })}
                                                     </Typography>
                                                     <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
                                                         {telemetryMetadata.image.timestamp_iso}
@@ -2469,7 +2469,7 @@ export default function FileBrowserMain() {
                         }}
                     >
                         <Button onClick={() => handleDownload(selectedItem)} startIcon={<DownloadIcon />} variant="outlined">
-                            Download
+                            {t('filebrowser_main.download', { defaultValue: 'Download' })}
                         </Button>
                         <Button
                             onClick={() => setDetailsOpen(false)}
@@ -2482,7 +2482,7 @@ export default function FileBrowserMain() {
                                 },
                             }}
                         >
-                            Close
+                            {t('filebrowser_main.close', { defaultValue: 'Close' })}
                         </Button>
                     </DialogActions>
                 </Dialog>
@@ -2563,7 +2563,7 @@ export default function FileBrowserMain() {
                         </Typography>
                         <Box sx={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 1, columnGap: 2 }}>
                             <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary', fontWeight: 500 }}>
-                                Type:
+                                {t('filebrowser_main.type', { defaultValue: 'Type:' })}
                             </Typography>
                             <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.primary' }}>
                                 {itemToDelete?.type === 'recording' ? 'Recording' :
@@ -2575,14 +2575,14 @@ export default function FileBrowserMain() {
                             </Typography>
 
                             <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary', fontWeight: 500 }}>
-                                Size:
+                                {t('filebrowser_main.size', { defaultValue: 'Size:' })}
                             </Typography>
                             <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.primary' }}>
                                 {formatBytes(itemToDelete?.data_size || itemToDelete?.size || 0)}
                             </Typography>
 
                             <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary', fontWeight: 500 }}>
-                                Created:
+                                {t('filebrowser_main.created_2', { defaultValue: 'Created:' })}
                             </Typography>
                             <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.primary' }}>
                                 {itemToDelete && formatDate(itemToDelete.created)}
@@ -2595,7 +2595,7 @@ export default function FileBrowserMain() {
                         )}
                         {itemToDelete?.folder_kind === 'observation' && (
                             <Typography variant="body2" sx={{ mt: 2, fontSize: '0.813rem', color: 'warning.main', fontStyle: 'italic' }}>
-                                This will delete the observation and every recording, image, and artifact it contains.
+                                {t('filebrowser_main.this_will_delete_the_observation_and_every_recording_ima', { defaultValue: 'This will delete the observation and every recording, image, and artifact it contains.' })}
                             </Typography>
                         )}
                     </Box>
@@ -2713,7 +2713,7 @@ export default function FileBrowserMain() {
                                     </Typography>
                                     <Box sx={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 1, columnGap: 2 }}>
                                         <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary', fontWeight: 500 }}>
-                                            Type:
+                                            {t('filebrowser_main.type', { defaultValue: 'Type:' })}
                                         </Typography>
                                         <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.primary' }}>
                                             {item.type === 'recording' ? 'Recording' :
@@ -2724,14 +2724,14 @@ export default function FileBrowserMain() {
                                         </Typography>
 
                                         <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary', fontWeight: 500 }}>
-                                            Size:
+                                            {t('filebrowser_main.size', { defaultValue: 'Size:' })}
                                         </Typography>
                                         <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.primary' }}>
                                             {formatBytes(item.data_size || item.size || 0)}
                                         </Typography>
 
                                         <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary', fontWeight: 500 }}>
-                                            Created:
+                                            {t('filebrowser_main.created_3', { defaultValue: 'Created:' })}
                                         </Typography>
                                         <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.primary' }}>
                                             {formatDate(item.created)}

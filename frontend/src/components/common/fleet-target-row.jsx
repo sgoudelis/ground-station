@@ -2,6 +2,7 @@ import * as React from 'react';
 import { Box, Chip, IconButton, Stack, Tooltip, Typography } from '@mui/material';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import TargetNumberIcon from './target-number-icon.jsx';
+import { useTranslation } from 'react-i18next';
 
 const FleetTargetRow = React.memo(function FleetTargetRow({
     targetNumber,
@@ -16,6 +17,7 @@ const FleetTargetRow = React.memo(function FleetTargetRow({
     statusChip = null,
     actions = null,
 }) {
+    const { t } = useTranslation('common');
     const hasElevation = elevation !== null && elevation !== undefined && Number.isFinite(Number(elevation));
     const isBadgeClickable = Boolean(onFocus);
 
@@ -98,7 +100,7 @@ const FleetTargetRow = React.memo(function FleetTargetRow({
                     {statusChip}
                     <Box sx={{ flexGrow: 1 }} />
                     {onOpenConsole && (
-                        <Tooltip title="Open Tracking Console">
+                        <Tooltip title={t('fleet_target_row.open_tracking_console', { defaultValue: 'Open Tracking Console' })}>
                             <IconButton size="small" onClick={onOpenConsole}>
                                 <OpenInNewIcon fontSize="small" />
                             </IconButton>

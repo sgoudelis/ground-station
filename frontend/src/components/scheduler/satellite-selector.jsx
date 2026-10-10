@@ -52,6 +52,7 @@ import {
     setSelectedPassId,
     fetchSatelliteWithTransmitters,
 } from './scheduler-slice.jsx';
+import { useTranslation } from 'react-i18next';
 
 const SATELLITE_NUMBER_LIMIT = 150;
 
@@ -64,6 +65,7 @@ const getGroupOptionIcon = (groupType) => {
 };
 
 const SatelliteGroupDropdown = ({ onSatelliteSelect, disabled = false }) => {
+    const { t } = useTranslation('common');
     const dispatch = useDispatch();
     const { socket } = useSocket();
 
@@ -103,16 +105,16 @@ const SatelliteGroupDropdown = ({ onSatelliteSelect, disabled = false }) => {
 
     return (
         <FormControl fullWidth variant="outlined" size="small" disabled={disabled || selectedFromSearch}>
-            <InputLabel>Satellite Group</InputLabel>
+            <InputLabel>{t('satellite_selector.satellite_group', { defaultValue: 'Satellite Group' })}</InputLabel>
             <Select
                 value={satGroups.length > 0 ? groupId : ''}
                 onChange={handleGroupChange}
-                label="Satellite Group"
+                label={t('satellite_selector.satellite_group', { defaultValue: 'Satellite Group' })}
             >
-                <ListSubheader>User Groups</ListSubheader>
+                <ListSubheader>{t('satellite_selector.user_groups', { defaultValue: 'User Groups' })}</ListSubheader>
                 {satGroups.filter(group => group.type === 'user').length === 0 ? (
                     <MenuItem disabled value="">
-                        None created
+                        {t('satellite_selector.none_created', { defaultValue: 'None created' })}
                     </MenuItem>
                 ) : (
                     satGroups
@@ -130,7 +132,7 @@ const SatelliteGroupDropdown = ({ onSatelliteSelect, disabled = false }) => {
                             </MenuItem>
                         ))
                 )}
-                <ListSubheader>Orbital Source Groups</ListSubheader>
+                <ListSubheader>{t('satellite_selector.orbital_source_groups', { defaultValue: 'Orbital Source Groups' })}</ListSubheader>
                 {satGroups
                     .filter(group => group.type === 'system')
                     .map((group) => (
@@ -151,6 +153,7 @@ const SatelliteGroupDropdown = ({ onSatelliteSelect, disabled = false }) => {
 };
 
 const SatelliteDropdown = ({ onSatelliteSelect, disabled = false }) => {
+    const { t } = useTranslation('common');
     const dispatch = useDispatch();
     const { groupOfSats, satelliteId, selectedFromSearch } = useSelector((state) => state.scheduler?.satelliteSelection || {});
 
@@ -167,11 +170,11 @@ const SatelliteDropdown = ({ onSatelliteSelect, disabled = false }) => {
 
     return (
         <FormControl fullWidth variant="outlined" size="small" disabled={disabled || selectedFromSearch}>
-            <InputLabel>Satellite</InputLabel>
+            <InputLabel>{t('satellite_selector.satellite', { defaultValue: 'Satellite' })}</InputLabel>
             <Select
                 value={groupOfSats.length > 0 && groupOfSats.find(s => s.norad_id === satelliteId) ? satelliteId : ''}
                 onChange={handleSatelliteChange}
-                label="Satellite"
+                label={t('satellite_selector.satellite', { defaultValue: 'Satellite' })}
             >
                 {groupOfSats.map((satellite) => (
                     <MenuItem key={satellite.norad_id} value={satellite.norad_id}>
@@ -189,6 +192,7 @@ const SatelliteSearchAutocomplete = ({
     disabled = false,
     initialSatellite = null,
 }) => {
+    const { t } = useTranslation('common');
     const dispatch = useDispatch();
     const { socket } = useSocket();
     const { searchOptions, searchLoading } = useSelector((state) => state.scheduler?.satelliteSelection || {});
@@ -347,7 +351,7 @@ const SatelliteSearchAutocomplete = ({
             renderInput={(params) => (
                 <TextField
                     {...params}
-                    label="Search Satellite"
+                    label={t('satellite_selector.search_satellite', { defaultValue: 'Search Satellite' })}
                     variant="outlined"
                     size="small"
                     slotProps={{
@@ -368,6 +372,7 @@ const SatelliteSearchAutocomplete = ({
 };
 
 const PassSelector = ({ onPassSelect, initialPass, currentObservationId, disabled = false }) => {
+    const { t } = useTranslation('common');
     const dispatch = useDispatch();
     const { socket } = useSocket();
     const { passes, passesLoading, satelliteId, selectedPassId } = useSelector(
@@ -569,7 +574,7 @@ const PassSelector = ({ onPassSelect, initialPass, currentObservationId, disable
                 </Box>
             ) : passes.length === 0 ? (
                 <Typography variant="body2" color="text.secondary" sx={{ p: 2 }}>
-                    No passes found in the next 24 hours
+                    {t('satellite_selector.no_passes_found_in_the_next_24_hours', { defaultValue: 'No passes found in the next 24 hours' })}
                 </Typography>
             ) : (
                 <Box>
@@ -579,7 +584,7 @@ const PassSelector = ({ onPassSelect, initialPass, currentObservationId, disable
                         error={effectiveSelectedPassId && isPassOverlapping(passes.find(p => p.id === effectiveSelectedPassId))}
                         disabled={disabled}
                     >
-                        <InputLabel>Select Pass</InputLabel>
+                        <InputLabel>{t('satellite_selector.select_pass', { defaultValue: 'Select Pass' })}</InputLabel>
                         <Select
                             value={effectiveSelectedPassId || ''}
                             onChange={(e) => {
@@ -587,7 +592,7 @@ const PassSelector = ({ onPassSelect, initialPass, currentObservationId, disable
                                 const selectedPass = passes.find(p => p.id === passId);
                                 handlePassClick(selectedPass);
                             }}
-                            label="Select Pass"
+                            label={t('satellite_selector.select_pass', { defaultValue: 'Select Pass' })}
                         >
                             {/* Future passes */}
                             {passes.map((pass) => {
@@ -637,7 +642,7 @@ const PassSelector = ({ onPassSelect, initialPass, currentObservationId, disable
                                                         fontSize: '0.7rem'
                                                     }}
                                                 >
-                                                    ⚠️ Conflicts with: {conflictingObs.name || conflictingObs.satellite?.name || 'Unknown'}
+                                                    {t('satellite_selector.conflicts_with', { defaultValue: '⚠️ Conflicts with:' })} {conflictingObs.name || conflictingObs.satellite?.name || 'Unknown'}
                                                 </Typography>
                                             )}
                                         </Box>

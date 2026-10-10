@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import {humanizeFrequency, humanizeNumber, WaterfallStatusBarPaper} from "../common/common.jsx";
 import { Box, useMediaQuery } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
+import { useTranslation } from 'react-i18next';
 
 const TRANSFORM_UPDATE_MS = 250;
 
 const WaterfallStatusBar = ({isStreaming, eventMetrics, centerFrequency, sampleRate, gain}) => {
+    const { t } = useTranslation('waterfall');
     const [transformData, setTransformData] = useState(null);
     const theme = useTheme();
     const isCompact = useMediaQuery(theme.breakpoints.down('lg'));
@@ -83,9 +85,9 @@ const WaterfallStatusBar = ({isStreaming, eventMetrics, centerFrequency, sampleR
                         </>
                     ) : (
                         <>
-                            <Box component="span">FPS: <Box component="span" sx={{ fontWeight: 500, display: 'inline-block', minWidth: '4ch', textAlign: 'right' }}>{isStreaming ? eventMetrics.current.renderWaterfallPerSecond : '-'}</Box></Box>
+                            <Box component="span">{t('waterfall_statusbar.fps', { defaultValue: 'FPS:' })} <Box component="span" sx={{ fontWeight: 500, display: 'inline-block', minWidth: '4ch', textAlign: 'right' }}>{isStreaming ? eventMetrics.current.renderWaterfallPerSecond : '-'}</Box></Box>
                             <Box component="span" sx={{ opacity: 0.6 }}>•</Box>
-                            <Box component="span">FFTs/s: <Box component="span" sx={{ fontWeight: 500, display: 'inline-block', minWidth: '4ch', textAlign: 'right' }}>{isStreaming ? humanizeNumber(eventMetrics.current.fftUpdatesPerSecond) : '-'}</Box></Box>
+                            <Box component="span">{t('waterfall_statusbar.ffts_s', { defaultValue: 'FFTs/s:' })} <Box component="span" sx={{ fontWeight: 500, display: 'inline-block', minWidth: '4ch', textAlign: 'right' }}>{isStreaming ? humanizeNumber(eventMetrics.current.fftUpdatesPerSecond) : '-'}</Box></Box>
                             <Box component="span" sx={{ opacity: 0.6 }}>•</Box>
                             <Box component="span">bins/s: <Box component="span" sx={{ fontWeight: 500, display: 'inline-block', minWidth: '4ch', textAlign: 'right' }}>{isStreaming ? humanizeNumber(eventMetrics.current.binsPerSecond) : '-'}</Box></Box>
                             <Box component="span" sx={{ opacity: 0.6 }}>•</Box>

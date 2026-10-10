@@ -37,6 +37,7 @@ import { useSelector } from 'react-redux';
 import { getDecoderParameters } from './vfo-marker/vfo-config.js';
 import { DecoderConfigSuggestion } from '../scheduler/decoder-config-suggestion.jsx';
 import { selectRunningRigTransmitters } from '../target/transmitter-selectors.js';
+import { useTranslation } from 'react-i18next';
 
 const normalizeTrackerId = (value) => {
     if (typeof value !== 'string') {
@@ -61,6 +62,7 @@ const DecoderParamsDialog = ({
     vfoActive,
     onVFOPropertyChange,
 }) => {
+    const { t } = useTranslation('waterfall');
     // Get satellite and transmitter data from Redux
     const activeSatelliteDetails = useSelector(state => state.targetSatTrack.satelliteData?.details || null);
     const trackerViews = useSelector(state => state.targetSatTrack?.trackerViews || {});
@@ -77,7 +79,8 @@ const DecoderParamsDialog = ({
         return null;
     }
 
-    const decoderParams = getDecoderParameters(decoder);
+    // Pass the component translator so parameter labels/tooltips stay localized.
+    const decoderParams = getDecoderParameters(decoder, t);
     const parametersEnabled = vfo.parametersEnabled ?? false; // Default to disabled
 
     // Get locked transmitter if available
@@ -158,7 +161,7 @@ const DecoderParamsDialog = ({
             <DialogTitle sx={{ backgroundColor: 'background.elevated', color: 'text.primary' }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Typography variant="h6">
-                        VFO {vfoIndex} - {decoder.toUpperCase()} Parameters
+                        VFO {vfoIndex} - {decoder.toUpperCase()} {t('decoder_params_dialog.parameters', { defaultValue: 'Parameters' })}
                     </Typography>
                     <IconButton onClick={onClose} size="small">
                         <CloseIcon />
@@ -192,7 +195,7 @@ const DecoderParamsDialog = ({
                             }
                             label={
                                 <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                    Enable Parameter Overrides
+                                    {t('decoder_params_dialog.enable_parameter_overrides', { defaultValue: 'Enable Parameter Overrides' })}
                                 </Typography>
                             }
                         />

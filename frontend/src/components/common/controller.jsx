@@ -5,6 +5,7 @@ import RotatorControl from '../dashboard/rotator-control.jsx'
 import RigControl from '../dashboard/rig-control.jsx'
 import {getClassNamesBasedOnGridEditing, TitleBar} from "./common.jsx";
 import {useSelector} from "react-redux";
+import { useTranslation } from 'react-i18next';
 
 
 const LedIcon = ({color = '#666666'}) => (
@@ -68,6 +69,7 @@ export const HardwareTabs = styled(Tabs)({
 
 
 export default function ControllerTabs({activeController}) {
+    const { t } = useTranslation('common');
     const [activeTab, setActiveTab] = useState(0);
     const {
         gridEditable: isTargetGridEditable,
@@ -114,12 +116,12 @@ export default function ControllerTabs({activeController}) {
                         indicatorColor="primary"
                     >
                         <Tab icon={<LedIcon color={rotatorData?.connected ? "#00ff00" : "#ff0000"}/>}
-                             iconPosition="start" label="Rotator"
+                             iconPosition="start" label={t('controller.rotator', { defaultValue: 'Rotator' })}
                              sx={{
                                  borderRight: '1px solid #494949',
                              }}/>
                         <Tab icon={<LedIcon color={rigData?.connected ? "#00ff00" : "#ff0000"}/>}
-                             iconPosition="start" label="Rig" />
+                             iconPosition="start" label={t('controller.rig', { defaultValue: 'Rig' })} />
                     </HardwareTabs>
                 </Box>
                 <TabPanel value={activeTab} index={0}>

@@ -34,6 +34,7 @@ import HomeIcon from '@mui/icons-material/Home';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import {store} from './store.jsx';
+import { useTranslation } from 'react-i18next';
 
 const MAX_ERROR_TEXT_LENGTH = 8000;
 
@@ -70,6 +71,7 @@ const buildErrorReport = (error, status) => {
 };
 
 const ErrorPage = () => {
+    const { t } = useTranslation('common');
     const error = useRouteError();
     const navigate = useNavigate();
     const [showReport, setShowReport] = React.useState(false);
@@ -113,7 +115,7 @@ const ErrorPage = () => {
                                 {title}
                             </Typography>
                             <Typography variant="body2" color="text.secondary">
-                                Error code: {status}
+                                {t('error_page.error_code', { defaultValue: 'Error code:' })} {status}
                             </Typography>
                         </Box>
                     </Stack>
@@ -125,15 +127,15 @@ const ErrorPage = () => {
                     </Alert>
 
                     <Typography variant="body1" color="text.secondary">
-                        Please try refreshing the page. If the problem persists, copy the error report and include it in a GitHub issue.
+                        {t('error_page.please_try_refreshing_the_page_if_the_problem_persists_c', { defaultValue: 'Please try refreshing the page. If the problem persists, copy the error report and include it in a GitHub issue.' })}
                     </Typography>
 
                     <Stack direction={{xs: 'column', sm: 'row'}} spacing={1.5}>
                         <Button variant="contained" startIcon={<HomeIcon/>} onClick={() => navigate('/')}>
-                            Back to Home
+                            {t('error_page.back_to_home', { defaultValue: 'Back to Home' })}
                         </Button>
                         <Button variant="outlined" startIcon={<RefreshIcon/>} onClick={() => window.location.reload()}>
-                            Reload Page
+                            {t('error_page.reload_page', { defaultValue: 'Reload Page' })}
                         </Button>
                     </Stack>
 
@@ -170,7 +172,7 @@ const ErrorPage = () => {
                                     }}
                                 >
                                     <Typography variant="caption" sx={{fontWeight: 600}}>
-                                        Error Report
+                                        {t('error_page.error_report', { defaultValue: 'Error Report' })}
                                     </Typography>
                                     <Button
                                         size="small"

@@ -210,7 +210,7 @@ const BrowserFeaturesCard = () => {
     return (
         <>
             <Typography variant="h6" gutterBottom>
-                Browser Features & Diagnostics
+                {t('browser_features_card.browser_features_diagnostics', { defaultValue: 'Browser Features & Diagnostics' })}
             </Typography>
             <Divider sx={{ mb: 2 }} />
 
@@ -241,7 +241,7 @@ const BrowserFeaturesCard = () => {
 
                 <Grid size={12}>
                     <Typography variant="body2" fontWeight="medium">
-                        Canvas Transfer to Offscreen
+                        {t('browser_features_card.canvas_transfer_to_offscreen', { defaultValue: 'Canvas Transfer to Offscreen' })}
                     </Typography>
                 </Grid>
                 <Grid size={4} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 1 }}>
@@ -260,7 +260,7 @@ const BrowserFeaturesCard = () => {
 
                 <Grid size={12}>
                     <Typography variant="body2" fontWeight="medium">
-                        Canvas Transfer to Worker
+                        {t('browser_features_card.canvas_transfer_to_worker', { defaultValue: 'Canvas Transfer to Worker' })}
                     </Typography>
                 </Grid>
                 <Grid size={4} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 1 }}>

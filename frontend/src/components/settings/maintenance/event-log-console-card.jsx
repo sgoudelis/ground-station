@@ -27,6 +27,7 @@ import { JsonView, defaultStyles, darkStyles } from 'react-json-view-lite';
 import 'react-json-view-lite/dist/index.css';
 import { useUserTimeSettings } from '../../../hooks/useUserTimeSettings.jsx';
 import { formatTime } from '../../../utils/date-time.js';
+import { useTranslation } from 'react-i18next';
 
 const LIMIT_OPTIONS = [200, 500, 1000];
 const HARD_CAP = 5000;
@@ -76,6 +77,7 @@ function matchesFilter(entry, filter) {
 
 // Memoized row to preserve JsonView expansion state across parent re-renders
 const LogEntryRow = React.memo(function LogEntryRow({ entry, jsonStyles }) {
+    const { t } = useTranslation('settings');
     const collapseNone = useCallback(() => false, []); // stable ref
     const { timezone, locale } = useUserTimeSettings();
 
@@ -93,7 +95,7 @@ const LogEntryRow = React.memo(function LogEntryRow({ entry, jsonStyles }) {
     const dirColor = entry.direction === 'in' ? 'success.main' : 'info.main';
 
     const renderPayload = (args) => {
-        if (!args || args.length === 0) return <Typography variant="body2" color="text.secondary">No payload</Typography>;
+        if (!args || args.length === 0) return <Typography variant="body2" color="text.secondary">{t('event_log_console_card.no_payload', { defaultValue: 'No payload' })}</Typography>;
 
         return (
             <Stack spacing={1} sx={{ mt: 1 }}>
@@ -136,6 +138,7 @@ const LogEntryRow = React.memo(function LogEntryRow({ entry, jsonStyles }) {
 });
 
 const EventLogConsoleCard = () => {
+    const { t } = useTranslation('settings');
     const { addDebugListener } = useSocket();
     const theme = useTheme();
     const [isPlaying, setIsPlaying] = useState(false);
@@ -240,7 +243,7 @@ const EventLogConsoleCard = () => {
     return (
         <>
             <Typography variant="h6" gutterBottom>
-                Message log
+                {t('event_log_console_card.message_log', { defaultValue: 'Message log' })}
             </Typography>
             <Divider sx={{ mb: 2 }} />
 
@@ -250,22 +253,22 @@ const EventLogConsoleCard = () => {
                         {isPlaying ? 'Stop' : 'listen'}
                     </Button>
                     <Button variant="outlined" startIcon={<ClearAllIcon/>} onClick={onClear}>
-                        Clear
+                        {t('event_log_console_card.clear', { defaultValue: 'Clear' })}
                     </Button>
                 </Stack>
 
-                <FormControlLabel control={<Checkbox checked={includeOutgoing} onChange={(e) => setIncludeOutgoing(e.target.checked)} />} label="Include outgoing" />
+                <FormControlLabel control={<Checkbox checked={includeOutgoing} onChange={(e) => setIncludeOutgoing(e.target.checked)} />} label={t('event_log_console_card.include_outgoing', { defaultValue: 'Include outgoing' })} />
 
                 <FormControl size="small" sx={{ minWidth: 120 }}>
-                    <InputLabel id="msg-limit-label">Last N</InputLabel>
-                    <Select labelId="msg-limit-label" label="Last N" value={limit} onChange={(e) => setLimit(Math.min(Number(e.target.value), HARD_CAP))}>
+                    <InputLabel id="msg-limit-label">{t('event_log_console_card.last_n', { defaultValue: 'Last N' })}</InputLabel>
+                    <Select labelId="msg-limit-label" label={t('event_log_console_card.last_n', { defaultValue: 'Last N' })} value={limit} onChange={(e) => setLimit(Math.min(Number(e.target.value), HARD_CAP))}>
                         {LIMIT_OPTIONS.map(opt => (
                             <MenuItem key={opt} value={opt}>{opt}</MenuItem>
                         ))}
                     </Select>
                 </FormControl>
 
-                <TextField size="small" label="Filter (event or payload)" value={filter} onChange={(e) => setFilter(e.target.value)} fullWidth />
+                <TextField size="small" label={t('event_log_console_card.filter_event_or_payload', { defaultValue: 'Filter (event or payload)' })} value={filter} onChange={(e) => setFilter(e.target.value)} fullWidth />
             </Stack>
 
             <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1, minHeight: '30vh', maxHeight: '60vh', overflow: 'auto' }}>

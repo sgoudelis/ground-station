@@ -138,7 +138,7 @@ export default function TranscriptionDialog({ open, onClose, transcription }) {
                 }}
             >
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Typography variant="h6">Transcription Details</Typography>
+                    <Typography variant="h6">{t('transcription_dialog.transcription_details', { defaultValue: 'Transcription Details' })}</Typography>
                     <Box>
                         {transcription.provider && (
                             <Chip
@@ -167,12 +167,12 @@ export default function TranscriptionDialog({ open, onClose, transcription }) {
             >
                 <Box sx={{ mt: 3 }}>
                     <Typography variant="subtitle2" gutterBottom>
-                        File
+                        {t('transcription_dialog.file', { defaultValue: 'File' })}
                     </Typography>
                     <Box sx={sectionSx}>
                         <Box sx={rowSx}>
                             <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                                Filename
+                                {t('transcription_dialog.filename', { defaultValue: 'Filename' })}
                             </Typography>
                             <Typography variant="body2" sx={{ fontFamily: 'monospace', wordBreak: 'break-word' }}>
                                 {transcription.filename}
@@ -183,13 +183,13 @@ export default function TranscriptionDialog({ open, onClose, transcription }) {
                     {transcription.metadata && (
                         <>
                             <Typography variant="subtitle2" gutterBottom>
-                                Transcription Properties
+                                {t('transcription_dialog.transcription_properties', { defaultValue: 'Transcription Properties' })}
                             </Typography>
                             <Box sx={sectionSx}>
                                 {transcription.provider && (
                                     <Box sx={rowSx}>
                                         <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                                            Provider
+                                            {t('transcription_dialog.provider', { defaultValue: 'Provider' })}
                                         </Typography>
                                         <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
                                             {transcription.provider}
@@ -199,7 +199,7 @@ export default function TranscriptionDialog({ open, onClose, transcription }) {
                                 {transcription.session_id && (
                                     <Box sx={rowSx}>
                                         <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                                            Session ID
+                                            {t('transcription_dialog.session_id', { defaultValue: 'Session ID' })}
                                         </Typography>
                                         <Typography variant="body2" sx={{ fontFamily: 'monospace', wordBreak: 'break-word' }}>
                                             {transcription.session_id}
@@ -209,7 +209,7 @@ export default function TranscriptionDialog({ open, onClose, transcription }) {
                                 {transcription.vfo_number && (
                                     <Box sx={rowSx}>
                                         <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                                            VFO
+                                            {t('transcription_dialog.vfo', { defaultValue: 'VFO' })}
                                         </Typography>
                                         <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
                                             {transcription.vfo_number}
@@ -219,7 +219,7 @@ export default function TranscriptionDialog({ open, onClose, transcription }) {
                                 {transcription.language && (
                                     <Box sx={rowSx}>
                                         <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                                            Language
+                                            {t('transcription_dialog.language', { defaultValue: 'Language' })}
                                         </Typography>
                                         <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
                                             {transcription.language}
@@ -229,7 +229,7 @@ export default function TranscriptionDialog({ open, onClose, transcription }) {
                                 {transcription.translate_to && (
                                     <Box sx={rowSx}>
                                         <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                                            Translated To
+                                            {t('transcription_dialog.translated_to', { defaultValue: 'Translated To' })}
                                         </Typography>
                                         <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
                                             {transcription.translate_to}
@@ -241,13 +241,13 @@ export default function TranscriptionDialog({ open, onClose, transcription }) {
                             {(transcription.started || transcription.ended) && (
                                 <>
                                     <Typography variant="subtitle2" gutterBottom>
-                                        Transcription Times
+                                        {t('transcription_dialog.transcription_times', { defaultValue: 'Transcription Times' })}
                                     </Typography>
                                     <Box sx={sectionSx}>
                                         {transcription.started && (
                                             <Box sx={rowSx}>
                                                 <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                                                    Started
+                                                    {t('transcription_dialog.started', { defaultValue: 'Started' })}
                                                 </Typography>
                                                 <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
                                                     {formatDate(transcription.started)}
@@ -257,7 +257,7 @@ export default function TranscriptionDialog({ open, onClose, transcription }) {
                                         {transcription.ended && (
                                             <Box sx={rowSx}>
                                                 <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                                                    Ended
+                                                    {t('transcription_dialog.ended', { defaultValue: 'Ended' })}
                                                 </Typography>
                                                 <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
                                                     {formatDate(transcription.ended)}
@@ -273,7 +273,7 @@ export default function TranscriptionDialog({ open, onClose, transcription }) {
                     <Divider sx={{ my: 2 }} />
 
                     <Typography variant="subtitle2" gutterBottom>
-                        Transcription Text
+                        {t('transcription_dialog.transcription_text', { defaultValue: 'Transcription Text' })}
                     </Typography>
 
                     {loading ? (
@@ -293,7 +293,7 @@ export default function TranscriptionDialog({ open, onClose, transcription }) {
                         </Box>
                     ) : error ? (
                         <Alert severity="error" sx={{ mb: 2 }}>
-                            Failed to load transcription: {error}
+                            {t('transcription_dialog.failed_to_load_transcription', { defaultValue: 'Failed to load transcription:' })} {error}
                         </Alert>
                     ) : (
                         <Box
@@ -339,7 +339,7 @@ export default function TranscriptionDialog({ open, onClose, transcription }) {
                     startIcon={<DownloadIcon />}
                     variant="outlined"
                 >
-                    Download
+                    {t('transcription_dialog.download', { defaultValue: 'Download' })}
                 </Button>
                 <Button
                     onClick={onClose}
@@ -352,7 +352,7 @@ export default function TranscriptionDialog({ open, onClose, transcription }) {
                         },
                     }}
                 >
-                    Close
+                    {t('transcription_dialog.close', { defaultValue: 'Close' })}
                 </Button>
             </DialogActions>
         </Dialog>

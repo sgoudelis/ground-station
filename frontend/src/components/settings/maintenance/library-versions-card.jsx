@@ -9,8 +9,10 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import { useSocket } from "../../common/socket.jsx";
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchLibraryVersions, fetchFrontendLibraryVersions } from '../library-versions-slice.jsx';
+import { useTranslation } from 'react-i18next';
 
 const LibraryVersionsCard = () => {
+    const { t } = useTranslation('settings');
     const { socket } = useSocket();
     const dispatch = useDispatch();
     const libraryVersions = useSelector((state) => state.libraryVersions);
@@ -44,7 +46,7 @@ const LibraryVersionsCard = () => {
         <>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Typography variant="h6">
-                    Library Versions
+                    {t('library_versions_card.library_versions', { defaultValue: 'Library Versions' })}
                 </Typography>
                 <Button
                     variant="outlined"
@@ -57,21 +59,21 @@ const LibraryVersionsCard = () => {
                     onClick={libraryVersionsTab === 0 ? handleRefreshLibraryVersions : handleRefreshFrontendLibraryVersions}
                     disabled={libraryVersionsTab === 0 ? libraryVersions.backend.loading : libraryVersions.frontend.loading}
                 >
-                    Refresh
+                    {t('library_versions_card.refresh', { defaultValue: 'Refresh' })}
                 </Button>
             </Box>
             <Divider sx={{ mb: 2 }} />
 
             <Tabs value={libraryVersionsTab} onChange={(e, newValue) => setLibraryVersionsTab(newValue)} sx={{ mb: 2 }}>
-                <Tab label="Backend" />
-                <Tab label="Frontend" />
+                <Tab label={t('library_versions_card.backend', { defaultValue: 'Backend' })} />
+                <Tab label={t('library_versions_card.frontend', { defaultValue: 'Frontend' })} />
             </Tabs>
 
             {/* Backend Tab */}
             {libraryVersionsTab === 0 && (
                 <>
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                        Versions of installed backend libraries and dependencies
+                        {t('library_versions_card.versions_of_installed_backend_libraries_and_dependencies', { defaultValue: 'Versions of installed backend libraries and dependencies' })}
                     </Typography>
 
                     {libraryVersions.backend.error && (
@@ -89,16 +91,16 @@ const LibraryVersionsCard = () => {
                             {Object.keys(libraryVersions.backend.categories).length > 0 ? (
                                 <>
                                     <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                                        Total libraries: <strong>{libraryVersions.backend.totalCount}</strong>
+                                        {t('library_versions_card.total_libraries', { defaultValue: 'Total libraries:' })} <strong>{libraryVersions.backend.totalCount}</strong>
                                     </Typography>
                                     <TableContainer>
                                         <Table size="small">
                                             <TableHead>
                                                 <TableRow>
-                                                    <TableCell><strong>Category</strong></TableCell>
-                                                    <TableCell><strong>Library</strong></TableCell>
-                                                    <TableCell><strong>Description</strong></TableCell>
-                                                    <TableCell><strong>Version</strong></TableCell>
+                                                    <TableCell><strong>{t('library_versions_card.category', { defaultValue: 'Category' })}</strong></TableCell>
+                                                    <TableCell><strong>{t('library_versions_card.library', { defaultValue: 'Library' })}</strong></TableCell>
+                                                    <TableCell><strong>{t('library_versions_card.description', { defaultValue: 'Description' })}</strong></TableCell>
+                                                    <TableCell><strong>{t('library_versions_card.version', { defaultValue: 'Version' })}</strong></TableCell>
                                                 </TableRow>
                                             </TableHead>
                                             <TableBody>
@@ -128,7 +130,7 @@ const LibraryVersionsCard = () => {
                                 </>
                             ) : (
                                 <Alert severity="info">
-                                    No backend library version information available
+                                    {t('library_versions_card.no_backend_library_version_information_available', { defaultValue: 'No backend library version information available' })}
                                 </Alert>
                             )}
                         </>
@@ -140,7 +142,7 @@ const LibraryVersionsCard = () => {
             {libraryVersionsTab === 1 && (
                 <>
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                        Versions of frontend packages from package.json
+                        {t('library_versions_card.versions_of_frontend_packages_from_package_json', { defaultValue: 'Versions of frontend packages from package.json' })}
                     </Typography>
 
                     {libraryVersions.frontend.error && (
@@ -158,16 +160,16 @@ const LibraryVersionsCard = () => {
                             {Object.keys(libraryVersions.frontend.categories).length > 0 ? (
                                 <>
                                     <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                                        Total packages: <strong>{libraryVersions.frontend.totalCount}</strong>
+                                        {t('library_versions_card.total_packages', { defaultValue: 'Total packages:' })} <strong>{libraryVersions.frontend.totalCount}</strong>
                                     </Typography>
                                     <TableContainer>
                                         <Table size="small">
                                             <TableHead>
                                                 <TableRow>
-                                                    <TableCell><strong>Category</strong></TableCell>
-                                                    <TableCell><strong>Package</strong></TableCell>
-                                                    <TableCell><strong>Description</strong></TableCell>
-                                                    <TableCell><strong>Version</strong></TableCell>
+                                                    <TableCell><strong>{t('library_versions_card.category', { defaultValue: 'Category' })}</strong></TableCell>
+                                                    <TableCell><strong>{t('library_versions_card.package', { defaultValue: 'Package' })}</strong></TableCell>
+                                                    <TableCell><strong>{t('library_versions_card.description', { defaultValue: 'Description' })}</strong></TableCell>
+                                                    <TableCell><strong>{t('library_versions_card.version', { defaultValue: 'Version' })}</strong></TableCell>
                                                 </TableRow>
                                             </TableHead>
                                             <TableBody>
@@ -197,7 +199,7 @@ const LibraryVersionsCard = () => {
                                 </>
                             ) : (
                                 <Alert severity="info">
-                                    No frontend library version information available
+                                    {t('library_versions_card.no_frontend_library_version_information_available', { defaultValue: 'No frontend library version information available' })}
                                 </Alert>
                             )}
                         </>

@@ -52,6 +52,7 @@ import {
     resetUserPassword,
     updateUser,
 } from '../auth/auth-slice.jsx';
+import { useTranslation } from 'react-i18next';
 
 const defaultCreateForm = {
     username: '',
@@ -78,6 +79,7 @@ function formatDateTime(value) {
 }
 
 function UsersForm() {
+    const { t } = useTranslation('settings');
     const dispatch = useDispatch();
     const authState = useSelector((state) => state.auth);
     const isAdmin = String(authState?.user?.role || '').toLowerCase() === 'admin';
@@ -267,7 +269,7 @@ function UsersForm() {
     if (!isAdmin) {
         return (
             <Paper elevation={3} sx={{ px: 2, pb: 2, pt: 1, marginTop: 0, borderRadius: 0 }}>
-                <Alert severity="warning">Only admins can manage users.</Alert>
+                <Alert severity="warning">{t('users_form.only_admins_can_manage_users', { defaultValue: 'Only admins can manage users.' })}</Alert>
             </Paper>
         );
     }
@@ -332,14 +334,14 @@ function UsersForm() {
                         primaryActions={
                             <>
                                 <Button variant="contained" onClick={handleOpenCreateDialog} disabled={isBusy}>
-                                    Add
+                                    {t('users_form.add', { defaultValue: 'Add' })}
                                 </Button>
                                 <Button
                                     variant="contained"
                                     onClick={handleOpenEditDialog}
                                     disabled={selected.length !== 1 || isBusy}
                                 >
-                                    Edit
+                                    {t('users_form.edit', { defaultValue: 'Edit' })}
                                 </Button>
                                 <Button
                                     variant="contained"
@@ -350,7 +352,7 @@ function UsersForm() {
                                     }}
                                     disabled={selected.length < 1 || isBusy}
                                 >
-                                    Delete
+                                    {t('users_form.delete', { defaultValue: 'Delete' })}
                                 </Button>
                             </>
                         }
@@ -358,8 +360,8 @@ function UsersForm() {
                 </Box>
             </Box>
             <Alert severity="info" sx={{ mt: 2 }}>
-                <AlertTitle>User Management</AlertTitle>
-                Manage admin and operator accounts for this station.
+                <AlertTitle>{t('users_form.user_management', { defaultValue: 'User Management' })}</AlertTitle>
+                {t('users_form.manage_admin_and_operator_accounts_for_this_station', { defaultValue: 'Manage admin and operator accounts for this station.' })}
             </Alert>
 
             <Dialog
@@ -395,7 +397,7 @@ function UsersForm() {
                             <Alert severity="error">{localError || authState.error}</Alert>
                         )}
                         <TextField
-                            label="Username"
+                            label={t('users_form.username', { defaultValue: 'Username' })}
                             value={userForm.username}
                             onChange={(event) =>
                                 setUserForm((current) => ({
@@ -408,10 +410,10 @@ function UsersForm() {
                             required
                         />
                         <FormControl fullWidth size="small">
-                            <InputLabel id="user-role-label">Role</InputLabel>
+                            <InputLabel id="user-role-label">{t('users_form.role', { defaultValue: 'Role' })}</InputLabel>
                             <Select
                                 labelId="user-role-label"
-                                label="Role"
+                                label={t('users_form.role', { defaultValue: 'Role' })}
                                 value={userForm.role}
                                 onChange={(event) =>
                                     setUserForm((current) => ({
@@ -438,7 +440,7 @@ function UsersForm() {
                                         }
                                     />
                                 }
-                                label="Active"
+                                label={t('users_form.active', { defaultValue: 'Active' })}
                             />
                         )}
 
@@ -489,10 +491,10 @@ function UsersForm() {
                             resetDialogState();
                         }}
                     >
-                        Cancel
+                        {t('users_form.cancel', { defaultValue: 'Cancel' })}
                     </Button>
                     <Button variant="contained" onClick={handleSaveUser} disabled={isBusy}>
-                        Save
+                        {t('users_form.save', { defaultValue: 'Save' })}
                     </Button>
                 </DialogActions>
             </Dialog>
@@ -541,11 +543,11 @@ function UsersForm() {
                     >
                         !
                     </Box>
-                    Confirm Deletion
+                    {t('users_form.confirm_deletion', { defaultValue: 'Confirm Deletion' })}
                 </DialogTitle>
                 <DialogContent sx={{ px: 3, pt: 3, pb: 3 }}>
                     <Typography variant="body1" sx={{ mt: 2, mb: 2, color: 'text.primary' }}>
-                        Delete the selected user account{selected.length > 1 ? 's' : ''}?
+                        {t('users_form.delete_the_selected_user_account', { defaultValue: 'Delete the selected user account' })}{selected.length > 1 ? 's' : ''}?
                     </Typography>
                     <Typography variant="body2" sx={{ mb: 2, fontWeight: 600, color: 'text.secondary' }}>
                         {selected.length === 1
@@ -557,7 +559,7 @@ function UsersForm() {
                         <TextField
                             fullWidth
                             size="small"
-                            label="Type DELETE to confirm"
+                            label={t('users_form.type_delete_to_confirm', { defaultValue: 'Type DELETE to confirm' })}
                             value={deleteConfirmText}
                             onChange={(event) => setDeleteConfirmText(event.target.value)}
                             sx={{ mb: 2 }}
@@ -602,7 +604,7 @@ function UsersForm() {
                                         variant="body2"
                                         sx={{ fontSize: '0.813rem', color: 'text.secondary', fontWeight: 500 }}
                                     >
-                                        Role:
+                                        {t('users_form.role_2', { defaultValue: 'Role:' })}
                                     </Typography>
                                     <Typography
                                         variant="body2"
@@ -614,7 +616,7 @@ function UsersForm() {
                                         variant="body2"
                                         sx={{ fontSize: '0.813rem', color: 'text.secondary', fontWeight: 500 }}
                                     >
-                                        Active:
+                                        {t('users_form.active_2', { defaultValue: 'Active:' })}
                                     </Typography>
                                     <Typography
                                         variant="body2"
@@ -642,7 +644,7 @@ function UsersForm() {
                         color="inherit"
                         sx={{ minWidth: 100, textTransform: 'none', fontWeight: 500 }}
                     >
-                        Cancel
+                        {t('users_form.cancel', { defaultValue: 'Cancel' })}
                     </Button>
                     <Button
                         variant="contained"
@@ -651,7 +653,7 @@ function UsersForm() {
                         disabled={!canConfirmDelete || isBusy}
                         sx={{ minWidth: 100, textTransform: 'none', fontWeight: 600 }}
                     >
-                        Delete
+                        {t('users_form.delete', { defaultValue: 'Delete' })}
                     </Button>
                 </DialogActions>
             </Dialog>

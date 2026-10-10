@@ -37,6 +37,7 @@ import DescriptionIcon from '@mui/icons-material/Description';
 import ImageIcon from '@mui/icons-material/Image';
 import { useSelector } from 'react-redux';
 import WaterfallViewer from './waterfall-viewer.jsx';
+import { useTranslation } from 'react-i18next';
 
 function formatBytes(bytes) {
     if (!Number.isFinite(bytes) || bytes < 0) return 'Unknown size';
@@ -107,6 +108,7 @@ function buildAssociatedFiles(recording) {
 }
 
 export default function RecordingDialog({ open, onClose, recording }) {
+    const { t } = useTranslation('filebrowser');
     // Get timezone preference
     const timezone = useSelector((state) => {
         const tzPref = state.preferences?.preferences?.find(p => p.name === 'timezone');
@@ -175,7 +177,7 @@ export default function RecordingDialog({ open, onClose, recording }) {
                 }}
             >
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Typography variant="h6">Recording Details</Typography>
+                    <Typography variant="h6">{t('recording_dialog.recording_details', { defaultValue: 'Recording Details' })}</Typography>
                     <Box>
                         {recording?.snapshot?.width && recording?.snapshot?.height && (
                             <Chip
@@ -223,12 +225,12 @@ export default function RecordingDialog({ open, onClose, recording }) {
                         )}
 
                         <Typography variant="subtitle2" gutterBottom>
-                            Recording
+                            {t('recording_dialog.recording', { defaultValue: 'Recording' })}
                         </Typography>
                         <Box sx={{ ...sectionSx, mb: 1.5 }}>
                             <Box sx={rowSx}>
                                 <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                                    Name
+                                    {t('recording_dialog.name', { defaultValue: 'Name' })}
                                 </Typography>
                                 <Typography variant="body2" sx={{ fontFamily: 'monospace', wordBreak: 'break-word' }}>
                                     {recording.name}
@@ -260,8 +262,8 @@ export default function RecordingDialog({ open, onClose, recording }) {
                                 }}
                             >
                                 <Box>
-                                    <Typography variant="subtitle2" fontWeight={700}>Recording files</Typography>
-                                    <Typography variant="caption" color="text.secondary">Source data and generated visual products</Typography>
+                                    <Typography variant="subtitle2" fontWeight={700}>{t('recording_dialog.recording_files', { defaultValue: 'Recording files' })}</Typography>
+                                    <Typography variant="caption" color="text.secondary">{t('recording_dialog.source_data_and_generated_visual_products', { defaultValue: 'Source data and generated visual products' })}</Typography>
                                 </Box>
                                 <Chip label={`${associatedFiles.length} files`} size="small" variant="outlined" />
                             </Box>
@@ -348,13 +350,13 @@ export default function RecordingDialog({ open, onClose, recording }) {
                                 {(recording.metadata.target_satellite_name || recording.metadata.target_satellite_norad_id) && (
                                     <>
                                         <Typography variant="subtitle2" gutterBottom>
-                                            Target Satellite
+                                            {t('recording_dialog.target_satellite', { defaultValue: 'Target Satellite' })}
                                         </Typography>
                                         <Box sx={sectionSx}>
                                             {recording.metadata.target_satellite_name && (
                                                 <Box sx={rowSx}>
                                                     <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                                                        Name
+                                                        {t('recording_dialog.name', { defaultValue: 'Name' })}
                                                     </Typography>
                                                     <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
                                                         {recording.metadata.target_satellite_name}
@@ -364,7 +366,7 @@ export default function RecordingDialog({ open, onClose, recording }) {
                                             {recording.metadata.target_satellite_norad_id && (
                                                 <Box sx={rowSx}>
                                                     <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                                                        NORAD ID
+                                                        {t('recording_dialog.norad_id', { defaultValue: 'NORAD ID' })}
                                                     </Typography>
                                                     <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
                                                         {recording.metadata.target_satellite_norad_id}
@@ -376,13 +378,13 @@ export default function RecordingDialog({ open, onClose, recording }) {
                                 )}
 
                                 <Typography variant="subtitle2" gutterBottom>
-                                    Metadata
+                                    {t('recording_dialog.metadata', { defaultValue: 'Metadata' })}
                                 </Typography>
                                 <Box sx={sectionSx}>
                                     {recording.metadata.datatype && (
                                         <Box sx={rowSx}>
                                             <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                                                Data Type
+                                                {t('recording_dialog.data_type', { defaultValue: 'Data Type' })}
                                             </Typography>
                                             <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
                                                 {recording.metadata.datatype}
@@ -392,7 +394,7 @@ export default function RecordingDialog({ open, onClose, recording }) {
                                     {recording.metadata.sample_rate && (
                                         <Box sx={rowSx}>
                                             <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                                                Sample Rate
+                                                {t('recording_dialog.sample_rate', { defaultValue: 'Sample Rate' })}
                                             </Typography>
                                             <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
                                                 {recording.metadata.sample_rate} Hz
@@ -402,7 +404,7 @@ export default function RecordingDialog({ open, onClose, recording }) {
                                     {recording.metadata.start_time && (
                                         <Box sx={rowSx}>
                                             <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                                                Start Time
+                                                {t('recording_dialog.start_time', { defaultValue: 'Start Time' })}
                                             </Typography>
                                             <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
                                                 {formatDate(recording.metadata.start_time)}
@@ -412,7 +414,7 @@ export default function RecordingDialog({ open, onClose, recording }) {
                                     {recording.metadata.finalized_time && (
                                         <Box sx={rowSx}>
                                             <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                                                End Time
+                                                {t('recording_dialog.end_time', { defaultValue: 'End Time' })}
                                             </Typography>
                                             <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
                                                 {formatDate(recording.metadata.finalized_time)}
@@ -422,7 +424,7 @@ export default function RecordingDialog({ open, onClose, recording }) {
                                     {recording.metadata.version && (
                                         <Box sx={rowSx}>
                                             <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                                                SigMF Version
+                                                {t('recording_dialog.sigmf_version', { defaultValue: 'SigMF Version' })}
                                             </Typography>
                                             <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
                                                 {recording.metadata.version}
@@ -432,7 +434,7 @@ export default function RecordingDialog({ open, onClose, recording }) {
                                     {recording.metadata.recorder && (
                                         <Box sx={rowSx}>
                                             <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                                                Recorder
+                                                {t('recording_dialog.recorder', { defaultValue: 'Recorder' })}
                                             </Typography>
                                             <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
                                                 {recording.metadata.recorder}
@@ -442,7 +444,7 @@ export default function RecordingDialog({ open, onClose, recording }) {
                                     {recording.metadata.description && (
                                         <Box sx={rowSx}>
                                             <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                                                Description
+                                                {t('recording_dialog.description', { defaultValue: 'Description' })}
                                             </Typography>
                                             <Typography variant="body2" sx={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
                                                 {recording.metadata.description}
@@ -454,7 +456,7 @@ export default function RecordingDialog({ open, onClose, recording }) {
                                 {recording.metadata.captures?.length > 0 && (
                                     <>
                                         <Typography variant="subtitle2" gutterBottom>
-                                            Capture Segments ({recording.metadata.captures.length})
+                                            {t('recording_dialog.capture_segments', { defaultValue: 'Capture Segments (' })}{recording.metadata.captures.length})
                                         </Typography>
                                         <Stack spacing={1} sx={{ mb: 2 }}>
                                             {recording.metadata.captures.map((capture, index) => (
@@ -471,7 +473,7 @@ export default function RecordingDialog({ open, onClose, recording }) {
                                                 >
                                                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                                                         <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                                                            Segment {index + 1}
+                                                            {t('recording_dialog.segment', { defaultValue: 'Segment' })} {index + 1}
                                                         </Typography>
                                                         <Chip
                                                             label={`${Object.keys(capture).length} fields`}
@@ -522,14 +524,14 @@ export default function RecordingDialog({ open, onClose, recording }) {
                     startIcon={<DownloadIcon />}
                     variant="outlined"
                 >
-                    Download Data
+                    {t('recording_dialog.download_data', { defaultValue: 'Download Data' })}
                 </Button>
                 <Button
                     onClick={() => window.open(recording?.download_urls.meta, '_blank')}
                     startIcon={<DownloadIcon />}
                     variant="outlined"
                 >
-                    Download Metadata
+                    {t('recording_dialog.download_metadata', { defaultValue: 'Download Metadata' })}
                 </Button>
                 {recording?.snapshot && (
                     <Button
@@ -537,7 +539,7 @@ export default function RecordingDialog({ open, onClose, recording }) {
                         startIcon={<DownloadIcon />}
                         variant="outlined"
                     >
-                        Download Snapshot
+                        {t('recording_dialog.download_snapshot', { defaultValue: 'Download Snapshot' })}
                     </Button>
                 )}
                 <Button
@@ -551,7 +553,7 @@ export default function RecordingDialog({ open, onClose, recording }) {
                         },
                     }}
                 >
-                    Close
+                    {t('recording_dialog.close', { defaultValue: 'Close' })}
                 </Button>
             </DialogActions>
         </Dialog>

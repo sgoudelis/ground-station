@@ -34,8 +34,10 @@ import CancelIcon from '@mui/icons-material/Cancel';
 import SearchIcon from '@mui/icons-material/Search';
 import WarningIcon from '@mui/icons-material/Warning';
 import { useSelector, useDispatch } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 
 const ReduxStateInspectorCard = () => {
+    const { t } = useTranslation('settings');
     const fullState = useSelector((state) => state);
     const dispatch = useDispatch();
 
@@ -178,6 +180,7 @@ const ReduxStateInspectorCard = () => {
 
     // Memoized recursive component to render state tree
     const StateTreeNode = memo(({ data, path = '', depth = 0 }) => {
+        const { t } = useTranslation('settings');
         if (data === null || data === undefined) {
             return (
                 <Box sx={{ color: 'text.secondary', fontFamily: 'monospace', display: 'inline' }}>
@@ -266,15 +269,15 @@ const ReduxStateInspectorCard = () => {
         <>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Typography variant="h6">
-                    Redux State Inspector
+                    {t('redux_state_inspector_card.redux_state_inspector', { defaultValue: 'Redux State Inspector' })}
                 </Typography>
                 <Box sx={{ display: 'flex', gap: 1 }}>
-                    <Tooltip title="Copy entire state">
+                    <Tooltip title={t('redux_state_inspector_card.copy_entire_state', { defaultValue: 'Copy entire state' })}>
                         <IconButton onClick={() => copyToClipboard(fullState)} color={copySuccess ? 'success' : 'default'}>
                             <ContentCopyIcon />
                         </IconButton>
                     </Tooltip>
-                    <Tooltip title="Download state as JSON">
+                    <Tooltip title={t('redux_state_inspector_card.download_state_as_json', { defaultValue: 'Download state as JSON' })}>
                         <IconButton onClick={downloadState}>
                             <DownloadIcon />
                         </IconButton>
@@ -284,8 +287,8 @@ const ReduxStateInspectorCard = () => {
             <Divider sx={{ mb: 2 }} />
 
             <Tabs value={activeTab} onChange={(e, newValue) => setActiveTab(newValue)} sx={{ mb: 2 }}>
-                <Tab label="Inspector" />
-                <Tab label="Raw JSON" />
+                <Tab label={t('redux_state_inspector_card.inspector', { defaultValue: 'Inspector' })} />
+                <Tab label={t('redux_state_inspector_card.raw_json', { defaultValue: 'Raw JSON' })} />
             </Tabs>
 
                 {/* Tab 0: Inspector with View and Edit side by side */}
@@ -296,7 +299,7 @@ const ReduxStateInspectorCard = () => {
                             <TextField
                                 fullWidth
                                 size="small"
-                                placeholder="Search state keys or values..."
+                                placeholder={t('redux_state_inspector_card.search_state_keys_or_values', { defaultValue: 'Search state keys or values...' })}
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 InputProps={{
@@ -323,7 +326,7 @@ const ReduxStateInspectorCard = () => {
                                     <Typography variant="body1" sx={{ mb: 1.5, fontFamily: 'monospace', fontWeight: 'medium' }}>
                                         {editingPath ? (
                                             <>
-                                                <span style={{ color: 'inherit', fontSize: '0.95rem' }}>Editing: </span>
+                                                <span style={{ color: 'inherit', fontSize: '0.95rem' }}>{t('redux_state_inspector_card.editing', { defaultValue: 'Editing:' })} </span>
                                                 {editingPath.split('.').map((segment, index, array) => (
                                                     <React.Fragment key={index}>
                                                         <span style={{ color: `hsl(${(index * 80) % 360}, 70%, 45%)`, fontWeight: 'bold', fontSize: '1rem' }}>
@@ -334,23 +337,23 @@ const ReduxStateInspectorCard = () => {
                                                 ))}
                                             </>
                                         ) : (
-                                            <span style={{ color: 'gray' }}>No path selected</span>
+                                            <span style={{ color: 'gray' }}>{t('redux_state_inspector_card.no_path_selected', { defaultValue: 'No path selected' })}</span>
                                         )}
                                     </Typography>
 
                                     <FormControl fullWidth size="small" sx={{ mb: 2 }} disabled={!editingPath}>
-                                        <InputLabel>Data Type</InputLabel>
+                                        <InputLabel>{t('redux_state_inspector_card.data_type', { defaultValue: 'Data Type' })}</InputLabel>
                                         <Select
                                             value={editingType}
                                             onChange={(e) => setEditingType(e.target.value)}
-                                            label="Data Type"
+                                            label={t('redux_state_inspector_card.data_type', { defaultValue: 'Data Type' })}
                                         >
-                                            <MenuItem value="string">String</MenuItem>
-                                            <MenuItem value="number">Number</MenuItem>
-                                            <MenuItem value="boolean">Boolean</MenuItem>
-                                            <MenuItem value="null">Null</MenuItem>
-                                            <MenuItem value="object">Object</MenuItem>
-                                            <MenuItem value="array">Array</MenuItem>
+                                            <MenuItem value="string">{t('redux_state_inspector_card.string', { defaultValue: 'String' })}</MenuItem>
+                                            <MenuItem value="number">{t('redux_state_inspector_card.number', { defaultValue: 'Number' })}</MenuItem>
+                                            <MenuItem value="boolean">{t('redux_state_inspector_card.boolean', { defaultValue: 'Boolean' })}</MenuItem>
+                                            <MenuItem value="null">{t('redux_state_inspector_card.null', { defaultValue: 'Null' })}</MenuItem>
+                                            <MenuItem value="object">{t('redux_state_inspector_card.object', { defaultValue: 'Object' })}</MenuItem>
+                                            <MenuItem value="array">{t('redux_state_inspector_card.array', { defaultValue: 'Array' })}</MenuItem>
                                         </Select>
                                     </FormControl>
 
@@ -387,8 +390,8 @@ const ReduxStateInspectorCard = () => {
                                         }}
                                     />
                                     <Alert severity="warning" sx={{ mb: 2 }}>
-                                        <AlertTitle>⚠️ Caution</AlertTitle>
-                                        Editing Redux state directly can cause unexpected behavior.
+                                        <AlertTitle>{t('redux_state_inspector_card.caution', { defaultValue: '⚠️ Caution' })}</AlertTitle>
+                                        {t('redux_state_inspector_card.editing_redux_state_directly_can_cause_unexpected_behavi', { defaultValue: 'Editing Redux state directly can cause unexpected behavior.' })}
                                     </Alert>
                                     <Box sx={{ display: 'flex', gap: 1 }}>
                                         <Button
@@ -398,7 +401,7 @@ const ReduxStateInspectorCard = () => {
                                             onClick={() => confirmEdit(editingPath, editingValue, editingType)}
                                             disabled={!editingPath}
                                         >
-                                            Save
+                                            {t('redux_state_inspector_card.save', { defaultValue: 'Save' })}
                                         </Button>
                                         <Button
                                             variant="outlined"
@@ -406,7 +409,7 @@ const ReduxStateInspectorCard = () => {
                                             onClick={cancelEdit}
                                             disabled={!editingPath}
                                         >
-                                            Cancel
+                                            {t('redux_state_inspector_card.cancel', { defaultValue: 'Cancel' })}
                                         </Button>
                                     </Box>
                                 </Box>
@@ -432,16 +435,16 @@ const ReduxStateInspectorCard = () => {
 
             {/* Confirmation Dialog */}
             <Dialog open={confirmDialogOpen} onClose={() => setConfirmDialogOpen(false)}>
-                <DialogTitle>Confirm State Change</DialogTitle>
+                <DialogTitle>{t('redux_state_inspector_card.confirm_state_change', { defaultValue: 'Confirm State Change' })}</DialogTitle>
                 <DialogContent>
                     <Alert severity="warning" sx={{ mb: 2 }}>
-                        You are about to modify the Redux state directly.
+                        {t('redux_state_inspector_card.you_are_about_to_modify_the_redux_state_directly', { defaultValue: 'You are about to modify the Redux state directly.' })}
                     </Alert>
                     <Typography variant="body2" sx={{ mb: 1 }}>
-                        <strong>Path:</strong> {pendingEdit?.path}
+                        <strong>{t('redux_state_inspector_card.path', { defaultValue: 'Path:' })}</strong> {pendingEdit?.path}
                     </Typography>
                     <Typography variant="body2">
-                        <strong>New Value:</strong>
+                        <strong>{t('redux_state_inspector_card.new_value', { defaultValue: 'New Value:' })}</strong>
                     </Typography>
                     <Box sx={{
                         mt: 1,
@@ -458,13 +461,13 @@ const ReduxStateInspectorCard = () => {
                         {pendingEdit?.newValue}
                     </Box>
                     <Typography variant="body2" sx={{ mt: 2, color: 'warning.main' }}>
-                        Note: This may not work for all state slices. Some slices may require specific action creators.
+                        {t('redux_state_inspector_card.note_this_may_not_work_for_all_state_slices_some_slices_', { defaultValue: 'Note: This may not work for all state slices. Some slices may require specific action creators.' })}
                     </Typography>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setConfirmDialogOpen(false)}>Cancel</Button>
+                    <Button onClick={() => setConfirmDialogOpen(false)}>{t('redux_state_inspector_card.cancel', { defaultValue: 'Cancel' })}</Button>
                     <Button onClick={applyEdit} color="warning" variant="contained">
-                        Apply Change
+                        {t('redux_state_inspector_card.apply_change', { defaultValue: 'Apply Change' })}
                     </Button>
                 </DialogActions>
             </Dialog>

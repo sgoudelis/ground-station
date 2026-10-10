@@ -22,6 +22,7 @@ import {
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import DataObjectIcon from '@mui/icons-material/DataObject';
 import AssessmentIcon from '@mui/icons-material/Assessment';
+import { useTranslation } from 'react-i18next';
 
 function AnalysisSection({ title, icon, children }) {
     const theme = useTheme();
@@ -58,6 +59,7 @@ function StatRow({ label, value, unit }) {
 }
 
 export default function AnalysisTab({ packet, telemetry }) {
+    const { t } = useTranslation('filebrowser');
     const theme = useTheme();
 
     // Get hex data
@@ -180,7 +182,7 @@ export default function AnalysisTab({ packet, telemetry }) {
         return (
             <Box sx={{ p: 3, textAlign: 'center' }}>
                 <Typography color="text.secondary">
-                    No data available for analysis
+                    {t('telemetry_analysis_tab.no_data_available_for_analysis', { defaultValue: 'No data available for analysis' })}
                 </Typography>
             </Box>
         );
@@ -190,12 +192,12 @@ export default function AnalysisTab({ packet, telemetry }) {
         <Box>
             {/* Probable Fields */}
             <AnalysisSection
-                title="Probable Fields"
+                title={t('telemetry_analysis_tab.probable_fields', { defaultValue: 'Probable Fields' })}
                 icon={<TrendingUpIcon color="primary" />}
             >
                 {analysis.probableFloats.length === 0 && analysis.probableTimestamps.length === 0 ? (
                     <Typography variant="body2" color="text.secondary">
-                        No high-confidence field detections. Try comparing multiple packets to identify patterns.
+                        {t('telemetry_analysis_tab.no_high_confidence_field_detections_try_comparing_multip', { defaultValue: 'No high-confidence field detections. Try comparing multiple packets to identify patterns.' })}
                     </Typography>
                 ) : (
                     <Stack spacing={1}>
@@ -273,28 +275,28 @@ export default function AnalysisTab({ packet, telemetry }) {
 
             {/* Statistics */}
             <AnalysisSection
-                title="Payload Statistics"
+                title={t('telemetry_analysis_tab.payload_statistics', { defaultValue: 'Payload Statistics' })}
                 icon={<AssessmentIcon color="primary" />}
             >
-                <StatRow label="Total Bytes" value={analysis.totalBytes} unit="bytes" />
+                <StatRow label={t('telemetry_analysis_tab.total_bytes', { defaultValue: 'Total Bytes' })} value={analysis.totalBytes} unit="bytes" />
                 <StatRow
-                    label="Zero Bytes"
+                    label={t('telemetry_analysis_tab.zero_bytes', { defaultValue: 'Zero Bytes' })}
                     value={`${analysis.zeroBytes} (${(analysis.zeroBytes / analysis.totalBytes * 100).toFixed(1)}%)`}
                     unit=""
                 />
                 <StatRow
-                    label="0xFF Bytes"
+                    label={t('telemetry_analysis_tab.0xff_bytes', { defaultValue: '0xFF Bytes' })}
                     value={`${analysis.ffBytes} (${(analysis.ffBytes / analysis.totalBytes * 100).toFixed(1)}%)`}
                     unit=""
                 />
                 <StatRow
-                    label="Printable ASCII"
+                    label={t('telemetry_analysis_tab.printable_ascii', { defaultValue: 'Printable ASCII' })}
                     value={`${analysis.printableAscii} (${(analysis.printableAscii / analysis.totalBytes * 100).toFixed(1)}%)`}
                     unit=""
                 />
                 <Box sx={{ mt: 2 }}>
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                        Entropy: {analysis.entropy.toFixed(2)} bits/byte
+                        {t('telemetry_analysis_tab.entropy', { defaultValue: 'Entropy:' })} {analysis.entropy.toFixed(2)} bits/byte
                     </Typography>
                     <LinearProgress
                         variant="determinate"
@@ -311,12 +313,12 @@ export default function AnalysisTab({ packet, telemetry }) {
 
             {/* Patterns */}
             <AnalysisSection
-                title="Detected Patterns"
+                title={t('telemetry_analysis_tab.detected_patterns', { defaultValue: 'Detected Patterns' })}
                 icon={<DataObjectIcon color="primary" />}
             >
                 {analysis.patterns.length === 0 ? (
                     <Typography variant="body2" color="text.secondary">
-                        No obvious patterns detected.
+                        {t('telemetry_analysis_tab.no_obvious_patterns_detected', { defaultValue: 'No obvious patterns detected.' })}
                     </Typography>
                 ) : (
                     <Stack spacing={1}>

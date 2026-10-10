@@ -339,7 +339,7 @@ const TransmittersTable = ({ satelliteData, inDialog = false, actionsPortalTarge
             renderCell: (params) => (
                 <IconButton
                     size="small"
-                    aria-label="Edit transmitter"
+                    aria-label={t('transmitters_table.edit_transmitter', { defaultValue: 'Edit transmitter' })}
                     sx={{ p: 0.25 }}
                     onClick={(event) => {
                         event.stopPropagation();
@@ -581,7 +581,7 @@ const TransmittersTable = ({ satelliteData, inDialog = false, actionsPortalTarge
                                                 {transmitter.type !== '-' && (
                                                     <>
                                                         <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary', fontWeight: 500 }}>
-                                                            Type:
+                                                            {t('transmitters_table.type', { defaultValue: 'Type:' })}
                                                         </Typography>
                                                         <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.primary' }}>
                                                             {transmitter.type}
@@ -592,7 +592,7 @@ const TransmittersTable = ({ satelliteData, inDialog = false, actionsPortalTarge
                                                 {transmitter.mode !== '-' && (
                                                     <>
                                                         <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary', fontWeight: 500 }}>
-                                                            Mode:
+                                                            {t('transmitters_table.mode', { defaultValue: 'Mode:' })}
                                                         </Typography>
                                                         <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.primary' }}>
                                                             {transmitter.mode}
@@ -603,7 +603,7 @@ const TransmittersTable = ({ satelliteData, inDialog = false, actionsPortalTarge
                                                 {transmitter.downlinkLow !== '-' && (
                                                     <>
                                                         <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary', fontWeight: 500 }}>
-                                                            Downlink:
+                                                            {t('transmitters_table.downlink', { defaultValue: 'Downlink:' })}
                                                         </Typography>
                                                         <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.primary' }}>
                                                             {transmitter.downlinkLow === transmitter.downlinkHigh || transmitter.downlinkHigh === '-'
@@ -617,7 +617,7 @@ const TransmittersTable = ({ satelliteData, inDialog = false, actionsPortalTarge
                                                 {transmitter.uplinkLow !== '-' && (
                                                     <>
                                                         <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary', fontWeight: 500 }}>
-                                                            Uplink:
+                                                            {t('transmitters_table.uplink', { defaultValue: 'Uplink:' })}
                                                         </Typography>
                                                         <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.primary' }}>
                                                             {transmitter.uplinkLow === transmitter.uplinkHigh || transmitter.uplinkHigh === '-'
@@ -631,7 +631,7 @@ const TransmittersTable = ({ satelliteData, inDialog = false, actionsPortalTarge
                                                 {transmitter.status !== '-' && (
                                                     <>
                                                         <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary', fontWeight: 500 }}>
-                                                            Status:
+                                                            {t('transmitters_table.status', { defaultValue: 'Status:' })}
                                                         </Typography>
                                                         <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.primary' }}>
                                                             {transmitter.status}

@@ -391,15 +391,15 @@ const MapLibreEarthViewMapRenderer = ({
         return normalizedMapEngine === 'maplibre' ? 0.5 : 1.5;
     }, [mapZoomByEngine, normalizedMapEngine]);
     const selectedTileLayer = useMemo(
-        () => getTileLayerById(tileLayerID, {mapEngine: normalizedMapEngine}),
-        [normalizedMapEngine, tileLayerID]
+        () => getTileLayerById(tileLayerID, {mapEngine: normalizedMapEngine, t}),
+        [normalizedMapEngine, tileLayerID, t]
     );
     const attributionHtml = useMemo(
         () => `<a href="https://maplibre.org/" title="Open source map rendering" target="_blank" rel="noopener noreferrer">MapLibre</a> | ${selectedTileLayer.attribution}`,
         [selectedTileLayer.attribution]
     );
     const selectedTileURL = useMemo(
-        () => getMapLibreTileURL(tileLayerID, {mapEngine: normalizedMapEngine}),
+        () => getMapLibreTileURL(tileLayerID, {mapEngine: normalizedMapEngine, t}),
         [normalizedMapEngine, tileLayerID]
     );
 
@@ -1078,19 +1078,19 @@ const MapLibreEarthViewMapRenderer = ({
 
                     {location && location.lat != null && location.lon != null ? (
                         <Marker longitude={location.lon} latitude={location.lat} anchor="center">
-                            <img src={homeIcon.options.iconUrl} alt="Home" style={{width: 20, height: 20, opacity: 0.8}}/>
+                            <img src={homeIcon.options.iconUrl} alt={t('earthview_map_maplibre.home', { defaultValue: 'Home' })} style={{width: 20, height: 20, opacity: 0.8}}/>
                         </Marker>
                     ) : null}
 
                     {showSunIcon && Array.isArray(overlayData.sunPos) ? (
                         <Marker longitude={overlayData.sunPos[1]} latitude={overlayData.sunPos[0]} anchor="center">
-                            <img src={sunIcon.options.iconUrl} alt="Sun" style={{width: 28, height: 28, opacity: 0.6}}/>
+                            <img src={sunIcon.options.iconUrl} alt={t('earthview_map_maplibre.sun', { defaultValue: 'Sun' })} style={{width: 28, height: 28, opacity: 0.6}}/>
                         </Marker>
                     ) : null}
 
                     {showMoonIcon && Array.isArray(overlayData.moonPos) ? (
                         <Marker longitude={overlayData.moonPos[1]} latitude={overlayData.moonPos[0]} anchor="center">
-                            <img src={moonIcon.options.iconUrl} alt="Moon" style={{width: 28, height: 28, opacity: 0.6}}/>
+                            <img src={moonIcon.options.iconUrl} alt={t('earthview_map_maplibre.moon', { defaultValue: 'Moon' })} style={{width: 28, height: 28, opacity: 0.6}}/>
                         </Marker>
                     ) : null}
 

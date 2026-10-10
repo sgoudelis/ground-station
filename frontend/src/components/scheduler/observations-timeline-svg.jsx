@@ -37,8 +37,10 @@ import { getFlattenedTasks } from './session-utils.js';
 import { humanizeFutureDateInMinutes } from '../common/common.jsx';
 import { useUserTimeSettings } from '../../hooks/useUserTimeSettings.jsx';
 import { formatDateTime, formatTime } from '../../utils/date-time.js';
+import { useTranslation } from 'react-i18next';
 
 const ObservationsTimeline = () => {
+    const { t } = useTranslation('common');
     const dispatch = useDispatch();
     const theme = useTheme();
     const observations = useSelector((state) => state.scheduler?.observations || []);
@@ -271,15 +273,15 @@ const ObservationsTimeline = () => {
         <Box>
             <Box display="flex" justifyContent="space-between" alignItems="center">
                 <Stack direction="row" spacing={2} alignItems="center">
-                    <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'text.primary' }}>Timeline</Typography>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'text.primary' }}>{t('observations_timeline_svg.timeline', { defaultValue: 'Timeline' })}</Typography>
                 </Stack>
                 <Stack direction="row" spacing={2} alignItems="center">
                     <FormControl size="small" sx={{ minWidth: 85, '& .MuiInputBase-root': { fontSize: '0.875rem' } }}>
-                        <InputLabel sx={{ fontSize: '0.875rem' }}>Duration</InputLabel>
+                        <InputLabel sx={{ fontSize: '0.875rem' }}>{t('observations_timeline_svg.duration', { defaultValue: 'Duration' })}</InputLabel>
                         <Select
                             value={durationHours}
                             onChange={(e) => dispatch(setTimelineDuration(e.target.value))}
-                            label="Duration"
+                            label={t('observations_timeline_svg.duration', { defaultValue: 'Duration' })}
                         >
                             <MenuItem value={12} sx={{ fontSize: '0.875rem' }}>12h</MenuItem>
                             <MenuItem value={24} sx={{ fontSize: '0.875rem' }}>24h</MenuItem>
@@ -529,7 +531,7 @@ const ObservationsTimeline = () => {
                                             {hoveredObservation.satellite?.name || hoveredObservation.satellite_name || 'Unknown satellite'}
                                         </Typography>
                                         <Typography variant="caption" color="text.secondary">
-                                            Scheduled observation
+                                            {t('observations_timeline_svg.scheduled_observation', { defaultValue: 'Scheduled observation' })}
                                         </Typography>
                                     </Box>
                                     <Chip
@@ -551,22 +553,22 @@ const ObservationsTimeline = () => {
 
                             <Box sx={{ px: 2, py: 1.5 }}>
                                 <Typography variant="overline" sx={{ color: 'text.secondary', fontWeight: 700, lineHeight: 1.5 }}>
-                                    Schedule
+                                    {t('observations_timeline_svg.schedule', { defaultValue: 'Schedule' })}
                                 </Typography>
                                 <Box sx={{ display: 'grid', gridTemplateColumns: '72px minmax(0, 1fr)', columnGap: 1.5, rowGap: 0.75, mt: 0.75 }}>
-                                    <Typography variant="caption" color="text.secondary">Starts</Typography>
+                                    <Typography variant="caption" color="text.secondary">{t('observations_timeline_svg.starts', { defaultValue: 'Starts' })}</Typography>
                                     <Typography variant="caption" sx={{ fontWeight: 600 }}>
                                         {formatDateTime(hoveredObservation.task_start, { timezone, locale })}
                                     </Typography>
-                                    <Typography variant="caption" color="text.secondary">Ends</Typography>
+                                    <Typography variant="caption" color="text.secondary">{t('observations_timeline_svg.ends', { defaultValue: 'Ends' })}</Typography>
                                     <Typography variant="caption" sx={{ fontWeight: 600 }}>
                                         {formatDateTime(hoveredObservation.task_end, { timezone, locale })}
                                     </Typography>
-                                    <Typography variant="caption" color="text.secondary">Duration</Typography>
+                                    <Typography variant="caption" color="text.secondary">{t('observations_timeline_svg.duration', { defaultValue: 'Duration' })}</Typography>
                                     <Typography variant="caption" sx={{ fontWeight: 600 }}>
                                         {formatDuration(hoveredObservation.task_start, hoveredObservation.task_end)}
                                     </Typography>
-                                    <Typography variant="caption" color="text.secondary">Begins</Typography>
+                                    <Typography variant="caption" color="text.secondary">{t('observations_timeline_svg.begins', { defaultValue: 'Begins' })}</Typography>
                                     <Typography variant="caption" sx={{ fontWeight: 600 }}>
                                         {humanizeFutureDateInMinutes(hoveredObservation.task_start)}
                                     </Typography>
@@ -579,7 +581,7 @@ const ObservationsTimeline = () => {
                                 <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={2}>
                                     <Box sx={{ minWidth: 0, flex: 1 }}>
                                         <Typography variant="overline" sx={{ color: 'text.secondary', fontWeight: 700, lineHeight: 1.5 }}>
-                                            Satellite pass
+                                            {t('observations_timeline_svg.satellite_pass', { defaultValue: 'Satellite pass' })}
                                         </Typography>
                                         <Typography variant="caption" display="block" sx={{ mt: 0.75, fontWeight: 600 }}>
                                             {passStartLabel || 'Timing unavailable'}
@@ -603,7 +605,7 @@ const ObservationsTimeline = () => {
                                             }}
                                         >
                                             <Typography variant="caption" color="text.secondary" display="block">
-                                                Peak elevation
+                                                {t('observations_timeline_svg.peak_elevation', { defaultValue: 'Peak elevation' })}
                                             </Typography>
                                             <Typography variant="h6" sx={{ fontWeight: 700, lineHeight: 1.2, color: 'text.primary' }}>
                                                 {peakElevation.toFixed(1)}°

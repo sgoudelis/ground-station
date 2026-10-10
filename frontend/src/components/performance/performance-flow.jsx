@@ -31,12 +31,14 @@ import 'reactflow/dist/style.css';
 import { Box, Button, Typography } from '@mui/material';
 import { ComponentNode } from './flow-node.jsx';
 import { createFlowFromMetrics, applyDagreLayout, preserveNodePositions } from './flow-layout.js';
+import { useTranslation } from 'react-i18next';
 
 const nodeTypes = {
     componentNode: ComponentNode,
 };
 
 const FlowContent = ({ metrics, onAutoArrangeCallback }) => {
+    const { t } = useTranslation('common');
     const [nodes, setNodes, onNodesChange] = useNodesState([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState([]);
     const [graphUnlocked, setGraphUnlocked] = useState(false);
@@ -168,100 +170,100 @@ const FlowContent = ({ metrics, onAutoArrangeCallback }) => {
                         }}
                     >
                         <Typography variant="caption" sx={{ fontWeight: 'bold', color: '#fff', display: 'block', mb: 0.5, fontSize: '0.65rem' }}>
-                            Data Types
+                            {t('performance_flow.data_types', { defaultValue: 'Data Types' })}
                         </Typography>
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.3, mb: 1 }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
                                 <Box sx={{ width: 18, height: 1.5, backgroundColor: '#2196f3' }} />
                                 <Typography variant="caption" sx={{ color: '#fff', fontSize: '0.6rem' }}>
-                                    IQ Samples
+                                    {t('performance_flow.iq_samples', { defaultValue: 'IQ Samples' })}
                                 </Typography>
                             </Box>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
                                 <Box sx={{ width: 18, height: 1.5, backgroundColor: '#4caf50' }} />
                                 <Typography variant="caption" sx={{ color: '#fff', fontSize: '0.6rem' }}>
-                                    Audio
+                                    {t('performance_flow.audio', { defaultValue: 'Audio' })}
                                 </Typography>
                             </Box>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
                                 <Box sx={{ width: 18, height: 1.5, backgroundColor: '#9c27b0' }} />
                                 <Typography variant="caption" sx={{ color: '#fff', fontSize: '0.6rem' }}>
-                                    FFT/Waterfall
+                                    {t('performance_flow.fft_waterfall', { defaultValue: 'FFT/Waterfall' })}
                                 </Typography>
                             </Box>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
                                 <Box sx={{ width: 18, height: 1.5, backgroundColor: '#ff9800' }} />
                                 <Typography variant="caption" sx={{ color: '#fff', fontSize: '0.6rem' }}>
-                                    Decoded Data
+                                    {t('performance_flow.decoded_data', { defaultValue: 'Decoded Data' })}
                                 </Typography>
                             </Box>
                         </Box>
                         <Typography variant="caption" sx={{ fontWeight: 'bold', color: '#fff', display: 'block', mb: 0.5, fontSize: '0.65rem' }}>
-                            Line Styles
+                            {t('performance_flow.line_styles', { defaultValue: 'Line Styles' })}
                         </Typography>
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.3, mb: 1 }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
                                 <Box sx={{ width: 18, height: 0, borderTop: '1.5px dotted #fff' }} />
                                 <Typography variant="caption" sx={{ color: '#fff', fontSize: '0.6rem' }}>
-                                    Data Flowing
+                                    {t('performance_flow.data_flowing', { defaultValue: 'Data Flowing' })}
                                 </Typography>
                             </Box>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
                                 <Box sx={{ width: 18, height: 1.5, backgroundColor: 'rgba(255, 255, 255, 0.3)' }} />
                                 <Typography variant="caption" sx={{ color: '#fff', fontSize: '0.6rem' }}>
-                                    No Flow / Idle
+                                    {t('performance_flow.no_flow_idle', { defaultValue: 'No Flow / Idle' })}
                                 </Typography>
                             </Box>
                         </Box>
                         <Typography variant="caption" sx={{ fontWeight: 'bold', color: '#fff', display: 'block', mb: 0.5, fontSize: '0.65rem' }}>
-                            Queue Health
+                            {t('performance_flow.queue_health', { defaultValue: 'Queue Health' })}
                         </Typography>
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.3 }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
                                 <Box sx={{ width: 18, height: 1.5, backgroundColor: '#4caf50' }} />
                                 <Typography variant="caption" sx={{ color: '#fff', fontSize: '0.6rem' }}>
-                                    Healthy (&lt;50%)
+                                    {t('performance_flow.healthy_lt_50', { defaultValue: 'Healthy (&lt;50%)' })}
                                 </Typography>
                             </Box>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
                                 <Box sx={{ width: 18, height: 1.5, backgroundColor: '#ff9800' }} />
                                 <Typography variant="caption" sx={{ color: '#fff', fontSize: '0.6rem' }}>
-                                    Warning (50-80%)
+                                    {t('performance_flow.warning_50_80', { defaultValue: 'Warning (50-80%)' })}
                                 </Typography>
                             </Box>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
                                 <Box sx={{ width: 18, height: 1.5, backgroundColor: '#f44336' }} />
                                 <Typography variant="caption" sx={{ color: '#fff', fontSize: '0.6rem' }}>
-                                    Critical (&gt;80%)
+                                    {t('performance_flow.critical_gt_80', { defaultValue: 'Critical (&gt;80%)' })}
                                 </Typography>
                             </Box>
                         </Box>
                         <Typography variant="caption" sx={{ fontWeight: 'bold', color: '#fff', display: 'block', mt: 1, mb: 0.5, fontSize: '0.65rem' }}>
-                            Real-time factor
+                            {t('performance_flow.real_time_factor', { defaultValue: 'Real-time factor' })}
                         </Typography>
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.3 }}>
                             <Typography variant="caption" sx={{ color: '#fff', fontSize: '0.6rem' }}>
-                                Green: P95 below 0.50
+                                {t('performance_flow.green_p95_below_0_50', { defaultValue: 'Green: P95 below 0.50' })}
                             </Typography>
                             <Typography variant="caption" sx={{ color: '#fff', fontSize: '0.6rem' }}>
-                                Amber: P95 from 0.50 to 0.99
+                                {t('performance_flow.amber_p95_from_0_50_to_0_99', { defaultValue: 'Amber: P95 from 0.50 to 0.99' })}
                             </Typography>
                             <Typography variant="caption" sx={{ color: '#fff', fontSize: '0.6rem' }}>
-                                Red: P95 at or above 1.00
+                                {t('performance_flow.red_p95_at_or_above_1_00', { defaultValue: 'Red: P95 at or above 1.00' })}
                             </Typography>
                         </Box>
                         <Typography variant="caption" sx={{ fontWeight: 'bold', color: '#fff', display: 'block', mt: 1, mb: 0.5, fontSize: '0.65rem' }}>
-                            Queue / end-to-end age
+                            {t('performance_flow.queue_end_to_end_age', { defaultValue: 'Queue / end-to-end age' })}
                         </Typography>
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.3 }}>
                             <Typography variant="caption" sx={{ color: '#fff', fontSize: '0.6rem' }}>
-                                Green: below 100ms
+                                {t('performance_flow.green_below_100ms', { defaultValue: 'Green: below 100ms' })}
                             </Typography>
                             <Typography variant="caption" sx={{ color: '#fff', fontSize: '0.6rem' }}>
-                                Amber: 100ms to 499ms
+                                {t('performance_flow.amber_100ms_to_499ms', { defaultValue: 'Amber: 100ms to 499ms' })}
                             </Typography>
                             <Typography variant="caption" sx={{ color: '#fff', fontSize: '0.6rem' }}>
-                                Red: 500ms or higher
+                                {t('performance_flow.red_500ms_or_higher', { defaultValue: 'Red: 500ms or higher' })}
                             </Typography>
                         </Box>
                     </Box>

@@ -1838,66 +1838,66 @@ const NextPassesGroupIsland = React.memo(function NextPassesGroupIsland() {
                         </Typography>
                     </Box>
                     <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
-                        <Tooltip title="All passes (Alt+1)">
+                        <Tooltip title={t('satellite_passes.all_passes_alt_1', { defaultValue: 'All passes (Alt+1)' })}>
                             <span>
                                 <Button
                                     size="small"
                                     variant={quickFilterPreset === 'all' ? 'contained' : 'outlined'}
                                     onClick={() => handleQuickPreset('all')}
                                     sx={quickFilterButtonSx}
-                                    aria-label="All passes"
+                                    aria-label={t('satellite_passes.all_passes', { defaultValue: 'All passes' })}
                                 >
                                     {isTightHeader ? <DoneAllIcon sx={{ fontSize: '0.82rem' }} /> : 'All'}
                                 </Button>
                             </span>
                         </Tooltip>
-                        <Tooltip title="Live passes (Alt+2)">
+                        <Tooltip title={t('satellite_passes.live_passes_alt_2', { defaultValue: 'Live passes (Alt+2)' })}>
                             <span>
                                 <Button
                                     size="small"
                                     variant={quickFilterPreset === 'live' ? 'contained' : 'outlined'}
                                     onClick={() => handleQuickPreset('live')}
                                     sx={quickFilterButtonSx}
-                                    aria-label="Live passes"
+                                    aria-label={t('satellite_passes.live_passes', { defaultValue: 'Live passes' })}
                                 >
                                     {isTightHeader ? <RadioButtonCheckedIcon sx={{ fontSize: '0.82rem' }} /> : 'Live'}
                                 </Button>
                             </span>
                         </Tooltip>
-                        <Tooltip title="Live or next 30 minutes (Alt+3)">
+                        <Tooltip title={t('satellite_passes.live_or_next_30_minutes_alt_3', { defaultValue: 'Live or next 30 minutes (Alt+3)' })}>
                             <span>
                                 <Button
                                     size="small"
                                     variant={quickFilterPreset === 'next30' ? 'contained' : 'outlined'}
                                     onClick={() => handleQuickPreset('next30')}
                                     sx={quickFilterButtonSx}
-                                    aria-label="Next 30 minutes"
+                                    aria-label={t('satellite_passes.next_30_minutes', { defaultValue: 'Next 30 minutes' })}
                                 >
                                     {isTightHeader ? <AccessTimeFilledIcon sx={{ fontSize: '0.82rem' }} /> : 'Next 30m'}
                                 </Button>
                             </span>
                         </Tooltip>
-                        <Tooltip title="Highest elevation first (Alt+4)">
+                        <Tooltip title={t('satellite_passes.highest_elevation_first_alt_4', { defaultValue: 'Highest elevation first (Alt+4)' })}>
                             <span>
                                 <Button
                                     size="small"
                                     variant={quickFilterPreset === 'highEl' ? 'contained' : 'outlined'}
                                     onClick={() => handleQuickPreset('highEl')}
                                     sx={quickFilterButtonSx}
-                                    aria-label="Highest elevation first"
+                                    aria-label={t('satellite_passes.highest_elevation_first', { defaultValue: 'Highest elevation first' })}
                                 >
                                     {isTightHeader ? <ArrowUpwardRoundedIcon sx={{ fontSize: '0.82rem' }} /> : 'High El'}
                                 </Button>
                             </span>
                         </Tooltip>
-                        <Tooltip title="Tracked satellites only (Alt+5)">
+                        <Tooltip title={t('satellite_passes.tracked_satellites_only_alt_5', { defaultValue: 'Tracked satellites only (Alt+5)' })}>
                             <span>
                                 <Button
                                     size="small"
                                     variant={quickFilterPreset === 'tracked' ? 'contained' : 'outlined'}
                                     onClick={() => handleQuickPreset('tracked')}
                                     sx={quickFilterButtonSx}
-                                    aria-label="Tracked satellites only"
+                                    aria-label={t('satellite_passes.tracked_satellites_only', { defaultValue: 'Tracked satellites only' })}
                                 >
                                     {isTightHeader ? <TrackChangesIcon sx={{ fontSize: '0.82rem' }} /> : 'Tracked'}
                                 </Button>
@@ -1914,7 +1914,7 @@ const NextPassesGroupIsland = React.memo(function NextPassesGroupIsland() {
                                 </IconButton>
                             </span>
                         </Tooltip>
-                        <Tooltip title="Refresh passes (force recalculate)">
+                        <Tooltip title={t('satellite_passes.refresh_passes_force_recalculate', { defaultValue: 'Refresh passes (force recalculate)' })}>
                             <span>
                                 <IconButton
                                     size="small"

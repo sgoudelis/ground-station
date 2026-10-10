@@ -245,31 +245,31 @@ export const TransmitterLockSelect = ({
             >
                 <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <TuneIcon />
-                    Retune SDR?
+                    {t('vfo_transmitter_lock.retune_sdr', { defaultValue: 'Retune SDR?' })}
                 </DialogTitle>
                 <DialogContent>
                     <DialogContentText>
-                        The transmitter frequency{' '}
+                        {t('vfo_transmitter_lock.the_transmitter_frequency', { defaultValue: 'The transmitter frequency' })}{' '}
                         <strong>
                             {pendingTransmitter?.transmitter?.downlink_observed_freq
                                 ? `${(pendingTransmitter.transmitter.downlink_observed_freq / 1e6).toFixed(6)} MHz`
                                 : ''}
                         </strong>
-                        {' '}is outside the current SDR bandwidth.
+                        {' '}{t('vfo_transmitter_lock.is_outside_the_current_sdr_bandwidth', { defaultValue: 'is outside the current SDR bandwidth.' })}
                         <br /><br />
-                        Would you like to retune the SDR center frequency to receive this transmitter?
+                        {t('vfo_transmitter_lock.would_you_like_to_retune_the_sdr_center_frequency_to_rec', { defaultValue: 'Would you like to retune the SDR center frequency to receive this transmitter?' })}
                         <br /><br />
                         <em style={{ fontSize: '0.875rem', color: 'gray' }}>
-                            Note: The SDR will be offset by 25% of the sample rate to avoid DC spike artifacts.
+                            {t('vfo_transmitter_lock.note_the_sdr_will_be_offset_by_25_of_the_sample_rate_to_', { defaultValue: 'Note: The SDR will be offset by 25% of the sample rate to avoid DC spike artifacts.' })}
                         </em>
                     </DialogContentText>
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={handleRetuneCancel} color="inherit">
-                        Cancel
+                        {t('vfo_transmitter_lock.cancel', { defaultValue: 'Cancel' })}
                     </Button>
                     <Button onClick={handleRetuneConfirm} variant="contained" color="primary" autoFocus>
-                        Retune SDR
+                        {t('vfo_transmitter_lock.retune_sdr_2', { defaultValue: 'Retune SDR' })}
                     </Button>
                 </DialogActions>
             </Dialog>

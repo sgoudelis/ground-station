@@ -20,6 +20,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Box } from '@mui/material';
 import ZoomInIcon from '@mui/icons-material/ZoomIn';
+import { useTranslation } from 'react-i18next';
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
@@ -39,6 +40,7 @@ export default function ZoomableImage({
     getCursorInfo,
     renderOverlay,
 }) {
+    const { t } = useTranslation('common');
     const [zoom, setZoom] = useState(1);
     const [pan, setPan] = useState({ x: 0, y: 0 });
     const [isPanning, setIsPanning] = useState(false);
@@ -320,7 +322,7 @@ export default function ZoomableImage({
                     }}
                 >
                     <ZoomInIcon sx={{ fontSize: '0.9rem' }} />
-                    Zoom
+                    {t('zoomable_image.zoom', { defaultValue: 'Zoom' })}
                 </Box>
             )}
             {showHint && showHintState && (

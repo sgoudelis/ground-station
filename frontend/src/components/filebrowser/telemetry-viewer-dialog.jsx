@@ -29,6 +29,7 @@ import StringsTab from './telemetry-strings-tab';
 import AnalysisTab from './telemetry-analysis-tab';
 import TelemetryValuesTab from './telemetry-values-tab';
 import APRSTab from './telemetry-aprs-tab.jsx';
+import { useTranslation } from 'react-i18next';
 
 function TabPanel({ children, value, index, ...other }) {
     return (
@@ -49,6 +50,7 @@ function TabPanel({ children, value, index, ...other }) {
 }
 
 export default function TelemetryViewerDialog({ open, onClose, file, metadata }) {
+    const { t } = useTranslation('filebrowser');
     const [activeTab, setActiveTab] = useState(0);
 
     // Reset tab when dialog opens
@@ -95,7 +97,7 @@ export default function TelemetryViewerDialog({ open, onClose, file, metadata })
             }}>
                 <Box>
                     <Typography variant="h6">
-                        Telemetry Packet Viewer
+                        {t('telemetry_viewer_dialog.telemetry_packet_viewer', { defaultValue: 'Telemetry Packet Viewer' })}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
                         {file.filename || file.name}
@@ -115,13 +117,13 @@ export default function TelemetryViewerDialog({ open, onClose, file, metadata })
                     scrollButtons="auto"
                     sx={{ px: 2 }}
                 >
-                    <Tab label="Overview" id="telemetry-tab-0" />
+                    <Tab label={t('telemetry_viewer_dialog.overview', { defaultValue: 'Overview' })} id="telemetry-tab-0" />
                     <Tab label={isAprs ? 'APRS' : 'Telemetry'} id="telemetry-tab-6" />
-                    <Tab label="Hex + ASCII" id="telemetry-tab-1" />
-                    <Tab label="As Float32" id="telemetry-tab-2" />
-                    <Tab label="As Integers" id="telemetry-tab-3" />
-                    <Tab label="As Strings" id="telemetry-tab-4" />
-                    <Tab label="Analysis" id="telemetry-tab-5" />
+                    <Tab label={t('telemetry_viewer_dialog.hex_ascii', { defaultValue: 'Hex + ASCII' })} id="telemetry-tab-1" />
+                    <Tab label={t('telemetry_viewer_dialog.as_float32', { defaultValue: 'As Float32' })} id="telemetry-tab-2" />
+                    <Tab label={t('telemetry_viewer_dialog.as_integers', { defaultValue: 'As Integers' })} id="telemetry-tab-3" />
+                    <Tab label={t('telemetry_viewer_dialog.as_strings', { defaultValue: 'As Strings' })} id="telemetry-tab-4" />
+                    <Tab label={t('telemetry_viewer_dialog.analysis', { defaultValue: 'Analysis' })} id="telemetry-tab-5" />
                 </Tabs>
             </Box>
 
@@ -222,7 +224,7 @@ export default function TelemetryViewerDialog({ open, onClose, file, metadata })
                     component="a"
                     variant="outlined"
                 >
-                    Download Binary
+                    {t('telemetry_viewer_dialog.download_binary', { defaultValue: 'Download Binary' })}
                 </Button>
                 <Button
                     startIcon={<DownloadIcon />}
@@ -231,7 +233,7 @@ export default function TelemetryViewerDialog({ open, onClose, file, metadata })
                     component="a"
                     variant="outlined"
                 >
-                    Download Metadata
+                    {t('telemetry_viewer_dialog.download_metadata', { defaultValue: 'Download Metadata' })}
                 </Button>
                 <Button
                     onClick={onClose}
@@ -244,7 +246,7 @@ export default function TelemetryViewerDialog({ open, onClose, file, metadata })
                         },
                     }}
                 >
-                    Close
+                    {t('telemetry_viewer_dialog.close', { defaultValue: 'Close' })}
                 </Button>
             </DialogActions>
         </Dialog>

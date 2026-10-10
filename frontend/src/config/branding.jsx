@@ -18,14 +18,25 @@
  */
 
 import {GroundStationLogoGreenBlue} from "../components/common/dataurl-icons.jsx";
+import { useTranslation } from 'react-i18next';
 
-export const BRANDING = {
-    logo: (
+// The logo is wrapped in a component so its alt text reacts to language changes
+// (a hook cannot be called in the module-level branding factory).
+const BrandingLogo = () => {
+    const { t } = useTranslation('common');
+    return (
         <img
             src={GroundStationLogoGreenBlue}
-            alt="Ground Station"
+            alt={t('branding.ground_station', { defaultValue: 'Ground Station' })}
             style={{height: 128}}
         />
-    ),
-    title: 'Ground Station',
+    );
 };
+
+// Toolpad's Branding.title must stay a plain string (it is rendered inside a
+// Typography and interpolated by SignInPage), so the branding object is built by
+// a factory that receives `t` from the calling component instead of a hook here.
+export const getBranding = (t) => ({
+    logo: <BrandingLogo />,
+    title: t('branding.ground_station', { defaultValue: 'Ground Station' }),
+});

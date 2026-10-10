@@ -20,30 +20,32 @@
 import React from 'react';
 import { Typography, Divider } from '@mui/material';
 import Grid from '@mui/material/Grid';
+import { useTranslation } from 'react-i18next';
 
 const CanvasDebugCard = () => {
+    const { t } = useTranslation('settings');
     return (
         <>
             <Typography variant="h6" gutterBottom>
-                Canvas Rendering Debug Information
+                {t('canvas_debug_card.canvas_rendering_debug_information', { defaultValue: 'Canvas Rendering Debug Information' })}
             </Typography>
             <Divider sx={{ mb: 2 }} />
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                Information about canvas rendering environment for debugging text distortion issues
+                {t('canvas_debug_card.information_about_canvas_rendering_environment_for_debug', { defaultValue: 'Information about canvas rendering environment for debugging text distortion issues' })}
             </Typography>
 
             <Grid container spacing={2} columns={16}>
                 <Grid size={16}>
                     <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                        Display Information
+                        {t('canvas_debug_card.display_information', { defaultValue: 'Display Information' })}
                     </Typography>
                     <Divider sx={{ mb: 1 }} />
                 </Grid>
 
                 <Grid size={8}>
-                    Device Pixel Ratio
+                    {t('canvas_debug_card.device_pixel_ratio', { defaultValue: 'Device Pixel Ratio' })}
                     <Typography variant="body2" color="text.secondary">
-                        Scale factor between CSS pixels and physical pixels
+                        {t('canvas_debug_card.scale_factor_between_css_pixels_and_physical_pixels', { defaultValue: 'Scale factor between CSS pixels and physical pixels' })}
                     </Typography>
                 </Grid>
                 <Grid size={8}>
@@ -53,9 +55,9 @@ const CanvasDebugCard = () => {
                 </Grid>
 
                 <Grid size={8}>
-                    Window Inner Dimensions
+                    {t('canvas_debug_card.window_inner_dimensions', { defaultValue: 'Window Inner Dimensions' })}
                     <Typography variant="body2" color="text.secondary">
-                        Viewport width and height in CSS pixels
+                        {t('canvas_debug_card.viewport_width_and_height_in_css_pixels', { defaultValue: 'Viewport width and height in CSS pixels' })}
                     </Typography>
                 </Grid>
                 <Grid size={8}>
@@ -65,9 +67,9 @@ const CanvasDebugCard = () => {
                 </Grid>
 
                 <Grid size={8}>
-                    Screen Resolution
+                    {t('canvas_debug_card.screen_resolution', { defaultValue: 'Screen Resolution' })}
                     <Typography variant="body2" color="text.secondary">
-                        Physical screen dimensions
+                        {t('canvas_debug_card.physical_screen_dimensions', { defaultValue: 'Physical screen dimensions' })}
                     </Typography>
                 </Grid>
                 <Grid size={8}>
@@ -77,9 +79,9 @@ const CanvasDebugCard = () => {
                 </Grid>
 
                 <Grid size={8}>
-                    Available Screen Space
+                    {t('canvas_debug_card.available_screen_space', { defaultValue: 'Available Screen Space' })}
                     <Typography variant="body2" color="text.secondary">
-                        Screen size minus OS toolbars/taskbar
+                        {t('canvas_debug_card.screen_size_minus_os_toolbars_taskbar', { defaultValue: 'Screen size minus OS toolbars/taskbar' })}
                     </Typography>
                 </Grid>
                 <Grid size={8}>
@@ -89,9 +91,9 @@ const CanvasDebugCard = () => {
                 </Grid>
 
                 <Grid size={8}>
-                    Color Depth
+                    {t('canvas_debug_card.color_depth', { defaultValue: 'Color Depth' })}
                     <Typography variant="body2" color="text.secondary">
-                        Bits per pixel for color representation
+                        {t('canvas_debug_card.bits_per_pixel_for_color_representation', { defaultValue: 'Bits per pixel for color representation' })}
                     </Typography>
                 </Grid>
                 <Grid size={8}>
@@ -102,15 +104,15 @@ const CanvasDebugCard = () => {
 
                 <Grid size={16}>
                     <Typography variant="subtitle2" color="text.secondary" gutterBottom sx={{ mt: 2 }}>
-                        Browser Information
+                        {t('canvas_debug_card.browser_information', { defaultValue: 'Browser Information' })}
                     </Typography>
                     <Divider sx={{ mb: 1 }} />
                 </Grid>
 
                 <Grid size={8}>
-                    User Agent
+                    {t('canvas_debug_card.user_agent', { defaultValue: 'User Agent' })}
                     <Typography variant="body2" color="text.secondary">
-                        Browser identification string
+                        {t('canvas_debug_card.browser_identification_string', { defaultValue: 'Browser identification string' })}
                     </Typography>
                 </Grid>
                 <Grid size={8}>
@@ -120,9 +122,9 @@ const CanvasDebugCard = () => {
                 </Grid>
 
                 <Grid size={8}>
-                    Platform
+                    {t('canvas_debug_card.platform', { defaultValue: 'Platform' })}
                     <Typography variant="body2" color="text.secondary">
-                        Operating system platform
+                        {t('canvas_debug_card.operating_system_platform', { defaultValue: 'Operating system platform' })}
                     </Typography>
                 </Grid>
                 <Grid size={8}>
@@ -132,9 +134,9 @@ const CanvasDebugCard = () => {
                 </Grid>
 
                 <Grid size={8}>
-                    Language
+                    {t('canvas_debug_card.language', { defaultValue: 'Language' })}
                     <Typography variant="body2" color="text.secondary">
-                        Browser language setting
+                        {t('canvas_debug_card.browser_language_setting', { defaultValue: 'Browser language setting' })}
                     </Typography>
                 </Grid>
                 <Grid size={8}>
@@ -145,15 +147,15 @@ const CanvasDebugCard = () => {
 
                 <Grid size={16}>
                     <Typography variant="subtitle2" color="text.secondary" gutterBottom sx={{ mt: 2 }}>
-                        Hardware Information
+                        {t('canvas_debug_card.hardware_information', { defaultValue: 'Hardware Information' })}
                     </Typography>
                     <Divider sx={{ mb: 1 }} />
                 </Grid>
 
                 <Grid size={8}>
-                    Hardware Concurrency
+                    {t('canvas_debug_card.hardware_concurrency', { defaultValue: 'Hardware Concurrency' })}
                     <Typography variant="body2" color="text.secondary">
-                        Number of logical processor cores
+                        {t('canvas_debug_card.number_of_logical_processor_cores', { defaultValue: 'Number of logical processor cores' })}
                     </Typography>
                 </Grid>
                 <Grid size={8}>
@@ -163,9 +165,9 @@ const CanvasDebugCard = () => {
                 </Grid>
 
                 <Grid size={8}>
-                    Max Touch Points
+                    {t('canvas_debug_card.max_touch_points', { defaultValue: 'Max Touch Points' })}
                     <Typography variant="body2" color="text.secondary">
-                        Maximum simultaneous touch points supported
+                        {t('canvas_debug_card.maximum_simultaneous_touch_points_supported', { defaultValue: 'Maximum simultaneous touch points supported' })}
                     </Typography>
                 </Grid>
                 <Grid size={8}>

@@ -126,10 +126,12 @@ const TRANSMITTER_DEPENDENT_FILTERS = new Set([
     'bands', 'frequencyMin', 'frequencyMax', 'modes', 'transmitterTypes', 'services',
     'baudMin', 'baudMax', 'unconfirmed',
 ]);
-const SERVICE_OPTIONS = [
-    'Amateur', 'Meteorological', 'Space Research', 'Space Operation', 'Inter-satellite',
+// Built per render: the labels follow the active language, so this cannot live
+// at module scope (no i18n `t` there).
+const getServiceOptions = (t) => [
+    'Amateur', 'Meteorological', t('satellite_table.space_research', { defaultValue: 'Space Research' }), t('satellite_table.space_operation', { defaultValue: 'Space Operation' }), 'Inter-satellite',
     'Radionavigational', 'Radiolocation', 'Mobile', 'Maritime', 'Aeronautical',
-    'Earth Exploration', 'Broadcasting', 'Unknown',
+    t('satellite_table.earth_exploration', { defaultValue: 'Earth Exploration' }), 'Broadcasting', 'Unknown',
 ];
 
 const EMPTY_CATALOG_FILTERS = {
@@ -429,8 +431,8 @@ const SatelliteTable = React.memo(function SatelliteTable() {
         [catalogFilters.transmitterTypes, catalogStats?.transmitter_types],
     );
     const serviceOptions = React.useMemo(
-        () => mergeCatalogOptions(SERVICE_OPTIONS, catalogStats?.services, catalogFilters.services),
-        [catalogFilters.services, catalogStats?.services],
+        () => mergeCatalogOptions(getServiceOptions(t), catalogStats?.services, catalogFilters.services),
+        [t, catalogFilters.services, catalogStats?.services],
     );
 
     const clearAllFilters = useCallback(() => {

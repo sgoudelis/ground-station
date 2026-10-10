@@ -39,6 +39,7 @@ import {getTileLayerById} from '../common/tile-layers.jsx';
 import {homeIcon} from '../common/dataurl-icons.jsx';
 import {MapStatusBar, MapTitleBar, SimpleTruncatedHtml} from '../common/common.jsx';
 import {getAprsData, getAprsDataTypeLabel} from './aprs-utils.js';
+import { useTranslation } from 'react-i18next';
 
 const TEST_MAP_LAYERS = [
     {id: 'satellite', label: 'Satellite'},
@@ -81,6 +82,7 @@ function ResizeMap() {
 }
 
 function PositionMap({position, source, receiver, preferredLayer}) {
+    const { t } = useTranslation('filebrowser');
     const latitude = Number(position?.latitude);
     const longitude = Number(position?.longitude);
     const preferredLayerIsAvailable = TEST_MAP_LAYERS.some(({id}) => id === preferredLayer);
@@ -90,7 +92,7 @@ function PositionMap({position, source, receiver, preferredLayer}) {
     const [enableMapZooming, setEnableMapZooming] = useState(false);
     const [showReceiver, setShowReceiver] = useState(true);
     const [showRadioPath, setShowRadioPath] = useState(true);
-    const tileLayer = getTileLayerById(tileLayerId);
+    const tileLayer = getTileLayerById(tileLayerId, { t });
     const receiverLatitude = Number(receiver?.lat);
     const receiverLongitude = Number(receiver?.lon);
     const hasReceiver = Number.isFinite(receiverLatitude) && Number.isFinite(receiverLongitude);
@@ -107,13 +109,13 @@ function PositionMap({position, source, receiver, preferredLayer}) {
         <Box sx={{borderRadius: 1, overflow: 'hidden', border: 1, borderColor: 'divider'}}>
             <MapTitleBar sx={{height: 'auto', minHeight: 38, display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap'}}>
                 <Typography variant="body2" sx={{fontWeight: 700, flexGrow: 1}}>
-                    APRS Position
+                    {t('telemetry_aprs_tab.aprs_position', { defaultValue: 'APRS Position' })}
                 </Typography>
                 {hasReceiver && (
                     <>
                         <FormControlLabel
                             sx={{m: 0}}
-                            label={<Typography variant="caption">Receiver</Typography>}
+                            label={<Typography variant="caption">{t('telemetry_aprs_tab.receiver', { defaultValue: 'Receiver' })}</Typography>}
                             control={(
                                 <Switch
                                     size="small"
@@ -124,7 +126,7 @@ function PositionMap({position, source, receiver, preferredLayer}) {
                         />
                         <FormControlLabel
                             sx={{m: 0}}
-                            label={<Typography variant="caption">Path</Typography>}
+                            label={<Typography variant="caption">{t('telemetry_aprs_tab.path', { defaultValue: 'Path' })}</Typography>}
                             control={(
                                 <Switch
                                     size="small"
@@ -137,7 +139,7 @@ function PositionMap({position, source, receiver, preferredLayer}) {
                 )}
                 <FormControlLabel
                     sx={{m: 0}}
-                    label={<Typography variant="caption">Zoom gestures</Typography>}
+                    label={<Typography variant="caption">{t('telemetry_aprs_tab.zoom_gestures', { defaultValue: 'Zoom gestures' })}</Typography>}
                     control={(
                         <Switch
                             size="small"
@@ -151,7 +153,7 @@ function PositionMap({position, source, receiver, preferredLayer}) {
                     size="small"
                     value={tileLayerId}
                     onChange={(event) => setTileLayerId(event.target.value)}
-                    aria-label="APRS map layer"
+                    aria-label={t('telemetry_aprs_tab.aprs_map_layer', { defaultValue: 'APRS map layer' })}
                     sx={{minWidth: 126, height: 28, fontSize: '0.75rem'}}
                 >
                     {TEST_MAP_LAYERS.map((layer) => (
@@ -179,7 +181,7 @@ function PositionMap({position, source, receiver, preferredLayer}) {
                     <TileLayer url={tileLayer.url} />
                     {hasReceiver && showReceiver && (
                         <Marker position={[receiverLatitude, receiverLongitude]} icon={homeIcon} opacity={0.85}>
-                            <LeafletTooltip direction="top">Receiver</LeafletTooltip>
+                            <LeafletTooltip direction="top">{t('telemetry_aprs_tab.receiver', { defaultValue: 'Receiver' })}</LeafletTooltip>
                         </Marker>
                     )}
                     {hasReceiver && showReceiver && showRadioPath && (
@@ -210,6 +212,7 @@ function PositionMap({position, source, receiver, preferredLayer}) {
 }
 
 export default function APRSTab({metadata}) {
+    const { t } = useTranslation('filebrowser');
     const receiver = useSelector((state) => state.location?.location);
     const preferredLayer = useSelector((state) => state.earthViewTrack?.tileLayerID);
     const aprs = getAprsData(metadata);
@@ -226,7 +229,7 @@ export default function APRSTab({metadata}) {
     const weather = aprs?.weather;
 
     if (!aprs) {
-        return <Alert severity="info">No APRS information field is available in this file.</Alert>;
+        return <Alert severity="info">{t('telemetry_aprs_tab.no_aprs_information_field_is_available_in_this_file', { defaultValue: 'No APRS information field is available in this file.' })}</Alert>;
     }
 
     return (
@@ -258,57 +261,57 @@ export default function APRSTab({metadata}) {
                             startIcon={<PlaceIcon />}
                             endIcon={<OpenInNewIcon />}
                         >
-                            Open map
+                            {t('telemetry_aprs_tab.open_map', { defaultValue: 'Open map' })}
                         </Button>
                     </Stack>
                 </>
             )}
 
             <Box sx={{display: 'grid', gridTemplateColumns: {xs: '1fr', md: '1fr 1fr'}, gap: 3}}>
-                <Section title="APRS Packet">
-                    <InfoRow label="Type" value={getAprsDataTypeLabel(aprs)} />
-                    <InfoRow label="Identifier" value={aprs.data_type_identifier} mono />
-                    <InfoRow label="Source" value={source} mono />
-                    <InfoRow label="Destination" value={destination} mono />
-                    <InfoRow label="Digipeater path" value={repeaters.join(' → ')} mono />
-                    <InfoRow label="Comment" value={aprs.comment} />
-                    <InfoRow label="Status" value={aprs.status} />
-                    <InfoRow label="Message" value={aprs.message?.text} />
-                    <InfoRow label="Addressee" value={aprs.message?.addressee} mono />
+                <Section title={t('telemetry_aprs_tab.aprs_packet', { defaultValue: 'APRS Packet' })}>
+                    <InfoRow label={t('telemetry_aprs_tab.type', { defaultValue: 'Type' })} value={getAprsDataTypeLabel(aprs)} />
+                    <InfoRow label={t('telemetry_aprs_tab.identifier', { defaultValue: 'Identifier' })} value={aprs.data_type_identifier} mono />
+                    <InfoRow label={t('telemetry_aprs_tab.source', { defaultValue: 'Source' })} value={source} mono />
+                    <InfoRow label={t('telemetry_aprs_tab.destination', { defaultValue: 'Destination' })} value={destination} mono />
+                    <InfoRow label={t('telemetry_aprs_tab.digipeater_path', { defaultValue: 'Digipeater path' })} value={repeaters.join(' → ')} mono />
+                    <InfoRow label={t('telemetry_aprs_tab.comment', { defaultValue: 'Comment' })} value={aprs.comment} />
+                    <InfoRow label={t('telemetry_aprs_tab.status', { defaultValue: 'Status' })} value={aprs.status} />
+                    <InfoRow label={t('telemetry_aprs_tab.message', { defaultValue: 'Message' })} value={aprs.message?.text} />
+                    <InfoRow label={t('telemetry_aprs_tab.addressee', { defaultValue: 'Addressee' })} value={aprs.message?.addressee} mono />
                 </Section>
 
-                <Section title="Position and Symbol">
-                    <InfoRow label="Latitude" value={hasPosition ? latitude.toFixed(6) : null} mono />
-                    <InfoRow label="Longitude" value={hasPosition ? longitude.toFixed(6) : null} mono />
-                    <InfoRow label="Position format" value={position?.format} />
-                    <InfoRow label="Symbol" value={position ? `${position.symbol_table}/${position.symbol_code}` : null} mono />
-                    <InfoRow label="Altitude" value={position?.altitude_meters !== undefined ? `${position.altitude_meters} m` : null} />
-                    <InfoRow label="Course" value={position?.course_degrees !== undefined ? `${position.course_degrees}°` : null} />
-                    <InfoRow label="Speed" value={position?.speed_knots !== undefined ? `${position.speed_knots} kn` : null} />
-                    <InfoRow label="PHG" value={aprs.phg} mono />
+                <Section title={t('telemetry_aprs_tab.position_and_symbol', { defaultValue: 'Position and Symbol' })}>
+                    <InfoRow label={t('telemetry_aprs_tab.latitude', { defaultValue: 'Latitude' })} value={hasPosition ? latitude.toFixed(6) : null} mono />
+                    <InfoRow label={t('telemetry_aprs_tab.longitude', { defaultValue: 'Longitude' })} value={hasPosition ? longitude.toFixed(6) : null} mono />
+                    <InfoRow label={t('telemetry_aprs_tab.position_format', { defaultValue: 'Position format' })} value={position?.format} />
+                    <InfoRow label={t('telemetry_aprs_tab.symbol', { defaultValue: 'Symbol' })} value={position ? `${position.symbol_table}/${position.symbol_code}` : null} mono />
+                    <InfoRow label={t('telemetry_aprs_tab.altitude', { defaultValue: 'Altitude' })} value={position?.altitude_meters !== undefined ? `${position.altitude_meters} m` : null} />
+                    <InfoRow label={t('telemetry_aprs_tab.course', { defaultValue: 'Course' })} value={position?.course_degrees !== undefined ? `${position.course_degrees}°` : null} />
+                    <InfoRow label={t('telemetry_aprs_tab.speed', { defaultValue: 'Speed' })} value={position?.speed_knots !== undefined ? `${position.speed_knots} kn` : null} />
+                    <InfoRow label={t('telemetry_aprs_tab.phg', { defaultValue: 'PHG' })} value={aprs.phg} mono />
                 </Section>
             </Box>
 
             {telemetry && (
-                <Section title="APRS Telemetry">
-                    <InfoRow label="Encoding" value={telemetry.encoding} />
-                    <InfoRow label="Sequence" value={telemetry.sequence} mono />
+                <Section title={t('telemetry_aprs_tab.aprs_telemetry', { defaultValue: 'APRS Telemetry' })}>
+                    <InfoRow label={t('telemetry_aprs_tab.encoding', { defaultValue: 'Encoding' })} value={telemetry.encoding} />
+                    <InfoRow label={t('telemetry_aprs_tab.sequence', { defaultValue: 'Sequence' })} value={telemetry.sequence} mono />
                     {(telemetry.channels || []).map((value, index) => (
                         <InfoRow key={`channel-${index + 1}`} label={`Channel ${index + 1} (raw)`} value={value} mono />
                     ))}
-                    <InfoRow label="Digital bits" value={telemetry.digital_bits} mono />
+                    <InfoRow label={t('telemetry_aprs_tab.digital_bits', { defaultValue: 'Digital bits' })} value={telemetry.digital_bits} mono />
                 </Section>
             )}
 
             {weather && Object.keys(weather).length > 0 && (
-                <Section title="Weather">
+                <Section title={t('telemetry_aprs_tab.weather', { defaultValue: 'Weather' })}>
                     {Object.entries(weather).map(([key, value]) => (
                         <InfoRow key={key} label={key.replaceAll('_', ' ')} value={value} mono />
                     ))}
                 </Section>
             )}
 
-            <Section title="Raw Information Field">
+            <Section title={t('telemetry_aprs_tab.raw_information_field', { defaultValue: 'Raw Information Field' })}>
                 <Typography variant="body2" sx={{fontFamily: 'monospace', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere'}}>
                     {aprs.raw}
                 </Typography>

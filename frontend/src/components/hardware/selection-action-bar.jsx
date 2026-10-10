@@ -1,5 +1,6 @@
 import React from 'react';
 import {Box, Button, Chip, Stack, Typography} from '@mui/material';
+import { useTranslation } from 'react-i18next';
 
 export default function SelectionActionBar({
     selectedCount,
@@ -7,6 +8,7 @@ export default function SelectionActionBar({
     primaryActions,
     secondaryActions,
 }) {
+    const { t } = useTranslation('common');
     return (
         <Stack
             direction={{xs: 'column', md: 'row'}}
@@ -21,12 +23,12 @@ export default function SelectionActionBar({
         >
             <Stack direction="row" spacing={1} sx={{alignItems: 'center', minHeight: 32}}>
                 <Typography variant="body2" color="text.secondary">
-                    Selection
+                    {t('selection_action_bar.selection', { defaultValue: 'Selection' })}
                 </Typography>
                 <Chip size="small" color={selectedCount > 0 ? 'primary' : 'default'} label={`${selectedCount} selected`} />
                 {selectedCount > 0 && (
                     <Button size="small" variant="text" onClick={onClearSelection}>
-                        Clear
+                        {t('selection_action_bar.clear', { defaultValue: 'Clear' })}
                     </Button>
                 )}
             </Stack>

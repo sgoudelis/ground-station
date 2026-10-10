@@ -28,7 +28,7 @@ import { AudioProvider } from "./components/dashboard/audio-provider.jsx";
 import { WaterfallEngineProvider } from './components/waterfall/waterfall-engine-provider.jsx';
 import { ToastContainerWithStyles } from "./utils/toast-container.jsx";
 import { getNavigation } from "./config/navigation.jsx";
-import { BRANDING } from "./config/branding.jsx";
+import { getBranding } from "./config/branding.jsx";
 import { useSocketEventHandlers } from "./hooks/useSocketEventHandlers.jsx";
 import { usePassFetching } from "./hooks/usePassFetching.jsx";
 import { useDispatch, useSelector } from 'react-redux';
@@ -42,7 +42,7 @@ import TranscriptionSubtitles from './components/waterfall/transcription-subtitl
 export default function App() {
     const dispatch = useDispatch();
     const { socket, handleAuthEpochChange } = useSocket();
-    const { i18n } = useTranslation();
+    const { t: tCommon, i18n } = useTranslation('common');
     const preferences = useSelector((state) => state.preferences.preferences);
     const authState = useSelector((state) => state.auth);
     const dashboardRuntimeState = useSelector((state) => state.dashboard);
@@ -55,6 +55,8 @@ export default function App() {
         () => getNavigation({ isAdmin }),
         [isAdmin, i18n.language],
     );
+    // Branding is built per language so the app title follows the active locale.
+    const branding = React.useMemo(() => getBranding(tCommon), [tCommon]);
 
     // Get theme preference and create theme
     const themePreference = preferences.find(pref => pref.name === 'theme');
@@ -201,7 +203,7 @@ export default function App() {
                     key={`app-provider-${i18n.language}`}
                     navigation={navigation}
                     theme={dashboardTheme}
-                    branding={BRANDING}
+                    branding={branding}
                 >
                     <Outlet/>
                     {/* Fixed-position subtitles belong to the application shell so a

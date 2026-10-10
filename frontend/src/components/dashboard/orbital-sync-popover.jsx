@@ -151,7 +151,7 @@ const OrbitalSyncPopover = () => {
                                 </Typography>
                             ) : (
                                 <Typography variant="caption" sx={{ fontSize: 10, fontWeight: 'bold' }}>
-                                    ORB
+                                    {t('orbital_sync_popover.orb', { defaultValue: 'ORB' })}
                                 </Typography>
                             )}
                         </Box>

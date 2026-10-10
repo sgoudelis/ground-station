@@ -464,5 +464,93 @@
       "keep_syncing": "继续同步",
       "confirm": "取消同步"
     }
+  },
+  "satellite_edit_dialog": {
+    "satellite_edit_tabs": "卫星编辑标签页"
+  },
+  "satellite_info_page": {
+    "countries": "国家：",
+    "norad_id": "NORAD ID：",
+    "satellite_to_be_deleted": "待删除的卫星：",
+    "status": "状态：",
+    "transmitters": "发射机：",
+    "transmitter_s_will_also_be_deleted": "台发射机也将一并删除"
+  },
+  "sources_table": {
+    "added": "已添加：",
+    "format": "格式：",
+    "provider": "提供商：",
+    "url": "URL：",
+    "amateur_radio": "业余无线电",
+    "active_satellites": "活跃卫星",
+    "analyst_satellites": "分析卫星",
+    "argos_data_collection_system": "ARGOS 数据收集系统",
+    "cosmos_2251_debris": "COSMOS 2251 碎片",
+    "disaster_monitoring": "灾害监测",
+    "chinese_asat_test_debris_fengyun_1c": "中国反卫星试验碎片（风云 1C）",
+    "active_geosynchronous": "活跃地球同步卫星",
+    "glonass_operational": "GLONASS 运行中",
+    "gps_operational": "GPS 运行中",
+    "hulianwang_digui": "互联网低轨卫星",
+    "iridium_33_debris": "IRIDIUM 33 碎片",
+    "iridium_next": "Iridium NEXT",
+    "last_30_days_launches": "最近 30 天发射",
+    "miscellaneous_military": "其他军用卫星",
+    "other_communications": "其他通信卫星",
+    "radar_calibration": "雷达校准",
+    "earth_resources": "地球资源卫星",
+    "synthetic_aperture_radar": "合成孔径雷达",
+    "search_rescue_sarsat": "搜索与救援（SARSAT）",
+    "satellite_based_augmentation_system_sbas": "星基增强系统（SBAS）",
+    "space_earth_science": "空间与地球科学",
+    "space_stations": "空间站",
+    "tracking_and_data_relay_satellite_system_tdrss": "跟踪与数据中继卫星系统（TDRSS）",
+    "experimental_communications": "实验通信卫星"
+  },
+  "transmitter_modal": {
+    "alive": "存活 *",
+    "basic_information": "基本信息",
+    "baud_rate": "波特率",
+    "cancel": "取消",
+    "confirm_delete": "确认删除",
+    "delete": "删除",
+    "description": "描述",
+    "downlink_drift_hz": "下行漂移（Hz）",
+    "downlink_frequencies": "下行频率",
+    "downlink_high_hz": "下行高端（Hz）",
+    "downlink_low_hz": "下行低端（Hz）",
+    "downlink_mode": "下行模式",
+    "enter_transmitter_description": "输入发射机描述",
+    "invert": "反转",
+    "source": "来源",
+    "status": "状态 *",
+    "transmission_settings": "传输设置",
+    "type": "类型 *",
+    "uplink_drift_hz": "上行漂移（Hz）",
+    "uplink_frequencies": "上行频率",
+    "uplink_high_hz": "上行高端（Hz）",
+    "uplink_low_hz": "上行低端（Hz）",
+    "uplink_mode": "上行模式",
+    "are_you_sure_you_want_to_delete_the_transmitter": "您确定要删除发射机 \"",
+    "error": "错误：",
+    "please_fill_in_all_required_fields": "请填写所有必填字段。"
+  },
+  "transmitters_table": {
+    "downlink": "下行：",
+    "edit_transmitter": "编辑发射机",
+    "mode": "模式：",
+    "status": "状态：",
+    "type": "类型：",
+    "uplink": "上行："
+  },
+  "satellite_map": {
+    "home": "地面站",
+    "moon": "月球",
+    "sun": "太阳"
+  },
+  "satellite_table": {
+    "space_research": "空间研究",
+    "space_operation": "空间操作",
+    "earth_exploration": "地球探测"
   }
 }

@@ -23,6 +23,7 @@ import {
     Chip,
     useTheme,
 } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 
 function isProbableTimestamp(value) {
     // Unix timestamp range: Jan 1, 2000 to Dec 31, 2100
@@ -35,6 +36,7 @@ function isProbableCounter(value) {
 }
 
 export default function IntegersTab({ packet, telemetry }) {
+    const { t } = useTranslation('filebrowser');
     const theme = useTheme();
 
     // Get hex data
@@ -128,7 +130,7 @@ export default function IntegersTab({ packet, telemetry }) {
         return (
             <Box sx={{ p: 3, textAlign: 'center' }}>
                 <Typography color="text.secondary">
-                    No data available
+                    {t('telemetry_integers_tab.no_data_available', { defaultValue: 'No data available' })}
                 </Typography>
             </Box>
         );
@@ -140,7 +142,7 @@ export default function IntegersTab({ packet, telemetry }) {
                 {/* Uint16 Table */}
                 <Box>
                     <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 700 }}>
-                        As Uint16 (Little-Endian)
+                        {t('telemetry_integers_tab.as_uint16_little_endian', { defaultValue: 'As Uint16 (Little-Endian)' })}
                     </Typography>
                     <TableContainer
                         component={Paper}
@@ -151,13 +153,13 @@ export default function IntegersTab({ packet, telemetry }) {
                             <TableHead>
                                 <TableRow>
                                     <TableCell sx={{ fontWeight: 700, backgroundColor: theme.palette.background.paper }}>
-                                        Offset
+                                        {t('telemetry_integers_tab.offset', { defaultValue: 'Offset' })}
                                     </TableCell>
                                     <TableCell sx={{ fontWeight: 700, backgroundColor: theme.palette.background.paper }}>
-                                        Value
+                                        {t('telemetry_integers_tab.value', { defaultValue: 'Value' })}
                                     </TableCell>
                                     <TableCell sx={{ fontWeight: 700, backgroundColor: theme.palette.background.paper }}>
-                                        Type
+                                        {t('telemetry_integers_tab.type', { defaultValue: 'Type' })}
                                     </TableCell>
                                 </TableRow>
                             </TableHead>
@@ -192,7 +194,7 @@ export default function IntegersTab({ packet, telemetry }) {
                 {/* Uint32 Table */}
                 <Box>
                     <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 700 }}>
-                        As Uint32 (Little-Endian)
+                        {t('telemetry_integers_tab.as_uint32_little_endian', { defaultValue: 'As Uint32 (Little-Endian)' })}
                     </Typography>
                     <TableContainer
                         component={Paper}
@@ -203,13 +205,13 @@ export default function IntegersTab({ packet, telemetry }) {
                             <TableHead>
                                 <TableRow>
                                     <TableCell sx={{ fontWeight: 700, backgroundColor: theme.palette.background.paper }}>
-                                        Offset
+                                        {t('telemetry_integers_tab.offset', { defaultValue: 'Offset' })}
                                     </TableCell>
                                     <TableCell sx={{ fontWeight: 700, backgroundColor: theme.palette.background.paper }}>
-                                        Value
+                                        {t('telemetry_integers_tab.value', { defaultValue: 'Value' })}
                                     </TableCell>
                                     <TableCell sx={{ fontWeight: 700, backgroundColor: theme.palette.background.paper }}>
-                                        Type
+                                        {t('telemetry_integers_tab.type', { defaultValue: 'Type' })}
                                     </TableCell>
                                 </TableRow>
                             </TableHead>
@@ -246,10 +248,7 @@ export default function IntegersTab({ packet, telemetry }) {
             {/* Info box */}
             <Box sx={{ mt: 2, p: 2, bgcolor: theme.palette.info.main + '30', borderRadius: 1, border: `1px solid ${theme.palette.info.main}60` }}>
                 <Typography variant="caption" sx={{ color: theme.palette.info.light, fontWeight: 500 }}>
-                    💡 Interpreting payload as little-endian unsigned integers.
-                    Uint16 range: 0-65,535 (ADC values typically 0-4095).
-                    Uint32 range: 0-4,294,967,295 (timestamps, large counters).
-                    Values between 946684800-4102444800 likely Unix timestamps (2000-2100).
+                    {t('telemetry_integers_tab.interpreting_payload_as_little_endian_unsigned_integers_', { defaultValue: '💡 Interpreting payload as little-endian unsigned integers.\n                    Uint16 range: 0-65,535 (ADC values typically 0-4095).\n                    Uint32 range: 0-4,294,967,295 (timestamps, large counters).\n                    Values between 946684800-4102444800 likely Unix timestamps (2000-2100).' })}
                 </Typography>
             </Box>
         </Box>

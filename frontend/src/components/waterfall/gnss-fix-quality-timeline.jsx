@@ -20,6 +20,7 @@
 import React, { useMemo } from 'react';
 import { Box, Typography, useTheme } from '@mui/material';
 import { alpha } from '@mui/material/styles';
+import { useTranslation } from 'react-i18next';
 
 const FIX_QUALITY_TIMELINE_WINDOW_MS = 30 * 60 * 1000;
 const FIX_QUALITY_TIMELINE_HEIGHT = 22;
@@ -34,6 +35,7 @@ const GnssFixQualityTimeline = React.memo(function GnssFixQualityTimeline({
     timeline,
     nowMs,
 }) {
+    const { t } = useTranslation('waterfall');
     const theme = useTheme();
 
     const sparkline = useMemo(() => {
@@ -92,7 +94,7 @@ const GnssFixQualityTimeline = React.memo(function GnssFixQualityTimeline({
                     variant="caption"
                     sx={{ color: 'text.secondary', opacity: 0.7, fontSize: '0.58rem', lineHeight: 1 }}
                 >
-                    Fix quality (30m)
+                    {t('gnss_fix_quality_timeline.fix_quality_30m', { defaultValue: 'Fix quality (30m)' })}
                 </Typography>
                 <Typography
                     variant="caption"

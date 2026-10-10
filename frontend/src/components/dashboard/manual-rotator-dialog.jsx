@@ -107,6 +107,7 @@ function CoordinateStepper({ label, value, min, max, disabled, onChange }) {
 }
 
 function AzimuthDial({ value, currentValue, min, max, disabled, onChange }) {
+    const { t } = useTranslation('target');
     const updateFromPointer = React.useCallback((event) => {
         const rect = event.currentTarget.getBoundingClientRect();
         const x = event.clientX - rect.left - rect.width / 2;
@@ -131,7 +132,7 @@ function AzimuthDial({ value, currentValue, min, max, disabled, onChange }) {
     return (
         <Box sx={{ textAlign: 'center' }}>
             <svg
-                aria-label="Azimuth dial"
+                aria-label={t('manual_rotator_dialog.azimuth_dial', { defaultValue: 'Azimuth dial' })}
                 aria-valuemin={min}
                 aria-valuemax={max}
                 aria-valuenow={numericValue ?? undefined}
@@ -175,6 +176,7 @@ function AzimuthDial({ value, currentValue, min, max, disabled, onChange }) {
 }
 
 function ElevationDial({ value, currentValue, min, max, disabled, onChange }) {
+    const { t } = useTranslation('target');
     const updateFromPointer = React.useCallback((event) => {
         const rect = event.currentTarget.getBoundingClientRect();
         const x = event.clientX - rect.left - rect.width * (ELEVATION_CENTER_X / DIAL_SIZE);
@@ -198,7 +200,7 @@ function ElevationDial({ value, currentValue, min, max, disabled, onChange }) {
     return (
         <Box sx={{ textAlign: 'center' }}>
             <svg
-                aria-label="Elevation dial"
+                aria-label={t('manual_rotator_dialog.elevation_dial', { defaultValue: 'Elevation dial' })}
                 aria-valuemin={min}
                 aria-valuemax={max}
                 aria-valuenow={numericValue ?? undefined}
@@ -334,14 +336,14 @@ export default function ManualRotatorDialog({
                     }}
                 >
                     {isCommandSpinning(command) && <CircularProgress size={14} color="inherit"
-                        aria-label="Applying rotator command" sx={{flexShrink: 0}} />}
+                        aria-label={t('manual_rotator_dialog.applying_rotator_command', { defaultValue: 'Applying rotator command' })} sx={{flexShrink: 0}} />}
                     <TrackerCommandHeaderStatus command={command} hardwareStatus={rotatorStatus?.value || 'Unavailable'}
                         sx={{minWidth: 0, color: statusColor, fontSize: '0.875rem', fontFamily: 'monospace', fontWeight: 800}} />
                 </Paper>
                 <Grid container spacing={2}>
                     <Grid size={{ xs: 6, sm: 6 }}>
                         <CoordinateStepper
-                            label="AZ"
+                            label={t('manual_rotator_dialog.az', { defaultValue: 'AZ' })}
                             value={az}
                             min={minAz}
                             max={maxAz}
@@ -351,7 +353,7 @@ export default function ManualRotatorDialog({
                     </Grid>
                     <Grid size={{ xs: 6, sm: 6 }}>
                         <CoordinateStepper
-                            label="EL"
+                            label={t('manual_rotator_dialog.el', { defaultValue: 'EL' })}
                             value={el}
                             min={minEl}
                             max={maxEl}

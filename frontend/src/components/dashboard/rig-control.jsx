@@ -386,7 +386,7 @@ const RigControl = React.memo(function RigControl({ trackerId: trackerIdOverride
                                                 {t('rig_control_labels.no_rig_control')}
                                             </Typography>
                                             <Chip
-                                                label="None"
+                                                label={t('rig_control.none', { defaultValue: 'None' })}
                                                 size="small"
                                                 variant="outlined"
                                                 sx={{ ml: 'auto', height: 18, fontSize: '0.62rem' }}
@@ -540,14 +540,14 @@ const RigControl = React.memo(function RigControl({ trackerId: trackerIdOverride
                                         handleVFO1Change(event);
                                     }}
                                     size="small"
-                                    label="VFO 1">
-                                    <MenuItem value="none">[none]</MenuItem>
+                                    label={t('rig_control.vfo_1', { defaultValue: 'VFO 1' })}>
+                                    <MenuItem value="none">{t('rig_control.none', { defaultValue: '[none]' })}</MenuItem>
                                     <MenuItem value="uplink">
                                         {effectiveSelectedTransmitter && effectiveSelectedTransmitter !== "none" && effectiveRigData?.transmitters?.length > 0 ? (
                                             (() => {
                                                 const transmitter = effectiveRigData.transmitters.find(t => t.id === effectiveSelectedTransmitter);
                                                 return transmitter ? (
-                                                    <>Uplink: {preciseHumanizeFrequency(transmitter.uplink_observed_freq || 0)}</>
+                                                    <>{t('rig_control.uplink', { defaultValue: 'Uplink:' })} {preciseHumanizeFrequency(transmitter.uplink_observed_freq || 0)}</>
                                                 ) : "Uplink";
                                             })()
                                         ) : "Uplink"}
@@ -557,7 +557,7 @@ const RigControl = React.memo(function RigControl({ trackerId: trackerIdOverride
                                             (() => {
                                                 const transmitter = effectiveRigData.transmitters.find(t => t.id === effectiveSelectedTransmitter);
                                                 return transmitter ? (
-                                                    <>Downlink: {preciseHumanizeFrequency(transmitter.downlink_observed_freq || 0)}</>
+                                                    <>{t('rig_control.downlink', { defaultValue: 'Downlink:' })} {preciseHumanizeFrequency(transmitter.downlink_observed_freq || 0)}</>
                                                 ) : "Downlink";
                                             })()
                                         ) : "Downlink"}
@@ -576,14 +576,14 @@ const RigControl = React.memo(function RigControl({ trackerId: trackerIdOverride
                                         handleVFO2Change(event);
                                     }}
                                     size="small"
-                                    label="VFO 2">
-                                    <MenuItem value="none">[none]</MenuItem>
+                                    label={t('rig_control.vfo_2', { defaultValue: 'VFO 2' })}>
+                                    <MenuItem value="none">{t('rig_control.none', { defaultValue: '[none]' })}</MenuItem>
                                     <MenuItem value="downlink">
                                         {effectiveSelectedTransmitter && effectiveSelectedTransmitter !== "none" && effectiveRigData?.transmitters?.length > 0 ? (
                                             (() => {
                                                 const transmitter = effectiveRigData.transmitters.find(t => t.id === effectiveSelectedTransmitter);
                                                 return transmitter ? (
-                                                    <>Downlink: {preciseHumanizeFrequency(transmitter.downlink_observed_freq || 0)}</>
+                                                    <>{t('rig_control.downlink', { defaultValue: 'Downlink:' })} {preciseHumanizeFrequency(transmitter.downlink_observed_freq || 0)}</>
                                                 ) : "Downlink";
                                             })()
                                         ) : "Downlink"}
@@ -593,7 +593,7 @@ const RigControl = React.memo(function RigControl({ trackerId: trackerIdOverride
                                             (() => {
                                                 const transmitter = effectiveRigData.transmitters.find(t => t.id === effectiveSelectedTransmitter);
                                                 return transmitter ? (
-                                                    <>Uplink: {preciseHumanizeFrequency(transmitter.uplink_observed_freq || 0)}</>
+                                                    <>{t('rig_control.uplink', { defaultValue: 'Uplink:' })} {preciseHumanizeFrequency(transmitter.uplink_observed_freq || 0)}</>
                                                 ) : "Uplink";
                                             })()
                                         ) : "Uplink"}
@@ -621,7 +621,7 @@ const RigControl = React.memo(function RigControl({ trackerId: trackerIdOverride
                                         color: 'action.disabled',
                                     }
                                 }}
-                                title="Swap VFO 1 and VFO 2">
+                                title={t('rig_control.swap_vfo_1_and_vfo_2', { defaultValue: 'Swap VFO 1 and VFO 2' })}>
                                 <SwapVertIcon />
                             </IconButton>
                         </Box>
@@ -637,7 +637,7 @@ const RigControl = React.memo(function RigControl({ trackerId: trackerIdOverride
                                 <Grid container direction="row" sx={{alignItems: "center", gap: 0}}>
                                     <Grid size="auto" style={{minWidth: '100px'}}>
                                         <Typography variant="body2" sx={{color: 'text.secondary'}}>
-                                            VFO 1
+                                            {t('rig_control.vfo_1', { defaultValue: 'VFO 1' })}
                                         </Typography>
                                     </Grid>
                                     <Grid size="grow" style={{textAlign: 'right'}}>
@@ -653,7 +653,7 @@ const RigControl = React.memo(function RigControl({ trackerId: trackerIdOverride
                                 <Grid container direction="row" sx={{alignItems: "center", gap: 0}}>
                                     <Grid size="auto" style={{minWidth: '100px'}}>
                                         <Typography variant="body2" sx={{color: 'text.secondary'}}>
-                                            VFO 2
+                                            {t('rig_control.vfo_2', { defaultValue: 'VFO 2' })}
                                         </Typography>
                                     </Grid>
                                     <Grid size="grow" style={{textAlign: 'right'}}>

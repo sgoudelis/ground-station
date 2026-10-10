@@ -165,7 +165,7 @@ const FrequencyControlAccordion = ({
                                             {t('frequency.no_frequency_selected')}
                                         </Box>
                                         <Box sx={{ fontSize: '0.75rem', opacity: 0.8 }}>
-                                            Tune or pick one
+                                            {t('settings_frequency.tune_or_pick_one', { defaultValue: 'Tune or pick one' })}
                                         </Box>
                                     </Box>
                                 </Box>
@@ -203,7 +203,7 @@ const FrequencyControlAccordion = ({
                                 <Box sx={{ width: 8, height: 8 }} />
                                 <Box>
                                     <Box sx={{ fontWeight: 600 }}>{t('frequency.no_frequency_selected')}</Box>
-                                    <Box sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>Manual control</Box>
+                                    <Box sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>{t('settings_frequency.manual_control', { defaultValue: 'Manual control' })}</Box>
                                 </Box>
                             </Box>
                         </MenuItem>
@@ -318,7 +318,7 @@ const FrequencyControlAccordion = ({
                         <MenuItem value="manual" sx={{ fontSize: '0.875rem' }}>
                             <Box>
                                 <Box sx={{ fontWeight: 600 }}>{t('frequency.manual')}</Box>
-                                <Box sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>Custom value</Box>
+                                <Box sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>{t('settings_frequency.custom_value', { defaultValue: 'Custom value' })}</Box>
                             </Box>
                         </MenuItem>
                         <MenuItem value="" disabled>

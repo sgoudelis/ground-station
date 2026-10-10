@@ -70,54 +70,109 @@ const FORMAT_OPTIONS = ['3le', 'omm'];
 const AUTH_TYPE_OPTIONS = ['none', 'basic', 'token'];
 const SPACE_TRACK_GP_BASE_URL = 'https://www.space-track.org/basicspacedata/query/class/gp';
 const CELESTRAK_SYNC_INTERVAL_MS = 2 * 60 * 60 * 1000;
-const CELESTRAK_GROUP_OPTIONS = [
-    ['amateur', 'Amateur radio'],
-    ['active', 'Active satellites'],
-    ['analyst', 'Analyst satellites'],
-    ['argos', 'ARGOS Data Collection System'],
+// CelesTrak API group slugs, kept label-free so validation and URL parsing can
+// run outside of React (no i18n `t` available at module scope).
+const CELESTRAK_GROUP_VALUES = [
+    'amateur',
+    'active',
+    'analyst',
+    'argos',
+    'beidou',
+    'cosmos-2251-debris',
+    'cubesat',
+    'dmc',
+    'education',
+    'engineering',
+    'eutelsat',
+    'fengyun-1c-debris',
+    'galileo',
+    'geodetic',
+    'geo',
+    'globalstar',
+    'glo-ops',
+    'gnss',
+    'gps-ops',
+    'hulianwang',
+    'intelsat',
+    'iridium-33-debris',
+    'iridium-next',
+    'kuiper',
+    'last-30-days',
+    'military',
+    'oneweb',
+    'orbcomm',
+    'other-comm',
+    'planet',
+    'qianfan',
+    'radar',
+    'resource',
+    'sar',
+    'satnogs',
+    'sarsat',
+    'sbas',
+    'science',
+    'ses',
+    'spire',
+    'starlink',
+    'stations',
+    'tdrss',
+    'telesat',
+    'visual',
+    'weather',
+    'x-comm',
+];
+
+// `[value, label]` pairs built per render so labels follow the active language.
+// The first element must stay byte-identical to CELESTRAK_GROUP_VALUES: it is the
+// slug sent to CelesTrak.
+const getCelestrakGroupOptions = (t) => [
+    ['amateur', t('sources_table.amateur_radio', { defaultValue: 'Amateur radio' })],
+    ['active', t('sources_table.active_satellites', { defaultValue: 'Active satellites' })],
+    ['analyst', t('sources_table.analyst_satellites', { defaultValue: 'Analyst satellites' })],
+    ['argos', t('sources_table.argos_data_collection_system', { defaultValue: 'ARGOS Data Collection System' })],
     ['beidou', 'BeiDou'],
-    ['cosmos-2251-debris', 'COSMOS 2251 debris'],
+    ['cosmos-2251-debris', t('sources_table.cosmos_2251_debris', { defaultValue: 'COSMOS 2251 debris' })],
     ['cubesat', 'CubeSats'],
-    ['dmc', 'Disaster Monitoring'],
+    ['dmc', t('sources_table.disaster_monitoring', { defaultValue: 'Disaster Monitoring' })],
     ['education', 'Education'],
     ['engineering', 'Engineering'],
     ['eutelsat', 'Eutelsat'],
-    ['fengyun-1c-debris', 'Chinese ASAT Test Debris (FENGYUN 1C)'],
+    ['fengyun-1c-debris', t('sources_table.chinese_asat_test_debris_fengyun_1c', { defaultValue: 'Chinese ASAT Test Debris (FENGYUN 1C)' })],
     ['galileo', 'Galileo'],
     ['geodetic', 'Geodetic'],
-    ['geo', 'Active geosynchronous'],
+    ['geo', t('sources_table.active_geosynchronous', { defaultValue: 'Active geosynchronous' })],
     ['globalstar', 'Globalstar'],
-    ['glo-ops', 'GLONASS operational'],
+    ['glo-ops', t('sources_table.glonass_operational', { defaultValue: 'GLONASS operational' })],
     ['gnss', 'GNSS'],
-    ['gps-ops', 'GPS operational'],
-    ['hulianwang', 'Hulianwang Digui'],
+    ['gps-ops', t('sources_table.gps_operational', { defaultValue: 'GPS operational' })],
+    ['hulianwang', t('sources_table.hulianwang_digui', { defaultValue: 'Hulianwang Digui' })],
     ['intelsat', 'Intelsat'],
-    ['iridium-33-debris', 'IRIDIUM 33 debris'],
-    ['iridium-next', 'Iridium NEXT'],
+    ['iridium-33-debris', t('sources_table.iridium_33_debris', { defaultValue: 'IRIDIUM 33 debris' })],
+    ['iridium-next', t('sources_table.iridium_next', { defaultValue: 'Iridium NEXT' })],
     ['kuiper', 'Kuiper'],
-    ['last-30-days', "Last 30 Days' Launches"],
-    ['military', 'Miscellaneous military'],
+    ['last-30-days', t('sources_table.last_30_days_launches', { defaultValue: 'Last 30 Days\' Launches' })],
+    ['military', t('sources_table.miscellaneous_military', { defaultValue: 'Miscellaneous military' })],
     ['oneweb', 'OneWeb'],
     ['orbcomm', 'ORBCOMM'],
-    ['other-comm', 'Other communications'],
+    ['other-comm', t('sources_table.other_communications', { defaultValue: 'Other communications' })],
     ['planet', 'Planet'],
     ['qianfan', 'Qianfan'],
-    ['radar', 'Radar calibration'],
-    ['resource', 'Earth resources'],
-    ['sar', 'Synthetic aperture radar'],
+    ['radar', t('sources_table.radar_calibration', { defaultValue: 'Radar calibration' })],
+    ['resource', t('sources_table.earth_resources', { defaultValue: 'Earth resources' })],
+    ['sar', t('sources_table.synthetic_aperture_radar', { defaultValue: 'Synthetic aperture radar' })],
     ['satnogs', 'SatNOGS'],
-    ['sarsat', 'Search & Rescue (SARSAT)'],
-    ['sbas', 'Satellite-based augmentation system (SBAS)'],
-    ['science', 'Space & Earth science'],
+    ['sarsat', t('sources_table.search_rescue_sarsat', { defaultValue: 'Search & Rescue (SARSAT)' })],
+    ['sbas', t('sources_table.satellite_based_augmentation_system_sbas', { defaultValue: 'Satellite-based augmentation system (SBAS)' })],
+    ['science', t('sources_table.space_earth_science', { defaultValue: 'Space & Earth science' })],
     ['ses', 'SES'],
     ['spire', 'Spire'],
     ['starlink', 'Starlink'],
-    ['stations', 'Space stations'],
-    ['tdrss', 'Tracking and Data Relay Satellite System (TDRSS)'],
+    ['stations', t('sources_table.space_stations', { defaultValue: 'Space stations' })],
+    ['tdrss', t('sources_table.tracking_and_data_relay_satellite_system_tdrss', { defaultValue: 'Tracking and Data Relay Satellite System (TDRSS)' })],
     ['telesat', 'Telesat'],
     ['visual', '100 (or so) Brightest'],
     ['weather', 'Weather'],
-    ['x-comm', 'Experimental communications'],
+    ['x-comm', t('sources_table.experimental_communications', { defaultValue: 'Experimental communications' })],
 ];
 
 const buildCelestrakUrl = (group) =>
@@ -135,7 +190,7 @@ const isCelestrakSource = (url) => {
 const getCelestrakGroupFromUrl = (url) => {
     try {
         const group = new URL(url).searchParams.get('GROUP')?.toLowerCase();
-        return CELESTRAK_GROUP_OPTIONS.some(([value]) => value === group) ? group : '';
+        return CELESTRAK_GROUP_VALUES.includes(group) ? group : '';
     } catch {
         return '';
     }
@@ -371,7 +426,7 @@ export function validateSourceForm(formValues, t) {
     const name = String(formValues.name || '').trim();
     const rawUrl = String(formValues.url || '').trim();
     const celestrakGroup = String(formValues.celestrak_group || '').trim().toLowerCase();
-    const isAllowedCelestrakGroup = CELESTRAK_GROUP_OPTIONS.some(([value]) => value === celestrakGroup);
+    const isAllowedCelestrakGroup = CELESTRAK_GROUP_VALUES.includes(celestrakGroup);
     const url = provider === 'space_track'
         ? SPACE_TRACK_GP_BASE_URL
         : provider === 'celestrak' && isAllowedCelestrakGroup
@@ -944,28 +999,28 @@ export default function SourcesTable({ showTabs = true }) {
                                             </Typography>
                                             <Box sx={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 1, columnGap: 2 }}>
                                                 <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary', fontWeight: 500 }}>
-                                                    URL:
+                                                    {t('sources_table.url', { defaultValue: 'URL:' })}
                                                 </Typography>
                                                 <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.primary', wordBreak: 'break-all' }}>
                                                     {source.url}
                                                 </Typography>
 
                                                 <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary', fontWeight: 500 }}>
-                                                    Format:
+                                                    {t('sources_table.format', { defaultValue: 'Format:' })}
                                                 </Typography>
                                                 <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.primary' }}>
                                                     {source.format}
                                                 </Typography>
 
                                                 <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary', fontWeight: 500 }}>
-                                                    Provider:
+                                                    {t('sources_table.provider', { defaultValue: 'Provider:' })}
                                                 </Typography>
                                                 <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.primary' }}>
                                                     {getProviderLabel(source.provider, t)}
                                                 </Typography>
 
                                                 <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary', fontWeight: 500 }}>
-                                                    Added:
+                                                    {t('sources_table.added', { defaultValue: 'Added:' })}
                                                 </Typography>
                                                 <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.primary' }}>
                                                     {betterDateTimes(source.added, timezone)}
@@ -1143,7 +1198,7 @@ export default function SourcesTable({ showTabs = true }) {
                                         <MenuItem value="" disabled>
                                             {t('orbital_sources.select_celestrak_group')}
                                         </MenuItem>
-                                        {CELESTRAK_GROUP_OPTIONS.map(([value, label]) => (
+                                        {getCelestrakGroupOptions(t).map(([value, label]) => (
                                             <MenuItem key={value} value={value}>{label}</MenuItem>
                                         ))}
                                     </Select>

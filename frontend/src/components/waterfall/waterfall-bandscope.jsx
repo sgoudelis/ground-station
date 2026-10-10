@@ -32,6 +32,7 @@ import VFOMarkersContainer from './vfo-marker/vfo-container.jsx';
 import FrequencyBandOverlay from './bandplan-overlay.jsx';
 import RecordingBandOverlay from './recording-band-overlay.jsx';
 import {useDopplerNeighbors} from '../../hooks/useDopplerNeighbors.jsx';
+import { useTranslation } from 'react-i18next';
 
 const PLAYBACK_COUNTDOWN_UPDATE_MS = 250;
 const INTERACTION_IDLE_MS = 120;
@@ -54,6 +55,7 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
                                               playbackRemainingSecondsRef,
                                           }, ref) {
 
+    const { t } = useTranslation('waterfall');
     const theme = useTheme();
     const containerRef = useRef(null);
     const viewportRef = useRef(null);
@@ -670,7 +672,7 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
                             backgroundColor: 'white',
                         }}
                     />
-                    REC
+                    {t('waterfall_bandscope.rec', { defaultValue: 'REC' })}
                 </Box>
             )}
             {/* Playback indicator overlay - outside transformed container */}

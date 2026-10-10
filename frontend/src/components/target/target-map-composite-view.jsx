@@ -518,15 +518,15 @@ const TargetMapCompositeView = ({}) => {
         [mapEngine]
     );
     const selectedTileLayer = useMemo(
-        () => getTileLayerById(tileLayerID, { mapEngine: normalizedMapEngine }),
-        [normalizedMapEngine, tileLayerID]
+        () => getTileLayerById(tileLayerID, { mapEngine: normalizedMapEngine, t }),
+        [normalizedMapEngine, tileLayerID, t]
     );
     const attributionHtml = useMemo(
         () => `<a href="https://leafletjs.com" title="A JavaScript library for interactive maps" target="_blank" rel="noopener noreferrer">Leaflet</a> | ${selectedTileLayer.attribution}`,
         [selectedTileLayer.attribution]
     );
     const mapCrs = useMemo(
-        () => getMapCrsByTileLayerId(tileLayerID, { mapEngine: normalizedMapEngine }),
+        () => getMapCrsByTileLayerId(tileLayerID, { mapEngine: normalizedMapEngine, t }),
         [normalizedMapEngine, tileLayerID]
     );
 
@@ -719,6 +719,7 @@ const TargetMapCompositeView = ({}) => {
 
     // Subscribe to map events
     function MapEventComponent({handleSetMapZoomLevel}) {
+        const { t } = useTranslation('target');
         const mapEvents = useMapEvents({
             zoomend: () => {
                 const mapZoom = mapEvents.getZoom();
@@ -1124,7 +1125,7 @@ const TargetMapCompositeView = ({}) => {
                                     </IconButton>
                                 </span>
                             </Tooltip>
-                            <Tooltip title="Refresh target scene">
+                            <Tooltip title={t('target_map_composite_view.refresh_target_scene', { defaultValue: 'Refresh target scene' })}>
                                 <span>
                                     <IconButton
                                         size="small"
@@ -1163,7 +1164,7 @@ const TargetMapCompositeView = ({}) => {
                     {!nonSatellitePayload ? (
                         <Box sx={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', p: 2 }}>
                             <Typography variant="body2" sx={{ color: 'text.secondary', textAlign: 'center' }}>
-                                Select a mission/body target to render the solar-system viewport.
+                                {t('target_map_composite_view.select_a_mission_body_target_to_render_the_solar_system_', { defaultValue: 'Select a mission/body target to render the solar-system viewport.' })}
                             </Typography>
                         </Box>
                     ) : (

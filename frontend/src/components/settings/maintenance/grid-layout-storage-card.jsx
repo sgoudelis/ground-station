@@ -17,7 +17,7 @@
  *
  */
 
-import React, {useState} from 'react';
+import React, {useMemo, useState} from 'react';
 import {
     Typography,
     Divider,
@@ -42,31 +42,34 @@ import {gridLayoutStoreName as celestialGridLayoutName} from "../../celestial/ma
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import {toast} from '../../../utils/toast-with-timestamp.jsx';
 
-const PAGE_LAYOUTS = [
+// Factory (instead of a module-level constant) so labels/descriptions can use
+// the component's `t`; the module scope has no translator in scope.
+const createPageLayouts = (t) => [
     {
         key: earthViewGridLayoutName,
-        label: 'Earth view',
-        description: 'Resets the widget layout on the Earth view page',
+        label: t('grid_layout_storage_card.earth_view', { defaultValue: 'Earth view' }),
+        description: t('grid_layout_storage_card.resets_the_widget_layout_on_the_earth_view_page', { defaultValue: 'Resets the widget layout on the Earth view page' }),
     },
     {
         key: targetGridLayoutName,
         label: 'Target',
-        description: 'Resets the widget layout on the Target page',
+        description: t('grid_layout_storage_card.resets_the_widget_layout_on_the_target_page', { defaultValue: 'Resets the widget layout on the Target page' }),
     },
     {
         key: waterfallGridLayoutName,
         label: 'Waterfall',
-        description: 'Resets the widget layout on the Waterfall page',
+        description: t('grid_layout_storage_card.resets_the_widget_layout_on_the_waterfall_page', { defaultValue: 'Resets the widget layout on the Waterfall page' }),
     },
     {
         key: celestialGridLayoutName,
         label: 'Celestial',
-        description: 'Resets the widget layout on the Celestial page',
+        description: t('grid_layout_storage_card.resets_the_widget_layout_on_the_celestial_page', { defaultValue: 'Resets the widget layout on the Celestial page' }),
     },
 ];
 
 const GridLayoutStorageCard = () => {
     const {t} = useTranslation('settings');
+    const pageLayouts = useMemo(() => createPageLayouts(t), [t]);
     const [confirmClearLayoutOpen, setConfirmClearLayoutOpen] = useState(false);
     const [confirmSingleClearLayoutOpen, setConfirmSingleClearLayoutOpen] = useState(false);
     const [pendingSingleClearLayout, setPendingSingleClearLayout] = useState(null);
@@ -119,7 +122,7 @@ const GridLayoutStorageCard = () => {
 
     const clearLayoutLocalStorage = () => {
         setConfirmClearLayoutOpen(false);
-        PAGE_LAYOUTS.forEach(({key}) => localStorage.removeItem(key));
+        pageLayouts.forEach(({key}) => localStorage.removeItem(key));
 
         // Show reload spinner and reload after 1 second
         setIsReloading(true);
@@ -151,23 +154,22 @@ const GridLayoutStorageCard = () => {
     return (
         <>
             <Typography variant="h6" gutterBottom>
-                Grid Layout Storage
+                {t('grid_layout_storage_card.grid_layout_storage', { defaultValue: 'Grid Layout Storage' })}
             </Typography>
             <Divider sx={{mb: 2}}/>
 
             <Grid container spacing={2} columns={16}>
                 <Grid size={16}>
                     <Alert severity="warning" sx={{mb: 2}}>
-                        <AlertTitle>Clear All Grid Layouts</AlertTitle>
-                        This will reset all grid layouts below to their defaults. Use individual buttons to clear
-                        specific layouts only.
+                        <AlertTitle>{t('grid_layout_storage_card.clear_all_grid_layouts', { defaultValue: 'Clear All Grid Layouts' })}</AlertTitle>
+                        {t('grid_layout_storage_card.this_will_reset_all_grid_layouts_below_to_their_defaults', { defaultValue: 'This will reset all grid layouts below to their defaults. Use individual buttons to clear\n                        specific layouts only.' })}
                     </Alert>
                 </Grid>
 
                 <Grid size={10}>
                     {t('maintenance.clear_layout')}
                     <Typography variant="body2" color="text.secondary">
-                        Clears all grid layouts (all layouts below)
+                        {t('grid_layout_storage_card.clears_all_grid_layouts_all_layouts_below', { defaultValue: 'Clears all grid layouts (all layouts below)' })}
                     </Typography>
                 </Grid>
                 <Grid size={6}>
@@ -185,11 +187,11 @@ const GridLayoutStorageCard = () => {
                 <Grid size={16}>
                     <Divider sx={{my: 2}}/>
                     <Typography variant="body2" color="text.secondary" gutterBottom>
-                        Or clear and export individual layouts:
+                        {t('grid_layout_storage_card.or_clear_and_export_individual_layouts', { defaultValue: 'Or clear and export individual layouts:' })}
                     </Typography>
                 </Grid>
 
-                {PAGE_LAYOUTS.map((layout) => (
+                {pageLayouts.map((layout) => (
                     <React.Fragment key={layout.key}>
                         <Grid size={10}>
                             {`Clear ${layout.label} Grid Layout`}
@@ -206,7 +208,7 @@ const GridLayoutStorageCard = () => {
                                     fullWidth
                                     size="small"
                                 >
-                                    Clear
+                                    {t('grid_layout_storage_card.clear', { defaultValue: 'Clear' })}
                                 </Button>
                                 <Button
                                     variant="outlined"
@@ -216,7 +218,7 @@ const GridLayoutStorageCard = () => {
                                     fullWidth
                                     size="small"
                                 >
-                                    Export JSON
+                                    {t('grid_layout_storage_card.export_json', { defaultValue: 'Export JSON' })}
                                 </Button>
                             </Stack>
                         </Grid>
@@ -266,16 +268,15 @@ const GridLayoutStorageCard = () => {
                     >
                         !
                     </Box>
-                    Clear All Grid Layouts?
+                    {t('grid_layout_storage_card.clear_all_grid_layouts', { defaultValue: 'Clear All Grid Layouts?' })}
                 </DialogTitle>
                 <DialogContent sx={{ px: 3, pt: '32px !important', pb: 3 }}>
                     <Alert severity="info" sx={{ mb: 2 }}>
-                        <AlertTitle>Local Browser Cache Only</AlertTitle>
-                        This will only clear layout preferences stored in your browser's local storage. No backend data
-                        will be affected.
+                        <AlertTitle>{t('grid_layout_storage_card.local_browser_cache_only', { defaultValue: 'Local Browser Cache Only' })}</AlertTitle>
+                        {t('grid_layout_storage_card.this_will_only_clear_layout_preferences_stored_in_your_b', { defaultValue: 'This will only clear layout preferences stored in your browser\'s local storage. No backend data\n                        will be affected.' })}
                     </Alert>
                     <Typography variant="body1" sx={{ mb: 2, color: 'text.primary' }}>
-                        This will reset all widget layouts to their defaults on the following pages:
+                        {t('grid_layout_storage_card.this_will_reset_all_widget_layouts_to_their_defaults_on_', { defaultValue: 'This will reset all widget layouts to their defaults on the following pages:' })}
                     </Typography>
                     <Box sx={{
                         p: 2,
@@ -285,16 +286,16 @@ const GridLayoutStorageCard = () => {
                     }}>
                         <Typography component="div" variant="body2" sx={{ fontSize: '0.813rem', color: 'text.primary' }}>
                             <ul style={{ margin: 0, paddingLeft: '1.5rem' }}>
-                                <li>Earth view page</li>
-                                <li>Target page</li>
-                                <li>Waterfall page</li>
-                                <li>Celestial page</li>
+                                <li>{t('grid_layout_storage_card.earth_view_page', { defaultValue: 'Earth view page' })}</li>
+                                <li>{t('grid_layout_storage_card.target_page', { defaultValue: 'Target page' })}</li>
+                                <li>{t('grid_layout_storage_card.waterfall_page', { defaultValue: 'Waterfall page' })}</li>
+                                <li>{t('grid_layout_storage_card.celestial_page', { defaultValue: 'Celestial page' })}</li>
                             </ul>
                         </Typography>
                     </Box>
                     <Alert severity="warning" sx={{ mt: 2 }}>
-                        <AlertTitle>Page Refresh Required</AlertTitle>
-                        You will need to refresh the page to see the changes.
+                        <AlertTitle>{t('grid_layout_storage_card.page_refresh_required', { defaultValue: 'Page Refresh Required' })}</AlertTitle>
+                        {t('grid_layout_storage_card.you_will_need_to_refresh_the_page_to_see_the_changes', { defaultValue: 'You will need to refresh the page to see the changes.' })}
                     </Alert>
                 </DialogContent>
                 <DialogActions
@@ -316,7 +317,7 @@ const GridLayoutStorageCard = () => {
                             fontWeight: 500,
                         }}
                     >
-                        Cancel
+                        {t('grid_layout_storage_card.cancel', { defaultValue: 'Cancel' })}
                     </Button>
                     <Button
                         onClick={clearLayoutLocalStorage}
@@ -328,7 +329,7 @@ const GridLayoutStorageCard = () => {
                             fontWeight: 600,
                         }}
                     >
-                        Clear Layouts
+                        {t('grid_layout_storage_card.clear_layouts', { defaultValue: 'Clear Layouts' })}
                     </Button>
                 </DialogActions>
             </Dialog>
@@ -359,11 +360,11 @@ const GridLayoutStorageCard = () => {
                 </DialogTitle>
                 <DialogContent sx={{ px: 3, pt: '32px !important', pb: 2 }}>
                     <Alert severity="warning" sx={{ mb: 2 }}>
-                        <AlertTitle>Local Browser Cache Only</AlertTitle>
-                        This only clears the saved layout in this browser.
+                        <AlertTitle>{t('grid_layout_storage_card.local_browser_cache_only', { defaultValue: 'Local Browser Cache Only' })}</AlertTitle>
+                        {t('grid_layout_storage_card.this_only_clears_the_saved_layout_in_this_browser', { defaultValue: 'This only clears the saved layout in this browser.' })}
                     </Alert>
                     <Typography variant="body2" color="text.secondary">
-                        Refresh the page after clearing to load the default layout.
+                        {t('grid_layout_storage_card.refresh_the_page_after_clearing_to_load_the_default_layo', { defaultValue: 'Refresh the page after clearing to load the default layout.' })}
                     </Typography>
                 </DialogContent>
                 <DialogActions
@@ -385,7 +386,7 @@ const GridLayoutStorageCard = () => {
                             fontWeight: 500,
                         }}
                     >
-                        Cancel
+                        {t('grid_layout_storage_card.cancel', { defaultValue: 'Cancel' })}
                     </Button>
                     <Button
                         onClick={confirmSingleClearLayout}
@@ -397,7 +398,7 @@ const GridLayoutStorageCard = () => {
                             fontWeight: 600,
                         }}
                     >
-                        Clear
+                        {t('grid_layout_storage_card.clear', { defaultValue: 'Clear' })}
                     </Button>
                 </DialogActions>
             </Dialog>
@@ -410,7 +411,7 @@ const GridLayoutStorageCard = () => {
                 <Box sx={{textAlign: 'center'}}>
                     <CircularProgress color="inherit" size={60}/>
                     <Typography variant="h6" sx={{mt: 2}}>
-                        Reloading...
+                        {t('grid_layout_storage_card.reloading', { defaultValue: 'Reloading...' })}
                     </Typography>
                 </Box>
             </Backdrop>

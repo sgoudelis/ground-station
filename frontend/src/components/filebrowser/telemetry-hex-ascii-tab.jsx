@@ -21,18 +21,20 @@ import {
 } from '@mui/material';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import { toast } from 'react-toastify';
+import { useTranslation } from 'react-i18next';
 
 function HexByte({ byte, offset, onClick, selected }) {
+    const { t } = useTranslation('filebrowser');
     const theme = useTheme();
     const byteValue = typeof byte === 'string' ? parseInt(byte, 16) : byte;
 
     const tooltipContent = (
         <Box sx={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>
-            <div>Offset: 0x{offset.toString(16).padStart(4, '0').toUpperCase()}</div>
-            <div>Hex: 0x{byteValue.toString(16).padStart(2, '0').toUpperCase()}</div>
-            <div>Dec: {byteValue}</div>
-            <div>Binary: {byteValue.toString(2).padStart(8, '0')}</div>
-            <div>ASCII: {byteValue >= 32 && byteValue < 127 ? String.fromCharCode(byteValue) : '·'}</div>
+            <div>{t('telemetry_hex_ascii_tab.offset_0x', { defaultValue: 'Offset: 0x' })}{offset.toString(16).padStart(4, '0').toUpperCase()}</div>
+            <div>{t('telemetry_hex_ascii_tab.hex_0x', { defaultValue: 'Hex: 0x' })}{byteValue.toString(16).padStart(2, '0').toUpperCase()}</div>
+            <div>{t('telemetry_hex_ascii_tab.dec', { defaultValue: 'Dec:' })} {byteValue}</div>
+            <div>{t('telemetry_hex_ascii_tab.binary', { defaultValue: 'Binary:' })} {byteValue.toString(2).padStart(8, '0')}</div>
+            <div>{t('telemetry_hex_ascii_tab.ascii', { defaultValue: 'ASCII:' })} {byteValue >= 32 && byteValue < 127 ? String.fromCharCode(byteValue) : '·'}</div>
         </Box>
     );
 
@@ -64,6 +66,7 @@ function HexByte({ byte, offset, onClick, selected }) {
 }
 
 export default function HexAsciiTab({ packet, telemetry }) {
+    const { t } = useTranslation('filebrowser');
     const theme = useTheme();
     const [selectedByte, setSelectedByte] = useState(null);
 
@@ -123,7 +126,7 @@ export default function HexAsciiTab({ packet, telemetry }) {
         return (
             <Box sx={{ p: 3, textAlign: 'center' }}>
                 <Typography color="text.secondary">
-                    No hex data available for this packet
+                    {t('telemetry_hex_ascii_tab.no_hex_data_available_for_this_packet', { defaultValue: 'No hex data available for this packet' })}
                 </Typography>
             </Box>
         );
@@ -139,7 +142,7 @@ export default function HexAsciiTab({ packet, telemetry }) {
                     onClick={handleCopy}
                     variant="outlined"
                 >
-                    Copy Hex
+                    {t('telemetry_hex_ascii_tab.copy_hex', { defaultValue: 'Copy Hex' })}
                 </Button>
                 <Button
                     size="small"
@@ -147,11 +150,11 @@ export default function HexAsciiTab({ packet, telemetry }) {
                     onClick={handleCopyFormatted}
                     variant="outlined"
                 >
-                    Copy Formatted
+                    {t('telemetry_hex_ascii_tab.copy_formatted', { defaultValue: 'Copy Formatted' })}
                 </Button>
                 <Box sx={{ flexGrow: 1 }} />
                 <Typography variant="caption" color="text.secondary" sx={{ alignSelf: 'center' }}>
-                    {bytes.length} bytes • Click byte for details
+                    {bytes.length} {t('telemetry_hex_ascii_tab.bytes_click_byte_for_details', { defaultValue: 'bytes • Click byte for details' })}
                 </Typography>
             </Stack>
 
@@ -187,7 +190,7 @@ export default function HexAsciiTab({ packet, telemetry }) {
                                 color: theme.palette.text.secondary,
                             }}
                         >
-                            Offset
+                            {t('telemetry_hex_ascii_tab.offset', { defaultValue: 'Offset' })}
                         </Typography>
                         <Typography
                             variant="caption"
@@ -197,7 +200,7 @@ export default function HexAsciiTab({ packet, telemetry }) {
                                 color: theme.palette.text.secondary,
                             }}
                         >
-                            Hex
+                            {t('telemetry_hex_ascii_tab.hex', { defaultValue: 'Hex' })}
                         </Typography>
                         <Typography
                             variant="caption"
@@ -207,7 +210,7 @@ export default function HexAsciiTab({ packet, telemetry }) {
                                 color: theme.palette.text.secondary,
                             }}
                         >
-                            ASCII
+                            {t('telemetry_hex_ascii_tab.ascii', { defaultValue: 'ASCII' })}
                         </Typography>
                     </Box>
 
@@ -276,7 +279,7 @@ export default function HexAsciiTab({ packet, telemetry }) {
             {/* Legend */}
             <Box sx={{ mt: 2, p: 2, bgcolor: theme.palette.info.main + '30', borderRadius: 1, border: `1px solid ${theme.palette.info.main}60` }}>
                 <Typography variant="caption" sx={{ color: theme.palette.info.light, fontWeight: 500 }}>
-                    💡 Tip: Hover over bytes to see detailed information. Click to select. ASCII column shows printable characters (·  for non-printable).
+                    {t('telemetry_hex_ascii_tab.tip_hover_over_bytes_to_see_detailed_information_click_t', { defaultValue: '💡 Tip: Hover over bytes to see detailed information. Click to select. ASCII column shows printable characters (·  for non-printable).' })}
                 </Typography>
             </Box>
         </Box>

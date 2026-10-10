@@ -201,11 +201,11 @@ const RotatorControl = React.memo(function RotatorControl({ trackerId: trackerId
                 color: 'default'
             };
         }
-        if (motionUnconfirmed) return { label: 'Motion unconfirmed', color: 'warning' };
+        if (motionUnconfirmed) return { label: t('rotator_control.motion_unconfirmed', { defaultValue: 'Motion unconfirmed' }), color: 'warning' };
         // Tracking stays active during a slew; show the current motion first.
         if (effectiveRotatorData?.slewing) return { label: 'Slewing', color: 'warning' };
         if (effectiveRotatorData?.tracking) return { label: 'Tracking', color: 'success' };
-        if (effectiveRotatorData?.park_requested) return { label: 'Park command sent', color: 'warning' };
+        if (effectiveRotatorData?.park_requested) return { label: t('rotator_control.park_command_sent', { defaultValue: 'Park command sent' }), color: 'warning' };
         if (effectiveRotatorData?.parked) return { label: 'Parked', color: 'warning' };
         if (effectiveRotatorData?.stopped) return { label: 'Stopped', color: 'warning' };
         return { label: 'Connected', color: 'success' };
@@ -501,7 +501,7 @@ const RotatorControl = React.memo(function RotatorControl({ trackerId: trackerId
                                                 {t('rotator_control_labels.no_rotator_control')}
                                             </Typography>
                                             <Chip
-                                                label="None"
+                                                label={t('rotator_control.none', { defaultValue: 'None' })}
                                                 size="small"
                                                 variant="outlined"
                                                 sx={{ ml: 'auto', height: 18, fontSize: '0.62rem' }}
@@ -665,10 +665,10 @@ const RotatorControl = React.memo(function RotatorControl({ trackerId: trackerId
                                 </Typography>
                                 {pointingError ? <>
                                     <Typography variant="body2" sx={{fontFamily: "Monospace, monospace"}}>
-                                        ΔAZ {formatPointingError(pointingError.az)}
+                                        {t('rotator_control.az', { defaultValue: 'ΔAZ' })} {formatPointingError(pointingError.az)}
                                     </Typography>
                                     <Typography variant="body2" sx={{fontFamily: "Monospace, monospace"}}>
-                                        ΔEL {formatPointingError(pointingError.el)}
+                                        {t('rotator_control.el', { defaultValue: 'ΔEL' })} {formatPointingError(pointingError.el)}
                                     </Typography>
                                 </> : <Typography variant="body2" sx={{fontFamily: "Monospace, monospace"}}>—</Typography>}
                             </Paper>

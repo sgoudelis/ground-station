@@ -11,6 +11,7 @@ import VolumeOffIcon from '@mui/icons-material/VolumeOff';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import { SquelchIconCentered } from '../../common/dataurl-icons.jsx';
 import { useAudio } from '../../dashboard/audio-provider.jsx';
+import { useTranslation } from 'react-i18next';
 
 const VAD_CLOSE_DELAY_MARKS = Array.from({ length: 5 }, (_, index) => {
     const value = (index + 1) * 200;
@@ -33,6 +34,7 @@ export const SquelchSlider = ({
     vadCloseDelayMs,
     onVFOPropertyChange
 }) => {
+    const { t } = useTranslation('waterfall');
     const { getVfoRfPower } = useAudio();
     const isFmMode = (mode || '').toUpperCase() === 'FM';
     const isVoiceSquelchEnabled = squelchMode === 'voice' || squelchMode === 'hybrid';
@@ -73,7 +75,7 @@ export const SquelchSlider = ({
     return (
         <Box sx={{ mt: 2, opacity: controlsEnabled ? 1 : 0.6 }}>
             <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.75 }}>
-                Squelch Type
+                {t('vfo_sliders.squelch_type', { defaultValue: 'Squelch Type' })}
             </Typography>
             <ToggleButtonGroup
                 value={squelchMode}
@@ -89,21 +91,21 @@ export const SquelchSlider = ({
             >
                 <ToggleButton
                     value="carrier"
-                    title="Open by received RF power threshold only"
+                    title={t('vfo_sliders.open_by_received_rf_power_threshold_only', { defaultValue: 'Open by received RF power threshold only' })}
                 >
-                    RF power
+                    {t('vfo_sliders.rf_power', { defaultValue: 'RF power' })}
                 </ToggleButton>
                 <ToggleButton
                     value="voice"
-                    title="Open only when voice-like audio is detected"
+                    title={t('vfo_sliders.open_only_when_voice_like_audio_is_detected', { defaultValue: 'Open only when voice-like audio is detected' })}
                 >
-                    Voice
+                    {t('vfo_sliders.voice', { defaultValue: 'Voice' })}
                 </ToggleButton>
                 <ToggleButton
                     value="hybrid"
-                    title="Open only when both RF power and voice detection pass"
+                    title={t('vfo_sliders.open_only_when_both_rf_power_and_voice_detection_pass', { defaultValue: 'Open only when both RF power and voice detection pass' })}
                 >
-                    Hybrid
+                    {t('vfo_sliders.hybrid', { defaultValue: 'Hybrid' })}
                 </ToggleButton>
             </ToggleButtonGroup>
 
@@ -114,7 +116,7 @@ export const SquelchSlider = ({
                 data-slider={squelchMode === 'voice' ? undefined : 'squelch'}
                 data-vfo-index={vfoIndex}
             >
-                <Tooltip title="Auto Squelch (Noise Floor + 5dB)" arrow>
+                <Tooltip title={t('vfo_sliders.auto_squelch_noise_floor_5db', { defaultValue: 'Auto Squelch (Noise Floor + 5dB)' })} arrow>
                     <span>
                         <IconButton
                             onClick={handleAutoSquelch}
@@ -148,7 +150,7 @@ export const SquelchSlider = ({
             </Stack>
 
             <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 1.25, mb: 0.75 }}>
-                Voice Sensitivity
+                {t('vfo_sliders.voice_sensitivity', { defaultValue: 'Voice Sensitivity' })}
             </Typography>
             <ToggleButtonGroup
                 value={vadSensitivity}
@@ -164,29 +166,29 @@ export const SquelchSlider = ({
             >
                 <ToggleButton
                     value="low"
-                    title="Least sensitive voice detection (fewer false opens)"
+                    title={t('vfo_sliders.least_sensitive_voice_detection_fewer_false_opens', { defaultValue: 'Least sensitive voice detection (fewer false opens)' })}
                 >
-                    Low
+                    {t('vfo_sliders.low', { defaultValue: 'Low' })}
                 </ToggleButton>
                 <ToggleButton
                     value="medium"
-                    title="Balanced voice detection for typical repeater use"
+                    title={t('vfo_sliders.balanced_voice_detection_for_typical_repeater_use', { defaultValue: 'Balanced voice detection for typical repeater use' })}
                 >
-                    Medium
+                    {t('vfo_sliders.medium', { defaultValue: 'Medium' })}
                 </ToggleButton>
                 <ToggleButton
                     value="high"
-                    title="Most sensitive voice detection (opens fastest)"
+                    title={t('vfo_sliders.most_sensitive_voice_detection_opens_fastest', { defaultValue: 'Most sensitive voice detection (opens fastest)' })}
                 >
-                    High
+                    {t('vfo_sliders.high', { defaultValue: 'High' })}
                 </ToggleButton>
             </ToggleButtonGroup>
 
             <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5 }}>
-                Close Delay
+                {t('vfo_sliders.close_delay', { defaultValue: 'Close Delay' })}
             </Typography>
             <Stack spacing={0} direction="row" alignItems="center">
-                <Tooltip title="Voice close delay" arrow>
+                <Tooltip title={t('vfo_sliders.voice_close_delay', { defaultValue: 'Voice close delay' })} arrow>
                     <span>
                         <IconButton
                             disabled

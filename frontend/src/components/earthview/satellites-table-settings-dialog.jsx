@@ -204,7 +204,7 @@ const SatellitesTableSettingsDialog = ({ open, onClose }) => {
             <DialogActions sx={DIALOG_ACTIONS_SX}>
                 <Box sx={FOOTER_ACTION_ROW_SX}>
                     <Button onClick={handleResetValues} variant="outlined">
-                        Reset Values
+                        {t('satellites_table_settings_dialog.reset_values', { defaultValue: 'Reset Values' })}
                     </Button>
                     <Box sx={{ flex: 1, minWidth: 8 }} />
                     <Button onClick={onClose} variant="contained">

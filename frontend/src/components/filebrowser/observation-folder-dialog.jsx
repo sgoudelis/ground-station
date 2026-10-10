@@ -25,6 +25,7 @@ import DownloadIcon from '@mui/icons-material/Download';
 import ImageIcon from '@mui/icons-material/Image';
 import RadioIcon from '@mui/icons-material/Radio';
 import SatelliteAltIcon from '@mui/icons-material/SatelliteAlt';
+import { useTranslation } from 'react-i18next';
 
 const IMAGE_FILE_TYPES = ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp'];
 
@@ -92,6 +93,7 @@ export default function ObservationFolderDialog({
     onOpenArtifact,
     onDelete,
 }) {
+    const { t } = useTranslation('filebrowser');
     if (!folder) return null;
 
     const artifacts = folder.artifacts || [];
@@ -113,27 +115,27 @@ export default function ObservationFolderDialog({
     const observationStatus = metadata.status || folder.observation_status;
     const sessionCount = Array.isArray(metadata.sessions) ? metadata.sessions.length : 0;
     const observationDetails = [
-        { label: 'Observation ID', value: metadata.observation_id, mono: true },
+        { label: t('observation_folder_dialog.observation_id', { defaultValue: 'Observation ID' }), value: metadata.observation_id, mono: true },
         { label: 'Target', value: satellite.name || folder.satellite_name },
-        { label: 'NORAD ID', value: satellite.norad_id || folder.satellite_id, mono: true },
+        { label: t('observation_folder_dialog.norad_id', { defaultValue: 'NORAD ID' }), value: satellite.norad_id || folder.satellite_id, mono: true },
         { label: 'Started', value: formatObservationTime(metadata.created_at) },
         { label: 'Finished', value: formatObservationTime(metadata.finalized_at) },
         { label: 'Sessions', value: sessionCount ? `${sessionCount} ${sessionCount === 1 ? 'session' : 'sessions'}` : null },
     ].filter((detail) => detail.value !== null && detail.value !== undefined && detail.value !== '');
     const scheduledObservation = metadata.scheduled_observation;
     const scheduledDetails = scheduledObservation ? [
-        { label: 'Planned AOS', value: formatObservationTime(scheduledObservation.pass?.event_start) },
-        { label: 'Planned LOS', value: formatObservationTime(scheduledObservation.pass?.event_end) },
+        { label: t('observation_folder_dialog.planned_aos', { defaultValue: 'Planned AOS' }), value: formatObservationTime(scheduledObservation.pass?.event_start) },
+        { label: t('observation_folder_dialog.planned_los', { defaultValue: 'Planned LOS' }), value: formatObservationTime(scheduledObservation.pass?.event_end) },
         {
-            label: 'Peak elevation',
+            label: t('observation_folder_dialog.peak_elevation', { defaultValue: 'Peak elevation' }),
             value: Number.isFinite(Number(scheduledObservation.pass?.peak_altitude))
                 ? `${Number(scheduledObservation.pass.peak_altitude).toFixed(1)}°`
                 : null,
         },
-        { label: 'Task start', value: formatObservationTime(scheduledObservation.task_start) },
-        { label: 'Task end', value: formatObservationTime(scheduledObservation.task_end) },
-        { label: 'Actual start', value: formatObservationTime(scheduledObservation.actual_start_time) },
-        { label: 'Actual end', value: formatObservationTime(scheduledObservation.actual_end_time) },
+        { label: t('observation_folder_dialog.task_start', { defaultValue: 'Task start' }), value: formatObservationTime(scheduledObservation.task_start) },
+        { label: t('observation_folder_dialog.task_end', { defaultValue: 'Task end' }), value: formatObservationTime(scheduledObservation.task_end) },
+        { label: t('observation_folder_dialog.actual_start', { defaultValue: 'Actual start' }), value: formatObservationTime(scheduledObservation.actual_start_time) },
+        { label: t('observation_folder_dialog.actual_end', { defaultValue: 'Actual end' }), value: formatObservationTime(scheduledObservation.actual_end_time) },
     ].filter((detail) => detail.value !== null && detail.value !== undefined && detail.value !== '') : [];
     const statusColor = observationStatus === 'completed'
         ? 'success'
@@ -150,12 +152,12 @@ export default function ObservationFolderDialog({
         (artifact) => !artifact.recording_name && !IMAGE_FILE_TYPES.includes(artifact.file_type)
     );
     const artifactSections = [
-        { id: 'decoded', title: 'Decoded data', artifacts: nonImageArtifacts.filter((artifact) => artifact.kind === 'decoded') },
-        { id: 'audio', title: 'Audio recordings', artifacts: nonImageArtifacts.filter((artifact) => artifact.kind === 'audio') },
+        { id: 'decoded', title: t('observation_folder_dialog.decoded_data', { defaultValue: 'Decoded data' }), artifacts: nonImageArtifacts.filter((artifact) => artifact.kind === 'decoded') },
+        { id: 'audio', title: t('observation_folder_dialog.audio_recordings', { defaultValue: 'Audio recordings' }), artifacts: nonImageArtifacts.filter((artifact) => artifact.kind === 'audio') },
         { id: 'transcriptions', title: 'Transcripts', artifacts: nonImageArtifacts.filter((artifact) => artifact.kind === 'transcriptions' || artifact.kind === 'transcription') },
         {
             id: 'other',
-            title: 'Other files',
+            title: t('observation_folder_dialog.other_files', { defaultValue: 'Other files' }),
             artifacts: nonImageArtifacts.filter(
                 (artifact) => !['decoded', 'audio', 'transcription', 'transcriptions'].includes(artifact.kind)
             ),
@@ -206,7 +208,7 @@ export default function ObservationFolderDialog({
                     </Box>
                     <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexShrink: 0 }}>
                         {folder.observation_in_progress && (
-                            <Chip label="In progress" size="small" color="warning" />
+                            <Chip label={t('observation_folder_dialog.in_progress', { defaultValue: 'In progress' })} size="small" color="warning" />
                         )}
                         {recordings.length > 0 && (
                             <Chip
@@ -254,7 +256,7 @@ export default function ObservationFolderDialog({
                             }}
                         >
                             <Box sx={{ minWidth: 0 }}>
-                                <Typography variant="subtitle2" fontWeight={700}>Observation details</Typography>
+                                <Typography variant="subtitle2" fontWeight={700}>{t('observation_folder_dialog.observation_details', { defaultValue: 'Observation details' })}</Typography>
                                 {metadata.observation_name && (
                                     <Typography variant="body2" color="text.secondary" noWrap>
                                         {metadata.observation_name}
@@ -316,7 +318,7 @@ export default function ObservationFolderDialog({
                                         bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.03)' : 'grey.50'),
                                     }}
                                 >
-                                    <Typography variant="subtitle2" fontWeight={700}>Scheduled pass</Typography>
+                                    <Typography variant="subtitle2" fontWeight={700}>{t('observation_folder_dialog.scheduled_pass', { defaultValue: 'Scheduled pass' })}</Typography>
                                 </Box>
                                 {scheduledDetails.length > 0 && (
                                     <Box
@@ -339,7 +341,7 @@ export default function ObservationFolderDialog({
                                 )}
                                 {scheduledObservation.error_message && (
                                     <Box sx={{ mx: 2.25, mb: 1.5, px: 1.25, py: 1, borderRadius: 1, bgcolor: 'error.lighter', color: 'error.dark' }}>
-                                        <Typography variant="caption" sx={{ display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>Scheduler error{scheduledObservation.error_count ? ` (${scheduledObservation.error_count})` : ''}</Typography>
+                                        <Typography variant="caption" sx={{ display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>{t('observation_folder_dialog.scheduler_error', { defaultValue: 'Scheduler error' })}{scheduledObservation.error_count ? ` (${scheduledObservation.error_count})` : ''}</Typography>
                                         <Typography variant="body2">{scheduledObservation.error_message}</Typography>
                                     </Box>
                                 )}
@@ -349,16 +351,16 @@ export default function ObservationFolderDialog({
                 )}
                 <Box sx={{ mt: 1, mb: 2 }}>
                     <Typography variant="subtitle1" fontWeight={700}>
-                        Observation artifacts
+                        {t('observation_folder_dialog.observation_artifacts', { defaultValue: 'Observation artifacts' })}
                         <Box component="span" sx={{ mx: 1, color: 'text.disabled' }}>·</Box>
                         <Box component="span" sx={{ color: 'text.secondary', fontSize: '0.875rem', fontWeight: 400 }}>
-                            Select an item to open it in its dedicated viewer
+                            {t('observation_folder_dialog.select_an_item_to_open_it_in_its_dedicated_viewer', { defaultValue: 'Select an item to open it in its dedicated viewer' })}
                         </Box>
                     </Typography>
                 </Box>
                 {recordings.length > 0 && (
                     <>
-                        <Typography variant="subtitle2" sx={{ mb: 1.25 }}>IQ recordings</Typography>
+                        <Typography variant="subtitle2" sx={{ mb: 1.25 }}>{t('observation_folder_dialog.iq_recordings', { defaultValue: 'IQ recordings' })}</Typography>
                         <Grid container spacing={1.5} sx={{ mb: 3 }}>
                             {recordings.map((recording) => {
                                 const previewUrl = recording.snapshot?.thumbnail_url || recording.snapshot?.url;
@@ -391,7 +393,7 @@ export default function ObservationFolderDialog({
                                                     {recordingSummary(recording)}
                                                 </Typography>
                                                 <Typography variant="caption" color="text.secondary" noWrap component="div">
-                                                    Open recording details
+                                                    {t('observation_folder_dialog.open_recording_details', { defaultValue: 'Open recording details' })}
                                                 </Typography>
                                             </Box>
                                         </Paper>
@@ -404,7 +406,7 @@ export default function ObservationFolderDialog({
                 )}
                 {images.length > 0 && (
                     <>
-                        <Typography variant="subtitle2" sx={{ mb: 1.25 }}>Image products</Typography>
+                        <Typography variant="subtitle2" sx={{ mb: 1.25 }}>{t('observation_folder_dialog.image_products', { defaultValue: 'Image products' })}</Typography>
                         <Grid container spacing={1.5} sx={{ mb: 3 }}>
                             {images.map((image) => (
                                 <Grid item xs={12} sm={6} md={4} key={image.path}>
@@ -416,7 +418,7 @@ export default function ObservationFolderDialog({
                                         <Box component="img" src={image.thumbnail_url || image.url} alt={image.name} loading="lazy" decoding="async" sx={{ display: 'block', width: '100%', height: 164, objectFit: 'contain', bgcolor: 'grey.900' }} />
                                         <Box sx={{ p: 1.25 }}>
                                             <Typography variant="body2" noWrap fontWeight={600}>{image.name}</Typography>
-                                            <Typography variant="caption" color="text.secondary">{formatBytes(image.size)} · Open image viewer</Typography>
+                                            <Typography variant="caption" color="text.secondary">{formatBytes(image.size)} {t('observation_folder_dialog.open_image_viewer', { defaultValue: '· Open image viewer' })}</Typography>
                                         </Box>
                                     </Paper>
                                 </Grid>
@@ -443,7 +445,7 @@ export default function ObservationFolderDialog({
                                             primaryTypographyProps={{ noWrap: true, fontWeight: 600 }}
                                             secondaryTypographyProps={{ noWrap: true }}
                                         />
-                                        <Tooltip title="Open in dedicated viewer">
+                                        <Tooltip title={t('observation_folder_dialog.open_in_dedicated_viewer', { defaultValue: 'Open in dedicated viewer' })}>
                                             <IconButton edge="end" onClick={(event) => { event.stopPropagation(); openArtifact(artifact); }}><DownloadIcon /></IconButton>
                                         </Tooltip>
                                     </ListItemButton>
@@ -453,7 +455,7 @@ export default function ObservationFolderDialog({
                         <Divider sx={{ mb: 2 }} />
                     </React.Fragment>
                 ))}
-                {!hasArtifacts && <Typography color="text.secondary">No files were produced by this observation.</Typography>}
+                {!hasArtifacts && <Typography color="text.secondary">{t('observation_folder_dialog.no_files_were_produced_by_this_observation', { defaultValue: 'No files were produced by this observation.' })}</Typography>}
             </DialogContent>
             <DialogActions disableSpacing sx={{
                 bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'grey.900' : 'grey.100'),
@@ -463,9 +465,9 @@ export default function ObservationFolderDialog({
                 gap: 1,
             }}>
                 <Button onClick={onDelete} color="error" variant="outlined" startIcon={<DeleteIcon />} disabled={!onDelete}>
-                    Delete
+                    {t('observation_folder_dialog.delete', { defaultValue: 'Delete' })}
                 </Button>
-                <Button onClick={onClose} variant="outlined">Close</Button>
+                <Button onClick={onClose} variant="outlined">{t('observation_folder_dialog.close', { defaultValue: 'Close' })}</Button>
             </DialogActions>
         </Dialog>
     );

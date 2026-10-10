@@ -84,7 +84,7 @@ import {
 import { fetchSDRs } from '../hardware/sdr-slice.jsx';
 import { fetchSatellite } from '../satellites/satellite-slice.jsx';
 import { SatelliteSelector } from './satellite-selector.jsx';
-import { SATDUMP_PIPELINES, getDecoderParameters, getDecoderDefaultParameters } from '../waterfall/decoder-parameters.js';
+import { getSatdumpPipelines, getDecoderParameters, getDecoderDefaultParameters } from '../waterfall/decoder-parameters.js';
 import { DecoderConfigSuggestion } from './decoder-config-suggestion.jsx';
 
 const DECODER_TYPES = [
@@ -204,8 +204,8 @@ const getDecimationOptions = (sampleRate) => {
     return options.length > 0 ? options : [1];
 };
 
-const getDefaultSatdumpPipeline = () => {
-    const group = Object.values(SATDUMP_PIPELINES).find((entry) => entry?.pipelines?.length);
+const getDefaultSatdumpPipeline = (t) => {
+    const group = Object.values(getSatdumpPipelines(t)).find((entry) => entry?.pipelines?.length);
     return group?.pipelines?.[0]?.value || '';
 };
 
@@ -247,7 +247,8 @@ const groupTransmittersByBand = (transmitters) => {
 
 const ObservationFormDialog = () => {
     const dispatch = useDispatch();
-    const { t } = useTranslation('common');
+    // 同上：本组件用 common，同时需要解析 decoder-parameters.js 的 waterfall 键
+    const { t } = useTranslation(['common', 'waterfall']);
     const { socket } = useSocket();
 
     const open = useSelector((state) => state.scheduler?.dialogOpen || false);
@@ -734,7 +735,7 @@ const ObservationFormDialog = () => {
                         decimation_factor: 1,
                         storage_format: 'cf32_le',
                         enable_post_processing: false,
-                        post_process_pipeline: getDefaultSatdumpPipeline(),
+                        post_process_pipeline: getDefaultSatdumpPipeline(t),
                         delete_after_post_processing: false,
                         retain_iq_on_satdump_failure: true,
                     },
@@ -903,7 +904,7 @@ const ObservationFormDialog = () => {
                     config: {
                         ...currentTask.config,
                         decoder_type: value,
-                        parameters: getDecoderDefaultParameters(value),
+                        parameters: getDecoderDefaultParameters(value, t),
                         bandwidth: nextBandwidth,
                     },
                 };
@@ -1685,7 +1686,7 @@ const ObservationFormDialog = () => {
                                             {bandwidthValidation.message}
                                         </Typography>
                                         <Typography variant="caption" display="block" sx={{ fontFamily: 'monospace', mt: 0.5 }}>
-                                            ({(bandwidthValidation.maxFreq / 1000000).toFixed(3)} MHz - {(bandwidthValidation.minFreq / 1000000).toFixed(3)} MHz = {(bandwidthValidation.requiredBandwidth / 1000000).toFixed(2)} MHz)
+                                            ({(bandwidthValidation.maxFreq / 1000000).toFixed(3)} {t('observation_form_dialog.mhz', { defaultValue: 'MHz -' })} {(bandwidthValidation.minFreq / 1000000).toFixed(3)} {t('observation_form_dialog.mhz_2', { defaultValue: 'MHz =' })} {(bandwidthValidation.requiredBandwidth / 1000000).toFixed(2)} {t('observation_form_dialog.mhz_3', { defaultValue: 'MHz)' })}
                                         </Typography>
                                     </Box>
                                 )}
@@ -2116,7 +2117,7 @@ const ObservationFormDialog = () => {
                                                     <Stack spacing={2}>
                                             {task.type === 'decoder' && (() => {
                                                 const decoderType = task.config.decoder_type;
-                                                const decoderParams = getDecoderParameters(decoderType);
+                                                const decoderParams = getDecoderParameters(decoderType, t);
                                                 const currentParams = task.config.parameters || {};
 
                                                 return (
@@ -2777,7 +2778,7 @@ const ObservationFormDialog = () => {
                                                                         const enabled = e.target.checked;
                                                                         handleTaskConfigChange(index, 'enable_post_processing', enabled);
                                                                         if (enabled && !task.config.post_process_pipeline) {
-                                                                            handleTaskConfigChange(index, 'post_process_pipeline', getDefaultSatdumpPipeline());
+                                                                            handleTaskConfigChange(index, 'post_process_pipeline', getDefaultSatdumpPipeline(t));
                                                                         }
                                                                         if (!enabled) {
                                                                             handleTaskConfigChange(index, 'delete_after_post_processing', false);
@@ -2796,13 +2797,13 @@ const ObservationFormDialog = () => {
                                                         >
                                                             <InputLabel>{t('scheduler_dialogs.shared.satdump_pipeline_label')}</InputLabel>
                                                             <Select
-                                                                value={task.config.post_process_pipeline || getDefaultSatdumpPipeline()}
+                                                                value={task.config.post_process_pipeline || getDefaultSatdumpPipeline(t)}
                                                                 onChange={(e) =>
                                                                     handleTaskConfigChange(index, 'post_process_pipeline', e.target.value)
                                                                 }
                                                                 label={t('scheduler_dialogs.shared.satdump_pipeline_label')}
                                                             >
-                                                                {Object.entries(SATDUMP_PIPELINES).map(([key, group]) => {
+                                                                {Object.entries(getSatdumpPipelines(t)).map(([key, group]) => {
                                                                     const pipelines = group?.pipelines || [];
                                                                     if (pipelines.length === 0) return null;
                                                                     const label = group.label || key;

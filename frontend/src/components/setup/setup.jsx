@@ -394,14 +394,14 @@ const SetupWizard = ({
             setSoapyRuntimeState((previous) => ({
                 ...previous,
                 status: 'inprogress',
-                detail: 'Discovery running...',
+                detail: t('setup.discovery_running', { defaultValue: 'Discovery running...' }),
             }));
         };
 
         const handleSoapyDiscoveryComplete = (data) => {
             setSoapyRuntimeState({
                 status: 'complete',
-                detail: 'Discovery complete.',
+                detail: t('setup.discovery_complete', { defaultValue: 'Discovery complete.' }),
                 serverCount: Number.isFinite(Number(data?.server_count))
                     ? Number(data.server_count)
                     : null,
@@ -418,7 +418,7 @@ const SetupWizard = ({
             setSoapyRuntimeState((previous) => ({
                 ...previous,
                 status: 'complete',
-                detail: 'Discovery refresh complete.',
+                detail: t('setup.discovery_refresh_complete', { defaultValue: 'Discovery refresh complete.' }),
                 sdrCount: Number.isFinite(Number(data?.sdr_count))
                     ? Number(data.sdr_count)
                     : Number.isFinite(Number(data?.active_count))
@@ -442,7 +442,7 @@ const SetupWizard = ({
             setSoapyRuntimeState((previous) => ({
                 ...previous,
                 status: 'inprogress',
-                detail: 'Discovery task started.',
+                detail: t('setup.discovery_task_started', { defaultValue: 'Discovery task started.' }),
             }));
         };
 
@@ -452,7 +452,7 @@ const SetupWizard = ({
                 setSoapyRuntimeState((previous) => ({
                     ...previous,
                     status: 'error',
-                    detail: 'Discovery task failed.',
+                    detail: t('setup.discovery_task_failed', { defaultValue: 'Discovery task failed.' }),
                     lastUpdate: Date.now(),
                 }));
                 return;
@@ -1145,7 +1145,7 @@ const SetupWizard = ({
                     <Alert severity="error">{adminLocalError || authError}</Alert>
                 )}
                 <TextField
-                    label="Username"
+                    label={t('setup.username', { defaultValue: 'Username' })}
                     value={adminUsername}
                     onChange={(event) => {
                         setAdminUsername(event.target.value);
@@ -1157,7 +1157,7 @@ const SetupWizard = ({
                     disabled={authLoadingAction}
                 />
                 <TextField
-                    label="Password"
+                    label={t('setup.password', { defaultValue: 'Password' })}
                     type="password"
                     value={adminPassword}
                     onChange={(event) => {
@@ -1170,7 +1170,7 @@ const SetupWizard = ({
                     disabled={authLoadingAction}
                 />
                 <TextField
-                    label="Confirm password"
+                    label={t('setup.confirm_password', { defaultValue: 'Confirm password' })}
                     type="password"
                     value={adminConfirmPassword}
                     onChange={(event) => {

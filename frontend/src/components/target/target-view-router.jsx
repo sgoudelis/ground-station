@@ -24,6 +24,7 @@ import {normalizeTargetType} from './celestial-target-utils.js';
 import TargetMapCompositeView from './target-map-composite-view.jsx';
 import TargetEarthMapLibreView from './target-earth-maplibre-view.jsx';
 import TargetSkyPlanetariumView from './target-sky-planetarium-view.jsx';
+import { useTranslation } from 'react-i18next';
 
 const MAP_ENGINE_MAPLIBRE_GLOBE = 'maplibre-globe';
 const MAP_ENGINE_PLANETARIUM = 'planetarium';
@@ -58,27 +59,31 @@ export const shouldRenderNoTargetView = ({hasTargets, effectiveMapEngine}) => (
     && (effectiveMapEngine === MAP_ENGINE_PLANETARIUM || effectiveMapEngine === MAP_ENGINE_MAPLIBRE_GLOBE)
 );
 
-const NoTargetMapView = () => (
-    <Box
-        sx={{
-            height: '100%',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 0.75,
-            p: 3,
-            textAlign: 'center',
-        }}
-    >
-        <Typography variant="subtitle2" sx={{fontWeight: 700}}>
-            No targets configured
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-            Add a target to view the planetarium or globe.
-        </Typography>
-    </Box>
-);
+const NoTargetMapView = () => {
+    const { t } = useTranslation('target');
+
+    return (
+        <Box
+            sx={{
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 0.75,
+                p: 3,
+                textAlign: 'center',
+            }}
+        >
+            <Typography variant="subtitle2" sx={{fontWeight: 700}}>
+                {t('target_view_router.no_targets_configured', { defaultValue: 'No targets configured' })}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+                {t('target_view_router.add_a_target_to_view_the_planetarium_or_globe', { defaultValue: 'Add a target to view the planetarium or globe.' })}
+            </Typography>
+        </Box>
+    );
+};
 
 const TargetViewRouter = () => {
     const mapEngine = useSelector((state) => state.targetSatTrack?.mapEngine);

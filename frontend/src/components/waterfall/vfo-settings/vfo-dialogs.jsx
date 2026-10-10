@@ -74,7 +74,7 @@ export const TranscriptionParamsDialog = ({
             <DialogTitle sx={{ backgroundColor: 'background.elevated', color: 'text.primary' }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Typography variant="h6">
-                        VFO {vfoIndex} - Transcription Parameters
+                        VFO {vfoIndex} {t('vfo_dialogs.transcription_parameters', { defaultValue: '- Transcription Parameters' })}
                     </Typography>
                     <IconButton onClick={onClose} size="small">
                         <CloseIcon />
@@ -203,7 +203,7 @@ export const TranscriptionParamsDialog = ({
                                 color: 'text.secondary',
                                 display: 'block'
                             }}>
-                                Audio chunks sent: {info.transcriptions_sent || 0} • Captions: {info.transcriptions_received || 0}
+                                {t('vfo_dialogs.audio_chunks_sent', { defaultValue: 'Audio chunks sent:' })} {info.transcriptions_sent || 0} {t('vfo_dialogs.captions', { defaultValue: '• Captions:' })} {info.transcriptions_received || 0}
                             </Typography>
                             {info.errors > 0 && (
                                 <Typography variant="body2" sx={{
@@ -212,7 +212,7 @@ export const TranscriptionParamsDialog = ({
                                     display: 'block',
                                     mt: 0.5
                                 }}>
-                                    Errors: {info.errors}
+                                    {t('vfo_dialogs.errors', { defaultValue: 'Errors:' })} {info.errors}
                                 </Typography>
                             )}
                         </Box>

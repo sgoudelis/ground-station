@@ -7,7 +7,11 @@ import reducer, {setTrackingStateInBackend, moveRotatorToPosition, stopRotator,
 import {isCommandOutstanding, isCommandSpinning, selectTrackerCommand} from '../tracker-command-state.js';
 import ManualRotatorDialog from '../../dashboard/manual-rotator-dialog.jsx';
 
-vi.mock('react-i18next', () => ({useTranslation: () => ({t: key => key})}));
+// The module under test pulls in the shared i18n instance, so keep the rest of the
+// react-i18next module (notably initReactI18next) and only stub the hook.
+vi.mock('react-i18next', async importOriginal => ({
+    ...await importOriginal(), useTranslation: () => ({t: (key, options) => options?.defaultValue ?? key}),
+}));
 
 function setup() {
     const initial = reducer(undefined, {type: '@@init'});

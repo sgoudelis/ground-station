@@ -38,8 +38,10 @@ import {
 import { Warning as WarningIcon, CheckCircle as CheckCircleIcon } from '@mui/icons-material';
 import { useUserTimeSettings } from '../../hooks/useUserTimeSettings.jsx';
 import { formatTime } from '../../utils/date-time.js';
+import { useTranslation } from 'react-i18next';
 
 const RegenerationPreviewDialog = ({ open, onClose, previewData, onConfirm }) => {
+    const { t } = useTranslation('common');
     const [conflictChoices, setConflictChoices] = useState({});
     const { timezone, locale } = useUserTimeSettings();
 
@@ -97,7 +99,7 @@ const RegenerationPreviewDialog = ({ open, onClose, previewData, onConfirm }) =>
                     ? 'rgba(46, 125, 50, 0.08)'
                     : 'rgba(46, 125, 50, 0.04)',
             } : {}}>
-                Regeneration Preview
+                {t('regeneration_preview_dialog.regeneration_preview', { defaultValue: 'Regeneration Preview' })}
             </DialogTitle>
 
             <DialogContent
@@ -114,12 +116,12 @@ const RegenerationPreviewDialog = ({ open, onClose, previewData, onConfirm }) =>
                         {!hasConflicts ? "No Conflicts - Ready to Generate" : `Auto-generation Strategy: ${current_strategy.toUpperCase()}`}
                     </AlertTitle>
                     {!hasConflicts ? (
-                        <>All passes can be scheduled without conflicts. Click "Confirm & Generate" to proceed.</>
+                        <>{t('regeneration_preview_dialog.all_passes_can_be_scheduled_without_conflicts_click_conf', { defaultValue: 'All passes can be scheduled without conflicts. Click "Confirm & Generate" to proceed.' })}</>
                     ) : (
                         <>
                             {getStrategyDescription()}
                             <br />
-                            <strong>Changes here apply ONLY to this regeneration.</strong>
+                            <strong>{t('regeneration_preview_dialog.changes_here_apply_only_to_this_regeneration', { defaultValue: 'Changes here apply ONLY to this regeneration.' })}</strong>
                         </>
                     )}
                 </Alert>
@@ -127,7 +129,7 @@ const RegenerationPreviewDialog = ({ open, onClose, previewData, onConfirm }) =>
                 {/* Summary */}
                 <Box sx={{ mb: 3 }}>
                     <Typography variant="h6" gutterBottom>
-                        Summary
+                        {t('regeneration_preview_dialog.summary', { defaultValue: 'Summary' })}
                     </Typography>
                     <Stack direction="row" spacing={2}>
                         <Chip
@@ -156,7 +158,7 @@ const RegenerationPreviewDialog = ({ open, onClose, previewData, onConfirm }) =>
                 {noConflicts.length > 0 && (
                     <Box sx={{ mb: 3 }}>
                         <Typography variant="h6" gutterBottom>
-                            Passes Without Conflicts ({noConflicts.length})
+                            {t('regeneration_preview_dialog.passes_without_conflicts', { defaultValue: 'Passes Without Conflicts (' })}{noConflicts.length})
                         </Typography>
                         <Box sx={{
                             maxHeight: 150,
@@ -179,9 +181,9 @@ const RegenerationPreviewDialog = ({ open, onClose, previewData, onConfirm }) =>
                                     ? 'rgba(0, 0, 0, 0.2)'
                                     : 'rgba(0, 0, 0, 0.05)',
                             }}>
-                                <Typography variant="caption" fontWeight="bold">Satellite</Typography>
-                                <Typography variant="caption" fontWeight="bold">Elevation</Typography>
-                                <Typography variant="caption" fontWeight="bold">Time</Typography>
+                                <Typography variant="caption" fontWeight="bold">{t('regeneration_preview_dialog.satellite', { defaultValue: 'Satellite' })}</Typography>
+                                <Typography variant="caption" fontWeight="bold">{t('regeneration_preview_dialog.elevation', { defaultValue: 'Elevation' })}</Typography>
+                                <Typography variant="caption" fontWeight="bold">{t('regeneration_preview_dialog.time', { defaultValue: 'Time' })}</Typography>
                             </Box>
                             {noConflicts.map((pass, idx) => (
                                 <Box
@@ -219,7 +221,7 @@ const RegenerationPreviewDialog = ({ open, onClose, previewData, onConfirm }) =>
                 {hasConflicts && (
                     <Box>
                         <Typography variant="h6" gutterBottom>
-                            Conflicts Detected ({conflicts.length})
+                            {t('regeneration_preview_dialog.conflicts_detected', { defaultValue: 'Conflicts Detected (' })}{conflicts.length})
                         </Typography>
 
                         {conflicts.map((conflict, idx) => {
@@ -269,7 +271,7 @@ const RegenerationPreviewDialog = ({ open, onClose, previewData, onConfirm }) =>
                                     {conflictReasons.length > 0 && (
                                         <Box sx={{ mb: 1.3 }}>
                                             <Typography variant="caption" color="text.secondary">
-                                                Conflict reason:
+                                                {t('regeneration_preview_dialog.conflict_reason', { defaultValue: 'Conflict reason:' })}
                                             </Typography>
                                             <Stack direction="row" spacing={0.7} sx={{ mt: 0.4, flexWrap: 'wrap' }}>
                                                 {conflictReasons.map((reason) => (
@@ -305,7 +307,7 @@ const RegenerationPreviewDialog = ({ open, onClose, previewData, onConfirm }) =>
                                             }}
                                         >
                                             <Typography variant="caption" color="text.secondary">
-                                                Candidate Pass
+                                                {t('regeneration_preview_dialog.candidate_pass', { defaultValue: 'Candidate Pass' })}
                                             </Typography>
                                             <Typography variant="subtitle2" sx={{ mt: 0.3 }}>
                                                 {conflict.new_pass.satellite}
@@ -335,7 +337,7 @@ const RegenerationPreviewDialog = ({ open, onClose, previewData, onConfirm }) =>
                                             }}
                                         >
                                             <Typography variant="caption" color="text.secondary">
-                                                Conflicts With Existing
+                                                {t('regeneration_preview_dialog.conflicts_with_existing', { defaultValue: 'Conflicts With Existing' })}
                                             </Typography>
                                             <Stack spacing={0.8} sx={{ mt: 0.5 }}>
                                                 {blockers.map((blocker) => (
@@ -362,7 +364,7 @@ const RegenerationPreviewDialog = ({ open, onClose, previewData, onConfirm }) =>
                                     <Divider sx={{ my: 1.2 }} />
 
                                     <Typography variant="subtitle2" sx={{ mb: 0.8 }}>
-                                        Resolution
+                                        {t('regeneration_preview_dialog.resolution', { defaultValue: 'Resolution' })}
                                     </Typography>
                                     <RadioGroup value={effectiveAction} onChange={(e) => handleConflictChoice(passId, e.target.value)}>
                                         <FormControlLabel
@@ -370,10 +372,10 @@ const RegenerationPreviewDialog = ({ open, onClose, previewData, onConfirm }) =>
                                             control={<Radio size="small" />}
                                             label={
                                                 <Typography variant="body2" component="span">
-                                                    <strong>Keep Existing Pass(es)</strong> and skip candidate pass
+                                                    <strong>{t('regeneration_preview_dialog.keep_existing_pass_es', { defaultValue: 'Keep Existing Pass(es)' })}</strong> {t('regeneration_preview_dialog.and_skip_candidate_pass', { defaultValue: 'and skip candidate pass' })}
                                                     {effectiveAction === 'keep_existing' && conflict.strategy_action === 'keep_existing' && (
                                                         <Chip
-                                                            label="Strategy Default"
+                                                            label={t('regeneration_preview_dialog.strategy_default', { defaultValue: 'Strategy Default' })}
                                                             size="small"
                                                             color="info"
                                                             sx={{ ml: 1 }}
@@ -387,10 +389,10 @@ const RegenerationPreviewDialog = ({ open, onClose, previewData, onConfirm }) =>
                                             control={<Radio size="small" />}
                                             label={
                                                 <Typography variant="body2" component="span">
-                                                    <strong>Schedule New Pass</strong> and replace conflicting existing passes
+                                                    <strong>{t('regeneration_preview_dialog.schedule_new_pass', { defaultValue: 'Schedule New Pass' })}</strong> {t('regeneration_preview_dialog.and_replace_conflicting_existing_passes', { defaultValue: 'and replace conflicting existing passes' })}
                                                     {effectiveAction === 'replace_blockers' && conflict.strategy_action === 'replace_blockers' && (
                                                         <Chip
-                                                            label="Strategy Default"
+                                                            label={t('regeneration_preview_dialog.strategy_default', { defaultValue: 'Strategy Default' })}
                                                             size="small"
                                                             color="info"
                                                             sx={{ ml: 1 }}
@@ -417,15 +419,15 @@ const RegenerationPreviewDialog = ({ open, onClose, previewData, onConfirm }) =>
 
             <DialogActions>
                 <Button onClick={onClose} variant="outlined">
-                    Cancel
+                    {t('regeneration_preview_dialog.cancel', { defaultValue: 'Cancel' })}
                 </Button>
                 {hasConflicts && (
                     <Button onClick={handleApplyStrategy} variant="outlined" color="info">
-                        Reset to Strategy Defaults
+                        {t('regeneration_preview_dialog.reset_to_strategy_defaults', { defaultValue: 'Reset to Strategy Defaults' })}
                     </Button>
                 )}
                 <Button onClick={handleConfirm} variant="contained" color="primary">
-                    Confirm & Generate
+                    {t('regeneration_preview_dialog.confirm_generate', { defaultValue: 'Confirm & Generate' })}
                 </Button>
             </DialogActions>
         </Dialog>

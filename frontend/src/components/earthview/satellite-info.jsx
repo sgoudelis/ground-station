@@ -254,7 +254,7 @@ const EarthViewSatelliteInfoCard = () => {
                         </Typography>
                     </Box>
                     <Typography variant="caption" sx={{color: 'text.secondary'}}>
-                        ID: {!loading && satelliteData && satelliteData['details'] ? satelliteData['details']['norad_id'] : ''}
+                        {t('satellite_info.id', { defaultValue: 'ID:' })} {!loading && satelliteData && satelliteData['details'] ? satelliteData['details']['norad_id'] : ''}
                     </Typography>
                 </Box>
             </TitleBar>
@@ -334,7 +334,7 @@ const EarthViewSatelliteInfoCard = () => {
                                     <Typography variant="subtitle1" noWrap sx={{ fontWeight: 'bold', minWidth: 0 }}>
                                         {satelliteData && satelliteData['details'] ? satelliteData['details']['name'] : "- - - - - - - - - - -"}
                                     </Typography>
-                                    <Tooltip title="Edit Details">
+                                    <Tooltip title={t('satellite_info.edit_details', { defaultValue: 'Edit Details' })}>
                                         <span>
                                             <IconButton
                                                 size="small"
@@ -345,7 +345,7 @@ const EarthViewSatelliteInfoCard = () => {
                                             </IconButton>
                                         </span>
                                     </Tooltip>
-                                    <Tooltip title="Edit Transmitters">
+                                    <Tooltip title={t('satellite_info.edit_transmitters', { defaultValue: 'Edit Transmitters' })}>
                                         <span>
                                             <IconButton
                                                 size="small"
@@ -369,7 +369,7 @@ const EarthViewSatelliteInfoCard = () => {
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                             <Typography variant="caption" sx={{ color: 'text.secondary', display: 'flex', alignItems: 'center' }}>
                                 <RocketLaunchIcon sx={{ fontSize: 12, mr: 0.5 }} />
-                                NORAD: {satelliteData && satelliteData['details'] ? satelliteData['details']['norad_id'] : ''}
+                                {t('satellite_info.norad', { defaultValue: 'NORAD:' })} {satelliteData && satelliteData['details'] ? satelliteData['details']['norad_id'] : ''}
                             </Typography>
                             <Typography variant="caption" sx={{ color: 'text.secondary', display: 'flex', alignItems: 'center' }}>
                                 <UpdateIcon sx={{ fontSize: 12, mr: 0.5 }} />

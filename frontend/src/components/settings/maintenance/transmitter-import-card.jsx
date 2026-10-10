@@ -29,8 +29,10 @@ import {
 import DownloadIcon from '@mui/icons-material/Download';
 import { useSocket } from '../../common/socket.jsx';
 import { toast } from '../../../utils/toast-with-timestamp.jsx';
+import { useTranslation } from 'react-i18next';
 
 const TransmitterImportCard = () => {
+    const { t } = useTranslation('settings');
     const { socket } = useSocket();
     const [activeSource, setActiveSource] = useState(null);
     const [results, setResults] = useState({});
@@ -92,22 +94,22 @@ const TransmitterImportCard = () => {
     return (
         <>
             <Typography variant="h6" gutterBottom>
-                Transmitter Imports
+                {t('transmitter_import_card.transmitter_imports', { defaultValue: 'Transmitter Imports' })}
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                Import transmitters from trusted sources. Existing transmitters are upserted by id.
+                {t('transmitter_import_card.import_transmitters_from_trusted_sources_existing_transm', { defaultValue: 'Import transmitters from trusted sources. Existing transmitters are upserted by id.' })}
             </Typography>
 
             <Alert severity="info" sx={{ mb: 2 }}>
-                SatDump uses the live satellite list page. gr-satellites reads local SatYAML data.
+                {t('transmitter_import_card.satdump_uses_the_live_satellite_list_page_gr_satellites_', { defaultValue: 'SatDump uses the live satellite list page. gr-satellites reads local SatYAML data.' })}
             </Alert>
 
             <Box sx={{ mb: 3 }}>
                 <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-                    SatDump (satdump.org)
+                    {t('transmitter_import_card.satdump_satdump_org', { defaultValue: 'SatDump (satdump.org)' })}
                 </Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                    Scrape the SatDump Satellite-List page and upsert transmitters into the database.
+                    {t('transmitter_import_card.scrape_the_satdump_satellite_list_page_and_upsert_transm', { defaultValue: 'Scrape the SatDump Satellite-List page and upsert transmitters into the database.' })}
                 </Typography>
                 <Button
                     variant="contained"
@@ -121,7 +123,7 @@ const TransmitterImportCard = () => {
                     onClick={() => handleImport('satdump')}
                     disabled={activeSource !== null}
                 >
-                    Import SatDump Transmitters
+                    {t('transmitter_import_card.import_satdump_transmitters', { defaultValue: 'Import SatDump Transmitters' })}
                 </Button>
                 {renderResult('satdump')}
             </Box>
@@ -133,7 +135,7 @@ const TransmitterImportCard = () => {
                     gr-satellites
                 </Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                    Parse SatYAML files and upsert transmitters into the database.
+                    {t('transmitter_import_card.parse_satyaml_files_and_upsert_transmitters_into_the_dat', { defaultValue: 'Parse SatYAML files and upsert transmitters into the database.' })}
                 </Typography>
                 <Button
                     variant="contained"
@@ -147,7 +149,7 @@ const TransmitterImportCard = () => {
                     onClick={() => handleImport('gr-satellites')}
                     disabled={activeSource !== null}
                 >
-                    Import gr-satellites Transmitters
+                    {t('transmitter_import_card.import_gr_satellites_transmitters', { defaultValue: 'Import gr-satellites Transmitters' })}
                 </Button>
                 {renderResult('gr-satellites')}
             </Box>

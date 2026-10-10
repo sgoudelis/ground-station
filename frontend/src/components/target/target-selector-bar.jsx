@@ -68,6 +68,7 @@ import { cancelRunningObservation } from "../scheduler/scheduler-slice.jsx";
 import { resolveTabHardwareLedStatus } from "../common/hardware-status.js";
 import { fetchMonitoredCelestial } from "../celestial/monitored-slice.jsx";
 import { resolveTargetDisplayName } from './celestial-target-utils.js';
+import { useTranslation } from 'react-i18next';
 
 const TARGET_SLOT_ID_PATTERN = /^target-(\d+)$/;
 const ADD_TARGET_TAB_VALUE = '__add-target__';
@@ -145,18 +146,20 @@ const deriveNextTrackerSlotId = (instances = []) => {
     return `target-${nextTargetNumber}`;
 };
 
-const resolveTabLedPresentation = ({ source, status, usedRigFallback }) => {
+// The LED label table lives at module level, where the `useTranslation` hook cannot
+// be called, so the active `t` function is supplied by the caller.
+const resolveTabLedPresentation = ({ source, status, usedRigFallback, t }) => {
     const bySource = {
         rotator: {
             none: {
-                label: 'No rotator',
+                label: t('target_selector_bar.no_rotator', { defaultValue: 'No rotator' }),
                 bgColor: 'action.disabled',
                 borderColor: 'action.disabledBackground',
                 Icon: null,
                 iconColor: 'text.disabled',
             },
             disconnected: {
-                label: 'Rotator disconnected',
+                label: t('target_selector_bar.rotator_disconnected', { defaultValue: 'Rotator disconnected' }),
                 // Neutral gray: disconnected is not an error state.
                 bgColor: 'action.disabled',
                 borderColor: 'action.disabledBackground',
@@ -164,42 +167,42 @@ const resolveTabLedPresentation = ({ source, status, usedRigFallback }) => {
                 iconColor: 'text.disabled',
             },
             parked: {
-                label: 'Rotator parked',
+                label: t('target_selector_bar.rotator_parked', { defaultValue: 'Rotator parked' }),
                 bgColor: 'warning.main',
                 borderColor: 'warning.dark',
                 Icon: LocalParkingIcon,
                 iconColor: 'common.white',
             },
             outofbounds: {
-                label: 'Rotator out of bounds',
+                label: t('target_selector_bar.rotator_out_of_bounds', { defaultValue: 'Rotator out of bounds' }),
                 bgColor: 'secondary.main',
                 borderColor: 'secondary.dark',
                 Icon: WarningIcon,
                 iconColor: 'common.white',
             },
             minelevation: {
-                label: 'Below minimum elevation',
+                label: t('target_selector_bar.below_minimum_elevation', { defaultValue: 'Below minimum elevation' }),
                 bgColor: 'error.light',
                 borderColor: 'error.main',
                 Icon: ArrowDownwardIcon,
                 iconColor: 'common.white',
             },
             slewing: {
-                label: 'Rotator slewing',
+                label: t('target_selector_bar.rotator_slewing', { defaultValue: 'Rotator slewing' }),
                 bgColor: 'warning.main',
                 borderColor: 'warning.dark',
                 Icon: PlayArrowIcon,
                 iconColor: 'common.white',
             },
             tracking: {
-                label: 'Rotator tracking',
+                label: t('target_selector_bar.rotator_tracking', { defaultValue: 'Rotator tracking' }),
                 bgColor: 'success.light',
                 borderColor: 'success.main',
                 Icon: LocationSearchingIcon,
                 iconColor: 'common.white',
             },
             stopped: {
-                label: 'Rotator stopped',
+                label: t('target_selector_bar.rotator_stopped', { defaultValue: 'Rotator stopped' }),
                 // Neutral informational state (not warning/error).
                 bgColor: 'info.light',
                 borderColor: 'info.main',
@@ -207,21 +210,21 @@ const resolveTabLedPresentation = ({ source, status, usedRigFallback }) => {
                 iconColor: 'common.white',
             },
             motion_unconfirmed: {
-                label: 'Rotator motion unconfirmed',
+                label: t('target_selector_bar.rotator_motion_unconfirmed', { defaultValue: 'Rotator motion unconfirmed' }),
                 bgColor: 'warning.main',
                 borderColor: 'warning.dark',
                 Icon: WarningIcon,
                 iconColor: 'common.white',
             },
             connected: {
-                label: 'Rotator connected',
+                label: t('target_selector_bar.rotator_connected', { defaultValue: 'Rotator connected' }),
                 bgColor: 'success.dark',
                 borderColor: 'success.main',
                 Icon: null,
                 iconColor: 'common.white',
             },
             unknown: {
-                label: 'Rotator status unknown',
+                label: t('target_selector_bar.rotator_status_unknown', { defaultValue: 'Rotator status unknown' }),
                 bgColor: 'action.disabled',
                 borderColor: 'action.disabledBackground',
                 Icon: null,
@@ -230,42 +233,42 @@ const resolveTabLedPresentation = ({ source, status, usedRigFallback }) => {
         },
         rig: {
             none: {
-                label: 'No rig',
+                label: t('target_selector_bar.no_rig', { defaultValue: 'No rig' }),
                 bgColor: 'action.disabled',
                 borderColor: 'action.disabledBackground',
                 Icon: null,
                 iconColor: 'text.disabled',
             },
             disconnected: {
-                label: 'Rig disconnected',
+                label: t('target_selector_bar.rig_disconnected', { defaultValue: 'Rig disconnected' }),
                 bgColor: 'action.disabled',
                 borderColor: 'action.disabledBackground',
                 Icon: CloseIcon,
                 iconColor: 'text.disabled',
             },
             tracking: {
-                label: 'Rig tracking',
+                label: t('target_selector_bar.rig_tracking', { defaultValue: 'Rig tracking' }),
                 bgColor: 'success.light',
                 borderColor: 'success.main',
                 Icon: LocationSearchingIcon,
                 iconColor: 'common.white',
             },
             stopped: {
-                label: 'Rig stopped',
+                label: t('target_selector_bar.rig_stopped', { defaultValue: 'Rig stopped' }),
                 bgColor: 'info.light',
                 borderColor: 'info.main',
                 Icon: PauseIcon,
                 iconColor: 'common.white',
             },
             connected: {
-                label: 'Rig connected',
+                label: t('target_selector_bar.rig_connected', { defaultValue: 'Rig connected' }),
                 bgColor: 'success.dark',
                 borderColor: 'success.main',
                 Icon: null,
                 iconColor: 'common.white',
             },
             unknown: {
-                label: 'Rig status unknown',
+                label: t('target_selector_bar.rig_status_unknown', { defaultValue: 'Rig status unknown' }),
                 bgColor: 'action.disabled',
                 borderColor: 'action.disabledBackground',
                 Icon: null,
@@ -284,6 +287,7 @@ const resolveTabLedPresentation = ({ source, status, usedRigFallback }) => {
 };
 
 const TargetSelectorBar = React.memo(function TargetSelectorBar() {
+    const { t } = useTranslation('target');
     const { socket } = useSocket();
     const dispatch = useDispatch();
     const theme = useTheme();
@@ -980,7 +984,7 @@ const TargetSelectorBar = React.memo(function TargetSelectorBar() {
         const tabHardwareLed = {
             source: tabHardwareLedStatus.source,
             status: tabHardwareLedStatus.status,
-            ...resolveTabLedPresentation(tabHardwareLedStatus),
+            ...resolveTabLedPresentation({ ...tabHardwareLedStatus, t }),
         };
         const linkedObservations = schedulerObservations
             .filter((obs) => obs?.enabled)
@@ -1093,7 +1097,7 @@ const TargetSelectorBar = React.memo(function TargetSelectorBar() {
                     py: 2,
                 }}
             >
-                Delete Target
+                {t('target_selector_bar.delete_target', { defaultValue: 'Delete Target' })}
             </DialogTitle>
             <DialogContent sx={{ px: 3, pb: 2.5 }}>
                 <Box sx={{ pt: 2 }}>
@@ -1101,13 +1105,13 @@ const TargetSelectorBar = React.memo(function TargetSelectorBar() {
                         {`Delete ${pendingDeleteTarget ? `Target ${pendingDeleteTarget.targetNumber}` : 'this target'}?`}
                     </DialogContentText>
                     <DialogContentText color="text.secondary">
-                        This will remove the target tracking state and stop its tracker process.
+                        {t('target_selector_bar.this_will_remove_the_target_tracking_state_and_stop_its_', { defaultValue: 'This will remove the target tracking state and stop its tracker process.' })}
                     </DialogContentText>
                     {deleteTargetBusy && (
                         <Box sx={{ mt: 1.2, display: 'flex', alignItems: 'center', gap: 1 }}>
                             <CircularProgress size={16} />
                             <Typography variant="caption" color="text.secondary">
-                                Deleting target...
+                                {t('target_selector_bar.deleting_target', { defaultValue: 'Deleting target...' })}
                             </Typography>
                         </Box>
                     )}
@@ -1131,7 +1135,7 @@ const TargetSelectorBar = React.memo(function TargetSelectorBar() {
                         setDeleteTargetBusy(false);
                     }}
                 >
-                    Cancel
+                    {t('target_selector_bar.cancel', { defaultValue: 'Cancel' })}
                 </Button>
                 <Button
                     color="error"
@@ -1176,8 +1180,8 @@ const TargetSelectorBar = React.memo(function TargetSelectorBar() {
                 <Box sx={{ pt: 2 }}>
                     <DialogContentText sx={{ mb: 1 }}>
                         {pendingAbortObservation?.status === 'running'
-                            ? <>Are you sure you want to stop the observation <strong>{pendingAbortObservation?.satellite?.name || 'Unknown'}</strong>?</>
-                            : <>Are you sure you want to abort the observation <strong>{pendingAbortObservation?.satellite?.name || 'Unknown'}</strong>?</>
+                            ? <>{t('target_selector_bar.are_you_sure_you_want_to_stop_the_observation', { defaultValue: 'Are you sure you want to stop the observation' })} <strong>{pendingAbortObservation?.satellite?.name || 'Unknown'}</strong>?</>
+                            : <>{t('target_selector_bar.are_you_sure_you_want_to_abort_the_observation', { defaultValue: 'Are you sure you want to abort the observation' })} <strong>{pendingAbortObservation?.satellite?.name || 'Unknown'}</strong>?</>
                         }
                     </DialogContentText>
                     <DialogContentText color="text.secondary">
@@ -1190,7 +1194,7 @@ const TargetSelectorBar = React.memo(function TargetSelectorBar() {
                         <Box sx={{ mt: 1.2, display: 'flex', alignItems: 'center', gap: 1 }}>
                             <CircularProgress size={16} />
                             <Typography variant="caption" color="text.secondary">
-                                Processing observation...
+                                {t('target_selector_bar.processing_observation', { defaultValue: 'Processing observation...' })}
                             </Typography>
                         </Box>
                     )}
@@ -1213,7 +1217,7 @@ const TargetSelectorBar = React.memo(function TargetSelectorBar() {
                         setPendingAbortObservation(null);
                     }}
                 >
-                    Cancel
+                    {t('target_selector_bar.cancel', { defaultValue: 'Cancel' })}
                 </Button>
                 <Button
                     color="error"
@@ -1254,10 +1258,10 @@ const TargetSelectorBar = React.memo(function TargetSelectorBar() {
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
                     <Box sx={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
                         <Typography variant="subtitle1" sx={{ fontWeight: 800, lineHeight: 1.2 }}>
-                            Add New Target
+                            {t('target_selector_bar.add_new_target', { defaultValue: 'Add New Target' })}
                         </Typography>
                         <Typography variant="caption" color="text.secondary" sx={{ mt: 0.2 }}>
-                            Configure target and hardware in two quick steps
+                            {t('target_selector_bar.configure_target_and_hardware_in_two_quick_steps', { defaultValue: 'Configure target and hardware in two quick steps' })}
                         </Typography>
                     </Box>
                     <Chip
@@ -1279,17 +1283,17 @@ const TargetSelectorBar = React.memo(function TargetSelectorBar() {
                         }}
                     >
                         <Typography variant="overline" sx={{ fontWeight: 800, color: 'primary.main', letterSpacing: 0.4 }}>
-                            Step 1 · Target
+                            {t('target_selector_bar.step_1_target', { defaultValue: 'Step 1 · Target' })}
                         </Typography>
                         <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', mb: 1 }}>
-                            Select a target type and choose a satellite, mission, or body.
+                            {t('target_selector_bar.select_a_target_type_and_choose_a_satellite_mission_or_b', { defaultValue: 'Select a target type and choose a satellite, mission, or body.' })}
                         </Typography>
                         <FormControl size="small" fullWidth sx={{ mb: 1 }}>
-                            <InputLabel id="create-target-type-label">Target Type</InputLabel>
+                            <InputLabel id="create-target-type-label">{t('target_selector_bar.target_type', { defaultValue: 'Target Type' })}</InputLabel>
                             <Select
                                 labelId="create-target-type-label"
                                 value={createTargetType}
-                                label="Target Type"
+                                label={t('target_selector_bar.target_type', { defaultValue: 'Target Type' })}
                                 onChange={(event) => {
                                     const nextType = String(event.target.value || TARGET_TYPES.SATELLITE);
                                     setCreateTargetType(nextType);
@@ -1299,9 +1303,9 @@ const TargetSelectorBar = React.memo(function TargetSelectorBar() {
                                     setCreateSelectedBodyId('');
                                 }}
                             >
-                                <MenuItem value={TARGET_TYPES.SATELLITE}>Satellite</MenuItem>
-                                <MenuItem value={TARGET_TYPES.MISSION}>Mission</MenuItem>
-                                <MenuItem value={TARGET_TYPES.BODY}>Body</MenuItem>
+                                <MenuItem value={TARGET_TYPES.SATELLITE}>{t('target_selector_bar.satellite', { defaultValue: 'Satellite' })}</MenuItem>
+                                <MenuItem value={TARGET_TYPES.MISSION}>{t('target_selector_bar.mission', { defaultValue: 'Mission' })}</MenuItem>
+                                <MenuItem value={TARGET_TYPES.BODY}>{t('target_selector_bar.body', { defaultValue: 'Body' })}</MenuItem>
                             </Select>
                         </FormControl>
                         {createTargetType === TARGET_TYPES.SATELLITE && (
@@ -1325,8 +1329,8 @@ const TargetSelectorBar = React.memo(function TargetSelectorBar() {
                                 renderInput={(params) => (
                                     <TextField
                                         {...params}
-                                        label="Satellite Target"
-                                        placeholder="Search satellite by name or NORAD ID"
+                                        label={t('target_selector_bar.satellite_target', { defaultValue: 'Satellite Target' })}
+                                        placeholder={t('target_selector_bar.search_satellite_by_name_or_norad_id', { defaultValue: 'Search satellite by name or NORAD ID' })}
                                         slotProps={{
                                             input: {
                                                 ...params.InputProps,
@@ -1381,8 +1385,8 @@ const TargetSelectorBar = React.memo(function TargetSelectorBar() {
                                 renderInput={(params) => (
                                     <TextField
                                         {...params}
-                                        label="Mission Target"
-                                        placeholder="Search mission name or command"
+                                        label={t('target_selector_bar.mission_target', { defaultValue: 'Mission Target' })}
+                                        placeholder={t('target_selector_bar.search_mission_name_or_command', { defaultValue: 'Search mission name or command' })}
                                         helperText={catalogError || ''}
                                         slotProps={{
                                             input: {
@@ -1445,8 +1449,8 @@ const TargetSelectorBar = React.memo(function TargetSelectorBar() {
                                 renderInput={(params) => (
                                     <TextField
                                         {...params}
-                                        label="Body Target"
-                                        placeholder="Search body name or ID"
+                                        label={t('target_selector_bar.body_target', { defaultValue: 'Body Target' })}
+                                        placeholder={t('target_selector_bar.search_body_name_or_id', { defaultValue: 'Search body name or ID' })}
                                         helperText={bodyCatalogError || ''}
                                         slotProps={{
                                             input: {
@@ -1470,7 +1474,7 @@ const TargetSelectorBar = React.memo(function TargetSelectorBar() {
                         )}
                         {createTargetType === TARGET_TYPES.BODY && !bodyCatalogError && bodyCatalogLoading && (
                             <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
-                                Loading body catalog...
+                                {t('target_selector_bar.loading_body_catalog', { defaultValue: 'Loading body catalog...' })}
                             </Typography>
                         )}
                     </Box>
@@ -1483,10 +1487,10 @@ const TargetSelectorBar = React.memo(function TargetSelectorBar() {
                         }}
                     >
                         <Typography variant="overline" sx={{ fontWeight: 800, color: 'secondary.main', letterSpacing: 0.4 }}>
-                            Step 2 · Hardware (Optional)
+                            {t('target_selector_bar.step_2_hardware_optional', { defaultValue: 'Step 2 · Hardware (Optional)' })}
                         </Typography>
                         <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', mb: 1 }}>
-                            Assign hardware now, or leave as none.
+                            {t('target_selector_bar.assign_hardware_now_or_leave_as_none', { defaultValue: 'Assign hardware now, or leave as none.' })}
                         </Typography>
 
                     <FormControl
@@ -1495,11 +1499,11 @@ const TargetSelectorBar = React.memo(function TargetSelectorBar() {
                         variant="outlined"
                         sx={{ minWidth: 200, mt: 0, mb: 1 }}
                     >
-                        <InputLabel id="create-target-rotator-label">Rotator</InputLabel>
+                        <InputLabel id="create-target-rotator-label">{t('target_selector_bar.rotator', { defaultValue: 'Rotator' })}</InputLabel>
                         <Select
                             labelId="create-target-rotator-label"
                             value={createSelectedRotatorId}
-                            label="Rotator"
+                            label={t('target_selector_bar.rotator', { defaultValue: 'Rotator' })}
                             onChange={(event) => setCreateSelectedRotatorId(String(event.target.value))}
                             renderValue={(selected) => {
                                 if (String(selected) === 'none') return 'No rotator control';
@@ -1535,10 +1539,10 @@ const TargetSelectorBar = React.memo(function TargetSelectorBar() {
                             <MenuItem value="none">
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
                                     <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                                        No rotator control
+                                        {t('target_selector_bar.no_rotator_control', { defaultValue: 'No rotator control' })}
                                     </Typography>
                                     <Chip
-                                        label="None"
+                                        label={t('target_selector_bar.none', { defaultValue: 'None' })}
                                         size="small"
                                         variant="outlined"
                                         sx={{ ml: 'auto', height: 18, fontSize: '0.62rem' }}
@@ -1583,11 +1587,11 @@ const TargetSelectorBar = React.memo(function TargetSelectorBar() {
                         variant="outlined"
                         sx={{ minWidth: 200, mt: 0, mb: 0.5 }}
                     >
-                        <InputLabel id="create-target-rig-label">Rig</InputLabel>
+                        <InputLabel id="create-target-rig-label">{t('target_selector_bar.rig', { defaultValue: 'Rig' })}</InputLabel>
                         <Select
                             labelId="create-target-rig-label"
                             value={createSelectedRigId}
-                            label="Rig"
+                            label={t('target_selector_bar.rig', { defaultValue: 'Rig' })}
                             onChange={(event) => setCreateSelectedRigId(String(event.target.value))}
                             renderValue={(selected) => {
                                 if (String(selected) === 'none') return 'No rig control';
@@ -1623,10 +1627,10 @@ const TargetSelectorBar = React.memo(function TargetSelectorBar() {
                             <MenuItem value="none">
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
                                     <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                                        No rig control
+                                        {t('target_selector_bar.no_rig_control', { defaultValue: 'No rig control' })}
                                     </Typography>
                                     <Chip
-                                        label="None"
+                                        label={t('target_selector_bar.none', { defaultValue: 'None' })}
                                         size="small"
                                         variant="outlined"
                                         sx={{ ml: 'auto', height: 18, fontSize: '0.62rem' }}
@@ -1702,7 +1706,7 @@ const TargetSelectorBar = React.memo(function TargetSelectorBar() {
                     disabled={createTargetBusy}
                     onClick={handleCloseCreateDialog}
                 >
-                    Cancel
+                    {t('target_selector_bar.cancel', { defaultValue: 'Cancel' })}
                 </Button>
                 <Button
                     variant="contained"
@@ -1718,7 +1722,7 @@ const TargetSelectorBar = React.memo(function TargetSelectorBar() {
                     onClick={handleCreateTargetSubmit}
                     startIcon={createTargetBusy ? <CircularProgress color="inherit" size={16} /> : <AddCircleIcon />}
                 >
-                    Create Target
+                    {t('target_selector_bar.create_target', { defaultValue: 'Create Target' })}
                 </Button>
             </DialogActions>
         </Dialog>
@@ -1768,7 +1772,7 @@ const TargetSelectorBar = React.memo(function TargetSelectorBar() {
                                 gap: 0.5,
                             }}
                         >
-                            <Tooltip title="Add target slot (satellite, mission, or body)" arrow>
+                            <Tooltip title={t('target_selector_bar.add_target_slot_satellite_mission_or_body', { defaultValue: 'Add target slot (satellite, mission, or body)' })} arrow>
                                 <IconButton
                                     onClick={handleOpenCreateDialog}
                                     sx={{
@@ -1796,7 +1800,7 @@ const TargetSelectorBar = React.memo(function TargetSelectorBar() {
                                     ml: 0.2,
                                 }}
                             >
-                                add target slot
+                                {t('target_selector_bar.add_target_slot', { defaultValue: 'add target slot' })}
                             </Typography>
                         </Box>
                     ) : (
@@ -1976,7 +1980,7 @@ const TargetSelectorBar = React.memo(function TargetSelectorBar() {
                             <Tab
                                 value={ADD_TARGET_TAB_VALUE}
                                 label={
-                                    <Tooltip title="Add target slot (satellite, mission, or body)" arrow>
+                                    <Tooltip title={t('target_selector_bar.add_target_slot_satellite_mission_or_body', { defaultValue: 'Add target slot (satellite, mission, or body)' })} arrow>
                                         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 20 }}>
                                             <Typography component="span" sx={{ fontSize: '2rem', lineHeight: 1, fontWeight: 700 }}>
                                                 +

@@ -517,5 +517,241 @@
   "common": {
     "disconnected": "已断开",
     "not_available": "不适用"
+  },
+  "branding": {
+    "ground_station": "地面站"
+  },
+  "controller": {
+    "rig": "电台",
+    "rotator": "旋转器"
+  },
+  "custom_icons": {
+    "vfo": "VFO"
+  },
+  "dataurl_icons": {
+    "custom_icon": "自定义图标",
+    "vfo1_icon": "VFO1 图标",
+    "vfo2_icon": "VFO2 图标",
+    "vfo3_icon": "VFO3 图标",
+    "vfo4_icon": "VFO4 图标",
+    "sq": "SQ"
+  },
+  "decoder_config_suggestion": {
+    "apply": "应用",
+    "loading_decoder_configuration": "正在加载解码器配置...",
+    "daniel_est_vez": "Daniel Estévez",
+    "suggested_configuration_for_this_satellite": "该卫星的建议配置"
+  },
+  "error_page": {
+    "back_to_home": "返回首页",
+    "error_report": "错误报告",
+    "please_try_refreshing_the_page_if_the_problem_persists_c": "请尝试刷新页面。如果问题仍然存在，请复制错误报告并附在 GitHub issue 中。",
+    "reload_page": "重新加载页面",
+    "error_code": "错误代码："
+  },
+  "fleet_target_row": {
+    "open_tracking_console": "打开跟踪控制台"
+  },
+  "flow_node": {
+    "active_sessions": "活跃会话",
+    "attempts": "尝试次数",
+    "audio": "音频",
+    "bytes": "字节",
+    "chunks": "数据块",
+    "commands": "命令",
+    "connection_info": "连接信息",
+    "cpu": "CPU",
+    "cycles": "循环次数",
+    "data": "数据",
+    "db_queries": "数据库查询",
+    "drops": "丢弃数",
+    "e2e": "E2E",
+    "emit_errors": "发送错误",
+    "errors": "错误数",
+    "failures": "失败次数",
+    "fft": "FFT",
+    "gemini_api": "Gemini API",
+    "images": "图像",
+    "ingest": "接入",
+    "input": "输入",
+    "iq_chunks": "IQ 数据块",
+    "mem": "MEM",
+    "messages": "消息",
+    "msgs": "消息",
+    "no_metrics": "无指标",
+    "output": "输出",
+    "p95": "P95",
+    "p95_rtf": "P95 RTF",
+    "packets": "数据包",
+    "pending": "待发送",
+    "processing": "处理中",
+    "queue": "队列",
+    "queue_age": "队列时长",
+    "rate": "速率",
+    "received": "已接收",
+    "samples": "采样点",
+    "sdr": "SDR",
+    "sent": "已发送",
+    "session": "会话：",
+    "sleeping": "休眠中",
+    "status": "状态",
+    "subscribers": "订阅者",
+    "updates": "更新次数",
+    "user_agent": "User Agent：",
+    "written": "已写入",
+    "ip": "IP"
+  },
+  "not_found_page": {
+    "back_to_home": "返回首页",
+    "check_the_url_or_continue_using_one_of_the_actions_below": "请检查 URL，或继续使用下方任一操作。",
+    "error_code_404": "错误代码：404",
+    "go_back": "返回",
+    "page_not_found": "页面未找到",
+    "the_page_you_requested_does_not_exist_or_may_have_been_m": "您请求的页面不存在，或已被移动。"
+  },
+  "observation_data_dialog": {
+    "close": "关闭",
+    "download": "下载",
+    "events_will_appear_here_once_the_observation_starts_exec": "观测开始执行后，事件将显示在此处。",
+    "files_will_appear_here_when": "文件将在以下情况出现：",
+    "last_error_message": "最近错误信息",
+    "no_data_files_found_for_this_observation": "未找到此观测的数据文件。",
+    "no_execution_events_recorded_yet": "尚未记录执行事件。",
+    "preview_not_available_for_this_file_type": "此文件类型不支持预览。",
+    "data_files": "数据文件 (",
+    "downloaded_data": "已下载数据",
+    "error_details": "错误详情",
+    "error_information": "错误信息",
+    "execution_timeline": "执行时间线",
+    "id": "• ID：",
+    "last_error_time": "最近错误时间",
+    "tasks_iq_recording_audio_decoding_generated_output_files": "• 任务（IQ 录制、音频、解码）生成了输出文件",
+    "the_observation_has_completed_successfully": "• 观测已成功完成",
+    "total_errors": "错误总数"
+  },
+  "observations_timeline_svg": {
+    "peak_elevation": "最高仰角",
+    "satellite_pass": "卫星过境",
+    "schedule": "调度",
+    "scheduled_observation": "已调度观测",
+    "begins": "距开始",
+    "duration": "持续时间",
+    "ends": "结束",
+    "starts": "开始",
+    "timeline": "时间线"
+  },
+  "performance_flow": {
+    "amber_100ms_to_499ms": "琥珀色：100ms 至 499ms",
+    "amber_p95_from_0_50_to_0_99": "琥珀色：P95 介于 0.50 至 0.99",
+    "audio": "音频",
+    "data_flowing": "数据流动中",
+    "data_types": "数据类型",
+    "decoded_data": "解码数据",
+    "fft_waterfall": "FFT/瀑布图",
+    "green_below_100ms": "绿色：低于 100ms",
+    "green_p95_below_0_50": "绿色：P95 低于 0.50",
+    "iq_samples": "IQ 采样点",
+    "line_styles": "线型",
+    "no_flow_idle": "无数据流 / 空闲",
+    "queue_end_to_end_age": "队列 / 端到端时长",
+    "queue_health": "队列健康度",
+    "real_time_factor": "实时因子",
+    "red_500ms_or_higher": "红色：500ms 或更高",
+    "red_p95_at_or_above_1_00": "红色：P95 达到或超过 1.00",
+    "warning_50_80": "警告（50-80%）",
+    "critical_gt_80": "严重（>80%）",
+    "healthy_lt_50": "正常（<50%）"
+  },
+  "performance_metrics_dialog": {
+    "auto_arrange": "自动排列",
+    "real_time_visualization_of_system_components_and_data_fl": "系统组件与数据流的实时可视化",
+    "waiting_for_metrics_data": "正在等待指标数据...",
+    "system_topology": "系统拓扑"
+  },
+  "regeneration_preview_dialog": {
+    "cancel": "取消",
+    "candidate_pass": "候选过境",
+    "confirm_generate": "确认并生成",
+    "conflict_reason": "冲突原因：",
+    "conflicts_with_existing": "与现有过境冲突",
+    "regeneration_preview": "重新生成预览",
+    "reset_to_strategy_defaults": "重置为策略默认值",
+    "resolution": "处理方式",
+    "strategy_default": "策略默认",
+    "summary": "汇总",
+    "all_passes_can_be_scheduled_without_conflicts_click_conf": "所有过境均可无冲突地调度。点击“确认并生成”以继续。",
+    "and_replace_conflicting_existing_passes": "并替换冲突的现有过境",
+    "and_skip_candidate_pass": "并跳过候选过境",
+    "changes_here_apply_only_to_this_regeneration": "此处的更改仅适用于本次重新生成。",
+    "conflicts_detected": "检测到冲突 (",
+    "elevation": "仰角",
+    "keep_existing_pass_es": "保留现有过境",
+    "passes_without_conflicts": "无冲突的过境 (",
+    "satellite": "卫星",
+    "schedule_new_pass": "安排新过境",
+    "time": "时间"
+  },
+  "satellite_selector": {
+    "no_passes_found_in_the_next_24_hours": "未来 24 小时内未找到过境",
+    "none_created": "尚未创建",
+    "satellite": "卫星",
+    "satellite_group": "卫星分组",
+    "search_satellite": "搜索卫星",
+    "select_pass": "选择过境",
+    "conflicts_with": "⚠️ 与以下冲突：",
+    "orbital_source_groups": "轨道数据源卫星分组"
+  },
+  "selection_action_bar": {
+    "clear": "清除",
+    "selection": "选择"
+  },
+  "use_sdr_takeover_dialog": {
+    "active_sessions_on_this_sdr": "此 SDR 上的活跃会话",
+    "cancel": "取消",
+    "internal": "内部",
+    "join": "加入",
+    "sdr_in_use": "SDR 使用中",
+    "take_over": "接管",
+    "taking_over_this_sdr_can_interrupt_an_ongoing_scheduled_": "接管此 SDR 可能会中断正在进行的已调度观测。"
+  },
+  "waterfall_bandscope": {
+    "rec": "REC"
+  },
+  "zoomable_image": {
+    "zoom": "缩放"
+  },
+  "deferredplaceholder": {
+    "loading_panel": "正在加载面板"
+  },
+  "monitored_satellite_dialog": {
+    "mhz": "MHz -",
+    "mhz_2": "MHz ="
+  },
+  "observation_form_dialog": {
+    "mhz": "MHz -",
+    "mhz_2": "MHz ="
+  },
+  "tile_layers": {
+    "street_map_with_roads_labels_and_place_details": "含道路、标签和地点详情的街道地图。",
+    "global_satellite_and_aerial_imagery_basemap": "全球卫星与航空影像底图。",
+    "topographic_style_with_terrain_and_contour_empha": "强调地形与等高线的地形图样式。",
+    "dark_themed_map_for_high_contrast_overlays": "用于高对比度叠加层的深色主题地图。",
+    "dark_map_tiles_from_carto_basemaps": "来自 CARTO 底图的深色地图瓦片。",
+    "muted_light_gray_reference_basemap": "柔和的浅灰色参考底图。",
+    "balanced_light_basemap_with_roads_and_labels": "带道路和标签的均衡浅色底图。",
+    "global_shaded_relief_and_bathymetry": "全球地貌晕渲与水深图。",
+    "cloud_free_global_imagery_assembled_from_modis_o": "由 MODIS 观测合成的无云全球影像。",
+    "global_shaded_relief_without_bathymetry": "不含水深的全球地貌晕渲图。",
+    "blue_marble_with_coastlines_boundaries_roads_and": "带海岸线、边界、道路和标签的 Blue Marble。",
+    "land_mask_layer_derived_from_osm_features": "基于 OSM 要素生成的陆地掩模图层。",
+    "land_and_water_reference_map_in_geographic_crs": "地理 CRS 下的陆地与水体参考地图。",
+    "global_night_time_city_lights_composite": "全球夜间城市灯光合成图。",
+    "global_color_terrain_relief_derived_from_aster_e": "基于 ASTER 高程数据的全球彩色地形晕渲图。",
+    "global_grayscale_terrain_relief_derived_from_ast": "基于 ASTER 高程数据的全球灰度地形晕渲图。",
+    "daily_global_true_color_imagery_from_modis_aqua": "来自 MODIS Aqua 的每日全球真彩色影像。",
+    "daily_global_true_color_imagery_from_modis_terra": "来自 MODIS Terra 的每日全球真彩色影像。",
+    "daily_global_true_color_imagery_from_viirs_noaa_": "来自 VIIRS NOAA-20 的每日全球真彩色影像。",
+    "daily_global_true_color_imagery_from_viirs_noaa__2": "来自 VIIRS NOAA-21 的每日全球真彩色影像。",
+    "daily_global_true_color_imagery_from_viirs_suomi": "来自 VIIRS Suomi NPP 的每日全球真彩色影像。"
   }
 }

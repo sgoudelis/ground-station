@@ -95,7 +95,7 @@ export default function ApplicationFooter() {
             >
                 <FooterItem>
                     <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>
-                        Ground Station{renderedVersion ? ` ${renderedVersion}` : ''}
+                        {t('application_footer.ground_station', { defaultValue: 'Ground Station' })}{renderedVersion ? ` ${renderedVersion}` : ''}
                     </Box>
                 </FooterItem>
                 {hostname && <FooterItem>{hostname}</FooterItem>}
@@ -109,7 +109,7 @@ export default function ApplicationFooter() {
                 <FooterItem>
                     {t('footer.made_by')}
                     <Link href={MAINTAINER_URL} target="_blank" rel="noreferrer" color="inherit">
-                        Efstratios Goudelis
+                        {t('application_footer.efstratios_goudelis', { defaultValue: 'Efstratios Goudelis' })}
                     </Link>
                 </FooterItem>
                 <FooterItem>

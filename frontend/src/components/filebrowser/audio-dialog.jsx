@@ -411,7 +411,7 @@ export default function AudioDialog({ open, onClose, audio, metadata }) {
                 }}
             >
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Typography variant="h6">Audio Recording Details</Typography>
+                    <Typography variant="h6">{t('audio_dialog.audio_recording_details', { defaultValue: 'Audio Recording Details' })}</Typography>
                     <Box>
                         {metadata?.sample_rate && (
                             <Chip
@@ -508,12 +508,12 @@ export default function AudioDialog({ open, onClose, audio, metadata }) {
                         </Box>
 
                         <Typography variant="subtitle2" gutterBottom>
-                            File
+                            {t('audio_dialog.file', { defaultValue: 'File' })}
                         </Typography>
                         <Box sx={sectionSx}>
                             <Box sx={rowSx}>
                                 <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                                    Filename
+                                    {t('audio_dialog.filename', { defaultValue: 'Filename' })}
                                 </Typography>
                                 <Typography variant="body2" sx={{ fontFamily: 'monospace', wordBreak: 'break-word' }}>
                                     {audio.filename}
@@ -524,13 +524,13 @@ export default function AudioDialog({ open, onClose, audio, metadata }) {
                         {metadata && (
                             <>
                                 <Typography variant="subtitle2" gutterBottom>
-                                    Audio Properties
+                                    {t('audio_dialog.audio_properties', { defaultValue: 'Audio Properties' })}
                                 </Typography>
                                 <Box sx={sectionSx}>
                                     {metadata.format && (
                                         <Box sx={rowSx}>
                                             <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                                                Format
+                                                {t('audio_dialog.format', { defaultValue: 'Format' })}
                                             </Typography>
                                             <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
                                                 {metadata.format.toUpperCase()}
@@ -540,7 +540,7 @@ export default function AudioDialog({ open, onClose, audio, metadata }) {
                                     {metadata.sample_rate && (
                                         <Box sx={rowSx}>
                                             <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                                                Sample Rate
+                                                {t('audio_dialog.sample_rate', { defaultValue: 'Sample Rate' })}
                                             </Typography>
                                             <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
                                                 {metadata.sample_rate} Hz
@@ -550,7 +550,7 @@ export default function AudioDialog({ open, onClose, audio, metadata }) {
                                     {metadata.channels && (
                                         <Box sx={rowSx}>
                                             <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                                                Channels
+                                                {t('audio_dialog.channels', { defaultValue: 'Channels' })}
                                             </Typography>
                                             <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
                                                 {metadata.channels} ({metadata.channels === 1 ? 'Mono' : 'Stereo'})
@@ -560,7 +560,7 @@ export default function AudioDialog({ open, onClose, audio, metadata }) {
                                     {metadata.bit_depth && (
                                         <Box sx={rowSx}>
                                             <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                                                Bit Depth
+                                                {t('audio_dialog.bit_depth', { defaultValue: 'Bit Depth' })}
                                             </Typography>
                                             <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
                                                 {metadata.bit_depth} bits
@@ -570,7 +570,7 @@ export default function AudioDialog({ open, onClose, audio, metadata }) {
                                     {metadata.duration_seconds !== undefined && (
                                         <Box sx={rowSx}>
                                             <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                                                Duration
+                                                {t('audio_dialog.duration', { defaultValue: 'Duration' })}
                                             </Typography>
                                             <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
                                                 {formatDuration(metadata.duration_seconds)} ({metadata.duration_seconds.toFixed(2)}s)
@@ -580,7 +580,7 @@ export default function AudioDialog({ open, onClose, audio, metadata }) {
                                     {metadata.total_samples && (
                                         <Box sx={rowSx}>
                                             <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                                                Total Samples
+                                                {t('audio_dialog.total_samples', { defaultValue: 'Total Samples' })}
                                             </Typography>
                                             <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
                                                 {metadata.total_samples.toLocaleString()}
@@ -592,13 +592,13 @@ export default function AudioDialog({ open, onClose, audio, metadata }) {
                                 {(metadata.vfo_number || metadata.demodulator_type || metadata.center_frequency || metadata.vfo_frequency) && (
                                     <>
                                         <Typography variant="subtitle2" gutterBottom>
-                                            Radio Configuration
+                                            {t('audio_dialog.radio_configuration', { defaultValue: 'Radio Configuration' })}
                                         </Typography>
                                         <Box sx={sectionSx}>
                                             {metadata.vfo_number && (
                                                 <Box sx={rowSx}>
                                                     <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                                                        VFO
+                                                        {t('audio_dialog.vfo', { defaultValue: 'VFO' })}
                                                     </Typography>
                                                     <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
                                                         {metadata.vfo_number}
@@ -608,7 +608,7 @@ export default function AudioDialog({ open, onClose, audio, metadata }) {
                                             {metadata.demodulator_type && (
                                                 <Box sx={rowSx}>
                                                     <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                                                        Demodulator
+                                                        {t('audio_dialog.demodulator', { defaultValue: 'Demodulator' })}
                                                     </Typography>
                                                     <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
                                                         {metadata.demodulator_type}
@@ -618,7 +618,7 @@ export default function AudioDialog({ open, onClose, audio, metadata }) {
                                             {metadata.center_frequency && (
                                                 <Box sx={rowSx}>
                                                     <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                                                        Center Frequency
+                                                        {t('audio_dialog.center_frequency', { defaultValue: 'Center Frequency' })}
                                                     </Typography>
                                                     <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
                                                         {(metadata.center_frequency / 1e6).toFixed(6)} MHz
@@ -628,7 +628,7 @@ export default function AudioDialog({ open, onClose, audio, metadata }) {
                                             {metadata.vfo_frequency && (
                                                 <Box sx={rowSx}>
                                                     <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                                                        VFO Frequency
+                                                        {t('audio_dialog.vfo_frequency', { defaultValue: 'VFO Frequency' })}
                                                     </Typography>
                                                     <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
                                                         {(metadata.vfo_frequency / 1e6).toFixed(6)} MHz
@@ -642,13 +642,13 @@ export default function AudioDialog({ open, onClose, audio, metadata }) {
                                 {(metadata.target_satellite_name || metadata.target_satellite_norad_id) && (
                                     <>
                                         <Typography variant="subtitle2" gutterBottom>
-                                            Target Satellite
+                                            {t('audio_dialog.target_satellite', { defaultValue: 'Target Satellite' })}
                                         </Typography>
                                         <Box sx={sectionSx}>
                                             {metadata.target_satellite_name && (
                                                 <Box sx={rowSx}>
                                                     <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                                                        Name
+                                                        {t('audio_dialog.name', { defaultValue: 'Name' })}
                                                     </Typography>
                                                     <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
                                                         {metadata.target_satellite_name}
@@ -658,7 +658,7 @@ export default function AudioDialog({ open, onClose, audio, metadata }) {
                                             {metadata.target_satellite_norad_id && (
                                                 <Box sx={rowSx}>
                                                     <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                                                        NORAD ID
+                                                        {t('audio_dialog.norad_id', { defaultValue: 'NORAD ID' })}
                                                     </Typography>
                                                     <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
                                                         {metadata.target_satellite_norad_id}
@@ -672,13 +672,13 @@ export default function AudioDialog({ open, onClose, audio, metadata }) {
                                 {(metadata.start_time || metadata.end_time) && (
                                     <>
                                         <Typography variant="subtitle2" gutterBottom>
-                                            Recording Times
+                                            {t('audio_dialog.recording_times', { defaultValue: 'Recording Times' })}
                                         </Typography>
                                         <Box sx={sectionSx}>
                                             {metadata.start_time && (
                                                 <Box sx={rowSx}>
                                                     <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                                                        Start
+                                                        {t('audio_dialog.start', { defaultValue: 'Start' })}
                                                     </Typography>
                                                     <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
                                                         {formatDate(metadata.start_time)}
@@ -688,7 +688,7 @@ export default function AudioDialog({ open, onClose, audio, metadata }) {
                                             {metadata.end_time && (
                                                 <Box sx={rowSx}>
                                                     <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                                                        End
+                                                        {t('audio_dialog.end', { defaultValue: 'End' })}
                                                     </Typography>
                                                     <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
                                                         {formatDate(metadata.end_time)}
@@ -702,7 +702,7 @@ export default function AudioDialog({ open, onClose, audio, metadata }) {
                                 {metadata.status && (
                                     <>
                                         <Typography variant="subtitle2" gutterBottom>
-                                            Status
+                                            {t('audio_dialog.status', { defaultValue: 'Status' })}
                                         </Typography>
                                         <Box sx={{ mb: 2 }}>
                                             <Chip
@@ -740,7 +740,7 @@ export default function AudioDialog({ open, onClose, audio, metadata }) {
                     startIcon={<DownloadIcon />}
                     variant="outlined"
                 >
-                    Download Audio
+                    {t('audio_dialog.download_audio', { defaultValue: 'Download Audio' })}
                 </Button>
                 {metadata && (
                     <Button
@@ -748,7 +748,7 @@ export default function AudioDialog({ open, onClose, audio, metadata }) {
                         startIcon={<DownloadIcon />}
                         variant="outlined"
                     >
-                        Download Metadata
+                        {t('audio_dialog.download_metadata', { defaultValue: 'Download Metadata' })}
                     </Button>
                 )}
                 <Button
@@ -762,7 +762,7 @@ export default function AudioDialog({ open, onClose, audio, metadata }) {
                         },
                     }}
                 >
-                    Close
+                    {t('audio_dialog.close', { defaultValue: 'Close' })}
                 </Button>
             </DialogActions>
         </Dialog>

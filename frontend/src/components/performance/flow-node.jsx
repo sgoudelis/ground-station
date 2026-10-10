@@ -22,6 +22,7 @@ import { Handle, Position } from 'reactflow';
 import { Paper, Box, Typography, Chip, Divider, Stack, Tooltip } from '@mui/material';
 import { useUserTimeSettings } from '../../hooks/useUserTimeSettings.jsx';
 import { formatDateTime } from '../../utils/date-time.js';
+import { useTranslation } from 'react-i18next';
 
 const formatRate = (rate) => {
     if (rate === null || rate === undefined) return 'N/A';
@@ -137,6 +138,7 @@ const getInputQueueAge = (component) => {
 };
 
 const ProcessingMetrics = ({ component }) => {
+    const { t } = useTranslation('common');
     const stages = getTimingStages(component);
     // Broadcasters have fan-out work rather than a DSP processing stage.
     const processing = stages.processing || stages.fanout;
@@ -157,27 +159,27 @@ const ProcessingMetrics = ({ component }) => {
         <Box>
             <Tooltip title={<span style={{ whiteSpace: 'pre-line' }}>{details}</span>} arrow>
                 <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.5, fontSize: '0.7rem', opacity: 0.75, textTransform: 'uppercase', letterSpacing: '0.05em', cursor: 'help' }}>
-                    Processing
+                    {t('flow_node.processing', { defaultValue: 'Processing' })}
                 </Typography>
             </Tooltip>
             <Stack spacing={0.25}>
                 {processing && (
                     <MetricRow
-                        label="P95"
+                        label={t('flow_node.p95', { defaultValue: 'P95' })}
                         value={formatMilliseconds(processing.p95_ms)}
                         valueColor={processingColor}
                     />
                 )}
                 {rtf !== undefined && (
                     <MetricRow
-                        label="P95 RTF"
+                        label={t('flow_node.p95_rtf', { defaultValue: 'P95 RTF' })}
                         value={rtf.toFixed(2)}
                         valueColor={processingColor}
                     />
                 )}
                 {pipelineAge && (
                     <MetricRow
-                        label="E2E"
+                        label={t('flow_node.e2e', { defaultValue: 'E2E' })}
                         value={formatMilliseconds(pipelineAge.p95_ms)}
                         valueColor={getLatencyColor(pipelineAge.p95_ms)}
                     />
@@ -188,6 +190,7 @@ const ProcessingMetrics = ({ component }) => {
 };
 
 const CpuMemoryBars = ({ cpuPercent, memoryMb, memoryPercent }) => {
+    const { t } = useTranslation('common');
     const hasCpu = cpuPercent !== null && cpuPercent !== undefined;
     const hasMemory = memoryMb !== undefined && memoryPercent !== undefined;
     const cappedCpuPercent = Math.min(cpuPercent || 0, 100);
@@ -210,7 +213,7 @@ const CpuMemoryBars = ({ cpuPercent, memoryMb, memoryPercent }) => {
         return (
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: '80px' }}>
                 <Typography variant="caption" sx={{ color: 'text.secondary', opacity: 0.5, fontSize: '0.65rem' }}>
-                    No metrics
+                    {t('flow_node.no_metrics', { defaultValue: 'No metrics' })}
                 </Typography>
             </Box>
         );
@@ -222,7 +225,7 @@ const CpuMemoryBars = ({ cpuPercent, memoryMb, memoryPercent }) => {
             {hasCpu && (
                 <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                     <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', mb: 0.5, fontSize: '0.65rem', opacity: 0.7 }}>
-                        CPU
+                        {t('flow_node.cpu', { defaultValue: 'CPU' })}
                     </Typography>
                     <Box sx={{
                         flex: 1,
@@ -256,7 +259,7 @@ const CpuMemoryBars = ({ cpuPercent, memoryMb, memoryPercent }) => {
             {hasMemory && (
                 <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                     <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', mb: 0.5, fontSize: '0.65rem', opacity: 0.7 }}>
-                        MEM
+                        {t('flow_node.mem', { defaultValue: 'MEM' })}
                     </Typography>
                     <Box sx={{
                         flex: 1,
@@ -290,6 +293,7 @@ const CpuMemoryBars = ({ cpuPercent, memoryMb, memoryPercent }) => {
 };
 
 export const ComponentNode = ({ data }) => {
+    const { t } = useTranslation('common');
     const { component, type, inputCount = 1, outputCount = 1 } = data;
     const { timezone, locale } = useUserTimeSettings();
 
@@ -399,7 +403,7 @@ export const ComponentNode = ({ data }) => {
                         {(type === 'decoder' || type === 'demodulator') && component?.stats?.is_sleeping && (
                             <Chip
                                 size="small"
-                                label="Sleeping"
+                                label={t('flow_node.sleeping', { defaultValue: 'Sleeping' })}
                                 color="warning"
                                 variant="filled"
                                 sx={{
@@ -468,20 +472,20 @@ export const ComponentNode = ({ data }) => {
                             {/* Left column - Processing */}
                             <Box>
                                 <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.5, fontSize: '0.7rem', opacity: 0.75, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                    Processing
+                                    {t('flow_node.processing', { defaultValue: 'Processing' })}
                                 </Typography>
                                 <Stack spacing={0.25}>
                                     <MetricRow
-                                        label="Cycles"
+                                        label={t('flow_node.cycles', { defaultValue: 'Cycles' })}
                                         value={formatNumber(component.stats?.tracking_cycles)}
                                     />
                                     <MetricRow
-                                        label="Rate"
+                                        label={t('flow_node.rate', { defaultValue: 'Rate' })}
                                         value={formatRate(component.rates?.tracking_cycles_per_sec)}
                                         unit="/s"
                                     />
                                     <MetricRow
-                                        label="DB Queries"
+                                        label={t('flow_node.db_queries', { defaultValue: 'DB Queries' })}
                                         value={formatNumber(component.stats?.db_queries)}
                                     />
                                 </Stack>
@@ -501,20 +505,20 @@ export const ComponentNode = ({ data }) => {
                             {/* Right column - Output */}
                             <Box>
                                 <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.5, fontSize: '0.7rem', opacity: 0.75, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                    Output
+                                    {t('flow_node.output', { defaultValue: 'Output' })}
                                 </Typography>
                                 <Stack spacing={0.25}>
                                     <MetricRow
-                                        label="Updates"
+                                        label={t('flow_node.updates', { defaultValue: 'Updates' })}
                                         value={formatNumber(component.stats?.updates_sent)}
                                     />
                                     <MetricRow
-                                        label="Rate"
+                                        label={t('flow_node.rate', { defaultValue: 'Rate' })}
                                         value={formatRate(component.rates?.updates_per_sec)}
                                         unit="/s"
                                     />
                                     <MetricRow
-                                        label="Commands"
+                                        label={t('flow_node.commands', { defaultValue: 'Commands' })}
                                         value={formatNumber(component.stats?.commands_processed)}
                                     />
                                 </Stack>
@@ -528,20 +532,20 @@ export const ComponentNode = ({ data }) => {
                             {/* Left column - Empty (no input) */}
                             <Box>
                                 <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.5, fontSize: '0.7rem', opacity: 0.75, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                    SDR
+                                    {t('flow_node.sdr', { defaultValue: 'SDR' })}
                                 </Typography>
                                 <Stack spacing={0.25}>
                                     <MetricRow
-                                        label="Samples"
+                                        label={t('flow_node.samples', { defaultValue: 'Samples' })}
                                         value={formatNumber(component.stats?.samples_read)}
                                     />
                                     <MetricRow
-                                        label="Rate"
+                                        label={t('flow_node.rate', { defaultValue: 'Rate' })}
                                         value={formatRate(component.rates?.samples_per_sec)}
                                         unit="/s"
                                     />
                                     <MetricRow
-                                        label="Errors"
+                                        label={t('flow_node.errors', { defaultValue: 'Errors' })}
                                         value={formatNumber(component.stats?.read_errors)}
                                     />
                                 </Stack>
@@ -561,20 +565,20 @@ export const ComponentNode = ({ data }) => {
                             {/* Right column - Output */}
                             <Box>
                                 <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.5, fontSize: '0.7rem', opacity: 0.75, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                    Output
+                                    {t('flow_node.output', { defaultValue: 'Output' })}
                                 </Typography>
                                 <Stack spacing={0.25}>
                                     <MetricRow
-                                        label="IQ Chunks"
+                                        label={t('flow_node.iq_chunks', { defaultValue: 'IQ Chunks' })}
                                         value={formatNumber(component.stats?.iq_chunks_out)}
                                     />
                                     <MetricRow
-                                        label="Rate"
+                                        label={t('flow_node.rate', { defaultValue: 'Rate' })}
                                         value={formatRate(component.rates?.iq_chunks_per_sec)}
                                         unit="/s"
                                     />
                                     <MetricRow
-                                        label="Drops"
+                                        label={t('flow_node.drops', { defaultValue: 'Drops' })}
                                         value={formatNumber(component.stats?.queue_drops)}
                                     />
                                 </Stack>
@@ -588,26 +592,26 @@ export const ComponentNode = ({ data }) => {
                             {/* Left column - Input */}
                             <Box>
                                 <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.5, fontSize: '0.7rem', opacity: 0.75, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                    Input
+                                    {t('flow_node.input', { defaultValue: 'Input' })}
                                 </Typography>
                                 <Stack spacing={0.25}>
                                     <MetricRow
-                                        label="Queue"
+                                        label={t('flow_node.queue', { defaultValue: 'Queue' })}
                                         value={formatQueueSize(component.source_queue_size, component.source_queue_maxsize)}
                                     />
                                     {hasInputQueueAge && (
                                         <MetricRow
-                                            label="Queue age"
+                                            label={t('flow_node.queue_age', { defaultValue: 'Queue age' })}
                                             value={formatMilliseconds(getInputQueueAge(component).p95_ms)}
                                             valueColor={getLatencyColor(getInputQueueAge(component).p95_ms)}
                                         />
                                     )}
                                     <MetricRow
-                                        label="Msgs"
+                                        label={t('flow_node.msgs', { defaultValue: 'Msgs' })}
                                         value={formatNumber(component.stats?.messages_in || component.stats?.messages_received)}
                                     />
                                     <MetricRow
-                                        label="Rate"
+                                        label={t('flow_node.rate', { defaultValue: 'Rate' })}
                                         value={formatRate(component.rates?.messages_in_per_sec || component.rates?.messages_received_per_sec)}
                                         unit="/s"
                                     />
@@ -624,25 +628,25 @@ export const ComponentNode = ({ data }) => {
                             {/* Right column - Output */}
                             <Box>
                                 <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.5, fontSize: '0.7rem', opacity: 0.75, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                    Output
+                                    {t('flow_node.output', { defaultValue: 'Output' })}
                                 </Typography>
                                 <Stack spacing={0.25}>
                                     <MetricRow
-                                        label="Subscribers"
+                                        label={t('flow_node.subscribers', { defaultValue: 'Subscribers' })}
                                         value={component.subscriber_count || 0}
                                     />
                                     <MetricRow
-                                        label="Msgs"
+                                        label={t('flow_node.msgs', { defaultValue: 'Msgs' })}
                                         value={formatNumber(component.stats?.messages_broadcast)}
                                     />
                                     <MetricRow
-                                        label="Rate"
+                                        label={t('flow_node.rate', { defaultValue: 'Rate' })}
                                         value={formatRate(component.rates?.messages_broadcast_per_sec)}
                                         unit="/s"
                                     />
                                     {component.stats?.messages_dropped !== undefined && (
                                         <MetricRow
-                                            label="Drops"
+                                            label={t('flow_node.drops', { defaultValue: 'Drops' })}
                                             value={formatNumber(component.stats.messages_dropped)}
                                         />
                                     )}
@@ -657,16 +661,16 @@ export const ComponentNode = ({ data }) => {
                             {/* Left column - Input */}
                             <Box>
                                 <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.5, fontSize: '0.7rem', opacity: 0.75, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                    Input
+                                    {t('flow_node.input', { defaultValue: 'Input' })}
                                 </Typography>
                                 <Stack spacing={0.25}>
                                     <MetricRow
-                                        label="Queue"
+                                        label={t('flow_node.queue', { defaultValue: 'Queue' })}
                                         value={formatQueueSize(component.input_queue_size, component.input_queue_maxsize)}
                                     />
                                     {hasInputQueueAge && (
                                         <MetricRow
-                                            label="Queue age"
+                                            label={t('flow_node.queue_age', { defaultValue: 'Queue age' })}
                                             value={formatMilliseconds(getInputQueueAge(component).p95_ms)}
                                             valueColor={getLatencyColor(getInputQueueAge(component).p95_ms)}
                                         />
@@ -676,7 +680,7 @@ export const ComponentNode = ({ data }) => {
                                         value={formatNumber(component.stats?.iq_chunks_in)}
                                     />
                                     <MetricRow
-                                        label="Rate"
+                                        label={t('flow_node.rate', { defaultValue: 'Rate' })}
                                         value={formatRate(component.rates?.iq_chunks_per_sec)}
                                         unit="/s"
                                     />
@@ -703,19 +707,19 @@ export const ComponentNode = ({ data }) => {
                             {/* Right column - Output */}
                             <Box>
                                 <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.5, fontSize: '0.7rem', opacity: 0.75, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                    Output
+                                    {t('flow_node.output', { defaultValue: 'Output' })}
                                 </Typography>
                                 <Stack spacing={0.25}>
                                     <MetricRow
-                                        label="Queue"
+                                        label={t('flow_node.queue', { defaultValue: 'Queue' })}
                                         value={formatQueueSize(component.output_queue_size, component.output_queue_maxsize)}
                                     />
                                     <MetricRow
-                                        label="FFT"
+                                        label={t('flow_node.fft', { defaultValue: 'FFT' })}
                                         value={formatNumber(component.stats?.fft_results_out)}
                                     />
                                     <MetricRow
-                                        label="Rate"
+                                        label={t('flow_node.rate', { defaultValue: 'Rate' })}
                                         value={formatRate(component.rates?.fft_results_per_sec)}
                                         unit="/s"
                                     />
@@ -730,16 +734,16 @@ export const ComponentNode = ({ data }) => {
                             {/* Left column - Input */}
                             <Box>
                                 <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.5, fontSize: '0.7rem', opacity: 0.75, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                    Input
+                                    {t('flow_node.input', { defaultValue: 'Input' })}
                                 </Typography>
                                 <Stack spacing={0.25}>
                                     <MetricRow
-                                        label="Queue"
+                                        label={t('flow_node.queue', { defaultValue: 'Queue' })}
                                         value={formatQueueSize(component.input_queue_size, component.input_queue_maxsize)}
                                     />
                                     {hasInputQueueAge && (
                                         <MetricRow
-                                            label="Queue age"
+                                            label={t('flow_node.queue_age', { defaultValue: 'Queue age' })}
                                             value={formatMilliseconds(getInputQueueAge(component).p95_ms)}
                                             valueColor={getLatencyColor(getInputQueueAge(component).p95_ms)}
                                         />
@@ -749,21 +753,21 @@ export const ComponentNode = ({ data }) => {
                                         value={formatNumber(component.stats?.iq_chunks_in)}
                                     />
                                     <MetricRow
-                                        label="Rate"
+                                        label={t('flow_node.rate', { defaultValue: 'Rate' })}
                                         value={formatRate(component.rates?.iq_chunks_in_per_sec)}
                                         unit="/s"
                                     />
                                     {/* Ingest-side rate from demodulator stats (available even when skipping processing) */}
                                     {component.stats?.ingest_samples_per_sec !== undefined && (
                                         <MetricRow
-                                            label="Ingest"
+                                            label={t('flow_node.ingest', { defaultValue: 'Ingest' })}
                                             value={`${(component.stats.ingest_samples_per_sec/1000).toFixed(1)}`}
                                             unit="kS/s"
                                         />
                                     )}
                                     {component.stats?.ingest_chunks_per_sec !== undefined && (
                                         <MetricRow
-                                            label="Chunks"
+                                            label={t('flow_node.chunks', { defaultValue: 'Chunks' })}
                                             value={component.stats.ingest_chunks_per_sec.toFixed(2)}
                                             unit="/s"
                                         />
@@ -781,25 +785,25 @@ export const ComponentNode = ({ data }) => {
                             {/* Right column - Output */}
                             <Box>
                                 <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.5, fontSize: '0.7rem', opacity: 0.75, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                    Output
+                                    {t('flow_node.output', { defaultValue: 'Output' })}
                                 </Typography>
                                 <Stack spacing={0.25}>
                                     <MetricRow
-                                        label="Queue"
+                                        label={t('flow_node.queue', { defaultValue: 'Queue' })}
                                         value={formatQueueSize(component.output_queue_size, component.output_queue_maxsize)}
                                     />
                                     <MetricRow
-                                        label="Audio"
+                                        label={t('flow_node.audio', { defaultValue: 'Audio' })}
                                         value={formatNumber(component.stats?.audio_chunks_out)}
                                     />
                                     <MetricRow
-                                        label="Rate"
+                                        label={t('flow_node.rate', { defaultValue: 'Rate' })}
                                         value={formatRate(component.rates?.audio_chunks_out_per_sec)}
                                         unit="/s"
                                     />
                                     {component.stats?.pending_emits !== undefined && (
                                         <MetricRow
-                                            label="Pending"
+                                            label={t('flow_node.pending', { defaultValue: 'Pending' })}
                                             value={formatNumber(component.stats.pending_emits)}
                                         />
                                     )}
@@ -814,11 +818,11 @@ export const ComponentNode = ({ data }) => {
                             {/* Left column - Input */}
                             <Box>
                                 <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.5, fontSize: '0.7rem', opacity: 0.75, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                    Input
+                                    {t('flow_node.input', { defaultValue: 'Input' })}
                                 </Typography>
                                 <Stack spacing={0.25}>
                                     <MetricRow
-                                        label="Queue"
+                                        label={t('flow_node.queue', { defaultValue: 'Queue' })}
                                         value={formatQueueSize(component.input_queue_size, component.input_queue_maxsize)}
                                     />
                                     <MetricRow
@@ -826,7 +830,7 @@ export const ComponentNode = ({ data }) => {
                                         value={formatNumber(component.stats?.iq_chunks_in)}
                                     />
                                     <MetricRow
-                                        label="Rate"
+                                        label={t('flow_node.rate', { defaultValue: 'Rate' })}
                                         value={formatRate(component.rates?.iq_chunks_in_per_sec)}
                                         unit="/s"
                                     />
@@ -837,15 +841,15 @@ export const ComponentNode = ({ data }) => {
                             {/* Right column - Output */}
                             <Box>
                                 <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.5, fontSize: '0.7rem', opacity: 0.75, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                    Output
+                                    {t('flow_node.output', { defaultValue: 'Output' })}
                                 </Typography>
                                 <Stack spacing={0.25}>
                                     <MetricRow
-                                        label="Written"
+                                        label={t('flow_node.written', { defaultValue: 'Written' })}
                                         value={formatNumber(component.stats?.samples_written)}
                                     />
                                     <MetricRow
-                                        label="Rate"
+                                        label={t('flow_node.rate', { defaultValue: 'Rate' })}
                                         value={formatRate(component.rates?.samples_written_per_sec)}
                                         unit="/s"
                                     />
@@ -860,19 +864,19 @@ export const ComponentNode = ({ data }) => {
                             {/* Left column - Input */}
                             <Box>
                                 <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.5, fontSize: '0.7rem', opacity: 0.75, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                    Input
+                                    {t('flow_node.input', { defaultValue: 'Input' })}
                                 </Typography>
                                 <Stack spacing={0.25}>
                                     <MetricRow
-                                        label="Queue"
+                                        label={t('flow_node.queue', { defaultValue: 'Queue' })}
                                         value={formatQueueSize(component.input_queue_size, component.input_queue_maxsize)}
                                     />
                                     <MetricRow
-                                        label="Audio"
+                                        label={t('flow_node.audio', { defaultValue: 'Audio' })}
                                         value={formatNumber(component.stats?.audio_chunks_in)}
                                     />
                                     <MetricRow
-                                        label="Rate"
+                                        label={t('flow_node.rate', { defaultValue: 'Rate' })}
                                         value={formatRate(component.rates?.audio_chunks_in_per_sec)}
                                         unit="/s"
                                     />
@@ -883,20 +887,20 @@ export const ComponentNode = ({ data }) => {
                             {/* Right column - Output */}
                             <Box>
                                 <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.5, fontSize: '0.7rem', opacity: 0.75, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                    Output
+                                    {t('flow_node.output', { defaultValue: 'Output' })}
                                 </Typography>
                                 <Stack spacing={0.25}>
                                     <MetricRow
-                                        label="Written"
+                                        label={t('flow_node.written', { defaultValue: 'Written' })}
                                         value={formatNumber(component.stats?.samples_written)}
                                     />
                                     <MetricRow
-                                        label="Rate"
+                                        label={t('flow_node.rate', { defaultValue: 'Rate' })}
                                         value={formatRate(component.rates?.samples_written_per_sec)}
                                         unit="/s"
                                     />
                                     <MetricRow
-                                        label="Bytes"
+                                        label={t('flow_node.bytes', { defaultValue: 'Bytes' })}
                                         value={formatNumber(component.stats?.bytes_written)}
                                     />
                                 </Stack>
@@ -910,11 +914,11 @@ export const ComponentNode = ({ data }) => {
                             {/* Left column - Input */}
                             <Box>
                                 <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.5, fontSize: '0.7rem', opacity: 0.75, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                    Input
+                                    {t('flow_node.input', { defaultValue: 'Input' })}
                                 </Typography>
                                 <Stack spacing={0.25}>
                                     <MetricRow
-                                        label="Queue"
+                                        label={t('flow_node.queue', { defaultValue: 'Queue' })}
                                         value={formatQueueSize(component.input_queue_size, component.input_queue_maxsize)}
                                     />
                                     {/* IQ-based decoders (BPSK, FSK-family, LoRa, SSTVDecoder) receive IQ samples, others receive audio */}
@@ -925,21 +929,21 @@ export const ComponentNode = ({ data }) => {
                                                 value={formatNumber(component.stats?.iq_chunks_in || component.stats?.samples_in)}
                                             />
                                             <MetricRow
-                                                label="Rate"
+                                                label={t('flow_node.rate', { defaultValue: 'Rate' })}
                                                 value={formatRate(component.rates?.iq_chunks_in_per_sec || component.rates?.samples_in_per_sec)}
                                                 unit="/s"
                                             />
                                             {/* Ingest-side rate from decoder stats (available even when skipping processing) */}
                                             {component.stats?.ingest_samples_per_sec !== undefined && (
                                                 <MetricRow
-                                                    label="Ingest"
+                                                    label={t('flow_node.ingest', { defaultValue: 'Ingest' })}
                                                     value={`${(component.stats.ingest_samples_per_sec/1000).toFixed(1)}`}
                                                     unit="kS/s"
                                                 />
                                             )}
                                             {component.stats?.ingest_chunks_per_sec !== undefined && (
                                                 <MetricRow
-                                                    label="Chunks"
+                                                    label={t('flow_node.chunks', { defaultValue: 'Chunks' })}
                                                     value={component.stats.ingest_chunks_per_sec.toFixed(2)}
                                                     unit="/s"
                                                 />
@@ -948,11 +952,11 @@ export const ComponentNode = ({ data }) => {
                                     ) : (
                                         <>
                                             <MetricRow
-                                                label="Audio"
+                                                label={t('flow_node.audio', { defaultValue: 'Audio' })}
                                                 value={formatNumber(component.stats?.audio_chunks_in)}
                                             />
                                             <MetricRow
-                                                label="Rate"
+                                                label={t('flow_node.rate', { defaultValue: 'Rate' })}
                                                 value={formatRate(component.rates?.audio_chunks_in_per_sec)}
                                                 unit="/s"
                                             />
@@ -975,27 +979,27 @@ export const ComponentNode = ({ data }) => {
                             {/* Right column - Output */}
                             <Box>
                                 <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.5, fontSize: '0.7rem', opacity: 0.75, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                    Output
+                                    {t('flow_node.output', { defaultValue: 'Output' })}
                                 </Typography>
                                 <Stack spacing={0.25}>
                                     <MetricRow
-                                        label="Data"
+                                        label={t('flow_node.data', { defaultValue: 'Data' })}
                                         value={formatNumber(component.stats?.data_messages_out)}
                                     />
                                     <MetricRow
-                                        label="Rate"
+                                        label={t('flow_node.rate', { defaultValue: 'Rate' })}
                                         value={formatRate(component.rates?.data_messages_out_per_sec)}
                                         unit="/s"
                                     />
                                     {component.stats?.images_decoded !== undefined && (
                                         <MetricRow
-                                            label="Images"
+                                            label={t('flow_node.images', { defaultValue: 'Images' })}
                                             value={formatNumber(component.stats.images_decoded)}
                                         />
                                     )}
                                     {component.stats?.packets_decoded !== undefined && (
                                         <MetricRow
-                                            label="Packets"
+                                            label={t('flow_node.packets', { defaultValue: 'Packets' })}
                                             value={formatNumber(component.stats.packets_decoded)}
                                         />
                                     )}
@@ -1010,26 +1014,26 @@ export const ComponentNode = ({ data }) => {
                             {/* Left column - Input */}
                             <Box>
                                 <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.5, fontSize: '0.7rem', opacity: 0.75, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                    Input
+                                    {t('flow_node.input', { defaultValue: 'Input' })}
                                 </Typography>
                                 <Stack spacing={0.25}>
                                     <MetricRow
-                                        label="Queue"
+                                        label={t('flow_node.queue', { defaultValue: 'Queue' })}
                                         value={component.input_queue_size || 0}
                                     />
                                     {hasInputQueueAge && (
                                         <MetricRow
-                                            label="Queue age"
+                                            label={t('flow_node.queue_age', { defaultValue: 'Queue age' })}
                                             value={formatMilliseconds(getInputQueueAge(component).p95_ms)}
                                             valueColor={getLatencyColor(getInputQueueAge(component).p95_ms)}
                                         />
                                     )}
                                     <MetricRow
-                                        label="Audio"
+                                        label={t('flow_node.audio', { defaultValue: 'Audio' })}
                                         value={formatNumber(component.stats?.audio_chunks_in)}
                                     />
                                     <MetricRow
-                                        label="Rate"
+                                        label={t('flow_node.rate', { defaultValue: 'Rate' })}
                                         value={formatRate(component.rates?.audio_chunks_in_per_sec)}
                                         unit="/s"
                                     />
@@ -1046,27 +1050,27 @@ export const ComponentNode = ({ data }) => {
                             {/* Right column - Output */}
                             <Box>
                                 <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.5, fontSize: '0.7rem', opacity: 0.75, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                    Output
+                                    {t('flow_node.output', { defaultValue: 'Output' })}
                                 </Typography>
                                 <Stack spacing={0.25}>
                                     <MetricRow
-                                        label="Msgs"
+                                        label={t('flow_node.msgs', { defaultValue: 'Msgs' })}
                                         value={formatNumber(component.stats?.messages_emitted)}
                                     />
                                     <MetricRow
-                                        label="Rate"
+                                        label={t('flow_node.rate', { defaultValue: 'Rate' })}
                                         value={formatRate(component.rates?.messages_emitted_per_sec)}
                                         unit="/s"
                                     />
                                     {component.stats?.pending_emits !== undefined && (
                                         <MetricRow
-                                            label="Pending"
+                                            label={t('flow_node.pending', { defaultValue: 'Pending' })}
                                             value={formatNumber(component.stats.pending_emits)}
                                         />
                                     )}
                                     {component.stats?.emit_errors !== undefined && (
                                         <MetricRow
-                                            label="Emit errors"
+                                            label={t('flow_node.emit_errors', { defaultValue: 'Emit errors' })}
                                             value={formatNumber(component.stats.emit_errors)}
                                         />
                                     )}
@@ -1077,7 +1081,7 @@ export const ComponentNode = ({ data }) => {
                                 <Box sx={{ gridColumn: '1 / -1', mt: 1 }}>
                                     <Divider sx={{ mb: 0.5 }} />
                                     <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', display: 'block', mb: 0.5 }}>
-                                        Active Sessions
+                                        {t('flow_node.active_sessions', { defaultValue: 'Active Sessions' })}
                                     </Typography>
                                     <Stack spacing={0.25}>
                                         {Object.entries(component.active_sessions).map(([sessionId, session]) => (
@@ -1102,19 +1106,19 @@ export const ComponentNode = ({ data }) => {
                             {/* Left column - Input */}
                             <Box>
                                 <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.5, fontSize: '0.7rem', opacity: 0.75, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                    Input
+                                    {t('flow_node.input', { defaultValue: 'Input' })}
                                 </Typography>
                                 <Stack spacing={0.25}>
                                     <MetricRow
-                                        label="Queue"
+                                        label={t('flow_node.queue', { defaultValue: 'Queue' })}
                                         value={formatQueueSize(component.input_queue_size, component.input_queue_maxsize)}
                                     />
                                     <MetricRow
-                                        label="Audio"
+                                        label={t('flow_node.audio', { defaultValue: 'Audio' })}
                                         value={formatNumber(component.stats?.audio_chunks_in)}
                                     />
                                     <MetricRow
-                                        label="Rate"
+                                        label={t('flow_node.rate', { defaultValue: 'Rate' })}
                                         value={formatRate(component.rates?.audio_chunks_in_per_sec)}
                                         unit="/s"
                                     />
@@ -1125,28 +1129,28 @@ export const ComponentNode = ({ data }) => {
                             {/* Right column - Output */}
                             <Box>
                                 <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', display: 'block', mb: 0.5, fontSize: '0.7rem', opacity: 0.75, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                    Gemini API
+                                    {t('flow_node.gemini_api', { defaultValue: 'Gemini API' })}
                                 </Typography>
                                 <Stack spacing={0.25}>
                                     <MetricRow
-                                        label="Status"
+                                        label={t('flow_node.status', { defaultValue: 'Status' })}
                                         value={component.stats?.is_connected ? 'Connected' : 'Disconnected'}
                                     />
                                     <MetricRow
-                                        label="Sent"
+                                        label={t('flow_node.sent', { defaultValue: 'Sent' })}
                                         value={formatNumber(component.stats?.transcriptions_sent)}
                                     />
                                     <MetricRow
-                                        label="Received"
+                                        label={t('flow_node.received', { defaultValue: 'Received' })}
                                         value={formatNumber(component.stats?.transcriptions_received)}
                                     />
                                     <MetricRow
-                                        label="Attempts"
+                                        label={t('flow_node.attempts', { defaultValue: 'Attempts' })}
                                         value={formatNumber(component.stats?.connection_attempts)}
                                     />
                                     {component.stats?.connection_failures > 0 && (
                                         <MetricRow
-                                            label="Failures"
+                                            label={t('flow_node.failures', { defaultValue: 'Failures' })}
                                             value={formatNumber(component.stats?.connection_failures)}
                                         />
                                     )}
@@ -1160,13 +1164,13 @@ export const ComponentNode = ({ data }) => {
                         <>
                             <Box sx={{ gridColumn: '1 / -1' }}>
                                 <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', display: 'block', mb: 0.5 }}>
-                                    Connection Info
+                                    {t('flow_node.connection_info', { defaultValue: 'Connection Info' })}
                                 </Typography>
                                 <Stack spacing={0.25}>
                                     <Tooltip title={component.session_id || 'N/A'} arrow>
                                         <Box sx={{ display: 'flex', justifyContent: 'space-between', my: 0.25 }}>
                                             <Typography variant="caption" color="text.secondary">
-                                                Session:
+                                                {t('flow_node.session', { defaultValue: 'Session:' })}
                                             </Typography>
                                             <Typography variant="caption" fontWeight="medium">
                                                 {truncateId(component.session_id)}
@@ -1174,13 +1178,13 @@ export const ComponentNode = ({ data }) => {
                                         </Box>
                                     </Tooltip>
                                     <MetricRow
-                                        label="IP"
+                                        label={t('flow_node.ip', { defaultValue: 'IP' })}
                                         value={component.client_ip || 'unknown'}
                                     />
                                     {component.user_agent && component.user_agent !== 'unknown' && (
                                         <Box sx={{ display: 'flex', justifyContent: 'space-between', my: 0.25 }}>
                                             <Typography variant="caption" color="text.secondary">
-                                                User Agent:
+                                                {t('flow_node.user_agent', { defaultValue: 'User Agent:' })}
                                             </Typography>
                                             <Typography
                                                 variant="caption"
@@ -1203,23 +1207,23 @@ export const ComponentNode = ({ data }) => {
                             <Box sx={{ gridColumn: '1 / -1', mt: 1 }}>
                                 <Divider sx={{ mb: 0.5 }} />
                                 <Typography variant="caption" sx={{ fontWeight: 'bold', color: 'text.secondary', display: 'block', mb: 0.5 }}>
-                                    Received
+                                    {t('flow_node.received', { defaultValue: 'Received' })}
                                 </Typography>
                                 <Stack spacing={0.25}>
                                     <MetricRow
-                                        label="Audio"
+                                        label={t('flow_node.audio', { defaultValue: 'Audio' })}
                                         value={formatNumber(component.stats?.audio_chunks_in)}
                                     />
                                     <MetricRow
-                                        label="Samples"
+                                        label={t('flow_node.samples', { defaultValue: 'Samples' })}
                                         value={formatNumber(component.stats?.audio_samples_in)}
                                     />
                                     <MetricRow
-                                        label="Messages"
+                                        label={t('flow_node.messages', { defaultValue: 'Messages' })}
                                         value={formatNumber(component.stats?.messages_emitted)}
                                     />
                                     <MetricRow
-                                        label="Rate"
+                                        label={t('flow_node.rate', { defaultValue: 'Rate' })}
                                         value={formatRate(component.rates?.messages_emitted_per_sec)}
                                         unit="/s"
                                     />
@@ -1233,7 +1237,7 @@ export const ComponentNode = ({ data }) => {
                         <Box sx={{ gridColumn: '1 / -1' }}>
                             <Divider sx={{ my: 0.5 }} />
                             <MetricRow
-                                label="Errors"
+                                label={t('flow_node.errors', { defaultValue: 'Errors' })}
                                 value={formatNumber(component.stats.errors)}
                             />
                         </Box>

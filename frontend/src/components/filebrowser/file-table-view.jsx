@@ -219,7 +219,7 @@ function FileTableRow({ item, selectionMode, isSelected, onToggleSelection, onSh
                 chips.push(
                     <Chip
                         key="recording"
-                        label="🔴 Recording"
+                        label={t('file_table_view.recording', { defaultValue: '🔴 Recording' })}
                         size="small"
                         color="error"
                         sx={{ height: '20px', fontSize: '0.65rem' }}
@@ -260,7 +260,7 @@ function FileTableRow({ item, selectionMode, isSelected, onToggleSelection, onSh
                     chips.push(
                         <Chip
                             key="observation-in-progress"
-                            label="In progress"
+                            label={t('file_table_view.in_progress', { defaultValue: 'In progress' })}
                             size="small"
                             color="warning"
                             sx={{ height: '20px', fontSize: '0.65rem' }}
@@ -420,7 +420,7 @@ function FileTableRow({ item, selectionMode, isSelected, onToggleSelection, onSh
                 chips.push(
                     <Chip
                         key="recording"
-                        label="🔴 Recording"
+                        label={t('file_table_view.recording', { defaultValue: '🔴 Recording' })}
                         size="small"
                         color="error"
                         sx={{ height: '20px', fontSize: '0.65rem' }}
@@ -606,7 +606,7 @@ function FileTableRow({ item, selectionMode, isSelected, onToggleSelection, onSh
                         </IconButton>
                     </Tooltip>
                     {item.type === 'recording' && onProcessingMenu && (
-                        <Tooltip title="Recording Actions">
+                        <Tooltip title={t('file_table_view.recording_actions', { defaultValue: 'Recording Actions' })}>
                             <IconButton
                                 size="small"
                                 color="primary"
@@ -671,12 +671,12 @@ export default function FileTableView({
                                     <TableRow>
                                         {selectionMode && <TableCell padding="checkbox" sx={{ width: 50 }}></TableCell>}
                                         <TableCell sx={{ width: 50 }}></TableCell>
-                                        <TableCell>Name</TableCell>
-                                        <TableCell align="right">Size</TableCell>
-                                        <TableCell>Type</TableCell>
-                                        <TableCell>🛰️ Satellite</TableCell>
-                                        <TableCell>Time</TableCell>
-                                        <TableCell align="right">Actions</TableCell>
+                                        <TableCell>{t('file_table_view.name', { defaultValue: 'Name' })}</TableCell>
+                                        <TableCell align="right">{t('file_table_view.size', { defaultValue: 'Size' })}</TableCell>
+                                        <TableCell>{t('file_table_view.type', { defaultValue: 'Type' })}</TableCell>
+                                        <TableCell>{t('file_table_view.satellite', { defaultValue: '🛰️ Satellite' })}</TableCell>
+                                        <TableCell>{t('file_table_view.time', { defaultValue: 'Time' })}</TableCell>
+                                        <TableCell align="right">{t('file_table_view.actions', { defaultValue: 'Actions' })}</TableCell>
                                     </TableRow>
                                 </TableHead>
                                 <TableBody>
