@@ -357,7 +357,7 @@ const SatelliteSearchAutocomplete = React.memo(function SatelliteSearchAutocompl
                         </Box>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
                             {monitored ? (
-                                <Chip size="small" color="success" label="Monitored" sx={{ height: 18, fontSize: '0.62rem' }} />
+                                <Chip size="small" color="success" label={t('satellite_search.monitored', { defaultValue: 'Monitored' })} sx={{ height: 18, fontSize: '0.62rem' }} />
                             ) : null}
                             <Chip
                                 size="small"

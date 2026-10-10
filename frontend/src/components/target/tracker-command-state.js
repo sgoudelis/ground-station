@@ -1,3 +1,15 @@
+import i18n from '../../i18n/config';
+
+/**
+ * Module-level translator.
+ *
+ * These helpers run outside React (redux thunks and socket acknowledgement
+ * callbacks), where the `useTranslation` hook is unavailable. Bind a fixed-namespace
+ * translator to the shared i18n instance instead (same approach as
+ * waterfall/vfo-marker/vfo-config.js).
+ */
+const t = i18n.getFixedT(null, 'target');
+
 // Commands and hardware observations have separate lifecycles. A request ACK
 // only confirms acceptance and can arrive after the worker's terminal event.
 export const COMMAND_BUSY = ['sending', 'submitted', 'started', 'unknown'];
@@ -113,12 +125,12 @@ export function commandLabel(command) {
 export function callTrackerApi(socket, cmd, data, timeout = 8000) {
     return new Promise((resolve, reject) => {
         if (!socket?.connected) {
-            reject({message: 'Not connected to backend', uncertain: false});
+            reject({message: t('tracker_command_state.not_connected_to_backend', { defaultValue: 'Not connected to backend' }), uncertain: false});
             return;
         }
         // Do not buffer hardware actions for automatic transmission after reconnect.
         socket.timeout(timeout).emit('api.call', {cmd, data}, (error, response) => {
-            if (error) reject({message: 'Acknowledgement missing; checking command status', uncertain: true});
+            if (error) reject({message: t('tracker_command_state.acknowledgement_missing_checking_command_status', { defaultValue: 'Acknowledgement missing; checking command status' }), uncertain: true});
             else if (!response?.success) reject({message: response?.message || response?.error || 'Command rejected', uncertain: false});
             else resolve(response.data);
         });

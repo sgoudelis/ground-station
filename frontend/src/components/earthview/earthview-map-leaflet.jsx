@@ -261,15 +261,15 @@ const LeafletEarthViewMapRenderer = ({
         return normalizedMapEngine === 'maplibre' ? -6 : 1.5;
     }, [mapZoomByEngine, normalizedMapEngine]);
     const selectedTileLayer = useMemo(
-        () => getTileLayerById(tileLayerID, { mapEngine: normalizedMapEngine }),
-        [normalizedMapEngine, tileLayerID]
+        () => getTileLayerById(tileLayerID, { mapEngine: normalizedMapEngine, t }),
+        [normalizedMapEngine, tileLayerID, t]
     );
     const attributionHtml = useMemo(
         () => `<a href="https://leafletjs.com" title="A JavaScript library for interactive maps" target="_blank" rel="noopener noreferrer">Leaflet</a> | ${selectedTileLayer.attribution}`,
         [selectedTileLayer.attribution]
     );
     const mapCrs = useMemo(
-        () => getMapCrsByTileLayerId(tileLayerID, { mapEngine: normalizedMapEngine }),
+        () => getMapCrsByTileLayerId(tileLayerID, { mapEngine: normalizedMapEngine, t }),
         [normalizedMapEngine, tileLayerID]
     );
     const tileEventHandlers = useMemo(() => ({

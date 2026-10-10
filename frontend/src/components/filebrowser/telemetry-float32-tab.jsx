@@ -25,6 +25,7 @@ import {
     Stack,
     useTheme,
 } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 
 function Float32Row({ offset, value, hex, type }) {
     const theme = useTheme();
@@ -60,6 +61,7 @@ function Float32Row({ offset, value, hex, type }) {
 }
 
 export default function Float32Tab({ packet, telemetry }) {
+    const { t } = useTranslation('filebrowser');
     const theme = useTheme();
     const [showAll, setShowAll] = useState(false);
 
@@ -128,7 +130,7 @@ export default function Float32Tab({ packet, telemetry }) {
         return (
             <Box sx={{ p: 3, textAlign: 'center' }}>
                 <Typography color="text.secondary">
-                    No data available
+                    {t('telemetry_float32_tab.no_data_available', { defaultValue: 'No data available' })}
                 </Typography>
             </Box>
         );
@@ -148,13 +150,13 @@ export default function Float32Tab({ packet, telemetry }) {
                     }
                     label={
                         <Typography variant="body2">
-                            Show all values (including unrealistic)
+                            {t('telemetry_float32_tab.show_all_values_including_unrealistic', { defaultValue: 'Show all values (including unrealistic)' })}
                         </Typography>
                     }
                 />
                 <Box sx={{ flexGrow: 1 }} />
                 <Typography variant="caption" color="text.secondary">
-                    Showing {displayedValues.length} of {floatValues.length} values
+                    {t('telemetry_float32_tab.showing', { defaultValue: 'Showing' })} {displayedValues.length} of {floatValues.length} values
                 </Typography>
             </Stack>
 
@@ -163,10 +165,10 @@ export default function Float32Tab({ packet, telemetry }) {
                 <Table size="small">
                     <TableHead>
                         <TableRow sx={{ backgroundColor: theme.palette.mode === 'dark' ? theme.palette.grey[900] : theme.palette.grey[100] }}>
-                            <TableCell sx={{ fontWeight: 700 }}>Offset</TableCell>
-                            <TableCell sx={{ fontWeight: 700 }}>Hex (4 bytes)</TableCell>
-                            <TableCell sx={{ fontWeight: 700 }}>Float32 Value</TableCell>
-                            <TableCell sx={{ fontWeight: 700 }}>Possible Type</TableCell>
+                            <TableCell sx={{ fontWeight: 700 }}>{t('telemetry_float32_tab.offset', { defaultValue: 'Offset' })}</TableCell>
+                            <TableCell sx={{ fontWeight: 700 }}>{t('telemetry_float32_tab.hex_4_bytes', { defaultValue: 'Hex (4 bytes)' })}</TableCell>
+                            <TableCell sx={{ fontWeight: 700 }}>{t('telemetry_float32_tab.float32_value', { defaultValue: 'Float32 Value' })}</TableCell>
+                            <TableCell sx={{ fontWeight: 700 }}>{t('telemetry_float32_tab.possible_type', { defaultValue: 'Possible Type' })}</TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
@@ -198,9 +200,7 @@ export default function Float32Tab({ packet, telemetry }) {
             {/* Info box */}
             <Box sx={{ mt: 2, p: 2, bgcolor: theme.palette.info.main + '30', borderRadius: 1, border: `1px solid ${theme.palette.info.main}60` }}>
                 <Typography variant="caption" sx={{ color: theme.palette.info.light, fontWeight: 500 }}>
-                    💡 Interpreting payload as little-endian Float32 (IEEE 754) values.
-                    Realistic ranges: voltages (0-10V), temperatures (-50 to +100°C), currents (0-5A).
-                    Hover over types to understand the heuristics used for classification.
+                    {t('telemetry_float32_tab.interpreting_payload_as_little_endian_float32_ieee_754_v', { defaultValue: '💡 Interpreting payload as little-endian Float32 (IEEE 754) values.\n                    Realistic ranges: voltages (0-10V), temperatures (-50 to +100°C), currents (0-5A).\n                    Hover over types to understand the heuristics used for classification.' })}
                 </Typography>
             </Box>
         </Box>

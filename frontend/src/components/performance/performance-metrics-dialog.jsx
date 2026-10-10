@@ -34,8 +34,10 @@ import { useSelector, useDispatch } from 'react-redux';
 import { setDialogOpen } from './performance-slice.jsx';
 import { useSocket } from '../common/socket.jsx';
 import PerformanceFlow from './performance-flow.jsx';
+import { useTranslation } from 'react-i18next';
 
 const PerformanceMetricsDialog = () => {
+    const { t } = useTranslation('common');
     const dispatch = useDispatch();
     const { socket } = useSocket();
     const open = useSelector((state) => state.performance.dialogOpen);
@@ -133,13 +135,13 @@ const PerformanceMetricsDialog = () => {
             >
                 <Box display="flex" justifyContent="space-between" alignItems="center">
                     <Box display="flex" flexDirection="column" gap={0.5}>
-                        <Typography variant="h6">System Topology</Typography>
+                        <Typography variant="h6">{t('performance_metrics_dialog.system_topology', { defaultValue: 'System Topology' })}</Typography>
                         <Typography
                             variant="caption"
                             color="text.secondary"
                             sx={{ opacity: 0.7, fontSize: '0.75rem' }}
                         >
-                            Real-time visualization of system components and data flow
+                            {t('performance_metrics_dialog.real_time_visualization_of_system_components_and_data_fl', { defaultValue: 'Real-time visualization of system components and data flow' })}
                         </Typography>
                     </Box>
                     <Box display="flex" alignItems="center" gap={1}>
@@ -150,7 +152,7 @@ const PerformanceMetricsDialog = () => {
                             onClick={handleAutoArrange}
                             disabled={!metrics}
                         >
-                            Auto Arrange
+                            {t('performance_metrics_dialog.auto_arrange', { defaultValue: 'Auto Arrange' })}
                         </Button>
                         <IconButton onClick={handleClose} size="small">
                             <CloseIcon />
@@ -171,7 +173,7 @@ const PerformanceMetricsDialog = () => {
                 {!metrics ? (
                     <Box display="flex" justifyContent="center" alignItems="center" height="100%">
                         <Typography variant="body1" color="text.secondary">
-                            Waiting for metrics data...
+                            {t('performance_metrics_dialog.waiting_for_metrics_data', { defaultValue: 'Waiting for metrics data...' })}
                         </Typography>
                     </Box>
                 ) : (

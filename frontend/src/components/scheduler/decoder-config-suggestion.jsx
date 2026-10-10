@@ -21,6 +21,7 @@ import React, { useEffect, useState } from 'react';
 import { Box, Typography, CircularProgress, Alert, Link, Button } from '@mui/material';
 import { Lightbulb as LightbulbIcon, Info as InfoIcon } from '@mui/icons-material';
 import { useSocket } from '../common/socket.jsx';
+import { useTranslation } from 'react-i18next';
 
 /**
  * DecoderConfigSuggestion component
@@ -37,6 +38,7 @@ import { useSocket } from '../common/socket.jsx';
  * @param {Function} props.onApply - Callback function to apply the configuration to the form
  */
 export const DecoderConfigSuggestion = ({ decoderType, satellite, transmitter, show, onApply }) => {
+    const { t } = useTranslation('common');
     const { socket } = useSocket();
     const [loading, setLoading] = useState(false);
     const [config, setConfig] = useState(null);
@@ -114,7 +116,7 @@ export const DecoderConfigSuggestion = ({ decoderType, satellite, transmitter, s
             >
                 <CircularProgress size={16} />
                 <Typography variant="body2" color="text.secondary">
-                    Loading decoder configuration...
+                    {t('decoder_config_suggestion.loading_decoder_configuration', { defaultValue: 'Loading decoder configuration...' })}
                 </Typography>
             </Box>
         );
@@ -244,7 +246,7 @@ export const DecoderConfigSuggestion = ({ decoderType, satellite, transmitter, s
                             color: 'text.primary',
                         }}
                     >
-                        Suggested configuration for this satellite
+                        {t('decoder_config_suggestion.suggested_configuration_for_this_satellite', { defaultValue: 'Suggested configuration for this satellite' })}
                         {config.transmitter?.mode && ` (${config.transmitter.mode})`}
                     </Typography>
                     <Typography
@@ -281,7 +283,7 @@ export const DecoderConfigSuggestion = ({ decoderType, satellite, transmitter, s
                             },
                         }}
                     >
-                        Apply
+                        {t('decoder_config_suggestion.apply', { defaultValue: 'Apply' })}
                     </Button>
                 )}
             </Box>
@@ -335,7 +337,7 @@ export const DecoderConfigSuggestion = ({ decoderType, satellite, transmitter, s
                                     },
                                 }}
                             >
-                                Daniel Estévez
+                                {t('decoder_config_suggestion.daniel_est_vez', { defaultValue: 'Daniel Estévez' })}
                             </Link>
                         </>
                     ) : (

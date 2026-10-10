@@ -22,6 +22,7 @@ import { Box, Divider, IconButton, Slider, Stack, Tooltip, Typography, useTheme 
 import { shallowEqual, useDispatch, useSelector } from 'react-redux';
 import { AutoScaleOnceIcon, AutoDBIcon } from '../common/custom-icons.jsx';
 import { setAutoDBRange, setDbRange } from './waterfall-slice.jsx';
+import { useTranslation } from 'react-i18next';
 
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 20;
@@ -29,6 +30,7 @@ const ZOOM_STEP = 0.1;
 const SIDEBAR_SLIDER_MIN_HEIGHT = 72;
 
 const WaterfallRightSidebar = ({ workerRef, waterfallControlRef, dimensions }) => {
+    const { t } = useTranslation('waterfall');
     const theme = useTheme();
     const dispatch = useDispatch();
     const [zoomSliderValue, setZoomSliderValue] = useState(1);
@@ -116,7 +118,7 @@ const WaterfallRightSidebar = ({ workerRef, waterfallControlRef, dimensions }) =
                         color: 'text.secondary',
                     }}
                 >
-                    Zoom
+                    {t('waterfall_right_sidebar.zoom', { defaultValue: 'Zoom' })}
                 </Typography>
                 <Typography
                     variant="caption"
@@ -186,10 +188,10 @@ const WaterfallRightSidebar = ({ workerRef, waterfallControlRef, dimensions }) =
                         color: 'text.secondary',
                     }}
                 >
-                    Range
+                    {t('waterfall_right_sidebar.range', { defaultValue: 'Range' })}
                 </Typography>
                 <Stack direction="row" spacing={0.5} sx={{ justifyContent: 'center', mb: 0.5 }}>
-                    <Tooltip title="Auto once" placement="left">
+                    <Tooltip title={t('waterfall_right_sidebar.auto_once', { defaultValue: 'Auto once' })} placement="left">
                         <span>
                             <IconButton
                                 disabled={!isStreaming}
@@ -211,7 +213,7 @@ const WaterfallRightSidebar = ({ workerRef, waterfallControlRef, dimensions }) =
                             </IconButton>
                         </span>
                     </Tooltip>
-                    <Tooltip title="Auto dB" placement="left">
+                    <Tooltip title={t('waterfall_right_sidebar.auto_db', { defaultValue: 'Auto dB' })} placement="left">
                         <span>
                             <IconButton
                                 disabled={!isStreaming}

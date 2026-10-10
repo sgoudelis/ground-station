@@ -124,23 +124,22 @@ const ReduxPersistentSettingsCard = () => {
     return (
         <>
             <Typography variant="h6" gutterBottom>
-                Redux Persistent Settings
+                {t('redux_persistent_settings_card.redux_persistent_settings', { defaultValue: 'Redux Persistent Settings' })}
             </Typography>
             <Divider sx={{mb: 2}}/>
 
             <Grid container spacing={2} columns={16}>
                 <Grid size={16}>
                     <Alert severity="warning" sx={{mb: 2}}>
-                        <AlertTitle>Clear All Redux Settings</AlertTitle>
-                        This will reset all application settings below to their defaults. Use individual buttons to
-                        clear specific settings only.
+                        <AlertTitle>{t('redux_persistent_settings_card.clear_all_redux_settings', { defaultValue: 'Clear All Redux Settings' })}</AlertTitle>
+                        {t('redux_persistent_settings_card.this_will_reset_all_application_settings_below_to_their_', { defaultValue: 'This will reset all application settings below to their defaults. Use individual buttons to\n                        clear specific settings only.' })}
                     </Alert>
                 </Grid>
 
                 <Grid size={10}>
                     {t('maintenance.clear_redux')}
                     <Typography variant="body2" color="text.secondary">
-                        Clears all Redux persistent data (all settings below)
+                        {t('redux_persistent_settings_card.clears_all_redux_persistent_data_all_settings_below', { defaultValue: 'Clears all Redux persistent data (all settings below)' })}
                     </Typography>
                 </Grid>
                 <Grid size={6}>
@@ -158,14 +157,14 @@ const ReduxPersistentSettingsCard = () => {
                 <Grid size={16}>
                     <Divider sx={{my: 2}}/>
                     <Typography variant="body2" color="text.secondary" gutterBottom>
-                        Or clear individual settings:
+                        {t('redux_persistent_settings_card.or_clear_individual_settings', { defaultValue: 'Or clear individual settings:' })}
                     </Typography>
                 </Grid>
 
                 <Grid size={10}>
-                    Clear File Browser Settings
+                    {t('redux_persistent_settings_card.clear_file_browser_settings', { defaultValue: 'Clear File Browser Settings' })}
                     <Typography variant="body2" color="text.secondary">
-                        Resets page size, sorting, filters, and view mode
+                        {t('redux_persistent_settings_card.resets_page_size_sorting_filters_and_view_mode', { defaultValue: 'Resets page size, sorting, filters, and view mode' })}
                     </Typography>
                 </Grid>
                 <Grid size={6}>
@@ -181,14 +180,14 @@ const ReduxPersistentSettingsCard = () => {
                         fullWidth
                         size="small"
                     >
-                        Clear
+                        {t('redux_persistent_settings_card.clear', { defaultValue: 'Clear' })}
                     </Button>
                 </Grid>
 
                 <Grid size={10}>
-                    Clear Waterfall Settings
+                    {t('redux_persistent_settings_card.clear_waterfall_settings', { defaultValue: 'Clear Waterfall Settings' })}
                     <Typography variant="body2" color="text.secondary">
-                        Resets frequency, gain, sample rate, colormap, FFT settings
+                        {t('redux_persistent_settings_card.resets_frequency_gain_sample_rate_colormap_fft_settings', { defaultValue: 'Resets frequency, gain, sample rate, colormap, FFT settings' })}
                     </Typography>
                 </Grid>
                 <Grid size={6}>
@@ -204,14 +203,14 @@ const ReduxPersistentSettingsCard = () => {
                         fullWidth
                         size="small"
                     >
-                        Clear
+                        {t('redux_persistent_settings_card.clear', { defaultValue: 'Clear' })}
                     </Button>
                 </Grid>
 
                 <Grid size={10}>
-                    Clear VFO Settings
+                    {t('redux_persistent_settings_card.clear_vfo_settings', { defaultValue: 'Clear VFO Settings' })}
                     <Typography variant="body2" color="text.secondary">
-                        Resets all VFO markers, frequencies, modes, and active states
+                        {t('redux_persistent_settings_card.resets_all_vfo_markers_frequencies_modes_and_active_stat', { defaultValue: 'Resets all VFO markers, frequencies, modes, and active states' })}
                     </Typography>
                 </Grid>
                 <Grid size={6}>
@@ -227,14 +226,14 @@ const ReduxPersistentSettingsCard = () => {
                         fullWidth
                         size="small"
                     >
-                        Clear
+                        {t('redux_persistent_settings_card.clear', { defaultValue: 'Clear' })}
                     </Button>
                 </Grid>
 
                 <Grid size={10}>
-                    Clear Preferences
+                    {t('redux_persistent_settings_card.clear_preferences', { defaultValue: 'Clear Preferences' })}
                     <Typography variant="body2" color="text.secondary">
-                        Resets all user preferences like timezone, theme, etc.
+                        {t('redux_persistent_settings_card.resets_all_user_preferences_like_timezone_theme_etc', { defaultValue: 'Resets all user preferences like timezone, theme, etc.' })}
                     </Typography>
                 </Grid>
                 <Grid size={6}>
@@ -250,14 +249,14 @@ const ReduxPersistentSettingsCard = () => {
                         fullWidth
                         size="small"
                     >
-                        Clear
+                        {t('redux_persistent_settings_card.clear', { defaultValue: 'Clear' })}
                     </Button>
                 </Grid>
 
                 <Grid size={10}>
-                    Clear Earth view Satellite Selection
+                    {t('redux_persistent_settings_card.clear_earth_view_satellite_selection', { defaultValue: 'Clear Earth view Satellite Selection' })}
                     <Typography variant="body2" color="text.secondary">
-                        Resets selected satellite group and satellite in earth view page
+                        {t('redux_persistent_settings_card.resets_selected_satellite_group_and_satellite_in_earth_v', { defaultValue: 'Resets selected satellite group and satellite in earth view page' })}
                     </Typography>
                 </Grid>
                 <Grid size={6}>
@@ -273,14 +272,14 @@ const ReduxPersistentSettingsCard = () => {
                         fullWidth
                         size="small"
                     >
-                        Clear
+                        {t('redux_persistent_settings_card.clear', { defaultValue: 'Clear' })}
                     </Button>
                 </Grid>
 
                 <Grid size={10}>
-                    Clear Celestial Settings
+                    {t('redux_persistent_settings_card.clear_celestial_settings', { defaultValue: 'Clear Celestial Settings' })}
                     <Typography variant="body2" color="text.secondary">
-                        Resets map settings, monitored table state, and solar system display options
+                        {t('redux_persistent_settings_card.resets_map_settings_monitored_table_state_and_solar_syst', { defaultValue: 'Resets map settings, monitored table state, and solar system display options' })}
                     </Typography>
                 </Grid>
                 <Grid size={6}>
@@ -296,7 +295,7 @@ const ReduxPersistentSettingsCard = () => {
                         fullWidth
                         size="small"
                     >
-                        Clear
+                        {t('redux_persistent_settings_card.clear', { defaultValue: 'Clear' })}
                     </Button>
                 </Grid>
             </Grid>
@@ -343,19 +342,18 @@ const ReduxPersistentSettingsCard = () => {
                     >
                         !
                     </Box>
-                    Clear All Redux Persistent State?
+                    {t('redux_persistent_settings_card.clear_all_redux_persistent_state', { defaultValue: 'Clear All Redux Persistent State?' })}
                 </DialogTitle>
                 <DialogContent sx={{ px: 3, pt: 3, pb: 3 }}>
                     <Alert severity="info" sx={{ mt: 2, mb: 2 }}>
-                        <AlertTitle>Local Browser Cache Only</AlertTitle>
-                        This will only clear application settings stored in your browser's local storage. No backend
-                        data (satellites, rigs, rotators, recordings, etc.) will be deleted.
+                        <AlertTitle>{t('redux_persistent_settings_card.local_browser_cache_only', { defaultValue: 'Local Browser Cache Only' })}</AlertTitle>
+                        {t('redux_persistent_settings_card.this_will_only_clear_application_settings_stored_in_your', { defaultValue: 'This will only clear application settings stored in your browser\'s local storage. No backend\n                        data (satellites, rigs, rotators, recordings, etc.) will be deleted.' })}
                     </Alert>
                     <Typography variant="body1" sx={{ mb: 2, color: 'text.primary' }}>
-                        This action will reset ALL local application settings to their defaults!
+                        {t('redux_persistent_settings_card.this_action_will_reset_all_local_application_settings_to', { defaultValue: 'This action will reset ALL local application settings to their defaults!' })}
                     </Typography>
                     <Typography variant="body2" sx={{ mb: 2, fontWeight: 600, color: 'text.secondary' }}>
-                        Settings to be cleared:
+                        {t('redux_persistent_settings_card.settings_to_be_cleared', { defaultValue: 'Settings to be cleared:' })}
                     </Typography>
                     <Box sx={{
                         maxHeight: 300,
@@ -367,25 +365,25 @@ const ReduxPersistentSettingsCard = () => {
                     }}>
                         <Typography component="div" variant="body2" sx={{ fontSize: '0.813rem', color: 'text.primary' }}>
                             <ul style={{ margin: 0, paddingLeft: '1.5rem' }}>
-                                <li>Waterfall settings (frequency, gain, sample rate, colormap, FFT)</li>
-                                <li>VFO settings (markers, frequencies, modes, active states)</li>
-                                <li>Cached rig configurations</li>
-                                <li>Cached rotator configurations</li>
-                                <li>Cached orbital sources</li>
-                                <li>Cached satellite and group data</li>
-                                <li>Location settings</li>
-                                <li>User preferences (timezone, theme)</li>
-                                <li>Dashboard settings</li>
-                                <li>Weather settings</li>
-                                <li>SDR settings</li>
-                                <li>File browser settings</li>
-                                <li>Celestial settings (map, monitored table, display options)</li>
+                                <li>{t('redux_persistent_settings_card.waterfall_settings_frequency_gain_sample_rate_colormap_f', { defaultValue: 'Waterfall settings (frequency, gain, sample rate, colormap, FFT)' })}</li>
+                                <li>{t('redux_persistent_settings_card.vfo_settings_markers_frequencies_modes_active_states', { defaultValue: 'VFO settings (markers, frequencies, modes, active states)' })}</li>
+                                <li>{t('redux_persistent_settings_card.cached_rig_configurations', { defaultValue: 'Cached rig configurations' })}</li>
+                                <li>{t('redux_persistent_settings_card.cached_rotator_configurations', { defaultValue: 'Cached rotator configurations' })}</li>
+                                <li>{t('redux_persistent_settings_card.cached_orbital_sources', { defaultValue: 'Cached orbital sources' })}</li>
+                                <li>{t('redux_persistent_settings_card.cached_satellite_and_group_data', { defaultValue: 'Cached satellite and group data' })}</li>
+                                <li>{t('redux_persistent_settings_card.location_settings', { defaultValue: 'Location settings' })}</li>
+                                <li>{t('redux_persistent_settings_card.user_preferences_timezone_theme', { defaultValue: 'User preferences (timezone, theme)' })}</li>
+                                <li>{t('redux_persistent_settings_card.dashboard_settings', { defaultValue: 'Dashboard settings' })}</li>
+                                <li>{t('redux_persistent_settings_card.weather_settings', { defaultValue: 'Weather settings' })}</li>
+                                <li>{t('redux_persistent_settings_card.sdr_settings', { defaultValue: 'SDR settings' })}</li>
+                                <li>{t('redux_persistent_settings_card.file_browser_settings', { defaultValue: 'File browser settings' })}</li>
+                                <li>{t('redux_persistent_settings_card.celestial_settings_map_monitored_table_display_options', { defaultValue: 'Celestial settings (map, monitored table, display options)' })}</li>
                             </ul>
                         </Typography>
                     </Box>
                     <Alert severity="warning" sx={{ mt: 2 }}>
-                        <AlertTitle>Page Refresh Required</AlertTitle>
-                        You will need to refresh the page after clearing. The application will re-fetch all configuration data from the backend.
+                        <AlertTitle>{t('redux_persistent_settings_card.page_refresh_required', { defaultValue: 'Page Refresh Required' })}</AlertTitle>
+                        {t('redux_persistent_settings_card.you_will_need_to_refresh_the_page_after_clearing_the_app', { defaultValue: 'You will need to refresh the page after clearing. The application will re-fetch all configuration data from the backend.' })}
                     </Alert>
                 </DialogContent>
                 <DialogActions
@@ -407,7 +405,7 @@ const ReduxPersistentSettingsCard = () => {
                             fontWeight: 500,
                         }}
                     >
-                        Cancel
+                        {t('redux_persistent_settings_card.cancel', { defaultValue: 'Cancel' })}
                     </Button>
                     <Button
                         onClick={clearReduxPersistentState}
@@ -419,7 +417,7 @@ const ReduxPersistentSettingsCard = () => {
                             fontWeight: 600,
                         }}
                     >
-                        Clear All Settings
+                        {t('redux_persistent_settings_card.clear_all_settings', { defaultValue: 'Clear All Settings' })}
                     </Button>
                 </DialogActions>
             </Dialog>
@@ -470,15 +468,15 @@ const ReduxPersistentSettingsCard = () => {
                 </DialogTitle>
                 <DialogContent sx={{ px: 3, pt: 3, pb: 3 }}>
                     <Alert severity="info" sx={{ mt: 2, mb: 2 }}>
-                        <AlertTitle>Local Browser Cache Only</AlertTitle>
-                        This only clears settings stored in your browser's local storage.
+                        <AlertTitle>{t('redux_persistent_settings_card.local_browser_cache_only', { defaultValue: 'Local Browser Cache Only' })}</AlertTitle>
+                        {t('redux_persistent_settings_card.this_only_clears_settings_stored_in_your_browser_s_local', { defaultValue: 'This only clears settings stored in your browser\'s local storage.' })}
                     </Alert>
                     <Typography variant="body1" sx={{ mb: 2, color: 'text.primary' }}>
                         {confirmIndividualAction?.description}
                     </Typography>
                     <Alert severity="warning" sx={{ mt: 2 }}>
-                        <AlertTitle>Reload May Be Required</AlertTitle>
-                        Refresh the page if you do not immediately see the updated defaults.
+                        <AlertTitle>{t('redux_persistent_settings_card.reload_may_be_required', { defaultValue: 'Reload May Be Required' })}</AlertTitle>
+                        {t('redux_persistent_settings_card.refresh_the_page_if_you_do_not_immediately_see_the_updat', { defaultValue: 'Refresh the page if you do not immediately see the updated defaults.' })}
                     </Alert>
                 </DialogContent>
                 <DialogActions
@@ -500,7 +498,7 @@ const ReduxPersistentSettingsCard = () => {
                             fontWeight: 500,
                         }}
                     >
-                        Cancel
+                        {t('redux_persistent_settings_card.cancel', { defaultValue: 'Cancel' })}
                     </Button>
                     <Button
                         onClick={handleConfirmIndividualAction}
@@ -525,7 +523,7 @@ const ReduxPersistentSettingsCard = () => {
                 <Box sx={{textAlign: 'center'}}>
                     <CircularProgress color="inherit" size={60}/>
                     <Typography variant="h6" sx={{mt: 2}}>
-                        Reloading...
+                        {t('redux_persistent_settings_card.reloading', { defaultValue: 'Reloading...' })}
                     </Typography>
                 </Box>
             </Backdrop>

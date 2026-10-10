@@ -38,6 +38,7 @@ import VolumeMuteIcon from '@mui/icons-material/VolumeMute';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import { useUserTimeSettings } from '../../hooks/useUserTimeSettings.jsx';
 import { formatTime } from '../../utils/date-time.js';
+import { useTranslation } from 'react-i18next';
 
 /**
  * Language code to emoji flag mapping
@@ -151,6 +152,7 @@ const VFOSubtitle = ({
     timezone,
     locale
 }) => {
+    const { t } = useTranslation('waterfall');
     const [lines, setLines] = useState([]);
     const subtitleColor = darken(vfoColor || '#000000', 0.32);
 
@@ -594,7 +596,7 @@ const VFOSubtitle = ({
                             </ToggleButtonGroup>
 
                             {/* Font size controls */}
-                            <Tooltip title="Decrease font size">
+                            <Tooltip title={t('transcription_subtitles.decrease_font_size', { defaultValue: 'Decrease font size' })}>
                                 <IconButton
                                     size="small"
                                     onClick={onDecreaseFontSize}
@@ -607,7 +609,7 @@ const VFOSubtitle = ({
                                     <TextDecreaseIcon fontSize="small" />
                                 </IconButton>
                             </Tooltip>
-                            <Tooltip title="Increase font size">
+                            <Tooltip title={t('transcription_subtitles.increase_font_size', { defaultValue: 'Increase font size' })}>
                                 <IconButton
                                     size="small"
                                     onClick={onIncreaseFontSize}
@@ -622,7 +624,7 @@ const VFOSubtitle = ({
                             </Tooltip>
 
                             {/* Clear button - rightmost */}
-                            <Tooltip title="Clear subtitles">
+                            <Tooltip title={t('transcription_subtitles.clear_subtitles', { defaultValue: 'Clear subtitles' })}>
                                 <IconButton
                                     size="small"
                                     onClick={() => onClear(vfoNumber)}

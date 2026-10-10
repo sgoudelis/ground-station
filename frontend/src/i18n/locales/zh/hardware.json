@@ -111,13 +111,16 @@
       "min_az_lte_max_az": "最小方位角必须 <= 最大方位角",
       "invalid_azimuth_mode": "无效的方位角模式",
       "min_el_lte_max_el": "最小仰角必须 <= 最大仰角",
-      "park_both_or_none": "停放方位角和仰角必须同时设置或同时留空"
+      "park_both_or_none": "停放方位角和仰角必须同时设置或同时留空",
+      "tracking_lead_range": "跟踪提前量必须在 0 到 10 秒之间"
     },
     "saved_success": "旋转器保存成功",
     "deleted_success": "旋转器删除成功",
     "no_rotators": "未配置天线旋转器。点击'添加'以配置一个旋转器。",
     "azimuth_mode_0_450": "0° 至 450°",
-    "azimuth_mode_help_0_450": "发送最大 450° 的绝对方位角指令，并跟踪跨圈重叠状态。需要控制器/rotctld 支持扩展方位角。"
+    "azimuth_mode_help_0_450": "发送最大 450° 的绝对方位角指令，并跟踪跨圈重叠状态。需要控制器/rotctld 支持扩展方位角。",
+    "tracking_lead": "卫星跟踪提前量",
+    "tracking_lead_helper": "提前指向以补偿旋转器延迟。设为 0 可禁用；允许范围为 0–10 秒。"
   },
   "camera": {
     "title": "摄像头集成设置",

@@ -1157,66 +1157,66 @@ const SatelliteDetailsTable = React.memo(function SatelliteDetailsTable() {
                         </Typography>
                     </Box>
                     <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', flexShrink: 0 }}>
-                        <Tooltip title="All satellites (Alt+1)">
+                        <Tooltip title={t('satellites_table.all_satellites_alt_1', { defaultValue: 'All satellites (Alt+1)' })}>
                             <span>
                                 <Button
                                     size="small"
                                     variant={quickFilterPreset === 'all' ? 'contained' : 'outlined'}
                                     onClick={() => handleQuickPreset('all')}
                                     sx={quickFilterButtonSx}
-                                    aria-label="All satellites"
+                                    aria-label={t('satellites_table.all_satellites', { defaultValue: 'All satellites' })}
                                 >
                                     {isTightHeader ? <DoneAllIcon sx={{ fontSize: '0.82rem' }} /> : 'All'}
                                 </Button>
                             </span>
                         </Tooltip>
-                        <Tooltip title="Visible satellites (Alt+2)">
+                        <Tooltip title={t('satellites_table.visible_satellites_alt_2', { defaultValue: 'Visible satellites (Alt+2)' })}>
                             <span>
                                 <Button
                                     size="small"
                                     variant={quickFilterPreset === 'visible' ? 'contained' : 'outlined'}
                                     onClick={() => handleQuickPreset('visible')}
                                     sx={quickFilterButtonSx}
-                                    aria-label="Visible satellites"
+                                    aria-label={t('satellites_table.visible_satellites', { defaultValue: 'Visible satellites' })}
                                 >
                                     {isTightHeader ? <VisibilityIcon sx={{ fontSize: '0.82rem' }} /> : 'Visible'}
                                 </Button>
                             </span>
                         </Tooltip>
-                        <Tooltip title="Rising satellites (Alt+3)">
+                        <Tooltip title={t('satellites_table.rising_satellites_alt_3', { defaultValue: 'Rising satellites (Alt+3)' })}>
                             <span>
                                 <Button
                                     size="small"
                                     variant={quickFilterPreset === 'rising' ? 'contained' : 'outlined'}
                                     onClick={() => handleQuickPreset('rising')}
                                     sx={quickFilterButtonSx}
-                                    aria-label="Rising satellites"
+                                    aria-label={t('satellites_table.rising_satellites', { defaultValue: 'Rising satellites' })}
                                 >
                                     {isTightHeader ? <TrendingUpIcon sx={{ fontSize: '0.82rem' }} /> : 'Rising'}
                                 </Button>
                             </span>
                         </Tooltip>
-                        <Tooltip title="Satellites with active transmitters (Alt+4)">
+                        <Tooltip title={t('satellites_table.satellites_with_active_transmitters_alt_4', { defaultValue: 'Satellites with active transmitters (Alt+4)' })}>
                             <span>
                                 <Button
                                     size="small"
                                     variant={quickFilterPreset === 'activeTx' ? 'contained' : 'outlined'}
                                     onClick={() => handleQuickPreset('activeTx')}
                                     sx={quickFilterButtonSx}
-                                    aria-label="Satellites with active transmitters"
+                                    aria-label={t('satellites_table.satellites_with_active_transmitters', { defaultValue: 'Satellites with active transmitters' })}
                                 >
                                     {isTightHeader ? <SettingsInputAntennaIcon sx={{ fontSize: '0.82rem' }} /> : 'Active TX'}
                                 </Button>
                             </span>
                         </Tooltip>
-                        <Tooltip title="Decayed satellites (Alt+5)">
+                        <Tooltip title={t('satellites_table.decayed_satellites_alt_5', { defaultValue: 'Decayed satellites (Alt+5)' })}>
                             <span>
                                 <Button
                                     size="small"
                                     variant={quickFilterPreset === 'decayed' ? 'contained' : 'outlined'}
                                     onClick={() => handleQuickPreset('decayed')}
                                     sx={quickFilterButtonSx}
-                                    aria-label="Decayed satellites"
+                                    aria-label={t('satellites_table.decayed_satellites', { defaultValue: 'Decayed satellites' })}
                                 >
                                     {isTightHeader ? <BlockIcon sx={{ fontSize: '0.82rem' }} /> : 'Decayed'}
                                 </Button>

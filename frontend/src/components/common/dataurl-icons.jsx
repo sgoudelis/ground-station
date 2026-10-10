@@ -19,13 +19,15 @@
 
 import {Icon as LeafletIcon, divIcon} from "leaflet";
 import { Icon } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 
 export const VFO1Icon = ({ size = 28, ...props }) => {
+    const { t } = useTranslation('common');
     return (
         <Icon {...props}>
             <img
                 src={"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAACQUlEQVR4nO2Wz6uMURjHv890Y1hcUiyQbqzY3BXZKEmS2VAiFhIbKytk4VcpyR+guyJM6palcrMgC10p2Sm/0rhWN4khGjIfizmTM+89c+bOO+NeU+ezet7nec73eb+955xeKZFIJBKJRCKR+K8AHvCXnYG6AVNez1rgMnHGAjobgTJQAWpAFXgGnAOW9mLgiDf4RqC+xas/drmuDAAngd+R/gqwPq+BYeCHE6oCxUz9qjfoWMDAmQ76u7zer8B+YBGwCrjm1V4BC/KaGPeE9nr5IWDa5WvAshwGJr3eE5laAXjp1Q/FtAqRWtmLD3jxdknLXXzPzD7FBgRefomkTV7qpl83s3omtyOmFzMwIemji0tusNRq5labtRcDe7p5Gaz25n43s+nA+ndevCbyju0NmNkvSePucaGkPe4s7Ha5z5LuxsR7wLyYWGPsC0it2+igpJKkYfd8x8xqbdadtZlMuNoHSXUXLwZWBNaPePFU7AWjBszsiaQ37nGbpONeud32iWJmXyQ99VIthxQoZHL388zxBc8H9nMFsExfN7dQyeutAvuAIrAyc42+zn2NesPWBQxcCvTN2oDrPwXUA9pN3gMbOul0OgMys7eSJjPpcqi3G8zsiqTNkm6rsc9/Svom6bmkC5JGzexFr3MSAwWNv9StwHUa/zhNDv+rmUN91huV9LDPmlE6HuIuqUt6JOmopBk31UABnJ6LLdTvLzDnJAPzTTIw3wy8gb4CjET+LpsUOyvNnvQFEolEIjHQ/AGTs6/IjfFd6QAAAABJRU5ErkJggg=="}
-                alt="VFO1 icon"
+                alt={t('dataurl_icons.vfo1_icon', { defaultValue: 'VFO1 icon' })}
                 style={{ width: size, height: size }}
             />
         </Icon>
@@ -33,11 +35,12 @@ export const VFO1Icon = ({ size = 28, ...props }) => {
 };
 
 export const VFO2Icon = ({ size = 28, ...props }) => {
+    const { t } = useTranslation('common');
     return (
         <Icon {...props}>
             <img
                 src={"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAACi0lEQVR4nO2XXWjPURjHv88SQ40Iy1viakoumBRuFpLdUCIuXLiSohSuvJWSXLmSK4WlVi5XliQXNCm5Iy9LM5Jl2majkX1cOGtnP+d//q/bf+p8bvb8nuc5z/N8+51zfv9JiUQikUgkEonElAJ4wBg7AnEDur2clcAl4lwL1GkEWoAuYBgYAJ4BZ4G55Qg45DW+EYhv8eKPna8oAcBJ4HckvwtoKFVAHfDDFRoAajPxq16jwwEBp/PU3+nlfgP2ATOBJcB1L/YamF6qiFav0B7PPw3ocf5hYF4JAjq83BOZWA3wyosfjNWqicRaPHu/Z2+VtMDZd83sa6xBYPg5kjZ4rpt+3MxGMr7tsXoxAe2Svji72TWWxou5lWPthcCeHr0Mlnp9v5tZT2D9O89eHpkxtwAz+yWp1T3OkLTbnYVdztcnqS1WvAzMs4klxt6ANH4bHZDULKnOPd8xs+Ec687Yv7S72AdJI86eBSwMrF/h2d2xAaMCzOyJpLfusUnSMS+ca/tEMbN+SU8917hDCtRkfPdK6eMXPBfYz12AZfKKuYWavdwBYC9QCyzOXKNvSr5GvWarAgIuBvIKFuDyTwEjgdqjvAdW56uT7wzIzDoldWTcLaHcYjCzy5I2Srqtv/v8p6RBSc8lnZe01sxelNsn8V8BLAKOA4+AfmAIeAlcAeqrPV9egLbIofw0ESLyHuIi+Sh3ACXNltSosZ8F9ZKOVLjfxAMc9d5C2bdXlkq/gRDzPbtzEvpVDqAB6PO+uMuqPVPBAGuAz274YQL/W09ZgHVArxt+CNhW7ZkKBtjkvgG4v5urPVPBAE3AoBu+F1hf7ZmKArgf+ZABPKx0z8m4RhOJRCKRmDD+ALTbLzEGdCgcAAAAAElFTkSuQmCC"}
-                alt="VFO2 icon"
+                alt={t('dataurl_icons.vfo2_icon', { defaultValue: 'VFO2 icon' })}
                 style={{ width: size, height: size }}
             />
         </Icon>
@@ -45,11 +48,12 @@ export const VFO2Icon = ({ size = 28, ...props }) => {
 };
 
 export const VFO3Icon = ({ size = 28, ...props }) => {
+    const { t } = useTranslation('common');
     return (
         <Icon {...props}>
             <img
                 src={"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAACqElEQVR4nO2YO2hUQRSG/xODSSyiCFpoUNFKwUehYmMKERG3SUAULRS0sRArtfIFghjBVlKJjyAELEVDClFBEoIiWCi+kJg0hiAagxKD+Sz2Lpmss3Ozu1c2wnzVmXPOnDM/OzM7XCkSiUQikUgkEplTAA+ZZrcnbsCQk7MauEyYTk+dLUAXMAhMAGPAc+AcsKgaAUecxjc98e1O/GniK0sAcAr4HcgfBNZWKqAZ+JkUGgMai+LXnEbHPALOpNTf4+R+B/YDTcBy4LoTewvMr1REt1Nor+OvB0YS/wSwuAIBfU7uyaJYHfDGiR8K1aoLxLoc+4Bj75S0JLEfmNmXUAPP4hdK2uq4brlxM5sq8u0K1QsJ6JE0mti5pLE0U8ztEnMvevZ04TJocfr+MLMRz/yPjr0isMbSAsxsUlJ3MmyQ1J6chbbE91XSvVDxKjDHJpQY+gWkmdvooKScpOZkfNfMJkrMO2t/05PEhiVNJfYCYKln/irHHgotMCjAzPolvU+GOySdcMKltk8QM/smacBxzTikQF2Rr7eSPm7B8579PAhYUV45t1DOyR0D9gGNwLKia/Rdxdeo02yNR8AlT96sBST5p4EpT+0Cn4B1aXXSzoDM7IOkviJ3ly+3HMzsiqRtku4ov89/SRqX9ELSBUkbzexVtX0i/xXk3zNHgcfknxuTwGegF2iv9fpSAY4HDiVAW9Y9Uw9xmYxL6pC0XlKTpJWS7jvx1oz7qT7LYmZ2o2AD8zwpj7Ls988ARj13eq7W65o1HgEAT5h+0c59gAZgM/DMEdFR63WVDdDqCBhIn1EeWd9CPtz3fHUPMw+ZCkj+sA6T/8zSCGySdNVJ6c+yX+aUOLwFhoGWWq8xCLAB6ARek/8sMw68JP/UXpJeIRKJRCKR8vgDI8RNhmGdheYAAAAASUVORK5CYII="}
-                alt="VFO3 icon"
+                alt={t('dataurl_icons.vfo3_icon', { defaultValue: 'VFO3 icon' })}
                 style={{ width: size, height: size }}
             />
         </Icon>
@@ -57,11 +61,12 @@ export const VFO3Icon = ({ size = 28, ...props }) => {
 };
 
 export const VFO4Icon = ({ size = 28, ...props }) => {
+    const { t } = useTranslation('common');
     return (
         <Icon {...props}>
             <img
                 src={"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAACYUlEQVR4nO2XO2jUQRCHfxN8JCJRBC00imijaayUNIKISPAaBVG0sLBKZaVWvkAIYnoRAoJ6CAFLwSBiIUhEEDvBN2esgoieol7E+yxuDzf/7O15L8zBftX8Z2Zndm5nHyclEolEIpFIJBILCuABfxkO2A2Y9nw2AZeIczUQZzuQBwpACSgCT4FzwMpWCjjuJb4esO/07I+crqECgFPA74h/AdjabAH9wA8XqAj0ZuxXvEQjgQLO1Im/z/P9ChwG+oB1wDXP9hJY0mwRE16gg55+ETDj9CVgVRMFTHm+JzO2HuCFZz8Wi9UTseU9+Ygn75G02sl3zexTLEFg8isk7fBUN3y7mZUzur2xeLECJiV9dHLOJZbmFnOzxtiLgZ6uHgYDXt7vZjYTGP/OkzdE5li7ADP7JWnCfS6VdMDthf1O91nSnVjwFjBPJuYYWwFpbhsdlZST1O++b5tZqca4szafSWf7IKns5GXAmsD4jZ48HZtgtAAzeyzptfvcLemEZ67VPlHM7IukJ55qziYFejK6e83k8QOeD/RzAbCMXyOnUM7zLQKHgF5gbeYYfdX0Meol2xwoYDTg988FOP/TQDkQu8p7YLBenHp7QGb2RtJURp0P+TaCmV2WNCTplip9Pivpm6Rnki5I2mZmz1vNk+hagOVus1e534k8dfdAC4yqzi26YAGGqDyVf3bdCgCLJY272POO2wUPlX9TAA+B9Z1egbYCbHFtMwsMAgNd00JUnhbjqrxcx7ruEgJ2uV/6LdDndB1fgbYBDEfeNT4j7czbyXug++mqTZxIJBKJxP/gDwJIHsC4URplAAAAAElFTkSuQmCC"}
-                alt="VFO4 icon"
+                alt={t('dataurl_icons.vfo4_icon', { defaultValue: 'VFO4 icon' })}
                 style={{ width: size, height: size }}
             />
         </Icon>
@@ -69,11 +74,12 @@ export const VFO4Icon = ({ size = 28, ...props }) => {
 };
 
 export const SquelchIcon = ({ size = 48, ...props }) => {
+    const { t } = useTranslation('common');
     return (
         <Icon {...props}>
             <img
                 src={"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAADn0lEQVR4nO3XXahVVRDA8d9Vk3Dsk0Qro6SMirAgo7Ki78JCBImifAjDgoqgDyKLKAgiKNDe+gB98KGyKMLMFyMrzIR6SCmiL1K0ssDQZMKyvD3sc+14ztr3nHuL7GH/YT/smVmzZvZes9YsGhoaGhoaGhoaGhoaGg4OA3WKzBzANbgRMzEVh2EvdmEbvsZGbMCHEbGn14SZOQbX4mrMwnE4Gn/iZ2zBOqyOiPdHlUBmTsXLuLCXgzbWR8Sw9pk5D0/i1D59fox7I2JdncGYwiSBtUYWPIytU2TmQGYuwWv6D57qz6/NzHvqDLoSwH04ZQST9MPjqA2iB+OwJDPnl5SlBOYVZKtxKSZhPKao6uMpfDfc7Jk5C48UVHuxBGdjAo7AxVhR4+qFzJzcKeyqgczchcPbRDswJSL+qAlwDK7H7IhYUNC/jSs6xPswNyJW1fh8GE8UVIsj4v5eCfyi2m2G2BwR00oT9aL1xbYXVM9FxB3DjBvAepzfodoWESe0C0pL6LOO95Myc1lmjqYuOr/8EM8PNygiBmtspmbm9HbBuILRUt2ZL8CCzNyCTfhctcWti4gfhomllPSvLR+92FAjn4avhl7qErgMNxd0J7aeOa33wczcgGci4pWC/TEF2U8Rsa8u6jZKS6/LZ9cSiojBiJiPhfi2xyQDuAArMvONzBzfR2CDfdgM+e4pL9UAiIilOBkX4TG8pWof6piLRztkOwp2k1pF2ouuLbPks7SE9tMqpg9aD8jMKao+ZhFO7xiy0IF7/jcFtxNxhu7NopPOOhzigHG1f6COiNgeEctVSXQyOTOPant/p8bNrX1MdVtB9mVEbG0XlHqhFZl5e2ZO6DHB78rreX+BRsT3eK9gc3dmXlLnODMfVHWqnSzrFJQOsk9wFhKrsAYfYSt240icq+pvZnYM3xkR7X9AK9B3C8HswWK8qFpqh2AG7sJNBfttOC0ist8ERsPyiLil4PMpPDBKn/Abriy11SOugWHYpdqtSizCs6P0uxNz6u4EpQRex48jnOQLXB4Rm0vKiNgXEXfiBm2naA8G8SpmRMSaOqO6G9lYnKc6kWdiOo71d5O3W1UTG7ESKyNibz9RtbrX2bhKVajHq66Uh3aY7sA5EbFlOH/9HCj/CZk5Q3XeTGwTf4pZEbG7bty/WQP/iIjYpOq/2vukM/FS668V+d8kABHxJh7qEF+Hpw9COKOndf8Y7HgWHuy4GhoaGrr5C1fFKJzZ182dAAAAAElFTkSuQmCC"}
-                alt="custom icon"
+                alt={t('dataurl_icons.custom_icon', { defaultValue: 'custom icon' })}
                 style={{ width: size, height: size }}
             />
         </Icon>
@@ -82,6 +88,7 @@ export const SquelchIcon = ({ size = 48, ...props }) => {
 
 // Centered Squelch Icon for IconButton use
 export const SquelchIconCentered = ({ size = 24, ...props }) => {
+    const { t } = useTranslation('common');
     return (
         <svg
             width={size}
@@ -100,18 +107,19 @@ export const SquelchIconCentered = ({ size = 24, ...props }) => {
                 fontWeight="bold"
                 fontFamily="monospace"
             >
-                SQ
+                {t('dataurl_icons.sq', { defaultValue: 'SQ' })}
             </text>
         </svg>
     );
 };
 
 export const TLEIcon = ({ size = 24, ...props }) => {
+    const { t } = useTranslation('common');
     return (
         <Icon {...props}>
             <img
                 src={"data:image/png;base64,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"}
-                alt="custom icon"
+                alt={t('dataurl_icons.custom_icon', { defaultValue: 'custom icon' })}
                 style={{ width: size, height: size }}
             />
         </Icon>

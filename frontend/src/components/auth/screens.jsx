@@ -136,12 +136,13 @@ function StationIdentityPanel({ station, showCallsign = true }) {
 }
 
 function AuthCardHeader({ title, description }) {
+    const { t } = useTranslation('dashboard');
     return (
         <Stack direction="row" spacing={1.5} alignItems="center">
             <Box
                 component="img"
                 src={GroundStationLogoGreenBlue}
-                alt="Ground Station"
+                alt={t('screens.ground_station', { defaultValue: 'Ground Station' })}
                 sx={{ width: 44, height: 44, objectFit: 'contain' }}
             />
             <Box>
@@ -164,6 +165,7 @@ function isHttpsPage() {
 }
 
 function LoginTransportSecurityIndicator({ isHttps, onOpenGuidance }) {
+    const { t } = useTranslation('dashboard');
     const StatusIcon = isHttps ? HttpsOutlinedIcon : LockOpenOutlinedIcon;
     const indicatorColor = isHttps ? 'success.main' : 'warning.main';
 
@@ -185,11 +187,11 @@ function LoginTransportSecurityIndicator({ isHttps, onOpenGuidance }) {
                 {isHttps ? 'HTTPS' : 'HTTP'}
             </Typography>
             {!isHttps && (
-                <Tooltip title="Transport security guidance">
+                <Tooltip title={t('screens.transport_security_guidance', { defaultValue: 'Transport security guidance' })}>
                     <IconButton
                         size="small"
                         sx={{ p: 0.35 }}
-                        aria-label="Open transport security guidance"
+                        aria-label={t('screens.open_transport_security_guidance', { defaultValue: 'Open transport security guidance' })}
                         onClick={onOpenGuidance}
                     >
                         <InfoOutlinedIcon sx={{ fontSize: 16 }} />
@@ -207,6 +209,7 @@ export function AdminRegistrationForm({
     showCallsign = true,
     cardMaxWidth = 500,
 }) {
+    const { t } = useTranslation('dashboard');
     const dispatch = useDispatch();
     const { loadingAction, error } = useSelector((state) => state.auth);
 
@@ -254,14 +257,14 @@ export function AdminRegistrationForm({
                     <Box component="form" onSubmit={handleSubmit}>
                         <Stack spacing={2}>
                             <TextField
-                                label="Username"
+                                label={t('screens.username', { defaultValue: 'Username' })}
                                 value={username}
                                 onChange={(event) => setUsername(event.target.value)}
                                 required
                                 autoComplete="username"
                             />
                             <TextField
-                                label="Password"
+                                label={t('screens.password', { defaultValue: 'Password' })}
                                 type="password"
                                 value={password}
                                 onChange={(event) => setPassword(event.target.value)}
@@ -269,7 +272,7 @@ export function AdminRegistrationForm({
                                 autoComplete="new-password"
                             />
                             <TextField
-                                label="Confirm password"
+                                label={t('screens.confirm_password', { defaultValue: 'Confirm password' })}
                                 type="password"
                                 value={confirmPassword}
                                 onChange={(event) => setConfirmPassword(event.target.value)}
@@ -288,6 +291,7 @@ export function AdminRegistrationForm({
 }
 
 export function LoginScreen() {
+    const { t } = useTranslation('dashboard');
     const dispatch = useDispatch();
     const { loadingAction, error, station } = useSelector((state) => state.auth);
 
@@ -336,8 +340,8 @@ export function LoginScreen() {
                 <CardContent sx={{ p: 3 }}>
                     <Stack spacing={2}>
                         <AuthCardHeader
-                            title="Sign In"
-                            description="Authentication is required to use this Ground Station instance."
+                            title={t('screens.sign_in', { defaultValue: 'Sign In' })}
+                            description={t('screens.authentication_is_required_to_use_this_ground_station_in', { defaultValue: 'Authentication is required to use this Ground Station instance.' })}
                         />
                         <StationIdentityPanel station={station} showCallsign={false} />
                         {(localError || error) && (
@@ -346,7 +350,7 @@ export function LoginScreen() {
                         <Box component="form" onSubmit={handleSubmit}>
                             <Stack spacing={2}>
                                 <TextField
-                                    label="Username"
+                                    label={t('screens.username', { defaultValue: 'Username' })}
                                     value={username}
                                     onChange={(event) => setUsername(event.target.value)}
                                     autoComplete="username"
@@ -354,7 +358,7 @@ export function LoginScreen() {
                                     required
                                 />
                                 <TextField
-                                    label="Password"
+                                    label={t('screens.password', { defaultValue: 'Password' })}
                                     type="password"
                                     value={password}
                                     onChange={(event) => setPassword(event.target.value)}
@@ -370,10 +374,10 @@ export function LoginScreen() {
                                             onChange={(event) => setKeepSessionActive(event.target.checked)}
                                         />
                                     )}
-                                    label="Keep session alive"
+                                    label={t('screens.keep_session_alive', { defaultValue: 'Keep session alive' })}
                                 />
                                 <Typography variant="caption" color="text.secondary" sx={{ mt: -1 }}>
-                                    Unchecked sessions expire after 15 days.
+                                    {t('screens.unchecked_sessions_expire_after_15_days', { defaultValue: 'Unchecked sessions expire after 15 days.' })}
                                 </Typography>
                                 <Button type="submit" variant="contained" disabled={loadingAction}>
                                     {loadingAction ? 'Signing in...' : 'Sign In'}
@@ -391,7 +395,7 @@ export function LoginScreen() {
                 fullWidth
             >
                 <DialogTitle id="login-transport-security-dialog-title">
-                    HTTP connection detected
+                    {t('screens.http_connection_detected', { defaultValue: 'HTTP connection detected' })}
                 </DialogTitle>
                 <DialogContent
                     sx={{
@@ -401,25 +405,23 @@ export function LoginScreen() {
                 >
                     <Stack spacing={1.25}>
                         <Typography variant="body2">
-                            This sign-in page is currently served over HTTP.
+                            {t('screens.this_sign_in_page_is_currently_served_over_http', { defaultValue: 'This sign-in page is currently served over HTTP.' })}
                         </Typography>
                         <Typography variant="body2">
-                            For stronger transport security, put Ground Station behind a TLS
-                            reverse proxy (for example Nginx, Caddy, or Traefik) and access it via{' '}
+                            {t('screens.for_stronger_transport_security_put_ground_station_behin', { defaultValue: 'For stronger transport security, put Ground Station behind a TLS\n                            reverse proxy (for example Nginx, Caddy, or Traefik) and access it via' })}{' '}
                             <Box component="span" sx={{ fontFamily: 'monospace' }}>
-                                https://
+                                {t('screens.https', { defaultValue: 'https://' })}
                             </Box>
                             .
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
-                            HTTPS also allows the backend to issue auth session cookies with the
-                            Secure flag.
+                            {t('screens.https_also_allows_the_backend_to_issue_auth_session_cook', { defaultValue: 'HTTPS also allows the backend to issue auth session cookies with the\n                            Secure flag.' })}
                         </Typography>
                     </Stack>
                 </DialogContent>
                 <DialogActions sx={{ px: 3, pb: 2 }}>
                     <Button onClick={() => setShowTlsGuidance(false)} autoFocus>
-                        Close
+                        {t('screens.close', { defaultValue: 'Close' })}
                     </Button>
                 </DialogActions>
             </Dialog>
@@ -428,11 +430,12 @@ export function LoginScreen() {
 }
 
 function SetupAdminRecoveryScreen({ station }) {
+    const { t } = useTranslation('dashboard');
     return (
         <Box sx={shellSx}>
             <AdminRegistrationForm
-                title="Create Administrator Account"
-                description="User accounts are missing. Create a new admin account to restore access."
+                title={t('screens.create_administrator_account', { defaultValue: 'Create Administrator Account' })}
+                description={t('screens.user_accounts_are_missing_create_a_new_admin_account_to_', { defaultValue: 'User accounts are missing. Create a new admin account to restore access.' })}
                 station={station}
                 showCallsign={false}
                 cardMaxWidth={350}
@@ -596,7 +599,7 @@ function SetupWizardScreen() {
                     color: 'primary.main',
                 }}
             >
-                Ground Station Setup
+                {t('screens.ground_station_setup', { defaultValue: 'Ground Station Setup' })}
             </DialogTitle>
             <DialogContent
                 dividers

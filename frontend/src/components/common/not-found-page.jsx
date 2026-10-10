@@ -12,8 +12,10 @@ import { useNavigate } from 'react-router-dom';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import HomeIcon from '@mui/icons-material/Home';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import { useTranslation } from 'react-i18next';
 
 const NotFoundPage = () => {
+    const { t } = useTranslation('common');
     const navigate = useNavigate();
 
     return (
@@ -33,10 +35,10 @@ const NotFoundPage = () => {
                         <ErrorOutlineIcon color="error" sx={{ fontSize: 30 }} />
                         <Box>
                             <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                                Page Not Found
+                                {t('not_found_page.page_not_found', { defaultValue: 'Page Not Found' })}
                             </Typography>
                             <Typography variant="body2" color="text.secondary">
-                                Error code: 404
+                                {t('not_found_page.error_code_404', { defaultValue: 'Error code: 404' })}
                             </Typography>
                         </Box>
                     </Stack>
@@ -44,11 +46,11 @@ const NotFoundPage = () => {
                     <Divider />
 
                     <Alert severity="error" variant="outlined">
-                        The page you requested does not exist or may have been moved.
+                        {t('not_found_page.the_page_you_requested_does_not_exist_or_may_have_been_m', { defaultValue: 'The page you requested does not exist or may have been moved.' })}
                     </Alert>
 
                     <Typography variant="body1" color="text.secondary">
-                        Check the URL or continue using one of the actions below.
+                        {t('not_found_page.check_the_url_or_continue_using_one_of_the_actions_below', { defaultValue: 'Check the URL or continue using one of the actions below.' })}
                     </Typography>
 
                     <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
@@ -57,14 +59,14 @@ const NotFoundPage = () => {
                             startIcon={<HomeIcon />}
                             onClick={() => navigate('/')}
                         >
-                            Back to Home
+                            {t('not_found_page.back_to_home', { defaultValue: 'Back to Home' })}
                         </Button>
                         <Button
                             variant="outlined"
                             startIcon={<ArrowBackIcon />}
                             onClick={() => navigate(-1)}
                         >
-                            Go Back
+                            {t('not_found_page.go_back', { defaultValue: 'Go Back' })}
                         </Button>
                     </Stack>
                 </Stack>

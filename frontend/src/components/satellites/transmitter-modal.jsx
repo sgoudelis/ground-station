@@ -23,6 +23,7 @@ import {
 } from "./satellite-slice.jsx";
 import { setTargetTransmitters } from "../target/target-slice.jsx";
 import {useSocket} from "../common/socket.jsx";
+import { useTranslation } from 'react-i18next';
 
 
 // Define the dropdown options
@@ -105,6 +106,7 @@ const TransmitterModal = ({
     targetKey,
     isNew = false,
 }) => {
+    const { t } = useTranslation('satellites');
     const dispatch = useDispatch();
     const {socket} = useSocket();
     const { loading, error } = useSelector(state => state.satellites);
@@ -383,7 +385,7 @@ const TransmitterModal = ({
                         color: 'error.contrastText'
                     }}>
                         <Typography variant="body2">
-                            Error: {error}
+                            {t('transmitter_modal.error', { defaultValue: 'Error:' })} {error}
                         </Typography>
                     </Box>
                 )}
@@ -398,7 +400,7 @@ const TransmitterModal = ({
                         color: 'error.contrastText'
                     }}>
                         <Typography variant="body2">
-                            Please fill in all required fields. {hasFrequencyErrors && 'At least one uplink or downlink frequency must be provided.'}
+                            {t('transmitter_modal.please_fill_in_all_required_fields', { defaultValue: 'Please fill in all required fields.' })} {hasFrequencyErrors && 'At least one uplink or downlink frequency must be provided.'}
                         </Typography>
                     </Box>
                 )}
@@ -407,16 +409,16 @@ const TransmitterModal = ({
 
                     {/* Basic Information Section */}
                     <Typography variant="h6" sx={{ color: 'primary.main', mb: 2, fontWeight: 'bold' }}>
-                        Basic Information
+                        {t('transmitter_modal.basic_information', { defaultValue: 'Basic Information' })}
                     </Typography>
 
                     <TextField
                         size="small"
                         fullWidth
-                        label="Description"
+                        label={t('transmitter_modal.description', { defaultValue: 'Description' })}
                         value={formData.description}
                         onChange={handleChange('description')}
-                        placeholder="Enter transmitter description"
+                        placeholder={t('transmitter_modal.enter_transmitter_description', { defaultValue: 'Enter transmitter description' })}
                         sx={getFieldSx('description')}
                         disabled={loading}
                         error={validationErrors.description}
@@ -427,7 +429,7 @@ const TransmitterModal = ({
                         <TextField
                             size="small"
                             fullWidth
-                            label="Source"
+                            label={t('transmitter_modal.source', { defaultValue: 'Source' })}
                             value={sourceValue}
                             sx={getFieldSx('source')}
                             disabled
@@ -436,11 +438,11 @@ const TransmitterModal = ({
 
                     <Box sx={{ display: 'flex', gap: 2, mb: 2.5 }}>
                         <FormControl fullWidth variant="outlined" error={validationErrors.type} size="small">
-                            <InputLabel sx={getInputLabelSx('type')}>Type *</InputLabel>
+                            <InputLabel sx={getInputLabelSx('type')}>{t('transmitter_modal.type', { defaultValue: 'Type *' })}</InputLabel>
                             <Select
                                 value={formData.type}
                                 onChange={handleChange('type')}
-                                label="Type *"
+                                label={t('transmitter_modal.type', { defaultValue: 'Type *' })}
                                 disabled={loading}
                                 sx={getSelectSx('type')}
                                 required>
@@ -451,11 +453,11 @@ const TransmitterModal = ({
                         </FormControl>
 
                         <FormControl fullWidth variant="outlined" error={validationErrors.status} size="small">
-                            <InputLabel sx={getInputLabelSx('status')}>Status *</InputLabel>
+                            <InputLabel sx={getInputLabelSx('status')}>{t('transmitter_modal.status', { defaultValue: 'Status *' })}</InputLabel>
                             <Select
                                 value={formData.status}
                                 onChange={handleChange('status')}
-                                label="Status *"
+                                label={t('transmitter_modal.status', { defaultValue: 'Status *' })}
                                 disabled={loading}
                                 sx={getSelectSx('status')}
                                 required>
@@ -467,11 +469,11 @@ const TransmitterModal = ({
                     </Box>
 
                     <FormControl fullWidth variant="outlined" sx={{ mb: 3 }} error={validationErrors.alive} size="small">
-                        <InputLabel sx={getInputLabelSx('alive')}>Alive *</InputLabel>
+                        <InputLabel sx={getInputLabelSx('alive')}>{t('transmitter_modal.alive', { defaultValue: 'Alive *' })}</InputLabel>
                         <Select
                             value={formData.alive}
                             onChange={handleChange('alive')}
-                            label="Alive *"
+                            label={t('transmitter_modal.alive', { defaultValue: 'Alive *' })}
                             disabled={loading}
                             sx={getSelectSx('alive')}
                             required>
@@ -483,13 +485,13 @@ const TransmitterModal = ({
 
                     {/* Uplink Frequencies Section */}
                     <Typography variant="h6" sx={{ color: 'primary.main', mb: 2, fontWeight: 'bold' }}>
-                        Uplink Frequencies
+                        {t('transmitter_modal.uplink_frequencies', { defaultValue: 'Uplink Frequencies' })}
                     </Typography>
 
                     <TextField
                         size="small"
                         fullWidth
-                        label="Uplink Low (Hz)"
+                        label={t('transmitter_modal.uplink_low_hz', { defaultValue: 'Uplink Low (Hz)' })}
                         value={formData.uplinkLow}
                         onChange={handleChange('uplinkLow')}
                         type="number"
@@ -502,7 +504,7 @@ const TransmitterModal = ({
                     <TextField
                         size="small"
                         fullWidth
-                        label="Uplink High (Hz)"
+                        label={t('transmitter_modal.uplink_high_hz', { defaultValue: 'Uplink High (Hz)' })}
                         value={formData.uplinkHigh}
                         onChange={handleChange('uplinkHigh')}
                         type="number"
@@ -515,7 +517,7 @@ const TransmitterModal = ({
                     <TextField
                         size="small"
                         fullWidth
-                        label="Uplink Drift (Hz)"
+                        label={t('transmitter_modal.uplink_drift_hz', { defaultValue: 'Uplink Drift (Hz)' })}
                         value={formData.uplinkDrift}
                         onChange={handleChange('uplinkDrift')}
                         type="number"
@@ -526,13 +528,13 @@ const TransmitterModal = ({
 
                     {/* Downlink Frequencies Section */}
                     <Typography variant="h6" sx={{ color: 'primary.main', mb: 2, fontWeight: 'bold' }}>
-                        Downlink Frequencies
+                        {t('transmitter_modal.downlink_frequencies', { defaultValue: 'Downlink Frequencies' })}
                     </Typography>
 
                     <TextField
                         size="small"
                         fullWidth
-                        label="Downlink Low (Hz)"
+                        label={t('transmitter_modal.downlink_low_hz', { defaultValue: 'Downlink Low (Hz)' })}
                         value={formData.downlinkLow}
                         onChange={handleChange('downlinkLow')}
                         type="number"
@@ -545,7 +547,7 @@ const TransmitterModal = ({
                     <TextField
                         size="small"
                         fullWidth
-                        label="Downlink High (Hz)"
+                        label={t('transmitter_modal.downlink_high_hz', { defaultValue: 'Downlink High (Hz)' })}
                         value={formData.downlinkHigh}
                         onChange={handleChange('downlinkHigh')}
                         type="number"
@@ -558,7 +560,7 @@ const TransmitterModal = ({
                     <TextField
                         size="small"
                         fullWidth
-                        label="Downlink Drift (Hz)"
+                        label={t('transmitter_modal.downlink_drift_hz', { defaultValue: 'Downlink Drift (Hz)' })}
                         value={formData.downlinkDrift}
                         onChange={handleChange('downlinkDrift')}
                         type="number"
@@ -569,16 +571,16 @@ const TransmitterModal = ({
 
                     {/* Transmission Settings Section */}
                     <Typography variant="h6" sx={{ color: 'primary.main', mb: 2, fontWeight: 'bold' }}>
-                        Transmission Settings
+                        {t('transmitter_modal.transmission_settings', { defaultValue: 'Transmission Settings' })}
                     </Typography>
 
                     <Box sx={{ display: 'flex', gap: 2, mb: 2.5 }}>
                         <FormControl fullWidth variant="outlined" size="small">
-                            <InputLabel sx={getInputLabelSx('mode')}>Downlink mode</InputLabel>
+                            <InputLabel sx={getInputLabelSx('mode')}>{t('transmitter_modal.downlink_mode', { defaultValue: 'Downlink mode' })}</InputLabel>
                             <Select
                                 value={formData.mode}
                                 onChange={handleChange('mode')}
-                                label="Downlink mode"
+                                label={t('transmitter_modal.downlink_mode', { defaultValue: 'Downlink mode' })}
                                 disabled={loading}
                                 sx={getSelectSx('mode')}
                             >
@@ -589,11 +591,11 @@ const TransmitterModal = ({
                         </FormControl>
 
                         <FormControl fullWidth variant="outlined" size="small">
-                            <InputLabel sx={getInputLabelSx('uplinkMode')}>Uplink mode</InputLabel>
+                            <InputLabel sx={getInputLabelSx('uplinkMode')}>{t('transmitter_modal.uplink_mode', { defaultValue: 'Uplink mode' })}</InputLabel>
                             <Select
                                 value={formData.uplinkMode}
                                 onChange={handleChange('uplinkMode')}
-                                label="Uplink mode"
+                                label={t('transmitter_modal.uplink_mode', { defaultValue: 'Uplink mode' })}
                                 disabled={loading}
                                 sx={getSelectSx('uplinkMode')}
                             >
@@ -606,11 +608,11 @@ const TransmitterModal = ({
 
                     <Box sx={{ display: 'flex', gap: 2, mb: 0 }}>
                         <FormControl fullWidth variant="outlined" size="small">
-                            <InputLabel sx={getInputLabelSx('invert')}>Invert</InputLabel>
+                            <InputLabel sx={getInputLabelSx('invert')}>{t('transmitter_modal.invert', { defaultValue: 'Invert' })}</InputLabel>
                             <Select
                                 value={formData.invert}
                                 onChange={handleChange('invert')}
-                                label="Invert"
+                                label={t('transmitter_modal.invert', { defaultValue: 'Invert' })}
                                 disabled={loading}
                                 sx={getSelectSx('invert')}
                             >
@@ -623,7 +625,7 @@ const TransmitterModal = ({
                         <TextField
                             size="small"
                             fullWidth
-                            label="Baud Rate"
+                            label={t('transmitter_modal.baud_rate', { defaultValue: 'Baud Rate' })}
                             value={formData.baud}
                             onChange={handleChange('baud')}
                             type="number"
@@ -655,7 +657,7 @@ const TransmitterModal = ({
                         },
                     }}
                 >
-                    Cancel
+                    {t('transmitter_modal.cancel', { defaultValue: 'Cancel' })}
                 </Button>
                 <Button
                     onClick={handleSave}
@@ -680,6 +682,7 @@ const TransmitterModal = ({
 
 // Delete Confirmation Dialog Component
 export const DeleteConfirmDialog = ({ open, onClose, onConfirm, transmitterName }) => {
+    const { t } = useTranslation('satellites');
     return (
         <Dialog
             open={open}
@@ -701,11 +704,11 @@ export const DeleteConfirmDialog = ({ open, onClose, onConfirm, transmitterName 
                     py: 2.5,
                 }}
             >
-                Confirm Delete
+                {t('transmitter_modal.confirm_delete', { defaultValue: 'Confirm Delete' })}
             </DialogTitle>
             <DialogContent sx={{ px: 3, py: 3, mt: 2 }}>
                 <Typography>
-                    Are you sure you want to delete the transmitter "{transmitterName}"?
+                    {t('transmitter_modal.are_you_sure_you_want_to_delete_the_transmitter', { defaultValue: 'Are you sure you want to delete the transmitter "' })}{transmitterName}"?
                 </Typography>
             </DialogContent>
             <DialogActions
@@ -728,10 +731,10 @@ export const DeleteConfirmDialog = ({ open, onClose, onConfirm, transmitterName 
                         },
                     }}
                 >
-                    Cancel
+                    {t('transmitter_modal.cancel', { defaultValue: 'Cancel' })}
                 </Button>
                 <Button onClick={onConfirm} variant="contained" color="error">
-                    Delete
+                    {t('transmitter_modal.delete', { defaultValue: 'Delete' })}
                 </Button>
             </DialogActions>
         </Dialog>

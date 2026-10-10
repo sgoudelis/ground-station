@@ -254,6 +254,7 @@ function ToolbarActions() {
 const MemoToolbarActions = React.memo(ToolbarActions);
 
 function ActiveObservationIndicator() {
+    const { t } = useTranslation('dashboard');
     const observations = useSelector((state) => state.scheduler?.observations || []);
     const { timezone, locale } = useUserTimeSettings();
     const [nowMs, setNowMs] = React.useState(() => Date.now());
@@ -333,7 +334,7 @@ function ActiveObservationIndicator() {
                 flexShrink: 1,
                 overflow: 'hidden',
             }}
-            aria-label="Active observation indicator"
+            aria-label={t('dashboard_layout.active_observation_indicator', { defaultValue: 'Active observation indicator' })}
         >
             <FiberManualRecordIcon
                 sx={{
@@ -396,7 +397,7 @@ function ActiveObservationIndicator() {
                         textOverflow: 'ellipsis',
                     }}
                 >
-                    • started {formattedStartTime}
+                    {t('dashboard_layout.started', { defaultValue: '• started' })} {formattedStartTime}
                 </Typography>
             )}
             {typeof peakAltitude === 'number' && (
@@ -409,7 +410,7 @@ function ActiveObservationIndicator() {
                         textOverflow: 'ellipsis',
                     }}
                 >
-                    • peak {peakAltitude.toFixed(0)}°
+                    {t('dashboard_layout.peak', { defaultValue: '• peak' })} {peakAltitude.toFixed(0)}°
                 </Typography>
             )}
         </Box>
@@ -417,6 +418,7 @@ function ActiveObservationIndicator() {
 }
 
 function UpcomingObservationIndicator() {
+    const { t } = useTranslation('dashboard');
     const observations = useSelector((state) => state.scheduler?.observations || []);
     const { timezone, locale } = useUserTimeSettings();
     const [nowMs, setNowMs] = React.useState(() => Date.now());
@@ -488,7 +490,7 @@ function UpcomingObservationIndicator() {
                 flexShrink: 1,
                 overflow: 'hidden',
             }}
-            aria-label="Upcoming observation indicator"
+            aria-label={t('dashboard_layout.upcoming_observation_indicator', { defaultValue: 'Upcoming observation indicator' })}
         >
             <AccessTimeIcon
                 sx={{
@@ -511,7 +513,7 @@ function UpcomingObservationIndicator() {
                     textOverflow: 'ellipsis',
                 }}
             >
-                Starting Soon: {nextObservation.satellite?.name || 'Unknown'}
+                {t('dashboard_layout.starting_soon', { defaultValue: 'Starting Soon:' })} {nextObservation.satellite?.name || 'Unknown'}
             </Typography>
             {nextObservation.satellite?.norad_id && (
                 <Typography
@@ -546,7 +548,7 @@ function UpcomingObservationIndicator() {
                         textOverflow: 'ellipsis',
                     }}
                 >
-                    • starts {formattedStartTime}
+                    {t('dashboard_layout.starts', { defaultValue: '• starts' })} {formattedStartTime}
                 </Typography>
             )}
             {typeof peakAltitude === 'number' && (
@@ -559,7 +561,7 @@ function UpcomingObservationIndicator() {
                         textOverflow: 'ellipsis',
                     }}
                 >
-                    • peak {peakAltitude.toFixed(0)}°
+                    {t('dashboard_layout.peak', { defaultValue: '• peak' })} {peakAltitude.toFixed(0)}°
                 </Typography>
             )}
         </Box>
@@ -579,14 +581,15 @@ SidebarFooter.propTypes = {
 };
 
 function CustomAppTitle() {
+    const { t } = useTranslation('dashboard');
     return (
         <Grid container direction="row">
             <Grid row={1} column={1} sx={{display: 'flex', alignItems: 'center'}}>
                 <Stack direction="row" alignItems="center" spacing={2}>
                     <Box display={{xs: "none", sm: "block"}}>
                         <Box display="flex" alignItems="center" gap={1}>
-                            <img src={GroundStationLogoGreenBlue} alt="Ground Station" width="30" height="30" />
-                            <Typography variant="h6">Ground Station</Typography>
+                            <img src={GroundStationLogoGreenBlue} alt={t('dashboard_layout.ground_station', { defaultValue: 'Ground Station' })} width="30" height="30" />
+                            <Typography variant="h6">{t('dashboard_layout.ground_station', { defaultValue: 'Ground Station' })}</Typography>
                             {/* Hide version indicator on phones and small tablets; show from ~768px and up */}
                             <Box sx={{
                                 display: 'none',
@@ -643,21 +646,6 @@ AccountSidebarPreview.propTypes = {
      */
     open: PropTypes.bool,
 };
-
-const accounts = [
-    {
-        id: 1,
-        name: 'Efstratios Goudelis',
-        email: 'sgoudelis@nerv.home',
-        image: null,
-        projects: [
-            {
-                id: 3,
-                title: 'Project X',
-            },
-        ],
-    }
-];
 
 function TimeDisplay() {
     const [isUTC, setIsUTC] = React.useState(false); // Toggle between UTC and Local Time
@@ -717,13 +705,29 @@ function TimeDisplay() {
 }
 
 function SidebarFooterAccountPopover() {
+    const { t } = useTranslation('dashboard');
+    // Kept inside the component so the project title can use the `t` from useTranslation.
+    const accounts = [
+        {
+            id: 1,
+            name: 'Efstratios Goudelis',
+            email: 'sgoudelis@nerv.home',
+            image: null,
+            projects: [
+                {
+                    id: 3,
+                    title: t('dashboard_layout.project_x', { defaultValue: 'Project X' }),
+                },
+            ],
+        }
+    ];
     return (
         <Stack direction="column" sx={{
             pl: '0px',
             pr: '0px',
         }}>
             <Typography variant="body2" mx={2} mt={1}>
-                Accounts
+                {t('dashboard_layout.accounts', { defaultValue: 'Accounts' })}
             </Typography>
             <MenuList>
                 {accounts.map((account) => (
@@ -1217,7 +1221,7 @@ export default function Layout() {
         <>
             <Toolbar />
             <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                <Box component="nav" role="navigation" aria-label="Main navigation" sx={{ overflow: 'auto', mt: 1, flex: 1 }}>
+                <Box component="nav" role="navigation" aria-label={t('dashboard_layout.main_navigation', { defaultValue: 'Main navigation' })} sx={{ overflow: 'auto', mt: 1, flex: 1 }}>
                     <List>
                         {navigation.map((item, index) => {
                             if (item.kind === 'header') {
@@ -1365,7 +1369,7 @@ export default function Layout() {
                             display: 'flex',
                             justifyContent: 'center',
                         }}
-                        aria-label="Application version and environment"
+                        aria-label={t('dashboard_layout.application_version_and_environment', { defaultValue: 'Application version and environment' })}
                     >
                         <VersionInfo minimal={true} />
                     </Box>
@@ -1443,7 +1447,7 @@ export default function Layout() {
                 <Toolbar>
                     <IconButton
                         color="inherit"
-                        aria-label="toggle drawer"
+                        aria-label={t('dashboard_layout.toggle_drawer', { defaultValue: 'toggle drawer' })}
                         onClick={handleDrawerToggle}
                         edge="start"
                         sx={{ mr: 2 }}

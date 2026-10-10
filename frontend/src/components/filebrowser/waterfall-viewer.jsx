@@ -24,6 +24,7 @@ import ZoomOutIcon from '@mui/icons-material/ZoomOut';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import DownloadIcon from '@mui/icons-material/Download';
 import FrequencyScale from '../waterfall/frequency-scale.jsx';
+import { useTranslation } from 'react-i18next';
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 const WHEEL_ZOOM_STEP = 0.35;
@@ -45,6 +46,7 @@ export default function WaterfallViewer({
     containerSx,
     hintDurationMs = 2800,
 }) {
+    const { t } = useTranslation('filebrowser');
     const containerRef = useRef(null);
     const canvasRef = useRef(null);
     const sourceImageRef = useRef(null);
@@ -1056,7 +1058,7 @@ export default function WaterfallViewer({
                     zIndex: 2,
                 }}
             >
-                <Tooltip title="Zoom Out X">
+                <Tooltip title={t('waterfall_viewer.zoom_out_x', { defaultValue: 'Zoom Out X' })}>
                     <IconButton
                         size="small"
                         onClick={() => zoomOnXAxisOnly(-0.5, containerSize.width / 2, { flushNow: true })}
@@ -1069,7 +1071,7 @@ export default function WaterfallViewer({
                         <ZoomOutIcon fontSize="small" />
                     </IconButton>
                 </Tooltip>
-                <Tooltip title="Zoom In X">
+                <Tooltip title={t('waterfall_viewer.zoom_in_x', { defaultValue: 'Zoom In X' })}>
                     <IconButton
                         size="small"
                         onClick={() => zoomOnXAxisOnly(0.5, containerSize.width / 2, { flushNow: true })}
@@ -1082,7 +1084,7 @@ export default function WaterfallViewer({
                         <ZoomInIcon fontSize="small" />
                     </IconButton>
                 </Tooltip>
-                <Tooltip title="Reset View">
+                <Tooltip title={t('waterfall_viewer.reset_view', { defaultValue: 'Reset View' })}>
                     <IconButton
                         size="small"
                         onClick={resetTransform}
@@ -1095,7 +1097,7 @@ export default function WaterfallViewer({
                         <RestartAltIcon fontSize="small" />
                     </IconButton>
                 </Tooltip>
-                <Tooltip title="Download Snapshot">
+                <Tooltip title={t('waterfall_viewer.download_snapshot', { defaultValue: 'Download Snapshot' })}>
                     <IconButton
                         size="small"
                         onClick={handleDownloadSnapshot}
@@ -1151,7 +1153,7 @@ export default function WaterfallViewer({
                         pointerEvents: 'none',
                     }}
                 >
-                    Scroll or pinch to zoom X axis, drag to pan
+                    {t('waterfall_viewer.scroll_or_pinch_to_zoom_x_axis_drag_to_pan', { defaultValue: 'Scroll or pinch to zoom X axis, drag to pan' })}
                 </Box>
             )}
 

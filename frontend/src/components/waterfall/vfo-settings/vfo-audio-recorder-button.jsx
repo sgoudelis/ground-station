@@ -24,8 +24,10 @@ import StopIcon from '@mui/icons-material/Stop';
 import { useDispatch, useSelector } from 'react-redux';
 import { startAudioRecording, stopAudioRecording } from '../vfo-marker/vfo-slice';
 import { useSocket } from '../../common/socket';
+import { useTranslation } from 'react-i18next';
 
 const VFOAudioRecorderButton = ({ vfoNumber, compact = false }) => {
+    const { t } = useTranslation('waterfall');
     const dispatch = useDispatch();
     const { socket } = useSocket();
 
@@ -127,7 +129,7 @@ const VFOAudioRecorderButton = ({ vfoNumber, compact = false }) => {
                         }
                     }}
                 >
-                    REC
+                    {t('vfo_audio_recorder_button.rec', { defaultValue: 'REC' })}
                 </Button>
             </span>
         </Tooltip>

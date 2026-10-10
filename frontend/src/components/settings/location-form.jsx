@@ -383,12 +383,12 @@ const LocationPage = ({
     const mapCenter = hasLocation ? [normalizedLocation.lat, normalizedLocation.lon] : [20, 0];
     const mapZoom = hasLocation ? 5 : 2;
     const selectedTileLayer = React.useMemo(
-        () => getTileLayerById('satellite', { mapEngine: 'maplibre' }),
-        []
+        () => getTileLayerById('satellite', { mapEngine: 'maplibre', t }),
+        [t]
     );
     const selectedTileURL = React.useMemo(
-        () => getMapLibreTileURL('satellite', { mapEngine: 'maplibre' }),
-        []
+        () => getMapLibreTileURL('satellite', { mapEngine: 'maplibre', t }),
+        [t]
     );
     const mapStyle = React.useMemo(() => ({
         version: 8,

@@ -31,7 +31,9 @@ import AutorenewIcon from '@mui/icons-material/Autorenew';
 import SettingsInputAntennaIcon from '@mui/icons-material/SettingsInputAntenna';
 import { useTranslation } from 'react-i18next';
 
-const SDR_TYPE_GROUPS = [
+// Factory (rather than a module-level constant) so the labels are translated with the
+// translator of the rendering component and follow runtime language changes.
+const getSdrTypeGroups = (t) => [
     {
         key: 'rtlsdr',
         label: 'RTL-SDR',
@@ -49,17 +51,17 @@ const SDR_TYPE_GROUPS = [
     },
     {
         key: 'soapysdrlocal',
-        label: 'SoapySDR (Local)',
+        label: t('settings_sdr.soapysdr_local', { defaultValue: 'SoapySDR (Local)' }),
         matches: (type) => type === 'soapysdrlocal',
     },
     {
         key: 'soapysdrremote',
-        label: 'SoapySDR (Remote)',
+        label: t('settings_sdr.soapysdr_remote', { defaultValue: 'SoapySDR (Remote)' }),
         matches: (type) => type === 'soapysdrremote',
     },
     {
         key: 'sigmfplayback',
-        label: 'SigMF Playback',
+        label: t('settings_sdr.sigmf_playback', { defaultValue: 'SigMF Playback' }),
         matches: (type) => type === 'sigmfplayback',
     },
 ];
@@ -211,7 +213,7 @@ const SdrAccordion = ({
     }, [sdrs, getSdrOptionIcon, sdrUsageByOtherSessions, t]);
 
     const sdrOptionsByGroup = React.useMemo(() => {
-        const typedGroups = SDR_TYPE_GROUPS.map((group) => ({
+        const typedGroups = getSdrTypeGroups(t).map((group) => ({
             ...group,
             items: [],
         }));
@@ -570,7 +572,7 @@ const SdrAccordion = ({
                                                 }}
                                             >
                                                 <MenuItem value="none" disabled={isStreaming}>
-                                                    [not configured]
+                                                    {t('settings_sdr.not_configured', { defaultValue: '[not configured]' })}
                                                 </MenuItem>
                                                 {options.map((option) => (
                                                     <MenuItem key={`${name}-${option}`} value={option}>
@@ -669,10 +671,10 @@ const SdrAccordion = ({
                                 variant="outlined"
                                 size="small"
                             >
-                                <InputLabel>Clock Source</InputLabel>
+                                <InputLabel>{t('settings_sdr.clock_source', { defaultValue: 'Clock Source' })}</InputLabel>
                                 <Select
                                     size="small"
-                                    label="Clock Source"
+                                    label={t('settings_sdr.clock_source', { defaultValue: 'Clock Source' })}
                                     value={
                                         clockSourceOptions.includes(selectedClockSource)
                                             ? selectedClockSource
@@ -681,7 +683,7 @@ const SdrAccordion = ({
                                     onChange={(e) => onClockSourceChange?.(e.target.value)}
                                 >
                                     <MenuItem value="none" disabled={isStreaming}>
-                                        [not configured]
+                                        {t('settings_sdr.not_configured', { defaultValue: '[not configured]' })}
                                     </MenuItem>
                                     {clockSourceOptions.map((source) => (
                                         <MenuItem key={source} value={source}>
@@ -703,10 +705,10 @@ const SdrAccordion = ({
                                 variant="outlined"
                                 size="small"
                             >
-                                <InputLabel>Time Source</InputLabel>
+                                <InputLabel>{t('settings_sdr.time_source', { defaultValue: 'Time Source' })}</InputLabel>
                                 <Select
                                     size="small"
-                                    label="Time Source"
+                                    label={t('settings_sdr.time_source', { defaultValue: 'Time Source' })}
                                     value={
                                         timeSourceOptions.includes(selectedTimeSource)
                                             ? selectedTimeSource
@@ -715,7 +717,7 @@ const SdrAccordion = ({
                                     onChange={(e) => onTimeSourceChange?.(e.target.value)}
                                 >
                                     <MenuItem value="none" disabled={isStreaming}>
-                                        [not configured]
+                                        {t('settings_sdr.not_configured', { defaultValue: '[not configured]' })}
                                     </MenuItem>
                                     {timeSourceOptions.map((source) => (
                                         <MenuItem key={source} value={source}>
@@ -753,7 +755,7 @@ const SdrAccordion = ({
                                         onChange={(e) => onBitpackChange?.(e.target.checked)}
                                     />
                                 }
-                                label="Bit Packing"
+                                label={t('settings_sdr.bit_packing', { defaultValue: 'Bit Packing' })}
                             />
                         )}
                         {hasTunerAgc && (
@@ -817,7 +819,7 @@ const SdrAccordion = ({
                                     >
                                         <Box sx={{display: 'flex', justifyContent: 'space-between', gap: 1}}>
                                             <Typography variant="caption" color="text.secondary">
-                                                Ref Clock Lock
+                                                {t('settings_sdr.ref_clock_lock', { defaultValue: 'Ref Clock Lock' })}
                                             </Typography>
                                             <Box
                                                 sx={{
@@ -870,7 +872,7 @@ const SdrAccordion = ({
                                     >
                                         <Box sx={{display: 'flex', justifyContent: 'space-between', gap: 1}}>
                                             <Typography variant="caption" color="text.secondary">
-                                                Temperature
+                                                {t('settings_sdr.temperature', { defaultValue: 'Temperature' })}
                                             </Typography>
                                             <Typography
                                                 variant="caption"

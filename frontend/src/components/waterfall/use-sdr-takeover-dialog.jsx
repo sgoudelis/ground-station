@@ -15,6 +15,7 @@ import {
     Typography,
 } from '@mui/material';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+import { useTranslation } from 'react-i18next';
 
 const normalizeSessions = (sessions) => {
     if (!Array.isArray(sessions)) {
@@ -35,6 +36,7 @@ const resolveSessionDisplayName = (session) => {
 };
 
 export const useSdrTakeoverDialog = ({ defaultSdrId } = {}) => {
+    const { t } = useTranslation('waterfall');
     const [open, setOpen] = React.useState(false);
     const [pendingConflict, setPendingConflict] = React.useState(null);
     const [pendingActionLabel, setPendingActionLabel] = React.useState('');
@@ -91,7 +93,7 @@ export const useSdrTakeoverDialog = ({ defaultSdrId } = {}) => {
         >
             <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <WarningAmberIcon color="warning" />
-                SDR in use
+                {t('use_sdr_takeover_dialog.sdr_in_use', { defaultValue: 'SDR in use' })}
             </DialogTitle>
             <DialogContent
                 sx={{
@@ -107,18 +109,18 @@ export const useSdrTakeoverDialog = ({ defaultSdrId } = {}) => {
                     {message}
                 </Typography>
                 <Typography variant="body2" sx={{ mb: 2 }}>
-                    You are about to {pendingActionLabel || 'continue'} on this SDR. Joining lets you use its current stream and your own VFOs. The stream stays live while any participant remains. Taking over may disrupt active sessions.
+                    {t('use_sdr_takeover_dialog.you_are_about_to', { defaultValue: 'You are about to' })} {pendingActionLabel || 'continue'} {t('use_sdr_takeover_dialog.on_this_sdr_joining_lets_you_use_its_current_stream_and_', { defaultValue: 'on this SDR. Joining lets you use its current stream and your own VFOs. The stream stays live while any participant remains. Taking over may disrupt active sessions.' })}
                 </Typography>
                 {pendingConflict?.includes_internal_observation && (
                     <Alert severity="warning" sx={{ mb: 2 }}>
-                        <AlertTitle>Automated observation active</AlertTitle>
-                        Taking over this SDR can interrupt an ongoing scheduled observation.
+                        <AlertTitle>{t('use_sdr_takeover_dialog.automated_observation_active', { defaultValue: 'Automated observation active' })}</AlertTitle>
+                        {t('use_sdr_takeover_dialog.taking_over_this_sdr_can_interrupt_an_ongoing_scheduled_', { defaultValue: 'Taking over this SDR can interrupt an ongoing scheduled observation.' })}
                     </Alert>
                 )}
                 {otherSessions.length > 0 && (
                     <Box>
                         <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                            Active sessions on this SDR
+                            {t('use_sdr_takeover_dialog.active_sessions_on_this_sdr', { defaultValue: 'Active sessions on this SDR' })}
                         </Typography>
                         <List dense disablePadding>
                             {otherSessions.map((session, index) => (
@@ -133,13 +135,13 @@ export const useSdrTakeoverDialog = ({ defaultSdrId } = {}) => {
                                                     {resolveSessionDisplayName(session)}
                                                 </Typography>
                                                 {session?.is_internal && (
-                                                    <Chip size="small" color="warning" label="Internal" />
+                                                    <Chip size="small" color="warning" label={t('use_sdr_takeover_dialog.internal', { defaultValue: 'Internal' })} />
                                                 )}
                                             </Box>
                                         )}
                                         secondary={(
                                             <Typography variant="caption" color="text.secondary">
-                                                Session: {session?.session_id || 'unknown'}
+                                                {t('use_sdr_takeover_dialog.session', { defaultValue: 'Session:' })} {session?.session_id || 'unknown'}
                                             </Typography>
                                         )}
                                     />
@@ -151,13 +153,13 @@ export const useSdrTakeoverDialog = ({ defaultSdrId } = {}) => {
             </DialogContent>
             <DialogActions>
                 <Button onClick={() => closeWithResult('cancel')}>
-                    Cancel
+                    {t('use_sdr_takeover_dialog.cancel', { defaultValue: 'Cancel' })}
                 </Button>
                 <Button onClick={() => closeWithResult('join')} variant="outlined">
-                    Join
+                    {t('use_sdr_takeover_dialog.join', { defaultValue: 'Join' })}
                 </Button>
                 <Button onClick={() => closeWithResult('takeover')} color="warning" variant="contained">
-                    Take Over
+                    {t('use_sdr_takeover_dialog.take_over', { defaultValue: 'Take Over' })}
                 </Button>
             </DialogActions>
         </Dialog>

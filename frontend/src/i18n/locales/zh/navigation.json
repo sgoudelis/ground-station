@@ -27,5 +27,14 @@
   "location": "位置",
   "maintenance": "维护",
   "about": "关于",
-  "users": "用户"
+  "users": "用户",
+  "data_administration": "数据管理",
+  "satellite_data": "卫星数据",
+  "sources_sync": "数据源与同步",
+  "ephemeris_sync": "星历与同步",
+  "celestial_data": "天体数据",
+  "ephemeris_data": "星历数据",
+  "celestial_targets": "监控天体",
+  "orbital_data": "轨道数据",
+  "sources": "数据源"
 }

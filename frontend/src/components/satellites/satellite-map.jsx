@@ -57,6 +57,7 @@ import {
     fitDialogMapLibreCoverage,
     getDialogLeafletCoveragePadding,
 } from './dialogcoveragefit.js';
+import { useTranslation } from 'react-i18next';
 
 const MAPLIBRE_MIN_ZOOM = -2;
 const LEAFLET_MIN_ZOOM = -4;
@@ -237,10 +238,11 @@ const SatelliteTooltip = ({satelliteData, position}) => (
 );
 
 const SatelliteLeafletMap = ({satelliteData, data, settings, location}) => {
+    const { t } = useTranslation('satellites');
     const [map, setMap] = useState(null);
     const {containerRef, revision: viewportRevision} = useDialogMapResize(map);
-    const selectedTileLayer = useMemo(() => getTileLayerById(settings.tileLayerID, {mapEngine: 'leaflet'}), [settings.tileLayerID]);
-    const mapCrs = useMemo(() => getMapCrsByTileLayerId(settings.tileLayerID, {mapEngine: 'leaflet'}), [settings.tileLayerID]);
+    const selectedTileLayer = useMemo(() => getTileLayerById(settings.tileLayerID, {mapEngine: 'leaflet', t}), [settings.tileLayerID, t]);
+    const mapCrs = useMemo(() => getMapCrsByTileLayerId(settings.tileLayerID, {mapEngine: 'leaflet', t}), [settings.tileLayerID, t]);
     const position = data.position;
     const positionLatLon = position ? [Number(position.lat), Number(position.lon)] : null;
     const attribution = `<a href="https://leafletjs.com" target="_blank" rel="noopener noreferrer">Leaflet</a> | ${selectedTileLayer.attribution}`;
@@ -321,12 +323,13 @@ const SatelliteLeafletMap = ({satelliteData, data, settings, location}) => {
 };
 
 const SatelliteMapLibreMap = ({satelliteData, data, settings, location}) => {
+    const { t } = useTranslation('satellites');
     const theme = useTheme();
     const [map, setMap] = useState(null);
     const [cameraRevision, setCameraRevision] = useState(0);
     const {containerRef, revision: viewportRevision} = useDialogMapResize(map);
-    const selectedTileLayer = useMemo(() => getTileLayerById(settings.tileLayerID, {mapEngine: MAP_ENGINE_MAPLIBRE}), [settings.tileLayerID]);
-    const tileURL = useMemo(() => getMapLibreTileURL(settings.tileLayerID, {mapEngine: MAP_ENGINE_MAPLIBRE}), [settings.tileLayerID]);
+    const selectedTileLayer = useMemo(() => getTileLayerById(settings.tileLayerID, {mapEngine: MAP_ENGINE_MAPLIBRE, t}), [settings.tileLayerID, t]);
+    const tileURL = useMemo(() => getMapLibreTileURL(settings.tileLayerID, {mapEngine: MAP_ENGINE_MAPLIBRE, t}), [settings.tileLayerID, t]);
     const mapStyle = useMemo(() => ({version: 8, sources: {basemap: {type: 'raster', tiles: [tileURL], tileSize: 256}}, layers: [{id: 'basemap', type: 'raster', source: 'basemap'}]}), [tileURL]);
     const position = data.position;
     const lat = Number(position?.lat);
@@ -432,9 +435,9 @@ const SatelliteMapLibreMap = ({satelliteData, data, settings, location}) => {
                 {settings.showFutureOrbitPath && futurePathGeoJSON.features.length > 0 && <Source id="satellite-dialog-future" type="geojson" data={futurePathGeoJSON}><Layer id="satellite-dialog-future-line" type="line" paint={{'line-color': settings.futureOrbitLineColor, 'line-width': 2, 'line-opacity': 0.8, 'line-dasharray': [0.1, 2.4]}} /></Source>}
                 {settings.showSatelliteCoverage && coverageGeoJSON.features.length > 0 && <Source id="satellite-dialog-coverage" type="geojson" data={coverageGeoJSON}><Layer id="satellite-dialog-coverage-fill" type="fill" paint={{'fill-color': settings.satelliteCoverageColor, 'fill-opacity': 0.2}} /><Layer id="satellite-dialog-coverage-line" type="line" paint={{'line-color': settings.satelliteCoverageColor, 'line-width': 1, 'line-opacity': 1}} /></Source>}
                 {settings.showGrid && <Source id="satellite-dialog-grid" type="geojson" data={GRID_GEOJSON}><Layer id="satellite-dialog-grid-line" type="line" paint={{'line-color': '#FFFFFF', 'line-width': 1, 'line-opacity': 0.5, 'line-dasharray': [1, 5]}} /></Source>}
-                {location && Number.isFinite(Number(location.lat)) && Number.isFinite(Number(location.lon)) && <Marker longitude={Number(location.lon)} latitude={Number(location.lat)} anchor="center"><img src={homeIcon.options.iconUrl} alt="Home" style={{width: 20, height: 20, opacity: 0.8}} /></Marker>}
-                {settings.showSunIcon && <Marker longitude={data.sky.sunPosition[1]} latitude={data.sky.sunPosition[0]} anchor="center"><img src={sunIcon.options.iconUrl} alt="Sun" style={{width: 28, height: 28, opacity: 0.6}} /></Marker>}
-                {settings.showMoonIcon && <Marker longitude={data.sky.moonPosition[1]} latitude={data.sky.moonPosition[0]} anchor="center"><img src={moonIcon.options.iconUrl} alt="Moon" style={{width: 28, height: 28, opacity: 0.6}} /></Marker>}
+                {location && Number.isFinite(Number(location.lat)) && Number.isFinite(Number(location.lon)) && <Marker longitude={Number(location.lon)} latitude={Number(location.lat)} anchor="center"><img src={homeIcon.options.iconUrl} alt={t('satellite_map.home', { defaultValue: 'Home' })} style={{width: 20, height: 20, opacity: 0.8}} /></Marker>}
+                {settings.showSunIcon && <Marker longitude={data.sky.sunPosition[1]} latitude={data.sky.sunPosition[0]} anchor="center"><img src={sunIcon.options.iconUrl} alt={t('satellite_map.sun', { defaultValue: 'Sun' })} style={{width: 28, height: 28, opacity: 0.6}} /></Marker>}
+                {settings.showMoonIcon && <Marker longitude={data.sky.moonPosition[1]} latitude={data.sky.moonPosition[0]} anchor="center"><img src={moonIcon.options.iconUrl} alt={t('satellite_map.moon', { defaultValue: 'Moon' })} style={{width: 28, height: 28, opacity: 0.6}} /></Marker>}
                 {hasPosition && (
                     <Marker longitude={lon} latitude={lat} anchor="center">
                         <div

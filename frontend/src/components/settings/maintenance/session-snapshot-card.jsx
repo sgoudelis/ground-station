@@ -17,6 +17,7 @@ import SignalWifi4BarIcon from '@mui/icons-material/SignalWifi4Bar';
 import SignalWifiOffIcon from '@mui/icons-material/SignalWifiOff';
 import { useUserTimeSettings } from '../../../hooks/useUserTimeSettings.jsx';
 import { formatDateTime, formatTime } from '../../../utils/date-time.js';
+import { useTranslation } from 'react-i18next';
 
 const KeyValue = ({ label, value, wrap = false }) => (
     <Stack direction="row" spacing={1} alignItems={wrap ? "flex-start" : "center"} sx={{ mb: 1 }}>
@@ -78,6 +79,7 @@ const getDeviceInfo = (userAgent) => {
 };
 
 const ConsumerBadges = ({ map, sessionId }) => {
+    const { t } = useTranslation('settings');
     if (!map || typeof map !== 'object') return null;
 
     // If sessionId provided, filter to only show that session's consumers
@@ -86,7 +88,7 @@ const ConsumerBadges = ({ map, sessionId }) => {
         entries = entries.filter(([k]) => k === sessionId || k.startsWith(`${sessionId}:`));
     }
 
-    if (!entries.length) return <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem' }}>None</Typography>;
+    if (!entries.length) return <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem' }}>{t('session_snapshot_card.none', { defaultValue: 'None' })}</Typography>;
 
     return (
         <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
@@ -119,6 +121,7 @@ const ConsumerBadges = ({ map, sessionId }) => {
 };
 
 const SessionSnapshotCard = () => {
+    const { t } = useTranslation('settings');
     const { socket } = useSocket();
     const [sdrFilter, setSdrFilter] = useState('');
     const [sessionFilter, setSessionFilter] = useState('');
@@ -153,10 +156,10 @@ const SessionSnapshotCard = () => {
     return (
         <>
             <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
-                <Typography variant="h6">Active Sessions & Runtime Snapshot</Typography>
+                <Typography variant="h6">{t('session_snapshot_card.active_sessions_runtime_snapshot', { defaultValue: 'Active Sessions & Runtime Snapshot' })}</Typography>
                 <Stack direction="row" spacing={1}>
-                    <TextField size="small" label="Filter by SDR ID" value={sdrFilter} onChange={(e) => setSdrFilter(e.target.value)} />
-                    <TextField size="small" label="Filter by Session ID" value={sessionFilter} onChange={(e) => setSessionFilter(e.target.value)} />
+                    <TextField size="small" label={t('session_snapshot_card.filter_by_sdr_id', { defaultValue: 'Filter by SDR ID' })} value={sdrFilter} onChange={(e) => setSdrFilter(e.target.value)} />
+                    <TextField size="small" label={t('session_snapshot_card.filter_by_session_id', { defaultValue: 'Filter by Session ID' })} value={sessionFilter} onChange={(e) => setSessionFilter(e.target.value)} />
                 </Stack>
             </Stack>
             <Divider sx={{ mb: 2 }} />
@@ -167,11 +170,11 @@ const SessionSnapshotCard = () => {
                 </Typography>
             )}
 
-            <SectionTitle>Active Sessions</SectionTitle>
+            <SectionTitle>{t('session_snapshot_card.active_sessions', { defaultValue: 'Active Sessions' })}</SectionTitle>
             <Divider sx={{ mb: 2 }} />
 
             {enrichedSessions.length === 0 ? (
-                <Typography variant="body2" color="text.secondary">No active sessions</Typography>
+                <Typography variant="body2" color="text.secondary">{t('session_snapshot_card.no_active_sessions', { defaultValue: 'No active sessions' })}</Typography>
             ) : (
                 <Grid container spacing={2} columns={{ xs: 1, sm: 1, md: 2, lg: 2 }}>
                     {enrichedSessions.map(({ sid, info, sdrData }) => {
@@ -253,7 +256,7 @@ const SessionSnapshotCard = () => {
                                                 ) : (
                                                     <Chip
                                                         size="small"
-                                                        label="No SDR"
+                                                        label={t('session_snapshot_card.no_sdr', { defaultValue: 'No SDR' })}
                                                         sx={{ height: 20, fontSize: '0.7rem' }}
                                                     />
                                                 )}
@@ -264,7 +267,7 @@ const SessionSnapshotCard = () => {
                                     {/* Browser & OS Info */}
                                     <Box sx={{ mb: 2, p: 1.5, bgcolor: 'rgba(0,0,0,0.1)', borderRadius: 1 }}>
                                         <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
-                                            Browser & OS
+                                            {t('session_snapshot_card.browser_os', { defaultValue: 'Browser & OS' })}
                                         </Typography>
                                         <Typography variant="body2" sx={{ fontWeight: 500 }}>
                                             {deviceInfo.browser} {deviceInfo.browserVersion && `v${deviceInfo.browserVersion.split('.')[0]}`}
@@ -278,27 +281,27 @@ const SessionSnapshotCard = () => {
                                     <Divider sx={{ my: 1.5 }} />
                                     <Box sx={{ p: 1.5, bgcolor: 'rgba(0,0,0,0.1)', borderRadius: 1, mb: 1 }}>
                                         <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1, fontWeight: 600, textTransform: 'uppercase' }}>
-                                            Connection Details
+                                            {t('session_snapshot_card.connection_details', { defaultValue: 'Connection Details' })}
                                         </Typography>
-                                        <KeyValue label="Owner" value={ownerName} />
-                                        <KeyValue label="Account Type" value={accountType} />
-                                        <KeyValue label="IP Address" value={metadata.ip} />
-                                        <KeyValue label="Origin" value={metadata.origin} />
-                                        <KeyValue label="Connected" value={connectedAt} />
-                                        <KeyValue label="Duration" value={durationStr} />
+                                        <KeyValue label={t('session_snapshot_card.owner', { defaultValue: 'Owner' })} value={ownerName} />
+                                        <KeyValue label={t('session_snapshot_card.account_type', { defaultValue: 'Account Type' })} value={accountType} />
+                                        <KeyValue label={t('session_snapshot_card.ip_address', { defaultValue: 'IP Address' })} value={metadata.ip} />
+                                        <KeyValue label={t('session_snapshot_card.origin', { defaultValue: 'Origin' })} value={metadata.origin} />
+                                        <KeyValue label={t('session_snapshot_card.connected', { defaultValue: 'Connected' })} value={connectedAt} />
+                                        <KeyValue label={t('session_snapshot_card.duration', { defaultValue: 'Duration' })} value={durationStr} />
                                     </Box>
 
                                     {/* SDR Device Info - Always shown */}
                                     <Divider sx={{ my: 1.5 }} />
                                     <Box sx={{ p: 1.5, bgcolor: 'rgba(0,0,0,0.1)', borderRadius: 1, mb: 1 }}>
                                         <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1, fontWeight: 600, textTransform: 'uppercase' }}>
-                                            SDR Device
+                                            {t('session_snapshot_card.sdr_device', { defaultValue: 'SDR Device' })}
                                         </Typography>
                                         <KeyValue label="SDR ID" value={info?.sdr_id || '—'} wrap />
-                                        <KeyValue label="Device Name" value={sdrData?.device?.name || '—'} />
-                                        <KeyValue label="Device Type" value={sdrData?.device?.type || '—'} />
-                                        <KeyValue label="Serial" value={sdrData?.device?.serial || '—'} />
-                                        <KeyValue label="Host" value={sdrData?.device?.host ? `${sdrData.device.host}:${sdrData.device.port || ''}` : '—'} />
+                                        <KeyValue label={t('session_snapshot_card.device_name', { defaultValue: 'Device Name' })} value={sdrData?.device?.name || '—'} />
+                                        <KeyValue label={t('session_snapshot_card.device_type', { defaultValue: 'Device Type' })} value={sdrData?.device?.type || '—'} />
+                                        <KeyValue label={t('session_snapshot_card.serial', { defaultValue: 'Serial' })} value={sdrData?.device?.serial || '—'} />
+                                        <KeyValue label={t('session_snapshot_card.host', { defaultValue: 'Host' })} value={sdrData?.device?.host ? `${sdrData.device.host}:${sdrData.device.port || ''}` : '—'} />
                                     </Box>
 
                                     {/* VFO State Information */}
@@ -307,38 +310,38 @@ const SessionSnapshotCard = () => {
                                             <Divider sx={{ my: 1.5 }} />
                                             <Box sx={{ p: 1.5, bgcolor: 'rgba(0,0,0,0.1)', borderRadius: 1, mb: 1 }}>
                                                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1, fontWeight: 600, textTransform: 'uppercase' }}>
-                                                    VFO Configuration
+                                                    {t('session_snapshot_card.vfo_configuration', { defaultValue: 'VFO Configuration' })}
                                                 </Typography>
                                                 {Object.entries(info.vfos).map(([vfoNum, vfo]) => (
                                                     <Box key={vfoNum} sx={{ mb: 1.5, pb: 1.5, borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
                                                         <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.5 }}>
                                                             <Typography variant="body2" sx={{ fontWeight: 600 }}>VFO {vfoNum}</Typography>
-                                                            {vfo.active && <Chip size="small" label="Active" color="success" sx={{ height: 18, fontSize: '0.65rem' }} />}
-                                                            {vfo.selected && <Chip size="small" label="Selected" color="primary" sx={{ height: 18, fontSize: '0.65rem' }} />}
+                                                            {vfo.active && <Chip size="small" label={t('session_snapshot_card.active', { defaultValue: 'Active' })} color="success" sx={{ height: 18, fontSize: '0.65rem' }} />}
+                                                            {vfo.selected && <Chip size="small" label={t('session_snapshot_card.selected', { defaultValue: 'Selected' })} color="primary" sx={{ height: 18, fontSize: '0.65rem' }} />}
                                                         </Stack>
-                                                        <KeyValue label="Frequency" value={`${(vfo.center_freq / 1e6).toFixed(6)} MHz`} />
-                                                        <KeyValue label="Bandwidth" value={`${(vfo.bandwidth / 1e3).toFixed(1)} kHz`} />
-                                                        <KeyValue label="Modulation" value={vfo.modulation || 'none'} />
+                                                        <KeyValue label={t('session_snapshot_card.frequency', { defaultValue: 'Frequency' })} value={`${(vfo.center_freq / 1e6).toFixed(6)} MHz`} />
+                                                        <KeyValue label={t('session_snapshot_card.bandwidth', { defaultValue: 'Bandwidth' })} value={`${(vfo.bandwidth / 1e3).toFixed(1)} kHz`} />
+                                                        <KeyValue label={t('session_snapshot_card.modulation', { defaultValue: 'Modulation' })} value={vfo.modulation || 'none'} />
                                                         {vfo.decoder && vfo.decoder !== 'none' && (
-                                                            <KeyValue label="Decoder" value={vfo.decoder} />
+                                                            <KeyValue label={t('session_snapshot_card.decoder', { defaultValue: 'Decoder' })} value={vfo.decoder} />
                                                         )}
                                                         {vfo.locked_transmitter_id && vfo.locked_transmitter_id !== 'none' && (
-                                                            <KeyValue label="Locked TX" value={vfo.locked_transmitter_id} wrap />
+                                                            <KeyValue label={t('session_snapshot_card.locked_tx', { defaultValue: 'Locked TX' })} value={vfo.locked_transmitter_id} wrap />
                                                         )}
                                                         {vfo.volume !== undefined && vfo.volume !== null && (
-                                                            <KeyValue label="Volume" value={`${vfo.volume}%`} />
+                                                            <KeyValue label={t('session_snapshot_card.volume', { defaultValue: 'Volume' })} value={`${vfo.volume}%`} />
                                                         )}
                                                         {vfo.squelch !== undefined && vfo.squelch !== null && (
-                                                            <KeyValue label="Squelch" value={`${vfo.squelch}%`} />
+                                                            <KeyValue label={t('session_snapshot_card.squelch', { defaultValue: 'Squelch' })} value={`${vfo.squelch}%`} />
                                                         )}
                                                         {vfo.transcription_enabled && (
                                                             <>
-                                                                <KeyValue label="Transcription" value={vfo.transcription_provider || 'Enabled'} />
+                                                                <KeyValue label={t('session_snapshot_card.transcription', { defaultValue: 'Transcription' })} value={vfo.transcription_provider || 'Enabled'} />
                                                                 {vfo.transcription_language && (
-                                                                    <KeyValue label="Language" value={vfo.transcription_language} />
+                                                                    <KeyValue label={t('session_snapshot_card.language', { defaultValue: 'Language' })} value={vfo.transcription_language} />
                                                                 )}
                                                                 {vfo.transcription_translate_to && (
-                                                                    <KeyValue label="Translate To" value={vfo.transcription_translate_to} />
+                                                                    <KeyValue label={t('session_snapshot_card.translate_to', { defaultValue: 'Translate To' })} value={vfo.transcription_translate_to} />
                                                                 )}
                                                             </>
                                                         )}
@@ -354,25 +357,25 @@ const SessionSnapshotCard = () => {
                                             <Divider sx={{ my: 1.5 }} />
                                             <Box sx={{ p: 1.5, bgcolor: 'rgba(0,0,0,0.1)', borderRadius: 1 }}>
                                                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1, fontWeight: 600, textTransform: 'uppercase' }}>
-                                                    Active Consumers
+                                                    {t('session_snapshot_card.active_consumers', { defaultValue: 'Active Consumers' })}
                                                 </Typography>
 
                                                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5, fontWeight: 600 }}>
-                                                    Demodulators
+                                                    {t('session_snapshot_card.demodulators', { defaultValue: 'Demodulators' })}
                                                 </Typography>
                                                 <Box sx={{ mb: 1.5 }}>
                                                     <ConsumerBadges map={sdrData?.demodulators} sessionId={sid} />
                                                 </Box>
 
                                                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5, fontWeight: 600 }}>
-                                                    Decoders
+                                                    {t('session_snapshot_card.decoders', { defaultValue: 'Decoders' })}
                                                 </Typography>
                                                 <Box sx={{ mb: 1.5 }}>
                                                     <ConsumerBadges map={sdrData?.decoders} sessionId={sid} />
                                                 </Box>
 
                                                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5, fontWeight: 600 }}>
-                                                    Recorders
+                                                    {t('session_snapshot_card.recorders', { defaultValue: 'Recorders' })}
                                                 </Typography>
                                                 <ConsumerBadges map={sdrData?.recorders} sessionId={sid} />
                                             </Box>
@@ -387,9 +390,9 @@ const SessionSnapshotCard = () => {
 
             <Divider sx={{ my: 2 }} />
             <Stack direction="row" spacing={2}>
-                <KeyValue label="Last Updated" value={runtime.lastUpdated ? formatTime(runtime.lastUpdated, { timezone, locale }) : '—'} />
-                <KeyValue label="Socket Connected" value={socket?.connected ? 'yes' : 'no'} />
-                <KeyValue label="Update Mode" value="auto (1s)" />
+                <KeyValue label={t('session_snapshot_card.last_updated', { defaultValue: 'Last Updated' })} value={runtime.lastUpdated ? formatTime(runtime.lastUpdated, { timezone, locale }) : '—'} />
+                <KeyValue label={t('session_snapshot_card.socket_connected', { defaultValue: 'Socket Connected' })} value={socket?.connected ? 'yes' : 'no'} />
+                <KeyValue label={t('session_snapshot_card.update_mode', { defaultValue: 'Update Mode' })} value="auto (1s)" />
             </Stack>
         </>
     );

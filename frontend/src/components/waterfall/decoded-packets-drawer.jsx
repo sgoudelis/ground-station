@@ -39,9 +39,11 @@ import { humanizeBytes } from '../common/common.jsx';
 import { toast } from 'react-toastify';
 import { useUserTimeSettings } from '../../hooks/useUserTimeSettings.jsx';
 import { formatTime } from '../../utils/date-time.js';
+import { useTranslation } from 'react-i18next';
 
 // Time formatter component that updates without causing re-renders
 const TimeFormatter = React.memo(function TimeFormatter({ value, nowMs, timezone, locale }) {
+    const { t } = useTranslation('waterfall');
     const timeString = formatTime(value, {
         timezone,
         locale,
@@ -51,21 +53,21 @@ const TimeFormatter = React.memo(function TimeFormatter({ value, nowMs, timezone
     const diffInSeconds = Math.max(0, Math.floor((nowMs - value) / 1000));
 
     if (diffInSeconds < 60) {
-        return <span>{diffInSeconds}s ago ({timeString})</span>;
+        return <span>{diffInSeconds}{t('decoded_packets_drawer.s_ago', { defaultValue: 's ago (' })}{timeString})</span>;
     }
     const diffInMinutes = Math.floor(diffInSeconds / 60);
     const remainingSeconds = diffInSeconds % 60;
     if (diffInMinutes < 60) {
-        return <span>{diffInMinutes}m {remainingSeconds}s ago ({timeString})</span>;
+        return <span>{diffInMinutes}m {remainingSeconds}{t('decoded_packets_drawer.s_ago', { defaultValue: 's ago (' })}{timeString})</span>;
     }
     const diffInHours = Math.floor(diffInMinutes / 60);
     const remainingMinutes = diffInMinutes % 60;
     if (diffInHours < 24) {
-        return <span>{diffInHours}h {remainingMinutes}m ago ({timeString})</span>;
+        return <span>{diffInHours}h {remainingMinutes}{t('decoded_packets_drawer.m_ago', { defaultValue: 'm ago (' })}{timeString})</span>;
     }
     const diffInDays = Math.floor(diffInHours / 24);
     const remainingHours = diffInHours % 24;
-    return <span>{diffInDays}d {remainingHours}h ago ({timeString})</span>;
+    return <span>{diffInDays}d {remainingHours}{t('decoded_packets_drawer.h_ago', { defaultValue: 'h ago (' })}{timeString})</span>;
 });
 
 // humanizeBytes now provided by common.jsx and imported above
@@ -168,6 +170,7 @@ export const mapOutputsToRows = (outputs, rowLimit = DEFAULT_DRAWER_ROW_LIMIT) =
 };
 
 const DecodedPacketsDrawer = React.memo(function DecodedPacketsDrawer({ embedded = false }) {
+    const { t } = useTranslation('waterfall');
     const theme = useTheme();
     const dispatch = useDispatch();
     const store = useStore();
@@ -812,7 +815,7 @@ const DecodedPacketsDrawer = React.memo(function DecodedPacketsDrawer({ embedded
                         <KeyboardArrowUpIcon sx={{ fontSize: '1.2rem', color: 'text.secondary' }} />
                     )}
                     <Typography variant="caption" sx={{ fontWeight: 600, fontSize: '0.7rem', letterSpacing: '0.5px' }}>
-                        PACKETS
+                        {t('decoded_packets_drawer.packets', { defaultValue: 'PACKETS' })}
                     </Typography>
                     {packetsDrawerOpen ? (
                         <KeyboardArrowDownIcon sx={{ fontSize: '1.2rem', color: 'text.secondary' }} />
@@ -891,7 +894,7 @@ const DecodedPacketsDrawer = React.memo(function DecodedPacketsDrawer({ embedded
             >
                 <DialogTitle>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Typography variant="h6">Decoded Image</Typography>
+                        <Typography variant="h6">{t('decoded_packets_drawer.decoded_image', { defaultValue: 'Decoded Image' })}</Typography>
                         {sstvMetadata?.decoder?.mode && (
                             <Chip
                                 label={sstvMetadata.decoder.mode}
@@ -921,48 +924,48 @@ const DecodedPacketsDrawer = React.memo(function DecodedPacketsDrawer({ embedded
                             {sstvMetadata && (
                                 <Box sx={{ mt: 2 }}>
                                     <Typography variant="subtitle2" color="text.primary" gutterBottom>
-                                        Metadata
+                                        {t('decoded_packets_drawer.metadata', { defaultValue: 'Metadata' })}
                                     </Typography>
                                     <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, p: 2, backgroundColor: 'background.default', borderRadius: 1 }}>
                                         {sstvMetadata.decoder?.type && (
                                             <>
-                                                <Typography variant="body2" color="text.secondary">Decoder Type:</Typography>
+                                                <Typography variant="body2" color="text.secondary">{t('decoded_packets_drawer.decoder_type', { defaultValue: 'Decoder Type:' })}</Typography>
                                                 <Typography variant="body2">{sstvMetadata.decoder.type.toUpperCase()}</Typography>
                                             </>
                                         )}
                                         {sstvMetadata.decoder?.mode && (
                                             <>
-                                                <Typography variant="body2" color="text.secondary">SSTV Mode:</Typography>
+                                                <Typography variant="body2" color="text.secondary">{t('decoded_packets_drawer.sstv_mode', { defaultValue: 'SSTV Mode:' })}</Typography>
                                                 <Typography variant="body2">{sstvMetadata.decoder.mode}</Typography>
                                             </>
                                         )}
                                         {sstvMetadata.signal?.frequency_mhz && (
                                             <>
-                                                <Typography variant="body2" color="text.secondary">Frequency:</Typography>
+                                                <Typography variant="body2" color="text.secondary">{t('decoded_packets_drawer.frequency', { defaultValue: 'Frequency:' })}</Typography>
                                                 <Typography variant="body2">{sstvMetadata.signal.frequency_mhz.toFixed(6)} MHz</Typography>
                                             </>
                                         )}
                                         {sstvMetadata.signal?.sample_rate_hz && (
                                             <>
-                                                <Typography variant="body2" color="text.secondary">Sample Rate:</Typography>
+                                                <Typography variant="body2" color="text.secondary">{t('decoded_packets_drawer.sample_rate', { defaultValue: 'Sample Rate:' })}</Typography>
                                                 <Typography variant="body2">{sstvMetadata.signal.sample_rate_hz} Hz</Typography>
                                             </>
                                         )}
                                         {sstvMetadata.vfo?.bandwidth_khz && (
                                             <>
-                                                <Typography variant="body2" color="text.secondary">VFO Bandwidth:</Typography>
+                                                <Typography variant="body2" color="text.secondary">{t('decoded_packets_drawer.vfo_bandwidth', { defaultValue: 'VFO Bandwidth:' })}</Typography>
                                                 <Typography variant="body2">{sstvMetadata.vfo.bandwidth_khz.toFixed(1)} kHz</Typography>
                                             </>
                                         )}
                                         {sstvMetadata.image?.timestamp_iso && (
                                             <>
-                                                <Typography variant="body2" color="text.secondary">Decoded:</Typography>
+                                                <Typography variant="body2" color="text.secondary">{t('decoded_packets_drawer.decoded', { defaultValue: 'Decoded:' })}</Typography>
                                                 <Typography variant="body2">{sstvMetadata.image.timestamp_iso}</Typography>
                                             </>
                                         )}
                                         {sstvMetadata.image?.width && sstvMetadata.image?.height && (
                                             <>
-                                                <Typography variant="body2" color="text.secondary">Dimensions:</Typography>
+                                                <Typography variant="body2" color="text.secondary">{t('decoded_packets_drawer.dimensions', { defaultValue: 'Dimensions:' })}</Typography>
                                                 <Typography variant="body2">{sstvMetadata.image.width} × {sstvMetadata.image.height}</Typography>
                                             </>
                                         )}
@@ -973,7 +976,7 @@ const DecodedPacketsDrawer = React.memo(function DecodedPacketsDrawer({ embedded
                     )}
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setSstvDialogOpen(false)}>Close</Button>
+                    <Button onClick={() => setSstvDialogOpen(false)}>{t('decoded_packets_drawer.close', { defaultValue: 'Close' })}</Button>
                 </DialogActions>
             </Dialog>
 
@@ -1019,14 +1022,14 @@ const DecodedPacketsDrawer = React.memo(function DecodedPacketsDrawer({ embedded
                     >
                         !
                     </Box>
-                    Delete Decoded File
+                    {t('decoded_packets_drawer.delete_decoded_file', { defaultValue: 'Delete Decoded File' })}
                 </DialogTitle>
                 <DialogContent sx={{ px: 3, pt: 3, pb: 3 }}>
                     <Typography variant="body1" sx={{ mt: 2, mb: 2, color: 'text.primary' }}>
-                        Are you sure you want to delete this decoded packet file?
+                        {t('decoded_packets_drawer.are_you_sure_you_want_to_delete_this_decoded_packet_file', { defaultValue: 'Are you sure you want to delete this decoded packet file?' })}
                     </Typography>
                     <Typography variant="body2" sx={{ mb: 2, fontWeight: 600, color: 'text.secondary' }}>
-                        File to be deleted:
+                        {t('decoded_packets_drawer.file_to_be_deleted', { defaultValue: 'File to be deleted:' })}
                     </Typography>
                     <Box sx={{
                         maxHeight: 300,
@@ -1041,7 +1044,7 @@ const DecodedPacketsDrawer = React.memo(function DecodedPacketsDrawer({ embedded
                             </Typography>
                             <Box sx={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 1, columnGap: 2 }}>
                                 <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary', fontWeight: 500 }}>
-                                    Decoder:
+                                    {t('decoded_packets_drawer.decoder', { defaultValue: 'Decoder:' })}
                                 </Typography>
                                 <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.primary' }}>
                                     {getDecoderDisplay(packetToDelete?.decoderType)}
@@ -1050,7 +1053,7 @@ const DecodedPacketsDrawer = React.memo(function DecodedPacketsDrawer({ embedded
                                 {packetToDelete?.from && packetToDelete?.from !== '-' && (
                                     <>
                                         <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary', fontWeight: 500 }}>
-                                            From:
+                                            {t('decoded_packets_drawer.from', { defaultValue: 'From:' })}
                                         </Typography>
                                         <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.primary' }}>
                                             {packetToDelete.from}
@@ -1061,7 +1064,7 @@ const DecodedPacketsDrawer = React.memo(function DecodedPacketsDrawer({ embedded
                                 {packetToDelete?.to && packetToDelete?.to !== '-' && (
                                     <>
                                         <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary', fontWeight: 500 }}>
-                                            To:
+                                            {t('decoded_packets_drawer.to', { defaultValue: 'To:' })}
                                         </Typography>
                                         <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.primary' }}>
                                             {packetToDelete.to}
@@ -1070,7 +1073,7 @@ const DecodedPacketsDrawer = React.memo(function DecodedPacketsDrawer({ embedded
                                 )}
 
                                 <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary', fontWeight: 500 }}>
-                                    Size:
+                                    {t('decoded_packets_drawer.size', { defaultValue: 'Size:' })}
                                 </Typography>
                                 <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.primary' }}>
                                     {humanizeBytes(packetToDelete?.packetLength)}
@@ -1079,7 +1082,7 @@ const DecodedPacketsDrawer = React.memo(function DecodedPacketsDrawer({ embedded
                         </Box>
                     </Box>
                     <Alert severity="warning" sx={{ mt: 2 }}>
-                        This action cannot be undone! The file will be permanently deleted from the filesystem.
+                        {t('decoded_packets_drawer.this_action_cannot_be_undone_the_file_will_be_permanentl', { defaultValue: 'This action cannot be undone! The file will be permanently deleted from the filesystem.' })}
                     </Alert>
                 </DialogContent>
                 <DialogActions
@@ -1101,7 +1104,7 @@ const DecodedPacketsDrawer = React.memo(function DecodedPacketsDrawer({ embedded
                             fontWeight: 500,
                         }}
                     >
-                        Cancel
+                        {t('decoded_packets_drawer.cancel', { defaultValue: 'Cancel' })}
                     </Button>
                     <Button
                         variant="contained"
@@ -1113,7 +1116,7 @@ const DecodedPacketsDrawer = React.memo(function DecodedPacketsDrawer({ embedded
                             fontWeight: 600,
                         }}
                     >
-                        Delete
+                        {t('decoded_packets_drawer.delete', { defaultValue: 'Delete' })}
                     </Button>
                 </DialogActions>
             </Dialog>

@@ -17,6 +17,22 @@
  *
  */
 
+import i18n from '../../../i18n/config.js';
+
+/**
+ * Module-level translator.
+ *
+ * The DEMODULATORS/DECODERS objects below are module-level constants that are also
+ * consumed by non-React modules (the VFO redux slice, canvas/drawing utilities), where
+ * the `useTranslation` hook is unavailable. Bind a fixed-namespace translator to the
+ * shared i18n instance instead (same approach as src/config/navigation.jsx).
+ *
+ * The translated `description` fields are exposed as getters so they are resolved on
+ * every access: module constants are evaluated only once, so a plain `t(...)` value
+ * would freeze the language that was active when this module first loaded.
+ */
+const t = i18n.getFixedT(null, 'waterfall');
+
 /**
  * Global VFO Configuration Object
  *
@@ -33,7 +49,7 @@ export const DEMODULATORS = {
     NONE: {
         internalName: 'none',
         displayName: 'none',
-        description: 'No demodulation - center line only',
+        get description() { return t('vfo_config.no_demodulation_center_line_only', { defaultValue: 'No demodulation - center line only' }); },
         defaultBandwidth: 1000, // 1 kHz minimal
         minBandwidth: 100,
         maxBandwidth: 10000,
@@ -47,7 +63,7 @@ export const DEMODULATORS = {
     FM: {
         internalName: 'FM',
         displayName: 'FM',
-        description: 'Frequency Modulation - Double Sideband',
+        get description() { return t('vfo_config.frequency_modulation_double_sideband', { defaultValue: 'Frequency Modulation - Double Sideband' }); },
         defaultBandwidth: 10000, // 10 kHz
         minBandwidth: 1000,
         maxBandwidth: 100000,
@@ -61,7 +77,7 @@ export const DEMODULATORS = {
     FM_STEREO: {
         internalName: 'FM_STEREO',
         displayName: 'FMS',
-        description: 'Stereo Frequency Modulation',
+        get description() { return t('vfo_config.stereo_frequency_modulation', { defaultValue: 'Stereo Frequency Modulation' }); },
         defaultBandwidth: 150000, // 150 kHz for broadcast FM
         minBandwidth: 1000, // allow narrowing below broadcast width (same floor as FM)
         maxBandwidth: 200000,
@@ -75,7 +91,7 @@ export const DEMODULATORS = {
     AM: {
         internalName: 'AM',
         displayName: 'AM',
-        description: 'Amplitude Modulation - Double Sideband',
+        get description() { return t('vfo_config.amplitude_modulation_double_sideband', { defaultValue: 'Amplitude Modulation - Double Sideband' }); },
         defaultBandwidth: 10000, // 10 kHz
         minBandwidth: 1000,
         maxBandwidth: 20000,
@@ -89,7 +105,7 @@ export const DEMODULATORS = {
     USB: {
         internalName: 'USB',
         displayName: 'USB',
-        description: 'Upper Sideband - Single Sideband',
+        get description() { return t('vfo_config.upper_sideband_single_sideband', { defaultValue: 'Upper Sideband - Single Sideband' }); },
         defaultBandwidth: 3000, // 3 kHz
         minBandwidth: 500,
         maxBandwidth: 10000,
@@ -103,7 +119,7 @@ export const DEMODULATORS = {
     LSB: {
         internalName: 'LSB',
         displayName: 'LSB',
-        description: 'Lower Sideband - Single Sideband',
+        get description() { return t('vfo_config.lower_sideband_single_sideband', { defaultValue: 'Lower Sideband - Single Sideband' }); },
         defaultBandwidth: 3000, // 3 kHz
         minBandwidth: 500,
         maxBandwidth: 10000,
@@ -117,7 +133,7 @@ export const DEMODULATORS = {
     CW: {
         internalName: 'CW',
         displayName: 'CW',
-        description: 'Continuous Wave (Morse) - Single Sideband',
+        get description() { return t('vfo_config.continuous_wave_morse_single_sideband', { defaultValue: 'Continuous Wave (Morse) - Single Sideband' }); },
         defaultBandwidth: 1000, // 1 kHz narrow filter
         minBandwidth: 200,
         maxBandwidth: 3000,
@@ -138,7 +154,7 @@ export const DECODERS = {
     none: {
         internalName: 'none',
         displayName: 'none',
-        description: 'No decoder',
+        get description() { return t('vfo_config.no_decoder', { defaultValue: 'No decoder' }); },
         hasStatusDisplay: false,
         hasProgressDisplay: false,
         hasTextOutput: false,
@@ -147,7 +163,7 @@ export const DECODERS = {
     sstv: {
         internalName: 'sstv',
         displayName: 'SSTV',
-        description: 'Slow Scan Television decoder',
+        get description() { return t('vfo_config.slow_scan_television_decoder', { defaultValue: 'Slow Scan Television decoder' }); },
         hasStatusDisplay: true, // shows decoder status (e.g., "detecting", "decoding")
         hasProgressDisplay: true, // shows percentage progress
         hasTextOutput: false, // no text output, outputs images
@@ -163,7 +179,7 @@ export const DECODERS = {
     geoscanimage: {
         internalName: 'geoscanimage',
         displayName: 'Geoscan Image',
-        description: 'Geoscan/Alferov packetised JPEG image decoder (FSK)',
+        get description() { return t('vfo_config.geoscan_alferov_packetised_jpeg_image_decoder_fs', { defaultValue: 'Geoscan/Alferov packetised JPEG image decoder (FSK)' }); },
         hasStatusDisplay: true,
         hasProgressDisplay: false,
         hasTextOutput: false,
@@ -179,7 +195,7 @@ export const DECODERS = {
     morse: {
         internalName: 'morse',
         displayName: 'Morse',
-        description: 'Morse code (CW) decoder',
+        get description() { return t('vfo_config.morse_code_cw_decoder', { defaultValue: 'Morse code (CW) decoder' }); },
         hasStatusDisplay: false, // no status, always listening
         hasProgressDisplay: false, // no progress bar
         hasTextOutput: true, // outputs decoded text
@@ -199,7 +215,7 @@ export const DECODERS = {
     apt: {
         internalName: 'apt',
         displayName: 'APT',
-        description: 'Automatic Picture Transmission (NOAA weather satellites)',
+        get description() { return t('vfo_config.automatic_picture_transmission_noaa_weather_sate', { defaultValue: 'Automatic Picture Transmission (NOAA weather satellites)' }); },
         hasStatusDisplay: true,
         hasProgressDisplay: true,
         hasTextOutput: false,
@@ -215,7 +231,7 @@ export const DECODERS = {
     lora: {
         internalName: 'lora',
         displayName: 'LoRa',
-        description: 'LoRa decoder (processes raw IQ, no demodulator)',
+        get description() { return t('vfo_config.lora_decoder_processes_raw_iq_no_demodulator', { defaultValue: 'LoRa decoder (processes raw IQ, no demodulator)' }); },
         hasStatusDisplay: true,
         hasProgressDisplay: false,
         hasTextOutput: false,
@@ -231,7 +247,7 @@ export const DECODERS = {
     gnss: {
         internalName: 'gnss',
         displayName: 'GNSS',
-        description: 'GNSS-SDR decoder (wideband raw IQ, no demodulator)',
+        get description() { return t('vfo_config.gnss_sdr_decoder_wideband_raw_iq_no_demodulator', { defaultValue: 'GNSS-SDR decoder (wideband raw IQ, no demodulator)' }); },
         hasStatusDisplay: true,
         hasProgressDisplay: false,
         hasTextOutput: false,
@@ -247,7 +263,7 @@ export const DECODERS = {
     gmsk: {
         internalName: 'gmsk',
         displayName: 'GMSK',
-        description: 'GMSK decoder (Gaussian MSK, processes raw IQ, no demodulator)',
+        get description() { return t('vfo_config.gmsk_decoder_gaussian_msk_processes_raw_iq_no_de', { defaultValue: 'GMSK decoder (Gaussian MSK, processes raw IQ, no demodulator)' }); },
         hasStatusDisplay: true,
         hasProgressDisplay: false,
         hasTextOutput: false,
@@ -271,7 +287,7 @@ export const DECODERS = {
     gfsk: {
         internalName: 'gfsk',
         displayName: 'GFSK',
-        description: 'GFSK decoder (Gaussian FSK, processes raw IQ, no demodulator)',
+        get description() { return t('vfo_config.gfsk_decoder_gaussian_fsk_processes_raw_iq_no_de', { defaultValue: 'GFSK decoder (Gaussian FSK, processes raw IQ, no demodulator)' }); },
         hasStatusDisplay: true,
         hasProgressDisplay: false,
         hasTextOutput: false,
@@ -295,7 +311,7 @@ export const DECODERS = {
     fsk: {
         internalName: 'fsk',
         displayName: 'FSK',
-        description: 'FSK decoder (Frequency Shift Keying, processes raw IQ, no demodulator)',
+        get description() { return t('vfo_config.fsk_decoder_frequency_shift_keying_processes_raw', { defaultValue: 'FSK decoder (Frequency Shift Keying, processes raw IQ, no demodulator)' }); },
         hasStatusDisplay: true,
         hasProgressDisplay: false,
         hasTextOutput: false,
@@ -319,7 +335,7 @@ export const DECODERS = {
     bpsk: {
         internalName: 'bpsk',
         displayName: 'BPSK',
-        description: 'BPSK decoder with AX.25 support (processes raw IQ, no demodulator)',
+        get description() { return t('vfo_config.bpsk_decoder_with_ax_25_support_processes_raw_iq', { defaultValue: 'BPSK decoder with AX.25 support (processes raw IQ, no demodulator)' }); },
         hasStatusDisplay: true,
         hasProgressDisplay: false,
         hasTextOutput: false,
@@ -343,7 +359,7 @@ export const DECODERS = {
     aprs: {
         internalName: 'aprs',
         displayName: 'APRS',
-        description: 'APRS Bell 202 decoder (processes raw IQ with integrated FM demodulation)',
+        get description() { return t('vfo_config.aprs_bell_202_decoder_processes_raw_iq_with_inte', { defaultValue: 'APRS Bell 202 decoder (processes raw IQ with integrated FM demodulation)' }); },
         hasStatusDisplay: true,
         hasProgressDisplay: false,
         hasTextOutput: false,
@@ -677,7 +693,7 @@ export const normalizeTransmitterMode = (mode) => {
  * Import them here for backwards compatibility
  */
 export {
-    DECODER_PARAMETERS,
+    getDecoderParameterDefinitions,
     getDecoderParameters,
     getDecoderDefaultParameters,
     mapParametersToBackend

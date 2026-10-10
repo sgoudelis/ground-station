@@ -1354,53 +1354,53 @@ const NextPassesIsland = React.memo(function NextPassesIsland() {
                     </Box>
                     {hasTargets && (
                     <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
-                        <Tooltip title="All passes (Alt+1)">
+                        <Tooltip title={t('next_passes.all_passes_alt_1', { defaultValue: 'All passes (Alt+1)' })}>
                             <span>
                                 <Button
                                     size="small"
                                     variant={quickFilterPreset === 'all' ? 'contained' : 'outlined'}
                                     onClick={() => handleQuickPreset('all')}
                                     sx={quickFilterButtonSx}
-                                    aria-label="All passes"
+                                    aria-label={t('next_passes.all_passes', { defaultValue: 'All passes' })}
                                 >
                                     {useIconQuickFilters ? <DoneAllIcon sx={{ fontSize: isTightHeader ? '0.82rem' : '0.9rem' }} /> : 'All'}
                                 </Button>
                             </span>
                         </Tooltip>
-                        <Tooltip title="Live passes (Alt+2)">
+                        <Tooltip title={t('next_passes.live_passes_alt_2', { defaultValue: 'Live passes (Alt+2)' })}>
                             <span>
                                 <Button
                                     size="small"
                                     variant={quickFilterPreset === 'live' ? 'contained' : 'outlined'}
                                     onClick={() => handleQuickPreset('live')}
                                     sx={quickFilterButtonSx}
-                                    aria-label="Live passes"
+                                    aria-label={t('next_passes.live_passes', { defaultValue: 'Live passes' })}
                                 >
                                     {useIconQuickFilters ? <RadioButtonCheckedIcon sx={{ fontSize: isTightHeader ? '0.82rem' : '0.9rem' }} /> : 'Live'}
                                 </Button>
                             </span>
                         </Tooltip>
-                        <Tooltip title="Live or next 30 minutes (Alt+3)">
+                        <Tooltip title={t('next_passes.live_or_next_30_minutes_alt_3', { defaultValue: 'Live or next 30 minutes (Alt+3)' })}>
                             <span>
                                 <Button
                                     size="small"
                                     variant={quickFilterPreset === 'next30' ? 'contained' : 'outlined'}
                                     onClick={() => handleQuickPreset('next30')}
                                     sx={quickFilterButtonSx}
-                                    aria-label="Next 30 minutes"
+                                    aria-label={t('next_passes.next_30_minutes', { defaultValue: 'Next 30 minutes' })}
                                 >
                                     {useIconQuickFilters ? <AccessTimeFilledIcon sx={{ fontSize: isTightHeader ? '0.82rem' : '0.9rem' }} /> : 'Next 30m'}
                                 </Button>
                             </span>
                         </Tooltip>
-                        <Tooltip title="Highest elevation first (Alt+4)">
+                        <Tooltip title={t('next_passes.highest_elevation_first_alt_4', { defaultValue: 'Highest elevation first (Alt+4)' })}>
                             <span>
                                 <Button
                                     size="small"
                                     variant={quickFilterPreset === 'highEl' ? 'contained' : 'outlined'}
                                     onClick={() => handleQuickPreset('highEl')}
                                     sx={quickFilterButtonSx}
-                                    aria-label="Highest elevation first"
+                                    aria-label={t('next_passes.highest_elevation_first', { defaultValue: 'Highest elevation first' })}
                                 >
                                     {useIconQuickFilters ? <ArrowUpwardRoundedIcon sx={{ fontSize: isTightHeader ? '0.82rem' : '0.9rem' }} /> : 'High El'}
                                 </Button>
@@ -1417,7 +1417,7 @@ const NextPassesIsland = React.memo(function NextPassesIsland() {
                                 </IconButton>
                             </span>
                         </Tooltip>
-                        <Tooltip title="Refresh passes (force recalculate)">
+                        <Tooltip title={t('next_passes.refresh_passes_force_recalculate', { defaultValue: 'Refresh passes (force recalculate)' })}>
                             <span>
                                 <IconButton
                                     size="small"
@@ -1464,10 +1464,10 @@ const NextPassesIsland = React.memo(function NextPassesIsland() {
                                 }}
                             >
                                 <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                                    No targets configured
+                                    {t('next_passes.no_targets_configured', { defaultValue: 'No targets configured' })}
                                 </Typography>
                                 <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                                    Add a target to load upcoming passes and visibility windows.
+                                    {t('next_passes.add_a_target_to_load_upcoming_passes_and_visibility_wind', { defaultValue: 'Add a target to load upcoming passes and visibility windows.' })}
                                 </Typography>
                             </Box>
                         </Box>

@@ -45,6 +45,7 @@ import { Download, Upload, Backup } from '@mui/icons-material';
 import { v4 as uuidv4 } from 'uuid';
 import { useSocket } from '../../common/socket.jsx';
 import { toast } from '../../../utils/toast-with-timestamp.jsx';
+import { useTranslation } from 'react-i18next';
 
 const FULL_RESTORE_MAX_FILE_SIZE_BYTES = 1024 * 1024 * 1024;
 const FULL_RESTORE_MAX_FILE_SIZE_MB = FULL_RESTORE_MAX_FILE_SIZE_BYTES / (1024 * 1024);
@@ -79,6 +80,7 @@ const uploadFullRestore = (file, dropTables, onUploadProgress) => new Promise((r
 });
 
 const DatabaseBackupCard = () => {
+    const { t } = useTranslation('settings');
     const { socket } = useSocket();
     const [tables, setTables] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -343,19 +345,19 @@ const DatabaseBackupCard = () => {
     return (
         <>
             <Typography variant="h6" gutterBottom>
-                Database Backup & Restore
+                {t('database_backup_card.database_backup_restore', { defaultValue: 'Database Backup & Restore' })}
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                Manage full database backups and individual table operations
+                {t('database_backup_card.manage_full_database_backups_and_individual_table_operat', { defaultValue: 'Manage full database backups and individual table operations' })}
             </Typography>
 
                     {/* Full Database Backup/Restore Section */}
                     <Box sx={{ mb: 3 }}>
                         <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-                            Full Database Operations
+                            {t('database_backup_card.full_database_operations', { defaultValue: 'Full Database Operations' })}
                         </Typography>
                         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                            Create or restore complete database backups including schema and all data
+                            {t('database_backup_card.create_or_restore_complete_database_backups_including_sc', { defaultValue: 'Create or restore complete database backups including schema and all data' })}
                         </Typography>
 
                         <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
@@ -366,7 +368,7 @@ const DatabaseBackupCard = () => {
                                 onClick={handleFullBackup}
                                 disabled={loading || fullBackup.isRunning}
                             >
-                                Full Database Backup
+                                {t('database_backup_card.full_database_backup', { defaultValue: 'Full Database Backup' })}
                             </Button>
                             <Button
                                 variant="contained"
@@ -375,7 +377,7 @@ const DatabaseBackupCard = () => {
                                 onClick={handleFullRestoreOpen}
                                 disabled={loading || fullBackup.isRunning}
                             >
-                                Full Database Restore
+                                {t('database_backup_card.full_database_restore', { defaultValue: 'Full Database Restore' })}
                             </Button>
                         </Box>
                     </Box>
@@ -385,14 +387,14 @@ const DatabaseBackupCard = () => {
                     {/* Individual Table Operations Section */}
                     <Box>
                         <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-                            Individual Table Operations
+                            {t('database_backup_card.individual_table_operations', { defaultValue: 'Individual Table Operations' })}
                         </Typography>
                         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                            Backup or restore specific tables (data only, no schema)
+                            {t('database_backup_card.backup_or_restore_specific_tables_data_only_no_schema', { defaultValue: 'Backup or restore specific tables (data only, no schema)' })}
                         </Typography>
 
                         <Alert severity="info" sx={{ mb: 2 }}>
-                            Table backups contain only INSERT statements (data). Schema is NOT included.
+                            {t('database_backup_card.table_backups_contain_only_insert_statements_data_schema', { defaultValue: 'Table backups contain only INSERT statements (data). Schema is NOT included.' })}
                         </Alert>
 
                         {loading ? (
@@ -404,9 +406,9 @@ const DatabaseBackupCard = () => {
                                 <Table size="small">
                                     <TableHead>
                                         <TableRow>
-                                            <TableCell>Table Name</TableCell>
-                                            <TableCell align="center">Row Count</TableCell>
-                                            <TableCell align="right">Actions</TableCell>
+                                            <TableCell>{t('database_backup_card.table_name', { defaultValue: 'Table Name' })}</TableCell>
+                                            <TableCell align="center">{t('database_backup_card.row_count', { defaultValue: 'Row Count' })}</TableCell>
+                                            <TableCell align="right">{t('database_backup_card.actions', { defaultValue: 'Actions' })}</TableCell>
                                         </TableRow>
                                     </TableHead>
                                     <TableBody>
@@ -437,7 +439,7 @@ const DatabaseBackupCard = () => {
                                                         sx={{ mr: 1 }}
                                                         disabled={fullBackup.isRunning}
                                                     >
-                                                        Backup
+                                                        {t('database_backup_card.backup', { defaultValue: 'Backup' })}
                                                     </Button>
                                                     <Button
                                                         size="small"
@@ -446,7 +448,7 @@ const DatabaseBackupCard = () => {
                                                         color="warning"
                                                         disabled={fullBackup.isRunning}
                                                     >
-                                                        Restore
+                                                        {t('database_backup_card.restore', { defaultValue: 'Restore' })}
                                                     </Button>
                                                 </TableCell>
                                             </TableRow>
@@ -458,11 +460,11 @@ const DatabaseBackupCard = () => {
                     </Box>
 
             <Dialog open={restoreDialog.open} onClose={() => setRestoreDialog({ open: false, table: null })}>
-                <DialogTitle>Restore Table: {restoreDialog.table}</DialogTitle>
+                <DialogTitle>{t('database_backup_card.restore_table', { defaultValue: 'Restore Table:' })} {restoreDialog.table}</DialogTitle>
                 <DialogContent>
                     <Box sx={{ minWidth: 400 }}>
                         <Alert severity="warning" sx={{ mb: 2 }}>
-                            This operation will modify the database. Make sure you have a backup!
+                            {t('database_backup_card.this_operation_will_modify_the_database_make_sure_you_ha', { defaultValue: 'This operation will modify the database. Make sure you have a backup!' })}
                         </Alert>
 
                         <FormControlLabel
@@ -472,7 +474,7 @@ const DatabaseBackupCard = () => {
                                     onChange={(e) => setDeleteBeforeRestore(e.target.checked)}
                                 />
                             }
-                            label="Delete all rows before restoring"
+                            label={t('database_backup_card.delete_all_rows_before_restoring', { defaultValue: 'Delete all rows before restoring' })}
                         />
 
                         <Box sx={{ mt: 2 }}>
@@ -481,7 +483,7 @@ const DatabaseBackupCard = () => {
                                 component="label"
                                 fullWidth
                             >
-                                Select SQL File
+                                {t('database_backup_card.select_sql_file', { defaultValue: 'Select SQL File' })}
                                 <input
                                     type="file"
                                     hidden
@@ -491,7 +493,7 @@ const DatabaseBackupCard = () => {
                             </Button>
                             {selectedFile && (
                                 <Typography variant="body2" sx={{ mt: 1 }}>
-                                    Selected: {selectedFile.name}
+                                    {t('database_backup_card.selected', { defaultValue: 'Selected:' })} {selectedFile.name}
                                 </Typography>
                             )}
                         </Box>
@@ -499,7 +501,7 @@ const DatabaseBackupCard = () => {
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={() => setRestoreDialog({ open: false, table: null })}>
-                        Cancel
+                        {t('database_backup_card.cancel', { defaultValue: 'Cancel' })}
                     </Button>
                     <Button
                         onClick={handleRestoreConfirm}
@@ -507,30 +509,27 @@ const DatabaseBackupCard = () => {
                         color="warning"
                         disabled={!selectedFile}
                     >
-                        Restore
+                        {t('database_backup_card.restore', { defaultValue: 'Restore' })}
                     </Button>
                 </DialogActions>
             </Dialog>
 
             {/* Full Database Restore Dialog */}
             <Dialog open={fullRestoreDialog} onClose={() => setFullRestoreDialog(false)} maxWidth="sm" fullWidth>
-                <DialogTitle>Full Database Restore</DialogTitle>
+                <DialogTitle>{t('database_backup_card.full_database_restore', { defaultValue: 'Full Database Restore' })}</DialogTitle>
                 <DialogContent>
                     <Box sx={{ minWidth: 400, pt: 2.5 }}>
                         <Alert severity="error" sx={{ mb: 2 }}>
-                            <strong>⚠️ DESTRUCTIVE OPERATION!</strong><br />
-                            This will replace your entire database with the backup file.
-                            All current data will be lost if "Drop existing tables" is checked.
-                            Make sure you have a recent backup before proceeding! After restoring,
-                            sign in with an administrator account from the restored database.
+                            <strong>{t('database_backup_card.destructive_operation', { defaultValue: '⚠️ DESTRUCTIVE OPERATION!' })}</strong><br />
+                            {t('database_backup_card.this_will_replace_your_entire_database_with_the_backup_f', { defaultValue: 'This will replace your entire database with the backup file.\n                            All current data will be lost if "Drop existing tables" is checked.\n                            Make sure you have a recent backup before proceeding! After restoring,\n                            sign in with an administrator account from the restored database.' })}
                         </Alert>
 
                         <Alert severity="info" sx={{ mb: 2 }}>
-                            The backup file must be a full database backup containing both schema (CREATE TABLE statements) and data (INSERT statements).
+                            {t('database_backup_card.the_backup_file_must_be_a_full_database_backup_containin', { defaultValue: 'The backup file must be a full database backup containing both schema (CREATE TABLE statements) and data (INSERT statements).' })}
                         </Alert>
 
                         <Alert severity="info" sx={{ mb: 2 }}>
-                            Maximum full restore file size: {FULL_RESTORE_MAX_FILE_SIZE_MB} MB.
+                            {t('database_backup_card.maximum_full_restore_file_size', { defaultValue: 'Maximum full restore file size:' })} {FULL_RESTORE_MAX_FILE_SIZE_MB} {t('database_backup_card.mb', { defaultValue: 'MB.' })}
                         </Alert>
 
                         <FormControlLabel
@@ -540,7 +539,7 @@ const DatabaseBackupCard = () => {
                                     onChange={(e) => setDropTables(e.target.checked)}
                                 />
                             }
-                            label="Drop existing tables before restore (recommended)"
+                            label={t('database_backup_card.drop_existing_tables_before_restore_recommended', { defaultValue: 'Drop existing tables before restore (recommended)' })}
                         />
 
                         <Box sx={{ mt: 2 }}>
@@ -549,7 +548,7 @@ const DatabaseBackupCard = () => {
                                 component="label"
                                 fullWidth
                             >
-                                Select Full Backup SQL File
+                                {t('database_backup_card.select_full_backup_sql_file', { defaultValue: 'Select Full Backup SQL File' })}
                                 <input
                                     type="file"
                                     hidden
@@ -559,7 +558,7 @@ const DatabaseBackupCard = () => {
                             </Button>
                             {fullRestoreFile && (
                                 <Typography variant="body2" sx={{ mt: 1 }}>
-                                    Selected: {fullRestoreFile.name}
+                                    {t('database_backup_card.selected', { defaultValue: 'Selected:' })} {fullRestoreFile.name}
                                 </Typography>
                             )}
                         </Box>
@@ -567,7 +566,7 @@ const DatabaseBackupCard = () => {
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={() => setFullRestoreDialog(false)} disabled={loading}>
-                        Cancel
+                        {t('database_backup_card.cancel', { defaultValue: 'Cancel' })}
                     </Button>
                     <Button
                         onClick={handleFullRestoreConfirm}
@@ -594,14 +593,14 @@ const DatabaseBackupCard = () => {
                 maxWidth="sm"
                 fullWidth
             >
-                <DialogTitle>Creating Full Database Backup</DialogTitle>
+                <DialogTitle>{t('database_backup_card.creating_full_database_backup', { defaultValue: 'Creating Full Database Backup' })}</DialogTitle>
                 <DialogContent>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, pt: 1 }}>
                         <CircularProgress size={28} />
                         <Box sx={{ minWidth: 0 }}>
                             <Typography variant="body1">{backupStatus}</Typography>
                             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                                Large databases can take several minutes. Keep this page open until the download starts.
+                                {t('database_backup_card.large_databases_can_take_several_minutes_keep_this_page_', { defaultValue: 'Large databases can take several minutes. Keep this page open until the download starts.' })}
                             </Typography>
                         </Box>
                     </Box>
@@ -630,7 +629,7 @@ const DatabaseBackupCard = () => {
                 <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                     <CircularProgress color="inherit" size={60} />
                     <Typography variant="h6" sx={{ mt: 2 }}>
-                        Reloading application...
+                        {t('database_backup_card.reloading_application', { defaultValue: 'Reloading application...' })}
                     </Typography>
                 </Box>
             </Backdrop>

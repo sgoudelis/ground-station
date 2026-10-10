@@ -98,9 +98,10 @@ const buildSettings = ({
     initialShowTooltip,
     initialShowGrid,
     normalizeMapEngineValue = defaultNormalizeMapEngine,
+    t,
 }) => {
     const mapEngine = normalizeMapEngineValue(initialMapEngine);
-    const tileLayerID = resolveCompatibleTileLayerId(initialTileLayerID, mapEngine);
+    const tileLayerID = resolveCompatibleTileLayerId(initialTileLayerID, mapEngine, t);
     return {
         lockOnTarget: Boolean(initialLockOnTarget),
         enableMapDragging: Boolean(initialEnableMapDragging),
@@ -335,6 +336,7 @@ const MapSettingsIsland = ({ initialLockOnTarget, initialEnableMapDragging, init
             initialShowTooltip,
             initialShowGrid,
             normalizeMapEngineValue,
+            t,
         }),
         [
             initialLockOnTarget,
@@ -380,6 +382,7 @@ const MapSettingsIsland = ({ initialLockOnTarget, initialEnableMapDragging, init
             initialShowTooltip: defaultSettings?.showTooltip,
             initialShowGrid: defaultSettings?.showGrid,
             normalizeMapEngineValue,
+            t,
         }),
         [defaultSettings, normalizeMapEngineValue]
     );
@@ -411,23 +414,23 @@ const MapSettingsIsland = ({ initialLockOnTarget, initialEnableMapDragging, init
     }, [draftSettings]);
 
     const selectedLayer = useMemo(
-        () => getTileLayerById(draftSettings.tileLayerID, { mapEngine: draftSettings.mapEngine }),
-        [draftSettings.mapEngine, draftSettings.tileLayerID]
+        () => getTileLayerById(draftSettings.tileLayerID, { mapEngine: draftSettings.mapEngine, t }),
+        [draftSettings.mapEngine, draftSettings.tileLayerID, t]
     );
     const isPlanetariumEngine = draftSettings.mapEngine === 'planetarium';
 
     const availableTileLayers = useMemo(
-        () => getTileLayersForEngine(draftSettings.mapEngine),
-        [draftSettings.mapEngine]
+        () => getTileLayersForEngine(draftSettings.mapEngine, t),
+        [draftSettings.mapEngine, t]
     );
 
     const initialLayer = useMemo(
-        () => getTileLayerById(initialSettings.tileLayerID, { mapEngine: initialSettings.mapEngine }),
-        [initialSettings.mapEngine, initialSettings.tileLayerID]
+        () => getTileLayerById(initialSettings.tileLayerID, { mapEngine: initialSettings.mapEngine, t }),
+        [initialSettings.mapEngine, initialSettings.tileLayerID, t]
     );
 
     useEffect(() => {
-        const compatibleLayerId = resolveCompatibleTileLayerId(draftSettings.tileLayerID, draftSettings.mapEngine);
+        const compatibleLayerId = resolveCompatibleTileLayerId(draftSettings.tileLayerID, draftSettings.mapEngine, t);
         if (compatibleLayerId !== draftSettings.tileLayerID) {
             setDraftSettings((prev) => ({ ...prev, tileLayerID: compatibleLayerId }));
         }
@@ -439,7 +442,7 @@ const MapSettingsIsland = ({ initialLockOnTarget, initialEnableMapDragging, init
 
     const applySettings = async () => {
         const mapEngine = normalizeMapEngineValue(draftSettings.mapEngine);
-        const tileLayerID = resolveCompatibleTileLayerId(draftSettings.tileLayerID, mapEngine);
+        const tileLayerID = resolveCompatibleTileLayerId(draftSettings.tileLayerID, mapEngine, t);
         const sanitizedSettings = {
             ...draftSettings,
             pastOrbitLineColor: normalizeHexColor(draftSettings.pastOrbitLineColor, initialSettings.pastOrbitLineColor),
@@ -526,7 +529,7 @@ const MapSettingsIsland = ({ initialLockOnTarget, initialEnableMapDragging, init
                                 setDraftSettings((prev) => ({
                                     ...prev,
                                     mapEngine: nextMapEngine,
-                                    tileLayerID: resolveCompatibleTileLayerId(prev.tileLayerID, nextMapEngine),
+                                    tileLayerID: resolveCompatibleTileLayerId(prev.tileLayerID, nextMapEngine, t),
                                 }));
                             }}
                         >
@@ -548,7 +551,7 @@ const MapSettingsIsland = ({ initialLockOnTarget, initialEnableMapDragging, init
                                 label={t('map_settings.tile_layer')}
                                 onChange={(e) => setDraftSettings((prev) => ({ ...prev, tileLayerID: e.target.value }))}
                                 renderValue={(value) => {
-                                    const layer = getTileLayerById(value, { mapEngine: draftSettings.mapEngine });
+                                    const layer = getTileLayerById(value, { mapEngine: draftSettings.mapEngine, t });
                                     return (
                                         <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
                                             <Typography variant="body2" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

@@ -1380,7 +1380,7 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay({
                                 onChange={handlePlaybackSeekChange}
                                 onChangeCommitted={handlePlaybackSeekCommit}
                                 size="medium"
-                                aria-label="Playback position"
+                                aria-label={t('waterfall_island.playback_position', { defaultValue: 'Playback position' })}
                                 sx={{
                                     position: 'relative',
                                     zIndex: 2,

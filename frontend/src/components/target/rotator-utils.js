@@ -17,6 +17,17 @@
  *
  */
 
+import i18n from '../../i18n/config';
+
+/**
+ * Module-level translator.
+ *
+ * This module is plain utility code with no React component to obtain a `t` from.
+ * Bind a fixed-namespace translator to the shared i18n instance instead (same
+ * approach as src/config/navigation.jsx and waterfall/vfo-marker/vfo-config.js).
+ */
+const t = i18n.getFixedT(null, 'target');
+
 /**
  * Get the current status of the rotator with color information
  * @param {Object} rotatorData - Rotator data from state
@@ -28,22 +39,22 @@ export function getCurrentStatusofRotator(rotatorData, lastRotatorEvent) {
     // Keys match the abbreviated event names from target-slice.jsx
     const statusMap = {
         'EL-MIN': {
-            text: "Target below minimum elevation",
+            text: t('rotator_utils.target_below_minimum_elevation', { defaultValue: 'Target below minimum elevation' }),
             bgColor: 'error.light',
             fgColor: 'error.dark'
         },
         'EL-MAX': {
-            text: "Target above maximum elevation",
+            text: t('rotator_utils.target_above_maximum_elevation', { defaultValue: 'Target above maximum elevation' }),
             bgColor: 'error.light',
             fgColor: 'error.dark'
         },
         'AZ-MIN': {
-            text: "Target below minimum azimuth",
+            text: t('rotator_utils.target_below_minimum_azimuth', { defaultValue: 'Target below minimum azimuth' }),
             bgColor: 'error.light',
             fgColor: 'error.dark'
         },
         'AZ-MAX': {
-            text: "Target above maximum azimuth",
+            text: t('rotator_utils.target_above_maximum_azimuth', { defaultValue: 'Target above maximum azimuth' }),
             bgColor: 'error.light',
             fgColor: 'error.dark'
         },
@@ -63,7 +74,7 @@ export function getCurrentStatusofRotator(rotatorData, lastRotatorEvent) {
             fgColor: 'info.dark'
         },
         'OOB': {
-            text: "Target below the horizon",
+            text: t('rotator_utils.target_below_the_horizon', { defaultValue: 'Target below the horizon' }),
             bgColor: '#701c49',
             fgColor: '#f8440e'
         }

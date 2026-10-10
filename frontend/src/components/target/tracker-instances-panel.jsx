@@ -2,8 +2,10 @@ import * as React from 'react';
 import { Box, Chip, Stack, Tooltip, Typography } from '@mui/material';
 import CircleIcon from '@mui/icons-material/Circle';
 import { useSelector } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 
 const TrackerInstancesPanel = React.memo(function TrackerInstancesPanel() {
+    const { t } = useTranslation('target');
     const instances = useSelector((state) => state.trackerInstances?.instances || []);
     const activeTrackerId = useSelector((state) => state.targetSatTrack?.trackerId || '');
 
@@ -23,7 +25,7 @@ const TrackerInstancesPanel = React.memo(function TrackerInstancesPanel() {
         >
             <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
                 <Typography variant="caption" sx={{ fontWeight: 700 }}>
-                    Trackers
+                    {t('tracker_instances_panel.trackers', { defaultValue: 'Trackers' })}
                 </Typography>
                 {instances.map((instance, index) => {
                     const trackerId = instance?.tracker_id || 'unknown';

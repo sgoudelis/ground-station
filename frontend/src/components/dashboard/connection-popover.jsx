@@ -254,7 +254,7 @@ function ConnectionStatus() {
                             <Box>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
                                     <Typography variant="caption" color="text.secondary">
-                                        CPU
+                                        {t('connection_popover.cpu', { defaultValue: 'CPU' })}
                                     </Typography>
                                     <Typography variant="caption" sx={{ fontFamily: 'monospace', color: 'text.primary' }}>
                                         {systemInfoRef.current.cpu.usage_percent !== null
@@ -290,7 +290,7 @@ function ConnectionStatus() {
                             <Box>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
                                     <Typography variant="caption" color="text.secondary">
-                                        Memory
+                                        {t('connection_popover.memory', { defaultValue: 'Memory' })}
                                     </Typography>
                                     <Typography variant="caption" sx={{ fontFamily: 'monospace', color: 'text.primary' }}>
                                         {systemInfoRef.current.memory.usage_percent !== null
@@ -326,7 +326,7 @@ function ConnectionStatus() {
                             <Box>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
                                     <Typography variant="caption" color="text.secondary">
-                                        Disk
+                                        {t('connection_popover.disk', { defaultValue: 'Disk' })}
                                     </Typography>
                                     <Typography variant="caption" sx={{ fontFamily: 'monospace', color: 'text.primary' }}>
                                         {systemInfoRef.current.disk.usage_percent !== null
@@ -361,7 +361,7 @@ function ConnectionStatus() {
                             {/* Load Average */}
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 0.5 }}>
                                 <Typography variant="caption" color="text.secondary">
-                                    Load Avg
+                                    {t('connection_popover.load_avg', { defaultValue: 'Load Avg' })}
                                 </Typography>
                                 <Typography variant="caption" sx={{ fontFamily: 'monospace', color: 'text.primary' }}>
                                     {systemInfoRef.current.load_avg
@@ -374,7 +374,7 @@ function ConnectionStatus() {
                             {systemInfoRef.current.temperatures?.cpu_c !== null && (
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <Typography variant="caption" color="text.secondary">
-                                        CPU Temp
+                                        {t('connection_popover.cpu_temp', { defaultValue: 'CPU Temp' })}
                                     </Typography>
                                     <Typography variant="caption" sx={{ fontFamily: 'monospace', color: 'text.primary' }}>
                                         {`${systemInfoRef.current.temperatures.cpu_c.toFixed(0)}°C`}
@@ -401,7 +401,7 @@ function ConnectionStatus() {
                                 }
                             }}
                         >
-                            Open System Topology
+                            {t('connection_popover.open_system_topology', { defaultValue: 'Open System Topology' })}
                         </Button>
                     </Box>
                 </Box>

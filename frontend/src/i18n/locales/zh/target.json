@@ -87,7 +87,8 @@
     "close": "关闭"
   },
   "pass_timeline": {
-    "title": "{{name}} 的过境时间线 - 未来 {{hours}} 小时"
+    "title": "{{name}} 的过境时间线 - 未来 {{hours}} 小时",
+    "refresh_passes_force_recalculate": "刷新过境（强制重新计算）"
   },
   "timeline": {
     "zoomIn": "放大",
@@ -118,7 +119,13 @@
     "connect": "连接",
     "disconnect": "断开",
     "track_radio": "跟踪电台",
-    "stop": "停止"
+    "stop": "停止",
+    "none": "无",
+    "swap_vfo_1_and_vfo_2": "交换 VFO 1 和 VFO 2",
+    "vfo_1": "VFO 1",
+    "vfo_2": "VFO 2",
+    "downlink": "下行：",
+    "uplink": "上行："
   },
   "rotator_control": {
     "title": "旋转器控制",
@@ -139,10 +146,17 @@
     "manual_azimuth": "方位角（{{min}}°–{{max}}°）",
     "manual_elevation": "仰角（{{min}}°–{{max}}°）",
     "move": "移动",
-    "close": "关闭"
+    "close": "关闭",
+    "tracking_lead": "卫星跟踪提前量",
+    "tracking_lead_short": "提前量",
+    "none": "无",
+    "target_offset": "目标偏差",
+    "motion_unconfirmed": "运动状态未确认",
+    "park_command_sent": "已发送停放指令"
   },
   "satellite_search": {
-    "search_label": "搜索卫星（按名称或 NORAD ID）"
+    "search_label": "搜索卫星（按名称或 NORAD ID）",
+    "monitored": "已监控"
   },
   "satellite_dropdown": {
     "label": "卫星"
@@ -231,7 +245,10 @@
       "frequency_violation": "⚠️ 频率违规",
       "no_transmitters": "无可用发射机",
       "no_transmitters_desc": "此卫星没有注册任何发射机。"
-    }
+    },
+    "inverted": "已反转",
+    "unconfirmed": "未确认",
+    "uplink": "上行"
   },
   "view_picker": {
     "label": "视图",
@@ -268,5 +285,143 @@
   "target_search": {
     "retarget_hint": "搜索卫星、任务或天体。选中结果会立即改指当前目标。",
     "search_label": "搜索卫星、任务或天体"
+  },
+  "manual_rotator_dialog": {
+    "applying_rotator_command": "正在应用旋转器指令",
+    "azimuth_dial": "方位角拨盘",
+    "elevation_dial": "仰角拨盘",
+    "az": "AZ",
+    "el": "EL"
+  },
+  "target_map_composite_view": {
+    "refresh_target_scene": "刷新目标场景",
+    "select_a_mission_body_target_to_render_the_solar_system_": "选择任务/天体目标以渲染太阳系视口。"
+  },
+  "target_selector_bar": {
+    "add_new_target": "添加新目标",
+    "add_target_slot": "添加目标槽位",
+    "add_target_slot_satellite_mission_or_body": "添加目标槽位（卫星、任务或天体）",
+    "assign_hardware_now_or_leave_as_none": "现在分配硬件，或保留为“无”。",
+    "body_target": "天体目标",
+    "cancel": "取消",
+    "configure_target_and_hardware_in_two_quick_steps": "两步快速配置目标和硬件",
+    "create_target": "创建目标",
+    "delete_target": "删除目标",
+    "deleting_target": "正在删除目标...",
+    "loading_body_catalog": "正在加载天体目录...",
+    "mission_target": "任务目标",
+    "no_rig_control": "无电台控制",
+    "no_rotator_control": "无旋转器控制",
+    "none": "无",
+    "processing_observation": "正在处理观测...",
+    "rig": "电台",
+    "rotator": "旋转器",
+    "satellite_target": "卫星目标",
+    "search_body_name_or_id": "搜索天体名称或 ID",
+    "search_mission_name_or_command": "搜索任务名称或指令",
+    "search_satellite_by_name_or_norad_id": "按名称或 NORAD ID 搜索卫星",
+    "select_a_target_type_and_choose_a_satellite_mission_or_b": "选择目标类型，然后选择卫星、任务或天体。",
+    "target_type": "目标类型",
+    "this_will_remove_the_target_tracking_state_and_stop_its_": "这将移除目标的跟踪状态并停止其跟踪进程。",
+    "are_you_sure_you_want_to_abort_the_observation": "您确定要中止观测",
+    "are_you_sure_you_want_to_stop_the_observation": "您确定要停止观测",
+    "body": "天体",
+    "mission": "任务",
+    "satellite": "卫星",
+    "step_1_target": "步骤 1 · 目标",
+    "step_2_hardware_optional": "步骤 2 · 硬件（可选）",
+    "no_rotator": "无旋转器",
+    "rotator_disconnected": "旋转器已断开",
+    "rotator_parked": "旋转器已停放",
+    "rotator_out_of_bounds": "旋转器超出范围",
+    "below_minimum_elevation": "低于最低仰角",
+    "rotator_slewing": "旋转器转动中",
+    "rotator_tracking": "旋转器跟踪中",
+    "rotator_stopped": "旋转器已停止",
+    "rotator_motion_unconfirmed": "旋转器运动未确认",
+    "rotator_connected": "旋转器已连接",
+    "rotator_status_unknown": "旋转器状态未知",
+    "no_rig": "无电台",
+    "rig_disconnected": "电台已断开",
+    "rig_tracking": "电台跟踪中",
+    "rig_stopped": "电台已停止",
+    "rig_connected": "电台已连接",
+    "rig_status_unknown": "电台状态未知"
+  },
+  "target_sky_planetarium_view": {
+    "loading_planetarium_vectors": "正在加载星空视图矢量...",
+    "refresh_target_scene": "刷新目标场景"
+  },
+  "tracker_instances_panel": {
+    "trackers": "跟踪器"
+  },
+  "target_earth_maplibre_view": {
+    "home": "地面站",
+    "moon": "月球",
+    "sun": "太阳"
+  },
+  "target_info_island": {
+    "added_to_db": "添加到数据库",
+    "altitude": "高度",
+    "altitude_kilometres": "高度（千米）",
+    "az": "AZ",
+    "azimuth": "方位角",
+    "cache": "缓存",
+    "citation": "引用",
+    "close": "关闭",
+    "data_source": "数据源",
+    "distance_from_sun": "距太阳距离",
+    "edit_details": "编辑详情",
+    "edit_transmitters": "编辑发射机",
+    "el": "EL",
+    "elevation": "仰角",
+    "last_refresh": "上次刷新",
+    "launched": "已发射",
+    "light_time": "光行时",
+    "line_1": "第1行",
+    "line_2": "第2行",
+    "link": "链接 ↗",
+    "more": "更多",
+    "projection": "投影",
+    "real_time_position": "实时位置",
+    "rig": "电台",
+    "rig_state": "电台状态",
+    "rotator": "旋转器",
+    "rotator_state": "旋转器状态",
+    "samples": "采样数",
+    "source": "来源",
+    "source_mode": "来源模式",
+    "speed": "速率",
+    "speed_kilometres_per_second": "速率（千米/秒）",
+    "stale": "过期",
+    "target_geometry": "目标几何",
+    "target_info": "目标信息",
+    "target_key": "目标键",
+    "target_metadata": "目标元数据",
+    "target_type": "目标类型",
+    "tle_data": "TLE 数据",
+    "tracking_link": "跟踪链接",
+    "updated": "已更新",
+    "velocity": "速度",
+    "velocity_kilometres_per_second": "速度（千米/秒）",
+    "view_full_details": "查看完整详情",
+    "visibility": "可见性",
+    "waiting_for_updated_mission_body_telemetry": "正在等待更新的任务/天体遥测。",
+    "website": "网站"
+  },
+  "target_view_router": {
+    "add_a_target_to_view_the_planetarium_or_globe": "添加目标以查看星空视图或地球仪。",
+    "no_targets_configured": "未配置目标"
+  },
+  "rotator_utils": {
+    "target_below_minimum_elevation": "目标低于最低仰角",
+    "target_above_maximum_elevation": "目标高于最高仰角",
+    "target_below_minimum_azimuth": "目标低于最小方位角",
+    "target_above_maximum_azimuth": "目标高于最大方位角",
+    "target_below_the_horizon": "目标位于地平线以下"
+  },
+  "tracker_command_state": {
+    "not_connected_to_backend": "未连接后端",
+    "acknowledgement_missing_checking_command_status": "未收到确认；正在检查指令状态"
   }
 }

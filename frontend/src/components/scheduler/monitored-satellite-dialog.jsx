@@ -67,7 +67,7 @@ import {
 } from './scheduler-slice.jsx';
 import { useSocket } from '../common/socket.jsx';
 import { SatelliteSelector } from './satellite-selector.jsx';
-import { SATDUMP_PIPELINES, getDecoderParameters, getDecoderDefaultParameters } from '../waterfall/decoder-parameters.js';
+import { getSatdumpPipelines, getDecoderParameters, getDecoderDefaultParameters } from '../waterfall/decoder-parameters.js';
 import { DecoderConfigSuggestion } from './decoder-config-suggestion.jsx';
 
 const DECODER_TYPES = [
@@ -187,8 +187,8 @@ const getDecimationOptions = (sampleRate) => {
     return options.length > 0 ? options : [1];
 };
 
-const getDefaultSatdumpPipeline = () => {
-    const group = Object.values(SATDUMP_PIPELINES).find((entry) => entry?.pipelines?.length);
+const getDefaultSatdumpPipeline = (t) => {
+    const group = Object.values(getSatdumpPipelines(t)).find((entry) => entry?.pipelines?.length);
     return group?.pipelines?.[0]?.value || '';
 };
 
@@ -230,7 +230,9 @@ const groupTransmittersByBand = (transmitters) => {
 
 export default function MonitoredSatelliteDialog() {
     const dispatch = useDispatch();
-    const { t } = useTranslation('common');
+    // 观测调度对话框复用 decoder-parameters.js，其键位于 waterfall 命名空间，
+    // 用命名空间回退数组让本组件的 common 键与共享模块的 waterfall 键都能解析
+    const { t } = useTranslation(['common', 'waterfall']);
     const { socket } = useSocket();
     const open = useSelector((state) => state.scheduler?.monitoredSatelliteDialogOpen || false);
     const selectedMonitoredSatellite = useSelector((state) => state.scheduler?.selectedMonitoredSatellite);
@@ -622,7 +624,7 @@ export default function MonitoredSatelliteDialog() {
                         decimation_factor: 1,
                         storage_format: 'cf32_le',
                         enable_post_processing: false,
-                        post_process_pipeline: getDefaultSatdumpPipeline(),
+                        post_process_pipeline: getDefaultSatdumpPipeline(t),
                         delete_after_post_processing: false,
                         retain_iq_on_satdump_failure: true,
                     },
@@ -680,7 +682,7 @@ export default function MonitoredSatelliteDialog() {
                     config: {
                         ...currentTask.config,
                         decoder_type: value,
-                        parameters: getDecoderDefaultParameters(value),
+                        parameters: getDecoderDefaultParameters(value, t),
                         bandwidth: nextBandwidth,
                     },
                 };
@@ -1549,7 +1551,7 @@ export default function MonitoredSatelliteDialog() {
                                             {bandwidthValidation.message}
                                         </Typography>
                                         <Typography variant="caption" display="block" sx={{ fontFamily: 'monospace', mt: 0.5 }}>
-                                            ({(bandwidthValidation.maxFreq / 1000000).toFixed(3)} MHz - {(bandwidthValidation.minFreq / 1000000).toFixed(3)} MHz = {(bandwidthValidation.requiredBandwidth / 1000000).toFixed(2)} MHz)
+                                            ({(bandwidthValidation.maxFreq / 1000000).toFixed(3)} {t('monitored_satellite_dialog.mhz', { defaultValue: 'MHz -' })} {(bandwidthValidation.minFreq / 1000000).toFixed(3)} {t('monitored_satellite_dialog.mhz_2', { defaultValue: 'MHz =' })} {(bandwidthValidation.requiredBandwidth / 1000000).toFixed(2)} {t('monitored_satellite_dialog.mhz_3', { defaultValue: 'MHz)' })}
                                         </Typography>
                                     </Box>
                                 )}
@@ -1997,7 +1999,7 @@ export default function MonitoredSatelliteDialog() {
                                                     <Stack spacing={2}>
                                                     {task.type === 'decoder' && (() => {
                                                         const decoderType = task.config.decoder_type;
-                                                        const decoderParams = getDecoderParameters(decoderType);
+                                                        const decoderParams = getDecoderParameters(decoderType, t);
                                                         const currentParams = task.config.parameters || {};
 
                                                         return (
@@ -2619,7 +2621,7 @@ export default function MonitoredSatelliteDialog() {
                                                                                 const enabled = e.target.checked;
                                                                                 handleTaskConfigChange(index, 'enable_post_processing', enabled);
                                                                                 if (enabled && !task.config.post_process_pipeline) {
-                                                                                    handleTaskConfigChange(index, 'post_process_pipeline', getDefaultSatdumpPipeline());
+                                                                                    handleTaskConfigChange(index, 'post_process_pipeline', getDefaultSatdumpPipeline(t));
                                                                                 }
                                                                                 if (!enabled) {
                                                                                     handleTaskConfigChange(index, 'delete_after_post_processing', false);
@@ -2637,13 +2639,13 @@ export default function MonitoredSatelliteDialog() {
                                                                 >
                                                                     <InputLabel>{t('scheduler_dialogs.shared.satdump_pipeline_label')}</InputLabel>
                                                                     <Select
-                                                                        value={task.config.post_process_pipeline || getDefaultSatdumpPipeline()}
+                                                                        value={task.config.post_process_pipeline || getDefaultSatdumpPipeline(t)}
                                                                         onChange={(e) =>
                                                                             handleTaskConfigChange(index, 'post_process_pipeline', e.target.value)
                                                                         }
                                                                         label={t('scheduler_dialogs.shared.satdump_pipeline_label')}
                                                                     >
-                                                                        {Object.entries(SATDUMP_PIPELINES).map(([key, group]) => {
+                                                                        {Object.entries(getSatdumpPipelines(t)).map(([key, group]) => {
                                                                             const pipelines = group?.pipelines || [];
                                                                             if (pipelines.length === 0) return null;
                                                                             const label = group.label || key;

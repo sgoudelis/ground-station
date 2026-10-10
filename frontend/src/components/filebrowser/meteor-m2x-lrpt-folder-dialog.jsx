@@ -47,6 +47,7 @@ import FolderIcon from '@mui/icons-material/Folder';
 import ZoomableImage from '../common/zoomable-image.jsx';
 import { useUserTimeSettings } from '../../hooks/useUserTimeSettings.jsx';
 import { formatDateTime } from '../../utils/date-time.js';
+import { useTranslation } from 'react-i18next';
 
 function TabPanel({ children, value, index }) {
     return (
@@ -94,6 +95,7 @@ function getImageTitle(filename) {
 }
 
 export default function MeteorM2xLrptFolderDialog({ open, onClose, folder }) {
+    const { t } = useTranslation('filebrowser');
     const { timezone, locale } = useUserTimeSettings();
     const [activeTab, setActiveTab] = useState(0);
     const [selectedImage, setSelectedImage] = useState(null);
@@ -123,12 +125,12 @@ export default function MeteorM2xLrptFolderDialog({ open, onClose, folder }) {
     ) || [];
 
     const categories = [
-        { label: 'RGB Composites', images: rgbComposites },
-        { label: 'Map Projections', images: mapProjections },
+        { label: t('meteor_m2x_lrpt_folder_dialog.rgb_composites', { defaultValue: 'RGB Composites' }), images: rgbComposites },
+        { label: t('meteor_m2x_lrpt_folder_dialog.map_projections', { defaultValue: 'Map Projections' }), images: mapProjections },
         { label: 'Corrected', images: corrected },
-        { label: 'IR Images', images: irImages },
-        { label: 'Raw Channels', images: rawChannels },
-        { label: 'All Images', images: folder.images || [] },
+        { label: t('meteor_m2x_lrpt_folder_dialog.ir_images', { defaultValue: 'IR Images' }), images: irImages },
+        { label: t('meteor_m2x_lrpt_folder_dialog.raw_channels', { defaultValue: 'Raw Channels' }), images: rawChannels },
+        { label: t('meteor_m2x_lrpt_folder_dialog.all_images', { defaultValue: 'All Images' }), images: folder.images || [] },
         { label: 'Metadata', images: null, isMetadata: true },
     ].filter(cat => cat.isMetadata || (cat.images && cat.images.length > 0));
 
@@ -225,7 +227,7 @@ export default function MeteorM2xLrptFolderDialog({ open, onClose, folder }) {
                         <Box sx={{ textAlign: 'center', py: 8 }}>
                             <FolderIcon sx={{ fontSize: 80, color: 'text.disabled', mb: 2 }} />
                             <Typography variant="h6" color="text.secondary">
-                                No images found in this folder
+                                {t('meteor_m2x_lrpt_folder_dialog.no_images_found_in_this_folder', { defaultValue: 'No images found in this folder' })}
                             </Typography>
                         </Box>
                     ) : (
@@ -236,17 +238,17 @@ export default function MeteorM2xLrptFolderDialog({ open, onClose, folder }) {
                                         {/* Dataset Information */}
                                         <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
                                             <SatelliteAltIcon color="primary" />
-                                            Dataset Information
+                                            {t('meteor_m2x_lrpt_folder_dialog.dataset_information', { defaultValue: 'Dataset Information' })}
                                         </Typography>
                                         <TableContainer component={Paper} sx={{ mb: 3 }}>
                                             <Table size="small">
                                                 <TableBody>
                                                     <TableRow>
-                                                        <TableCell sx={{ fontWeight: 600 }}>Satellite</TableCell>
+                                                        <TableCell sx={{ fontWeight: 600 }}>{t('meteor_m2x_lrpt_folder_dialog.satellite', { defaultValue: 'Satellite' })}</TableCell>
                                                         <TableCell>{folder.metadata?.satellite || folder.satellite_name || 'Unknown'}</TableCell>
                                                     </TableRow>
                                                     <TableRow>
-                                                        <TableCell sx={{ fontWeight: 600 }}>Timestamp</TableCell>
+                                                        <TableCell sx={{ fontWeight: 600 }}>{t('meteor_m2x_lrpt_folder_dialog.timestamp', { defaultValue: 'Timestamp' })}</TableCell>
                                                         <TableCell>
                                                             {folder.metadata?.timestamp
                                                                 ? formatDateTime(folder.metadata.timestamp * 1000, { timezone, locale })
@@ -254,27 +256,27 @@ export default function MeteorM2xLrptFolderDialog({ open, onClose, folder }) {
                                                         </TableCell>
                                                     </TableRow>
                                                     <TableRow>
-                                                        <TableCell sx={{ fontWeight: 600 }}>Products</TableCell>
+                                                        <TableCell sx={{ fontWeight: 600 }}>{t('meteor_m2x_lrpt_folder_dialog.products', { defaultValue: 'Products' })}</TableCell>
                                                         <TableCell>{folder.products?.join(', ') || 'N/A'}</TableCell>
                                                     </TableRow>
                                                     <TableRow>
-                                                        <TableCell sx={{ fontWeight: 600 }}>Pipeline</TableCell>
+                                                        <TableCell sx={{ fontWeight: 600 }}>{t('meteor_m2x_lrpt_folder_dialog.pipeline', { defaultValue: 'Pipeline' })}</TableCell>
                                                         <TableCell>{folder.pipeline || 'N/A'}</TableCell>
                                                     </TableRow>
                                                     <TableRow>
-                                                        <TableCell sx={{ fontWeight: 600 }}>Total Images</TableCell>
+                                                        <TableCell sx={{ fontWeight: 600 }}>{t('meteor_m2x_lrpt_folder_dialog.total_images', { defaultValue: 'Total Images' })}</TableCell>
                                                         <TableCell>{folder.image_count}</TableCell>
                                                     </TableRow>
                                                     <TableRow>
-                                                        <TableCell sx={{ fontWeight: 600 }}>Total Size</TableCell>
+                                                        <TableCell sx={{ fontWeight: 600 }}>{t('meteor_m2x_lrpt_folder_dialog.total_size', { defaultValue: 'Total Size' })}</TableCell>
                                                         <TableCell>{formatBytes(folder.size)}</TableCell>
                                                     </TableRow>
                                                     <TableRow>
-                                                        <TableCell sx={{ fontWeight: 600 }}>CADU Data</TableCell>
+                                                        <TableCell sx={{ fontWeight: 600 }}>{t('meteor_m2x_lrpt_folder_dialog.cadu_data', { defaultValue: 'CADU Data' })}</TableCell>
                                                         <TableCell>{folder.has_cadu ? 'Yes' : 'No'}</TableCell>
                                                     </TableRow>
                                                     <TableRow>
-                                                        <TableCell sx={{ fontWeight: 600 }}>Created</TableCell>
+                                                        <TableCell sx={{ fontWeight: 600 }}>{t('meteor_m2x_lrpt_folder_dialog.created', { defaultValue: 'Created' })}</TableCell>
                                                         <TableCell>{formatDateTime(folder.created, { timezone, locale })}</TableCell>
                                                     </TableRow>
                                                 </TableBody>
@@ -286,20 +288,20 @@ export default function MeteorM2xLrptFolderDialog({ open, onClose, folder }) {
                                             <>
                                                 <Typography variant="h6" sx={{ mb: 2, mt: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
                                                     <ImageIcon color="success" />
-                                                    Telemetry Data
+                                                    {t('meteor_m2x_lrpt_folder_dialog.telemetry_data', { defaultValue: 'Telemetry Data' })}
                                                 </Typography>
                                                 <TableContainer component={Paper}>
                                                     <Table size="small">
                                                         <TableBody>
                                                             {folder.telemetry.msu_mr_id !== undefined && (
                                                                 <TableRow>
-                                                                    <TableCell sx={{ fontWeight: 600 }}>MSU-MR ID</TableCell>
+                                                                    <TableCell sx={{ fontWeight: 600 }}>{t('meteor_m2x_lrpt_folder_dialog.msu_mr_id', { defaultValue: 'MSU-MR ID' })}</TableCell>
                                                                     <TableCell>{folder.telemetry.msu_mr_id}</TableCell>
                                                                 </TableRow>
                                                             )}
                                                             {folder.telemetry.msu_mr_set && (
                                                                 <TableRow>
-                                                                    <TableCell sx={{ fontWeight: 600 }}>MSU-MR Set</TableCell>
+                                                                    <TableCell sx={{ fontWeight: 600 }}>{t('meteor_m2x_lrpt_folder_dialog.msu_mr_set', { defaultValue: 'MSU-MR Set' })}</TableCell>
                                                                     <TableCell>{folder.telemetry.msu_mr_set}</TableCell>
                                                                 </TableRow>
                                                             )}
@@ -403,7 +405,7 @@ export default function MeteorM2xLrptFolderDialog({ open, onClose, folder }) {
                 >
                     {folder.images && folder.images.length > 0 && (
                         <Button onClick={handleDownloadFolder} startIcon={<DownloadIcon />} variant="outlined">
-                            DOWNLOAD ZIP ({folder.image_count})
+                            {t('meteor_m2x_lrpt_folder_dialog.download_zip', { defaultValue: 'DOWNLOAD ZIP (' })}{folder.image_count})
                         </Button>
                     )}
                     <Button
@@ -417,7 +419,7 @@ export default function MeteorM2xLrptFolderDialog({ open, onClose, folder }) {
                             },
                         }}
                     >
-                        Close
+                        {t('meteor_m2x_lrpt_folder_dialog.close', { defaultValue: 'Close' })}
                     </Button>
                 </DialogActions>
             </Dialog>
@@ -513,7 +515,7 @@ export default function MeteorM2xLrptFolderDialog({ open, onClose, folder }) {
                             startIcon={<DownloadIcon />}
                             variant="outlined"
                         >
-                            Download
+                            {t('meteor_m2x_lrpt_folder_dialog.download', { defaultValue: 'Download' })}
                         </Button>
                         <Button
                             onClick={() => setSelectedImage(null)}
@@ -526,7 +528,7 @@ export default function MeteorM2xLrptFolderDialog({ open, onClose, folder }) {
                                 },
                             }}
                         >
-                            Close
+                            {t('meteor_m2x_lrpt_folder_dialog.close', { defaultValue: 'Close' })}
                         </Button>
                     </DialogActions>
                 </Dialog>

@@ -36,7 +36,17 @@
     },
     "below_horizon": "地平线以下",
     "visibility": "可见性",
-    "visible": "可见"
+    "visible": "可见",
+    "all_satellites": "所有卫星",
+    "all_satellites_alt_1": "所有卫星 (Alt+1)",
+    "decayed_satellites": "已衰减卫星",
+    "decayed_satellites_alt_5": "已衰减卫星 (Alt+5)",
+    "rising_satellites": "上升中的卫星",
+    "rising_satellites_alt_3": "上升中的卫星 (Alt+3)",
+    "satellites_with_active_transmitters": "有活跃发射机的卫星",
+    "satellites_with_active_transmitters_alt_4": "有活跃发射机的卫星 (Alt+4)",
+    "visible_satellites": "可见卫星",
+    "visible_satellites_alt_2": "可见卫星 (Alt+2)"
   },
   "satellites_table_settings": {
     "title": "卫星表格设置",
@@ -143,7 +153,8 @@
     "user_groups": "用户定义的卫星分组",
     "tle_groups": "轨道数据源卫星分组",
     "failed_load_groups": "加载卫星分组失败",
-    "none_defined": "未定义"
+    "none_defined": "未定义",
+    "grouping": "分组方式"
   },
   "satellite_info": {
     "title": "卫星信息",
@@ -169,7 +180,11 @@
     "unknown": "未知",
     "currently_targeted": "当前目标",
     "set_as_target": "设为目标",
-    "failed_tracking": "使用旋转器启动跟踪失败"
+    "failed_tracking": "使用旋转器启动跟踪失败",
+    "edit_details": "编辑详情",
+    "edit_transmitters": "编辑发射机",
+    "id": "ID：",
+    "norad": "NORAD："
   },
   "weather": {
     "title": "天气",
@@ -201,5 +216,48 @@
   "weather_errors": {
     "fetch_failed": "无法获取天气数据",
     "failed_to_fetch": "获取天气数据失败"
+  },
+  "earthview_map_maplibre": {
+    "home": "地面站",
+    "moon": "月球",
+    "sun": "太阳"
+  },
+  "next_passes": {
+    "add_a_target_to_load_upcoming_passes_and_visibility_wind": "添加目标以加载即将到来的过境和可见性窗口。",
+    "all_passes": "所有过境",
+    "all_passes_alt_1": "所有过境 (Alt+1)",
+    "highest_elevation_first": "最高仰角优先",
+    "highest_elevation_first_alt_4": "最高仰角优先 (Alt+4)",
+    "live_or_next_30_minutes_alt_3": "实时或未来 30 分钟 (Alt+3)",
+    "live_passes": "实时过境",
+    "live_passes_alt_2": "实时过境 (Alt+2)",
+    "next_30_minutes": "未来 30 分钟",
+    "no_targets_configured": "未配置目标",
+    "refresh_passes_force_recalculate": "刷新过境（强制重新计算）"
+  },
+  "passes_table_settings_dialog": {
+    "reset_values": "重置数值"
+  },
+  "satellite_passes": {
+    "all_passes": "所有过境",
+    "all_passes_alt_1": "所有过境 (Alt+1)",
+    "highest_elevation_first": "最高仰角优先",
+    "highest_elevation_first_alt_4": "最高仰角优先 (Alt+4)",
+    "live_or_next_30_minutes_alt_3": "实时或未来 30 分钟 (Alt+3)",
+    "live_passes": "实时过境",
+    "live_passes_alt_2": "实时过境 (Alt+2)",
+    "next_30_minutes": "未来 30 分钟",
+    "refresh_passes_force_recalculate": "刷新过境（强制重新计算）",
+    "tracked_satellites_only": "仅已跟踪的卫星",
+    "tracked_satellites_only_alt_5": "仅已跟踪的卫星 (Alt+5)"
+  },
+  "satellites_table_settings_dialog": {
+    "reset_values": "重置数值"
+  },
+  "satellite_group_selector_bar": {
+    "falling": "下降中：",
+    "peak": "最高点：",
+    "rising": "上升中：",
+    "select_group": "[选择分组]"
   }
 }

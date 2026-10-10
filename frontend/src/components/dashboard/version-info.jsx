@@ -59,14 +59,14 @@ const VersionInfo = ({ minimal = false }) => {
         // Build tooltip content with system info (static values only)
         const tooltipContent = (
             <Box sx={{ fontSize: '0.75rem', lineHeight: 1.4 }}>
-                <Box><strong>Version:</strong> {data?.version || t('version_info.unknown')}</Box>
-                <Box><strong>Build Date:</strong> {data?.buildDate || t('version_info.unknown')}</Box>
-                <Box><strong>Git Commit:</strong> {data?.gitCommit || t('version_info.unknown')}</Box>
-                <Box sx={{ mt: 0.5 }}><strong>Architecture:</strong> {cpuArch || 'unknown'}</Box>
-                <Box><strong>CPU Cores:</strong> {staticSystemInfo.coresLogical || '?'} ({staticSystemInfo.coresPhysical || '?'} physical)</Box>
-                <Box><strong>Memory (total):</strong> {staticSystemInfo.memTotal ?? '?'}{staticSystemInfo.memTotal != null ? ' GB' : ''}</Box>
-                <Box><strong>Disk (total):</strong> {staticSystemInfo.diskTotal ?? '?'}{staticSystemInfo.diskTotal != null ? ' GB' : ''}</Box>
-                <Box><strong>OS:</strong> {(staticSystemInfo.osSystem || 'unknown')} {(staticSystemInfo.osRelease || '')}</Box>
+                <Box><strong>{t('version_info.version', { defaultValue: 'Version:' })}</strong> {data?.version || t('version_info.unknown')}</Box>
+                <Box><strong>{t('version_info.build_date', { defaultValue: 'Build Date:' })}</strong> {data?.buildDate || t('version_info.unknown')}</Box>
+                <Box><strong>{t('version_info.git_commit', { defaultValue: 'Git Commit:' })}</strong> {data?.gitCommit || t('version_info.unknown')}</Box>
+                <Box sx={{ mt: 0.5 }}><strong>{t('version_info.architecture', { defaultValue: 'Architecture:' })}</strong> {cpuArch || 'unknown'}</Box>
+                <Box><strong>{t('version_info.cpu_cores', { defaultValue: 'CPU Cores:' })}</strong> {staticSystemInfo.coresLogical || '?'} ({staticSystemInfo.coresPhysical || '?'} physical)</Box>
+                <Box><strong>{t('version_info.memory_total', { defaultValue: 'Memory (total):' })}</strong> {staticSystemInfo.memTotal ?? '?'}{staticSystemInfo.memTotal != null ? ' GB' : ''}</Box>
+                <Box><strong>{t('version_info.disk_total', { defaultValue: 'Disk (total):' })}</strong> {staticSystemInfo.diskTotal ?? '?'}{staticSystemInfo.diskTotal != null ? ' GB' : ''}</Box>
+                <Box><strong>{t('version_info.os', { defaultValue: 'OS:' })}</strong> {(staticSystemInfo.osSystem || 'unknown')} {(staticSystemInfo.osRelease || '')}</Box>
             </Box>
         );
 

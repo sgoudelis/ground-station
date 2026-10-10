@@ -17,6 +17,7 @@
  */
 
 import { SvgIcon } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 
 /**
  * Orbit-style icon for orbital data sources.
@@ -73,6 +74,7 @@ export const CelestialSolarIcon = (props) => {
  * Custom icon displaying "VFO" with "1" underneath
  */
 export const VFO1Icon = (props) => {
+    const { t } = useTranslation('common');
     return (
         <SvgIcon {...props}>
             <text
@@ -84,7 +86,7 @@ export const VFO1Icon = (props) => {
                 fontWeight="bold"
                 fontFamily="Roboto, Arial, sans-serif"
             >
-                VFO
+                {t('custom_icons.vfo', { defaultValue: 'VFO' })}
             </text>
             <text
                 x="50%"
@@ -105,6 +107,7 @@ export const VFO1Icon = (props) => {
  * Custom icon displaying "VFO" with "2" underneath
  */
 export const VFO2Icon = (props) => {
+    const { t } = useTranslation('common');
     return (
         <SvgIcon {...props}>
             <text
@@ -116,7 +119,7 @@ export const VFO2Icon = (props) => {
                 fontWeight="bold"
                 fontFamily="Roboto, Arial, sans-serif"
             >
-                VFO
+                {t('custom_icons.vfo', { defaultValue: 'VFO' })}
             </text>
             <text
                 x="50%"
@@ -137,6 +140,7 @@ export const VFO2Icon = (props) => {
  * Custom icon displaying "VFO" with "3" underneath
  */
 export const VFO3Icon = (props) => {
+    const { t } = useTranslation('common');
     return (
         <SvgIcon {...props}>
             <text
@@ -148,7 +152,7 @@ export const VFO3Icon = (props) => {
                 fontWeight="bold"
                 fontFamily="Roboto, Arial, sans-serif"
             >
-                VFO
+                {t('custom_icons.vfo', { defaultValue: 'VFO' })}
             </text>
             <text
                 x="50%"
@@ -169,6 +173,7 @@ export const VFO3Icon = (props) => {
  * Custom icon displaying "VFO" with "4" underneath
  */
 export const VFO4Icon = (props) => {
+    const { t } = useTranslation('common');
     return (
         <SvgIcon {...props}>
             <text
@@ -180,7 +185,7 @@ export const VFO4Icon = (props) => {
                 fontWeight="bold"
                 fontFamily="Roboto, Arial, sans-serif"
             >
-                VFO
+                {t('custom_icons.vfo', { defaultValue: 'VFO' })}
             </text>
             <text
                 x="50%"

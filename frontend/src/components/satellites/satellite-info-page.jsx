@@ -337,7 +337,7 @@ const SatelliteInfoContent = ({
                         {t('satellite_info.delete_confirm_message')}
                     </Typography>
                     <Typography variant="body2" sx={{ mb: 2, fontWeight: 600, color: 'text.secondary' }}>
-                        Satellite to be deleted:
+                        {t('satellite_info_page.satellite_to_be_deleted', { defaultValue: 'Satellite to be deleted:' })}
                     </Typography>
                     <Box sx={{
                         p: 2,
@@ -350,7 +350,7 @@ const SatelliteInfoContent = ({
                         </Typography>
                         <Box sx={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 1, columnGap: 2 }}>
                             <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary', fontWeight: 500 }}>
-                                NORAD ID:
+                                {t('satellite_info_page.norad_id', { defaultValue: 'NORAD ID:' })}
                             </Typography>
                             <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.primary' }}>
                                 {satelliteData.norad_id}
@@ -359,7 +359,7 @@ const SatelliteInfoContent = ({
                             {satelliteData.status && (
                                 <>
                                     <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary', fontWeight: 500 }}>
-                                        Status:
+                                        {t('satellite_info_page.status', { defaultValue: 'Status:' })}
                                     </Typography>
                                     <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.primary' }}>
                                         {betterStatusValue(satelliteData.status)}
@@ -370,7 +370,7 @@ const SatelliteInfoContent = ({
                             {satelliteData.countries && (
                                 <>
                                     <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary', fontWeight: 500 }}>
-                                        Countries:
+                                        {t('satellite_info_page.countries', { defaultValue: 'Countries:' })}
                                     </Typography>
                                     <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.primary' }}>
                                         {renderCountryFlagsCSV(satelliteData.countries)}
@@ -381,10 +381,10 @@ const SatelliteInfoContent = ({
                             {satelliteData.transmitters && satelliteData.transmitters.length > 0 && (
                                 <>
                                     <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary', fontWeight: 500 }}>
-                                        Transmitters:
+                                        {t('satellite_info_page.transmitters', { defaultValue: 'Transmitters:' })}
                                     </Typography>
                                     <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'warning.main', fontWeight: 500 }}>
-                                        {satelliteData.transmitters.length} transmitter(s) will also be deleted
+                                        {satelliteData.transmitters.length} {t('satellite_info_page.transmitter_s_will_also_be_deleted', { defaultValue: 'transmitter(s) will also be deleted' })}
                                     </Typography>
                                 </>
                             )}

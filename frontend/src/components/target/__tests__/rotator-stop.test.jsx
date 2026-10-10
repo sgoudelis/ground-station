@@ -12,7 +12,7 @@ import {resolveRotatorLedStatus} from '../../common/hardware-status.js';
 
 vi.mock('../../common/socket.jsx', () => ({useSocket: vi.fn()}));
 vi.mock('react-i18next', async importOriginal => ({
-    ...await importOriginal(), useTranslation: () => ({t: key => key}),
+    ...await importOriginal(), useTranslation: () => ({t: (key, options) => options?.defaultValue ?? key}),
 }));
 
 describe('rotator Stop recovery', () => {

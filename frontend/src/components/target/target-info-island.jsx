@@ -470,6 +470,7 @@ const TargetInfoIsland = () => {
 
     // Mini circular gauge for angular measurements
     const CircularGauge = ({ value, max, size = 36 }) => {
+        const { t } = useTranslation('target');
         const percentage = (value / max) * 100;
         const circumference = 2 * Math.PI * 13;
         const strokeDashoffset = circumference - (percentage / 100) * circumference;
@@ -581,7 +582,7 @@ const TargetInfoIsland = () => {
                 <Box sx={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%'}}>
                     <Box sx={{display: 'flex', alignItems: 'center'}}>
                         <Typography variant="subtitle2" sx={{fontWeight: 'bold'}}>
-                            Target Info
+                            {t('target_info_island.target_info', { defaultValue: 'Target Info' })}
                         </Typography>
                     </Box>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -680,7 +681,7 @@ const TargetInfoIsland = () => {
                                         ? `${satelliteData['details']['name']}${satelliteData['details']['name_other'] ? ` • ${satelliteData['details']['name_other']}` : ''}`
                                         : "NO DATA"}
                                 </Typography>
-                                <Tooltip title="Edit Details">
+                                <Tooltip title={t('target_info_island.edit_details', { defaultValue: 'Edit Details' })}>
                                     <span>
                                         <IconButton
                                             size="small"
@@ -691,7 +692,7 @@ const TargetInfoIsland = () => {
                                         </IconButton>
                                     </span>
                                 </Tooltip>
-                                <Tooltip title="Edit Transmitters">
+                                <Tooltip title={t('target_info_island.edit_transmitters', { defaultValue: 'Edit Transmitters' })}>
                                     <span>
                                         <IconButton
                                             size="small"
@@ -774,7 +775,7 @@ const TargetInfoIsland = () => {
                         color: 'primary.main',
                         letterSpacing: '0.5px'
                     }}>
-                        Real-Time Position
+                        {t('target_info_island.real_time_position', { defaultValue: 'Real-Time Position' })}
                     </Typography>
                 </Box>
                 <Box sx={responsiveMetricPanelSx}>
@@ -787,9 +788,9 @@ const TargetInfoIsland = () => {
                                 border: '1px solid',
                                 borderColor: 'divider'
                             }}>
-                                <Typography aria-label="Elevation" variant="caption" sx={{ color: 'text.secondary', fontSize: '0.55rem', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', mb: 0.5 }}>
-                                    <span className="target-metric-label-full">Elevation</span>
-                                    <span className="target-metric-label-short">EL</span>
+                                <Typography aria-label={t('target_info_island.elevation', { defaultValue: 'Elevation' })} variant="caption" sx={{ color: 'text.secondary', fontSize: '0.55rem', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', mb: 0.5 }}>
+                                    <span className="target-metric-label-full">{t('target_info_island.elevation', { defaultValue: 'Elevation' })}</span>
+                                    <span className="target-metric-label-short">{t('target_info_island.el', { defaultValue: 'EL' })}</span>
                                 </Typography>
                                 <Typography className="target-metric-value" variant="h4" sx={{ fontWeight: 700, color: 'primary.main', fontFamily: 'monospace', lineHeight: 1, fontSize: '1.5rem', whiteSpace: 'nowrap' }}>
                                     {Number.isFinite(satelliteElevation)
@@ -805,9 +806,9 @@ const TargetInfoIsland = () => {
                                 border: '1px solid',
                                 borderColor: 'divider'
                             }}>
-                                <Typography aria-label="Azimuth" variant="caption" sx={{ color: 'text.secondary', fontSize: '0.55rem', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', mb: 0.5 }}>
-                                    <span className="target-metric-label-full">Azimuth</span>
-                                    <span className="target-metric-label-short">AZ</span>
+                                <Typography aria-label={t('target_info_island.azimuth', { defaultValue: 'Azimuth' })} variant="caption" sx={{ color: 'text.secondary', fontSize: '0.55rem', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', mb: 0.5 }}>
+                                    <span className="target-metric-label-full">{t('target_info_island.azimuth', { defaultValue: 'Azimuth' })}</span>
+                                    <span className="target-metric-label-short">{t('target_info_island.az', { defaultValue: 'AZ' })}</span>
                                 </Typography>
                                 <Typography className="target-metric-value" variant="h4" sx={{ fontWeight: 700, color: 'secondary.main', fontFamily: 'monospace', lineHeight: 1, fontSize: '1.5rem', whiteSpace: 'nowrap' }}>
                                     {Number.isFinite(satelliteAzimuth) ? `${satelliteAzimuth.toFixed(2)}°` : '--'}
@@ -821,8 +822,8 @@ const TargetInfoIsland = () => {
                                 border: '1px solid',
                                 borderColor: 'divider'
                             }}>
-                                <Typography aria-label="Altitude, kilometres" variant="caption" sx={{ color: 'text.secondary', fontSize: '0.55rem', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', mb: 0.5 }}>
-                                    <span className="target-metric-label-full">Altitude</span>
+                                <Typography aria-label={t('target_info_island.altitude_kilometres', { defaultValue: 'Altitude, kilometres' })} variant="caption" sx={{ color: 'text.secondary', fontSize: '0.55rem', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', mb: 0.5 }}>
+                                    <span className="target-metric-label-full">{t('target_info_island.altitude', { defaultValue: 'Altitude' })}</span>
                                     <span className="target-metric-label-short">ALT · km</span>
                                 </Typography>
                                 <Typography className="target-metric-value" variant="h5" sx={{ fontWeight: 700, color: 'text.primary', fontFamily: 'monospace', lineHeight: 1, whiteSpace: 'nowrap' }}>
@@ -841,8 +842,8 @@ const TargetInfoIsland = () => {
                                 border: '1px solid',
                                 borderColor: 'divider'
                             }}>
-                                <Typography aria-label="Velocity, kilometres per second" variant="caption" sx={{ color: 'text.secondary', fontSize: '0.55rem', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', mb: 0.5 }}>
-                                    <span className="target-metric-label-full">Velocity</span>
+                                <Typography aria-label={t('target_info_island.velocity_kilometres_per_second', { defaultValue: 'Velocity, kilometres per second' })} variant="caption" sx={{ color: 'text.secondary', fontSize: '0.55rem', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', mb: 0.5 }}>
+                                    <span className="target-metric-label-full">{t('target_info_island.velocity', { defaultValue: 'Velocity' })}</span>
                                     <span className="target-metric-label-short">VEL · km/s</span>
                                 </Typography>
                                 <Typography className="target-metric-value" variant="h5" sx={{ fontWeight: 700, color: 'text.primary', fontFamily: 'monospace', lineHeight: 1, whiteSpace: 'nowrap' }}>
@@ -1045,7 +1046,7 @@ const TargetInfoIsland = () => {
                 {/* TLE Data */}
                 {satelliteData && satelliteData['details'] && satelliteData['details']['tle1'] && (
                     <>
-                        <Section title="TLE Data" icon={SatelliteAltIcon}>
+                        <Section title={t('target_info_island.tle_data', { defaultValue: 'TLE Data' })} icon={SatelliteAltIcon}>
                             <Box sx={{
                                 p: 1,
                                 bgcolor: 'overlay.light',
@@ -1058,7 +1059,7 @@ const TargetInfoIsland = () => {
                                     mb: 0.5,
                                     textTransform: 'uppercase'
                                 }}>
-                                    Line 1
+                                    {t('target_info_island.line_1', { defaultValue: 'Line 1' })}
                                 </Typography>
                                 <Typography variant="caption" sx={{
                                     color: 'text.primary',
@@ -1078,7 +1079,7 @@ const TargetInfoIsland = () => {
                                     mb: 0.5,
                                     textTransform: 'uppercase'
                                 }}>
-                                    Line 2
+                                    {t('target_info_island.line_2', { defaultValue: 'Line 2' })}
                                 </Typography>
                                 <Typography variant="caption" sx={{
                                     color: 'text.primary',
@@ -1120,7 +1121,7 @@ const TargetInfoIsland = () => {
                             <Grid size={12}>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
                                     <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.65rem', textTransform: 'uppercase' }}>
-                                        Added to DB
+                                        {t('target_info_island.added_to_db', { defaultValue: 'Added to DB' })}
                                     </Typography>
                                     <Typography variant="caption" sx={{ color: 'text.primary', fontWeight: 600, fontSize: '0.65rem' }}>
                                         {satelliteData && satelliteData['details'] ? humanizeDate(satelliteData['details']['added']) : t('satellite_info.values.na')}
@@ -1133,7 +1134,7 @@ const TargetInfoIsland = () => {
                             <Grid size={12}>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
                                     <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.65rem', textTransform: 'uppercase' }}>
-                                        Launched
+                                        {t('target_info_island.launched', { defaultValue: 'Launched' })}
                                     </Typography>
                                     <Typography variant="caption" sx={{ color: 'text.primary', fontWeight: 600, fontSize: '0.65rem' }}>
                                         {satelliteData && satelliteData['details'] ? humanizeDate(satelliteData['details']['launched']) : t('satellite_info.values.na')}
@@ -1146,7 +1147,7 @@ const TargetInfoIsland = () => {
                             <Grid size={12}>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
                                     <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.65rem', textTransform: 'uppercase' }}>
-                                        Updated
+                                        {t('target_info_island.updated', { defaultValue: 'Updated' })}
                                     </Typography>
                                     <Typography variant="caption" sx={{ color: 'text.primary', fontWeight: 600, fontSize: '0.65rem' }}>
                                         {satelliteData && satelliteData['details'] ? humanizeDate(satelliteData['details']['updated']) : t('satellite_info.values.na')}
@@ -1161,7 +1162,7 @@ const TargetInfoIsland = () => {
                                     <Grid size={12}>
                                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
                                             <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.65rem', textTransform: 'uppercase' }}>
-                                                Website
+                                                {t('target_info_island.website', { defaultValue: 'Website' })}
                                             </Typography>
                                             <Typography
                                                 component="a"
@@ -1179,7 +1180,7 @@ const TargetInfoIsland = () => {
                                                     }
                                                 }}
                                             >
-                                                Link ↗
+                                                {t('target_info_island.link', { defaultValue: 'Link ↗' })}
                                             </Typography>
                                         </Box>
                                     </Grid>
@@ -1200,7 +1201,7 @@ const TargetInfoIsland = () => {
                                             minWidth: 0,
                                         }}>
                                             <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.65rem', textTransform: 'uppercase' }}>
-                                                Citation
+                                                {t('target_info_island.citation', { defaultValue: 'Citation' })}
                                             </Typography>
                                             <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5, minWidth: 0 }}>
                                                 {citationPresentation.sourceUrl && (
@@ -1240,7 +1241,7 @@ const TargetInfoIsland = () => {
                                                             flexShrink: 0,
                                                         }}
                                                     >
-                                                        More
+                                                        {t('target_info_island.more', { defaultValue: 'More' })}
                                                     </Button>
                                                 )}
                                             </Box>
@@ -1293,7 +1294,7 @@ const TargetInfoIsland = () => {
                                 }
                             }}
                         >
-                            Edit Details
+                            {t('target_info_island.edit_details', { defaultValue: 'Edit Details' })}
                         </Button>
                         <Button
                             variant="text"
@@ -1313,7 +1314,7 @@ const TargetInfoIsland = () => {
                                 }
                             }}
                         >
-                            Edit Transmitters
+                            {t('target_info_island.edit_transmitters', { defaultValue: 'Edit Transmitters' })}
                         </Button>
                         <Button
                             variant="text"
@@ -1332,7 +1333,7 @@ const TargetInfoIsland = () => {
                                 }
                             }}
                         >
-                            View Full Details
+                            {t('target_info_island.view_full_details', { defaultValue: 'View Full Details' })}
                         </Button>
                     </Box>
                 )}
@@ -1381,7 +1382,7 @@ const TargetInfoIsland = () => {
                                                             : `Body ID · ${nonSatelliteIdentifier || '-'}`}
                                                     </Typography>
                                                 </Typography>
-                                                <Tooltip title="Edit Transmitters">
+                                                <Tooltip title={t('target_info_island.edit_transmitters', { defaultValue: 'Edit Transmitters' })}>
                                                     <span>
                                                         <IconButton
                                                             size="small"
@@ -1454,7 +1455,7 @@ const TargetInfoIsland = () => {
                     <Box sx={{ pr: 1.5, pl: 1.5, pt: 1.5, pb: 1, flex: 1, overflow: 'auto' }}>
                         {!nonSatelliteHasRealtime ? (
                             <Typography variant="caption" sx={{ color: 'warning.main', display: 'block', mb: 1.25 }}>
-                                Waiting for updated mission/body telemetry.
+                                {t('target_info_island.waiting_for_updated_mission_body_telemetry', { defaultValue: 'Waiting for updated mission/body telemetry.' })}
                             </Typography>
                         ) : null}
 
@@ -1466,7 +1467,7 @@ const TargetInfoIsland = () => {
                                 color: 'primary.main',
                                 letterSpacing: '0.5px',
                             }}>
-                                Real-Time Position
+                                {t('target_info_island.real_time_position', { defaultValue: 'Real-Time Position' })}
                             </Typography>
                         </Box>
                         <Box sx={responsiveMetricPanelSx}>
@@ -1479,9 +1480,9 @@ const TargetInfoIsland = () => {
                                         border: '1px solid',
                                         borderColor: 'divider',
                                     }}>
-                                        <Typography aria-label="Elevation" variant="caption" sx={{ color: 'text.secondary', fontSize: '0.55rem', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', mb: 0.5 }}>
-                                            <span className="target-metric-label-full">Elevation</span>
-                                            <span className="target-metric-label-short">EL</span>
+                                        <Typography aria-label={t('target_info_island.elevation', { defaultValue: 'Elevation' })} variant="caption" sx={{ color: 'text.secondary', fontSize: '0.55rem', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', mb: 0.5 }}>
+                                            <span className="target-metric-label-full">{t('target_info_island.elevation', { defaultValue: 'Elevation' })}</span>
+                                            <span className="target-metric-label-short">{t('target_info_island.el', { defaultValue: 'EL' })}</span>
                                         </Typography>
                                         <Typography className="target-metric-value" variant="h4" sx={{ fontWeight: 700, color: 'primary.main', fontFamily: 'monospace', lineHeight: 1, fontSize: '1.5rem', whiteSpace: 'nowrap' }}>
                                             {formatAngle(nonSatelliteElevation)}
@@ -1495,9 +1496,9 @@ const TargetInfoIsland = () => {
                                         border: '1px solid',
                                         borderColor: 'divider',
                                     }}>
-                                        <Typography aria-label="Azimuth" variant="caption" sx={{ color: 'text.secondary', fontSize: '0.55rem', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', mb: 0.5 }}>
-                                            <span className="target-metric-label-full">Azimuth</span>
-                                            <span className="target-metric-label-short">AZ</span>
+                                        <Typography aria-label={t('target_info_island.azimuth', { defaultValue: 'Azimuth' })} variant="caption" sx={{ color: 'text.secondary', fontSize: '0.55rem', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', mb: 0.5 }}>
+                                            <span className="target-metric-label-full">{t('target_info_island.azimuth', { defaultValue: 'Azimuth' })}</span>
+                                            <span className="target-metric-label-short">{t('target_info_island.az', { defaultValue: 'AZ' })}</span>
                                         </Typography>
                                         <Typography className="target-metric-value" variant="h4" sx={{ fontWeight: 700, color: 'secondary.main', fontFamily: 'monospace', lineHeight: 1, fontSize: '1.5rem', whiteSpace: 'nowrap' }}>
                                             {formatAngle(nonSatelliteAzimuth)}
@@ -1511,8 +1512,8 @@ const TargetInfoIsland = () => {
                                         border: '1px solid',
                                         borderColor: 'divider',
                                     }}>
-                                        <Typography aria-label="Distance from Sun" variant="caption" sx={{ color: 'text.secondary', fontSize: '0.55rem', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', mb: 0.5 }}>
-                                            <span className="target-metric-label-full">Distance from Sun</span>
+                                        <Typography aria-label={t('target_info_island.distance_from_sun', { defaultValue: 'Distance from Sun' })} variant="caption" sx={{ color: 'text.secondary', fontSize: '0.55rem', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', mb: 0.5 }}>
+                                            <span className="target-metric-label-full">{t('target_info_island.distance_from_sun', { defaultValue: 'Distance from Sun' })}</span>
                                             <span className="target-metric-label-short">SUN · AU</span>
                                         </Typography>
                                         <Typography className="target-metric-value" variant="h5" sx={{ fontWeight: 700, color: 'text.primary', fontFamily: 'monospace', lineHeight: 1, whiteSpace: 'nowrap' }}>
@@ -1530,8 +1531,8 @@ const TargetInfoIsland = () => {
                                         border: '1px solid',
                                         borderColor: 'divider',
                                     }}>
-                                        <Typography aria-label="Speed, kilometres per second" variant="caption" sx={{ color: 'text.secondary', fontSize: '0.55rem', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', mb: 0.5 }}>
-                                            <span className="target-metric-label-full">Speed</span>
+                                        <Typography aria-label={t('target_info_island.speed_kilometres_per_second', { defaultValue: 'Speed, kilometres per second' })} variant="caption" sx={{ color: 'text.secondary', fontSize: '0.55rem', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', mb: 0.5 }}>
+                                            <span className="target-metric-label-full">{t('target_info_island.speed', { defaultValue: 'Speed' })}</span>
                                             <span className="target-metric-label-short">SPD · km/s</span>
                                         </Typography>
                                         <Typography className="target-metric-value" variant="h5" sx={{ fontWeight: 700, color: 'text.primary', fontFamily: 'monospace', lineHeight: 1, whiteSpace: 'nowrap' }}>
@@ -1545,25 +1546,25 @@ const TargetInfoIsland = () => {
                             </Box>
                         </Box>
 
-                        <Section title="Target Geometry" icon={TrackChangesIcon}>
+                        <Section title={t('target_info_island.target_geometry', { defaultValue: 'Target Geometry' })} icon={TrackChangesIcon}>
                             <Grid container spacing={0.75}>
                                 <Grid size={6}>
-                                    <DataPoint icon={ExploreIcon} label="Azimuth" value={formatAngle(nonSatelliteAzimuth)} emphasis />
+                                    <DataPoint icon={ExploreIcon} label={t('target_info_island.azimuth', { defaultValue: 'Azimuth' })} value={formatAngle(nonSatelliteAzimuth)} emphasis />
                                 </Grid>
                                 <Grid size={6}>
-                                    <DataPoint icon={TrackChangesIcon} label="Elevation" value={formatAngle(nonSatelliteElevation)} emphasis />
+                                    <DataPoint icon={TrackChangesIcon} label={t('target_info_island.elevation', { defaultValue: 'Elevation' })} value={formatAngle(nonSatelliteElevation)} emphasis />
                                 </Grid>
                                 <Grid size={6}>
                                     <DataPoint
                                         icon={CheckCircleIcon}
-                                        label="Visibility"
+                                        label={t('target_info_island.visibility', { defaultValue: 'Visibility' })}
                                         value={nonSatelliteVisible == null ? 'Unknown' : (nonSatelliteVisible ? 'Above Horizon' : 'Below Horizon')}
                                     />
                                 </Grid>
                                 <Grid size={6}>
                                     <DataPoint
                                         icon={AccessTimeIcon}
-                                        label="Light Time"
+                                        label={t('target_info_island.light_time', { defaultValue: 'Light Time' })}
                                         value={Number.isFinite(nonSatelliteLightTimeMinutes) ? nonSatelliteLightTimeMinutes.toFixed(2) : '--'}
                                         unit="min"
                                     />
@@ -1573,10 +1574,10 @@ const TargetInfoIsland = () => {
 
                         <Divider sx={{ my: 1, borderColor: 'border.main' }} />
 
-                        <Section title="Target Metadata" icon={InfoOutlinedIcon}>
+                        <Section title={t('target_info_island.target_metadata', { defaultValue: 'Target Metadata' })} icon={InfoOutlinedIcon}>
                             <Grid container spacing={0.75}>
                                 <Grid size={6}>
-                                    <DataPoint icon={InfoOutlinedIcon} label="Target Type" value={targetType === 'mission' ? 'Mission' : 'Body'} />
+                                    <DataPoint icon={InfoOutlinedIcon} label={t('target_info_island.target_type', { defaultValue: 'Target Type' })} value={targetType === 'mission' ? 'Mission' : 'Body'} />
                                 </Grid>
                                 <Grid size={6}>
                                     <DataPoint
@@ -1586,42 +1587,42 @@ const TargetInfoIsland = () => {
                                     />
                                 </Grid>
                                 <Grid size={6}>
-                                    <DataPoint icon={PublicIcon} label="Target Key" value={nonSatelliteTargetKey || '-'} />
+                                    <DataPoint icon={PublicIcon} label={t('target_info_island.target_key', { defaultValue: 'Target Key' })} value={nonSatelliteTargetKey || '-'} />
                                 </Grid>
                                 <Grid size={6}>
-                                    <DataPoint icon={RocketLaunchIcon} label="Source Mode" value={nonSatelliteSourceMode || '-'} />
+                                    <DataPoint icon={RocketLaunchIcon} label={t('target_info_island.source_mode', { defaultValue: 'Source Mode' })} value={nonSatelliteSourceMode || '-'} />
                                 </Grid>
                             </Grid>
                         </Section>
 
                         <Divider sx={{ my: 1, borderColor: 'border.main' }} />
 
-                        <Section title="Tracking Link" icon={MyLocationIcon}>
+                        <Section title={t('target_info_island.tracking_link', { defaultValue: 'Tracking Link' })} icon={MyLocationIcon}>
                             <Grid container spacing={0.75}>
                                 <Grid size={6}>
-                                    <DataPoint icon={MyLocationIcon} label="Rotator" value={String(trackingState?.rotator_id || '-')} />
+                                    <DataPoint icon={MyLocationIcon} label={t('target_info_island.rotator', { defaultValue: 'Rotator' })} value={String(trackingState?.rotator_id || '-')} />
                                 </Grid>
                                 <Grid size={6}>
-                                    <DataPoint icon={RadioIcon} label="Rig" value={String(trackingState?.rig_id || '-')} />
+                                    <DataPoint icon={RadioIcon} label={t('target_info_island.rig', { defaultValue: 'Rig' })} value={String(trackingState?.rig_id || '-')} />
                                 </Grid>
                                 <Grid size={6}>
-                                    <DataPoint icon={MyLocationIcon} label="Rotator State" value={String(trackingState?.rotator_state || '-')} />
+                                    <DataPoint icon={MyLocationIcon} label={t('target_info_island.rotator_state', { defaultValue: 'Rotator State' })} value={String(trackingState?.rotator_state || '-')} />
                                 </Grid>
                                 <Grid size={6}>
-                                    <DataPoint icon={RadioIcon} label="Rig State" value={String(trackingState?.rig_state || '-')} />
+                                    <DataPoint icon={RadioIcon} label={t('target_info_island.rig_state', { defaultValue: 'Rig State' })} value={String(trackingState?.rig_state || '-')} />
                                 </Grid>
                             </Grid>
                         </Section>
 
                         <Divider sx={{ my: 1, borderColor: 'border.main' }} />
 
-                        <Section title="Data Source" icon={BusinessIcon}>
+                        <Section title={t('target_info_island.data_source', { defaultValue: 'Data Source' })} icon={BusinessIcon}>
                             <Box sx={{ p: 1, bgcolor: 'overlay.light', borderRadius: 1 }}>
                                 <Grid container spacing={1}>
                                     <Grid size={12}>
                                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
                                             <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.65rem', textTransform: 'uppercase' }}>
-                                                Source
+                                                {t('target_info_island.source', { defaultValue: 'Source' })}
                                             </Typography>
                                             <Typography variant="caption" sx={{ color: 'text.primary', fontWeight: 600, fontSize: '0.65rem', fontFamily: 'monospace' }}>
                                                 {nonSatelliteSource}
@@ -1634,7 +1635,7 @@ const TargetInfoIsland = () => {
                                     <Grid size={12}>
                                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
                                             <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.65rem', textTransform: 'uppercase' }}>
-                                                Cache
+                                                {t('target_info_island.cache', { defaultValue: 'Cache' })}
                                             </Typography>
                                             <Typography variant="caption" sx={{ color: 'text.primary', fontWeight: 600, fontSize: '0.65rem', fontFamily: 'monospace' }}>
                                                 {nonSatelliteCache}
@@ -1647,7 +1648,7 @@ const TargetInfoIsland = () => {
                                     <Grid size={12}>
                                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
                                             <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.65rem', textTransform: 'uppercase' }}>
-                                                Stale
+                                                {t('target_info_island.stale', { defaultValue: 'Stale' })}
                                             </Typography>
                                             <Typography variant="caption" sx={{ color: 'text.primary', fontWeight: 600, fontSize: '0.65rem' }}>
                                                 {nonSatelliteStale ? 'Yes' : 'No'}
@@ -1660,7 +1661,7 @@ const TargetInfoIsland = () => {
                                     <Grid size={12}>
                                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
                                             <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.65rem', textTransform: 'uppercase' }}>
-                                                Samples
+                                                {t('target_info_island.samples', { defaultValue: 'Samples' })}
                                             </Typography>
                                             <Typography variant="caption" sx={{ color: 'text.primary', fontWeight: 600, fontSize: '0.65rem' }}>
                                                 {nonSatelliteSampleCount}
@@ -1675,7 +1676,7 @@ const TargetInfoIsland = () => {
                                             <Grid size={12}>
                                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
                                                     <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.65rem', textTransform: 'uppercase' }}>
-                                                        Projection
+                                                        {t('target_info_island.projection', { defaultValue: 'Projection' })}
                                                     </Typography>
                                                     <Typography variant="caption" sx={{ color: 'text.primary', fontWeight: 600, fontSize: '0.65rem' }}>
                                                         {`${Number(nonSatelliteProjection?.past_hours || 0)}h / ${Number(nonSatelliteProjection?.future_hours || 0)}h @ ${Number(nonSatelliteProjection?.step_minutes || 0)}m`}
@@ -1692,7 +1693,7 @@ const TargetInfoIsland = () => {
                                             <Grid size={12}>
                                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
                                                     <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.65rem', textTransform: 'uppercase' }}>
-                                                        Last Refresh
+                                                        {t('target_info_island.last_refresh', { defaultValue: 'Last Refresh' })}
                                                     </Typography>
                                                     <Typography variant="caption" sx={{ color: 'text.primary', fontWeight: 600, fontSize: '0.65rem' }}>
                                                         {humanizeDate(nonSatelliteLastRefresh)}
@@ -1726,7 +1727,7 @@ const TargetInfoIsland = () => {
                 maxWidth="sm"
                 aria-labelledby="citation-dialog-title"
             >
-                <DialogTitle id="citation-dialog-title">Citation</DialogTitle>
+                <DialogTitle id="citation-dialog-title">{t('target_info_island.citation', { defaultValue: 'Citation' })}</DialogTitle>
                 <DialogContent>
                     <Typography
                         variant="body2"
@@ -1739,7 +1740,7 @@ const TargetInfoIsland = () => {
                     </Typography>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setCitationDialogOpen(false)}>Close</Button>
+                    <Button onClick={() => setCitationDialogOpen(false)}>{t('target_info_island.close', { defaultValue: 'Close' })}</Button>
                 </DialogActions>
             </Dialog>
             <TransmittersDialog

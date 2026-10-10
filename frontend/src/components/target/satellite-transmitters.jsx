@@ -119,6 +119,7 @@ const TargetSatelliteTransmittersIsland = () => {
     );
 
     const TransmitterRow = ({ transmitter }) => {
+        const { t } = useTranslation('target');
         const band = transmitter.downlink_low ? getFrequencyBand(transmitter.downlink_low) : 'N/A';
         const isActive = transmitter.alive && transmitter.status === 'active';
 
@@ -202,7 +203,7 @@ const TargetSatelliteTransmittersIsland = () => {
                         bgcolor: 'background.paper'
                     }}>
                         <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.62rem', textTransform: 'uppercase', letterSpacing: '0.45px' }}>
-                            Uplink
+                            {t('satellite_transmitters.uplink', { defaultValue: 'Uplink' })}
                         </Typography>
                         <Typography sx={{ mt: 0.15, fontWeight: 700, color: 'secondary.main', fontFamily: 'monospace', fontSize: '0.76rem' }}>
                             {formatFrequencyRange(transmitter.uplink_low, transmitter.uplink_high)}
@@ -244,14 +245,14 @@ const TargetSatelliteTransmittersIsland = () => {
                     <Box sx={{ mt: 0.55, display: 'flex', gap: 0.4, flexWrap: 'wrap' }}>
                         {transmitter.invert && (
                             <Chip
-                                label="Inverted"
+                                label={t('satellite_transmitters.inverted', { defaultValue: 'Inverted' })}
                                 size="small"
                                 sx={{ height: 16, fontSize: '0.55rem', bgcolor: 'warning.main', color: 'warning.contrastText' }}
                             />
                         )}
                         {transmitter.unconfirmed && (
                             <Chip
-                                label="Unconfirmed"
+                                label={t('satellite_transmitters.unconfirmed', { defaultValue: 'Unconfirmed' })}
                                 size="small"
                                 sx={{ height: 16, fontSize: '0.55rem', bgcolor: 'info.main', color: 'info.contrastText' }}
                             />

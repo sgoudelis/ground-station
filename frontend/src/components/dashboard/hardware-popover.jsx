@@ -404,10 +404,10 @@ const HardwareSettingsPopover = () => {
                         }}
                     >
                         <Typography variant="body2" sx={{ fontWeight: 700 }}>
-                            No targets configured
+                            {t('hardware_popover.no_targets_configured', { defaultValue: 'No targets configured' })}
                         </Typography>
                         <Typography variant="caption" color="text.secondary">
-                            Add a target to enable per-target rig and rotator quick actions.
+                            {t('hardware_popover.add_a_target_to_enable_per_target_rig_and_rotator_quick_', { defaultValue: 'Add a target to enable per-target rig and rotator quick actions.' })}
                         </Typography>
                     </Box>
                 </Box>
@@ -554,7 +554,7 @@ const HardwareSettingsPopover = () => {
                                                     >
                                                     <Box sx={{ display: 'grid', gridTemplateColumns: 'auto 1fr', alignItems: 'baseline', columnGap: 0.6, minWidth: 0 }}>
                                                         <Typography component="span" variant="caption" color="text.secondary" sx={{ fontSize: '12px', lineHeight: 1.3, whiteSpace: 'nowrap' }}>
-                                                            VFO 1 Frequency
+                                                            {t('hardware_popover.vfo_1_frequency', { defaultValue: 'VFO 1 Frequency' })}
                                                         </Typography>
                                                         <Typography
                                                             component="span"
@@ -567,7 +567,7 @@ const HardwareSettingsPopover = () => {
                                                     </Box>
                                                     <Box sx={{ display: 'grid', gridTemplateColumns: 'auto 1fr', alignItems: 'baseline', columnGap: 0.6, minWidth: 0 }}>
                                                         <Typography component="span" variant="caption" color="text.secondary" sx={{ fontSize: '12px', lineHeight: 1.3, whiteSpace: 'nowrap' }}>
-                                                            VFO 2 Frequency
+                                                            {t('hardware_popover.vfo_2_frequency', { defaultValue: 'VFO 2 Frequency' })}
                                                         </Typography>
                                                         <Typography
                                                             component="span"
@@ -580,7 +580,7 @@ const HardwareSettingsPopover = () => {
                                                     </Box>
                                                     <Box sx={{ display: 'grid', gridTemplateColumns: 'auto 1fr', alignItems: 'baseline', columnGap: 0.6, minWidth: 0 }}>
                                                         <Typography component="span" variant="caption" color="text.secondary" sx={{ fontSize: '12px', lineHeight: 1.3, whiteSpace: 'nowrap' }}>
-                                                            Doppler Shift
+                                                            {t('hardware_popover.doppler_shift', { defaultValue: 'Doppler Shift' })}
                                                         </Typography>
                                                         <Typography
                                                             component="span"
@@ -593,7 +593,7 @@ const HardwareSettingsPopover = () => {
                                                     </Box>
                                                     <Box sx={{ display: 'grid', gridTemplateColumns: 'auto 1fr', alignItems: 'baseline', columnGap: 0.6, minWidth: 0 }}>
                                                         <Typography component="span" variant="caption" color="text.secondary" sx={{ fontSize: '12px', lineHeight: 1.3, whiteSpace: 'nowrap' }}>
-                                                            Downlink Observed
+                                                            {t('hardware_popover.downlink_observed', { defaultValue: 'Downlink Observed' })}
                                                         </Typography>
                                                         <Typography
                                                             component="span"

@@ -7,11 +7,13 @@
 import React from 'react';
 import { Box, Typography } from '@mui/material';
 import { useAudio } from '../../dashboard/audio-provider.jsx';
+import { useTranslation } from 'react-i18next';
 
 /**
  * RF Power Meter (S-Meter) Component
  */
 export const RfPowerMeter = ({ vfoActive, rfPower }) => {
+    const { t } = useTranslation('waterfall');
     const getPowerColor = (powerDb) => {
         if (powerDb > -40) return '#4caf50'; // Green (excellent signal, -40dB to 0dB)
         if (powerDb > -60) return '#8bc34a'; // Light green (good signal, -60dB to -40dB)
@@ -23,7 +25,7 @@ export const RfPowerMeter = ({ vfoActive, rfPower }) => {
         <Box sx={{ mt: 1, mb: 1, opacity: vfoActive ? 1 : 0.4 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
                 <Typography variant="caption" color="text.secondary">
-                    RF Power
+                    {t('vfo_meters.rf_power', { defaultValue: 'RF Power' })}
                 </Typography>
                 <Typography variant="caption" sx={{
                     fontFamily: 'monospace',
@@ -62,6 +64,7 @@ export const RfPowerMeter = ({ vfoActive, rfPower }) => {
  * Audio Level Meter (VU Meter) Component
  */
 export const AudioLevelMeter = ({ vfoActive, audioLevel }) => {
+    const { t } = useTranslation('waterfall');
     const levelDb = 20 * Math.log10(audioLevel + 0.00001);
 
     const getLevelColor = (levelDb) => {
@@ -82,7 +85,7 @@ export const AudioLevelMeter = ({ vfoActive, audioLevel }) => {
         <Box sx={{ mt: 1, mb: 1, opacity: vfoActive ? 1 : 0.4 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
                 <Typography variant="caption" color="text.secondary">
-                    Audio Level
+                    {t('vfo_meters.audio_level', { defaultValue: 'Audio Level' })}
                 </Typography>
                 <Typography variant="caption" sx={{
                     fontFamily: 'monospace',
@@ -154,6 +157,7 @@ export const AudioLevelMeter = ({ vfoActive, audioLevel }) => {
  * Audio Buffer Meter Component
  */
 export const AudioBufferMeter = ({ vfoActive, bufferLength }) => {
+    const { t } = useTranslation('waterfall');
     const bufferMs = bufferLength * 1000;
 
     const getBufferColor = (bufferMs) => {
@@ -166,7 +170,7 @@ export const AudioBufferMeter = ({ vfoActive, bufferLength }) => {
         <Box sx={{ mt: 1, mb: 1, opacity: vfoActive ? 1 : 0.4 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
                 <Typography variant="caption" color="text.secondary">
-                    Audio Buffer
+                    {t('vfo_meters.audio_buffer', { defaultValue: 'Audio Buffer' })}
                 </Typography>
                 <Typography variant="caption" sx={{
                     fontFamily: 'monospace',
@@ -217,6 +221,7 @@ export const AudioBufferMeter = ({ vfoActive, bufferLength }) => {
 };
 
 export const VfoLiveMeters = React.memo(function VfoLiveMeters({ vfoIndex, vfoActive }) {
+    const { t } = useTranslation('waterfall');
     const { getAudioBufferLength, getVfoAudioLevel, getVfoRfPower } = useAudio();
     const [metrics, setMetrics] = React.useState({
         bufferLength: 0,

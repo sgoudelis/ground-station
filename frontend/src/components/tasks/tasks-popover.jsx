@@ -375,13 +375,13 @@ const BackgroundTasksPopover = () => {
     const getStatusChip = (status) => {
         switch (status) {
             case 'running':
-                return <Chip label="Running" size="small" color="info" icon={<PendingActionsIcon />} />;
+                return <Chip label={t('tasks_popover.running', { defaultValue: 'Running' })} size="small" color="info" icon={<PendingActionsIcon />} />;
             case 'completed':
-                return <Chip label="Completed" size="small" color="success" icon={<CheckCircleIcon />} />;
+                return <Chip label={t('tasks_popover.completed', { defaultValue: 'Completed' })} size="small" color="success" icon={<CheckCircleIcon />} />;
             case 'failed':
-                return <Chip label="Failed" size="small" color="error" icon={<ErrorIcon />} />;
+                return <Chip label={t('tasks_popover.failed', { defaultValue: 'Failed' })} size="small" color="error" icon={<ErrorIcon />} />;
             case 'stopped':
-                return <Chip label="Stopped" size="small" color="warning" icon={<CancelIcon />} />;
+                return <Chip label={t('tasks_popover.stopped', { defaultValue: 'Stopped' })} size="small" color="warning" icon={<CancelIcon />} />;
             default:
                 return <Chip label={status} size="small" />;
         }
@@ -506,7 +506,7 @@ const BackgroundTasksPopover = () => {
                                 <Box>
                                     <LinearProgress variant="determinate" value={task.progress} sx={{ height: 6, borderRadius: 999 }} />
                                     <Typography variant="caption" color="text.secondary" sx={{ mt: 0.35, display: 'block' }}>
-                                        {Math.round(task.progress)}% complete
+                                        {Math.round(task.progress)}{t('tasks_popover.complete', { defaultValue: '% complete' })}
                                     </Typography>
                                 </Box>
                             ) : (
@@ -514,7 +514,7 @@ const BackgroundTasksPopover = () => {
                             )}
                             <Stack direction="row" justifyContent="space-between" alignItems="center">
                                 <Typography variant="caption" color="text.secondary">
-                                    Duration: {formatDuration(duration)}
+                                    {t('tasks_popover.duration', { defaultValue: 'Duration:' })} {formatDuration(duration)}
                                 </Typography>
                                 <Button
                                     size="small"
@@ -523,7 +523,7 @@ const BackgroundTasksPopover = () => {
                                     startIcon={<StopIcon />}
                                     onClick={() => handleStopTask(taskId)}
                                 >
-                                    Stop
+                                    {t('tasks_popover.stop', { defaultValue: 'Stop' })}
                                 </Button>
                             </Stack>
                         </>
@@ -531,7 +531,7 @@ const BackgroundTasksPopover = () => {
 
                     {!isRunning && isExpanded && (
                         <Typography variant="caption" color="text.secondary">
-                            Duration: {formatDuration(duration)}
+                            {t('tasks_popover.duration', { defaultValue: 'Duration:' })} {formatDuration(duration)}
                             {task.return_code !== null && ` | Exit code: ${task.return_code}`}
                         </Typography>
                     )}

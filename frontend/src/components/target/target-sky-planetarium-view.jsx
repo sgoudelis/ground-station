@@ -407,7 +407,7 @@ const TargetSkyPlanetariumView = () => {
                             </span>
                         </Tooltip>
                         {!isSatelliteTarget ? (
-                            <Tooltip title="Refresh target scene">
+                            <Tooltip title={t('target_sky_planetarium_view.refresh_target_scene', { defaultValue: 'Refresh target scene' })}>
                                 <span>
                                     <IconButton
                                         size="small"
@@ -482,7 +482,7 @@ const TargetSkyPlanetariumView = () => {
                     >
                         <CircularProgress size={34}/>
                         <Typography variant="caption" color="text.secondary" sx={{fontFamily: 'monospace'}}>
-                            Loading planetarium vectors...
+                            {t('target_sky_planetarium_view.loading_planetarium_vectors', { defaultValue: 'Loading planetarium vectors...' })}
                         </Typography>
                     </Box>
                 ) : null}

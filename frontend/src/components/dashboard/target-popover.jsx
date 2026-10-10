@@ -489,7 +489,7 @@ const SatelliteInfoPopover = () => {
                 color: 'text.secondary',
                 backgroundColor: 'action.hover',
                 icon: <InfoIcon />,
-                description: 'No satellite selected'
+                description: t('target_popover.no_satellite_selected', { defaultValue: 'No satellite selected' })
             };
         }
 
@@ -504,7 +504,7 @@ const SatelliteInfoPopover = () => {
                     ? `${theme.palette.error.main}25` // 15% opacity on dark
                     : 'error.light',
                 icon: <VisibilityOffIcon />,
-                description: 'Satellite is not visible from current location'
+                description: t('target_popover.satellite_is_not_visible_from_current_location', { defaultValue: 'Satellite is not visible from current location' })
             };
         } else if (elevation < minElevation) {
             return {
@@ -524,7 +524,7 @@ const SatelliteInfoPopover = () => {
                     ? `${theme.palette.success.main}25` // 15% opacity on dark
                     : 'success.light',
                 icon: <SatelliteAltIcon />,
-                description: 'Currently tracking this satellite'
+                description: t('target_popover.currently_tracking_this_satellite', { defaultValue: 'Currently tracking this satellite' })
             };
         } else {
             return {
@@ -534,7 +534,7 @@ const SatelliteInfoPopover = () => {
                     ? `${theme.palette.info.main}25` // 15% opacity on dark
                     : 'info.light',
                 icon: <VisibilityIcon />,
-                description: 'Satellite is well positioned above horizon'
+                description: t('target_popover.satellite_is_well_positioned_above_horizon', { defaultValue: 'Satellite is well positioned above horizon' })
             };
         }
     };
@@ -696,6 +696,7 @@ const SatelliteInfoPopover = () => {
 
     // Countdown Component - extracted outside to use memoized nextPass
     const NextPassCountdown = React.memo(({ pass }) => {
+        const { t } = useTranslation('dashboard');
         // We intentionally read from outer scope to react to store updates over time
         // without relying only on props that don't change as time advances.
         const selectedNoradId = satelliteData.details?.norad_id;
@@ -785,7 +786,7 @@ const SatelliteInfoPopover = () => {
         if (!selectedNoradId) {
             return (
                 <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                    No satellite selected
+                    {t('target_popover.no_satellite_selected', { defaultValue: 'No satellite selected' })}
                 </Typography>
             );
         }
@@ -793,7 +794,7 @@ const SatelliteInfoPopover = () => {
         if (!currentPass) {
             return (
                 <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                    No upcoming passes
+                    {t('target_popover.no_upcoming_passes', { defaultValue: 'No upcoming passes' })}
                 </Typography>
             );
         }
@@ -807,7 +808,7 @@ const SatelliteInfoPopover = () => {
                 gap: 1
             }}>
                 <Typography variant="body2" color="text.secondary">
-                    Next pass in
+                    {t('target_popover.next_pass_in', { defaultValue: 'Next pass in' })}
                 </Typography>
                 <Typography
                     variant="h4"
@@ -823,7 +824,7 @@ const SatelliteInfoPopover = () => {
                     {formatLegibleDateTime(currentPass.event_start, timezone, locale)}
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
-                    Peak elevation: {currentPass.peak_altitude?.toFixed(1)}°
+                    {t('target_popover.peak_elevation', { defaultValue: 'Peak elevation:' })} {currentPass.peak_altitude?.toFixed(1)}°
                 </Typography>
             </Box>
         );
@@ -1100,7 +1101,7 @@ const SatelliteInfoPopover = () => {
                                             {hasElevation && (
                                                 <Box sx={{ textAlign: 'right' }}>
                                                     <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '0.75rem' }}>
-                                                        Elevation
+                                                        {t('target_popover.elevation', { defaultValue: 'Elevation' })}
                                                     </Typography>
                                                     <Typography variant="h6" sx={{
                                                         color: getElevationColor(Number(row.elevation)),
@@ -1137,10 +1138,10 @@ const SatelliteInfoPopover = () => {
                         >
                             <SatelliteAltIcon sx={{ color: 'text.secondary' }} />
                             <Typography variant="body2" sx={{ fontWeight: 700 }}>
-                                No targets configured
+                                {t('target_popover.no_targets_configured', { defaultValue: 'No targets configured' })}
                             </Typography>
                             <Typography variant="caption" color="text.secondary">
-                                Create a target from the Track page to view live satellite status.
+                                {t('target_popover.create_a_target_from_the_track_page_to_view_live_satelli', { defaultValue: 'Create a target from the Track page to view live satellite status.' })}
                             </Typography>
                         </Box>
                     )}

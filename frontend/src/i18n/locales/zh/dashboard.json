@@ -57,7 +57,16 @@
     "website": "网站：",
     "yes": "是",
     "no": "否",
-    "na": "N/A"
+    "na": "N/A",
+    "create_a_target_from_the_track_page_to_view_live_satelli": "在跟踪页面创建目标以查看实时卫星状态。",
+    "next_pass_in": "距下次过境",
+    "no_satellite_selected": "未选择卫星",
+    "no_targets_configured": "未配置目标",
+    "no_upcoming_passes": "无即将到来的过境",
+    "peak_elevation": "最高仰角：",
+    "satellite_is_not_visible_from_current_location": "卫星从当前位置不可见",
+    "currently_tracking_this_satellite": "当前正在跟踪该卫星",
+    "satellite_is_well_positioned_above_horizon": "卫星位置良好，位于地平线以上"
   },
   "version_info": {
     "version": "版本：",
@@ -65,7 +74,12 @@
     "git_commit": "Git 提交：",
     "unknown": "未知",
     "loading": "正在加载版本信息...",
-    "unavailable": "版本信息不可用"
+    "unavailable": "版本信息不可用",
+    "architecture": "架构：",
+    "cpu_cores": "CPU 核心：",
+    "disk_total": "磁盘（总计）：",
+    "memory_total": "内存（总计）：",
+    "os": "操作系统："
   },
   "connection_popover": {
     "network_connected_ws": "网络：已连接（WebSocket）",
@@ -87,7 +101,13 @@
     "messages": "{{count}} 条消息",
     "transport_upgrades": "传输协议升级：",
     "audio_buffer": "音频缓冲区",
-    "browser_buffer_length": "浏览器缓冲长度："
+    "browser_buffer_length": "浏览器缓冲长度：",
+    "cpu": "CPU",
+    "cpu_temp": "CPU 温度",
+    "disk": "磁盘",
+    "load_avg": "平均负载",
+    "memory": "内存",
+    "open_system_topology": "打开系统拓扑"
   },
   "hardware_popover": {
     "socket_disconnected": "套接字：已断开",
@@ -106,7 +126,12 @@
     "warning_below_horizon": "地平线以下",
     "warning_below_min_elevation": "低于最低仰角",
     "warning_out_of_bounds": "超出范围",
-    "warning_parked": "已停放"
+    "warning_parked": "已停放",
+    "add_a_target_to_enable_per_target_rig_and_rotator_quick_": "添加目标后即可启用针对各目标的电台和旋转器快捷操作。",
+    "doppler_shift": "多普勒频移",
+    "downlink_observed": "下行观测频率",
+    "vfo_1_frequency": "VFO 1 频率",
+    "vfo_2_frequency": "VFO 2 频率"
   },
   "orbital_sync_popover": {
     "syncing": "同步中：{{progress}}%",
@@ -123,7 +148,8 @@
     "satellites": "卫星：{{count}}",
     "transmitters": "发射机：{{count}}",
     "groups": "分组：{{count}}",
-    "errors": "错误（{{count}}）"
+    "errors": "错误（{{count}}）",
+    "orb": "ORB"
   },
   "auth": {
     "logout": "退出登录",
@@ -133,5 +159,73 @@
   },
   "common": {
     "cancel": "取消"
+  },
+  "vfo_audio": {
+    "tooltip": "VFO 音频控制",
+    "title": "VFO 音频",
+    "no_active_vfos": "没有活动的 VFO",
+    "vfo": "VFO {{number}}",
+    "receiving": "正在接收音频",
+    "waiting": "等待音频",
+    "status_no_audio": "无音频",
+    "status_muted": "已静音",
+    "status_squelched": "静噪中",
+    "status_unmuted": "已取消静音",
+    "mute": "静音",
+    "unmute": "取消静音",
+    "mute_all": "全部 VFO 静音",
+    "unmute_all": "取消全部 VFO 静音",
+    "volume": "音量",
+    "volume_for": "VFO {{number}} 音量",
+    "audio_level": "音频电平",
+    "buffer": "音频缓冲"
+  },
+  "application_footer": {
+    "efstratios_goudelis": "Efstratios Goudelis",
+    "ground_station": "Ground Station"
+  },
+  "dashboard_layout": {
+    "accounts": "账户",
+    "active_observation_indicator": "活跃观测指示器",
+    "ground_station": "地面站",
+    "upcoming_observation_indicator": "即将到来的观测指示器",
+    "application_version_and_environment": "应用版本与环境",
+    "main_navigation": "主导航",
+    "peak": "• 最高仰角",
+    "started": "• 已开始",
+    "starting_soon": "即将开始：",
+    "starts": "• 开始",
+    "toggle_drawer": "切换侧边栏",
+    "project_x": "Project X"
+  },
+  "screens": {
+    "authentication_is_required_to_use_this_ground_station_in": "使用此地面站实例需要身份验证。",
+    "close": "关闭",
+    "confirm_password": "确认密码",
+    "create_administrator_account": "创建管理员账户",
+    "ground_station": "地面站",
+    "ground_station_setup": "地面站设置",
+    "http_connection_detected": "检测到 HTTP 连接",
+    "keep_session_alive": "保持会话活跃",
+    "open_transport_security_guidance": "打开传输安全指南",
+    "password": "密码",
+    "sign_in": "登录",
+    "this_sign_in_page_is_currently_served_over_http": "此登录页面当前通过 HTTP 提供。",
+    "transport_security_guidance": "传输安全指南",
+    "unchecked_sessions_expire_after_15_days": "未勾选的会话将在 15 天后过期。",
+    "user_accounts_are_missing_create_a_new_admin_account_to_": "用户账户缺失。请创建新的管理员账户以恢复访问。",
+    "username": "用户名",
+    "for_stronger_transport_security_put_ground_station_behin": "为增强传输安全性，请将 Ground Station 置于 TLS 反向代理（例如 Nginx、Caddy 或 Traefik）之后，并通过",
+    "https": "https://",
+    "https_also_allows_the_backend_to_issue_auth_session_cook": "HTTPS 还允许后端签发带 Secure 标志的认证会话 cookie。"
+  },
+  "tasks_popover": {
+    "completed": "已完成",
+    "failed": "失败",
+    "running": "运行中",
+    "stop": "停止",
+    "stopped": "已停止",
+    "complete": "% 已完成",
+    "duration": "持续时间："
   }
 }

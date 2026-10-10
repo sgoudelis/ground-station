@@ -69,8 +69,10 @@ import RecordingDialog from '../filebrowser/recording-dialog.jsx';
 import AudioDialog from '../filebrowser/audio-dialog.jsx';
 import TranscriptionDialog from '../filebrowser/transcription-dialog.jsx';
 import TelemetryViewerDialog from '../filebrowser/telemetry-viewer-dialog.jsx';
+import { useTranslation } from 'react-i18next';
 
 const ObservationDataDialog = ({ open, onClose, observation }) => {
+    const { t } = useTranslation('common');
     const { socket } = useSocket();
     const dispatch = useDispatch();
     const [files, setFiles] = useState([]);
@@ -265,7 +267,7 @@ const ObservationDataDialog = ({ open, onClose, observation }) => {
                             {latestObservation?.name || `${latestObservation?.satellite?.name || 'Unknown'} Observation`}
                         </Typography>
                         <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                            {latestObservation?.satellite?.name || 'Unknown Satellite'} • ID: {latestObservation?.id || 'N/A'}
+                            {latestObservation?.satellite?.name || 'Unknown Satellite'} {t('observation_data_dialog.id', { defaultValue: '• ID:' })} {latestObservation?.id || 'N/A'}
                         </Typography>
                     </Box>
                     <Chip 
@@ -292,9 +294,9 @@ const ObservationDataDialog = ({ open, onClose, observation }) => {
                     bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.100',
                 }}
             >
-                <Tab label="Execution Timeline" />
-                <Tab label="Downloaded Data" />
-                {latestObservation?.error_message && <Tab label="Error Details" />}
+                <Tab label={t('observation_data_dialog.execution_timeline', { defaultValue: 'Execution Timeline' })} />
+                <Tab label={t('observation_data_dialog.downloaded_data', { defaultValue: 'Downloaded Data' })} />
+                {latestObservation?.error_message && <Tab label={t('observation_data_dialog.error_details', { defaultValue: 'Error Details' })} />}
             </Tabs>
 
             <DialogContent
@@ -362,10 +364,10 @@ const ObservationDataDialog = ({ open, onClose, observation }) => {
                             <Box sx={{ textAlign: 'center', py: 4 }}>
                                 <ScheduleIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
                                 <Typography variant="body2" color="text.secondary">
-                                    No execution events recorded yet.
+                                    {t('observation_data_dialog.no_execution_events_recorded_yet', { defaultValue: 'No execution events recorded yet.' })}
                                 </Typography>
                                 <Typography variant="caption" color="text.secondary">
-                                    Events will appear here once the observation starts executing.
+                                    {t('observation_data_dialog.events_will_appear_here_once_the_observation_starts_exec', { defaultValue: 'Events will appear here once the observation starts executing.' })}
                                 </Typography>
                             </Box>
                         )}
@@ -376,7 +378,7 @@ const ObservationDataDialog = ({ open, onClose, observation }) => {
                 {activeTab === 1 && (
                     <Box>
                         <Typography variant="subtitle2" sx={{ mb: 2 }}>
-                            Data Files ({files.length})
+                            {t('observation_data_dialog.data_files', { defaultValue: 'Data Files (' })}{files.length})
                         </Typography>
 
                         {loading ? (
@@ -386,16 +388,16 @@ const ObservationDataDialog = ({ open, onClose, observation }) => {
                         ) : files.length === 0 ? (
                             <Box sx={{ textAlign: 'center', py: 4 }}>
                                 <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic', mb: 2 }}>
-                                    No data files found for this observation.
+                                    {t('observation_data_dialog.no_data_files_found_for_this_observation', { defaultValue: 'No data files found for this observation.' })}
                                 </Typography>
                                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                                    Files will appear here when:
+                                    {t('observation_data_dialog.files_will_appear_here_when', { defaultValue: 'Files will appear here when:' })}
                                 </Typography>
                                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                                    • The observation has completed successfully
+                                    {t('observation_data_dialog.the_observation_has_completed_successfully', { defaultValue: '• The observation has completed successfully' })}
                                 </Typography>
                                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                                    • Tasks (IQ recording, audio, decoding) generated output files
+                                    {t('observation_data_dialog.tasks_iq_recording_audio_decoding_generated_output_files', { defaultValue: '• Tasks (IQ recording, audio, decoding) generated output files' })}
                                 </Typography>
                             </Box>
                         ) : (
@@ -479,14 +481,14 @@ const ObservationDataDialog = ({ open, onClose, observation }) => {
                 {activeTab === 2 && latestObservation?.error_message && (
                     <Box>
                         <Alert severity="error" sx={{ mb: 3 }}>
-                            <AlertTitle>Error Information</AlertTitle>
+                            <AlertTitle>{t('observation_data_dialog.error_information', { defaultValue: 'Error Information' })}</AlertTitle>
                             <Grid container spacing={2} sx={{ mt: 1 }}>
                                 <Grid item xs={12} md={4}>
-                                    <Typography variant="caption" color="text.secondary">Total Errors</Typography>
+                                    <Typography variant="caption" color="text.secondary">{t('observation_data_dialog.total_errors', { defaultValue: 'Total Errors' })}</Typography>
                                     <Typography variant="h6">{latestObservation?.error_count || 0}</Typography>
                                 </Grid>
                                 <Grid item xs={12} md={8}>
-                                    <Typography variant="caption" color="text.secondary">Last Error Time</Typography>
+                                    <Typography variant="caption" color="text.secondary">{t('observation_data_dialog.last_error_time', { defaultValue: 'Last Error Time' })}</Typography>
                                     <Typography variant="body2">{formatDateTime(latestObservation?.last_error_time)}</Typography>
                                 </Grid>
                             </Grid>
@@ -494,7 +496,7 @@ const ObservationDataDialog = ({ open, onClose, observation }) => {
 
                         <Paper elevation={2} sx={{ p: 2 }}>
                             <Typography variant="subtitle2" gutterBottom>
-                                Last Error Message
+                                {t('observation_data_dialog.last_error_message', { defaultValue: 'Last Error Message' })}
                             </Typography>
                             <Divider sx={{ my: 1 }} />
                             <Typography 
@@ -537,7 +539,7 @@ const ObservationDataDialog = ({ open, onClose, observation }) => {
                         },
                     }}
                 >
-                    Close
+                    {t('observation_data_dialog.close', { defaultValue: 'Close' })}
                 </Button>
             </DialogActions>
 
@@ -625,7 +627,7 @@ const ObservationDataDialog = ({ open, onClose, observation }) => {
                             </Box>
                         ) : (
                             <Typography variant="body2" color="text.secondary">
-                                Preview not available for this file type.
+                                {t('observation_data_dialog.preview_not_available_for_this_file_type', { defaultValue: 'Preview not available for this file type.' })}
                             </Typography>
                         )}
                     </DialogContent>
@@ -642,7 +644,7 @@ const ObservationDataDialog = ({ open, onClose, observation }) => {
                             onClick={() => window.open(selectedFile.url, '_blank')}
                             variant="contained"
                         >
-                            Download
+                            {t('observation_data_dialog.download', { defaultValue: 'Download' })}
                         </Button>
                         <Button
                             onClick={() => setFileDetailsOpen(false)}
@@ -655,7 +657,7 @@ const ObservationDataDialog = ({ open, onClose, observation }) => {
                                 },
                             }}
                         >
-                            Close
+                            {t('observation_data_dialog.close', { defaultValue: 'Close' })}
                         </Button>
                     </DialogActions>
                 </Dialog>

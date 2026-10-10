@@ -34,8 +34,10 @@ import StorageIcon from '@mui/icons-material/Storage';
 import ComputerIcon from '@mui/icons-material/Computer';
 import DeviceThermostatIcon from '@mui/icons-material/DeviceThermostat';
 import EqualizerIcon from '@mui/icons-material/Equalizer';
+import { useTranslation } from 'react-i18next';
 
 const SystemInfoCard = () => {
+    const { t } = useTranslation('settings');
     const theme = useTheme();
     const versionInfo = useSelector((state) => state.version?.data);
     const liveSystemInfo = useSelector((state) => state.systemInfo);
@@ -52,10 +54,10 @@ const SystemInfoCard = () => {
         return (
             <>
                 <Typography variant="h6" gutterBottom>
-                    System Information
+                    {t('system_info_card.system_information', { defaultValue: 'System Information' })}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                    System information not available yet. Ensure the UI is connected to the backend.
+                    {t('system_info_card.system_information_not_available_yet_ensure_the_ui_is_co', { defaultValue: 'System information not available yet. Ensure the UI is connected to the backend.' })}
                 </Typography>
             </>
         );
@@ -64,7 +66,7 @@ const SystemInfoCard = () => {
     return (
         <>
             <Typography variant="h6" gutterBottom>
-                System Information
+                {t('system_info_card.system_information', { defaultValue: 'System Information' })}
             </Typography>
 
             {/* Responsive CSS grid ensures equal-width cards per row */}
@@ -86,7 +88,7 @@ const SystemInfoCard = () => {
                                     <Stack direction="row" spacing={1} alignItems="center">
                                         <MemoryIcon color="primary" fontSize="small" />
                                         <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                                            CPU
+                                            {t('system_info_card.cpu', { defaultValue: 'CPU' })}
                                         </Typography>
                                     </Stack>
 
@@ -100,7 +102,7 @@ const SystemInfoCard = () => {
                                                     <>
                                                         <Box>
                                                             <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>
-                                                                Processor
+                                                                {t('system_info_card.processor', { defaultValue: 'Processor' })}
                                                             </Typography>
                                                             <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
                                                                 {proc}
@@ -108,7 +110,7 @@ const SystemInfoCard = () => {
                                                         </Box>
                                                         <Box>
                                                             <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>
-                                                                Architecture
+                                                                {t('system_info_card.architecture', { defaultValue: 'Architecture' })}
                                                             </Typography>
                                                             <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
                                                                 {arch}
@@ -135,7 +137,7 @@ const SystemInfoCard = () => {
                                         {systemInfo.cpu.cores && (
                                             <Box>
                                                 <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>
-                                                    Cores
+                                                    {t('system_info_card.cores', { defaultValue: 'Cores' })}
                                                 </Typography>
                                                 <Typography variant="body2">
                                                     {systemInfo.cpu.cores.physical} physical, {systemInfo.cpu.cores.logical} logical
@@ -147,7 +149,7 @@ const SystemInfoCard = () => {
                                             <Box>
                                                 <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.5 }}>
                                                     <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>
-                                                        Usage
+                                                        {t('system_info_card.usage', { defaultValue: 'Usage' })}
                                                     </Typography>
                                                     <Typography variant="caption" sx={{ fontWeight: 600 }}>
                                                         {systemInfo.cpu.usage_percent.toFixed(1)}%
@@ -184,7 +186,7 @@ const SystemInfoCard = () => {
                                     <Stack direction="row" spacing={1} alignItems="center">
                                         <EqualizerIcon color="info" fontSize="small" />
                                         <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                                            Load Average
+                                            {t('system_info_card.load_average', { defaultValue: 'Load Average' })}
                                         </Typography>
                                     </Stack>
 
@@ -256,7 +258,7 @@ const SystemInfoCard = () => {
 
                                     {!systemInfo?.cpu?.cores?.logical && (
                                         <Typography variant="caption" color="text.secondary">
-                                            Per-core normalization not available (logical core count missing)
+                                            {t('system_info_card.per_core_normalization_not_available_logical_core_count_', { defaultValue: 'Per-core normalization not available (logical core count missing)' })}
                                         </Typography>
                                     )}
                                 </Stack>
@@ -271,7 +273,7 @@ const SystemInfoCard = () => {
                                 <Stack direction="row" spacing={1} alignItems="center">
                                     <DeviceThermostatIcon color="warning" fontSize="small" />
                                     <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                                        Temperatures
+                                        {t('system_info_card.temperatures', { defaultValue: 'Temperatures' })}
                                     </Typography>
                                 </Stack>
 
@@ -316,7 +318,7 @@ const SystemInfoCard = () => {
                                     if (!hasAny) {
                                         return (
                                             <Typography variant="body2" color="text.secondary">
-                                                Not available on this platform
+                                                {t('system_info_card.not_available_on_this_platform', { defaultValue: 'Not available on this platform' })}
                                             </Typography>
                                         );
                                     }
@@ -328,7 +330,7 @@ const SystemInfoCard = () => {
                                             {gpuTemps && gpuTemps.length > 0 && (
                                                 <Box>
                                                     <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 700, display: 'block', mb: 0.5 }}>
-                                                        GPUs
+                                                        {t('system_info_card.gpus', { defaultValue: 'GPUs' })}
                                                     </Typography>
                                                     <Box>
                                                         {gpuTemps.map((t, idx) => renderTempBar(`GPU ${idx + 1}`, t))}
@@ -339,7 +341,7 @@ const SystemInfoCard = () => {
                                             {diskTemps && Object.keys(diskTemps).length > 0 && (
                                                 <Box>
                                                     <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 700, display: 'block', mb: 0.5 }}>
-                                                        Disks
+                                                        {t('system_info_card.disks', { defaultValue: 'Disks' })}
                                                     </Typography>
                                                     <Box>
                                                         {Object.entries(diskTemps).map(([name, t]) => renderTempBar(String(name), t))}
@@ -361,7 +363,7 @@ const SystemInfoCard = () => {
                                     <Stack direction="row" spacing={1} alignItems="center">
                                         <MemoryIcon color="secondary" fontSize="small" />
                                         <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                                            Memory
+                                            {t('system_info_card.memory', { defaultValue: 'Memory' })}
                                         </Typography>
                                     </Stack>
                                     
@@ -369,7 +371,7 @@ const SystemInfoCard = () => {
                                         {systemInfo.memory.total_gb && (
                                             <Box>
                                                 <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>
-                                                    Total
+                                                    {t('system_info_card.total', { defaultValue: 'Total' })}
                                                 </Typography>
                                                 <Typography variant="body2">
                                                     {systemInfo.memory.total_gb.toFixed(2)} GB
@@ -380,7 +382,7 @@ const SystemInfoCard = () => {
                                         {systemInfo.memory.available_gb !== null && (
                                             <Box>
                                                 <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>
-                                                    Available
+                                                    {t('system_info_card.available', { defaultValue: 'Available' })}
                                                 </Typography>
                                                 <Typography variant="body2">
                                                     {systemInfo.memory.available_gb.toFixed(2)} GB
@@ -392,7 +394,7 @@ const SystemInfoCard = () => {
                                             <Box>
                                                 <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.5 }}>
                                                     <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>
-                                                        Usage
+                                                        {t('system_info_card.usage', { defaultValue: 'Usage' })}
                                                     </Typography>
                                                     <Typography variant="caption" sx={{ fontWeight: 600 }}>
                                                         {systemInfo.memory.usage_percent.toFixed(1)}%
@@ -428,7 +430,7 @@ const SystemInfoCard = () => {
                                     <Stack direction="row" spacing={1} alignItems="center">
                                         <StorageIcon color="warning" fontSize="small" />
                                         <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                                            Disk
+                                            {t('system_info_card.disk', { defaultValue: 'Disk' })}
                                         </Typography>
                                     </Stack>
                                     
@@ -436,7 +438,7 @@ const SystemInfoCard = () => {
                                         {systemInfo.disk.total_gb && (
                                             <Box>
                                                 <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>
-                                                    Total
+                                                    {t('system_info_card.total', { defaultValue: 'Total' })}
                                                 </Typography>
                                                 <Typography variant="body2">
                                                     {systemInfo.disk.total_gb.toFixed(2)} GB
@@ -447,7 +449,7 @@ const SystemInfoCard = () => {
                                         {systemInfo.disk.available_gb !== null && (
                                             <Box>
                                                 <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>
-                                                    Available
+                                                    {t('system_info_card.available', { defaultValue: 'Available' })}
                                                 </Typography>
                                                 <Typography variant="body2">
                                                     {systemInfo.disk.available_gb.toFixed(2)} GB
@@ -459,7 +461,7 @@ const SystemInfoCard = () => {
                                             <Box>
                                                 <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.5 }}>
                                                     <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>
-                                                        Usage
+                                                        {t('system_info_card.usage', { defaultValue: 'Usage' })}
                                                     </Typography>
                                                     <Typography variant="caption" sx={{ fontWeight: 600 }}>
                                                         {systemInfo.disk.usage_percent.toFixed(1)}%
@@ -495,7 +497,7 @@ const SystemInfoCard = () => {
                                     <Stack direction="row" spacing={1} alignItems="center">
                                         <ComputerIcon color="success" fontSize="small" />
                                         <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                                            Operating System
+                                            {t('system_info_card.operating_system', { defaultValue: 'Operating System' })}
                                         </Typography>
                                     </Stack>
                                     
@@ -503,7 +505,7 @@ const SystemInfoCard = () => {
                                         {systemInfo.os.system && (
                                             <Box>
                                                 <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>
-                                                    System
+                                                    {t('system_info_card.system', { defaultValue: 'System' })}
                                                 </Typography>
                                                 <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
                                                     {systemInfo.os.system}
@@ -514,7 +516,7 @@ const SystemInfoCard = () => {
                                         {systemInfo.os.release && (
                                             <Box>
                                                 <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>
-                                                    Release
+                                                    {t('system_info_card.release', { defaultValue: 'Release' })}
                                                 </Typography>
                                                 <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
                                                     {systemInfo.os.release}
@@ -525,7 +527,7 @@ const SystemInfoCard = () => {
                                         {systemInfo.os.version && (
                                             <Box>
                                                 <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>
-                                                    Version
+                                                    {t('system_info_card.version', { defaultValue: 'Version' })}
                                                 </Typography>
                                                 <Typography variant="body2" sx={{ fontFamily: 'monospace', wordBreak: 'break-word' }}>
                                                     {systemInfo.os.version}

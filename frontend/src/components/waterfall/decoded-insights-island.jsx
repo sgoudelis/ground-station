@@ -43,14 +43,17 @@ import {
     setDecodedInsightsActiveTab,
     setGnssSatellitesSortModel,
 } from './gnss-slice.jsx';
+import { useTranslation } from 'react-i18next';
 
-const CONSTELLATION_OPERATOR_META = {
-    GPS: { flag: '🇺🇸', label: 'United States' },
+// Factory (rather than a module-level constant) so the labels are translated with the
+// translator of the rendering component and follow runtime language changes.
+const getConstellationOperatorMeta = (t) => ({
+    GPS: { flag: '🇺🇸', label: t('decoded_insights_island.united_states', { defaultValue: 'United States' }) },
     GLONASS: { flag: '🇷🇺', label: 'Russia' },
     BEIDOU: { flag: '🇨🇳', label: 'China' },
     QZSS: { flag: '🇯🇵', label: 'Japan' },
-    GALILEO: { flag: '🇪🇺', label: 'European Union' },
-};
+    GALILEO: { flag: '🇪🇺', label: t('decoded_insights_island.european_union', { defaultValue: 'European Union' }) },
+});
 
 function toFiniteNumber(value) {
     const parsed = Number(value);
@@ -73,8 +76,8 @@ function formatElapsedDuration(durationMs) {
     return `${seconds}s`;
 }
 
-function getOperatorMetadata(constellation) {
-    return CONSTELLATION_OPERATOR_META[String(constellation || '').toUpperCase()] || null;
+function getOperatorMetadata(constellation, operatorMeta) {
+    return operatorMeta[String(constellation || '').toUpperCase()] || null;
 }
 
 const LastSeenFormatter = React.memo(function LastSeenFormatter({ value, nowMs, timezone, locale }) {
@@ -98,11 +101,14 @@ const LastSeenFormatter = React.memo(function LastSeenFormatter({ value, nowMs, 
 });
 
 const DecodedInsightsIsland = React.memo(function DecodedInsightsIsland() {
+    const { t } = useTranslation('waterfall');
     const dispatch = useDispatch();
     const theme = useTheme();
     const { timezone, locale } = useUserTimeSettings();
     const [selectedSatelliteId, setSelectedSatelliteId] = useState(null);
     const [relativeNowMs, setRelativeNowMs] = useState(() => Date.now());
+    // Translated constellation metadata, rebuilt when the language/translator changes.
+    const constellationOperatorMeta = useMemo(() => getConstellationOperatorMeta(t), [t]);
 
     const {
         outputs,
@@ -347,7 +353,7 @@ const DecodedInsightsIsland = React.memo(function DecodedInsightsIsland() {
             minWidth: 170,
             flex: 1.1,
             renderCell: (params) => {
-                const operatorMeta = getOperatorMetadata(params.row?.constellation);
+                const operatorMeta = getOperatorMetadata(params.row?.constellation, constellationOperatorMeta);
                 const satelliteLabel = params.row?.matchedNorad
                     ? `${params.value} (${params.row.matchedNorad})`
                     : params.value;
@@ -515,7 +521,7 @@ const DecodedInsightsIsland = React.memo(function DecodedInsightsIsland() {
                 />
             ),
         },
-    ]), [locale, relativeNowMs, timezone]);
+    ]), [locale, relativeNowMs, timezone, constellationOperatorMeta]);
 
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -525,15 +531,15 @@ const DecodedInsightsIsland = React.memo(function DecodedInsightsIsland() {
             >
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', height: '100%' }}>
                     <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
-                        Decoded
+                        {t('decoded_insights_island.decoded', { defaultValue: 'Decoded' })}
                     </Typography>
-                    <Tooltip title="Clear decoded packets and GNSS history">
+                    <Tooltip title={t('decoded_insights_island.clear_decoded_packets_and_gnss_history', { defaultValue: 'Clear decoded packets and GNSS history' })}>
                         <span>
                             <IconButton
                                 size="small"
                                 onClick={handleClearAll}
                                 disabled={outputs.length === 0 && satelliteRows.length === 0 && gnssFixQualityTimeline.length === 0}
-                                aria-label="Clear all decoded history"
+                                aria-label={t('decoded_insights_island.clear_all_decoded_history', { defaultValue: 'Clear all decoded history' })}
                                 sx={{ p: '2px' }}
                             >
                                 <DeleteSweepIcon fontSize="small" />
@@ -625,7 +631,7 @@ const DecodedInsightsIsland = React.memo(function DecodedInsightsIsland() {
                                 }}
                             >
                                 <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.primary', fontSize: '0.68rem' }}>
-                                    PKTS
+                                    {t('decoded_insights_island.pkts', { defaultValue: 'PKTS' })}
                                 </Typography>
                                 <Box sx={{ opacity: 0.55 }}>•</Box>
                                 <Box sx={{ display: 'flex', gap: 0.45, flex: '1 1 auto', minWidth: 0, overflow: 'hidden' }}>
@@ -737,7 +743,7 @@ const DecodedInsightsIsland = React.memo(function DecodedInsightsIsland() {
                                     }}
                                 >
                                     <Typography variant="caption" sx={{ color: 'text.primary', fontWeight: 700, fontSize: '0.7rem', lineHeight: 1.1 }}>
-                                        Satellite Details
+                                        {t('decoded_insights_island.satellite_details', { defaultValue: 'Satellite Details' })}
                                     </Typography>
                                     <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.66rem', lineHeight: 1.1, maxWidth: '70%', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                         {selectedSatellite ? selectedSatellite.satelliteId : 'No selection'}
@@ -748,7 +754,7 @@ const DecodedInsightsIsland = React.memo(function DecodedInsightsIsland() {
                                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.7 }}>
                                         {!selectedSatellite && (
                                             <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                                                Select a satellite row to inspect its latest events.
+                                                {t('decoded_insights_island.select_a_satellite_row_to_inspect_its_latest_events', { defaultValue: 'Select a satellite row to inspect its latest events.' })}
                                             </Typography>
                                         )}
 
@@ -777,7 +783,7 @@ const DecodedInsightsIsland = React.memo(function DecodedInsightsIsland() {
                                                     {`Signal: C/N0 ${toFiniteNumber(selectedSatellite.lastCn0DbHz) !== null ? toFiniteNumber(selectedSatellite.lastCn0DbHz).toFixed(1) : '-'} | Doppler ${toFiniteNumber(selectedSatellite.lastCarrierDopplerHz) !== null ? toFiniteNumber(selectedSatellite.lastCarrierDopplerHz).toFixed(1) : '-'} Hz | UTC ${selectedSatellite.lastUtcTime || '-'}`}
                                                 </Typography>
                                                 <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                                                    Recent events:
+                                                    {t('decoded_insights_island.recent_events', { defaultValue: 'Recent events:' })}
                                                 </Typography>
                                                 {(selectedSatellite.events || []).slice(0, 10).map((event, idx) => (
                                                     <Typography
@@ -796,7 +802,7 @@ const DecodedInsightsIsland = React.memo(function DecodedInsightsIsland() {
                                                 ))}
                                                 {(selectedSatellite.events || []).length === 0 && (
                                                     <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                                                        No events for this satellite yet.
+                                                        {t('decoded_insights_island.no_events_for_this_satellite_yet', { defaultValue: 'No events for this satellite yet.' })}
                                                     </Typography>
                                                 )}
                                             </Box>
@@ -834,7 +840,7 @@ const DecodedInsightsIsland = React.memo(function DecodedInsightsIsland() {
                                 >
                                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 0.75 }}>
                                         <Typography variant="caption" sx={{ color: 'text.primary', fontWeight: 700, fontSize: '0.7rem', lineHeight: 1.1 }}>
-                                            GNSS Summary
+                                            {t('decoded_insights_island.gnss_summary', { defaultValue: 'GNSS Summary' })}
                                         </Typography>
                                         <Typography
                                             variant="caption"
@@ -854,7 +860,7 @@ const DecodedInsightsIsland = React.memo(function DecodedInsightsIsland() {
                                     </Box>
                                     <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, minWidth: 0 }}>
                                         <Typography variant="caption" sx={{ color: 'text.secondary', opacity: 0.72, fontSize: '0.66rem', lineHeight: 1.2 }}>
-                                            Detected satellites:
+                                            {t('decoded_insights_island.detected_satellites', { defaultValue: 'Detected satellites:' })}
                                         </Typography>
                                         <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.66rem', lineHeight: 1.2, fontWeight: 700, marginLeft: 'auto', textAlign: 'right' }}>
                                             {satelliteRows.length}
@@ -862,7 +868,7 @@ const DecodedInsightsIsland = React.memo(function DecodedInsightsIsland() {
                                     </Box>
                                     <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, minWidth: 0 }}>
                                         <Typography variant="caption" sx={{ color: 'text.secondary', opacity: 0.72, fontSize: '0.66rem', lineHeight: 1.2 }}>
-                                            Fix quality:
+                                            {t('decoded_insights_island.fix_quality', { defaultValue: 'Fix quality:' })}
                                         </Typography>
                                         <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.66rem', lineHeight: 1.2, fontWeight: 700, marginLeft: 'auto', textAlign: 'right' }}>
                                             {receiverFix.fixQuality !== null ? receiverFix.fixQuality : '-'}
@@ -870,7 +876,7 @@ const DecodedInsightsIsland = React.memo(function DecodedInsightsIsland() {
                                     </Box>
                                     <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, minWidth: 0 }}>
                                         <Typography variant="caption" sx={{ color: 'text.secondary', opacity: 0.72, fontSize: '0.66rem', lineHeight: 1.2 }}>
-                                            Position:
+                                            {t('decoded_insights_island.position', { defaultValue: 'Position:' })}
                                         </Typography>
                                         <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.66rem', lineHeight: 1.2, fontFamily: 'monospace', marginLeft: 'auto', textAlign: 'right' }}>
                                             {receiverFix.latitude !== null && receiverFix.longitude !== null ? `${receiverFix.latitude.toFixed(6)}, ${receiverFix.longitude.toFixed(6)}` : '-'}
@@ -878,7 +884,7 @@ const DecodedInsightsIsland = React.memo(function DecodedInsightsIsland() {
                                     </Box>
                                     <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, minWidth: 0 }}>
                                         <Typography variant="caption" sx={{ color: 'text.secondary', opacity: 0.72, fontSize: '0.66rem', lineHeight: 1.2 }}>
-                                            Altitude:
+                                            {t('decoded_insights_island.altitude', { defaultValue: 'Altitude:' })}
                                         </Typography>
                                         <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.66rem', lineHeight: 1.2, fontFamily: 'monospace', marginLeft: 'auto', textAlign: 'right' }}>
                                             {receiverFix.altitudeM !== null ? `${receiverFix.altitudeM.toFixed(1)} m` : '-'}
@@ -886,7 +892,7 @@ const DecodedInsightsIsland = React.memo(function DecodedInsightsIsland() {
                                     </Box>
                                     <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, minWidth: 0 }}>
                                         <Typography variant="caption" sx={{ color: 'text.secondary', opacity: 0.72, fontSize: '0.66rem', lineHeight: 1.2 }}>
-                                            UTC time:
+                                            {t('decoded_insights_island.utc_time', { defaultValue: 'UTC time:' })}
                                         </Typography>
                                         <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.66rem', lineHeight: 1.2, fontFamily: 'monospace', marginLeft: 'auto', textAlign: 'right' }}>
                                             {receiverFix.utcTime || '-'}
@@ -894,7 +900,7 @@ const DecodedInsightsIsland = React.memo(function DecodedInsightsIsland() {
                                     </Box>
                                     <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, minWidth: 0 }}>
                                         <Typography variant="caption" sx={{ color: 'text.secondary', opacity: 0.72, fontSize: '0.66rem', lineHeight: 1.2 }}>
-                                            Current fix duration:
+                                            {t('decoded_insights_island.current_fix_duration', { defaultValue: 'Current fix duration:' })}
                                         </Typography>
                                         <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.66rem', lineHeight: 1.2, fontFamily: 'monospace', marginLeft: 'auto', textAlign: 'right' }}>
                                             {currentFixElapsedMs !== null ? formatElapsedDuration(currentFixElapsedMs) : '-'}
@@ -902,7 +908,7 @@ const DecodedInsightsIsland = React.memo(function DecodedInsightsIsland() {
                                     </Box>
                                     <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, minWidth: 0 }}>
                                         <Typography variant="caption" sx={{ color: 'text.secondary', opacity: 0.72, fontSize: '0.66rem', lineHeight: 1.2 }}>
-                                            Time without fix:
+                                            {t('decoded_insights_island.time_without_fix', { defaultValue: 'Time without fix:' })}
                                         </Typography>
                                         <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.66rem', lineHeight: 1.2, fontFamily: 'monospace', marginLeft: 'auto', textAlign: 'right' }}>
                                             {displayFixStatus === 'FIX' || noFixElapsedMs === null ? '-' : formatElapsedDuration(noFixElapsedMs)}
@@ -910,7 +916,7 @@ const DecodedInsightsIsland = React.memo(function DecodedInsightsIsland() {
                                     </Box>
                                     <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, minWidth: 0 }}>
                                         <Typography variant="caption" sx={{ color: 'text.secondary', opacity: 0.72, fontSize: '0.66rem', lineHeight: 1.2 }}>
-                                            Fix acquired:
+                                            {t('decoded_insights_island.fix_acquired', { defaultValue: 'Fix acquired:' })}
                                         </Typography>
                                         <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.66rem', lineHeight: 1.2, fontFamily: 'monospace', marginLeft: 'auto', textAlign: 'right' }}>
                                             {acquiredAgoMs !== null ? `${formatElapsedDuration(acquiredAgoMs)} ago` : '-'}
@@ -918,7 +924,7 @@ const DecodedInsightsIsland = React.memo(function DecodedInsightsIsland() {
                                     </Box>
                                     <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, minWidth: 0 }}>
                                         <Typography variant="caption" sx={{ color: 'text.secondary', opacity: 0.72, fontSize: '0.66rem', lineHeight: 1.2 }}>
-                                            Fix lost:
+                                            {t('decoded_insights_island.fix_lost', { defaultValue: 'Fix lost:' })}
                                         </Typography>
                                         <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.66rem', lineHeight: 1.2, fontFamily: 'monospace', marginLeft: 'auto', textAlign: 'right' }}>
                                             {lostAgoMs !== null ? `${formatElapsedDuration(lostAgoMs)} ago` : '-'}
@@ -926,7 +932,7 @@ const DecodedInsightsIsland = React.memo(function DecodedInsightsIsland() {
                                     </Box>
                                     <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, minWidth: 0 }}>
                                         <Typography variant="caption" sx={{ color: 'text.secondary', opacity: 0.72, fontSize: '0.66rem', lineHeight: 1.2 }}>
-                                            Last fix acquired:
+                                            {t('decoded_insights_island.last_fix_acquired', { defaultValue: 'Last fix acquired:' })}
                                         </Typography>
                                         <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.66rem', lineHeight: 1.2, fontFamily: 'monospace', marginLeft: 'auto', textAlign: 'right' }}>
                                             {lastFixAcquiredAgoMs !== null ? `${formatElapsedDuration(lastFixAcquiredAgoMs)} ago` : '-'}
@@ -934,7 +940,7 @@ const DecodedInsightsIsland = React.memo(function DecodedInsightsIsland() {
                                     </Box>
                                     <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, minWidth: 0 }}>
                                         <Typography variant="caption" sx={{ color: 'text.secondary', opacity: 0.72, fontSize: '0.66rem', lineHeight: 1.2 }}>
-                                            Last update:
+                                            {t('decoded_insights_island.last_update', { defaultValue: 'Last update:' })}
                                         </Typography>
                                         <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.66rem', lineHeight: 1.2, marginLeft: 'auto', textAlign: 'right' }}>
                                             {receiverFix.lastUpdateMs ? formatTimestamp(receiverFix.lastUpdateMs) : '-'}
@@ -976,7 +982,7 @@ const DecodedInsightsIsland = React.memo(function DecodedInsightsIsland() {
                                 }}
                             >
                                 <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.primary', fontSize: '0.68rem' }}>
-                                    GNSS
+                                    {t('decoded_insights_island.gnss', { defaultValue: 'GNSS' })}
                                 </Typography>
                                 <Box sx={{ opacity: 0.55 }}>•</Box>
                                 <Box sx={{ display: 'flex', gap: 0.45, flex: '1 1 auto', minWidth: 0, overflow: 'hidden' }}>

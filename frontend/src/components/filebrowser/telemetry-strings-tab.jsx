@@ -29,6 +29,7 @@ import {
 } from '@mui/material';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import { toast } from 'react-toastify';
+import { useTranslation } from 'react-i18next';
 
 function getConfidenceColor(confidence) {
     switch (confidence) {
@@ -52,6 +53,7 @@ function getTypeColor(detectedType) {
 }
 
 export default function StringsTab({ packet, telemetry }) {
+    const { t } = useTranslation('filebrowser');
     const theme = useTheme();
 
     // Get string analysis from backend
@@ -155,7 +157,7 @@ export default function StringsTab({ packet, telemetry }) {
             `  Null Bytes: ${stringAnalysis.statistics.null_bytes}`,
             `  Strings Found: ${stringAnalysis.statistics.strings_found}`,
             '',
-            'Detected Strings:',
+            t('telemetry_strings_tab.detected_strings', { defaultValue: 'Detected Strings:' }),
             '',
             ...stringAnalysis.strings.map(s =>
                 `Offset: 0x${s.offset.toString(16).padStart(4, '0').toUpperCase()} | ` +
@@ -175,7 +177,7 @@ export default function StringsTab({ packet, telemetry }) {
         return (
             <Box sx={{ p: 3, textAlign: 'center' }}>
                 <Typography color="text.secondary">
-                    No data available for string analysis
+                    {t('telemetry_strings_tab.no_data_available_for_string_analysis', { defaultValue: 'No data available for string analysis' })}
                 </Typography>
             </Box>
         );
@@ -188,7 +190,7 @@ export default function StringsTab({ packet, telemetry }) {
             {/* Statistics */}
             <Paper variant="outlined" sx={{ p: 2, mb: 3 }}>
                 <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 700 }}>
-                    String Content Statistics
+                    {t('telemetry_strings_tab.string_content_statistics', { defaultValue: 'String Content Statistics' })}
                 </Typography>
                 <Box sx={{
                     display: 'grid',
@@ -197,7 +199,7 @@ export default function StringsTab({ packet, telemetry }) {
                 }}>
                     <Box>
                         <Typography variant="caption" color="text.secondary">
-                            Total Bytes
+                            {t('telemetry_strings_tab.total_bytes', { defaultValue: 'Total Bytes' })}
                         </Typography>
                         <Typography variant="h6" sx={{ fontFamily: 'monospace' }}>
                             {statistics.total_bytes}
@@ -205,7 +207,7 @@ export default function StringsTab({ packet, telemetry }) {
                     </Box>
                     <Box>
                         <Typography variant="caption" color="text.secondary">
-                            Printable ASCII
+                            {t('telemetry_strings_tab.printable_ascii', { defaultValue: 'Printable ASCII' })}
                         </Typography>
                         <Typography variant="h6" sx={{ fontFamily: 'monospace' }}>
                             {statistics.printable_ascii_count} ({statistics.printable_ascii_percent}%)
@@ -213,7 +215,7 @@ export default function StringsTab({ packet, telemetry }) {
                     </Box>
                     <Box>
                         <Typography variant="caption" color="text.secondary">
-                            Null Bytes
+                            {t('telemetry_strings_tab.null_bytes', { defaultValue: 'Null Bytes' })}
                         </Typography>
                         <Typography variant="h6" sx={{ fontFamily: 'monospace' }}>
                             {statistics.null_bytes}
@@ -221,7 +223,7 @@ export default function StringsTab({ packet, telemetry }) {
                     </Box>
                     <Box>
                         <Typography variant="caption" color="text.secondary">
-                            Strings Found
+                            {t('telemetry_strings_tab.strings_found', { defaultValue: 'Strings Found' })}
                         </Typography>
                         <Typography variant="h6" sx={{ fontFamily: 'monospace' }}>
                             {statistics.strings_found}
@@ -239,7 +241,7 @@ export default function StringsTab({ packet, telemetry }) {
                     variant="outlined"
                     disabled={strings.length === 0}
                 >
-                    Copy All Strings
+                    {t('telemetry_strings_tab.copy_all_strings', { defaultValue: 'Copy All Strings' })}
                 </Button>
                 <Button
                     size="small"
@@ -248,7 +250,7 @@ export default function StringsTab({ packet, telemetry }) {
                     variant="outlined"
                     disabled={strings.length === 0}
                 >
-                    Copy Full Report
+                    {t('telemetry_strings_tab.copy_full_report', { defaultValue: 'Copy Full Report' })}
                 </Button>
             </Stack>
 
@@ -256,7 +258,7 @@ export default function StringsTab({ packet, telemetry }) {
             {strings.length === 0 ? (
                 <Paper variant="outlined" sx={{ p: 3, textAlign: 'center' }}>
                     <Typography color="text.secondary">
-                        No strings detected in this packet. The payload may be purely binary data.
+                        {t('telemetry_strings_tab.no_strings_detected_in_this_packet_the_payload_may_be_pu', { defaultValue: 'No strings detected in this packet. The payload may be purely binary data.' })}
                     </Typography>
                 </Paper>
             ) : (
@@ -269,25 +271,25 @@ export default function StringsTab({ packet, telemetry }) {
                         <TableHead>
                             <TableRow>
                                 <TableCell sx={{ fontWeight: 700, backgroundColor: theme.palette.background.paper }}>
-                                    Offset
+                                    {t('telemetry_strings_tab.offset', { defaultValue: 'Offset' })}
                                 </TableCell>
                                 <TableCell sx={{ fontWeight: 700, backgroundColor: theme.palette.background.paper }}>
-                                    Content
+                                    {t('telemetry_strings_tab.content', { defaultValue: 'Content' })}
                                 </TableCell>
                                 <TableCell sx={{ fontWeight: 700, backgroundColor: theme.palette.background.paper }}>
-                                    Length
+                                    {t('telemetry_strings_tab.length', { defaultValue: 'Length' })}
                                 </TableCell>
                                 <TableCell sx={{ fontWeight: 700, backgroundColor: theme.palette.background.paper }}>
-                                    Type
+                                    {t('telemetry_strings_tab.type', { defaultValue: 'Type' })}
                                 </TableCell>
                                 <TableCell sx={{ fontWeight: 700, backgroundColor: theme.palette.background.paper }}>
-                                    Confidence
+                                    {t('telemetry_strings_tab.confidence', { defaultValue: 'Confidence' })}
                                 </TableCell>
                                 <TableCell sx={{ fontWeight: 700, backgroundColor: theme.palette.background.paper }}>
-                                    Format
+                                    {t('telemetry_strings_tab.format', { defaultValue: 'Format' })}
                                 </TableCell>
                                 <TableCell sx={{ fontWeight: 700, backgroundColor: theme.palette.background.paper, width: 60 }}>
-                                    Actions
+                                    {t('telemetry_strings_tab.actions', { defaultValue: 'Actions' })}
                                 </TableCell>
                             </TableRow>
                         </TableHead>
@@ -359,9 +361,7 @@ export default function StringsTab({ packet, telemetry }) {
             {/* Info box */}
             <Box sx={{ mt: 2, p: 2, bgcolor: theme.palette.info.main + '30', borderRadius: 1, border: `1px solid ${theme.palette.info.main}60` }}>
                 <Typography variant="caption" sx={{ color: theme.palette.info.light, fontWeight: 500 }}>
-                    💡 This tab extracts text strings from the payload using multiple methods:
-                    contiguous printable ASCII sequences, null-terminated C-style strings, and length-prefixed strings.
-                    Confidence scores indicate likelihood of being meaningful text.
+                    {t('telemetry_strings_tab.this_tab_extracts_text_strings_from_the_payload_using_mu', { defaultValue: '💡 This tab extracts text strings from the payload using multiple methods:\n                    contiguous printable ASCII sequences, null-terminated C-style strings, and length-prefixed strings.\n                    Confidence scores indicate likelihood of being meaningful text.' })}
                 </Typography>
             </Box>
         </Box>

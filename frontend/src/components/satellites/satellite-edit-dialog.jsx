@@ -333,7 +333,7 @@ const SatelliteEditDialog = ({ open, onClose, satelliteData, onSaved }) => {
                 <Tabs
                     value={activeTab}
                     onChange={(_event, value) => setActiveTab(value)}
-                    aria-label="satellite edit tabs"
+                    aria-label={t('satellite_edit_dialog.satellite_edit_tabs', { defaultValue: 'satellite edit tabs' })}
                     sx={{ mt: 1.5, borderBottom: (theme) => `1px solid ${theme.palette.divider}` }}
                 >
                     <Tab label={t('satellite_database.tab_general', { defaultValue: 'General' })} />

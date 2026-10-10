@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { Box, Typography, useTheme } from '@mui/material';
 import { setVFOProperty } from './vfo-marker/vfo-slice.jsx';
 import { selectRunningRigTransmitters } from '../target/transmitter-selectors.js';
+import { useTranslation } from 'react-i18next';
 
 const sameIdentifier = (left, right) => {
     if (left == null || right == null) {
@@ -34,6 +35,7 @@ const areRotaryVfoStatesEqual = (previous, next) => (
 // means the rotary control itself stays idle while a hidden readout is not in
 // use, instead of rerendering along with every doppler sample.
 const RotaryFrequencyReadout = ({ vfoNumber, vfo, theme }) => {
+    const { t } = useTranslation('waterfall');
     const frequency = useSelector((state) => state.vfo.vfoMarkers?.[vfoNumber]?.frequency || 0);
     const transmitters = useSelector(selectRunningRigTransmitters);
     const lockedTransmitter = vfo?.lockedTransmitterId && vfo.lockedTransmitterId !== 'none'
@@ -54,7 +56,7 @@ const RotaryFrequencyReadout = ({ vfoNumber, vfo, theme }) => {
     return (
         <Box sx={{ mb: 1, textAlign: 'center' }}>
             <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
-                VFO {vfoNumber} - Step: {vfo.stepSize >= 1000 ? `${vfo.stepSize / 1000}kHz` : `${vfo.stepSize}Hz`}
+                VFO {vfoNumber} {t('rotator_encoder.step', { defaultValue: '- Step:' })} {vfo.stepSize >= 1000 ? `${vfo.stepSize / 1000}kHz` : `${vfo.stepSize}Hz`}
             </Typography>
             <Typography variant="h6" sx={{ fontFamily: 'monospace', color: vfo.color }}>
                 {formatFrequency(frequency)}
@@ -62,10 +64,10 @@ const RotaryFrequencyReadout = ({ vfoNumber, vfo, theme }) => {
             {lockedTransmitter && (
                 <Box sx={{ mt: 0.5 }}>
                     <Typography variant="caption" sx={{ color: theme.palette.warning.main, fontWeight: 600, display: 'block' }}>
-                        🔒 OFFSET MODE
+                        {t('rotator_encoder.offset_mode', { defaultValue: '🔒 OFFSET MODE' })}
                     </Typography>
                     <Typography variant="caption" sx={{ color: theme.palette.text.secondary, fontSize: '0.7rem' }}>
-                        Corrected: {formatFrequency(correctedFrequency)}
+                        {t('rotator_encoder.corrected', { defaultValue: 'Corrected:' })} {formatFrequency(correctedFrequency)}
                     </Typography>
                     <Typography
                         variant="caption"
@@ -76,7 +78,7 @@ const RotaryFrequencyReadout = ({ vfoNumber, vfo, theme }) => {
                             fontSize: '0.75rem',
                         }}
                     >
-                        Offset: {(vfo.frequencyOffset || 0) >= 0 ? '+' : ''}{vfo.frequencyOffset || 0} Hz
+                        {t('rotator_encoder.offset', { defaultValue: 'Offset:' })} {(vfo.frequencyOffset || 0) >= 0 ? '+' : ''}{vfo.frequencyOffset || 0} Hz
                     </Typography>
                 </Box>
             )}
@@ -91,6 +93,7 @@ const RotaryEncoder = ({
                            showFrequency = false,
                            style = {}
                        }) => {
+                           const { t } = useTranslation('waterfall');
     const theme = useTheme();
     const dispatch = useDispatch();
     const { currentVFO, isVFOActive } = useSelector((state) => ({
@@ -395,7 +398,7 @@ const RotaryEncoder = ({
                                 fill={theme.palette.warning.main}
                                 fontFamily="sans-serif"
                             >
-                                OFFSET
+                                {t('rotator_encoder.offset', { defaultValue: 'OFFSET' })}
                             </text>
                         </g>
                     )}
@@ -454,7 +457,7 @@ const RotaryEncoder = ({
 
             {!currentVFO && (
                 <Typography variant="caption" sx={{ mt: 1, color: theme.palette.text.disabled, textAlign: 'center' }}>
-                    VFO {vfoNumber} not configured
+                    VFO {vfoNumber} {t('rotator_encoder.not_configured', { defaultValue: 'not configured' })}
                 </Typography>
             )}
 

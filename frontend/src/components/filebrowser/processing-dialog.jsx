@@ -47,16 +47,9 @@ import ErrorIcon from '@mui/icons-material/Error';
 import CancelIcon from '@mui/icons-material/Cancel';
 import { useSocket } from '../common/socket.jsx';
 import { startBackgroundTask } from './filebrowser-slice.jsx';
-import { SATDUMP_PIPELINES } from '../waterfall/decoder-parameters.js';
+import { getSatdumpPipelines } from '../waterfall/decoder-parameters.js';
 import { toast } from 'react-toastify';
-
-const BASEBAND_FORMATS = [
-    { value: 'i16', label: 'Complex Int16 (i16)' },
-    { value: 'i8', label: 'Complex Int8 (i8)' },
-    { value: 'f32', label: 'Complex Float32 (f32)' },
-    { value: 'w16', label: 'Complex Int16 WAV (w16)' },
-    { value: 'w8', label: 'Complex Int8 WAV (w8)' },
-];
+import { useTranslation } from 'react-i18next';
 
 const getRecordingBaseName = (recordingName) => {
     if (!recordingName) return '';
@@ -129,6 +122,18 @@ const parseAnsiColors = (text = '') => {
 };
 
 export default function ProcessingDialog({ open, onClose, recording }) {
+    // 同上：本组件用 filebrowser，同时需要解析 decoder-parameters.js 的 waterfall 键
+    const { t } = useTranslation(['filebrowser', 'waterfall']);
+
+    // Defined inside the component so the labels can use this component's `t`.
+    const BASEBAND_FORMATS = [
+        { value: 'i16', label: t('processing_dialog.complex_int16_i16', { defaultValue: 'Complex Int16 (i16)' }) },
+        { value: 'i8', label: t('processing_dialog.complex_int8_i8', { defaultValue: 'Complex Int8 (i8)' }) },
+        { value: 'f32', label: t('processing_dialog.complex_float32_f32', { defaultValue: 'Complex Float32 (f32)' }) },
+        { value: 'w16', label: t('processing_dialog.complex_int16_wav_w16', { defaultValue: 'Complex Int16 WAV (w16)' }) },
+        { value: 'w8', label: t('processing_dialog.complex_int8_wav_w8', { defaultValue: 'Complex Int8 WAV (w8)' }) },
+    ];
+
     const { socket } = useSocket();
     const dispatch = useDispatch();
     const { tasks } = useSelector(state => state.backgroundTasks);
@@ -265,13 +270,13 @@ export default function ProcessingDialog({ open, onClose, recording }) {
     const getStatusChip = (status) => {
         switch (status) {
             case 'running':
-                return <Chip label="Running" size="small" color="info" icon={<PlaylistPlayIcon />} />;
+                return <Chip label={t('processing_dialog.running', { defaultValue: 'Running' })} size="small" color="info" icon={<PlaylistPlayIcon />} />;
             case 'completed':
-                return <Chip label="Completed" size="small" color="success" icon={<CheckCircleIcon />} />;
+                return <Chip label={t('processing_dialog.completed', { defaultValue: 'Completed' })} size="small" color="success" icon={<CheckCircleIcon />} />;
             case 'failed':
-                return <Chip label="Failed" size="small" color="error" icon={<ErrorIcon />} />;
+                return <Chip label={t('processing_dialog.failed', { defaultValue: 'Failed' })} size="small" color="error" icon={<ErrorIcon />} />;
             case 'stopped':
-                return <Chip label="Stopped" size="small" color="warning" icon={<CancelIcon />} />;
+                return <Chip label={t('processing_dialog.stopped', { defaultValue: 'Stopped' })} size="small" color="warning" icon={<CancelIcon />} />;
             default:
                 return <Chip label={status || 'Pending'} size="small" />;
         }
@@ -330,7 +335,7 @@ export default function ProcessingDialog({ open, onClose, recording }) {
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <BuildIcon color="primary" />
                         <Typography variant="h6">
-                            Process IQ Recording
+                            {t('processing_dialog.process_iq_recording', { defaultValue: 'Process IQ Recording' })}
                         </Typography>
                     </Box>
                 </Box>
@@ -347,21 +352,21 @@ export default function ProcessingDialog({ open, onClose, recording }) {
             >
                 <Box sx={{ mt: 3 }}>
                     <Typography variant="subtitle2" gutterBottom>
-                        SatDump Processing
+                        {t('processing_dialog.satdump_processing', { defaultValue: 'SatDump Processing' })}
                     </Typography>
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                        Process this IQ recording using SatDump satellite decoder
+                        {t('processing_dialog.process_this_iq_recording_using_satdump_satellite_decode', { defaultValue: 'Process this IQ recording using SatDump satellite decoder' })}
                     </Typography>
 
                     <FormControl fullWidth size="small" sx={{ mb: 2 }} disabled={isTaskRunning}>
-                        <InputLabel>Satellite / Pipeline</InputLabel>
+                        <InputLabel>{t('processing_dialog.satellite_pipeline', { defaultValue: 'Satellite / Pipeline' })}</InputLabel>
                         <Select
                             value={selectedPipeline}
-                            label="Satellite / Pipeline"
+                            label={t('processing_dialog.satellite_pipeline', { defaultValue: 'Satellite / Pipeline' })}
                             onChange={(e) => setSelectedPipeline(e.target.value)}
                             size="small"
                         >
-                            {Object.entries(SATDUMP_PIPELINES).map(([key, group]) => {
+                            {Object.entries(getSatdumpPipelines(t)).map(([key, group]) => {
                                 const pipelines = group?.pipelines || [];
                                 if (pipelines.length === 0) return null;
                                 const label = group.label || key;
@@ -380,10 +385,10 @@ export default function ProcessingDialog({ open, onClose, recording }) {
                     </FormControl>
 
                     <FormControl fullWidth size="small" sx={{ mb: 2 }} disabled>
-                        <InputLabel>Baseband Format</InputLabel>
+                        <InputLabel>{t('processing_dialog.baseband_format', { defaultValue: 'Baseband Format' })}</InputLabel>
                         <Select
                             value={basebandFormat}
-                            label="Baseband Format"
+                            label={t('processing_dialog.baseband_format', { defaultValue: 'Baseband Format' })}
                             onChange={(e) => setBasebandFormat(e.target.value)}
                             size="small"
                         >
@@ -397,7 +402,7 @@ export default function ProcessingDialog({ open, onClose, recording }) {
 
                     <TextField
                         fullWidth
-                        label="Sample Rate (Hz)"
+                        label={t('processing_dialog.sample_rate_hz', { defaultValue: 'Sample Rate (Hz)' })}
                         type="number"
                         value={samplerate}
                         onChange={(e) => setSamplerate(e.target.value)}
@@ -413,7 +418,7 @@ export default function ProcessingDialog({ open, onClose, recording }) {
                                 onChange={(e) => setFinishProcessing(e.target.checked)}
                             />
                         }
-                        label="Generate products after decoding"
+                        label={t('processing_dialog.generate_products_after_decoding', { defaultValue: 'Generate products after decoding' })}
                     />
 
                     {(hasTask || submitting) && (
@@ -423,13 +428,13 @@ export default function ProcessingDialog({ open, onClose, recording }) {
                                 <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
                                     <Box>
                                         <Typography variant="subtitle2">
-                                            Background Task
+                                            {t('processing_dialog.background_task', { defaultValue: 'Background Task' })}
                                         </Typography>
                                         <Typography variant="caption" color="text.secondary">
-                                            This dialog stays open to show task updates. You can close it anytime.
+                                            {t('processing_dialog.this_dialog_stays_open_to_show_task_updates_you_can_clos', { defaultValue: 'This dialog stays open to show task updates. You can close it anytime.' })}
                                         </Typography>
                                     </Box>
-                                    {hasTask ? getStatusChip(selectedTask.status) : <Chip label="Starting" size="small" />}
+                                    {hasTask ? getStatusChip(selectedTask.status) : <Chip label={t('processing_dialog.starting', { defaultValue: 'Starting' })} size="small" />}
                                 </Stack>
 
                                 {hasTask && (
@@ -447,7 +452,7 @@ export default function ProcessingDialog({ open, onClose, recording }) {
                                                 <Box>
                                                     <LinearProgress variant="determinate" value={selectedTask.progress} />
                                                     <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
-                                                        Progress: {Math.round(selectedTask.progress)}%
+                                                        {t('processing_dialog.progress', { defaultValue: 'Progress:' })} {Math.round(selectedTask.progress)}%
                                                     </Typography>
                                                 </Box>
                                             ) : (
@@ -456,7 +461,7 @@ export default function ProcessingDialog({ open, onClose, recording }) {
                                         ) : null}
                                         {getTaskDuration(selectedTask) && (
                                             <Typography variant="caption" color="text.secondary">
-                                                Duration: {getTaskDuration(selectedTask)}
+                                                {t('processing_dialog.duration', { defaultValue: 'Duration:' })} {getTaskDuration(selectedTask)}
                                                 {selectedTask.return_code !== null && ` | Exit code: ${selectedTask.return_code}`}
                                             </Typography>
                                         )}
@@ -466,7 +471,7 @@ export default function ProcessingDialog({ open, onClose, recording }) {
                                         <Stack spacing={0.75}>
                                             <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
                                                 <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700 }}>
-                                                    Task Output
+                                                    {t('processing_dialog.task_output', { defaultValue: 'Task Output' })}
                                                 </Typography>
                                                 {outputLines.length > 1 && (
                                                     <Button
@@ -524,7 +529,7 @@ export default function ProcessingDialog({ open, onClose, recording }) {
                                                     );
                                                 }) : (
                                                     <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
-                                                        Waiting for task output...
+                                                        {t('processing_dialog.waiting_for_task_output', { defaultValue: 'Waiting for task output...' })}
                                                     </Typography>
                                                 )}
                                             </Paper>
@@ -539,10 +544,10 @@ export default function ProcessingDialog({ open, onClose, recording }) {
 
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                         <Typography variant="body2" color="text.secondary">
-                            <strong>Note:</strong> Processing will run in the background. You can monitor progress in the Tasks panel.
+                            <strong>{t('processing_dialog.note', { defaultValue: 'Note:' })}</strong> {t('processing_dialog.processing_will_run_in_the_background_you_can_monitor_pr', { defaultValue: 'Processing will run in the background. You can monitor progress in the Tasks panel.' })}
                         </Typography>
                         <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                            ⓘ Ensure the signal is centered at the recording's center frequency for a successful decoding.
+                            {t('processing_dialog.ensure_the_signal_is_centered_at_the_recording_s_center_', { defaultValue: 'ⓘ Ensure the signal is centered at the recording\'s center frequency for a successful decoding.' })}
                         </Typography>
                     </Box>
                 </Box>

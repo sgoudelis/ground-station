@@ -246,7 +246,7 @@ const SatelliteGroupSelectorBar = React.memo(function SatelliteGroupSelectorBar(
                     onChange={handleOnGroupChange}
                 >
                     <MenuItem value="none" key="none">
-                        [select group]
+                        {t('satellite_group_selector_bar.select_group', { defaultValue: '[select group]' })}
                     </MenuItem>
                     <ListSubheader>{t('satellite_selector.user_groups')}</ListSubheader>
                     {userRankedGroups.length === 0 ? (
@@ -359,13 +359,13 @@ const SatelliteGroupSelectorBar = React.memo(function SatelliteGroupSelectorBar(
                 title={
                     <Box>
                         <Typography variant="caption" display="block">
-                            Rising: {risingCount}
+                            {t('satellite_group_selector_bar.rising', { defaultValue: 'Rising:' })} {risingCount}
                         </Typography>
                         <Typography variant="caption" display="block">
-                            Peak: {peakCount}
+                            {t('satellite_group_selector_bar.peak', { defaultValue: 'Peak:' })} {peakCount}
                         </Typography>
                         <Typography variant="caption" display="block">
-                            Falling: {fallingCount}
+                            {t('satellite_group_selector_bar.falling', { defaultValue: 'Falling:' })} {fallingCount}
                         </Typography>
                     </Box>
                 }

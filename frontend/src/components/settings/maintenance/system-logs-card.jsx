@@ -41,6 +41,7 @@ import DownloadIcon from '@mui/icons-material/Download';
 import { useSocket } from '../../common/socket.jsx';
 import { useUserTimeSettings } from '../../../hooks/useUserTimeSettings.jsx';
 import { formatTime } from '../../../utils/date-time.js';
+import { useTranslation } from 'react-i18next';
 
 const LIMIT_OPTIONS = [200, 500, 1000, 2000];
 const HARD_CAP = 5000;
@@ -163,6 +164,7 @@ const LogEntryRow = React.memo(function LogEntryRow({ log, showMetadata }) {
 });
 
 const SystemLogsCard = () => {
+    const { t } = useTranslation('settings');
     const { socket } = useSocket();
     const [isStreaming, setIsStreaming] = useState(false);
     const [logs, setLogs] = useState([]);
@@ -266,10 +268,10 @@ const SystemLogsCard = () => {
     return (
         <>
             <Typography variant="h6" gutterBottom>
-                System Logs
+                {t('system_logs_card.system_logs', { defaultValue: 'System Logs' })}
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                Real-time streaming of backend logs from all processes and threads
+                {t('system_logs_card.real_time_streaming_of_backend_logs_from_all_processes_a', { defaultValue: 'Real-time streaming of backend logs from all processes and threads' })}
             </Typography>
             <Divider sx={{ mb: 2 }} />
 
@@ -290,7 +292,7 @@ const SystemLogsCard = () => {
                         startIcon={<ClearAllIcon />}
                         onClick={onClear}
                     >
-                        Clear
+                        {t('system_logs_card.clear', { defaultValue: 'Clear' })}
                     </Button>
 
                     <Button
@@ -299,15 +301,15 @@ const SystemLogsCard = () => {
                         onClick={onDownload}
                         disabled={visibleLogs.length === 0}
                     >
-                        Export
+                        {t('system_logs_card.export', { defaultValue: 'Export' })}
                     </Button>
                 </Stack>
 
                 <FormControl size="small" sx={{ minWidth: 120 }}>
-                    <InputLabel id="log-limit-label">Buffer Size</InputLabel>
+                    <InputLabel id="log-limit-label">{t('system_logs_card.buffer_size', { defaultValue: 'Buffer Size' })}</InputLabel>
                     <Select
                         labelId="log-limit-label"
-                        label="Buffer Size"
+                        label={t('system_logs_card.buffer_size', { defaultValue: 'Buffer Size' })}
                         value={limit}
                         onChange={(e) => setLimit(Math.min(Number(e.target.value), HARD_CAP))}
                     >
@@ -322,11 +324,11 @@ const SystemLogsCard = () => {
             <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems={{ md: 'center' }} sx={{ mb: 2 }}>
                 <TextField
                     size="small"
-                    label="Search logs"
+                    label={t('system_logs_card.search_logs', { defaultValue: 'Search logs' })}
                     value={searchText}
                     onChange={(e) => setSearchText(e.target.value)}
                     fullWidth
-                    placeholder="Filter by message, logger, process..."
+                    placeholder={t('system_logs_card.filter_by_message_logger_process', { defaultValue: 'Filter by message, logger, process...' })}
                 />
 
                 <ToggleButtonGroup
@@ -336,11 +338,11 @@ const SystemLogsCard = () => {
                     size="small"
                     sx={{ flexShrink: 0 }}
                 >
-                    <ToggleButton value="ALL">All</ToggleButton>
-                    <ToggleButton value="DEBUG">Debug</ToggleButton>
-                    <ToggleButton value="INFO">Info</ToggleButton>
-                    <ToggleButton value="WARNING">Warn</ToggleButton>
-                    <ToggleButton value="ERROR">Error</ToggleButton>
+                    <ToggleButton value="ALL">{t('system_logs_card.all', { defaultValue: 'All' })}</ToggleButton>
+                    <ToggleButton value="DEBUG">{t('system_logs_card.debug', { defaultValue: 'Debug' })}</ToggleButton>
+                    <ToggleButton value="INFO">{t('system_logs_card.info', { defaultValue: 'Info' })}</ToggleButton>
+                    <ToggleButton value="WARNING">{t('system_logs_card.warn', { defaultValue: 'Warn' })}</ToggleButton>
+                    <ToggleButton value="ERROR">{t('system_logs_card.error', { defaultValue: 'Error' })}</ToggleButton>
                 </ToggleButtonGroup>
             </Stack>
 
@@ -353,7 +355,7 @@ const SystemLogsCard = () => {
                             size="small"
                         />
                     }
-                    label="Show metadata"
+                    label={t('system_logs_card.show_metadata', { defaultValue: 'Show metadata' })}
                 />
 
                 <FormControlLabel
@@ -364,7 +366,7 @@ const SystemLogsCard = () => {
                             size="small"
                         />
                     }
-                    label="Auto-scroll"
+                    label={t('system_logs_card.auto_scroll', { defaultValue: 'Auto-scroll' })}
                 />
             </Stack>
 
@@ -404,11 +406,11 @@ const SystemLogsCard = () => {
             {/* Stats */}
             <Stack direction="row" spacing={2} sx={{ mt: 1 }}>
                 <Typography variant="caption" color="text.secondary">
-                    Showing {visibleLogs.length} of {logs.length} logs
+                    {t('system_logs_card.showing', { defaultValue: 'Showing' })} {visibleLogs.length} of {logs.length} logs
                 </Typography>
                 {searchText && (
                     <Typography variant="caption" color="primary">
-                        Filtered by: "{searchText}"
+                        {t('system_logs_card.filtered_by', { defaultValue: 'Filtered by: "' })}{searchText}"
                     </Typography>
                 )}
             </Stack>

@@ -828,7 +828,7 @@ const PassTimelineComponent = ({
                   </Tooltip>
                 )}
                 {onRefresh && (
-                  <Tooltip title="Refresh passes (force recalculate)">
+                  <Tooltip title={t('pass_timeline.refresh_passes_force_recalculate', { defaultValue: 'Refresh passes (force recalculate)' })}>
                     <span>
                       <IconButton
                         size="small"

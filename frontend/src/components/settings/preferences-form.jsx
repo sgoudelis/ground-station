@@ -609,7 +609,7 @@ const PreferencesForm = ({ mode = 'preferences' }) => {
                                                         fieldKey="gemini_api_key"
                                                         label={t('preferences.gemini_api_key', { defaultValue: 'Gemini API Key' })}
                                                         value={draft.gemini_api_key || ''}
-                                                        placeholder="AIza..."
+                                                        placeholder={t('preferences_form.aiza', { defaultValue: 'AIza...' })}
                                                         helperText={t('preferences.gemini_api_key_help', { defaultValue: 'Google Gemini API key for audio transcription. Get yours at ai.google.dev.' })}
                                                         statusLabel={draft.gemini_api_key
                                                             ? t('preferences.configured', { defaultValue: 'Configured' })
@@ -739,7 +739,7 @@ const PreferencesForm = ({ mode = 'preferences' }) => {
                                                         fieldKey="google_translate_api_key"
                                                         label={t('preferences.google_translate_api_key', { defaultValue: 'Google Translate API Key' })}
                                                         value={draft.google_translate_api_key || ''}
-                                                        placeholder="AIza..."
+                                                        placeholder={t('preferences_form.aiza', { defaultValue: 'AIza...' })}
                                                         helperText={t('preferences.google_translate_api_key_help', { defaultValue: 'Google Cloud Translation API key for translating Deepgram transcriptions.' })}
                                                         statusLabel={draft.google_translate_api_key
                                                             ? t('preferences.configured', { defaultValue: 'Configured' })
