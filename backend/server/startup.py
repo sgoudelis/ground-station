@@ -1,3 +1,18 @@
+# Copyright (c) 2025 Efstratios Goudelis
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 import asyncio
 import concurrent.futures
 import json
@@ -1425,7 +1440,7 @@ def _api_artifact_links(item: Dict[str, Any]) -> Dict[str, Any]:
             "thumbnail": f"{base}?part=thumbnail",
         }
     elif item_type in {"decoded", "audio"} and item.get("file_count", 1) > 1:
-        linked["api_download_urls"] = {"content": base, "sidecar": f"{base}?part=sidecar"}
+        linked["api_download_urls"] = {"content": base, "metadata": f"{base}?part=metadata"}
 
     # Folder details already list nested files. Point those entries at the
     # member route so clients can fetch one product without downloading the ZIP.
@@ -1485,7 +1500,7 @@ async def api_artifact_download(
     background_tasks: BackgroundTasks,
     part: Optional[str] = Query(default=None),
 ):
-    """Download a file or a ZIP of a folder by inventory ID. Use `part` for a recording's `meta`, `snapshot`, or `thumbnail`, a snapshot's `thumbnail`, or a decoded/audio `sidecar`. Supports byte ranges for direct files. Requires `artifacts:download`."""
+    """Download a file or a ZIP of a folder by inventory ID. Use `part` for a recording's `meta`, `snapshot`, or `thumbnail`, a snapshot's `thumbnail`, or a decoded/audio `metadata`. Supports byte ranges for direct files. Requires `artifacts:download`."""
     await _require_api_token(request, "artifacts:download")
     path = await asyncio.to_thread(get_inventory().resolve_download, artifact_id, part=part)
     if path is None:

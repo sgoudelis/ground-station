@@ -1,0 +1,177 @@
+[
+  {
+    "filename": "gfsk_9600baud_20260131_185322_736476.bin",
+    "binary_hex": "7e86a240404040609e966098a6a46103f0444f532c38302c302c302c302c2d3336322c313630322c2d3132312c313137302c3333362c33312c3132302c3132302c3131392c3131352c3136382c313635007e",
+    "metadata": {
+      "satellite": {
+        "norad_id": 62391,
+        "name": "LASARSAT"
+      },
+      "decoder_config": {
+        "source": "transmitter_metadata",
+        "framing": "ax25",
+        "payload_protocol": "ax25"
+      },
+      "packet": {
+        "number": 3,
+        "length_bytes": 82,
+        "timestamp": 1769878402.7364767,
+        "timestamp_iso": "2026-01-31T18:53:22+0200",
+        "hex": "7e86a240404040609e966098a6a46103f0444f532c38302c302c302c302c2d3336322c313630322c2d3132312c313137302c3333362c33312c3132302c3132302c3131392c3131352c3136382c313635007e"
+      },
+      "telemetry": {
+        "parser": "ax25",
+        "success": true,
+        "protocol": "ax25",
+        "frame": {
+          "destination": "CQ-0",
+          "source": "OK0LSR-0",
+          "control": "0x03",
+          "pid": "0xf0",
+          "repeaters": null
+        },
+        "telemetry": {
+          "format": "raw",
+          "hex": "444f532c38302c302c302c302c2d3336322c313630322c2d3132312c313137302c3333362c33312c3132302c3132302c3131392c3131352c3136382c31363500",
+          "length": 64,
+          "ascii": "DOS,80,0,0,0,-362,1602,-121,1170,336,31,120,120,119,115,168,165\u0000"
+        },
+        "raw": {
+          "packet_hex": "86a240404040609e966098a6a46103f0444f532c38302c302c302c302c2d3336322c313630322c2d3132312c313137302c3333362c33312c3132302c3132302c3131392c3131352c3136382c31363500",
+          "payload_hex": "444f532c38302c302c302c302c2d3336322c313630322c2d3132312c313137302c3333362c33312c3132302c3132302c3131392c3131352c3136382c31363500",
+          "payload_length": 64
+        }
+      },
+      "decoder": {
+        "type": "gfsk"
+      }
+    }
+  },
+  {
+    "filename": "gfsk_9600baud_20260131_185332_983072.bin",
+    "binary_hex": "7e86a240404040609e966098a6a46103f0534f4c2c313538312c313437352c323836322c333330362c323738372c313831322c3136352c3133342c3838342c3133342c3432312c313336007e",
+    "metadata": {
+      "satellite": {
+        "norad_id": 62391,
+        "name": "LASARSAT"
+      },
+      "decoder_config": {
+        "source": "transmitter_metadata",
+        "framing": "ax25",
+        "payload_protocol": "ax25"
+      },
+      "packet": {
+        "number": 5,
+        "length_bytes": 76,
+        "timestamp": 1769878412.983072,
+        "timestamp_iso": "2026-01-31T18:53:32+0200",
+        "hex": "7e86a240404040609e966098a6a46103f0534f4c2c313538312c313437352c323836322c333330362c323738372c313831322c3136352c3133342c3838342c3133342c3432312c313336007e"
+      },
+      "telemetry": {
+        "parser": "ax25",
+        "success": true,
+        "protocol": "ax25",
+        "frame": {
+          "destination": "CQ-0",
+          "source": "OK0LSR-0",
+          "control": "0x03",
+          "pid": "0xf0",
+          "repeaters": null
+        },
+        "telemetry": {
+          "format": "raw",
+          "hex": "534f4c2c313538312c313437352c323836322c333330362c323738372c313831322c3136352c3133342c3838342c3133342c3432312c31333600",
+          "length": 58,
+          "ascii": "SOL,1581,1475,2862,3306,2787,1812,165,134,884,134,421,136\u0000"
+        },
+        "raw": {
+          "packet_hex": "86a240404040609e966098a6a46103f0534f4c2c313538312c313437352c323836322c333330362c323738372c313831322c3136352c3133342c3838342c3133342c3432312c31333600",
+          "payload_hex": "534f4c2c313538312c313437352c323836322c333330362c323738372c313831322c3136352c3133342c3838342c3133342c3432312c31333600",
+          "payload_length": 58
+        }
+      },
+      "decoder": {
+        "type": "gfsk"
+      }
+    }
+  },
+  {
+    "filename": "gfsk_9600baud_20260131_185408_841185.bin",
+    "binary_hex": "7e86a240404040609e966098a6a46103f0552c31363336303332372c33353039303731372c342c312c323936342c333035322c333131322c3838372c4f4d314154422c33353338312c323539333434382c38392c313133007e",
+    "metadata": {
+      "satellite": {
+        "norad_id": 62391,
+        "name": "LASARSAT"
+      },
+      "decoder_config": {
+        "source": "transmitter_metadata",
+        "framing": "ax25",
+        "payload_protocol": "ax25"
+      },
+      "packet": {
+        "number": 6,
+        "length_bytes": 89,
+        "timestamp": 1769878448.8411853,
+        "timestamp_iso": "2026-01-31T18:54:08+0200",
+        "hex": "7e86a240404040609e966098a6a46103f0552c31363336303332372c33353039303731372c342c312c323936342c333035322c333131322c3838372c4f4d314154422c33353338312c323539333434382c38392c313133007e"
+      },
+      "telemetry": {
+        "parser": "ax25",
+        "success": true,
+        "protocol": "ax25",
+        "frame": {
+          "destination": "CQ-0",
+          "source": "OK0LSR-0",
+          "control": "0x03",
+          "pid": "0xf0",
+          "repeaters": null
+        },
+        "telemetry": {
+          "format": "raw",
+          "hex": "552c31363336303332372c33353039303731372c342c312c323936342c333035322c333131322c3838372c4f4d314154422c33353338312c323539333434382c38392c31313300",
+          "length": 71,
+          "ascii": "U,16360327,35090717,4,1,2964,3052,3112,887,OM1ATB,35381,2593448,89,113\u0000"
+        },
+        "raw": {
+          "packet_hex": "86a240404040609e966098a6a46103f0552c31363336303332372c33353039303731372c342c312c323936342c333035322c333131322c3838372c4f4d314154422c33353338312c323539333434382c38392c31313300",
+          "payload_hex": "552c31363336303332372c33353039303731372c342c312c323936342c333035322c333131322c3838372c4f4d314154422c33353338312c323539333434382c38392c31313300",
+          "payload_length": 71
+        }
+      },
+      "decoder": {
+        "type": "gfsk"
+      }
+    }
+  },
+  {
+    "filename": "gfsk_9600baud_20260131_185322_728723.bin",
+    "binary_hex": "7e8baecc00000000971431055f31119a503349d09145001cf734ac727da94018c77a4231cd00274a3be697af349d462800279a29319e29d8e6801073cd28a3a1e051df9a003a5260f5a5efd28a0404d263d29451d3b503019f5a5a4a5009e94008452fb507838cd277f7a00060f3839a5cfb629ca8429248c7d69bdb3da801413c8a319340a5c771400d1919a427bd6a36f07e",
+    "metadata": {
+      "satellite": {
+        "norad_id": 62391,
+        "name": "LASARSAT"
+      },
+      "decoder_config": {
+        "source": "transmitter_metadata",
+        "framing": "ax25",
+        "payload_protocol": "ax25"
+      },
+      "packet": {
+        "number": 1,
+        "length_bytes": 147,
+        "timestamp": 1769878402.7287233,
+        "timestamp_iso": "2026-01-31T18:53:22+0200",
+        "hex": "7e8baecc00000000971431055f31119a503349d09145001cf734ac727da94018c77a4231cd00274a3be697af349d462800279a29319e29d8e6801073cd28a3a1e051df9a003a5260f5a5efd28a0404d263d29451d3b503019f5a5a4a5009e94008452fb507838cd277f7a00060f3839a5cfb629ca8429248c7d69bdb3da801413c8a319340a5c771400d1919a427bd6a36f07e"
+      },
+      "telemetry": {
+        "parser": null,
+        "success": false,
+        "protocol": "ax25",
+        "error": "Invalid destination callsign: 'EWf' (not valid AX.25 format)"
+      },
+      "decoder": {
+        "type": "gfsk"
+      }
+    }
+  }
+]

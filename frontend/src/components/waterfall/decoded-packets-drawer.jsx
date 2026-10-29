@@ -1055,6 +1055,8 @@ const DecodedPacketsDrawer = React.memo(function DecodedPacketsDrawer({ embedded
                 onClose={() => setTelemetryDialogOpen(false)}
                 file={telemetryFile}
                 metadata={telemetryMetadata}
+                socket={socket}
+                onMetadataChange={setTelemetryMetadata}
             />
 
             <SatelliteInfoDialog

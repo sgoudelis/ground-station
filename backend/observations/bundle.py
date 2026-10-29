@@ -1,3 +1,18 @@
+# Copyright (c) 2026 Efstratios Goudelis
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 """Filesystem bundles for artifacts produced by automated observations."""
 
 import json
@@ -122,7 +137,7 @@ def bundle_has_artifacts(bundle_dir: Path) -> bool:
     manifest_path = bundle_dir / "manifest.json"
     return any(
         file_path.is_file() and file_path != manifest_path
-        # JSON sidecars only describe another product and are not displayed as
+        # JSON metadata files only describe another product and are not displayed as
         # artifacts in the file browser.
         and file_path.suffix.lower() != ".json"
         for file_path in bundle_dir.rglob("*")

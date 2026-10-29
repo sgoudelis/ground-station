@@ -103,6 +103,7 @@ export default function OverviewTab({ metadata, file, telemetry, packet, ax25 })
         (telemetry.protocol === 'ax25' || telemetryParser === 'ax25' || telemetryParser.startsWith('ax25+'));
 
     const isGeoscan = framing === 'geoscan' || payloadProtocol === 'proprietary';
+    const isLora = telemetry.protocol === 'lora' || payloadProtocol === 'lora' || decoder.type === ModulationType.LORA;
     // Encapsulated AX.25 detection: show AX.25 frame whenever telemetry.frame carries
     // source/destination, regardless of which payload parser produced values.
     const hasEncapsulatedAx25 = Boolean((telemetry?.frame && telemetry.frame.source && telemetry.frame.destination));
@@ -115,7 +116,14 @@ export default function OverviewTab({ metadata, file, telemetry, packet, ax25 })
                 {/* Left Column */}
                 <Box>
                     {/* Link-layer / Frame Information */}
-                    {isGeoscan ? (
+                    {isLora ? (
+                        <InfoSection title={t('telemetry_overview_tab.lora_frame_information', { defaultValue: 'LoRa Frame Information' })}>
+                            <InfoRow label={t('telemetry_overview_tab.protocol', { defaultValue: 'Protocol' })} value="LoRa" />
+                            <InfoRow label={t('telemetry_overview_tab.parser', { defaultValue: 'Parser' })} value={telemetryParser || 'lora'} />
+                            <InfoRow label={t('telemetry_overview_tab.delivered_payload_length', { defaultValue: 'Delivered Payload Length' })}
+                                value={`${telemetry.raw?.payload_length ?? packet.length_bytes ?? '-'} bytes`} />
+                        </InfoSection>
+                    ) : isGeoscan ? (
                         <InfoSection title={t('telemetry_overview_tab.geoscan_frame_information', { defaultValue: 'GEOSCAN Frame Information' })}>
                             <InfoRow label={t('telemetry_overview_tab.framing', { defaultValue: 'Framing' })} value={framing || 'geoscan'} />
                             <InfoRow label={t('telemetry_overview_tab.protocol', { defaultValue: 'Protocol' })} value={payloadProtocol || 'proprietary'} />
@@ -274,7 +282,7 @@ export default function OverviewTab({ metadata, file, telemetry, packet, ax25 })
             <InfoSection title={t('telemetry_overview_tab.validation', { defaultValue: 'Validation' })}>
                 <Stack spacing={1}>
                     {/* Show validation info based on decoder type */}
-                    {decoder.type === ModulationType.LORA ? (
+                    {isLora ? (
                         <>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                 <CheckCircleIcon sx={{ color: decoder.crc_valid === true ? theme.palette.success.main : theme.palette.text.secondary, fontSize: 20 }} />
@@ -354,7 +362,7 @@ export default function OverviewTab({ metadata, file, telemetry, packet, ax25 })
 
                 <Box sx={{ mt: 2, p: 1.5, bgcolor: theme.palette.info.main + '30', borderRadius: 1, border: `1px solid ${theme.palette.info.main}60` }}>
                     <Typography variant="caption" sx={{ color: theme.palette.info.light, fontWeight: 500 }}>
-                        {decoder.type === ModulationType.LORA ? (
+                        {isLora ? (
                             <>LoRa uses forward error correction. Packets with a failed payload CRC are discarded; packets without a payload CRC are retained as unchecked.</>
                         ) : isGeoscan ? (
                             <>{t('telemetry_overview_tab.geoscan_frames_include_ti_cc11xx_crc_and_pn9_scrambling_', { defaultValue: 'ℹ️ GEOSCAN frames include TI CC11xx CRC and PN9 scrambling. The configured frame size typically includes a 2-byte CC11xx CRC that is removed after validation.' })}</>

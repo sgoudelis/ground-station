@@ -391,6 +391,7 @@ def delete_snapshot_file(snapshots_dir: Path, snapshot_filename: str, logger) ->
         return False
 
     snapshot_file.unlink()
+    snapshot_file.with_suffix(".json").unlink(missing_ok=True)
     delete_image_thumbnail(snapshot_file)
     logger.info(f"Deleted snapshot: {snapshot_filename}")
     return True
@@ -558,7 +559,7 @@ def build_observation_bundle_item(bundle_dir: Path) -> Dict[str, Any]:
     # ``artifacts`` (tagged with the owner) so downloads and counts stay complete.
     bundle_recordings, recording_owner_by_path = build_observation_bundle_recordings(bundle_dir)
     for file_path in sorted(bundle_dir.rglob("*")):
-        # JSON files are internal sidecars (manifest, decoder/audio metadata) that
+        # JSON files hold manifests and decoder/audio metadata that
         # power the dedicated viewers and are not user-facing observation artifacts.
         if (
             not file_path.is_file()

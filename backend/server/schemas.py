@@ -1,3 +1,18 @@
+# Copyright (c) 2026 Efstratios Goudelis
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 """Public API response contracts and examples for OpenAPI consumers."""
 
 from __future__ import annotations
@@ -915,7 +930,7 @@ ARTIFACT_DOWNLOAD_DESCRIPTION = """Download an indexed artifact with a Bearer to
 that has `artifacts:download`. A single file returns its bytes; a decoded folder
 or observation bundle returns a ZIP. The optional `part` query selects a
 recording's `meta`, `snapshot`, or `thumbnail`, a snapshot's `thumbnail`, or a
-decoded/audio `sidecar` when present. Fetch `GET /api/v1/artifacts/{artifact_id}`
+decoded/audio `metadata` when present. Fetch `GET /api/v1/artifacts/{artifact_id}`
 with `artifacts:read` to discover `api_download_url` and available part links.
 Direct files support `Range: bytes=start-end` and may return 206; ZIP generation
 does not support partial responses. For example:

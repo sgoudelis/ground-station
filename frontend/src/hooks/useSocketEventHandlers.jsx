@@ -375,6 +375,7 @@ export const useSocketEventHandlers = (socket, enabled = true) => {
             store.dispatch(fetchFiles({
                 socket,
                 filters: browser.filters,
+                search: browser.search,
                 sortBy: browser.sortBy,
                 sortOrder: browser.sortOrder,
                 page: browser.page,

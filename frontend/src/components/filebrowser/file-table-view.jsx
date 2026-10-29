@@ -47,6 +47,7 @@ import ImageIcon from '@mui/icons-material/Image';
 import FolderIcon from '@mui/icons-material/Folder';
 import BuildIcon from '@mui/icons-material/Build';
 import { useTranslation } from 'react-i18next';
+import FileSearchMatch from './file-search-match.jsx';
 
 function formatBytes(bytes) {
     if (bytes === 0) return '0 Bytes';
@@ -159,6 +160,9 @@ function FileTableRow({ item, selectionMode, isSelected, onToggleSelection, onSh
             return item.satellite_name;
         }
         if (item.type === 'transcription' && item.satellite_name) {
+            return item.satellite_name;
+        }
+        if (item.type === 'snapshot' && item.satellite_name) {
             return item.satellite_name;
         }
         return null;
@@ -555,6 +559,7 @@ function FileTableRow({ item, selectionMode, isSelected, onToggleSelection, onSh
                             {item.displayName}
                         </Typography>
                     </Tooltip>
+                    <FileSearchMatch item={item} />
                     {detailChips.length > 0 && (
                         <Box sx={{ display: 'flex', gap: 0.5, mt: 0.5, flexWrap: 'wrap' }}>
                             {detailChips}

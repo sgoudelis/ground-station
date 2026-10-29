@@ -160,8 +160,9 @@ single file, or a ZIP containing a decoded folder or observation bundle. A token
 can have `artifacts:read` without download access, or download access without
 metadata access when the artifact ID is already known. Recording metadata also
 includes `api_download_urls` for its SigMF data, SigMF metadata, and available
-waterfall images. Snapshot thumbnails and decoded/audio sidecars have part links
-when present. Folder detail responses include API links for individual listed
+waterfall images. Snapshot thumbnails and decoded/audio metadata have part links
+when present; JSON metadata downloads use `api_download_urls.metadata` and
+`part=metadata`. Folder detail responses include API links for individual listed
 files. Other folder members can be fetched at
 `/api/v1/artifacts/{id}/files/{relative_path}`; the path must stay inside the
 indexed folder. Large direct files support HTTP `Range` requests. For example:

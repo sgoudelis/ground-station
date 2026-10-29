@@ -31,6 +31,7 @@ httpx==0.28.1
 idna==3.15
 ifaddr==0.2.0
 jplephem==2.22
+kaitaistruct==0.11
 Mako==1.4.2
 MarkupSafe==3.0.2
 multidict==6.4.3

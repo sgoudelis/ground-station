@@ -1,3 +1,18 @@
+# Copyright (c) 2026 Efstratios Goudelis
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 """Socket commands for the filesystem-backed library inventory.
 
 List and delete commands return normal RPC acknowledgements.  Broadcasts are
@@ -14,6 +29,7 @@ from typing import Any, Dict, List, Optional
 
 from common import auth as authsvc
 from library.inventory import _parse_cutoff, get_inventory, publish_ready_artifacts
+from library.search import normalize_search
 
 # A purge executes in a worker thread inside this server process (the
 # inventory is a process-local singleton, so child processes cannot use it).
@@ -34,6 +50,10 @@ async def _emit_changed(sio: Any, revision: int, changes: List[Dict[str, str]]) 
 async def query_library(_sio: Any, data: Optional[Dict], _logger: Any, _sid: str) -> Dict[str, Any]:
     """Return one compact server-side page from the rebuildable inventory."""
     request = data if isinstance(data, dict) else {}
+    try:
+        search = normalize_search(request.get("search"))
+    except ValueError as exc:
+        return {"success": False, "error": str(exc)}
     result = await asyncio.to_thread(
         get_inventory().query,
         request.get("filters"),
@@ -43,6 +63,7 @@ async def query_library(_sio: Any, data: Optional[Dict], _logger: Any, _sid: str
         request.get("pageSize", 25),
         request.get("sessionId"),
         request.get("observationId"),
+        search,
     )
     return {"success": True, "data": result}
 

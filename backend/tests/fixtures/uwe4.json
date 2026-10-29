@@ -1,0 +1,60 @@
+{
+ "beacon_1": {
+  "description": "UWE-4 (DP0UWH) AX.25 beacon captured on rfbox5 {'binary': 'fsk_9600baud_20261018_110923_716500.bin', 'binary_path': '/app/backend/data/observations/UWE-4_20261018_110711.gsobs/decoded/fsk_9600baud_20261018_110923_716500.bin'}",
+  "packet_hex": "7e888860aaae8a6088a060aaae90e103f025821f0f020101000e2e1f0005af2305ad9f4ea10100f00000031f09760000047f0b5e0b548a006810ab001c102a051100121200141b108b2fec7e",
+  "source": "DP0UWH-0",
+  "expected_values": {
+   "api": 14,
+   "batt_a_current_ma": 138,
+   "batt_a_soc_pct": 94,
+   "batt_a_temp_c": 11,
+   "batt_a_voltage_v": 4.2,
+   "batt_b_current_ma": 171,
+   "batt_b_soc_pct": 84,
+   "batt_b_temp_c": 11,
+   "batt_b_voltage_v": 4.124,
+   "beacon_rate_s": 60.0,
+   "freq_khz": 435600,
+   "obc_temp_c": 17,
+   "packet_id": 3871,
+   "panel_neg_x_temp_c": 18,
+   "panel_neg_y_temp_c": 0,
+   "panel_neg_z_temp_c": 27,
+   "panel_pos_x_temp_c": 0,
+   "panel_pos_y_temp_c": 18,
+   "panel_pos_z_temp_c": 20,
+   "payload_size": 46,
+   "power_consumption_mw": 1322,
+   "uptime_s": 30217
+  }
+ },
+ "beacon_2": {
+  "description": "UWE-4 (DP0UWH) AX.25 beacon captured on rfbox5 {'binary': 'fsk_9600baud_20261018_111121_284566.bin', 'binary_path': '/app/backend/data/observations/UWE-4_20261018_110711.gsobs/decoded/fsk_9600baud_20261018_111121_284566.bin'}",
+  "packet_hex": "7e888860aaae8a6088a060aaae90e103f02582310f020101000e2e1f0005af23117fa14ea10100f00000031f84760000047f0c5d0b4e96006c102d00d00f12051100101200151a108bc1037e",
+  "source": "DP0UWH-0",
+  "expected_values": {
+   "api": 14,
+   "batt_a_current_ma": 150,
+   "batt_a_soc_pct": 93,
+   "batt_a_temp_c": 12,
+   "batt_a_voltage_v": 4.204,
+   "batt_b_current_ma": 45,
+   "batt_b_soc_pct": 78,
+   "batt_b_temp_c": 11,
+   "batt_b_voltage_v": 4.048,
+   "beacon_rate_s": 60.0,
+   "freq_khz": 435600,
+   "obc_temp_c": 17,
+   "packet_id": 3889,
+   "panel_neg_x_temp_c": 16,
+   "panel_neg_y_temp_c": 0,
+   "panel_neg_z_temp_c": 26,
+   "panel_pos_x_temp_c": 0,
+   "panel_pos_y_temp_c": 18,
+   "panel_pos_z_temp_c": 21,
+   "payload_size": 46,
+   "power_consumption_mw": 1298,
+   "uptime_s": 30340
+  }
+ }
+}

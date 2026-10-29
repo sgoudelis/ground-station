@@ -1,3 +1,22 @@
+/**
+ * @license
+ * Copyright (c) 2026 Efstratios Goudelis
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ *
+ */
+
 import { configureStore } from '@reduxjs/toolkit';
 import { expect, test, vi } from 'vitest';
 import reducer, {
@@ -11,6 +30,8 @@ import reducer, {
     clearPurgeState,
     setPageSize,
     setPage,
+    setSearch,
+    toggleItemSelection,
     setAllFilters,
     toggleFilter,
     reconcileFileBrowserPersistedState,
@@ -54,6 +75,7 @@ test('queries one server-side page and stores its total', async () => {
                 cmd: 'filebrowser.query',
                 data: {
                     filters: { showAudio: true },
+                    search: '',
                     sortBy: 'modified',
                     sortOrder: 'desc',
                     page: 3,
@@ -193,6 +215,45 @@ test('a page click invalidates the previous reply before the next request starts
 
     expect(store.getState().filebrowser.page).toBe(3);
     expect(store.getState().filebrowser.files).toEqual([]);
+});
+
+test('search changes clear selection, restart paging, and discard an older reply before fetching again', async () => {
+    const store = createStore();
+    let reply;
+    const socket = { connected: true, emit: (_event, _payload, callback) => { reply = callback; } };
+    const pending = store.dispatch(fetchFiles({ socket, page: 1, search: '' }));
+    store.dispatch(toggleItemSelection('decoded:old.bin'));
+    store.dispatch(setSearch('  ISS   APRS  '));
+    expect(store.getState().filebrowser).toMatchObject({
+        search: 'ISS APRS', page: 1, selectedItems: [], filesRequestId: null,
+    });
+    reply({ success: true, data: { items: [{ id: 'old' }], total: 1, page: 1 } });
+    await pending;
+    expect(store.getState().filebrowser.files).toEqual([]);
+
+    store.dispatch(setPage(3));
+    store.dispatch(setSearch('NOAA'));
+    expect(store.getState().filebrowser.page).toBe(1);
+});
+
+test('search requests can finish out of order without changing results or reporting an obsolete error', async () => {
+    const store = createStore();
+    const replies = new Map();
+    const socket = {
+        connected: true,
+        emit: (_event, { data }, callback) => replies.set(data.search, callback),
+    };
+    store.dispatch(setSearch('ISS'));
+    const first = store.dispatch(fetchFiles({ socket, page: 1, search: 'ISS' }));
+    store.dispatch(setSearch('NOAA'));
+    const second = store.dispatch(fetchFiles({ socket, page: 1, search: 'NOAA' }));
+    replies.get('NOAA')({ success: true, data: { items: [{ id: 'noaa' }], total: 1 } });
+    await second;
+    replies.get('ISS')({ success: false, error: 'Obsolete failure' });
+    await first;
+    expect(store.getState().filebrowser).toMatchObject({
+        files: [{ id: 'noaa' }], total: 1, filesLoading: false, filesError: null,
+    });
 });
 
 test('only removes acknowledged library deletions', async () => {

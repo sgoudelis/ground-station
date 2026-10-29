@@ -33,9 +33,9 @@ it must not be substituted for the satellite's subsystem clock.
 
 ## Dialog data flow
 
-`BaseDecoder` saves the complete parser result in the `.bin` file's JSON sidecar
+`BaseDecoder` saves the complete parser result in the `.bin` file's JSON metadata file
 under `metadata.telemetry`. The file browser, observation dialog and live packet
-drawer fetch that sidecar and pass it to `TelemetryViewerDialog`.
+drawer fetch that metadata and pass it to `TelemetryViewerDialog`.
 `TelemetryValuesTab` reads `metadata.telemetry.telemetry.messages` for USP packets,
 grouping engineering values by message with labels and units from `field_info`.
 Other satellites continue to use the existing `values` / `raw_fields` representation.
@@ -43,11 +43,11 @@ File-transfer, terminal and acknowledgement messages are identified without
 interpreting their bytes as temperatures or voltages. Unsupported message bodies
 remain available in the Hex + ASCII tab.
 
-Previously recorded JSON sidecars contain the result from the parser available at
-capture time. They must be regenerated to use a new parser; adding the parser does
+Previously recorded JSON metadata contains the result from the parser available at
+capture time. It must be regenerated to use a new parser; adding the parser does
 not silently rewrite historical files. Only the `telemetry` key needs replacement,
 using the original binary, `decoder_config.payload_protocol`, and framing hints.
-Keep the original sidecars before doing this. The three locally imported October
+Keep the original metadata before doing this. The three locally imported October
 21/23 observations were refreshed this way during development.
 
 ## References and validation

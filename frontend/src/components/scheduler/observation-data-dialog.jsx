@@ -580,6 +580,8 @@ const ObservationDataDialog = ({ open, onClose, observation }) => {
                 }}
                 file={selectedFile}
                 metadata={telemetryMetadata}
+                socket={socket}
+                onMetadataChange={setTelemetryMetadata}
             />
 
             {/* Simple preview for decoded image files and snapshots */}

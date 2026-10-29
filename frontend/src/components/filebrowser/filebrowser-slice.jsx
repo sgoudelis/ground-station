@@ -37,10 +37,11 @@ const callLibrary = (socket, cmd, data) => new Promise((resolve, reject) => {
 // response bounded even when the storage library contains many artifacts.
 export const fetchFiles = createAsyncThunk(
     'filebrowser/fetchFiles',
-    async ({ socket, filters, sortBy = 'created', sortOrder = 'desc', page = 1, pageSize = 25 }, { rejectWithValue }) => {
+    async ({ socket, filters, search = '', sortBy = 'created', sortOrder = 'desc', page = 1, pageSize = 25 }, { rejectWithValue }) => {
         try {
             return await callLibrary(socket, 'filebrowser.query', {
                 filters,
+                search,
                 sortBy,
                 sortOrder,
                 page,
@@ -331,6 +332,8 @@ const initialState = {
     page: 1,
     pageSize: 10,
     total: 0,
+    // Retained while navigating within the app, without hiding files after a reload.
+    search: '',
     sortBy: 'created',
     sortOrder: 'desc',
     filters: {
@@ -388,6 +391,16 @@ const fileBrowserSlice = createSlice({
     name: 'filebrowser',
     initialState,
     reducers: {
+        setSearch: (state, action) => {
+            const search = action.payload.trim().replace(/\s+/g, ' ');
+            if (state.search === search) return;
+            state.search = search;
+            state.page = 1;
+            state.selectedItems = [];
+            // Invalidate immediately, before the effect starts the next request.
+            // An older query on page 1 must not replace the new search results.
+            state.filesRequestId = null;
+        },
         setSortBy: (state, action) => {
             state.sortBy = action.payload;
             state.page = 1; // Reset to first page when sort changes
@@ -508,7 +521,8 @@ const fileBrowserSlice = createSlice({
         builder.addCase(fetchFiles.fulfilled, (state, action) => {
             // Page requests may finish out of order, or after a new page was
             // selected but before its request starts. Ignore either stale reply.
-            if (state.filesRequestId !== action.meta.requestId || state.page !== action.meta.arg.page) return;
+            if (state.filesRequestId !== action.meta.requestId || state.page !== action.meta.arg.page
+                || state.search !== (action.meta.arg.search || '')) return;
             state.filesRequestId = null;
             state.filesLoading = false;
             state.files = action.payload.items || [];
@@ -528,7 +542,8 @@ const fileBrowserSlice = createSlice({
             }
         });
         builder.addCase(fetchFiles.rejected, (state, action) => {
-            if (state.filesRequestId !== action.meta.requestId || state.page !== action.meta.arg.page) return;
+            if (state.filesRequestId !== action.meta.requestId || state.page !== action.meta.arg.page
+                || state.search !== (action.meta.arg.search || '')) return;
             state.filesRequestId = null;
             state.filesLoading = false;
             state.filesError = action.payload || 'Failed to fetch files';
@@ -668,6 +683,7 @@ const fileBrowserSlice = createSlice({
 });
 
 export const {
+    setSearch,
     setSortBy,
     toggleSortOrder,
     setPage,

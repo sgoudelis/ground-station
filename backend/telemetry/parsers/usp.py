@@ -1,121 +1,100 @@
+# Copyright (c) 2026 Efstratios Goudelis
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 """SPUTNIX USP messages carried in UMKA-1 (RS40S) AX.25 information fields.
 
-Layouts follow SPUTNIX's UHF_msgid, PS3_msgid and OBCU_msgid resources,
-cross-checked against SatsDecoder's systems/usp.py. See docs/UMKA_TELEMETRY.md
-for references, units and capture examples. USP deframers already remove FEC
-and the outer encapsulation; there is no AX.25 FCS to remove from this payload.
+Message body layouts are Kaitai specs (``specs/usp_uhf.ksy``, ``usp_power.ksy``
+and ``usp_adcs.ksy``, generated into ``gen/``); this module keeps what a byte
+layout cannot express: the TLV message framing with per-message status, the
+human labels/units the values tab shows, flag-bit expansion, NaN handling and
+the time_utc conversion. Layouts follow SPUTNIX's UHF_msgid, PS3_msgid and
+OBCU_msgid resources, cross-checked against SatsDecoder's systems/usp.py. See
+docs/UMKA_TELEMETRY.md for references, units and capture examples. USP
+deframers already remove FEC and the outer encapsulation; there is no AX.25
+FCS to remove from this payload.
 """
 
 import math
 import struct
-from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
 
+from .kaitai import decode_spec, split_spec_fields
 
-@dataclass(frozen=True)
-class Field:
-    name: str
-    offset: int
-    fmt: str
-    label: str
-    unit: str = ""
-    divisor: int = 1
+# key -> (label, unit); table order drives values/field_info presentation order,
+# matching the previous hand-coded field tables.
+UHF_LABELS: dict[str, tuple[str, str]] = {
+    "amplifier_temperature": ("Amplifier temperature", "°C"),
+    "radio_temperature": ("Radio temperature", "°C"),
+    "received_signal_strength": ("Received signal strength", "dBm"),
+    "idle_signal_strength": ("Idle signal strength", "dBm"),
+    "forward_power": ("Forward RF power", "dBm"),
+    "reflected_power": ("Reflected RF power", "dBm"),
+    "reset_count": ("Radio reset count", ""),
+    "radio_flags": ("Radio flags", ""),
+    "time_unix_s": ("Radio time", "s"),
+    "uptime": ("Radio uptime", "s"),
+    "receive_bitrate": ("Receive bitrate", "bit/s"),
+    "current": ("Radio current", "mA"),
+    "input_voltage": ("Radio input voltage", "V"),
+}
 
+POWER_LABELS: dict[str, tuple[str, str]] = {
+    **{f"panel_voltage_{i + 1}": (f"Solar panel {i + 1} voltage", "V") for i in range(3)},
+    **{f"panel_current_{i + 1}": (f"Solar panel {i + 1} current", "mA") for i in range(3)},
+    "battery_current": ("Battery current", "mA"),
+    **{f"channel_current_{i + 1}": (f"Output channel {i + 1} current", "mA") for i in range(4)},
+    **{f"battery_temperature_{i + 1}": (f"Battery temperature {i + 1}", "°C") for i in range(4)},
+    "battery_voltage": ("Battery voltage", "V"),
+    "record_id": ("Power telemetry sequence", ""),
+    "time_unix_s": ("Power system time", "s"),
+    "reset_count": ("Power system reset count", ""),
+    "reset_reason": ("Power system reset reason", ""),
+}
 
-UHF_FIELDS = (
-    Field("amplifier_temperature", 0, "b", "Amplifier temperature", "°C"),
-    Field("radio_temperature", 1, "b", "Radio temperature", "°C"),
-    Field("received_signal_strength", 2, "B", "Received signal strength", "dBm", -1),
-    Field("idle_signal_strength", 3, "B", "Idle signal strength", "dBm", -1),
-    Field("forward_power", 4, "b", "Forward RF power", "dBm"),
-    Field("reflected_power", 5, "b", "Reflected RF power", "dBm"),
-    Field("reset_count", 6, "B", "Radio reset count"),
-    Field("radio_flags", 7, "B", "Radio flags"),
-    Field("time_unix_s", 8, "i", "Radio time", "s"),
-    Field("uptime", 12, "I", "Radio uptime", "s"),
-    Field("receive_bitrate", 16, "I", "Receive bitrate", "bit/s"),
-    Field("current", 20, "H", "Radio current", "mA"),
-    Field("input_voltage", 22, "h", "Radio input voltage", "V", 1000),
-)
+# Legacy table order: all quaternions, then all angular velocities (the wire
+# layout interleaves them per attitude solution block).
+ADCS_LABELS: dict[str, tuple[str, str]] = {
+    "time_unix_us": ("Attitude-control time", "µs"),
+    "uptime": ("Attitude-control uptime", "s"),
+    **{
+        f"{prefix}_quaternion_{axis}": (f"{label} quaternion {axis}", "")
+        for prefix, label in (("eci", "ECI"), ("orb", "Orbital"), ("forced", "Forced ECI"))
+        for axis in "wxyz"
+    },
+    **{
+        f"{prefix}_angular_velocity_{axis}": (f"{label} angular velocity {axis}", "°/s")
+        for prefix, label in (("eci", "ECI"), ("orb", "Orbital"), ("forced", "Forced ECI"))
+        for axis in "xyz"
+    },
+    "latitude": ("Latitude", "°"),
+    "longitude": ("Longitude", "°"),
+    "altitude": ("Altitude", "m"),
+    "task_type": ("Attitude-control task type", ""),
+    "task_count": ("Scheduled attitude-control tasks", ""),
+    "wheel_speed_x_plus": ("Reaction wheel +X speed", "rpm"),
+    "wheel_speed_x_minus": ("Reaction wheel −X speed", "rpm"),
+    "wheel_speed_y_plus": ("Reaction wheel +Y speed", "rpm"),
+    "wheel_speed_y_minus": ("Reaction wheel −Y speed", "rpm"),
+}
 
-POWER_FIELDS = (
-    *(
-        Field(f"panel_voltage_{i + 1}", i * 2, "H", f"Solar panel {i + 1} voltage", "V", 1000)
-        for i in range(3)
-    ),
-    *(
-        Field(f"panel_current_{i + 1}", 6 + i * 2, "H", f"Solar panel {i + 1} current", "mA")
-        for i in range(3)
-    ),
-    Field("battery_current", 12, "h", "Battery current", "mA"),
-    *(
-        Field(f"channel_current_{i + 1}", 14 + i * 2, "H", f"Output channel {i + 1} current", "mA")
-        for i in range(4)
-    ),
-    *(
-        Field(
-            f"battery_temperature_{i + 1}",
-            22 + i * 2,
-            "h",
-            f"Battery temperature {i + 1}",
-            "°C",
-            100,
-        )
-        for i in range(4)
-    ),
-    Field("battery_voltage", 34, "h", "Battery voltage", "V", 1000),
-    Field("record_id", 36, "I", "Power telemetry sequence"),
-    Field("time_unix_s", 40, "i", "Power system time", "s"),
-    Field("reset_count", 44, "B", "Power system reset count"),
-    Field("reset_reason", 45, "B", "Power system reset reason"),
-)
-
-ADCS_FIELDS = (
-    Field("time_unix_us", 0, "q", "Attitude-control time", "µs"),
-    Field("uptime", 8, "I", "Attitude-control uptime", "s"),
-    # Each attitude solution has seven floats followed by a validity/policy byte.
-    *(
-        Field(f"{prefix}_quaternion_{axis}", start + i * 4, "f", f"{label} quaternion {axis}")
-        for prefix, label, start in (
-            ("eci", "ECI", 12),
-            ("orb", "Orbital", 41),
-            ("forced", "Forced ECI", 70),
-        )
-        for i, axis in enumerate("wxyz")
-    ),
-    *(
-        Field(
-            f"{prefix}_angular_velocity_{axis}",
-            start + 16 + i * 4,
-            "f",
-            f"{label} angular velocity {axis}",
-            "°/s",
-        )
-        for prefix, label, start in (
-            ("eci", "ECI", 12),
-            ("orb", "Orbital", 41),
-            ("forced", "Forced ECI", 70),
-        )
-        for i, axis in enumerate("xyz")
-    ),
-    Field("latitude", 99, "f", "Latitude", "°"),
-    Field("longitude", 103, "f", "Longitude", "°"),
-    Field("altitude", 107, "f", "Altitude", "m"),
-    Field("task_type", 112, "B", "Attitude-control task type"),
-    Field("task_count", 113, "B", "Scheduled attitude-control tasks"),
-    *(
-        Field(f"wheel_speed_{axis}", 114 + i * 2, "h", f"Reaction wheel {label} speed", "rpm")
-        for i, (axis, label) in enumerate(
-            (("x_plus", "+X"), ("x_minus", "−X"), ("y_plus", "+Y"), ("y_minus", "−Y"))
-        )
-    ),
-)
-
+# message id -> (display name, expected body size, kaitai spec, labels)
 LAYOUTS = {
-    0x4246: ("UHF radio beacon", 25, UHF_FIELDS),
-    0xDE21: ("Power system telemetry", 46, POWER_FIELDS),
-    0xF210: ("Attitude-control telemetry", 125, ADCS_FIELDS),
+    0x4246: ("UHF radio beacon", 25, "usp_uhf", UHF_LABELS),
+    0xDE21: ("Power system telemetry", 46, "usp_power", POWER_LABELS),
+    0xF210: ("Attitude-control telemetry", 125, "usp_adcs", ADCS_LABELS),
 }
 
 NON_TELEMETRY = {
@@ -139,14 +118,26 @@ def _add_flags(message: dict[str, Any], value: int, flags: tuple[tuple[str, str]
         _add_value(message, key, bool(value & (1 << bit)), label)
 
 
-def _decode_message(message: dict[str, Any], body: bytes, fields: tuple[Field, ...]) -> None:
-    for field in fields:
-        raw = struct.unpack_from("<" + field.fmt, body, field.offset)[0]
+def _decode_message(
+    message: dict[str, Any], body: bytes, spec: str, labels: dict[str, tuple[str, str]]
+) -> None:
+    """Populate one message dict from its body using the Kaitai spec.
+
+    Seq fields (suffixed ``_raw`` in the spec) become raw_fields under the
+    suffix-stripped legacy key; computed instances become values, presented
+    in label-table order with their labels/units.
+    """
+    fields, instances = split_spec_fields(decode_spec(spec, body), spec)
+    for name, value in fields.items():
+        if not name.endswith("_raw"):
+            continue
         # NaN/Infinity are legal float bit patterns, but not JSON measurements.
-        finite = not isinstance(raw, float) or math.isfinite(raw)
-        message["raw_fields"][field.name] = raw if finite else str(raw)
-        value = (raw if field.divisor == 1 else raw / field.divisor) if finite else None
-        _add_value(message, field.name, value, field.label, field.unit)
+        finite = not isinstance(value, float) or math.isfinite(value)
+        message["raw_fields"][name[:-4]] = value if finite else str(value)
+    for key, (label, unit) in labels.items():
+        value = instances[key]
+        finite = not isinstance(value, float) or math.isfinite(value)
+        _add_value(message, key, value if finite else None, label, unit)
 
     timestamp_key = "time_unix_us" if "time_unix_us" in message["values"] else "time_unix_s"
     timestamp = message["values"].pop(timestamp_key)
@@ -159,9 +150,9 @@ def _decode_message(message: dict[str, Any], body: bytes, fields: tuple[Field, .
     label = message["field_info"].pop(timestamp_key)["label"]
     _add_value(message, "time_utc", utc, label + " (UTC)")
 
+    # Flag-bit semantics (presentation logic a byte layout cannot express).
     message_id = message["message_id"]
     if message_id == "0x4246":
-        message["raw_fields"]["schedule_flags"] = body[24]
         _add_value(message, "active_schedules", body[24] & 0x1F, "Active schedules")
         _add_flags(
             message,
@@ -174,7 +165,6 @@ def _decode_message(message: dict[str, Any], body: bytes, fields: tuple[Field, .
     elif message_id == "0xDE21":
         # The flags occupy four little-endian bytes, not one 32-bit big-endian bitfield.
         flags = int.from_bytes(body[30:34], "little")
-        message["raw_fields"]["power_flags"] = flags
         _add_flags(
             message,
             flags,
@@ -204,7 +194,6 @@ def _decode_message(message: dict[str, Any], body: bytes, fields: tuple[Field, .
             ("forced", "Forced ECI", 98),
         ):
             flags = body[offset]
-            message["raw_fields"][prefix + "_flags"] = flags
             _add_value(message, prefix + "_policy", flags & 0x7F, label + " solution policy")
             _add_value(
                 message, prefix + "_invalid", bool(flags & 0x80), label + " solution invalid"
@@ -214,8 +203,6 @@ def _decode_message(message: dict[str, Any], body: bytes, fields: tuple[Field, .
                 for key in message["values"]:
                     if key.startswith((prefix + "_quaternion_", prefix + "_angular_velocity_")):
                         message["values"][key] = None
-        message["raw_fields"]["control_flags"] = body[111]
-        message["raw_fields"]["sensor_flags"] = body[122:125].hex()
         _add_value(message, "gnss_invalid", bool(body[111] & 8), "GNSS solution invalid")
         _add_value(message, "ballistics_policy", body[111] & 7, "Orbit solution policy")
         _add_value(message, "reset_reason", body[124] >> 4, "Attitude-control reset reason")
@@ -267,14 +254,14 @@ class USPParser:
             # preserves subsequent telemetry and repeated messages in a single frame.
             offset += size
             if layout:
-                _, expected_size, fields = layout
+                _, expected_size, spec, labels = layout
                 if size != expected_size:
                     message["status"] = "malformed"
                     message["error"] = (
                         f"Unsupported message length: expected {expected_size} bytes, received {size}."
                     )
                     continue
-                _decode_message(message, body, fields)
+                _decode_message(message, body, spec, labels)
                 message["status"] = "decoded"
             elif message_id in NON_TELEMETRY:
                 message["status"] = "non_telemetry"

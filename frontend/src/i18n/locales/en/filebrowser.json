@@ -1,5 +1,46 @@
 {
   "title": "File Browser",
+  "telemetry_values_tab": {
+    "spacecraft_time_utc": "Spacecraft time (UTC)",
+    "spacecraft_time": "Spacecraft time ({{timezone}})",
+    "power_system_time": "Power system time ({{timezone}})",
+    "received_time": "Received ({{timezone}})",
+    "beacon_id": "Beacon ID",
+    "beacon_type": "Beacon type",
+    "raw_reading": "raw",
+    "raw_readings_hint": "Readings marked “raw” have no verified conversion to physical units.",
+    "saved_packet_needs_decode": "This packet has no saved telemetry values. Connect to the backend and reopen it to decode, or use Reparse telemetry.",
+    "raw_reserved_fields": "Raw fields and reserved bytes",
+    "groups": {
+      "battery_a": "Battery A",
+      "battery_b": "Battery B",
+      "status": "Satellite status",
+      "panels": "Panel temperatures",
+      "power": "Power system",
+      "obc": "Onboard computer",
+      "temperatures": "Temperatures",
+      "channels": "Output channels",
+      "communications": "Communications",
+      "diodes": "Diode readings",
+      "magnetometer": "Magnetometer",
+      "gyroscope": "Gyroscope",
+      "payload": "Payload",
+      "navigation": "Navigation status",
+      "position": "Position",
+      "velocity": "Velocity",
+      "other": "Other telemetry"
+    }
+  },
+  "telemetry_overview_tab": {
+    "lora_frame_information": "LoRa Frame Information"
+  },
+  "telemetry_viewer_dialog": {
+    "preview_loading": "Decoding saved packet…",
+    "preview_failed": "Could not decode this saved packet. Try Reparse telemetry.",
+    "reparse": "Reparse telemetry",
+    "reparsing": "Reparsing…",
+    "reparse_failed": "Could not reparse this packet."
+  },
   "sort_by": "Sort By",
   "sort": {
     "created": "Date Created",
@@ -9,6 +50,16 @@
     "sample_rate": "Sample Rate"
   },
   "filter": "Filter",
+  "search": {
+    "label": "Search files",
+    "placeholder": "Search filenames, satellites, NORAD IDs…",
+    "clear": "Clear search",
+    "searching": "Searching…",
+    "results_one": "{{count}} result",
+    "results_other": "{{count}} results",
+    "no_results": "No files match “{{query}}”.",
+    "matched_inside": "Matched inside: {{files}}"
+  },
   "filters": {
     "recordings": "Recordings",
     "snapshots": "Snapshots",

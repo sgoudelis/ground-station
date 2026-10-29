@@ -1,3 +1,22 @@
+/**
+ * @license
+ * Copyright (c) 2026 Efstratios Goudelis
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ *
+ */
+
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { afterEach, expect, test, vi } from 'vitest';
@@ -7,6 +26,7 @@ import { setInitialDataLoading } from '../components/dashboard/dashboard-slice.j
 import { initializeAppData } from '../services/data-sync.js';
 import { toast } from '../utils/toast-with-timestamp.jsx';
 import { setErrorDialogOpen, setErrorMessage } from '../components/waterfall/waterfall-slice.jsx';
+import { setSearch } from '../components/filebrowser/filebrowser-slice.jsx';
 import { useSocketEventHandlers } from './useSocketEventHandlers.jsx';
 
 vi.mock('../services/data-sync.js', () => ({
@@ -15,6 +35,30 @@ vi.mock('../services/data-sync.js', () => ({
 
 afterEach(() => {
     vi.restoreAllMocks();
+});
+
+test('library change notifications preserve search while the new-files badge stays unfiltered', async () => {
+    const listeners = new Map();
+    const requests = [];
+    const socket = {
+        connected: false,
+        on: vi.fn((event, handler) => listeners.set(event, handler)),
+        off: vi.fn((event) => listeners.delete(event)),
+        emit: vi.fn((_event, request, callback) => {
+            requests.push(request);
+            callback({ success: true, data: { items: [], total: 0 } });
+        }),
+    };
+    store.dispatch(setSearch('ISS APRS'));
+    const wrapper = ({ children }) => <Provider store={store}>{children}</Provider>;
+    const { unmount } = renderHook(() => useSocketEventHandlers(socket), { wrapper });
+    socket.connected = true;
+    await act(async () => listeners.get('library.changed')({ revision: 2 }));
+    expect(requests).toHaveLength(2);
+    expect(requests[0]).toMatchObject({ cmd: 'filebrowser.query', data: { search: 'ISS APRS' } });
+    expect(requests[1].data).not.toHaveProperty('search');
+    unmount();
+    store.dispatch(setSearch(''));
 });
 
 test('configuration errors open one detailed dialog without a duplicate toast', () => {

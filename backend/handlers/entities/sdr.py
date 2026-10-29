@@ -884,7 +884,9 @@ async def sdr_command_routing(
                 waterfall_image = data.get("waterfallImage", None)
                 snapshot_name = data.get("snapshotName", "")
 
-                result = save_waterfall_snapshot(waterfall_image, snapshot_name)
+                result = save_waterfall_snapshot(
+                    waterfall_image, snapshot_name, metadata=data.get("metadata")
+                )
 
                 if result["success"]:
                     reply["success"] = True

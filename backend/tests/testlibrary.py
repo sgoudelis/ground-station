@@ -1,3 +1,18 @@
+# Copyright (c) 2026 Efstratios Goudelis
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 """Tests for the rebuildable filesystem library catalogue."""
 
 import asyncio
@@ -424,7 +439,7 @@ def test_purge_preview_counts_each_group_as_a_single_item(inventory):
     assert preview["categories"]["observation"] == {"items": 1, "files": 3, "bytes": bundle_bytes}
     assert preview["categories"]["decoded_folder"]["items"] == 1
     assert preview["categories"]["decoded_folder"]["files"] == 3
-    assert preview["categories"]["audio"]["files"] == 2  # wav + metadata sidecar
+    assert preview["categories"]["audio"]["files"] == 2  # wav + metadata
     assert preview["oldest"] and preview["newest"]
     assert preview["skippedInProgress"] == 0
 
@@ -459,7 +474,7 @@ def test_purge_preview_and_purge_skip_in_progress_work(inventory):
     assert (recording_root / "live.sigmf-data").exists()
     assert (inventory.roots.observations / "RUNNING.gsobs").exists()
     assert not (inventory.roots.snapshots / "waterfall.png").exists()
-    assert not (inventory.roots.audio / "voice.json").exists()  # sidecar cascade
+    assert not (inventory.roots.audio / "voice.json").exists()  # metadata cascade
 
 
 def test_purge_keeps_recent_items_and_reports_progress(inventory):
@@ -513,7 +528,7 @@ def test_purge_rechecks_status_during_the_sweep(inventory):
     assert (inventory.roots.recordings / "capture.sigmf-data").exists()
 
 
-def test_purge_includes_owned_sidecars_and_thumbnails(inventory):
+def test_purge_includes_owned_metadata_and_thumbnails(inventory):
     snapshot_thumbnail = _write(
         inventory.roots.snapshots / "thumbnails" / "waterfall.jpg", b"thumb"
     )

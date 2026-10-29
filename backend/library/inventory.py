@@ -1,3 +1,18 @@
+# Copyright (c) 2026 Efstratios Goudelis
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 """Rebuildable in-memory catalogue for user-visible filesystem artifacts.
 
 The catalogue deliberately has no persistence layer.  It is reconstructed
@@ -17,6 +32,7 @@ from typing import Any, Dict, Iterable, List, Optional
 from urllib.parse import quote
 
 from common.events import public_events
+from library.search import match_search, normalize_search, search_text
 
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp"}
 DECODED_PATTERNS = ("*.png", "*.jpg", "*.jpeg", "*.txt", "*.bin")
@@ -84,8 +100,13 @@ def _activity_time(item: Dict[str, Any]) -> Optional[datetime]:
 def _read_json(path: Path) -> Dict[str, Any]:
     try:
         value = json.loads(path.read_text())
-    except (OSError, json.JSONDecodeError):
+    except (OSError, UnicodeError, json.JSONDecodeError):
         return {}
+    return value if isinstance(value, dict) else {}
+
+
+def _object(value: Any) -> Dict[str, Any]:
+    """Treat missing or malformed optional metadata sections as absent metadata."""
     return value if isinstance(value, dict) else {}
 
 
@@ -116,7 +137,7 @@ def _transcription_summary(path: Path) -> Dict[str, Any]:
     """Read only the comment header; transcript bodies never enter the index."""
     result: Dict[str, Any] = {}
     try:
-        with path.open("r") as file:
+        with path.open("r", encoding="utf-8") as file:
             for line in file:
                 line = line.strip()
                 if not line.startswith("#"):
@@ -125,13 +146,33 @@ def _transcription_summary(path: Path) -> Dict[str, Any]:
                     result["provider"] = line.split(":", 1)[1].strip()
                 elif line.startswith("# Session:"):
                     result["session_id"] = line.split(":", 1)[1].strip()
+                elif line.startswith("# Satellite:"):
+                    satellite = line.split(":", 1)[1].strip()
+                    name, separator, norad = satellite.rpartition(" (NORAD:")
+                    if not separator:
+                        name, norad = satellite, ""
+                    if name and name != "Unknown":
+                        result["satellite_name"] = name
+                    norad = norad.rstrip(")").strip()
+                    if norad.isdigit():
+                        result["satellite_norad_id"] = int(norad)
+                        # Existing transcription views use this older field name.
+                        result["satellite_norad"] = norad
+                elif line.startswith("# Transmitter:"):
+                    value = line.split(":", 1)[1].strip()
+                    if value != "Unknown":
+                        result["transmitter_description"] = value
+                elif line.startswith("# Transmitter Mode:"):
+                    value = line.split(":", 1)[1].strip()
+                    if value != "N/A":
+                        result["transmitter_mode"] = value
                 elif line.startswith("# Language:"):
                     result["language"] = line.split(":", 1)[1].strip()
                 elif line.startswith("# Translate To:"):
                     result["translate_to"] = line.split(":", 1)[1].strip()
                 elif line.startswith("# Translation Backend:"):
                     result["translation_backend"] = line.split(":", 1)[1].strip()
-    except OSError:
+    except (OSError, UnicodeError):
         return {}
     return result
 
@@ -236,18 +277,26 @@ class LibraryInventory:
         page_size: int = 25,
         session_id: Optional[str] = None,
         observation_id: Optional[str] = None,
+        search: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Return one compact, sorted page without touching the filesystem."""
+        tokens = normalize_search(search).casefold().split()
         if not self._ready:
             self.rebuild()
         page = max(1, int(page))
         page_size = max(1, min(int(page_size), 100))
         with self._lock:
-            items = [
-                self._public(item)
-                for item in self._items.values()
-                if self._matches(item, filters, session_id, observation_id)
-            ]
+            items = []
+            for item in self._items.values():
+                if not self._matches(item, filters, session_id, observation_id):
+                    continue
+                matched_files = match_search(item, tokens)
+                if matched_files is None:
+                    continue
+                summary = self._public(item)
+                if matched_files:
+                    summary["matched_files"] = matched_files
+                items.append(summary)
             revision = self._revision
         allowed_sorts = {"name", "size", "created", "modified", "sample_rate"}
         sort_by = sort_by if sort_by in allowed_sorts else "created"
@@ -347,7 +396,7 @@ class LibraryInventory:
             candidate = candidates.get(part)
         elif item_type == "snapshot" and part == "thumbnail":
             candidate = indexed_path.parent / "thumbnails" / f"{indexed_path.stem}.jpg"
-        elif item_type in {"decoded", "audio"} and part == "sidecar":
+        elif item_type in {"decoded", "audio"} and part == "metadata":
             candidate = indexed_path.with_suffix(".json")
         else:
             return None
@@ -536,7 +585,11 @@ class LibraryInventory:
         elif path.is_dir():
             owned = path.rglob("*")
         elif item.get("type") == "snapshot":
-            owned = (path, path.parent / "thumbnails" / f"{path.stem}.jpg")
+            owned = (
+                path,
+                path.with_suffix(".json"),
+                path.parent / "thumbnails" / f"{path.stem}.jpg",
+            )
         elif item.get("type") in {"decoded", "audio"}:
             owned = (path, path.with_suffix(".json"))
         else:
@@ -597,12 +650,18 @@ class LibraryInventory:
 
     def _add(self, items: Dict[str, Dict[str, Any]], item: Dict[str, Any], path: Path) -> None:
         item["_path"] = str(path)
+        item["_search_text"] = search_text(item)
+        # Stable ordering prevents harmless directory traversal order changes
+        # from advancing the inventory revision or changing search hints.
+        members = sorted(item.pop("_member_names", ()))
+        if members:
+            item["_search_members"] = tuple((name, name.casefold()) for name in members)
         items[str(item["id"])] = item
 
     @staticmethod
     def _public(item: Dict[str, Any]) -> Dict[str, Any]:
         """Never expose implementation paths outside the storage service."""
-        return {key: value for key, value in item.items() if key != "_path"}
+        return {key: value for key, value in item.items() if not key.startswith("_")}
 
     def _scan_recordings(self, items: Dict[str, Dict[str, Any]]) -> None:
         root = self.roots.recordings
@@ -652,6 +711,9 @@ class LibraryInventory:
                         + (thumbnail_stat.st_size if thumbnail_stat else 0)
                     ),
                     "metadata": metadata,
+                    "satellite_name": metadata.get("target_satellite_name"),
+                    "satellite_norad_id": metadata.get("target_satellite_norad_id"),
+                    "description": metadata.get("description"),
                     "session_id": metadata.get("session_id"),
                     "recording_in_progress": metadata.get("recording_in_progress", False),
                     "snapshot": self._snapshot_info(snapshot, "/recordings", thumbnail),
@@ -669,6 +731,9 @@ class LibraryInventory:
             return
         for path in root.glob("*.png"):
             stat = path.stat()
+            metadata_path = path.with_suffix(".json")
+            metadata_stat = metadata_path.stat() if metadata_path.is_file() else None
+            metadata = _read_json(metadata_path)
             thumbnail = root / "thumbnails" / f"{path.stem}.jpg"
             thumbnail_stat = thumbnail.stat() if thumbnail.is_file() else None
             self._add(
@@ -683,10 +748,21 @@ class LibraryInventory:
                     "created": _iso(stat.st_ctime),
                     "modified": _iso(stat.st_mtime),
                     "latest_activity": _iso(
-                        max(stat.st_mtime, thumbnail_stat.st_mtime if thumbnail_stat else 0)
+                        max(
+                            stat.st_mtime,
+                            metadata_stat.st_mtime if metadata_stat else 0,
+                            thumbnail_stat.st_mtime if thumbnail_stat else 0,
+                        )
                     ),
-                    "file_count": 1 + int(thumbnail_stat is not None),
-                    "purge_bytes": stat.st_size + (thumbnail_stat.st_size if thumbnail_stat else 0),
+                    "file_count": 1
+                    + int(metadata_stat is not None)
+                    + int(thumbnail_stat is not None),
+                    "purge_bytes": stat.st_size
+                    + (metadata_stat.st_size if metadata_stat else 0)
+                    + (thumbnail_stat.st_size if thumbnail_stat else 0),
+                    "satellite_name": metadata.get("target_satellite_name"),
+                    "satellite_norad_id": metadata.get("target_satellite_norad_id"),
+                    "session_id": metadata.get("session_id"),
                     "url": f"/snapshots/{quote(path.name)}",
                     "thumbnail_url": (
                         f"/snapshots/thumbnails/{quote(thumbnail.name)}"
@@ -712,6 +788,7 @@ class LibraryInventory:
             total_size = 0
             image_count = 0
             file_count = 0
+            member_names = []
             # Content mtimes only: a directory's own mtime shifts on unrelated
             # entry churn, which would wrongly keep old folders out of purges.
             latest_mtime: float | None = None
@@ -726,12 +803,21 @@ class LibraryInventory:
                     else max(latest_mtime, file_stat.st_mtime)
                 )
                 file_count += 1
+                relative = path.relative_to(folder)
+                # Metadata and cached previews are implementation details.
+                if (
+                    path.suffix.lower() != ".json"
+                    and path.name != "thumbnail.jpg"
+                    and "thumbnails" not in relative.parent.parts
+                ):
+                    member_names.append(relative.as_posix())
                 if path.suffix.lower() in IMAGE_EXTENSIONS:
                     image_count += 1
             # An empty folder falls back to its own mtime.
             if latest_mtime is None:
                 latest_mtime = stat.st_mtime
             dataset = _read_json(folder / "dataset.json")
+            satellite = _object(dataset.get("satellite"))
             folder_parts = folder.name.split(".")
             pipeline = folder_parts[1].replace("satdump_", "") if len(folder_parts) > 1 else None
             self._add(
@@ -754,11 +840,19 @@ class LibraryInventory:
                         if (folder / "thumbnail.jpg").is_file()
                         else None
                     ),
-                    "satellite_name": dataset.get("satellite", "Unknown"),
+                    "satellite_name": satellite.get("name")
+                    or (
+                        dataset.get("satellite")
+                        if isinstance(dataset.get("satellite"), str)
+                        else None
+                    )
+                    or "Unknown",
+                    "satellite_norad_id": satellite.get("norad_id") or dataset.get("norad_id"),
                     "pipeline": pipeline,
                     "products": dataset.get("products", []),
                     "image_count": image_count,
                     "metadata": dataset,
+                    "_member_names": member_names,
                 },
                 folder,
             )
@@ -767,17 +861,14 @@ class LibraryInventory:
                 if not path.is_file():
                     continue
                 stat = path.stat()
-                sidecar = path.with_suffix(".json")
-                sidecar_stat = sidecar.stat() if sidecar.is_file() else None
-                metadata = _read_json(sidecar)
-                decoder: Dict[str, Any] = {}
-                decoder_value = metadata.get("decoder")
-                if isinstance(decoder_value, dict):
-                    decoder = decoder_value
-                satellite: Dict[str, Any] = {}
-                satellite_value = metadata.get("satellite")
-                if isinstance(satellite_value, dict):
-                    satellite = satellite_value
+                metadata_path = path.with_suffix(".json")
+                metadata_stat = metadata_path.stat() if metadata_path.is_file() else None
+                metadata = _read_json(metadata_path)
+                decoder = _object(metadata.get("decoder"))
+                satellite = _object(metadata.get("satellite"))
+                transmitter = _object(metadata.get("transmitter"))
+                ax25 = _object(metadata.get("ax25"))
+                decoder_config = _object(metadata.get("decoder_config"))
                 self._add(
                     items,
                     {
@@ -790,13 +881,22 @@ class LibraryInventory:
                         "created": _iso(stat.st_ctime),
                         "modified": _iso(stat.st_mtime),
                         "latest_activity": _iso(
-                            max(stat.st_mtime, sidecar_stat.st_mtime if sidecar_stat else 0)
+                            max(stat.st_mtime, metadata_stat.st_mtime if metadata_stat else 0)
                         ),
-                        "file_count": 1 + int(sidecar_stat is not None),
-                        "purge_bytes": stat.st_size + (sidecar_stat.st_size if sidecar_stat else 0),
+                        "file_count": 1 + int(metadata_stat is not None),
+                        "purge_bytes": stat.st_size
+                        + (metadata_stat.st_size if metadata_stat else 0),
                         "url": f"/decoded/{quote(path.name)}",
                         "file_type": path.suffix.lower(),
                         "decoder_type": str(decoder.get("type") or "").upper() or None,
+                        "decoder_mode": decoder.get("mode"),
+                        "protocol": decoder_config.get("payload_protocol"),
+                        # A callsign identifies a station, including terrestrial
+                        # APRS stations; never promote it to satellite identity.
+                        "source_callsign": ax25.get("from_callsign"),
+                        "destination_callsign": ax25.get("to_callsign"),
+                        "transmitter_description": transmitter.get("description"),
+                        "transmitter_mode": transmitter.get("mode"),
                         "satellite_name": satellite.get("name"),
                         "satellite_norad_id": satellite.get("norad_id"),
                         "session_id": decoder.get("session_id"),
@@ -811,9 +911,9 @@ class LibraryInventory:
             return
         for path in root.glob("*.wav"):
             stat = path.stat()
-            sidecar = path.with_suffix(".json")
-            sidecar_stat = sidecar.stat() if sidecar.is_file() else None
-            metadata = _read_json(sidecar)
+            metadata_path = path.with_suffix(".json")
+            metadata_stat = metadata_path.stat() if metadata_path.is_file() else None
+            metadata = _read_json(metadata_path)
             self._add(
                 items,
                 {
@@ -826,11 +926,11 @@ class LibraryInventory:
                     "created": _iso(stat.st_ctime),
                     "modified": _iso(stat.st_mtime),
                     "latest_activity": _iso(
-                        max(stat.st_mtime, sidecar_stat.st_mtime if sidecar_stat else 0)
+                        max(stat.st_mtime, metadata_stat.st_mtime if metadata_stat else 0)
                     ),
-                    "file_count": 2 if sidecar_stat else 1,
-                    # Deleting audio also unlinks its metadata sidecar.
-                    "purge_bytes": stat.st_size + (sidecar_stat.st_size if sidecar_stat else 0),
+                    "file_count": 2 if metadata_stat else 1,
+                    # Deleting audio also unlinks its metadata.
+                    "purge_bytes": stat.st_size + (metadata_stat.st_size if metadata_stat else 0),
                     "url": f"/audio/{quote(path.name)}",
                     "file_type": ".wav",
                     "vfo_number": metadata.get("vfo_number"),
@@ -892,14 +992,15 @@ class LibraryInventory:
                 (path for path in (folder / "recordings").glob("*_waterfall_thumb.png")), None
             )
             # Count and size only files the dialog presents as artifacts;
-            # manifests, sidecars, and thumbnails are implementation metadata.
+            # manifests, metadata, and thumbnails are implementation metadata.
             # This traversal already powers the artifact count, so including
             # byte totals here gives cards an accurate size without a second walk.
             manifest_path = folder / "manifest.json"
             artifact_count = 0
             total_size = 0
+            member_names = []
             # ``total_size`` only covers dialog-visible artifacts, while a purge
-            # also frees manifests, sidecars, and thumbnails. Track both.
+            # also frees manifests, metadata, and thumbnails. Track both.
             disk_size = 0
             file_count = 0
             # Content mtimes only, same as the decoded folder scan.
@@ -923,6 +1024,8 @@ class LibraryInventory:
                     continue
                 artifact_count += 1
                 total_size += file_stat.st_size
+                if not path.name.endswith("_waterfall_thumb.png"):
+                    member_names.append(path.relative_to(folder).as_posix())
             if latest_mtime is None:
                 latest_mtime = stat.st_mtime
             self._add(
@@ -952,9 +1055,11 @@ class LibraryInventory:
                     ),
                     "satellite_name": satellite.get("name", "Unknown"),
                     "satellite_id": satellite.get("norad_id"),
+                    "satellite_norad_id": satellite.get("norad_id"),
                     "observation_status": manifest.get("status", "unknown"),
                     "observation_in_progress": bool(manifest.get("in_progress", False)),
                     "artifact_count": artifact_count,
+                    "_member_names": member_names,
                 },
                 folder,
             )
@@ -1170,11 +1275,11 @@ class LibraryInventory:
             shutil.rmtree(path)
         elif path.is_file():
             path.unlink()
-            if item_type in {"audio", "decoded"}:
-                sidecar = path.with_suffix(".json")
-                if sidecar.is_file():
-                    sidecar.unlink()
-            elif item_type == "snapshot":
+            if item_type in {"audio", "decoded", "snapshot"}:
+                metadata_path = path.with_suffix(".json")
+                if metadata_path.is_file():
+                    metadata_path.unlink()
+            if item_type == "snapshot":
                 thumbnail = path.parent / "thumbnails" / f"{path.stem}.jpg"
                 if thumbnail.is_file():
                     thumbnail.unlink()

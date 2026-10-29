@@ -1,3 +1,22 @@
+/**
+ * @license
+ * Copyright (c) 2026 Efstratios Goudelis
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ *
+ */
+
 import React from 'react';
 import {fireEvent, render, screen, within} from '@testing-library/react';
 import {describe, expect, it, vi} from 'vitest';
@@ -110,5 +129,25 @@ describe('LASARSAT telemetry in the packet viewer', () => {
 
         expect(screen.getByRole('alert')).toHaveTextContent('Expected 11 PSU fields, received 3');
         expect(screen.queryByText('Engineering Values')).not.toBeInTheDocument();
+    });
+});
+
+describe('Kaitai telemetry presentation', () => {
+    it.each([
+        ['tianqi', 'Fleet satellite identifier', 'sat_id', 39, ''],
+    ])('renders %s labels, units, spacecraft UTC and raw fields', (spec, label, key, value, unit) => {
+        render(<TelemetryValuesTab telemetry={{telemetry: {
+            format: 'kaitai', spec,
+            values: {[key]: value, time_unix_s: 1700000000},
+            field_info: {[key]: {label, unit}},
+            time_utc: '2023-11-14 22:13:20',
+            raw_fields: {sensor_raw: 1234},
+        }}} />);
+        expect(screen.getByText(label)).toBeInTheDocument();
+        expect(screen.getByText(`${value}${unit ? ` ${unit}` : ''}`)).toBeInTheDocument();
+        expect(screen.getByText('Spacecraft time (UTC)')).toBeInTheDocument();
+        expect(screen.getByText('2023-11-14 22:13:20')).toBeInTheDocument();
+        expect(screen.queryByText('time_unix_s')).not.toBeInTheDocument();
+        expect(screen.getByText('sensor_raw')).toBeInTheDocument();
     });
 });

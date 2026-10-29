@@ -1,3 +1,18 @@
+# Copyright (c) 2026 Efstratios Goudelis
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 """Personal token management over Socket.IO and scoped public HTTP access."""
 
 import io
@@ -834,6 +849,7 @@ async def test_artifact_downloads_are_scoped_and_support_ranges(token_store, mon
     (data / "decoded" / "packet.bin").write_bytes(b"packet")
     (data / "decoded" / "packet.json").write_text("{}")
     (data / "audio" / "voice.wav").write_bytes(b"voice")
+    (data / "audio" / "voice.json").write_text("{}")
     (data / "transcriptions" / "voice.txt").write_text("transcript")
     bundle = data / "observations" / "NOAA.gsobs"
     (bundle / "decoded").mkdir(parents=True)
@@ -901,12 +917,10 @@ async def test_artifact_downloads_are_scoped_and_support_ranges(token_store, mon
                 detail.json()["data"]["api_download_url"], headers=download_headers
             )
             assert response.content == expected
-        assert (
-            await client.get(
-                "/api/v1/artifacts/decoded:packet.bin/download?part=sidecar",
-                headers=download_headers,
-            )
-        ).json() == {}
+            if item_id in {"decoded:packet.bin", "audio:voice.wav"}:
+                metadata_url = detail.json()["data"]["api_download_urls"]["metadata"]
+                assert metadata_url.endswith("?part=metadata")
+                assert (await client.get(metadata_url, headers=download_headers)).json() == {}
 
         detail = await client.get("/api/v1/artifacts/observation:NOAA.gsobs", headers=read_headers)
         assert detail.status_code == 200

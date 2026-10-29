@@ -31,7 +31,7 @@ export default function ImageViewerDialog({
     const titleId = useId();
     const width = imageWidth || metadata?.image?.width;
     const height = imageHeight || metadata?.image?.height;
-    // SSTV filenames identify decoder images even when their sidecar is missing.
+    // SSTV filenames identify decoder images even when their metadata is missing.
     const isSstv = metadata?.decoder?.type?.toLowerCase() === 'sstv' || /^sstv_/i.test(title || '');
     const rows = [
         { label: t('filebrowser_main.decoder_type', { defaultValue: 'Decoder Type' }), value: metadata?.decoder?.type?.toUpperCase() },

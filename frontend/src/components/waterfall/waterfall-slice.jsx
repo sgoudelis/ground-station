@@ -120,13 +120,21 @@ export const stopRecording = createAsyncThunk(
 
 export const saveWaterfallSnapshot = createAsyncThunk(
     'waterfall/saveWaterfallSnapshot',
-    async ({socket, waterfallImage, snapshotName}, {rejectWithValue}) => {
+    async ({socket, waterfallImage, snapshotName}, {getState, rejectWithValue}) => {
+        const target = getState().targetSatTrack;
+        // Snapshot pixels do not retain structured satellite identity. Save
+        // the current target alongside them so NORAD search remains possible.
+        const metadata = {
+            target_satellite_name: target?.satelliteData?.details?.name || '',
+            target_satellite_norad_id: target?.trackingState?.norad_id || '',
+        };
         return new Promise((resolve, reject) => {
             socket.emit("api.call", {
   cmd: "sdr.save-waterfall-snapshot",
   data: {
     waterfallImage,
-    snapshotName: snapshotName || ''
+    snapshotName: snapshotName || '',
+    metadata,
   }
 }, response => {
   if (response && response.success) {

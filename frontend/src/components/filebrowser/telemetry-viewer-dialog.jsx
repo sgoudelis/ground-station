@@ -8,7 +8,7 @@
  * (at your option) any later version.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
     Dialog,
     DialogTitle,
@@ -19,8 +19,11 @@ import {
     Tabs,
     Tab,
     Typography,
+    Alert,
+    CircularProgress,
 } from '@mui/material';
 import DownloadIcon from '@mui/icons-material/Download';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import OverviewTab from './telemetry-overview-tab';
 import HexAsciiTab from './telemetry-hex-ascii-tab';
 import Float32Tab from './telemetry-float32-tab';
@@ -49,9 +52,75 @@ function TabPanel({ children, value, index, ...other }) {
     );
 }
 
-export default function TelemetryViewerDialog({ open, onClose, file, metadata }) {
+export default function TelemetryViewerDialog({ open, onClose, file, metadata, socket, onMetadataChange }) {
     const { t } = useTranslation('filebrowser');
     const [activeTab, setActiveTab] = useState(0);
+    const [reparsing, setReparsing] = useState(false);
+    const [reparseError, setReparseError] = useState(null);
+    const [preview, setPreview] = useState(null);
+    const reparseSequence = useRef(0);
+
+    const savedTelemetry = metadata?.telemetry;
+    const savedPayload = savedTelemetry?.telemetry;
+    const isLasarsat = metadata?.satellite?.name?.toUpperCase() === 'LASARSAT'
+        || savedPayload?.satellite === 'LASARSAT'
+        || /^OK0LSR(?:-|$)/.test(savedTelemetry?.frame?.source || '');
+    const hasGroups = Object.values(savedPayload?.field_info || {}).some((info) => info?.group);
+    const needsPreview = isLasarsat && !hasGroups && metadata?.decoder?.type !== 'aprs';
+
+    useEffect(() => {
+        if (!open || !needsPreview || !file?.url?.endsWith('.bin') || !socket?.connected) {
+            setPreview(null);
+            return;
+        }
+        let cancelled = false;
+        const source = metadata;
+        const url = file.url;
+        setPreview({source, url, loading: true});
+        // Old metadata may contain only generic ASCII analysis. Decode packets in
+        // the backend for this view; saving remains an explicit Reparse action.
+        socket.timeout(30000).emit('api.call', {
+            cmd: 'filebrowser.preview-telemetry', data: {url},
+        }, (error, result) => {
+            if (cancelled) return;
+            if (error || !result?.success || !result.data?.telemetry) {
+                setPreview({source, url, failed: true, error: result?.error});
+                return;
+            }
+            setPreview({source, url, data: result.data});
+        });
+        // Switching packets, closing, or saving new metadata invalidates any
+        // pending preview, so a late reply cannot replace the current packet.
+        return () => { cancelled = true; };
+    }, [open, needsPreview, file?.url, metadata, socket, socket?.connected]);
+
+    const activePreview = preview?.source === metadata && preview?.url === file?.url ? preview : null;
+    const displayedMetadata = activePreview?.data || metadata;
+
+    useEffect(() => {
+        // Ignore replies belonging to a previously opened packet.
+        reparseSequence.current += 1;
+        setReparsing(false);
+        setReparseError(null);
+        return () => { reparseSequence.current += 1; };
+    }, [open, file?.url]);
+
+    const handleReparse = () => {
+        const sequence = ++reparseSequence.current;
+        setReparsing(true);
+        setReparseError(null);
+        socket.timeout(30000).emit('api.call', {
+            cmd: 'filebrowser.reparse-telemetry', data: { url: file.url },
+        }, (error, result) => {
+            if (sequence !== reparseSequence.current) return;
+            setReparsing(false);
+            if (error || !result?.success) {
+                setReparseError(result?.error || t('telemetry_viewer_dialog.reparse_failed', { defaultValue: 'Could not reparse this packet.' }));
+                return;
+            }
+            onMetadataChange(result.data);
+        });
+    };
 
     // Reset tab when dialog opens
     useEffect(() => {
@@ -68,9 +137,9 @@ export default function TelemetryViewerDialog({ open, onClose, file, metadata })
         return null;
     }
 
-    const telemetry = metadata.telemetry || {};
-    const packet = metadata.packet || {};
-    const ax25 = metadata.ax25 || {};
+    const telemetry = displayedMetadata.telemetry || {};
+    const packet = displayedMetadata.packet || {};
+    const ax25 = displayedMetadata.ax25 || {};
     const isAprs = metadata.decoder?.type === 'aprs';
 
     return (
@@ -133,10 +202,11 @@ export default function TelemetryViewerDialog({ open, onClose, file, metadata })
                     bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'rgba(0, 0, 0, 0.36)' : 'grey.100'),
                 }}
             >
+                {reparseError && <Alert severity="error" sx={{ m: 3 }}>{reparseError}</Alert>}
                 <TabPanel value={activeTab} index={0}>
                     <Box sx={{ px: 3, pb: 2 }}>
                         <OverviewTab
-                            metadata={metadata}
+                            metadata={displayedMetadata}
                             file={file}
                             telemetry={telemetry}
                             packet={packet}
@@ -147,10 +217,23 @@ export default function TelemetryViewerDialog({ open, onClose, file, metadata })
 
                 <TabPanel value={activeTab} index={1}>
                     <Box sx={{ px: 3, pb: 2 }}>
-                        {isAprs ? (
-                            <APRSTab metadata={metadata} />
+                        {activePreview?.loading ? (
+                            <Box role="status" sx={{display: 'flex', alignItems: 'center', gap: 1}}>
+                                <CircularProgress size={20} />
+                                {t('telemetry_viewer_dialog.preview_loading', {defaultValue: 'Decoding saved packet…'})}
+                            </Box>
+                        ) : isAprs ? (
+                            <APRSTab metadata={displayedMetadata} />
                         ) : (
-                            <TelemetryValuesTab telemetry={telemetry} />
+                            <>
+                                {activePreview?.failed && <Alert severity="warning" sx={{mb: 2}}>
+                                    {activePreview.error || t('telemetry_viewer_dialog.preview_failed', {
+                                        defaultValue: 'Could not decode this saved packet. Try Reparse telemetry.',
+                                    })}
+                                </Alert>}
+                                <TelemetryValuesTab telemetry={telemetry} satellite={displayedMetadata.satellite?.name}
+                                    captureTime={packet.timestamp ?? displayedMetadata.timestamp} />
+                            </>
                         )}
                     </Box>
                 </TabPanel>
@@ -217,6 +300,14 @@ export default function TelemetryViewerDialog({ open, onClose, file, metadata })
                     },
                 }}
             >
+                {onMetadataChange && file.url.endsWith('.bin') && (
+                    <Button startIcon={<RefreshIcon />} onClick={handleReparse}
+                        disabled={reparsing || activePreview?.loading || !socket?.connected} variant="outlined">
+                        {reparsing
+                            ? t('telemetry_viewer_dialog.reparsing', { defaultValue: 'Reparsing…' })
+                            : t('telemetry_viewer_dialog.reparse', { defaultValue: 'Reparse telemetry' })}
+                    </Button>
+                )}
                 <Button
                     startIcon={<DownloadIcon />}
                     href={file.url}

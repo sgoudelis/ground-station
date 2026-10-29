@@ -1,5 +1,20 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+# Copyright (c) 2025 Efstratios Goudelis
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 """
 Generic Telemetry Parser with Pluggable Architecture (protocol-agnostic)
 
@@ -129,6 +144,9 @@ class TelemetryParser:
         self.csp_parser = CSPParser()
         self.ccsds_parser = CCSDSParser()
         self.payload_parsers: Dict[Any, Any] = {}  # protocol-aware registry
+        # LoRa payload parsers keyed by uppercase satellite-name prefix
+        # (LoRa frames carry no callsign to route on).
+        self.lora_parsers: Dict[str, Any] = {}
         register_builtin_payload_parsers(self)
         logger.debug("Telemetry parser initialized (protocol-agnostic)")
 
@@ -187,14 +205,31 @@ class TelemetryParser:
                 return None
             return None
 
-        # LoRa is a PHY, not an application protocol. Keep arbitrary payloads
-        # opaque until a satellite-specific parser is explicitly selected.
+        # LoRa is a PHY, not an application protocol. Satellite-specific specs
+        # (matched by observation satellite name) may decode the payload;
+        # anything else stays opaque hex until a parser exists for it.
         if protocol_hint == "lora":
+            telemetry: Optional[Dict[str, Any]] = None
+            parser_name = "lora"
+            sat_key = (sat_hint or "").strip().upper()
+            for prefix, lora_parser in self.lora_parsers.items():
+                if not sat_key.startswith(prefix):
+                    continue
+                try:
+                    telemetry = lora_parser.parse(packet_bytes)
+                    parser_name = f"lora+{type(lora_parser).__name__}"
+                except ValueError as exc:
+                    # Fail-fast spec mismatch: fall back to hex below.
+                    logger.info(f"LoRa payload parser '{prefix}' declined: {exc}")
+                    telemetry = None
+                break
+            if telemetry is None:
+                telemetry = self._fallback_telemetry(packet_bytes)
             return {
-                "parser": "lora",
+                "parser": parser_name,
                 "protocol": "lora",
                 "success": True,
-                "telemetry": self._fallback_telemetry(packet_bytes),
+                "telemetry": telemetry,
                 "raw": {
                     "packet_hex": packet_bytes.hex(),
                     "payload_hex": packet_bytes.hex(),

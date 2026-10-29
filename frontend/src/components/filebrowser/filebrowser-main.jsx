@@ -17,7 +17,7 @@
  *
  */
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useCallback, useEffect, useState, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
     Box,
@@ -91,6 +91,7 @@ import {
     toggleSortOrder,
     toggleFilter,
     setAllFilters,
+    setSearch,
     setPage,
     setPageSize,
     toggleItemSelection,
@@ -116,6 +117,8 @@ import ImageViewerDialog from '../common/image-viewer-dialog.jsx';
 import DecodedFolderThumbnail from './decoded-folder-thumbnail.jsx';
 import { buildFileBrowserDisplayItem } from './filebrowser-display-item.js';
 import FileTypeFilter from './file-type-filter.jsx';
+import FileSearchInput from './file-search-input.jsx';
+import FileSearchMatch from './file-search-match.jsx';
 import { getWaterfallRecordingPath } from './waterfall-recording-path.js';
 import { getRunningWaterfallPaths, isWaterfallRunningForItem } from './waterfall-task-status.js';
 import WaterfallGenerationOverlay from './waterfall-generation-overlay.jsx';
@@ -301,6 +304,7 @@ export default function FileBrowserMain() {
         filesError,
         page,
         total,
+        search,
         sortBy,
         sortOrder,
         filters,
@@ -360,6 +364,7 @@ export default function FileBrowserMain() {
         buildWaterfallDialogDefaults()
     );
     const [purgeDialogOpen, setPurgeDialogOpen] = useState(false);
+    const handleSearchChange = useCallback((value) => dispatch(setSearch(value)), [dispatch]);
 
     // Opening the page acknowledges earlier files. Leaving acknowledges any
     // additions received while the user was viewing the live library.
@@ -392,13 +397,14 @@ export default function FileBrowserMain() {
             dispatch(fetchFiles({
                 socket,
                 filters,
+                search,
                 sortBy,
                 sortOrder,
                 page,
                 pageSize,
             }));
         }
-    }, [socket, dispatch, filters, sortBy, sortOrder, page, pageSize]);
+    }, [socket, dispatch, filters, search, sortBy, sortOrder, page, pageSize]);
 
     // The global listener refreshes the library page, while an open dialog
     // needs its own fresh detail payload after a waterfall is replaced.
@@ -514,6 +520,7 @@ export default function FileBrowserMain() {
             dispatch(fetchFiles({
                 socket,
                 filters,
+                search,
                 sortBy,
                 sortOrder,
                 page,
@@ -732,7 +739,7 @@ export default function FileBrowserMain() {
                 const response = await fetch(artifact.url.replace(/\.wav$/, '.json'));
                 if (response.ok) metadata = await response.json();
             } catch (_) {
-                // The audio player can still play a WAV file without sidecar metadata.
+                // The audio player can still play a WAV file without metadata.
             }
             setAudioFile({ ...baseItem, type: 'audio' });
             setAudioMetadata(metadata);
@@ -763,7 +770,7 @@ export default function FileBrowserMain() {
         if (['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp'].includes(fileType)) {
             let metadata = artifact.metadata || null;
             if (path.startsWith('decoded/')) {
-                // Decoded images can have a sidecar; missing metadata must not
+                // Decoded images can have metadata; missing metadata must not
                 // prevent viewing the image. Keep version query parameters.
                 const metadataUrl = artifact.url.replace(/\.(png|jpe?g|gif|bmp|webp)(?=\?|$)/i, '.json');
                 try {
@@ -921,6 +928,16 @@ export default function FileBrowserMain() {
 
     return (
         <Box sx={{ p: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2, flexWrap: 'wrap' }}>
+                <FileSearchInput value={search} onChange={handleSearchChange} />
+                {search && !filesError && (
+                    <Typography variant="body2" color="text.secondary" role="status" aria-live="polite">
+                        {isLoading
+                            ? t('search.searching', 'Searching…')
+                            : t('search.results', { count: total, defaultValue: '{{count}} results' })}
+                    </Typography>
+                )}
+            </Box>
             <Box sx={{
                 mb: 2,
                 display: 'flex',
@@ -1157,8 +1174,15 @@ export default function FileBrowserMain() {
                         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                             {!filters.showRecordings && !filters.showSnapshots && !filters.showDecoded && !filters.showObservations && !filters.showAudio && !filters.showTranscriptions
                                 ? t('no_files.message_filter', 'Enable at least one filter to see files')
-                                : t('no_files.message_empty', 'Take snapshots or record IQ data from the waterfall view')}
+                                : search
+                                    ? t('search.no_results', { query: search, defaultValue: 'No files match “{{query}}”.' })
+                                    : t('no_files.message_empty', 'Take snapshots or record IQ data from the waterfall view')}
                         </Typography>
+                        {search && (
+                            <Button variant="outlined" onClick={() => dispatch(setSearch(''))} sx={{ mr: 1 }}>
+                                {t('search.clear', 'Clear search')}
+                            </Button>
+                        )}
                         <Button
                             variant="outlined"
                             startIcon={<RefreshIcon />}
@@ -1682,6 +1706,7 @@ export default function FileBrowserMain() {
                                                 {item.displayName}
                                             </Typography>
                                         </Tooltip>
+                                        <FileSearchMatch item={item} />
                                         {isRecording ? (
                                             item.metadata?.description && (
                                                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
@@ -1815,7 +1840,7 @@ export default function FileBrowserMain() {
                                                     sx={{ height: '20px', fontSize: '0.65rem', '& .MuiChip-label': { px: 0.75 } }}
                                                 />
                                             )}
-                                            {item.type === 'decoded'
+                                            {['decoded', 'snapshot'].includes(item.type)
                                                 && item.satellite_name
                                                 && (!isAprsDecodedFile || item.satellite_norad_id) && (
                                                 <Chip
@@ -2513,6 +2538,8 @@ export default function FileBrowserMain() {
                 onClose={() => setTelemetryViewerOpen(false)}
                 file={telemetryFile}
                 metadata={telemetryMetadata}
+                socket={socket}
+                onMetadataChange={setTelemetryMetadata}
             />
 
             {/* Audio Dialog */}

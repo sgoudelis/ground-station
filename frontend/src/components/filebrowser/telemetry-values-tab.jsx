@@ -1,58 +1,35 @@
 /**
  * @license
  * Copyright (c) 2025 Efstratios Goudelis
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ *
  */
 
 import React from 'react';
 import { Alert, Box, Typography, Divider } from '@mui/material';
 import { useTranslation } from 'react-i18next';
+import { RawFields, Row, Values } from './telemetry-fields.jsx';
+import HousekeepingTelemetry, { isHousekeepingTelemetry } from './telemetry-housekeeping.jsx';
 
-function Row({ label, value }) {
-  return (
-    <Box sx={{
-      display: 'grid',
-      gridTemplateColumns: '1fr 1fr',
-      alignItems: 'center',
-      py: 0.75,
-      columnGap: 2,
-    }}>
-      <Typography variant="body2" color="text.secondary">{label}</Typography>
-      <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>{value}</Typography>
-    </Box>
-  );
-}
-
-function Values({ values, fieldInfo = {} }) {
-  const { t } = useTranslation('filebrowser');
-  const formatValue = (value) => {
-    if (value === null || value === undefined) {
-      return t('telemetry_values_tab.unavailable', { defaultValue: 'Unavailable' });
-    }
-    if (typeof value === 'boolean') {
-      return value
-        ? t('telemetry_values_tab.yes', { defaultValue: 'Yes' })
-        : t('telemetry_values_tab.no', { defaultValue: 'No' });
-    }
-    if (typeof value === 'number') {
-      return new Intl.NumberFormat(undefined, { maximumFractionDigits: 6 }).format(value);
-    }
-    return typeof value === 'object' ? JSON.stringify(value) : String(value);
-  };
-
-  return Object.entries(values).map(([key, value]) => {
-    const info = fieldInfo[key] || {};
-    // Missing/invalid sensor readings must not look like a measured zero.
-    const unit = value != null && info.unit ? ` ${info.unit}` : '';
-    return <Row key={key} label={info.label || key} value={`${formatValue(value)}${unit}`} />;
-  });
-}
-
-export default function TelemetryValuesTab({ telemetry }) {
+export default function TelemetryValuesTab({ telemetry, satellite, captureTime }) {
   const { t } = useTranslation('filebrowser');
   const values = telemetry?.telemetry?.values || null;
   const rawFields = telemetry?.telemetry?.raw_fields || telemetry?.telemetry?.rawFields || null;
   const payload = telemetry?.telemetry;
-  const isLasarsat = payload?.satellite === 'LASARSAT';
+  const isLasarsat = payload?.satellite === 'LASARSAT' || satellite?.toUpperCase() === 'LASARSAT'
+    || /^OK0LSR(?:-|$)/.test(telemetry?.frame?.source || '');
 
   // A USP AX.25 frame can carry several independent subsystem messages. Keep
   // their values together so repeated fields (time, current, etc.) stay unambiguous.
@@ -84,35 +61,37 @@ export default function TelemetryValuesTab({ telemetry }) {
                   : t('telemetry_values_tab.unsupported_message', { defaultValue: 'This message type is not decoded yet. Its bytes are available in Hex + ASCII.' })}
               </Typography>
             )}
-            {Object.keys(message.raw_fields || {}).length > 0 && (
-              <Box component="details" sx={{ mt: 2 }}>
-                <Typography component="summary" variant="body2" sx={{ cursor: 'pointer' }}>
-                  {t('telemetry_values_tab.raw_fields', { defaultValue: 'Raw Fields' })}
-                </Typography>
-                {Object.entries(message.raw_fields).map(([key, value]) => (
-                  <Row key={key} label={key} value={String(value)} />
-                ))}
-              </Box>
-            )}
+            <RawFields fields={message.raw_fields} />
           </Box>
         ))}
       </Box>
     );
   }
 
-  if (isLasarsat && payload.format === 'malformed') {
+  if (isLasarsat && payload?.format === 'malformed') {
     return <Alert severity="warning">{payload.error}</Alert>;
   }
 
-  if (isLasarsat && payload.format === 'text') {
+  if (isLasarsat && payload?.format === 'text') {
     return <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>{payload.text}</Typography>;
   }
 
+  if (isHousekeepingTelemetry(telemetry)) {
+    return <HousekeepingTelemetry payload={payload} satellite={satellite} captureTime={captureTime} />;
+  }
+
   if (!values) {
+    const error = telemetry?.error || payload?.error;
+    if (error) return <Alert severity="warning">{error}</Alert>;
     return (
-      <Typography variant="body2" color="text.secondary">
-        {t('telemetry_values_tab.no_decoded_telemetry_available_for_this_packet', { defaultValue: 'No decoded telemetry available for this packet.' })}
-      </Typography>
+      <Box>
+        <Typography variant="body2" color="text.secondary">
+          {t('telemetry_values_tab.no_decoded_telemetry_available_for_this_packet', { defaultValue: 'No decoded telemetry available for this packet.' })}
+        </Typography>
+        {isLasarsat && <Alert severity="info" sx={{mt: 2}}>
+          {t('telemetry_values_tab.saved_packet_needs_decode', {defaultValue: 'This packet has no saved telemetry values. Connect to the backend and reopen it to decode, or use Reparse telemetry.'})}
+        </Alert>}
+      </Box>
     );
   }
 
@@ -130,18 +109,16 @@ export default function TelemetryValuesTab({ telemetry }) {
         </Alert>
       )}
       <Box>
-        <Values values={values} fieldInfo={payload?.field_info} />
+        {payload.time_utc && (
+          <Row label={t('telemetry_values_tab.spacecraft_time_utc', { defaultValue: 'Spacecraft time (UTC)' })}
+            value={payload.time_utc} />
+        )}
+        <Values values={Object.fromEntries(Object.entries(values).filter(([key]) =>
+          !payload.time_utc || !['time_unix_s', 'eps_time_unix_s'].includes(key)
+        ))} fieldInfo={payload?.field_info} />
       </Box>
 
-      {rawFields && (
-        <Box sx={{ mt: 3 }}>
-          <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>{t('telemetry_values_tab.raw_fields', { defaultValue: 'Raw Fields' })}</Typography>
-          <Divider sx={{ mb: 2 }} />
-          {Object.entries(rawFields).map(([k, v]) => (
-            <Row key={k} label={k} value={String(v)} />
-          ))}
-        </Box>
-      )}
+      <RawFields fields={rawFields} />
     </Box>
   );
 }
