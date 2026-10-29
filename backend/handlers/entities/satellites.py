@@ -235,8 +235,10 @@ async def search_targets(
         hinted_body_type = str(type_hints.get("body_type") or "").strip().lower() or None
         tail_query = str(type_hints.get("tail_query") or "").strip()
 
-        # Reuse existing satellite search flow so results keep group and transmitter enrichment.
-        satellites_reply = await search_satellites(sio, query, logger, sid)
+        # Pass the limit into SQL so enrichment only runs for the requested suggestions.
+        satellites_reply = await search_satellites(
+            sio, {"keyword": query, "limit": limit}, logger, sid
+        )
         if not satellites_reply.get("success"):
             return {
                 "success": False,

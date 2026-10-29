@@ -171,6 +171,8 @@ const TargetSelectorBar = React.memo(function TargetSelectorBar() {
     const [createSearchOpen, setCreateSearchOpen] = useState(false);
     const [createSearchOptions, setCreateSearchOptions] = useState([]);
     const [createSearchLoading, setCreateSearchLoading] = useState(false);
+    const [createSearchKeyword, setCreateSearchKeyword] = useState('');
+    const createSearchRequestRef = useRef(0);
     const [createSelectedSatellite, setCreateSelectedSatellite] = useState(null);
     const [createSelectedMission, setCreateSelectedMission] = useState(null);
     const [createSelectedBodyId, setCreateSelectedBodyId] = useState('');
@@ -421,6 +423,8 @@ const TargetSelectorBar = React.memo(function TargetSelectorBar() {
     }, []);
 
     const resetCreateDialogState = useCallback(() => {
+        createSearchRequestRef.current += 1;
+        setCreateSearchKeyword('');
         setCreateTargetType(TARGET_TYPES.SATELLITE);
         setCreateSearchOpen(false);
         setCreateSearchOptions([]);
@@ -444,27 +448,47 @@ const TargetSelectorBar = React.memo(function TargetSelectorBar() {
         resetCreateDialogState();
     }, [createTargetBusy, resetCreateDialogState]);
 
-    const handleCreateSearchInputChange = useCallback((event, value) => {
-        const keyword = String(value || '').trim();
-        if (keyword.length < 3) {
+    const handleCreateSearchInputChange = useCallback((event, value, reason) => {
+        // Selecting a result resets the input label; it should not start another search.
+        if (reason !== 'input' && reason !== 'clear') return;
+        const keyword = String(value || '');
+        if (keyword === createSearchKeyword) return;
+        createSearchRequestRef.current += 1;
+        setCreateSearchKeyword(keyword);
+    }, [createSearchKeyword]);
+
+    useEffect(() => {
+        const requestId = ++createSearchRequestRef.current;
+        const keyword = createSearchKeyword.trim();
+        if (!socket || !createDialogOpen || !createSearchOpen
+            || createTargetType !== TARGET_TYPES.SATELLITE || keyword.length < 3) {
             setCreateSearchOptions([]);
             setCreateSearchLoading(false);
             return;
         }
+        setCreateSearchOptions([]);
         setCreateSearchLoading(true);
-        socket.emit("api.call", {
-  cmd: 'get-satellite-search',
-  data: keyword
-}, response => {
-  if (response?.success) {
-    setCreateSearchOptions(Array.isArray(response?.data) ? response.data : []);
-  } else {
-    setCreateSearchOptions([]);
-    toast.error(response?.error || 'Error searching for satellites');
-  }
-  setCreateSearchLoading(false);
-});
-    }, [socket]);
+        const timer = setTimeout(() => {
+            socket.emit('api.call', {
+                cmd: 'get-satellite-search',
+                data: { keyword, limit: 20 },
+            }, response => {
+                if (requestId !== createSearchRequestRef.current) return;
+                if (response?.success) {
+                    setCreateSearchOptions(Array.isArray(response?.data) ? response.data : []);
+                } else {
+                    setCreateSearchOptions([]);
+                    toast.error(response?.error || 'Error searching for satellites');
+                }
+                setCreateSearchLoading(false);
+            });
+        }, 300);
+        return () => {
+            clearTimeout(timer);
+            // Clearing, closing, switching target types, and unmounting invalidate replies.
+            createSearchRequestRef.current += 1;
+        };
+    }, [createDialogOpen, createSearchKeyword, createSearchOpen, createTargetType, socket]);
 
     const buildTargetTrackingPatch = useCallback((target) => {
         const targetType = target?.targetType || TARGET_TYPES.SATELLITE;
@@ -1175,13 +1199,14 @@ const TargetSelectorBar = React.memo(function TargetSelectorBar() {
                                 value={createSelectedSatellite}
                                 onInputChange={handleCreateSearchInputChange}
                                 onChange={(event, value) => {
+                                    setCreateSearchKeyword('');
                                     setCreateSelectedSatellite(value || null);
                                     if (createDialogError) {
                                         setCreateDialogError('');
                                     }
                                 }}
                                 isOptionEqualToValue={(option, value) => option?.norad_id === value?.norad_id}
-                                getOptionLabel={(option) => `${option?.norad_id || ''} - ${option?.name || ''}`}
+                                getOptionLabel={(option) => `${option?.name || ''} - ${option?.norad_id || ''}`}
                                 renderInput={(params) => (
                                     <TextField
                                         {...params}

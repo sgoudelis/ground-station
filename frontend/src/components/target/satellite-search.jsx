@@ -190,6 +190,7 @@ const SatelliteSearchAutocomplete = React.memo(function SatelliteSearchAutocompl
 
     React.useEffect(() => {
         if (!socket || disabled || !open) {
+            setLoading(false);
             return;
         }
         const keyword = String(inputValue || '').trim();
@@ -224,7 +225,11 @@ const SatelliteSearchAutocomplete = React.memo(function SatelliteSearchAutocompl
   setLoading(false);
 });
         }, 220);
-        return () => clearTimeout(timer);
+        return () => {
+            clearTimeout(timer);
+            // Late replies must not repopulate a cleared, closed, or disabled search.
+            requestRef.current += 1;
+        };
     }, [disabled, inputValue, open, socket]);
 
     const handleOpen = () => {

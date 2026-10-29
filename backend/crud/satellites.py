@@ -602,7 +602,7 @@ async def search_satellites(
     If 'keyword' is provided, return satellite records that have a matching NORAD id,
     name, or transmitter property. Structured catalog requests can include page,
     page_size, and sorting fields; enrichment then runs only for that SQL page.
-    Legacy callers without page_size continue to receive every matching record.
+    Autocomplete callers without page_size receive 20 matches by default, capped at 50.
     """
     try:
         catalog_filters = filters if isinstance(filters, dict) else {}
@@ -855,6 +855,10 @@ async def search_satellites(
             ordering = sort_column.desc() if sort_direction == "desc" else sort_column.asc()
             stmt = stmt.order_by(ordering, Satellites.norad_id.asc())
             stmt = stmt.offset(page * page_size).limit(page_size)
+        else:
+            # Bound autocomplete work in SQL before orbit, transmitter, and group enrichment.
+            limit = min(_catalog_int(catalog_filters.get("limit")) or 20, 50)
+            stmt = stmt.order_by(func.lower(Satellites.name), Satellites.norad_id).limit(limit)
 
         result = await session.execute(stmt)
         satellites = result.scalars().all()
