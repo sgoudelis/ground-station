@@ -38,6 +38,8 @@ import {
 import CloseIcon from '@mui/icons-material/Close';
 import { useSelector } from 'react-redux';
 import { getDecoderParameters } from './vfo-marker/vfo-config.js';
+import { areDecoderParametersValid } from './decoder-parameters.js';
+import { DecoderNumberField } from './decoder-number-field.jsx';
 import { DecoderConfigSuggestion } from '../scheduler/decoder-config-suggestion.jsx';
 import { selectRunningRigTransmitters } from '../target/transmitter-selectors.js';
 import { useTranslation } from 'react-i18next';
@@ -113,6 +115,7 @@ const DecoderParamsDialog = ({
     // Pass the component translator so parameter labels/tooltips stay localized.
     const decoderParams = getDecoderParameters(decoder, t);
     const parametersEnabled = draft.parametersEnabled; // Default to disabled
+    const parametersValid = !parametersEnabled || areDecoderParametersValid(decoder, draft.parameters);
     const gnssAdvice = decoder === 'gnss' ? getGnssTuningAdvice({
         parameters: draft.parameters,
         parametersEnabled,
@@ -194,6 +197,7 @@ const DecoderParamsDialog = ({
     };
 
     const commitDraft = (extraUpdates = {}) => {
+        if (!parametersValid) return;
         const updates = { ...extraUpdates };
         if (draft.parametersEnabled !== initialDraft.parametersEnabled) {
             updates.parametersEnabled = draft.parametersEnabled;
@@ -386,6 +390,17 @@ const DecoderParamsDialog = ({
 
                         return (
                             <Box key={paramKey} sx={{ mb: 2.5 }}>
+                                {paramDef.type === 'number' && (
+                                    <DecoderNumberField
+                                        definition={paramDef}
+                                        value={currentValue}
+                                        disabled={!vfoActive[vfoIndex] || !parametersEnabled}
+                                        onChange={(value) => setDraft((current) => ({
+                                            ...current,
+                                            parameters: { ...current.parameters, [paramKey]: value },
+                                        }))}
+                                    />
+                                )}
                                 {paramDef.type === 'select' && (
                                     <FormControl fullWidth size="small" variant="outlined">
                                         <InputLabel id={`vfo-${vfoIndex}-${paramKey}-label`}>{paramDef.label}</InputLabel>
@@ -460,11 +475,11 @@ const DecoderParamsDialog = ({
             <DialogActions>
                 <Button onClick={onClose}>{t('common:cancel', { defaultValue: 'Cancel' })}</Button>
                 {gnssAdvice?.band && canTuneReceiver && gnssAdvice.needsTune && (
-                    <Button variant="outlined" onClick={handleApplyAndTune} disabled={hardwareBusy}>
+                    <Button variant="outlined" onClick={handleApplyAndTune} disabled={hardwareBusy || !parametersValid}>
                         Apply and tune receiver
                     </Button>
                 )}
-                <Button variant="contained" onClick={() => commitDraft()} disabled={!hasChanges || hardwareBusy || gnssAdvice?.bandCount === 0}>
+                <Button variant="contained" onClick={() => commitDraft()} disabled={!hasChanges || !parametersValid || hardwareBusy || gnssAdvice?.bandCount === 0}>
                     {t('common:apply', { defaultValue: 'Apply' })}
                 </Button>
             </DialogActions>

@@ -48,7 +48,7 @@ beforeEach(() => {
     });
 });
 
-function renderDialog(editing = true) {
+function renderDialog(editing = true, selectedSatellite = satellite) {
     const initialState = schedulerReducer(undefined, { type: '@@INIT' });
     const sdrState = { sdrs: [{ id: 'sdr-1', name: 'Test SDR', type: 'test' }] };
     const rotatorState = { rotators: [] };
@@ -66,8 +66,8 @@ function renderDialog(editing = true) {
             scheduler: {
                 ...initialState,
                 monitoredSatelliteDialogOpen: true,
-                selectedMonitoredSatellite: editing ? satellite : null,
-                monitoredSatellites: editing ? [satellite] : [],
+                selectedMonitoredSatellite: editing ? selectedSatellite : null,
+                monitoredSatellites: editing ? [selectedSatellite] : [],
             },
         },
     });
@@ -86,6 +86,28 @@ function selectOption(label, option) {
 }
 
 describe('monitored satellite dialog', () => {
+    it('blocks invalid preambles and saves a custom integer in decoder tasks', async () => {
+        const selectedSatellite = structuredClone(satellite);
+        selectedSatellite.sessions[0].tasks = [{
+            id: 'lora-task', type: 'decoder',
+            config: { decoder_type: 'lora', transmitter_id: '', parameters: { lora_preamble_len: 15 } },
+        }];
+        renderDialog(true, selectedSatellite);
+        fireEvent.click(screen.getByRole('button', { name: /Decoder.*LoRa/ }));
+
+        const input = await screen.findByRole('spinbutton', { name: 'Preamble Length' });
+        const save = screen.getByRole('button', { name: 'Save and Generate' });
+        expect(input).toHaveValue(15);
+        fireEvent.change(input, { target: { value: '17.5' } });
+        expect(input).toHaveAttribute('aria-invalid', 'true');
+        expect(save).toBeDisabled();
+
+        fireEvent.change(input, { target: { value: '17' } });
+        await waitFor(() => expect(save).toBeEnabled());
+        fireEvent.click(save);
+        expect(requests[0].data.sessions[0].tasks[0].config.parameters.lora_preamble_len).toBe(17);
+    });
+
     // This full-form creation and retry flow needs extra time with coverage on CI runners.
     it('saves before generating, stays busy until acknowledgement, and retries without duplicating a new definition', async () => {
         const store = renderDialog(false);

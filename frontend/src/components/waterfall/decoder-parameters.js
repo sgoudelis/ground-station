@@ -30,7 +30,7 @@
  * Structure:
  * - label: Display name for UI
  * - description: Optional help text
- * - type: 'select' or 'switch'
+ * - type: 'select', 'number', or 'switch'
  * - default: Default value
  * - options: Array of {value, label, tooltip?} for select type
  *
@@ -110,8 +110,8 @@ export const getLoraParameters = (t = englishFallback) => ({
     lora_preamble_len: {
         label: t('decoder_parameters.preamble_length', { defaultValue: 'Preamble Length' }),
         description: 'Number of preamble symbols.',
-        type: 'select', default: 8,
-        options: [5, 6, 7, 8, 9, 10, 12, 16, 24, 32, 64, 128, 256, 512, 1024].map(value => ({ value, label: String(value) }))
+        type: 'number', default: 8,
+        min: 5, max: 65535, step: 1,
     },
     lora_ldro_mode: {
         label: t('decoder_parameters.low_data_rate_optimization', { defaultValue: 'Low Data Rate Optimization' }),
@@ -642,6 +642,19 @@ export function getDecoderParameters(decoder, t = englishFallback) {
             acc[key] = value;
             return acc;
         }, {});
+}
+
+export function isDecoderParameterValid(definition, value) {
+    if (definition.type !== 'number') return true;
+    return Number.isInteger(value) && value >= definition.min && value <= definition.max;
+}
+
+export function areDecoderParametersValid(decoder, parameters = {}) {
+    // Numeric drafts can be empty or fractional while typing; block saving them.
+    return Object.entries(getDecoderParameters(decoder)).every(([key, definition]) => (
+        (definition.visibleWhen && !definition.visibleWhen(parameters)) ||
+        isDecoderParameterValid(definition, parameters[key] ?? definition.default)
+    ));
 }
 
 /**

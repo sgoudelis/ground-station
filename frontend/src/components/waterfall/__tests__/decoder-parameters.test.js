@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
     DECODER_SUPPORT,
+    areDecoderParametersValid,
     getDecoderDefaultParameters,
     getDecoderParameters,
     mapParametersToBackend,
@@ -104,10 +105,21 @@ describe('LoRa decoder parameters', () => {
         expect(mapParametersToBackend('lora', { lora_fldro: true }).ldro_mode).toBe(1);
         expect(mapParametersToBackend('lora', { lora_fldro: false }).ldro_mode).toBe(2);
         const preamble = getDecoderParameters('lora').lora_preamble_len;
-        expect(preamble.options).toContainEqual({ value: 9, label: '9' });
+        expect(preamble.type).toBe('number');
         expect(mapParametersToBackend('lora', { lora_preamble_len: 9 }).preamble_len).toBe(9);
         const sync = getDecoderParameters('lora').lora_sync_word.options;
         expect(sync.some(option => JSON.stringify(option.value) === '[52]')).toBe(true);
         expect(sync.some(option => JSON.stringify(option.value) === '[0,0]')).toBe(true);
+    });
+
+    it('accepts custom integer preambles and rejects invalid drafts before saving', () => {
+        for (const value of [5, 9, 15, 17, 18, 65535]) {
+            expect(areDecoderParametersValid('lora', { lora_preamble_len: value })).toBe(true);
+            expect(mapParametersToBackend('lora', { lora_preamble_len: value }).preamble_len).toBe(value);
+        }
+        for (const value of ['', 4, 15.5, 65536, NaN, Infinity]) {
+            expect(areDecoderParametersValid('lora', { lora_preamble_len: value })).toBe(false);
+        }
+        expect(areDecoderParametersValid('lora')).toBe(true);
     });
 });

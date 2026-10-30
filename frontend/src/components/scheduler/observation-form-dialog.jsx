@@ -93,7 +93,8 @@ import {
 import { fetchSDRs } from '../hardware/sdr-slice.jsx';
 import { fetchSatellite } from '../satellites/satellite-slice.jsx';
 import { SatelliteSelector } from './satellite-selector.jsx';
-import { getSatdumpPipelines, getDecoderParameters, getDecoderDefaultParameters } from '../waterfall/decoder-parameters.js';
+import { getSatdumpPipelines, getDecoderParameters, getDecoderDefaultParameters, areDecoderParametersValid } from '../waterfall/decoder-parameters.js';
+import { DecoderNumberField } from '../waterfall/decoder-number-field.jsx';
 import { DecoderConfigSuggestion } from './decoder-config-suggestion.jsx';
 import { ObservationRigFields } from './observation-rig-fields.jsx';
 
@@ -628,6 +629,7 @@ const ObservationFormDialog = ({ onExited }) => {
     };
 
     const handleSave = () => {
+        if (!isFormValid()) return;
         const sessions = Array.isArray(formData.sessions) && formData.sessions.length
             ? formData.sessions
             : [{ sdr: formData.sdr, tasks: formData.tasks }];
@@ -1006,6 +1008,16 @@ const ObservationFormDialog = ({ onExited }) => {
                     )}
                 </FormControl>
             );
+        } else if (paramDef.type === 'number') {
+            return (
+                <DecoderNumberField
+                    key={paramKey}
+                    definition={paramDef}
+                    value={currentValue}
+                    disabled={isFormDisabled}
+                    onChange={(value) => handleDecoderParameterChange(taskIndex, paramKey, value)}
+                />
+            );
         } else if (paramDef.type === 'switch') {
             return (
                 <FormControlLabel
@@ -1165,7 +1177,9 @@ const ObservationFormDialog = ({ onExited }) => {
                 sdr.id &&
                 sdr.gain !== '' &&
                 sdr.antenna_port !== '' &&
-                validateTasksWithinBandwidth(session).valid
+                validateTasksWithinBandwidth(session).valid &&
+                (session.tasks || []).every((task) => task.type !== 'decoder' ||
+                    areDecoderParametersValid(task.config.decoder_type, task.config.parameters || {}))
             );
         });
 

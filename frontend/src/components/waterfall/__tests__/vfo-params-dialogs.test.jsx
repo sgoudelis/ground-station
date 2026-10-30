@@ -46,6 +46,50 @@ const renderDecoderDialog = (vfo, onVFOPropertyChange = vi.fn(), onClose = vi.fn
 );
 
 describe('Waterfall VFO parameter dialogs', () => {
+    it('loads and applies a custom LoRa preamble as an integer only after Apply', () => {
+        const onVFOPropertyChange = vi.fn();
+        renderDecoderDialog({
+            decoder: 'lora', parametersEnabled: true,
+            parameters: { lora_preamble_len: 15, lora_sf: 8 },
+        }, onVFOPropertyChange);
+
+        const input = screen.getByRole('spinbutton', { name: 'Preamble Length' });
+        expect(input).toHaveValue(15);
+        fireEvent.change(input, { target: { value: '17' } });
+        expect(onVFOPropertyChange).not.toHaveBeenCalled();
+
+        fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
+        expect(onVFOPropertyChange).toHaveBeenCalledExactlyOnceWith(1, {
+            parameters: { lora_preamble_len: 17, lora_sf: 8 },
+        });
+    });
+
+    it('blocks empty, fractional, and out-of-range preambles until corrected', () => {
+        const onVFOPropertyChange = vi.fn();
+        renderDecoderDialog({
+            decoder: 'lora', parametersEnabled: true, parameters: {},
+        }, onVFOPropertyChange);
+
+        const input = screen.getByRole('spinbutton', { name: 'Preamble Length' });
+        const apply = screen.getByRole('button', { name: 'Apply' });
+        expect(input).toHaveValue(8);
+        for (const value of ['', '4', '15.5', '65536']) {
+            fireEvent.change(input, { target: { value } });
+            expect(input).toHaveAttribute('aria-invalid', 'true');
+            expect(apply).toBeDisabled();
+            fireEvent.click(apply);
+            expect(onVFOPropertyChange).not.toHaveBeenCalled();
+        }
+
+        fireEvent.change(input, { target: { value: '18' } });
+        expect(input).toHaveAttribute('aria-invalid', 'false');
+        expect(apply).toBeEnabled();
+        fireEvent.click(apply);
+        expect(onVFOPropertyChange).toHaveBeenCalledExactlyOnceWith(1, {
+            parameters: { lora_preamble_len: 18 },
+        });
+    });
+
     it('commits several transcription choices in one update only after Apply', () => {
         const onVFOPropertyChange = vi.fn();
         const onClose = vi.fn();
