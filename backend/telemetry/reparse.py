@@ -69,12 +69,9 @@ def view_packet(backend_dir: Path, url: str) -> dict[str, Any]:
     packet, metadata = _load_packet(backend_dir, url)
     normalized = normalize_metadata(metadata)
     saved = normalized["telemetry"]
-    # Old raw captures can benefit from a newly installed parser. Existing
-    # measurements remain the saved interpretation until an explicit reparse.
-    if (
-        not metadata.get("telemetry", {}).get("schema_version")
-        and saved["payload_status"] == "unsupported"
-    ):
+    # Unsupported captures can benefit from a new parser regardless of schema
+    # version. Existing measurements keep their saved interpretation until reparse.
+    if saved["payload_status"] == "unsupported":
         try:
             normalized["telemetry"] = _decode_packet(packet, metadata)
         except ValueError:

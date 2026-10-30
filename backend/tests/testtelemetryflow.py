@@ -296,6 +296,63 @@ async def test_view_is_read_only_and_does_not_require_parser_context(tmp_path, m
     sio.emit.assert_not_called()
 
 
+@pytest.mark.parametrize("versioned", [False, True])
+@pytest.mark.parametrize("name,status", [("beacon", "decoded"), ("ack", "non_telemetry")])
+def test_view_upgrades_unsupported_rs18s_captures_without_writing(
+    tmp_path, versioned, name, status
+):
+    capture = json.loads((FIXTURES / "rs18s.json").read_text())[name]
+    original = bytes.fromhex(capture["packet_hex"])
+    context = ParseContext(
+        "ax25", framing="usp", satellite="SAKHACUBE-CHOLBON (RS18S)", hdlc_flags=True
+    )
+    # Reproduce metadata saved before RS18S was registered, including schema v1.
+    previous_parser = TelemetryParser()
+    previous_parser.payload_parsers.pop(("ax25", "RS18S", None))
+    saved = parse_packet(original, context, previous_parser)
+    assert saved["payload_status"] == "unsupported"
+    if not versioned:
+        saved.pop("schema_version")
+    packet = tmp_path / "data" / "observations" / capture["source"]
+    packet.parent.mkdir(parents=True)
+    packet.write_bytes(original)
+    metadata_path = packet.with_suffix(".json")
+    metadata_path.write_text(json.dumps({"parse_context": context.to_dict(), "telemetry": saved}))
+    before = {p.name: (p.read_bytes(), p.stat().st_mtime_ns) for p in packet.parent.iterdir()}
+
+    result = reparse.view_packet(tmp_path, "/observations/" + capture["source"])["telemetry"]
+
+    assert result["parser_id"] == "usp"
+    assert result["payload_status"] == status
+    if name == "beacon":
+        radio, power = result["payload"]["records"]
+        assert radio["groups"][0]["values"]["amplifier_temperature"] == 16
+        assert power["groups"][0]["values"]["battery_voltage"] == 7.888
+    else:
+        assert result["payload"]["records"][0]["groups"] == []
+    assert {
+        p.name: (p.read_bytes(), p.stat().st_mtime_ns) for p in packet.parent.iterdir()
+    } == before
+
+
+@pytest.mark.parametrize("status", ["decoded", "partial"])
+def test_view_preserves_saved_measurements_without_running_current_parser(
+    tmp_path, monkeypatch, status
+):
+    sample = deepcopy(viewer_fixtures()["real"]["umka"])
+    sample["telemetry"]["payload_status"] = sample["telemetry"]["payload"]["status"] = status
+    directory = tmp_path / "data" / "decoded"
+    directory.mkdir(parents=True)
+    packet = directory / "packet.bin"
+    packet.write_bytes(bytes.fromhex(sample["packet"]["hex"]))
+    packet.with_suffix(".json").write_text(json.dumps(sample))
+    decode = Mock(side_effect=AssertionError("Saved measurements must not be reinterpreted"))
+    monkeypatch.setattr(reparse, "_decode_packet", decode)
+
+    assert reparse.view_packet(tmp_path, "/decoded/packet.bin") == sample
+    decode.assert_not_called()
+
+
 def test_nonfinite_readings_are_strict_json_and_unknown_objects_fail():
     assert json_safe([float("nan"), float("inf"), b"\x01"]) == [None, None, "01"]
     with pytest.raises(TypeError):

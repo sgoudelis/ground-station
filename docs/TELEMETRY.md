@@ -147,8 +147,9 @@ channel flags appear as display values. Shared telemetry cards honor backend
 explicitly assigned a display group. Historical interpretation is confined to
 `compatibility.py`; the frontend does not repeat those rules. All old metadata
 uses the authenticated `filebrowser.view-telemetry` command for read-only
-normalization. Old unsupported captures may be parsed for display when their
-saved context permits it. Existing saved measurements remain their recorded
+normalization. Unsupported captures may be parsed for display when their
+saved context permits it, including packets already using the current schema.
+Existing saved measurements remain their recorded
 interpretation until explicitly reparsed. `filebrowser.preview-telemetry`
 continues to support a read-only parse with the current parser.
 

@@ -120,7 +120,24 @@ describe('Historical saved telemetry', () => {
         expect(changed).toHaveBeenCalledWith(saved);
     });
 
-    it('does not prepare current schema metadata again', () => {
+    it('prepares unsupported current-schema packets with the current parser without saving', () => {
+        const socket = connection();
+        const changed = vi.fn();
+        const unsupported = {...current, telemetry: {...current.telemetry, payload_status: 'unsupported'}};
+        render(<TelemetryViewerDialog open file={file} metadata={unsupported} socket={socket}
+            onMetadataChange={changed} onClose={() => {}} />);
+        expect(socket.emit.mock.calls[0][1]).toEqual({cmd: 'filebrowser.view-telemetry', data: {url: file.url}});
+        fireEvent.click(screen.getByRole('tab', {name: 'Telemetry'}));
+        expect(screen.getByRole('status')).toHaveTextContent('Preparing saved telemetry');
+        respond(socket, 0, saved);
+        expect(screen.getByText('Battery A voltage')).toBeInTheDocument();
+        expect(screen.getByText('4.2 V')).toBeInTheDocument();
+        expect(changed).not.toHaveBeenCalled();
+        expect(unsupported.telemetry.payload_status).toBe('unsupported');
+        expect(socket.emit).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not prepare already decoded current-schema metadata again', () => {
         const socket = connection();
         render(<TelemetryViewerDialog open file={file} metadata={saved} socket={socket} onClose={() => {}} />);
         expect(socket.emit).not.toHaveBeenCalled();

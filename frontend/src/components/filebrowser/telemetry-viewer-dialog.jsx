@@ -63,9 +63,10 @@ export default function TelemetryViewerDialog({ open, onClose, file, metadata, s
     const [preview, setPreview] = useState(null);
     const reparseSequence = useRef(0);
 
-    // Legacy interpretation belongs to the backend compatibility adapter.
+    // Unsupported captures may gain a parser without changing the metadata schema.
     // Every entry point shares this read-only request; saved files stay untouched.
-    const needsPreview = metadata?.telemetry?.schema_version !== 1;
+    const needsPreview = metadata?.telemetry?.schema_version !== 1
+        || metadata.telemetry.payload_status === 'unsupported';
 
     useEffect(() => {
         if (!open || !needsPreview || !file?.url?.endsWith('.bin') || !socket?.connected) {
@@ -76,8 +77,8 @@ export default function TelemetryViewerDialog({ open, onClose, file, metadata, s
         const source = metadata;
         const url = file.url;
         setPreview({source, url, loading: true});
-        // Normalize old saved results; unsupported old captures may be parsed
-        // for display. Saving always remains an explicit Reparse action.
+        // Normalize saved results and try the current parser for unsupported
+        // captures. Saving always remains an explicit Reparse action.
         socket.timeout(30000).emit('api.call', {
             cmd: 'filebrowser.view-telemetry', data: {url},
         }, (error, result) => {
