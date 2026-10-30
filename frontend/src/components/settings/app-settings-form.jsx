@@ -766,11 +766,10 @@ const AppSettingsForm = () => {
                     sticky
                     mobileInline
                     sx={{
-                        backgroundColor: (theme) => (
-                            theme.palette.mode === 'dark'
-                                ? alpha(theme.palette.grey[700], 0.18)
-                                : alpha(theme.palette.grey[100], 0.9)
-                        ),
+                        bgcolor: 'surface.raised',
+                        boxShadow: (theme) => theme.palette.mode === 'dark'
+                            ? '0 0 12px rgba(0, 0, 0, 0.45)'
+                            : '0 0 12px rgba(0, 0, 0, 0.16)',
                     }}
                 >
                     <Button variant="outlined" onClick={handleReset} disabled={saving || loading || !isDirty}>

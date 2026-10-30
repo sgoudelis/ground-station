@@ -174,12 +174,6 @@ const ObservationsTable = () => {
     // Filter observations based on status filters
     const observations = allObservations.filter(obs => statusFilters[obs.status]);
 
-    useEffect(() => {
-        if (socket) {
-            dispatch(fetchScheduledObservations({ socket }));
-        }
-    }, [socket, dispatch]);
-
     // Load column visibility from localStorage on mount
     useEffect(() => {
         try {

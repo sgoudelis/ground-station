@@ -17,55 +17,86 @@
  *
  */
 
-import React from 'react';
-import { Box } from '@mui/material';
+import React, { useEffect, useState } from 'react';
+import { Box, Stack } from '@mui/material';
+import { useDispatch } from 'react-redux';
+import { useTranslation } from 'react-i18next';
+import { AntTab, AntTabs } from '../common/common.jsx';
+import PageTabsLayout from '../common/page-tabs.jsx';
+import { useSocket } from '../common/socket.jsx';
+import { fetchScheduledObservations } from './scheduler-slice.jsx';
 import ObservationsTable from './observations-table.jsx';
 import MonitoredSatellitesTable from './monitored-satellites-table.jsx';
 import ObservationStatusBanner from './observation-status-banner.jsx';
 
 export default function ScheduledObservationsLayout() {
-    // Socket listeners for scheduler updates are now in useSocketEventHandlers hook
-    // This ensures updates are received even when not on the scheduler page
+    const dispatch = useDispatch();
+    const { socket } = useSocket();
+    const { t } = useTranslation('common');
+    const [activeTab, setActiveTab] = useState('monitored');
+
+    useEffect(() => {
+        // The upcoming banner needs observations before their table's tab is opened.
+        if (socket) dispatch(fetchScheduledObservations({ socket }));
+    }, [socket, dispatch]);
 
     return (
-        <Box
-            sx={{
-                height: '100%',
-                width: '100%',
-                boxSizing: 'border-box',
-                minWidth: 0,
-                display: 'flex',
-                flexDirection: 'column',
-                p: 2,
-                gap: 2,
-                overflow: 'auto',
-                position: 'relative',
-            }}
-        >
-            {/* Status Banner - Shows running or next observation */}
-            <ObservationStatusBanner />
-
-            <Box
-                sx={{
-                    display: 'grid',
-                    gap: 2,
-                    minHeight: 0,
-                    minWidth: 0,
-                    // Allow the observations card to grow with its rows so the page handles vertical scrolling.
-                    gridTemplateRows: 'auto minmax(min-content, 1fr)',
-                    flex: 1,
-                }}
+        <PageTabsLayout sx={{ width: '100%', minWidth: 0, bgcolor: 'transparent' }} tabs={
+            <AntTabs
+                value={activeTab}
+                onChange={(_event, value) => setActiveTab(value)}
+                variant="scrollable"
+                scrollButtons
+                allowScrollButtonsMobile
+                aria-label={t('scheduler', { ns: 'navigation' })}
+                sx={(theme) => ({
+                    backgroundColor: theme.palette.settingsTabs?.detailRow?.background || theme.palette.background.paper,
+                    borderColor: theme.palette.settingsTabs?.border || theme.palette.divider,
+                    '& .MuiTabs-indicator': { display: 'none' },
+                    '& .MuiTabs-scrollButtons.Mui-disabled': { opacity: 0.3 },
+                    '& .MuiTab-root.Mui-selected': {
+                        backgroundColor: theme.palette.settingsTabs?.detailRow?.selected || theme.palette.action.selected,
+                        color: theme.palette.text.primary,
+                    },
+                })}
             >
-                {/* Monitored Satellites - Top Section */}
-                <Box sx={{ minHeight: 0, minWidth: 0 }}>
-                    <MonitoredSatellitesTable />
-                </Box>
-
-                {/* Scheduled Observations - Bottom Section */}
-                <Box sx={{ minHeight: 0, minWidth: 0 }}>
-                    <ObservationsTable />
-                </Box>
+                <AntTab
+                    value="monitored"
+                    id="scheduler-tab-monitored"
+                    aria-controls="scheduler-panel-monitored"
+                    label={t('scheduler_tables.monitored.title')}
+                />
+                <AntTab
+                    value="observations"
+                    id="scheduler-tab-observations"
+                    aria-controls="scheduler-panel-observations"
+                    label={t('scheduler_tables.observations.title')}
+                />
+            </AntTabs>
+        }>
+            <Box
+                role="tabpanel"
+                id="scheduler-panel-monitored"
+                aria-labelledby="scheduler-tab-monitored"
+                hidden={activeTab !== 'monitored'}
+                sx={{ p: 2, minWidth: 0 }}
+            >
+                {activeTab === 'monitored' && (
+                    <Stack spacing={2}>
+                        <ObservationStatusBanner />
+                        <MonitoredSatellitesTable />
+                    </Stack>
+                )}
             </Box>
-        </Box>
+            <Box
+                role="tabpanel"
+                id="scheduler-panel-observations"
+                aria-labelledby="scheduler-tab-observations"
+                hidden={activeTab !== 'observations'}
+                sx={{ p: 2, minWidth: 0 }}
+            >
+                {activeTab === 'observations' && <ObservationsTable />}
+            </Box>
+        </PageTabsLayout>
     );
 }

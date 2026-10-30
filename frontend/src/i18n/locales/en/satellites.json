@@ -117,7 +117,7 @@
     "orbit_changed": "Orbit changed",
     "actions": "Actions",
     "view": "View",
-    "edit_transmitters": "EDIT TRANSMITTERS",
+    "edit_transmitters": "Edit transmitters",
     "edit_transmitters_title": "Edit Transmitters: {{name}}",
     "close": "Close",
     "no_satellites": "No satellites loaded. Please select a satellite group from the dropdown above.",
