@@ -64,6 +64,7 @@ POWER_LABELS: dict[str, tuple[str, str]] = {
     "reset_reason": ("Power system reset reason", ""),
 }
 
+
 # Legacy table order: all quaternions, then all angular velocities (the wire
 # layout interleaves them per attitude solution block).
 ADCS_LABELS: dict[str, tuple[str, str]] = {
