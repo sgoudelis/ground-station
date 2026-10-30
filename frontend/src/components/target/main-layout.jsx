@@ -50,6 +50,7 @@ import NextPassesIsland from "./next-passes.jsx";
 import TargetViewRouter from './target-view-router.jsx';
 import SatellitePassTimeline from "./timeline-main.jsx";
 import TargetSelectorBar from "./target-selector-bar.jsx";
+import PageTabsLayout from '../common/page-tabs.jsx';
 import RotatorControl from "../dashboard/rotator-control.jsx";
 import RigControl from "../dashboard/rig-control.jsx";
 
@@ -759,12 +760,11 @@ const TrackingLayout = React.memo(function TrackingLayout() {
     ) : null;
 
     return (
-        <>
-            <TargetSelectorBar/>
+        <PageTabsLayout tabs={<TargetSelectorBar/>} sx={{ bgcolor: 'transparent' }}>
             <div ref={containerRef}>
                 {ResponsiveGridLayoutParent}
             </div>
-        </>
+        </PageTabsLayout>
     );
 });
 

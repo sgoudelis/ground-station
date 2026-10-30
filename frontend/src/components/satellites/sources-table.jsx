@@ -65,6 +65,7 @@ import {useSocket} from "../common/socket.jsx";
 import SynchronizeOrbitalDataCard from "./synchronize-orbital-data-card.jsx";
 import {toRowSelectionModel, toSelectedIds} from '../../utils/datagrid-selection.js';
 import { AntTab, AntTabs } from '../common/common.jsx';
+import PageTabsLayout from '../common/page-tabs.jsx';
 
 const PROVIDER_OPTIONS = ['celestrak', 'generic_http', 'space_track'];
 const ADAPTER_OPTIONS = ['http_3le', 'http_omm', 'space_track_gp'];
@@ -827,8 +828,8 @@ export default function SourcesTable({ showTabs = true }) {
     const hasValidationErrors = Object.keys(validationErrors).length > 0;
 
     return (
-        <Box sx={{width: '100%', marginTop: 0}}>
-            {showTabs && <AntTabs
+        <PageTabsLayout sx={{width: '100%', marginTop: 0}} tabs={
+            showTabs && <AntTabs
                 value={activeTab}
                 onChange={(_event, nextTab) => setActiveTab(nextTab)}
                 variant="scrollable"
@@ -848,7 +849,8 @@ export default function SourcesTable({ showTabs = true }) {
                     data-testid="orbital-data-tab-sources"
                     label={t('orbital_sources.tabs.sources', { defaultValue: 'Sources' })}
                 />
-            </AntTabs>}
+            </AntTabs>
+        }>
 
             {activeTab === 'sources' ? (
             <Box sx={{ pt: 2, px: 2 }}>
@@ -885,7 +887,9 @@ export default function SourcesTable({ showTabs = true }) {
                                 theme.palette.primary.main,
                                 theme.palette.mode === 'dark' ? 0.18 : 0.10
                             ),
-                            borderBottom: (theme) => `2px solid ${alpha(theme.palette.primary.main, 0.45)}`,
+                            // Keep the separator inside MUI's measured header height to avoid wheel-catching overflow.
+                            borderBottom: 0,
+                            boxShadow: (theme) => `inset 0 -2px 0 ${alpha(theme.palette.primary.main, 0.45)}`,
                         },
                         '& .MuiDataGrid-columnHeader': {
                             backgroundColor: 'transparent',
@@ -1475,6 +1479,6 @@ export default function SourcesTable({ showTabs = true }) {
                     <SynchronizeOrbitalDataCard/>
                 </Box>
             ) : null}
-        </Box>
+        </PageTabsLayout>
     );
 }

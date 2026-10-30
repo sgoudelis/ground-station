@@ -37,6 +37,7 @@ import CelestialStatusBar from './celestial-statusbar.jsx';
 import SolarSystemCanvas from './solarsystem-canvas.jsx';
 import PlanetariumCanvas from './planetarium-canvas.jsx';
 import CelestialTopBar from './celestial-topbar.jsx';
+import PageTabsLayout from '../common/page-tabs.jsx';
 import MonitoredCelestialGridIsland from './monitored-grid-island.jsx';
 import CelestialPasses from './celestial-passes.jsx';
 import CelestialPassTimeline from './celestial-pass-timeline.jsx';
@@ -1192,7 +1193,15 @@ const CelestialMainLayout = () => {
     ];
 
     return (
-        <Box sx={{ width: '100%', height: '100%' }}>
+        <PageTabsLayout sx={{ width: '100%', bgcolor: 'transparent' }} tabs={
+            <CelestialTopBar
+                projectionPastHours={projectionSettings.past_hours}
+                projectionFutureHours={projectionSettings.future_hours}
+                onProjectionPastHoursChange={(value) => updateProjectionSetting({ pastHours: value })}
+                onProjectionFutureHoursChange={(value) => updateProjectionSetting({ futureHours: value })}
+                onTargetAdded={handleTargetAdded}
+            />
+        }>
             <SolarSystemLayoutOptionsDialog
                 open={openSolarSystemLayoutOptionsDialog}
                 initialSolarSystemOptions={solarSystemDisplayOptions}
@@ -1207,13 +1216,6 @@ const CelestialMainLayout = () => {
                 }}
                 onApplyViewMode={updateViewMode}
                 onClose={() => setOpenSolarSystemLayoutOptionsDialog(false)}
-            />
-            <CelestialTopBar
-                projectionPastHours={projectionSettings.past_hours}
-                projectionFutureHours={projectionSettings.future_hours}
-                onProjectionPastHoursChange={(value) => updateProjectionSetting({ pastHours: value })}
-                onProjectionFutureHoursChange={(value) => updateProjectionSetting({ futureHours: value })}
-                onTargetAdded={handleTargetAdded}
             />
             <div ref={containerRef}>
                 {mounted ? (
@@ -1233,7 +1235,7 @@ const CelestialMainLayout = () => {
                     </Responsive>
                 ) : null}
             </div>
-        </Box>
+        </PageTabsLayout>
     );
 };
 

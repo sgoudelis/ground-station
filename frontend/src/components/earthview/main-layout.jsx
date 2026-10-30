@@ -46,6 +46,7 @@ import { setRotator, setTrackerId, setTrackingStateInBackend } from "../target/t
 import EarthViewMapContainer from './earthview-map-container.jsx';
 import SatelliteDetailsTable from "./satellites-table.jsx";
 import SatelliteGroupSelectorBar from "./satellite-group-selector-bar.jsx";
+import PageTabsLayout from '../common/page-tabs.jsx';
 import EarthViewPassTimeline from './earthview-pass-timeline.jsx';
 import { useTargetRotatorSelectionDialog } from '../target/use-target-rotator-selection-dialog.jsx';
 import useStableEvent from '../../hooks/useStableEvent.js';
@@ -540,12 +541,11 @@ const EarthViewLayout = React.memo(function EarthViewLayout() {
     ) : null;
 
     return (
-        <>
-            <SatelliteGroupSelectorBar/>
+        <PageTabsLayout tabs={<SatelliteGroupSelectorBar/>} sx={{ bgcolor: 'transparent' }}>
             <div ref={containerRef}>
                 {ResponsiveGridLayoutParent}
             </div>
-        </>
+        </PageTabsLayout>
     );
 });
 

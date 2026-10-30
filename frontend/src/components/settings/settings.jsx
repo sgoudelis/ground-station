@@ -45,6 +45,7 @@ import PreferencesForm from "./preferences-form.jsx";
 import MaintenanceForm from "./maintenance-form.jsx";
 import UsersForm from "./users-form.jsx";
 import {AntTab, AntTabs} from "../common/common.jsx";
+import PageTabsLayout from '../common/page-tabs.jsx';
 import SDRsPage from "../hardware/sdr-table.jsx";
 import AppSettingsForm from "./app-settings-form.jsx";
 import {
@@ -280,7 +281,7 @@ export function UserAccountPageLayout({ activeTab, children }) {
     };
 
     return (
-        <Box sx={{ flexGrow: 1, bgcolor: 'background.paper' }}>
+        <PageTabsLayout tabs={
             <AntTabs
                 value={activeTab}
                 onChange={handleTabChange}
@@ -294,8 +295,9 @@ export function UserAccountPageLayout({ activeTab, children }) {
                     <AntTab key={tab.key} value={tab.key} label={t(tab.labelKey, { defaultValue: tab.defaultLabel })} />
                 ))}
             </AntTabs>
+        }>
             {children}
-        </Box>
+        </PageTabsLayout>
     );
 }
 
@@ -315,7 +317,7 @@ const AdminSatellitesPageLayout = React.memo(function AdminSatellitesPageLayout(
     };
 
     return (
-        <Box sx={{ flexGrow: 1, bgcolor: 'background.paper' }}>
+        <PageTabsLayout tabs={
             <AntTabs
                 value={activeTab}
                 onChange={handleTabChange}
@@ -333,8 +335,9 @@ const AdminSatellitesPageLayout = React.memo(function AdminSatellitesPageLayout(
                     />
                 ))}
             </AntTabs>
+        }>
             {children}
-        </Box>
+        </PageTabsLayout>
     );
 });
 
@@ -349,7 +352,7 @@ const AdminCelestialPageLayout = React.memo(function AdminCelestialPageLayout({ 
     };
 
     return (
-        <Box sx={{ flexGrow: 1, bgcolor: 'background.paper' }}>
+        <PageTabsLayout tabs={
             <AntTabs
                 value={activeTab}
                 onChange={handleTabChange}
@@ -363,8 +366,9 @@ const AdminCelestialPageLayout = React.memo(function AdminCelestialPageLayout({ 
                     <AntTab key={tab.key} value={tab.key} label={t(tab.labelKey, { defaultValue: tab.defaultLabel })} />
                 ))}
             </AntTabs>
+        }>
             {children}
-        </Box>
+        </PageTabsLayout>
     );
 });
 
@@ -384,7 +388,7 @@ const AdminSystemPageLayout = React.memo(function AdminSystemPageLayout({ active
     };
 
     return (
-        <Box sx={{ flexGrow: 1, bgcolor: 'background.paper' }}>
+        <PageTabsLayout tabs={
             <AntTabs
                 value={activeTab}
                 onChange={handleTabChange}
@@ -402,8 +406,9 @@ const AdminSystemPageLayout = React.memo(function AdminSystemPageLayout({ active
                     />
                 ))}
             </AntTabs>
+        }>
             {children}
-        </Box>
+        </PageTabsLayout>
     );
 });
 
@@ -596,7 +601,7 @@ export const SettingsTabs = React.memo(function SettingsTabs({
     }
 
     return (
-         <Box sx={{ flexGrow: 1, bgcolor: 'background.paper' }}>
+         <PageTabsLayout tabs={<>
              <AntTabs
                  sx={getSettingsTabRowSx('mainRow')}
                  value={activeMainTab}
@@ -610,8 +615,9 @@ export const SettingsTabs = React.memo(function SettingsTabs({
                  <AntTab value={"settings"} label={t('tabs.settings')} to="/settings/general" component={Link}/>
              </AntTabs>
              {tabObject}
+         </>}>
              {activeTabContent}
-         </Box>
+         </PageTabsLayout>
     );
 });
 
@@ -693,7 +699,7 @@ const AdminSystemHardwareTabs = React.memo(function AdminSystemHardwareTabs() {
     }
 
     return (
-        <Box sx={{ flexGrow: 1, bgcolor: 'background.paper' }}>
+        <PageTabsLayout tabs={
             <AntTabs
                 value={activeTab}
                 onChange={handleTabChange}
@@ -707,8 +713,9 @@ const AdminSystemHardwareTabs = React.memo(function AdminSystemHardwareTabs() {
                 <AntTab key="rigs" value="rigs" label={t('tabs.rigs')} />
                 <AntTab key="rotators" value="rotators" label={t('tabs.rotators')} />
             </AntTabs>
+        }>
             {content}
-        </Box>
+        </PageTabsLayout>
     );
 });
 
@@ -755,7 +762,7 @@ const SettingsAndPreferencesForm = React.memo(function SettingsAndPreferencesFor
     };
 
     return (
-        <Box sx={{ flexGrow: 1, bgcolor: 'background.paper' }}>
+        <PageTabsLayout tabs={
             <AntTabs
                 value={activeSubTab}
                 onChange={handleTabChange}
@@ -769,9 +776,10 @@ const SettingsAndPreferencesForm = React.memo(function SettingsAndPreferencesFor
                 <AntTab key="location" value="location" label={t('tabs.location')} />
                 <AntTab key="settings" value="settings" label={t('tabs.general', { defaultValue: 'General' })} />
             </AntTabs>
+        }>
             {activeSubTab === "preferences" ? <PreferencesForm /> : null}
             {activeSubTab === "location" ? <LocationPage/> : null}
             {activeSubTab === "settings" ? <AppSettingsForm/> : null}
-        </Box>
+        </PageTabsLayout>
     );
 });

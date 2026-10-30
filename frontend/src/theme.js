@@ -243,7 +243,8 @@ export function setupTheme(themeName = 'dark') {
                     root: ({ theme }) => ({
                         backgroundColor: theme.palette.surface.appBar,
                         color: theme.palette.text.primary,
-                        borderBottom: `1px solid ${theme.palette.border.main}`,
+                        borderBottom: `1px solid ${theme.palette.settingsTabs?.border
+                            || (theme.palette.mode === 'dark' ? '#50565f' : '#c5cfdd')}`,
                         boxShadow: isDark
                             ? '0 2px 4px rgba(0, 0, 0, 0.45)'
                             : '0 1px 3px rgba(0, 0, 0, 0.08)',

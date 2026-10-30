@@ -1444,7 +1444,13 @@ export default function Layout() {
     );
 
     return (
-        <Box sx={{ display: 'flex', minHeight: '100vh', overflow: 'hidden' }}>
+        <Box sx={{
+            display: 'flex',
+            minHeight: '100vh',
+            '--AppBar-height': '52px',
+            // Clip overflow without creating a scroll container that traps sticky page tabs.
+            overflow: 'clip',
+        }}>
             <CssBaseline />
             <CustomAppBar position="fixed" open={open}>
                 <Toolbar>
@@ -1661,7 +1667,7 @@ export default function Layout() {
                 component="main"
                 sx={{
                     flexGrow: 1,
-                    mt: '52px',
+                    mt: 'var(--AppBar-height)',
                     minWidth: 0,
                     display: 'flex',
                     flexDirection: 'column',

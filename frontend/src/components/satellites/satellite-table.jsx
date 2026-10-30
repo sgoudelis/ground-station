@@ -1210,7 +1210,9 @@ const SatelliteTable = React.memo(function SatelliteTable() {
                                 theme.palette.primary.main,
                                 theme.palette.mode === 'dark' ? 0.18 : 0.10
                             ),
-                            borderBottom: (theme) => `2px solid ${alpha(theme.palette.primary.main, 0.45)}`,
+                            // Keep the separator inside MUI's measured header height to avoid wheel-catching overflow.
+                            borderBottom: 0,
+                            boxShadow: (theme) => `inset 0 -2px 0 ${alpha(theme.palette.primary.main, 0.45)}`,
                         },
                         '& .MuiDataGrid-columnHeader': {
                             backgroundColor: 'transparent',

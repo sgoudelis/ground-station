@@ -42,6 +42,7 @@ import ArticleIcon from '@mui/icons-material/Article';
 import SystemUpdateAltIcon from '@mui/icons-material/SystemUpdateAlt';
 import { useTranslation } from 'react-i18next';
 import { AntTab, AntTabs } from '../common/common.jsx';
+import PageTabsLayout from '../common/page-tabs.jsx';
 import {
     BrowserFeaturesCard,
     CanvasDebugCard,
@@ -269,7 +270,7 @@ const MaintenanceForm = () => {
 
     return (
         <Paper elevation={3} sx={{ p: 0, mt: 0, borderRadius: 0 }}>
-            <Box>
+            <PageTabsLayout tabs={
                 <AntTabs
                     value={activeTabKey}
                     onChange={(_event, newValue) => setActiveTabKey(newValue)}
@@ -289,6 +290,7 @@ const MaintenanceForm = () => {
                         />
                     ))}
                 </AntTabs>
+            }>
 
                 <TabPanel tabKey="updates">
                     <Grid container spacing={2}>
@@ -476,7 +478,7 @@ const MaintenanceForm = () => {
                         </Grid>
                     </Stack>
                 </TabPanel>
-            </Box>
+            </PageTabsLayout>
         </Paper>
     );
 };
