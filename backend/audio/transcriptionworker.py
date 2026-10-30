@@ -36,7 +36,7 @@ import uuid
 from abc import ABC, abstractmethod
 from asyncio import Task
 from concurrent.futures import Future
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, TextIO
 
 import numpy as np
@@ -318,7 +318,7 @@ class TranscriptionWorker(ABC, threading.Thread):
                 f"# Language: {self.language}\n"
                 f"# Translate To: {self.translate_to}\n"
                 f"# Translation Backend: {self.translation_backend}\n"
-                f"# Started: {datetime.now().isoformat()}\n"
+                f"# Started: {datetime.now(timezone.utc).isoformat()}\n"
                 f"#\n"
                 f"# Format: [HH:MM:SS] transcribed text (up to 20 words per line)\n"
                 f"#\n\n"
@@ -870,7 +870,7 @@ class TranscriptionWorker(ABC, threading.Thread):
                         self.word_buffer = []
 
                 # Write footer with end time
-                footer = f"\n# Ended: {datetime.now().isoformat()}\n"
+                footer = f"\n# Ended: {datetime.now(timezone.utc).isoformat()}\n"
                 self.transcription_file.write(footer)
                 self.transcription_file.close()
                 logger.info(f"Transcription file closed: {self.transcription_file_path}")

@@ -54,6 +54,23 @@ test('rehydrates the new observation filter from the former decoded choice', () 
     expect(changed.page).toBe(1);
 });
 
+test('uses capture chronology by default and migrates the former created sort', () => {
+    const current = reducer(undefined, { type: '@@INIT' });
+    expect(current.sortBy).toBe('captured_at');
+    expect(reconcileFileBrowserPersistedState({ sortBy: 'created' }, current).sortBy).toBe('captured_at');
+    expect(reconcileFileBrowserPersistedState({ sortBy: 'modified' }, current).sortBy).toBe('modified');
+});
+
+test('explicit refresh rescans copied files before requesting the current page', async () => {
+    const socket = {
+        connected: true,
+        emit: vi.fn((_event, request, callback) => callback({ success: true, data: { items: [], page: 1 } })),
+    };
+    await createStore().dispatch(fetchFiles({ socket, reconcile: true })).unwrap();
+    expect(socket.emit.mock.calls.map((call) => call[1].cmd)).toEqual(['filebrowser.reconcile', 'filebrowser.query']);
+    expect(socket.emit.mock.calls[1][1].data.sortBy).toBe('captured_at');
+});
+
 test('selecting or clearing every type updates filters in one action', () => {
     const store = createStore();
     store.dispatch(setPage(3));

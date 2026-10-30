@@ -22,7 +22,7 @@ This module handles saving waterfall display snapshots to disk.
 import base64
 import json
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from common.logger import logger
@@ -97,19 +97,20 @@ def save_waterfall_snapshot(
                 and isinstance(value, (str, int))
                 and not isinstance(value, bool)
             }
+            # Keep capture time with the image so copying it to another station
+            # does not make it appear to have been captured on the import date.
+            context["captured_at"] = datetime.now(timezone.utc).isoformat()
             with image_path.open("wb") as f:
                 f.write(image_bytes)
-            if context:
-                try:
-                    image_path.with_suffix(".json").write_text(
-                        json.dumps(context, ensure_ascii=False), encoding="utf-8"
-                    )
-                except OSError:
-                    # A failed save must not leave an apparently successful
-                    # snapshot whose promised satellite context was lost.
-                    image_path.unlink(missing_ok=True)
-                    image_path.with_suffix(".json").unlink(missing_ok=True)
-                    raise
+            try:
+                image_path.with_suffix(".json").write_text(
+                    json.dumps(context, ensure_ascii=False), encoding="utf-8"
+                )
+            except OSError:
+                # Do not report success if durable capture metadata was lost.
+                image_path.unlink(missing_ok=True)
+                image_path.with_suffix(".json").unlink(missing_ok=True)
+                raise
 
             logger.info(f"Saved waterfall snapshot: {image_path}")
             return {"success": True, "snapshot_path": str(image_path)}

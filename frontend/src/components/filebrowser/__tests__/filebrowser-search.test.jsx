@@ -25,7 +25,7 @@ import { createTheme, ThemeProvider } from '@mui/material/styles';
 import { expect, test, vi } from 'vitest';
 import '../../../i18n/config.js';
 import FileBrowserMain from '../filebrowser-main.jsx';
-import filebrowserReducer, { setViewMode } from '../filebrowser-slice.jsx';
+import filebrowserReducer, { setSortBy, setViewMode } from '../filebrowser-slice.jsx';
 import { saveWaterfallSnapshot } from '../../waterfall/waterfall-slice.jsx';
 
 const { socket } = vi.hoisted(() => ({
@@ -46,11 +46,14 @@ const parent = {
     id: 'observation:pass.gsobs', type: 'decoded_folder', folder_kind: 'observation',
     name: 'pass', foldername: 'pass.gsobs', satellite_name: 'ISS', size: 10,
     created: '2026-10-29T08:00:00Z', modified: '2026-10-29T08:00:00Z',
+    captured_at: '2026-09-07T01:36:25Z', completed_at: '2026-09-07T01:43:13Z',
+    captured_at_source: 'metadata',
     matched_files: ['decoded/beacon.bin'],
 };
 
 function renderBrowser() {
     socket.emit.mockReset().mockImplementation((_event, { cmd, data }, callback) => {
+        if (cmd === 'filebrowser.reconcile') callback({ success: true, data: {} });
         if (cmd === 'filebrowser.query') {
             callback({
                 success: true,
@@ -71,8 +74,8 @@ test('searches the backend, shows matches in both views, and keeps the query on 
     expect(screen.getByText('Matched inside: decoded/beacon.bin')).toBeInTheDocument();
     expect(store.getState().filebrowser.search).toBe('beacon');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
-    expect(socket.emit.mock.lastCall[1]).toMatchObject({ cmd: 'filebrowser.query', data: { search: 'beacon', page: 1 } });
+    await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Refresh' })));
+    await waitFor(() => expect(socket.emit.mock.lastCall[1]).toMatchObject({ cmd: 'filebrowser.query', data: { search: 'beacon', page: 1 } }));
     act(() => store.dispatch(setViewMode('card')));
     expect(screen.getByText('Matched inside: decoded/beacon.bin')).toBeInTheDocument();
 });
@@ -88,6 +91,24 @@ test('shows a search-specific empty state and clears the applied query', async (
     await waitFor(() => expect(store.getState().filebrowser.search).toBe(''));
     expect(input).toHaveValue('');
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
+});
+
+test('day groups and row times use the selected capture, modified or completion date', async () => {
+    const store = renderBrowser();
+    fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'beacon' } });
+    expect(await screen.findByText('September 7, 2026')).toBeInTheDocument();
+    expect(screen.getByText('1:36:25 AM')).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Date Captured' })).toBeInTheDocument();
+
+    await act(async () => store.dispatch(setSortBy('modified')));
+    expect(screen.getByText('October 29, 2026')).toBeInTheDocument();
+    expect(screen.getByText('8:00:00 AM')).toBeInTheDocument();
+    expect(screen.queryByText('September 7, 2026')).not.toBeInTheDocument();
+
+    await act(async () => store.dispatch(setSortBy('completed_at')));
+    expect(screen.getByText('September 7, 2026')).toBeInTheDocument();
+    expect(screen.getByText('1:43:13 AM')).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Date Completed' })).toBeInTheDocument();
 });
 
 test('snapshot saving sends the satellite context needed for later NORAD searches', async () => {

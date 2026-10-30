@@ -45,8 +45,14 @@
     "packet_bytes": "Complete packet",
     "payload_bytes": "Payload only"
   },
+  "dates": {
+    "unavailable": "Date unavailable",
+    "approximate": "Capture date estimated from file modification time"
+  },
   "sort_by": "Sort By",
   "sort": {
+    "captured_at": "Date Captured",
+    "completed_at": "Date Completed",
     "created": "Date Created",
     "modified": "Date Modified",
     "name": "Name",

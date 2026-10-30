@@ -32,6 +32,7 @@ from urllib.parse import quote
 from PIL import Image
 
 from common import auth as authsvc
+from common.artifactdates import artifact_dates, folder_content_mtime, transcription_end
 from common.decoded_thumbnails import get_decoded_thumbnail_url
 from common.thumbnails import (
     THUMBNAIL_DIRECTORY,
@@ -125,6 +126,7 @@ def parse_sigmf_metadata(meta_file_path: str) -> dict:
             "recorder": global_meta.get("core:recorder"),
             "recording_in_progress": global_meta.get("gs:recording_in_progress", False),
             "start_time": global_meta.get("gs:start_time"),
+            "capture_time": captures[0].get("core:datetime") if captures else None,
             "finalized_time": global_meta.get("gs:finalized_time"),
             "session_id": global_meta.get("gs:session_id"),
             "target_satellite_norad_id": global_meta.get("gs:target_satellite_norad_id"),
@@ -278,6 +280,9 @@ def parse_transcription_metadata(transcription_file_path: str) -> Dict[str, Any]
                     metadata["started"] = line.split(":", 1)[1].strip()
                 elif line.startswith("# Ended:"):
                     metadata["ended"] = line.split(":", 1)[1].strip()
+        metadata["ended"] = transcription_end(Path(transcription_file_path)) or metadata.get(
+            "ended"
+        )
         return metadata
     except Exception as e:
         return {"error": f"Failed to parse metadata: {str(e)}"}
@@ -516,6 +521,7 @@ def build_observation_bundle_recordings(
                 "meta_size": meta_stat.st_size,
                 "created": datetime.fromtimestamp(data_stat.st_ctime, timezone.utc).isoformat(),
                 "modified": datetime.fromtimestamp(data_stat.st_mtime, timezone.utc).isoformat(),
+                **artifact_dates("recording", data_file, metadata, mtime=data_stat.st_mtime),
                 "metadata": metadata,
                 "session_id": metadata.get("session_id"),
                 "snapshot": build_recording_snapshot_info(snapshot_file, url_prefix),
@@ -591,6 +597,7 @@ def build_observation_bundle_item(bundle_dir: Path) -> Dict[str, Any]:
             images.append(artifact)
 
     stat = bundle_dir.stat()
+    modified = folder_content_mtime(bundle_dir)
     satellite_data = manifest.get("satellite")
     satellite: Dict[str, Any] = satellite_data if isinstance(satellite_data, dict) else {}
     # rglob() sorts the full waterfall before its ``_waterfall_thumb`` sibling.
@@ -611,7 +618,8 @@ def build_observation_bundle_item(bundle_dir: Path) -> Dict[str, Any]:
         "foldername": bundle_dir.name,
         "size": total_size,
         "created": datetime.fromtimestamp(stat.st_ctime, timezone.utc).isoformat(),
-        "modified": datetime.fromtimestamp(stat.st_mtime, timezone.utc).isoformat(),
+        "modified": datetime.fromtimestamp(modified, timezone.utc).isoformat(),
+        **artifact_dates("observation", bundle_dir, manifest, mtime=modified),
         "url": f"/observations/{quote(bundle_dir.name)}",
         "download_url": f"/api/observations/{quote(bundle_dir.name)}/download",
         "thumbnail_url": (
@@ -794,6 +802,9 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
                             "modified": datetime.fromtimestamp(
                                 data_stat.st_mtime, timezone.utc
                             ).isoformat(),
+                            **artifact_dates(
+                                "recording", data_file, metadata, mtime=data_stat.st_mtime
+                            ),
                             "metadata": metadata,
                             "session_id": metadata.get("session_id"),
                             "snapshot": snapshot_info,
@@ -828,6 +839,7 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
                             "modified": datetime.fromtimestamp(
                                 file_stat.st_mtime, timezone.utc
                             ).isoformat(),
+                            **artifact_dates("snapshot", png_file, None, mtime=file_stat.st_mtime),
                             "width": width,
                             "height": height,
                             "url": f"/snapshots/{png_file.name}",
@@ -847,6 +859,7 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
                     if idx % 10 == 0:
                         await asyncio.sleep(0)
                     folder_stat = folder.stat()
+                    folder_mtime = folder_content_mtime(folder)
 
                     # Parse dataset.json for metadata
                     dataset_file = folder / "dataset.json"
@@ -937,8 +950,11 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
                                 folder_stat.st_ctime, timezone.utc
                             ).isoformat(),
                             "modified": datetime.fromtimestamp(
-                                folder_stat.st_mtime, timezone.utc
+                                folder_mtime, timezone.utc
                             ).isoformat(),
+                            **artifact_dates(
+                                "decoded_folder", folder, dataset_meta, mtime=folder_mtime
+                            ),
                             "url": f"/decoded/{folder.name}",
                             "thumbnail_url": thumbnail_url,
                             "satellite_name": sat_name or dataset_meta.get("satellite", "Unknown"),
@@ -991,6 +1007,7 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
                     session_id = None
 
                     # Check if there's a corresponding .json metadata file
+                    metadata = {}
                     metadata_file = decoded_dir / f"{decoded_file.stem}.json"
                     if metadata_file.exists():
                         try:
@@ -1065,6 +1082,9 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
                             "modified": datetime.fromtimestamp(
                                 file_stat.st_mtime, timezone.utc
                             ).isoformat(),
+                            **artifact_dates(
+                                "decoded", decoded_file, metadata, mtime=file_stat.st_mtime
+                            ),
                             "width": width,
                             "height": height,
                             "url": f"/decoded/{decoded_file.name}",
@@ -1130,6 +1150,9 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
                             "modified": datetime.fromtimestamp(
                                 file_stat.st_mtime, timezone.utc
                             ).isoformat(),
+                            **artifact_dates(
+                                "audio", audio_file, metadata, mtime=file_stat.st_mtime
+                            ),
                             "url": f"/audio/{audio_file.name}",
                             "file_type": ".wav",
                             "vfo_number": vfo_number,
@@ -1187,6 +1210,12 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
                             "modified": datetime.fromtimestamp(
                                 file_stat.st_mtime, timezone.utc
                             ).isoformat(),
+                            **artifact_dates(
+                                "transcription",
+                                transcription_file,
+                                metadata,
+                                mtime=file_stat.st_mtime,
+                            ),
                             "url": f"/transcriptions/{transcription_file.name}",
                             "file_type": ".txt",
                             "provider": provider,
@@ -1308,6 +1337,9 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
                             "modified": datetime.fromtimestamp(
                                 data_stat.st_mtime, timezone.utc
                             ).isoformat(),
+                            **artifact_dates(
+                                "recording", data_file, metadata, mtime=data_stat.st_mtime
+                            ),
                             "metadata": metadata,
                             "snapshot": build_recording_snapshot_info(snapshot_file, url_prefix),
                             "recording_in_progress": metadata.get("recording_in_progress", False),
@@ -1367,6 +1399,7 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
                 "meta_size": meta_stat.st_size,
                 "created": datetime.fromtimestamp(data_stat.st_ctime, timezone.utc).isoformat(),
                 "modified": datetime.fromtimestamp(data_stat.st_mtime, timezone.utc).isoformat(),
+                **artifact_dates("recording", data_file, metadata, mtime=data_stat.st_mtime),
                 "metadata": metadata,
                 "snapshot": snapshot_info,
                 "recording_in_progress": is_recording_in_progress,
@@ -1445,6 +1478,7 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
                     "modified": datetime.fromtimestamp(
                         file_stat.st_mtime, timezone.utc
                     ).isoformat(),
+                    **artifact_dates("snapshot", png_file, None, mtime=file_stat.st_mtime),
                     "width": width,
                     "height": height,
                     "url": f"/snapshots/{png_file.name}",

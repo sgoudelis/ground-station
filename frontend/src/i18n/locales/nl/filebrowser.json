@@ -1,7 +1,13 @@
 {
+  "dates": {
+    "unavailable": "Datum niet beschikbaar",
+    "approximate": "Opnamedatum geschat op basis van de wijzigingsdatum van het bestand"
+  },
   "title": "Bestandsverkenner",
   "sort_by": "Sorteren op",
   "sort": {
+    "captured_at": "Opnamedatum",
+    "completed_at": "Voltooiingsdatum",
     "created": "Datum aangemaakt",
     "modified": "Datum gewijzigd",
     "name": "Naam",

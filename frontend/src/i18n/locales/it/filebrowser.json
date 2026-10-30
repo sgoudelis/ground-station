@@ -1,4 +1,12 @@
 {
+  "dates": {
+    "unavailable": "Data non disponibile",
+    "approximate": "Data di acquisizione stimata dalla modifica del file"
+  },
+  "sort": {
+    "captured_at": "Data di acquisizione",
+    "completed_at": "Data di completamento"
+  },
   "purge_dialog": {
     "button": "Pulisci",
     "title": "Pulizia file vecchi",

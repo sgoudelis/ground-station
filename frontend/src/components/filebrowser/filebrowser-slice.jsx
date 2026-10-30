@@ -37,8 +37,11 @@ const callLibrary = (socket, cmd, data) => new Promise((resolve, reject) => {
 // response bounded even when the storage library contains many artifacts.
 export const fetchFiles = createAsyncThunk(
     'filebrowser/fetchFiles',
-    async ({ socket, filters, search = '', sortBy = 'created', sortOrder = 'desc', page = 1, pageSize = 25 }, { rejectWithValue }) => {
+    async ({ socket, filters, search = '', sortBy = 'captured_at', sortOrder = 'desc', page = 1, pageSize = 25, reconcile = false }, { rejectWithValue }) => {
         try {
+            // An explicit refresh must discover files copied outside the app;
+            // ordinary paging and sorting can keep using the cached inventory.
+            if (reconcile) await callLibrary(socket, 'filebrowser.reconcile', {});
             return await callLibrary(socket, 'filebrowser.query', {
                 filters,
                 search,
@@ -334,7 +337,7 @@ const initialState = {
     total: 0,
     // Retained while navigating within the app, without hiding files after a reload.
     search: '',
-    sortBy: 'created',
+    sortBy: 'captured_at',
     sortOrder: 'desc',
     filters: {
         showRecordings: true,
@@ -375,6 +378,9 @@ export function reconcileFileBrowserPersistedState(inboundState, currentState) {
     return {
         ...currentState,
         ...inboundState,
+        // Move the former default to portable capture chronology on upgrade.
+        sortBy: inboundState.sortBy === 'created' ? 'captured_at'
+            : inboundState.sortBy || currentState.sortBy,
         filters: {
             ...currentState.filters,
             ...savedFilters,

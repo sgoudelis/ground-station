@@ -1,7 +1,13 @@
 {
   "title": "Dateibrowser",
+  "dates": {
+    "unavailable": "Datum nicht verfügbar",
+    "approximate": "Aufnahmedatum anhand des Änderungsdatums der Datei geschätzt"
+  },
   "sort_by": "Sortieren nach",
   "sort": {
+    "captured_at": "Aufnahmedatum",
+    "completed_at": "Abschlussdatum",
     "created": "Erstellungsdatum",
     "modified": "Änderungsdatum",
     "name": "Name",

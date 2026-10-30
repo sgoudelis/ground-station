@@ -57,7 +57,7 @@ async def query_library(_sio: Any, data: Optional[Dict], _logger: Any, _sid: str
     result = await asyncio.to_thread(
         get_inventory().query,
         request.get("filters"),
-        request.get("sortBy", "created"),
+        request.get("sortBy", "captured_at"),
         request.get("sortOrder", "desc"),
         request.get("page", 1),
         request.get("pageSize", 25),

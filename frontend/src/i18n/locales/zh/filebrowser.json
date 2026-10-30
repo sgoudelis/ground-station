@@ -1,7 +1,13 @@
 {
+  "dates": {
+    "unavailable": "日期不可用",
+    "approximate": "根据文件修改时间估算的采集日期"
+  },
   "title": "文件浏览器",
   "sort_by": "排序方式",
   "sort": {
+    "captured_at": "采集日期",
+    "completed_at": "完成日期",
     "created": "创建日期",
     "modified": "修改日期",
     "name": "名称",

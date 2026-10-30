@@ -31,6 +31,7 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
 from urllib.parse import quote
 
+from common.artifactdates import artifact_dates, parse_artifact_time, transcription_end
 from common.events import public_events
 from library.search import match_search, normalize_search, search_text
 
@@ -124,6 +125,7 @@ def _sigmf_summary(path: Path) -> Dict[str, Any]:
         "recorder": global_meta.get("core:recorder"),
         "recording_in_progress": bool(global_meta.get("gs:recording_in_progress", False)),
         "start_time": global_meta.get("gs:start_time"),
+        "capture_time": first_capture.get("core:datetime"),
         "finalized_time": global_meta.get("gs:finalized_time"),
         "session_id": global_meta.get("gs:session_id"),
         "observation_id": global_meta.get("gs:observation_id"),
@@ -170,10 +172,13 @@ def _transcription_summary(path: Path) -> Dict[str, Any]:
                     result["language"] = line.split(":", 1)[1].strip()
                 elif line.startswith("# Translate To:"):
                     result["translate_to"] = line.split(":", 1)[1].strip()
+                elif line.startswith("# Started:"):
+                    result["started"] = line.split(":", 1)[1].strip()
                 elif line.startswith("# Translation Backend:"):
                     result["translation_backend"] = line.split(":", 1)[1].strip()
     except (OSError, UnicodeError):
         return {}
+    result["ended"] = transcription_end(path)
     return result
 
 
@@ -271,7 +276,7 @@ class LibraryInventory:
     def query(
         self,
         filters: Optional[Dict[str, bool]] = None,
-        sort_by: str = "created",
+        sort_by: str = "captured_at",
         sort_order: str = "desc",
         page: int = 1,
         page_size: int = 25,
@@ -298,8 +303,16 @@ class LibraryInventory:
                     summary["matched_files"] = matched_files
                 items.append(summary)
             revision = self._revision
-        allowed_sorts = {"name", "size", "created", "modified", "sample_rate"}
-        sort_by = sort_by if sort_by in allowed_sorts else "created"
+        allowed_sorts = {
+            "name",
+            "size",
+            "created",
+            "modified",
+            "captured_at",
+            "completed_at",
+            "sample_rate",
+        }
+        sort_by = sort_by if sort_by in allowed_sorts else "captured_at"
         reverse = sort_order != "asc"
 
         def key(item: Dict[str, Any]) -> Any:
@@ -309,8 +322,13 @@ class LibraryInventory:
                 return item.get("data_size") or item.get("size") or 0
             if sort_by == "sample_rate":
                 return item.get("metadata", {}).get("sample_rate") or item.get("sample_rate") or 0
-            return item.get(sort_by) or ""
+            parsed = parse_artifact_time(item.get(sort_by))
+            # Unknown completion dates stay at the end in either direction.
+            return parsed.timestamp() if parsed else (float("-inf") if reverse else float("inf"))
 
+        # Equal capture dates are common; stable IDs keep pagination repeatable
+        # even if filesystem iteration order changes after a copy or restart.
+        items.sort(key=lambda item: item["id"])
         items.sort(key=key, reverse=reverse)
         total = len(items)
         last_page = max(1, (total + page_size - 1) // page_size)
@@ -692,6 +710,7 @@ class LibraryInventory:
                     "meta_size": meta_stat.st_size,
                     "created": _iso(stat.st_ctime),
                     "modified": _iso(stat.st_mtime),
+                    **artifact_dates("recording", data, metadata, mtime=stat.st_mtime),
                     "latest_activity": _iso(
                         max(
                             stat.st_mtime,
@@ -747,6 +766,7 @@ class LibraryInventory:
                     "size": stat.st_size,
                     "created": _iso(stat.st_ctime),
                     "modified": _iso(stat.st_mtime),
+                    **artifact_dates("snapshot", path, metadata, mtime=stat.st_mtime),
                     "latest_activity": _iso(
                         max(
                             stat.st_mtime,
@@ -830,7 +850,8 @@ class LibraryInventory:
                     "foldername": folder.name,
                     "size": total_size,
                     "created": _iso(stat.st_ctime),
-                    "modified": _iso(stat.st_mtime),
+                    "modified": _iso(latest_mtime),
+                    **artifact_dates("decoded_folder", folder, dataset, mtime=latest_mtime),
                     "latest_activity": _iso(latest_mtime),
                     "file_count": file_count,
                     "purge_bytes": total_size,
@@ -880,6 +901,7 @@ class LibraryInventory:
                         "size": stat.st_size,
                         "created": _iso(stat.st_ctime),
                         "modified": _iso(stat.st_mtime),
+                        **artifact_dates("decoded", path, metadata, mtime=stat.st_mtime),
                         "latest_activity": _iso(
                             max(stat.st_mtime, metadata_stat.st_mtime if metadata_stat else 0)
                         ),
@@ -925,6 +947,7 @@ class LibraryInventory:
                     "size": stat.st_size,
                     "created": _iso(stat.st_ctime),
                     "modified": _iso(stat.st_mtime),
+                    **artifact_dates("audio", path, metadata, mtime=stat.st_mtime),
                     "latest_activity": _iso(
                         max(stat.st_mtime, metadata_stat.st_mtime if metadata_stat else 0)
                     ),
@@ -965,6 +988,7 @@ class LibraryInventory:
                     "size": stat.st_size,
                     "created": _iso(stat.st_ctime),
                     "modified": _iso(stat.st_mtime),
+                    **artifact_dates("transcription", path, metadata, mtime=stat.st_mtime),
                     "latest_activity": _iso(stat.st_mtime),
                     "file_count": 1,
                     "purge_bytes": stat.st_size,
@@ -1039,7 +1063,8 @@ class LibraryInventory:
                     "foldername": folder.name,
                     "size": total_size,
                     "created": _iso(stat.st_ctime),
-                    "modified": _iso(stat.st_mtime),
+                    "modified": _iso(latest_mtime),
+                    **artifact_dates("observation", folder, manifest, mtime=latest_mtime),
                     "latest_activity": _iso(latest_mtime),
                     "file_count": file_count,
                     "purge_bytes": disk_size,
@@ -1209,6 +1234,7 @@ class LibraryInventory:
                         "meta_size": meta.stat().st_size,
                         "created": _iso(stat.st_ctime),
                         "modified": _iso(stat.st_mtime),
+                        **artifact_dates("recording", data, metadata, mtime=stat.st_mtime),
                         "metadata": metadata,
                         "recording_in_progress": metadata.get("recording_in_progress", False),
                         "snapshot": self._snapshot_info(

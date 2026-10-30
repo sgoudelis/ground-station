@@ -1,7 +1,13 @@
 {
   "title": "Navigateur de fichiers",
+  "dates": {
+    "unavailable": "Date indisponible",
+    "approximate": "Date de capture estimée à partir de la modification du fichier"
+  },
   "sort_by": "Trier par",
   "sort": {
+    "captured_at": "Date de capture",
+    "completed_at": "Date de fin",
     "created": "Date de création",
     "modified": "Date de modification",
     "name": "Dénomination",

@@ -48,6 +48,7 @@ import FolderIcon from '@mui/icons-material/Folder';
 import BuildIcon from '@mui/icons-material/Build';
 import { useTranslation } from 'react-i18next';
 import FileSearchMatch from './file-search-match.jsx';
+import { getFileBrowserDate, getFileBrowserDateField, isFileBrowserDateApproximate } from './filebrowser-display-item.js';
 
 function formatBytes(bytes) {
     if (bytes === 0) return '0 Bytes';
@@ -69,7 +70,7 @@ function getLanguageFlag(langCode) {
     return flagMap[langCode] || '🌐';
 }
 
-function FileTableRow({ item, selectionMode, isSelected, onToggleSelection, onShowDetails, onDownload, onDelete, onProcessingMenu, timezone, t }) {
+function FileTableRow({ item, sortBy, selectionMode, isSelected, onToggleSelection, onShowDetails, onDownload, onDelete, onProcessingMenu, timezone, t }) {
     const isRecording = item.type === 'recording';
     const isAprsDecodedFile = item.type === 'decoded'
         && String(item.decoder_type || '').toLowerCase() === 'aprs';
@@ -588,9 +589,12 @@ function FileTableRow({ item, selectionMode, isSelected, onToggleSelection, onSh
                 )}
             </TableCell>
             <TableCell sx={{ verticalAlign: 'middle' }}>
-                <Typography variant="body2">
-                    {formatTime(item.modified || item.created)}
-                </Typography>
+                <Tooltip title={isFileBrowserDateApproximate(item, sortBy) ? t('dates.approximate', 'Capture date estimated from file modification time') : ''}>
+                    <Typography variant="body2">
+                        {isFileBrowserDateApproximate(item, sortBy) && '≈ '}
+                        {getFileBrowserDate(item, sortBy) ? formatTime(getFileBrowserDate(item, sortBy)) : '—'}
+                    </Typography>
+                </Tooltip>
             </TableCell>
             <TableCell align="right" onClick={(e) => e.stopPropagation()} sx={{ verticalAlign: 'middle' }}>
                 <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end', alignItems: 'center' }}>
@@ -638,6 +642,7 @@ function FileTableRow({ item, selectionMode, isSelected, onToggleSelection, onSh
 
 export default function FileTableView({
     filesByDay,
+    sortBy = 'captured_at',
     selectionMode,
     selectedItems,
     onToggleSelection,
@@ -680,7 +685,7 @@ export default function FileTableView({
                                         <TableCell align="right">{t('file_table_view.size', { defaultValue: 'Size' })}</TableCell>
                                         <TableCell>{t('file_table_view.type', { defaultValue: 'Type' })}</TableCell>
                                         <TableCell>{t('file_table_view.satellite', { defaultValue: '🛰️ Satellite' })}</TableCell>
-                                        <TableCell>{t('file_table_view.time', { defaultValue: 'Time' })}</TableCell>
+                                        <TableCell>{t(`sort.${getFileBrowserDateField(sortBy)}`)}</TableCell>
                                         <TableCell align="right">{t('file_table_view.actions', { defaultValue: 'Actions' })}</TableCell>
                                     </TableRow>
                                 </TableHead>
@@ -693,6 +698,7 @@ export default function FileTableView({
                                             <FileTableRow
                                                 key={key}
                                                 item={item}
+                                                sortBy={sortBy}
                                                 selectionMode={selectionMode}
                                                 isSelected={isSelected}
                                                 onToggleSelection={onToggleSelection}

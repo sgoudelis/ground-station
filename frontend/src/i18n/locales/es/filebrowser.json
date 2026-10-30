@@ -1,7 +1,13 @@
 {
   "title": "Explorador de archivos",
+  "dates": {
+    "unavailable": "Fecha no disponible",
+    "approximate": "Fecha de captura estimada a partir de la modificación del archivo"
+  },
   "sort_by": "Ordenar por",
   "sort": {
+    "captured_at": "Fecha de captura",
+    "completed_at": "Fecha de finalización",
     "created": "Fecha Creada",
     "modified": "Fecha modificada",
     "name": "Nombre",

@@ -1,3 +1,21 @@
+export function getFileBrowserDateField(sortBy) {
+    return ['modified', 'completed_at'].includes(sortBy) ? sortBy : 'captured_at';
+}
+
+export function getFileBrowserDate(item, sortBy) {
+    const field = getFileBrowserDateField(sortBy);
+    // Older payloads may not include capture metadata yet. Their content mtime
+    // is a better approximation than Linux ctime. Completion stays unknown.
+    return field === 'captured_at'
+        ? item.captured_at || item.modified || item.created || null
+        : item[field] || null;
+}
+
+export function isFileBrowserDateApproximate(item, sortBy) {
+    return getFileBrowserDateField(sortBy) === 'captured_at'
+        && (!item.captured_at || item.captured_at_source === 'filesystem');
+}
+
 export function buildFileBrowserDisplayItem(item, formatDurationFn) {
     const isRecording = item.type === 'recording';
     const duration = isRecording && item.metadata?.start_time

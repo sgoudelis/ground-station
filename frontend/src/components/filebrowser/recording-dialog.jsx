@@ -233,9 +233,10 @@ export default function RecordingDialog({ open, onClose, recording, socket }) {
                                 centerFrequency={recording?.metadata?.center_frequency}
                                 sampleRate={recording?.metadata?.sample_rate}
                                 transmitters={transmitters}
-                                startTime={recording?.metadata?.start_time}
+                                startTime={recording?.metadata?.start_time || recording?.captured_at}
                                 endTime={
                                     recording?.metadata?.finalized_time ||
+                                    recording?.completed_at ||
                                     recording?.modified ||
                                     recording?.created
                                 }

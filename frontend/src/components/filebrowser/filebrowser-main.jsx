@@ -118,7 +118,7 @@ import PurgeDialog from './purge-dialog.jsx';
 import ImageViewerDialog from '../common/image-viewer-dialog.jsx';
 import ResponsiveActionButton from '../common/responsive-action-button.jsx';
 import DecodedFolderThumbnail from './decoded-folder-thumbnail.jsx';
-import { buildFileBrowserDisplayItem } from './filebrowser-display-item.js';
+import { buildFileBrowserDisplayItem, getFileBrowserDate, isFileBrowserDateApproximate } from './filebrowser-display-item.js';
 import FileTypeFilter from './file-type-filter.jsx';
 import FileSearchInput from './file-search-input.jsx';
 import FileSearchMatch from './file-search-match.jsx';
@@ -484,19 +484,18 @@ export default function FileBrowserMain() {
 
     // Group files by day for table view
     const filesByDay = useMemo(() => {
-        if (viewMode !== 'table') return {};
+        if (viewMode !== 'table') return [];
 
         const grouped = {};
-        const dateField = (sortBy === 'created' || sortBy === 'modified') ? sortBy : 'created';
-
         displayItems.forEach(item => {
-            const date = new Date(item[dateField]);
-            const dayKey = date.toLocaleDateString('en-US', {
+            const timestamp = getFileBrowserDate(item, sortBy);
+            const date = timestamp ? new Date(timestamp) : null;
+            const dayKey = date ? date.toLocaleDateString('en-US', {
                 timeZone: timezone,
                 year: 'numeric',
                 month: 'long',
                 day: 'numeric'
-            });
+            }) : t('dates.unavailable', 'Date unavailable');
 
             if (!grouped[dayKey]) {
                 grouped[dayKey] = {
@@ -510,11 +509,13 @@ export default function FileBrowserMain() {
 
         // Sort day groups by date
         const sortedDays = Object.values(grouped).sort((a, b) => {
+            if (!a.date) return b.date ? 1 : 0;
+            if (!b.date) return -1;
             return sortOrder === 'desc' ? b.date - a.date : a.date - b.date;
         });
 
         return sortedDays;
-    }, [displayItems, viewMode, sortBy, sortOrder, timezone]);
+    }, [displayItems, viewMode, sortBy, sortOrder, timezone, t]);
 
     const handleSortChange = (event) => {
         dispatch(setSortBy(event.target.value));
@@ -524,6 +525,7 @@ export default function FileBrowserMain() {
         if (socket) {
             dispatch(fetchFiles({
                 socket,
+                reconcile: true,
                 filters,
                 search,
                 sortBy,
@@ -966,7 +968,8 @@ export default function FileBrowserMain() {
                             onChange={handleSortChange}
                             startAdornment={<SortIcon sx={{ mr: 1, color: 'action.active' }} />}
                         >
-                            <MenuItem value="created">{t('sort.created', 'Date Created')}</MenuItem>
+                            <MenuItem value="captured_at">{t('sort.captured_at', 'Date Captured')}</MenuItem>
+                            <MenuItem value="completed_at">{t('sort.completed_at', 'Date Completed')}</MenuItem>
                             <MenuItem value="modified">{t('sort.modified', 'Date Modified')}</MenuItem>
                             <MenuItem value="name">{t('sort.name', 'Name')}</MenuItem>
                             <MenuItem value="size">{t('sort.size', 'Size')}</MenuItem>
@@ -1207,6 +1210,7 @@ export default function FileBrowserMain() {
                 ) : viewMode === 'table' ? (
                     <FileTableView
                         filesByDay={filesByDay}
+                        sortBy={sortBy}
                         selectionMode={selectionMode}
                         selectedItems={selectedItems}
                         onToggleSelection={handleToggleSelection}
@@ -1416,7 +1420,7 @@ export default function FileBrowserMain() {
                                                         fontSize: '0.75rem',
                                                     }}
                                                 >
-                                                    {formatRelativeTime(item.created)}
+                                                    {formatRelativeTime(getFileBrowserDate(item, 'captured_at'))}
                                                 </Typography>
                                             </Box>
                                         </Box>
@@ -1700,7 +1704,7 @@ export default function FileBrowserMain() {
                                                         fontSize: '0.75rem',
                                                     }}
                                                 >
-                                                    {formatRelativeTime(item.created)}
+                                                    {formatRelativeTime(getFileBrowserDate(item, 'captured_at'))}
                                                 </Typography>
                                             </Box>
                                         </Box>
@@ -1936,9 +1940,12 @@ export default function FileBrowserMain() {
                                                 />
                                             )}
                                         </Box>
-                                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-                                            {formatDate(item.modified)}
-                                        </Typography>
+                                        <Tooltip title={isFileBrowserDateApproximate(item, sortBy) ? t('dates.approximate', 'Capture date estimated from file modification time') : ''}>
+                                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+                                                {isFileBrowserDateApproximate(item, sortBy) && '≈ '}
+                                                {getFileBrowserDate(item, sortBy) ? formatDate(getFileBrowserDate(item, sortBy)) : '—'}
+                                            </Typography>
+                                        </Tooltip>
                                     </CardContent>
                                     <CardActions sx={{ pt: 0 }} onClick={(e) => e.stopPropagation()}>
                                         <Tooltip title={t('actions.view_details', 'View Details')}>
@@ -2245,7 +2252,7 @@ export default function FileBrowserMain() {
                     imageHeight={selectedItem.height}
                     sizeLabel={formatBytes(selectedItem.size || 0)}
                     details={selectedItem.type === 'snapshot' ? [
-                        { label: t('filebrowser_main.created', { defaultValue: 'Created' }), value: selectedItem.created ? formatDate(selectedItem.created) : null },
+                        { label: t('sort.captured_at', 'Date Captured'), value: getFileBrowserDate(selectedItem, 'captured_at') ? formatDate(getFileBrowserDate(selectedItem, 'captured_at')) : null },
                         { label: t('filebrowser_main.modified', { defaultValue: 'Modified' }), value: selectedItem.modified ? formatDate(selectedItem.modified) : null },
                     ] : []}
                     onDownload={() => handleDownload(selectedItem)}
@@ -2346,10 +2353,10 @@ export default function FileBrowserMain() {
                             </Typography>
 
                             <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary', fontWeight: 500 }}>
-                                {t('filebrowser_main.created_2', { defaultValue: 'Created:' })}
+                                {t('sort.captured_at', 'Date Captured')}
                             </Typography>
                             <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.primary' }}>
-                                {itemToDelete && formatDate(itemToDelete.created)}
+                                {itemToDelete && formatDate(getFileBrowserDate(itemToDelete, 'captured_at'))}
                             </Typography>
                         </Box>
                         {itemToDelete?.type === 'recording' && (
@@ -2495,10 +2502,10 @@ export default function FileBrowserMain() {
                                         </Typography>
 
                                         <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.secondary', fontWeight: 500 }}>
-                                            {t('filebrowser_main.created_3', { defaultValue: 'Created:' })}
+                                            {t('sort.captured_at', 'Date Captured')}
                                         </Typography>
                                         <Typography variant="body2" sx={{ fontSize: '0.813rem', color: 'text.primary' }}>
-                                            {formatDate(item.created)}
+                                            {formatDate(getFileBrowserDate(item, 'captured_at'))}
                                         </Typography>
                                     </Box>
                                 </Box>
