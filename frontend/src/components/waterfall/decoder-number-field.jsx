@@ -5,8 +5,9 @@ import React from 'react';
 import { TextField } from '@mui/material';
 import { isDecoderParameterValid } from './decoder-parameters.js';
 
-export const DecoderNumberField = ({ definition, value, onChange, disabled = false }) => {
-    const valid = isDecoderParameterValid(definition, value);
+export const DecoderNumberField = ({ definition, value, onChange, disabled = false, optional = false }) => {
+    // Transmitter profiles can leave values unspecified; decoder tasks require them.
+    const valid = (optional && value === '') || isDecoderParameterValid(definition, value);
 
     return (
         <TextField
@@ -15,6 +16,7 @@ export const DecoderNumberField = ({ definition, value, onChange, disabled = fal
             type="number"
             label={definition.label}
             value={value}
+            placeholder={optional ? 'Unspecified' : undefined}
             disabled={disabled}
             error={!valid}
             helperText={valid

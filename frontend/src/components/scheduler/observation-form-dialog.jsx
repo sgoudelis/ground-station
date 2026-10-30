@@ -97,6 +97,7 @@ import { getSatdumpPipelines, getDecoderParameters, getDecoderDefaultParameters,
 import { DecoderNumberField } from '../waterfall/decoder-number-field.jsx';
 import { DecoderConfigSuggestion } from './decoder-config-suggestion.jsx';
 import { ObservationRigFields } from './observation-rig-fields.jsx';
+import { findObservationConflict, getObservationForPass } from './observation-conflicts.js';
 
 const DECODER_TYPES = [
     { value: 'none', labelKey: 'decoder_type_none' },
@@ -1121,6 +1122,15 @@ const ObservationFormDialog = ({ onExited }) => {
         );
     };
 
+    // Include the active session draft before its synchronization effect runs.
+    const observationDraft = {
+        ...formData,
+        id: selectedObservation?.id,
+        sessions: (formData.sessions?.length ? formData.sessions : [{}]).map((session, index) => (
+            index === activeSessionIndex ? { ...session, sdr: formData.sdr, tasks: formData.tasks } : session
+        )),
+    };
+
     const isFormValid = () => {
         // Check if CURRENT formData.pass is valid (exists in future passes or is null)
         const hasValidPass = !formData.pass || passes.some(p => {
@@ -1129,36 +1139,8 @@ const ObservationFormDialog = ({ onExited }) => {
             return Math.abs(passStartTime - currentStartTime) < 1000;
         });
 
-        // Check if selected pass conflicts with existing observations
-        const conflictingObs = formData.pass && observations.find(obs => {
-            // Skip the observation we're currently editing
-            if (selectedObservation?.id && obs.id === selectedObservation.id) {
-                return false;
-            }
-            if (!obs.pass) return false;
-            const passStart = new Date(formData.pass.event_start);
-            const passEnd = new Date(formData.pass.event_end);
-            // Use task_start/task_end if available (actual execution window),
-            // otherwise fall back to event_start/event_end (full visibility window)
-            const obsStart = obs.task_start ? new Date(obs.task_start) : new Date(obs.pass.event_start);
-            const obsEnd = obs.task_end ? new Date(obs.task_end) : new Date(obs.pass.event_end);
-            // Check for any overlap
-            const hasOverlap = (passStart < obsEnd && passEnd > obsStart);
-
-            if (hasOverlap) {
-                console.log('[FormValidation] Overlap detected:', {
-                    newPass: { start: passStart.toISOString(), end: passEnd.toISOString() },
-                    existingObs: {
-                        name: obs.name,
-                        start: obsStart.toISOString(),
-                        end: obsEnd.toISOString()
-                    }
-                });
-            }
-
-            return hasOverlap;
-        });
-        const hasConflict = conflictingObs !== null && conflictingObs !== undefined;
+        // Share the dropdown's hardware check so selecting a valid pass also permits saving.
+        const hasConflict = Boolean(findObservationConflict(observationDraft, observations));
         const sessions = Array.isArray(formData.sessions) && formData.sessions.length
             ? formData.sessions
             : [{ sdr: formData.sdr, tasks: formData.tasks }];
@@ -1323,7 +1305,7 @@ const ObservationFormDialog = ({ onExited }) => {
                         <SatelliteSelector
                             initialSatellite={selectedObservation?.satellite}
                             initialPass={selectedObservation?.pass}
-                            currentObservationId={selectedObservation?.id}
+                            observation={observationDraft}
                             onSatelliteSelect={(satellite) => {
                                 setFormData((prev) => ({
                                     ...prev,
@@ -1340,7 +1322,7 @@ const ObservationFormDialog = ({ onExited }) => {
                             onPassSelect={(pass) => {
                                 if (pass) {
                                     setFormData((prev) => ({
-                                        ...prev,
+                                        ...getObservationForPass(prev, pass),
                                         pass: {
                                             event_start: pass.event_start,
                                             event_end: pass.event_end,
@@ -1352,10 +1334,7 @@ const ObservationFormDialog = ({ onExited }) => {
                                     }));
                                 } else {
                                     // No pass selected (continuous observation)
-                                    setFormData((prev) => ({
-                                        ...prev,
-                                        pass: null,
-                                    }));
+                                    setFormData((prev) => getObservationForPass(prev, null));
                                 }
                             }}
                             disabled={isFormDisabled}

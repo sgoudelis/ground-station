@@ -54,6 +54,8 @@ const artifact = {
     file_type: '.png',
     kind: 'decoded',
     size: 172685,
+    captured_at: '2026-10-29T08:22:00Z',
+    captured_at_source: 'metadata',
 };
 const folder = {
     id: 'observation:UMKA.gsobs',
@@ -131,7 +133,7 @@ describe('shared image viewer entry points', () => {
         expect(within(viewer).getByText('437.625000 MHz')).toBeInTheDocument();
         expect(within(viewer).getByText('VFO').parentElement).toHaveTextContent('1');
         expect(within(viewer).getByText('Decoded').parentElement).toHaveTextContent('29/10/2026, 10:22:45 π.μ.');
-        expect(within(viewer).getByText('Created').parentElement).toHaveTextContent('29/10/2026, 10:21:49 π.μ.');
+        expect(within(viewer).getByText('Date Captured').parentElement).toHaveTextContent('29/10/2026, 10:22:00 π.μ.');
         expect(within(viewer).getByText('Modified').parentElement).toHaveTextContent('29/10/2026, 10:30:59 π.μ.');
         fireEvent.click(within(viewer).getByRole('button', { name: 'Download' }));
         expect(download).toHaveBeenCalledWith(artifact.url, '_blank');

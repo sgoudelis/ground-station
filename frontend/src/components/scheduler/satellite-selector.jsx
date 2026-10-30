@@ -53,6 +53,7 @@ import {
     fetchSatelliteWithTransmitters,
 } from './scheduler-slice.jsx';
 import { useTranslation } from 'react-i18next';
+import { findObservationConflict, getObservationForPass } from './observation-conflicts.js';
 
 const SATELLITE_NUMBER_LIMIT = 150;
 
@@ -370,7 +371,7 @@ const SatelliteSearchAutocomplete = ({
     );
 };
 
-const PassSelector = ({ onPassSelect, initialPass, currentObservationId, disabled = false }) => {
+const PassSelector = ({ onPassSelect, initialPass, observation, disabled = false }) => {
     const { t } = useTranslation('common');
     const dispatch = useDispatch();
     const { socket } = useSocket();
@@ -457,34 +458,10 @@ const PassSelector = ({ onPassSelect, initialPass, currentObservationId, disable
         }
     };
 
-    // Check if a pass overlaps with any existing observation and return conflict info
-    const getPassConflict = (pass) => {
-        const passStart = new Date(pass.event_start);
-        const passEnd = new Date(pass.event_end);
-
-        const conflictingObs = observations.find(obs => {
-            // Skip the observation we're currently editing
-            if (currentObservationId && obs.id === currentObservationId) {
-                return false;
-            }
-
-            if (!obs.pass) {
-                return false;
-            }
-
-            // Use task_start/task_end if available (actual execution window),
-            // otherwise fall back to event_start/event_end (full visibility window)
-            const obsStart = obs.task_start ? new Date(obs.task_start) : new Date(obs.pass.event_start);
-            const obsEnd = obs.task_end ? new Date(obs.task_end) : new Date(obs.pass.event_end);
-
-            // Check for any overlap
-            const hasOverlap = (passStart < obsEnd && passEnd > obsStart);
-
-            return hasOverlap;
-        });
-
-        return conflictingObs || null;
-    };
+    // Use the live form hardware so changing SDRs immediately updates pass availability.
+    const getPassConflict = (pass) => findObservationConflict(
+        getObservationForPass(observation, pass), observations
+    );
 
     // Check if a pass overlaps with any existing observation
     const isPassOverlapping = (pass) => {
@@ -663,7 +640,7 @@ export const SatelliteSelector = ({
     showPassSelector = true,
     initialSatellite = null,
     initialPass = null,
-    currentObservationId = null,
+    observation = null,
     disabled = false,
 }) => {
     const dispatch = useDispatch();
@@ -677,7 +654,7 @@ export const SatelliteSelector = ({
                 disabled={disabled}
                 initialSatellite={initialSatellite}
             />
-            {showPassSelector && <PassSelector onPassSelect={onPassSelect} initialPass={initialPass} currentObservationId={currentObservationId} disabled={disabled} />}
+            {showPassSelector && <PassSelector onPassSelect={onPassSelect} initialPass={initialPass} observation={observation} disabled={disabled} />}
         </Stack>
     );
 };

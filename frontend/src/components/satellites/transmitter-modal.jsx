@@ -25,7 +25,8 @@ import {
 import { setTargetTransmitters } from "../target/target-slice.jsx";
 import {useSocket} from "../common/socket.jsx";
 import { useTranslation } from 'react-i18next';
-import {getLoraParameters} from '../waterfall/decoder-parameters.js';
+import {getLoraParameters, isDecoderParameterValid} from '../waterfall/decoder-parameters.js';
+import {DecoderNumberField} from '../waterfall/decoder-number-field.jsx';
 
 
 // Define the dropdown options
@@ -229,8 +230,7 @@ const TransmitterModal = ({
         }
     };
 
-    const handleLoraChange = (key) => (event) => {
-        const value = JSON.parse(event.target.value);
+    const handleLoraChange = (key, value) => {
         setFormData((current) => {
             const loraConfig = {...current.loraConfig};
             if (value === null) {
@@ -241,6 +241,12 @@ const TransmitterModal = ({
             return {...current, loraConfig};
         });
     };
+
+    const hasInvalidLoraParameters = String(formData.mode).toLowerCase() === 'lora'
+        && Object.entries(loraParameters).some(([parameterKey, definition]) => {
+            const value = formData.loraConfig[parameterKey.slice('lora_'.length)];
+            return value != null && !isDecoderParameterValid(definition, value);
+        });
 
     const validateForm = () => {
         const errors = {};
@@ -280,7 +286,7 @@ const TransmitterModal = ({
     };
 
     const handleSave = async () => {
-        if (!validateForm()) {
+        if (hasInvalidLoraParameters || !validateForm()) {
             return;
         }
 
@@ -736,10 +742,21 @@ const TransmitterModal = ({
                             <Box sx={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 2}}>
                                 {Object.entries(loraParameters).map(([parameterKey, definition]) => {
                                     const key = parameterKey.slice('lora_'.length);
+                                    const currentValue = formData.loraConfig[key];
+                                    // Numeric definitions have bounds instead of dropdown options.
+                                    if (definition.type === 'number') {
+                                        return <DecoderNumberField
+                                            key={key}
+                                            definition={definition}
+                                            value={currentValue ?? ''}
+                                            optional
+                                            disabled={loading}
+                                            onChange={(value) => handleLoraChange(key, value === '' ? null : value)}
+                                        />;
+                                    }
                                     const options = definition.type === 'switch'
                                         ? [{value: true, label: 'On'}, {value: false, label: 'Off'}]
                                         : definition.options;
-                                    const currentValue = formData.loraConfig[key];
                                     const hasListedValue = options.some((option) =>
                                         JSON.stringify(option.value) === JSON.stringify(currentValue));
                                     return (
@@ -747,7 +764,7 @@ const TransmitterModal = ({
                                             <InputLabel>{definition.label}</InputLabel>
                                             <Select
                                                 value={JSON.stringify(formData.loraConfig[key] ?? null)}
-                                                onChange={handleLoraChange(key)}
+                                                onChange={(event) => handleLoraChange(key, JSON.parse(event.target.value))}
                                                 label={definition.label}
                                                 disabled={loading}
                                             >
@@ -805,7 +822,7 @@ const TransmitterModal = ({
                 <Button
                     onClick={handleSave}
                     variant="contained"
-                    disabled={loading}
+                    disabled={loading || hasInvalidLoraParameters}
                     sx={{
                         '&.Mui-disabled': {
                             bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.800' : 'grey.400',
