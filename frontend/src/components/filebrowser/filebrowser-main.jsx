@@ -60,6 +60,8 @@ import DownloadIcon from '@mui/icons-material/Download';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import InfoIcon from '@mui/icons-material/Info';
 import SortIcon from '@mui/icons-material/Sort';
+import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
+import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import CameraAltIcon from '@mui/icons-material/CameraAlt';
 import RadioIcon from '@mui/icons-material/Radio';
@@ -114,6 +116,7 @@ import ObservationFolderDialog from './observation-folder-dialog.jsx';
 import ProcessingDialog from './processing-dialog.jsx';
 import PurgeDialog from './purge-dialog.jsx';
 import ImageViewerDialog from '../common/image-viewer-dialog.jsx';
+import ResponsiveActionButton from '../common/responsive-action-button.jsx';
 import DecodedFolderThumbnail from './decoded-folder-thumbnail.jsx';
 import { buildFileBrowserDisplayItem } from './filebrowser-display-item.js';
 import FileTypeFilter from './file-type-filter.jsx';
@@ -202,6 +205,8 @@ const DEFAULT_WATERFALL_TASK_OPTIONS = Object.freeze({
 });
 
 const buildWaterfallDialogDefaults = () => ({ ...DEFAULT_WATERFALL_TASK_OPTIONS });
+
+const TOOLBAR_COMPACT_QUERY = '@container file-browser (max-width: 1000px)';
 
 const clampNumber = (value, min, max, fallback) => {
     const numeric = Number(value);
@@ -927,7 +932,7 @@ export default function FileBrowserMain() {
     const showRefreshOverlay = isLoading && files.length > 0;
 
     return (
-        <Box sx={{ p: 2 }}>
+        <Box sx={{ p: 2, containerType: 'inline-size', containerName: 'file-browser' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2, flexWrap: 'wrap' }}>
                 <FileSearchInput value={search} onChange={handleSearchChange} />
                 {search && !filesError && (
@@ -944,6 +949,7 @@ export default function FileBrowserMain() {
                 flexDirection: { xs: 'column', sm: 'row' },
                 justifyContent: 'space-between',
                 alignItems: { xs: 'stretch', sm: 'center' },
+                flexWrap: 'wrap',
                 gap: 2
             }}>
                 <Box sx={{
@@ -978,12 +984,15 @@ export default function FileBrowserMain() {
                 <Box sx={{
                     display: 'flex',
                     gap: 1,
-                    flexDirection: { xs: 'row', sm: 'row' },
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
                     justifyContent: { xs: 'space-between', sm: 'flex-end' }
                 }}>
                     <Box sx={{ display: 'flex', gap: 0 }}>
                         <IconButton
                             size="small"
+                            aria-label={t('view_mode.card', 'Card view')}
+                            aria-pressed={viewMode === 'card'}
                             onClick={() => dispatch(setViewMode('card'))}
                             sx={{
                                 border: 1,
@@ -991,6 +1000,8 @@ export default function FileBrowserMain() {
                                 borderRadius: '4px 0 0 4px',
                                 backgroundColor: viewMode === 'card' ? 'primary.main' : 'transparent',
                                 color: viewMode === 'card' ? 'primary.contrastText' : 'text.secondary',
+                                minWidth: 40,
+                                minHeight: 40,
                                 '&:hover': {
                                     backgroundColor: viewMode === 'card' ? 'primary.dark' : 'action.hover',
                                 }
@@ -1000,6 +1011,8 @@ export default function FileBrowserMain() {
                         </IconButton>
                         <IconButton
                             size="small"
+                            aria-label={t('view_mode.table', 'Table view')}
+                            aria-pressed={viewMode === 'table'}
                             onClick={() => dispatch(setViewMode('table'))}
                             sx={{
                                 border: 1,
@@ -1008,6 +1021,8 @@ export default function FileBrowserMain() {
                                 borderLeft: 0,
                                 backgroundColor: viewMode === 'table' ? 'primary.main' : 'transparent',
                                 color: viewMode === 'table' ? 'primary.contrastText' : 'text.secondary',
+                                minWidth: 40,
+                                minHeight: 40,
                                 '&:hover': {
                                     backgroundColor: viewMode === 'table' ? 'primary.dark' : 'action.hover',
                                 }
@@ -1016,41 +1031,39 @@ export default function FileBrowserMain() {
                             <ViewListIcon fontSize="small" />
                         </IconButton>
                     </Box>
-                    <Button
+                    <ResponsiveActionButton
                         variant="outlined"
                         size="small"
+                        startIcon={sortOrder === 'asc' ? <ArrowUpwardIcon /> : <ArrowDownwardIcon />}
                         onClick={() => dispatch(toggleSortOrder())}
-                        sx={{ flex: { xs: 1, sm: 'initial' } }}
-                    >
-                        {sortOrder === 'asc' ? t('sort_order.ascending', 'Ascending') : t('sort_order.descending', 'Descending')}
-                    </Button>
-                    <Button
+                        compactQuery={TOOLBAR_COMPACT_QUERY}
+                        label={sortOrder === 'asc' ? t('sort_order.ascending', 'Ascending') : t('sort_order.descending', 'Descending')}
+                    />
+                    <ResponsiveActionButton
                         variant={selectionMode ? "contained" : "outlined"}
                         size="small"
                         startIcon={selectionMode ? <CheckBoxIcon /> : <CheckBoxOutlineBlankIcon />}
                         onClick={handleToggleSelectionMode}
-                        sx={{ flex: { xs: 1, sm: 'initial' } }}
-                    >
-                        {selectionMode ? t('selection.exit', 'Exit Select') : t('selection.select', 'Select')}
-                    </Button>
-                    <Button
+                        aria-pressed={selectionMode}
+                        compactQuery={TOOLBAR_COMPACT_QUERY}
+                        label={selectionMode ? t('selection.exit', 'Exit Select') : t('selection.select', 'Select')}
+                    />
+                    <ResponsiveActionButton
                         variant="outlined"
                         size="small"
                         startIcon={<RefreshIcon />}
                         onClick={handleRefresh}
-                        sx={{ flex: { xs: 1, sm: 'initial' } }}
-                    >
-                        {t('refresh', 'Refresh')}
-                    </Button>
-                    <Button
+                        compactQuery={TOOLBAR_COMPACT_QUERY}
+                        label={t('refresh', 'Refresh')}
+                    />
+                    <ResponsiveActionButton
                         variant="outlined"
                         size="small"
                         startIcon={<CleaningServicesIcon />}
                         onClick={() => setPurgeDialogOpen(true)}
-                        sx={{ flex: { xs: 1, sm: 'initial' } }}
-                    >
-                        {t('purge_dialog.button', { defaultValue: 'Purge' })}
-                    </Button>
+                        compactQuery={TOOLBAR_COMPACT_QUERY}
+                        label={t('purge_dialog.button', { defaultValue: 'Purge' })}
+                    />
                 </Box>
             </Box>
 

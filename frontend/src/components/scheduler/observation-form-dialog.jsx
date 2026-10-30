@@ -56,7 +56,6 @@ import {
     Tooltip,
 } from '@mui/material';
 import {
-    Add as AddIcon,
     Close as CloseIcon,
     Delete as DeleteIcon,
     ExpandMore as ExpandMoreIcon,
@@ -67,6 +66,12 @@ import {
     RadioButtonUnchecked as RadioButtonUncheckedIcon,
 } from '@mui/icons-material';
 import { FaSatelliteDish } from 'react-icons/fa6';
+import GraphicEqIcon from '@mui/icons-material/GraphicEq';
+import AudioFileIcon from '@mui/icons-material/AudioFile';
+import TranscribeIcon from '@mui/icons-material/Transcribe';
+import SaveIcon from '@mui/icons-material/Save';
+import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
+import ResponsiveActionButton from '../common/responsive-action-button.jsx';
 import { useSocket } from '../common/socket.jsx';
 import { getLibreTargetOptions, isLibrePairSupported, resolveTranslationBackend, TranslationBackendField, useLibreTranslateCapabilities } from '../common/translation-options.jsx';
 import {
@@ -1465,7 +1470,7 @@ const ObservationFormDialog = ({ onExited }) => {
                     <Divider />
 
                     {/* Sessions */}
-                    <Box>
+                    <Box sx={{ containerType: 'inline-size', containerName: 'sdr-sessions' }}>
                         <Typography variant="subtitle2" gutterBottom sx={{ color: 'primary.main', fontWeight: 'bold' }}>
                             {t('scheduler_dialogs.shared.sdr_sessions_title')}
                         </Typography>
@@ -1588,16 +1593,16 @@ const ObservationFormDialog = ({ onExited }) => {
                                     </IconButton>
                                 </Box>
                             </Tooltip>
-                            <Button
+                            <ResponsiveActionButton
                                 size="small"
                                 variant="outlined"
-                                startIcon={<AddIcon />}
+                                startIcon={<MemoryIcon />}
                                 onClick={handleAddSession}
                                 disabled={isFormDisabled}
-                                sx={{ minHeight: 38, whiteSpace: 'nowrap' }}
-                            >
-                                {t('scheduler_dialogs.shared.add_sdr')}
-                            </Button>
+                                compactQuery="@container sdr-sessions (max-width: 700px)"
+                                label={t('scheduler_dialogs.shared.add_sdr')}
+                                sx={{ minHeight: 40 }}
+                            />
                         </Stack>
                     </Box>
 
@@ -1986,47 +1991,47 @@ const ObservationFormDialog = ({ onExited }) => {
                     <Divider />
 
                     {/* Tasks */}
-                    <Box>
-                        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                    <Box sx={{ containerType: 'inline-size', containerName: 'observation-tasks' }}>
+                        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2} sx={{ gap: 1, flexWrap: 'wrap' }}>
                             <Typography variant="subtitle2" sx={{ color: 'primary.main', fontWeight: 'bold' }}>{t('scheduler_dialogs.shared.tasks_title')}</Typography>
-                            <Stack direction="row" spacing={1}>
-                                <Button
+                            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                                <ResponsiveActionButton
                                     size="small"
                                     variant="outlined"
-                                    startIcon={<AddIcon />}
+                                    startIcon={<GraphicEqIcon />}
                                     onClick={() => handleAddTask('decoder')}
                                     disabled={isFormDisabled}
-                                >
-                                    {t('scheduler_dialogs.shared.task_decoder')}
-                                </Button>
-                                <Button
+                                    compactQuery="@container observation-tasks (max-width: 700px)"
+                                    label={t('scheduler_dialogs.shared.task_decoder')}
+                                />
+                                <ResponsiveActionButton
                                     size="small"
                                     variant="outlined"
-                                    startIcon={<AddIcon />}
+                                    startIcon={<AudioFileIcon />}
                                     onClick={() => handleAddTask('audio_recording')}
                                     disabled={isFormDisabled}
-                                >
-                                    {t('scheduler_dialogs.shared.task_audio_recording')}
-                                </Button>
-                                <Button
+                                    compactQuery="@container observation-tasks (max-width: 700px)"
+                                    label={t('scheduler_dialogs.shared.task_audio_recording')}
+                                />
+                                <ResponsiveActionButton
                                     size="small"
                                     variant="outlined"
-                                    startIcon={<AddIcon />}
+                                    startIcon={<TranscribeIcon />}
                                     onClick={() => handleAddTask('transcription')}
                                     disabled={isFormDisabled}
-                                >
-                                    {t('scheduler_dialogs.shared.task_transcription')}
-                                </Button>
-                                <Button
+                                    compactQuery="@container observation-tasks (max-width: 700px)"
+                                    label={t('scheduler_dialogs.shared.task_transcription')}
+                                />
+                                <ResponsiveActionButton
                                     size="small"
                                     variant="outlined"
-                                    startIcon={<AddIcon />}
+                                    startIcon={<SaveIcon />}
                                     onClick={() => handleAddTask('iq_recording')}
                                     disabled={isFormDisabled}
-                                >
-                                    {t('scheduler_dialogs.shared.task_iq_recording')}
-                                </Button>
-                            </Stack>
+                                    compactQuery="@container observation-tasks (max-width: 700px)"
+                                    label={t('scheduler_dialogs.shared.task_iq_recording')}
+                                />
+                            </Box>
                         </Box>
 
                         {formData.tasks.length === 0 ? (
@@ -2970,67 +2975,73 @@ const ObservationFormDialog = ({ onExited }) => {
 
             <DialogActions
                 sx={{
+                    containerType: 'inline-size',
+                    containerName: 'dialog-footer',
                     bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.100',
                     borderTop: (theme) => `1px solid ${theme.palette.divider}`,
-                    px: 3,
+                    px: { xs: 2, sm: 3 },
                     py: 2.5,
-                    gap: 2,
+                    gap: 1,
                     display: 'flex',
                     justifyContent: 'space-between',
+                    flexWrap: 'wrap',
                 }}
             >
                 {/* Left side - action buttons (only shown when editing) */}
-                <Box sx={{ display: 'flex', gap: 1 }}>
+                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                     {selectedObservation?.id && (
                         <>
-                            <Button
+                            <ResponsiveActionButton
                                 onClick={handleDeleteClick}
                                 variant="contained"
                                 color="error"
                                 startIcon={<DeleteIcon />}
                                 size="small"
-                            >
-                                {t('delete')}
-                            </Button>
-                            <Button
+                                compactQuery="@container dialog-footer (max-width: 700px)"
+                                label={t('delete')}
+                            />
+                            <ResponsiveActionButton
                                 onClick={handleCancelClick}
                                 variant="contained"
                                 color="warning"
                                 startIcon={<StopIcon />}
                                 size="small"
                                 disabled={formData.status !== 'running' && formData.status !== 'scheduled'}
-                            >
-                                {t('cancel')}
-                            </Button>
-                            <Button
+                                compactQuery="@container dialog-footer (max-width: 700px)"
+                                label={t('cancel')}
+                            />
+                            <ResponsiveActionButton
                                 onClick={handleEnable}
                                 variant="contained"
                                 color="success"
                                 startIcon={<EnableIcon />}
                                 size="small"
                                 disabled={formData.status === 'running' || formData.enabled}
-                            >
-                                {t('scheduler_dialogs.shared.enable_button')}
-                            </Button>
-                            <Button
+                                compactQuery="@container dialog-footer (max-width: 700px)"
+                                label={t('scheduler_dialogs.shared.enable_button')}
+                            />
+                            <ResponsiveActionButton
                                 onClick={handleDisable}
                                 variant="contained"
                                 color="secondary"
                                 startIcon={<DisableIcon />}
                                 size="small"
                                 disabled={formData.status === 'running' || !formData.enabled}
-                            >
-                                {t('scheduler_dialogs.shared.disable_button')}
-                            </Button>
+                                compactQuery="@container dialog-footer (max-width: 700px)"
+                                label={t('scheduler_dialogs.shared.disable_button')}
+                            />
                         </>
                     )}
                 </Box>
 
                 {/* Right side - save/cancel buttons */}
-                <Box sx={{ display: 'flex', gap: 2 }}>
-                    <Button
+                <Box sx={{ display: 'flex', gap: 1, ml: 'auto' }}>
+                    <ResponsiveActionButton
                         onClick={handleClose}
                         variant="outlined"
+                        startIcon={<CloseIcon />}
+                        compactQuery="@container dialog-footer (max-width: 700px)"
+                        label={t('cancel')}
                         sx={{
                             borderColor: (theme) => theme.palette.mode === 'dark' ? 'grey.700' : 'grey.400',
                             '&:hover': {
@@ -3038,25 +3049,24 @@ const ObservationFormDialog = ({ onExited }) => {
                                 bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.800' : 'grey.200',
                             },
                         }}
-                    >
-                        {t('cancel')}
-                    </Button>
-                    <Button
+                    />
+                    <ResponsiveActionButton
                         onClick={handleSave}
                         variant="contained"
                         disabled={!isFormValid() || isSaving || isFormDisabled}
-                        startIcon={isSaving && <CircularProgress size={20} color="inherit" />}
+                        startIcon={isSaving ? <CircularProgress size={20} color="inherit" />
+                            : (selectedObservation ? <SaveIcon /> : <AddCircleOutlineIcon />)}
+                        compactQuery="@container dialog-footer (max-width: 700px)"
+                        label={isSaving
+                            ? t('scheduler_dialogs.shared.saving')
+                            : (selectedObservation ? t('scheduler_dialogs.shared.update_button') : t('scheduler_dialogs.shared.create_button'))}
                         sx={{
                             '&.Mui-disabled': {
                                 bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.800' : 'grey.400',
                                 color: (theme) => theme.palette.mode === 'dark' ? 'grey.600' : 'grey.600',
                             },
                         }}
-                    >
-                        {isSaving
-                            ? t('scheduler_dialogs.shared.saving')
-                            : (selectedObservation ? t('scheduler_dialogs.shared.update_button') : t('scheduler_dialogs.shared.create_button'))}
-                    </Button>
+                    />
                 </Box>
             </DialogActions>
 

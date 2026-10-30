@@ -54,8 +54,14 @@ import {
     Switch,
     Tooltip,
 } from '@mui/material';
-import { Add as AddIcon, Close as CloseIcon, Delete as DeleteIcon, ExpandMore as ExpandMoreIcon, ErrorOutline as ErrorOutlineIcon, Memory as MemoryIcon, RadioButtonUnchecked as RadioButtonUncheckedIcon, CheckCircle as EnableIcon, Cancel as DisableIcon } from '@mui/icons-material';
+import { Close as CloseIcon, Delete as DeleteIcon, ExpandMore as ExpandMoreIcon, ErrorOutline as ErrorOutlineIcon, Memory as MemoryIcon, RadioButtonUnchecked as RadioButtonUncheckedIcon, CheckCircle as EnableIcon, Cancel as DisableIcon } from '@mui/icons-material';
 import { FaSatelliteDish } from 'react-icons/fa6';
+import GraphicEqIcon from '@mui/icons-material/GraphicEq';
+import AudioFileIcon from '@mui/icons-material/AudioFile';
+import TranscribeIcon from '@mui/icons-material/Transcribe';
+import SaveIcon from '@mui/icons-material/Save';
+import EventRepeatIcon from '@mui/icons-material/EventRepeat';
+import ResponsiveActionButton from '../common/responsive-action-button.jsx';
 import {
     setMonitoredSatelliteDialogOpen,
     createMonitoredSatellite,
@@ -1390,7 +1396,7 @@ export default function MonitoredSatelliteDialog({ onExited }) {
                     <Divider />
 
                     {/* Sessions */}
-                    <Box>
+                    <Box sx={{ containerType: 'inline-size', containerName: 'sdr-sessions' }}>
                         <Typography variant="subtitle2" gutterBottom sx={{ color: 'primary.main', fontWeight: 'bold' }}>
                             {t('scheduler_dialogs.shared.sdr_sessions_title')}
                         </Typography>
@@ -1511,15 +1517,15 @@ export default function MonitoredSatelliteDialog({ onExited }) {
                                     </IconButton>
                                 </Box>
                             </Tooltip>
-                            <Button
+                            <ResponsiveActionButton
                                 size="small"
                                 variant="outlined"
-                                startIcon={<AddIcon />}
+                                startIcon={<MemoryIcon />}
                                 onClick={handleAddSession}
-                                sx={{ minHeight: 38, whiteSpace: 'nowrap' }}
-                            >
-                                {t('scheduler_dialogs.shared.add_sdr')}
-                            </Button>
+                                compactQuery="@container sdr-sessions (max-width: 700px)"
+                                label={t('scheduler_dialogs.shared.add_sdr')}
+                                sx={{ minHeight: 40 }}
+                            />
                         </Stack>
                     </Box>
 
@@ -1907,7 +1913,7 @@ export default function MonitoredSatelliteDialog({ onExited }) {
                     <Divider />
 
                     {/* Tasks */}
-                    <Box sx={{ position: 'relative', minHeight: 120 }}>
+                    <Box sx={{ position: 'relative', minHeight: 120, containerType: 'inline-size', containerName: 'satellite-tasks' }}>
                         <Backdrop
                             open={transmittersLoading}
                             sx={{
@@ -1928,44 +1934,44 @@ export default function MonitoredSatelliteDialog({ onExited }) {
                                 </Typography>
                             </Stack>
                         </Backdrop>
-                        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2} sx={{ gap: 1, flexWrap: 'wrap' }}>
                             <Typography variant="subtitle2" sx={{ color: 'primary.main', fontWeight: 'bold' }}>
                                 {t('scheduler_dialogs.shared.tasks_title')}
                             </Typography>
-                            <Stack direction="row" spacing={1}>
-                                <Button
+                            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                                <ResponsiveActionButton
                                     size="small"
                                     variant="outlined"
-                                    startIcon={<AddIcon />}
+                                    startIcon={<GraphicEqIcon />}
                                     onClick={() => handleAddTask('decoder')}
-                                >
-                                    {t('scheduler_dialogs.shared.task_decoder')}
-                                </Button>
-                                <Button
+                                    compactQuery="@container satellite-tasks (max-width: 700px)"
+                                    label={t('scheduler_dialogs.shared.task_decoder')}
+                                />
+                                <ResponsiveActionButton
                                     size="small"
                                     variant="outlined"
-                                    startIcon={<AddIcon />}
+                                    startIcon={<AudioFileIcon />}
                                     onClick={() => handleAddTask('audio_recording')}
-                                >
-                                    {t('scheduler_dialogs.shared.task_audio_recording')}
-                                </Button>
-                                <Button
+                                    compactQuery="@container satellite-tasks (max-width: 700px)"
+                                    label={t('scheduler_dialogs.shared.task_audio_recording')}
+                                />
+                                <ResponsiveActionButton
                                     size="small"
                                     variant="outlined"
-                                    startIcon={<AddIcon />}
+                                    startIcon={<TranscribeIcon />}
                                     onClick={() => handleAddTask('transcription')}
-                                >
-                                    {t('scheduler_dialogs.shared.task_transcription')}
-                                </Button>
-                                <Button
+                                    compactQuery="@container satellite-tasks (max-width: 700px)"
+                                    label={t('scheduler_dialogs.shared.task_transcription')}
+                                />
+                                <ResponsiveActionButton
                                     size="small"
                                     variant="outlined"
-                                    startIcon={<AddIcon />}
+                                    startIcon={<SaveIcon />}
                                     onClick={() => handleAddTask('iq_recording')}
-                                >
-                                    {t('scheduler_dialogs.shared.task_iq_recording')}
-                                </Button>
-                            </Stack>
+                                    compactQuery="@container satellite-tasks (max-width: 700px)"
+                                    label={t('scheduler_dialogs.shared.task_iq_recording')}
+                                />
+                            </Box>
                         </Box>
 
                         {formData.tasks.length === 0 ? (
@@ -2860,11 +2866,13 @@ export default function MonitoredSatelliteDialog({ onExited }) {
 
             <DialogActions
                 sx={{
+                    containerType: 'inline-size',
+                    containerName: 'dialog-footer',
                     bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.100',
                     borderTop: (theme) => `1px solid ${theme.palette.divider}`,
-                    px: 3,
+                    px: { xs: 2, sm: 3 },
                     py: 2.5,
-                    gap: 2,
+                    gap: 1,
                     justifyContent: 'space-between',
                     flexWrap: 'wrap',
                 }}
@@ -2872,17 +2880,17 @@ export default function MonitoredSatelliteDialog({ onExited }) {
                 <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                     {isEditingMonitoredSatellite && (
                         <>
-                            <Button
+                            <ResponsiveActionButton
                                 onClick={() => setOpenDeleteConfirm(true)}
                                 variant="contained"
                                 color="error"
                                 startIcon={<DeleteIcon />}
                                 size="small"
                                 disabled={!socket || isBusy}
-                            >
-                                {t('delete')}
-                            </Button>
-                            <Button
+                                compactQuery="@container dialog-footer (max-width: 700px)"
+                                label={t('delete')}
+                            />
+                            <ResponsiveActionButton
                                 onClick={() => handleToggleEnabled(true)}
                                 variant="contained"
                                 color="success"
@@ -2890,10 +2898,10 @@ export default function MonitoredSatelliteDialog({ onExited }) {
                                     ? <CircularProgress size={16} color="inherit" /> : <EnableIcon />}
                                 size="small"
                                 disabled={!socket || isBusy || formData.enabled}
-                            >
-                                {t('scheduler_tables.shared.enable')}
-                            </Button>
-                            <Button
+                                compactQuery="@container dialog-footer (max-width: 700px)"
+                                label={t('scheduler_tables.shared.enable')}
+                            />
+                            <ResponsiveActionButton
                                 onClick={() => handleToggleEnabled(false)}
                                 variant="contained"
                                 color="warning"
@@ -2901,17 +2909,20 @@ export default function MonitoredSatelliteDialog({ onExited }) {
                                     ? <CircularProgress size={16} color="inherit" /> : <DisableIcon />}
                                 size="small"
                                 disabled={!socket || isBusy || !formData.enabled}
-                            >
-                                {t('scheduler_tables.shared.disable')}
-                            </Button>
+                                compactQuery="@container dialog-footer (max-width: 700px)"
+                                label={t('scheduler_tables.shared.disable')}
+                            />
                         </>
                     )}
                 </Box>
-                <Box sx={{ display: 'flex', gap: 2, ml: 'auto' }}>
-                    <Button
+                <Box sx={{ display: 'flex', gap: 1, ml: 'auto' }}>
+                    <ResponsiveActionButton
                         onClick={handleClose}
                         variant="outlined"
                         disabled={isBusy}
+                        startIcon={<CloseIcon />}
+                        compactQuery="@container dialog-footer (max-width: 700px)"
+                        label={t('cancel')}
                         sx={{
                             borderColor: (theme) => theme.palette.mode === 'dark' ? 'grey.700' : 'grey.400',
                             '&:hover': {
@@ -2919,28 +2930,26 @@ export default function MonitoredSatelliteDialog({ onExited }) {
                                 bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.800' : 'grey.200',
                             },
                         }}
-                    >
-                        {t('cancel')}
-                    </Button>
-                    <Button
+                    />
+                    <ResponsiveActionButton
                         variant="contained"
                         onClick={handleSubmit}
                         disabled={!socket || !isFormValid() || isBusy}
                         startIcon={(isSaving || pendingAction === 'save' || pendingAction === 'generate')
-                            && <CircularProgress size={20} color="inherit" />}
+                            ? <CircularProgress size={20} color="inherit" /> : <EventRepeatIcon />}
+                        compactQuery="@container dialog-footer (max-width: 700px)"
+                        label={pendingAction === 'generate'
+                            ? t('scheduler_dialogs.monitored.generating')
+                            : (isSaving || pendingAction === 'save'
+                                ? t('scheduler_dialogs.shared.saving')
+                                : t('scheduler_dialogs.monitored.save_and_generate'))}
                         sx={{
                             '&.Mui-disabled': {
                                 bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.800' : 'grey.400',
                                 color: (theme) => theme.palette.mode === 'dark' ? 'grey.600' : 'grey.600',
                             },
                         }}
-                    >
-                        {pendingAction === 'generate'
-                            ? t('scheduler_dialogs.monitored.generating')
-                            : (isSaving || pendingAction === 'save'
-                                ? t('scheduler_dialogs.shared.saving')
-                                : t('scheduler_dialogs.monitored.save_and_generate'))}
-                    </Button>
+                    />
                 </Box>
             </DialogActions>
 
