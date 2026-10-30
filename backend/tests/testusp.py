@@ -1,4 +1,4 @@
-"""UMKA captures and boundary cases for USP payload decoding.
+"""UMKA and RS18S captures and boundary cases for USP payload decoding.
 
 Expected engineering values are read from the published SPUTNIX layouts and
 the captured bytes, independently of the decoder's field table.
@@ -10,11 +10,14 @@ from pathlib import Path
 
 import pytest
 
+from telemetry.context import ParseContext
 from telemetry.parser import TelemetryParser
 from telemetry.parsers.usp import USPParser
+from telemetry.service import parse_packet
 
 pytestmark = pytest.mark.unit
 CAPTURES = json.loads((Path(__file__).parent / "fixtures" / "umka.json").read_text())
+RS18S_CAPTURES = json.loads((Path(__file__).parent / "fixtures" / "rs18s.json").read_text())
 
 
 def parse_capture(name):
@@ -26,6 +29,51 @@ def parse_capture(name):
 
 def message(message_id, body, source=2):
     return struct.pack("<4H", message_id, source, 1, len(body)) + body
+
+
+def parse_rs18s_capture(name):
+    return parse_packet(
+        bytes.fromhex(RS18S_CAPTURES[name]["packet_hex"]),
+        ParseContext(
+            protocol="ax25",
+            framing="usp",
+            satellite="SAKHACUBE-CHOLBON (RS18S)",
+            hdlc_flags=True,
+        ),
+    )
+
+
+def test_real_rs18s_beacon_routes_to_usp_and_exposes_radio_and_power_records():
+    result = parse_rs18s_capture("beacon")
+    assert result["frame"]["source"] == "RS18S-1"
+    assert result["parser_id"] == "usp"
+    assert result["payload_status"] == "decoded"
+    assert result["raw"]["packet_hex"] == RS18S_CAPTURES["beacon"]["packet_hex"]
+    radio, power = result["telemetry"]["messages"]
+    assert (radio["message_id"], power["message_id"]) == ("0x4246", "0xDE21")
+    assert radio["values"]["amplifier_temperature"] == 16
+    assert radio["values"]["input_voltage"] == 7.924
+    assert radio["values"]["time_utc"] == "2026-10-30T09:31:40+00:00"
+    assert power["values"]["battery_voltage"] == 7.888
+    assert power["values"]["battery_current"] == 239
+    assert power["values"]["battery_temperature_1"] == -2.18
+    # RS18S also transmits an unsynchronised power-system clock; preserve it literally.
+    assert power["values"]["time_utc"] == "2018-03-06T01:31:53+00:00"
+    radio_record, power_record = result["payload"]["records"]
+    assert radio_record["status"] == power_record["status"] == "decoded"
+    group = power_record["groups"][0]
+    assert group["values"]["battery_voltage"] == 7.888
+    assert group["field_info"]["battery_voltage"]["unit"] == "V"
+
+
+def test_real_rs18s_acknowledgement_does_not_produce_telemetry_measurements():
+    result = parse_rs18s_capture("ack")
+    assert result["parser_id"] == "usp"
+    assert result["payload_status"] == "non_telemetry"
+    (record,) = result["payload"]["records"]
+    assert record["message_id"] == "0x0118"
+    assert record["status"] == "non_telemetry"
+    assert record["groups"] == []
 
 
 def test_real_night_beacon_decodes_both_subsystems_and_signed_current():

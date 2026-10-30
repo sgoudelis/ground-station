@@ -178,6 +178,7 @@ decoded packets are supported; metadata must identify a supported protocol.
 |---|---|---|
 | `RS52S` | STRATOSAT-TK 1 | `specs/rs52s.ksy` (parity-proven vs old hand-coded parser) |
 | `RS40S` | UMKA-1 (SPUTNIX USP) | `specs/usp_uhf/power/adcs.ksy` bodies + `usp.py` (framing, labels, flag semantics; envelope byte-identical to pre-migration) |
+| `RS18S` | SAKHACUBE-CHOLBON (SPUTNIX USP) | Same USP parser; radio/power beacons and acknowledgements verified against rfbox5 captures in `tests/fixtures/rs18s.json` |
 | `RS67S` / `COLIBRI-S` | Colibri-S GEOSCAN Type-I | `colibri_s.py` (ksy migration planned; same Type-I info layout as `geoscan_type1_info56.ksy`) |
 | `OK0LSR` | LasaSat | `lasarsat.py` (text, stays) |
 | `DP0UWH` | UWE-4 | `specs/uwe4.ksy` (hskp + RF-message payloads; ported from SatNOGS, pinned to rfbox5 captures) |

@@ -6,6 +6,16 @@ the recorder's enclosing `0x7e` bytes and calls `TelemetryParser` with the AX.25
 protocol hint. The AX.25 information field is then passed to `USPParser`,
 registered under the base callsign `RS40S`.
 
+SAKHACUBE-CHOLBON (NORAD 67290, AX.25 source `RS18S-1`) uses the same
+radio/power message layouts and is registered under `RS18S`. The October 30,
+2026 rfbox5 observation contains nine combined radio/power packets and four
+command acknowledgements; all are handled by the shared USP parser.
+`backend/tests/fixtures/rs18s.json` preserves one beacon and one acknowledgement.
+Its power-system clock reports 2018 while the radio clock matches reception
+time. Receive RSSI is consistently `0xFF`, displayed literally as −255 dBm;
+an unavailable-value meaning has not been confirmed. No ADCS messages were
+present in these RS18S captures.
+
 Each information field can contain multiple messages. Each message starts with
 four little-endian unsigned 16-bit fields: message ID, source device, destination
 device, and body length. Unknown messages are skipped using that length so they

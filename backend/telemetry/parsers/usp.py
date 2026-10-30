@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-"""SPUTNIX USP messages carried in UMKA-1 (RS40S) AX.25 information fields.
+"""SPUTNIX USP messages in UMKA-1 (RS40S) and SAKHACUBE-CHOLBON (RS18S) AX.25 frames.
 
 Message body layouts are Kaitai specs (``specs/usp_uhf.ksy``, ``usp_power.ksy``
 and ``usp_adcs.ksy``, generated into ``gen/``); this module keeps what a byte

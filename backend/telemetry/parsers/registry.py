@@ -44,6 +44,7 @@ def _iter_builtin_ax25_parsers() -> Iterable[Tuple[str, Callable[[], Any]]]:
     adapters backed by specs/rs52s.ksy and friends.
     """
     return (
+        ("RS18S", USPParser),
         ("RS40S", USPParser),
         ("RS52S", KaitaiPayloadParser.factory("rs52s", satellite="RS52S")),
         ("RS67S", ColibriSGeoscanAx25Parser),
