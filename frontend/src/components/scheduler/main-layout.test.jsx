@@ -16,7 +16,7 @@ vi.mock('./monitored-satellites-table.jsx', () => ({ default: () => <div>Monitor
 vi.mock('./observations-table.jsx', () => ({ default: () => <div>Observation timeline and table</div> }));
 vi.mock('./observation-status-banner.jsx', () => ({ default: () => <div>Upcoming observation row</div> }));
 
-it('keeps the upcoming row in the first tab and loads its data before opening observations', async () => {
+it('shows the upcoming row in both tabs and loads its data before opening observations', async () => {
     const user = userEvent.setup();
     const observation = { id: 'upcoming', name: 'Next pass', status: 'scheduled' };
     socket.emit.mockImplementation((_event, _request, acknowledge) => {
@@ -46,7 +46,7 @@ it('keeps the upcoming row in the first tab and loads its data before opening ob
     expect(screen.getByRole('tabpanel', { name: 'Scheduled Observations' }))
         .toHaveAttribute('id', observationsTab.getAttribute('aria-controls'));
     expect(screen.getByText('Observation timeline and table')).toBeVisible();
-    expect(screen.queryByText('Upcoming observation row')).not.toBeInTheDocument();
+    expect(screen.getByText('Upcoming observation row')).toBeVisible();
     expect(screen.queryByText('Monitored card')).not.toBeInTheDocument();
 
     await user.click(monitoredTab);

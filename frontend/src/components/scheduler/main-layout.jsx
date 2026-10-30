@@ -95,7 +95,12 @@ export default function ScheduledObservationsLayout() {
                 hidden={activeTab !== 'observations'}
                 sx={{ p: 2, minWidth: 0 }}
             >
-                {activeTab === 'observations' && <ObservationsTable />}
+                {activeTab === 'observations' && (
+                    <Stack spacing={2}>
+                        <ObservationStatusBanner />
+                        <ObservationsTable />
+                    </Stack>
+                )}
             </Box>
         </PageTabsLayout>
     );
