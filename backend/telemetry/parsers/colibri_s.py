@@ -37,6 +37,8 @@ from typing import Any, Dict, cast
 
 
 class ColibriSGeoscanAx25Parser:
+    parser_id = "colibri"
+
     def parse(self, payload: bytes) -> Dict[str, Any]:
         out: Dict[str, Any] = {"satellite": "COLIBRI-S", "length": len(payload)}
 

@@ -41,6 +41,18 @@ class CCSDSParser:
         total_len_field = pkt_len + 1 + 6
         payload = packet[6:]
 
+        if version != 0 or len(packet) != total_len_field:
+            return {
+                "success": False,
+                "primary_header": primary_header,
+                "length_check": len(packet) == total_len_field,
+                "error": (
+                    "Unsupported CCSDS version"
+                    if version != 0
+                    else f"CCSDS length mismatch: expected {total_len_field} bytes, received {len(packet)}"
+                ),
+            }
+
         return {
             "success": True,
             "primary_header": primary_header,

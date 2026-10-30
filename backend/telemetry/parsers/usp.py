@@ -214,6 +214,8 @@ def _decode_message(
 class USPParser:
     """Decode a sequence of length-delimited USP messages without guessing layouts."""
 
+    parser_id = "usp"
+
     def parse(self, payload: bytes) -> dict[str, Any]:
         result: dict[str, Any] = {"format": "usp", "length": len(payload), "messages": []}
         if not payload:

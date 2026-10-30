@@ -28,6 +28,9 @@ from typing import Any, Dict, Optional
 import numpy as np
 
 from constants import get_modulation_display, payload_protocol_from_framing
+from telemetry.context import ParseContext
+from telemetry.result import failure_result
+from telemetry.service import parse_packet
 
 logger = logging.getLogger("basedecoder")
 
@@ -226,133 +229,41 @@ class BaseDecoder:
             decoder_display = get_modulation_display(decoder_type)
             logger.info(f"{decoder_display} transmission decoded: {len(payload)} bytes")
 
-            # Log callsigns if available and perform NORAD ID lookup
-            identified_norad_id = None
-            identified_satellite = None
-            if callsigns:
-                logger.info(f"  Callsigns: {callsigns.get('to')} <- {callsigns.get('from')}")
-
-                # Look up NORAD ID from callsign
-                from_callsign = callsigns.get("from")
-                if from_callsign:
-                    lookup_table = _load_callsign_lookup()
-
-                    # Try exact match first
-                    identified_norad_id = lookup_table.get(from_callsign)
-
-                    # If not found and callsign ends with -1 (or other single digit SSID), try without it
-                    if not identified_norad_id and from_callsign.endswith(
-                        ("-0", "-1", "-2", "-3", "-4", "-5", "-6", "-7", "-8", "-9")
-                    ):
-                        base_callsign = from_callsign[:-2]  # Remove last 2 chars (-X)
-                        identified_norad_id = lookup_table.get(base_callsign)
-                        if identified_norad_id:
-                            identified_satellite = base_callsign
-                            logger.info(
-                                f"  Identified satellite: {identified_satellite} (NORAD {identified_norad_id}) from callsign {from_callsign}"
-                            )
-
-                    if identified_norad_id and not identified_satellite:
-                        identified_satellite = from_callsign
-                        logger.info(
-                            f"  Identified satellite: {identified_satellite} (NORAD {identified_norad_id})"
-                        )
-                    elif not identified_norad_id:
-                        logger.debug(f"  Callsign '{from_callsign}' not found in lookup table")
-
-            # Remove HDLC flags for processing
-            packet_data = self._strip_hdlc_flags(payload)
-            logger.info(f"  First 20 bytes: {packet_data[:20].hex()}")
-
-            # Parse telemetry with protocol hinting
-            protocol_hint = None
-            try:
-                protocol_hint = self._get_payload_protocol()
-            except Exception:
-                protocol_hint = None
-
-            sat_hint = None
-            try:
-                sat_hint = (self.satellite or {}).get("name")
-            except Exception:
-                sat_hint = None
-
-            # Provide parser hint with framing and resolved frame_size so proprietary parsers
-            # (e.g., GEOSCAN) can deterministically choose the correct layout (66/74).
-            parser_hint = {
-                "framing": getattr(self, "framing", None),
-                "frame_size": (getattr(self, "framing_params", None) or {}).get("frame_size"),
-            }
-            telemetry_result = self.telemetry_parser.parse(
-                packet_data,
-                protocol_hint=protocol_hint,
-                sat_hint=sat_hint,
-                parser_hint=parser_hint,
-            )
-            if telemetry_result.get("success"):
-                logger.info(f"Telemetry parsed: {telemetry_result.get('parser', 'unknown')}")
-
-            # Backfill missing callsigns from AX.25 telemetry header (regression fix)
-            # Some framings (e.g., AX100/CSP, GEOSCAN) do not extract callsigns at the
-            # deframer stage. However, TelemetryParser may still parse an AX.25 header
-            # from the resulting bytes. If so, synthesize the callsigns object here so
-            # downstream metadata/UI continue to receive `output.callsigns.{from,to}`.
-            try:
-                # If we already have callsigns from deframer, keep them. Otherwise try to backfill
-                # from telemetry_result.frame when present (works for GEOSCAN+AX.25 too).
-                if not callsigns:
-                    frame_hdr = (
-                        (telemetry_result.get("frame") or {})
-                        if isinstance(telemetry_result, dict)
-                        else {}
-                    )
-                    src_val = frame_hdr.get("source") if isinstance(frame_hdr, dict) else None
-                    dst_val = frame_hdr.get("destination") if isinstance(frame_hdr, dict) else None
-                    if isinstance(src_val, str) and isinstance(dst_val, str):
-                        src_str: str = src_val
-                        dst_str: str = dst_val
-                        callsigns = {"from": src_str, "to": dst_str}
-
-                        # Perform NORAD lookup now that we have a from-callsign
-                        backfill_from_callsign: str = src_str
-                        lookup_table = _load_callsign_lookup()
-
-                        # Try exact match first
-                        identified_norad_id = lookup_table.get(backfill_from_callsign)
-
-                        # If not found and callsign ends with -X, try base callsign
-                        if not identified_norad_id and backfill_from_callsign.endswith(
-                            ("-0", "-1", "-2", "-3", "-4", "-5", "-6", "-7", "-8", "-9")
-                        ):
-                            base_callsign = backfill_from_callsign[:-2]
-                            identified_norad_id = lookup_table.get(base_callsign)
-                            if identified_norad_id:
-                                identified_satellite = base_callsign
-                                logger.info(
-                                    f"  Identified satellite: {identified_satellite} (NORAD {identified_norad_id}) from callsign {backfill_from_callsign}"
-                                )
-
-                        if identified_norad_id and not identified_satellite:
-                            identified_satellite = backfill_from_callsign
-                            logger.info(
-                                f"  Identified satellite: {identified_satellite} (NORAD {identified_norad_id})"
-                            )
-                        elif not identified_norad_id:
-                            logger.debug(
-                                f"  Callsign '{backfill_from_callsign}' not found in lookup table"
-                            )
-            except Exception:
-                # Non-fatal – continue without backfilled callsigns
-                pass
-
-            # Save to file
+            # Preserve reception independently of parsing, identity lookup or UI
+            # metadata. Even a programming error must leave the original bytes.
             decode_timestamp = time.time()
             filename = self._generate_filename(decode_timestamp)
             filepath = os.path.join(self.output_dir, filename)
-
             with open(filepath, "wb") as f:
                 f.write(payload)
-            logger.info(f"Saved: {filepath}")
+
+            # Capture and reparse resolve exactly the same context and byte
+            # convention. Store it so future parser changes need no guessing.
+            try:
+                parse_context = ParseContext.from_metadata(
+                    {
+                        "decoder_config": self._get_decoder_config_metadata(),
+                        "decoder": {"type": decoder_type},
+                        "satellite": self.satellite or {},
+                    }
+                )
+                telemetry_result = parse_packet(payload, parse_context, self.telemetry_parser)
+            except Exception as exc:
+                logger.exception("Could not resolve packet parsing context")
+                parse_context = ParseContext(protocol="unknown")
+                telemetry_result = failure_result(payload, "unknown", str(exc))
+            if telemetry_result.get("success"):
+                logger.info(f"Telemetry parsed: {telemetry_result.get('parser', 'unknown')}")
+
+            # Only the validated shared AX.25 reader may supply missing callsigns.
+            frame = telemetry_result.get("frame") or {}
+            if (
+                not callsigns
+                and isinstance(frame.get("source"), str)
+                and isinstance(frame.get("destination"), str)
+            ):
+                callsigns = {"from": frame["source"], "to": frame["destination"]}
+            identified_norad_id, identified_satellite = self._identify_satellite(callsigns)
 
             # Build metadata
             metadata = self._build_metadata(
@@ -365,12 +276,13 @@ class BaseDecoder:
                 identified_norad_id,
                 identified_satellite,
             )
+            metadata["parse_context"] = parse_context.to_dict()
 
             # Save metadata JSON
             metadata_filename = filename.replace(".bin", ".json")
             metadata_filepath = os.path.join(self.output_dir, metadata_filename)
             with open(metadata_filepath, "w") as f:
-                json.dump(metadata, f, indent=2)
+                json.dump(metadata, f, indent=2, allow_nan=False)
             logger.info(f"Saved metadata: {metadata_filepath}")
 
             # Send to UI
@@ -409,22 +321,19 @@ class BaseDecoder:
         """
         return True
 
-    def _strip_hdlc_flags(self, payload: bytes) -> bytes:
-        """
-        Remove HDLC flags (0x7E) from start/end of payload.
-
-        Args:
-            payload: Raw packet bytes
-
-        Returns:
-            bytes: Packet data without HDLC flags
-        """
-        packet_data = payload
-        if len(packet_data) > 0 and packet_data[0] == 0x7E:
-            packet_data = packet_data[1:]
-        if len(packet_data) > 0 and packet_data[-1] == 0x7E:
-            packet_data = packet_data[:-1]
-        return packet_data
+    @staticmethod
+    def _identify_satellite(callsigns):
+        """Identity enrichment must never prevent packet metadata from being saved."""
+        if not callsigns or not callsigns.get("from"):
+            return None, None
+        source = callsigns["from"]
+        lookup = _load_callsign_lookup()
+        # All AX.25 SSIDs (0–15) share the base callsign's identity.
+        for candidate in (source, source.split("-", 1)[0]):
+            norad_id = lookup.get(candidate)
+            if norad_id:
+                return norad_id, candidate
+        return None, None
 
     def _generate_filename(self, timestamp: float) -> str:
         """
@@ -682,13 +591,8 @@ class BaseDecoder:
                 "name": self.satellite_name,
             }
 
-        # Add telemetry if parsed
-        if telemetry_result.get("success"):
-            output_data["telemetry"] = {
-                "parser": telemetry_result.get("parser"),
-                "frame": telemetry_result.get("frame"),
-                "data": telemetry_result.get("telemetry"),
-            }
+        # Files and events carry the same result, including parse failures.
+        output_data["telemetry"] = telemetry_result
 
         # Add decoder config
         output_data["decoder_config"] = self._get_decoder_config_metadata()

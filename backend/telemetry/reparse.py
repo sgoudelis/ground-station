@@ -23,7 +23,9 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import unquote, urlsplit
 
-from telemetry.parser import TelemetryParser
+from .compatibility import normalize_metadata
+from .context import ParseContext
+from .service import parse_packet
 
 
 def _load_packet(backend_dir: Path, url: str) -> tuple[Path, dict[str, Any]]:
@@ -59,60 +61,27 @@ def _load_packet(backend_dir: Path, url: str) -> tuple[Path, dict[str, Any]]:
 
 def _decode_packet(packet: Path, metadata: dict[str, Any]) -> dict[str, Any]:
     """Use the same framing hints and parser as live decoding, without writes."""
-    config = metadata.get("decoder_config") or {}
-    previous = metadata.get("telemetry") or {}
-    decoder = metadata.get("decoder") or {}
-    satellite = metadata.get("satellite") or {}
-    if not all(isinstance(section, dict) for section in (config, previous, decoder, satellite)):
-        raise ValueError("Invalid packet decoding metadata")
-    framing = config.get("framing")
-    if framing is not None and not isinstance(framing, str):
-        raise ValueError("Invalid packet framing")
-    protocol = (
-        config.get("payload_protocol")
-        or {
-            "lora": "lora",
-            "ax25": "ax25",
-            "usp": "ax25",
-            "aprs": "ax25",
-            "geoscan": "proprietary",
-            "ax100_rs": "csp",
-            "ax100_asm": "csp",
-            "doka": "ccsds",
-        }.get(framing or "")
-        or previous.get("protocol")
-    )
-    if decoder.get("type") == "lora":
-        protocol = "lora"
-    if not isinstance(protocol, str) or protocol not in {
-        "lora",
-        "ax25",
-        "proprietary",
-        "csp",
-        "ccsds",
-    }:
-        raise ValueError("Packet metadata does not identify a supported payload protocol")
-    satellite_name = satellite.get("name")
-    if satellite_name is not None and not isinstance(satellite_name, str):
-        raise ValueError("Invalid packet satellite name")
-    framing_params = config.get("framing_params") or {}
-    geoscan = config.get("geoscan") or {}
-    if not isinstance(framing_params, dict) or not isinstance(geoscan, dict):
-        raise ValueError("Invalid packet framing parameters")
-    payload = packet.read_bytes()
-    # Match the live decoder: HDLC flags are framing bytes only outside LoRa.
-    if protocol != "lora":
-        payload = payload.removeprefix(b"\x7e").removesuffix(b"\x7e")
-    frame_size = (
-        config.get("frame_size") or framing_params.get("frame_size") or geoscan.get("frame_size")
-    )
-    parsed: dict[str, Any] = TelemetryParser().parse(
-        payload,
-        protocol_hint=protocol,
-        sat_hint=satellite_name,
-        parser_hint={"framing": framing, "frame_size": frame_size},
-    )
-    return parsed
+    return parse_packet(packet.read_bytes(), ParseContext.from_metadata(metadata))
+
+
+def view_packet(backend_dir: Path, url: str) -> dict[str, Any]:
+    """Normalize saved metadata for every viewer without rewriting a capture."""
+    packet, metadata = _load_packet(backend_dir, url)
+    normalized = normalize_metadata(metadata)
+    saved = normalized["telemetry"]
+    # Old raw captures can benefit from a newly installed parser. Existing
+    # measurements remain the saved interpretation until an explicit reparse.
+    if (
+        not metadata.get("telemetry", {}).get("schema_version")
+        and saved["payload_status"] == "unsupported"
+    ):
+        try:
+            normalized["telemetry"] = _decode_packet(packet, metadata)
+        except ValueError:
+            # Context-free historical files still have their normalized values
+            # and bytes available; viewing must not require speculative routing.
+            pass
+    return normalized
 
 
 def preview_packet(backend_dir: Path, url: str) -> dict[str, Any]:
@@ -130,8 +99,36 @@ def reparse_packet(backend_dir: Path, url: str) -> dict[str, Any]:
     """Refresh one decoded packet's JSON metadata file, replacing it atomically."""
     packet, metadata = _load_packet(backend_dir, url)
     parsed = _decode_packet(packet, metadata)
-    if not parsed.get("success"):
-        raise ValueError(parsed.get("error") or "Packet could not be parsed")
+    failed_records = any(
+        record["status"] in {"malformed", "error"} for record in parsed["payload"]["records"]
+    )
+    previous = normalize_metadata(metadata)["telemetry"]
+    # A partially supported reparse must not quietly erase a previously decoded
+    # subsystem. Record identity stays stable for the same packet bytes.
+    records = {record["id"]: record for record in parsed["payload"]["records"]}
+    lost_values = previous["payload_status"] in {"decoded", "partial"} and parsed[
+        "payload_status"
+    ] in {"unsupported", "non_telemetry"}
+    for record in previous["payload"]["records"]:
+        if record["status"] == "decoded" and any(group["values"] for group in record["groups"]):
+            updated = records.get(record["id"])
+            if (
+                not updated
+                or updated["status"] != "decoded"
+                or not any(group["values"] for group in updated["groups"])
+            ):
+                lost_values = True
+    if (
+        not parsed.get("success")
+        or parsed["payload_status"] in {"malformed", "error"}
+        or failed_records
+        or lost_values
+    ):
+        diagnostics = parsed.get("diagnostics") or []
+        message = parsed.get("error") or next(
+            (item.get("message") for item in diagnostics if item.get("message")), None
+        )
+        raise ValueError(message or "Packet could not be parsed; saved telemetry was preserved")
     metadata["telemetry"] = parsed
     metadata_path = packet.with_suffix(".json")
 

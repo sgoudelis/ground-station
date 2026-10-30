@@ -29,17 +29,21 @@
       "position": "Position",
       "velocity": "Velocity",
       "other": "Other telemetry"
-    }
+    },
+    "message_header": "Message {{id}} · Device {{source}} → {{destination}} · {{length}} bytes",
+    "legacy_metadata": "Connect to the backend to prepare this saved telemetry. The original bytes remain available in Hex + ASCII."
   },
   "telemetry_overview_tab": {
     "lora_frame_information": "LoRa Frame Information"
   },
   "telemetry_viewer_dialog": {
-    "preview_loading": "Decoding saved packet…",
-    "preview_failed": "Could not decode this saved packet. Try Reparse telemetry.",
+    "preview_loading": "Preparing saved telemetry…",
+    "preview_failed": "Could not prepare this saved telemetry. Try Reparse telemetry.",
     "reparse": "Reparse telemetry",
     "reparsing": "Reparsing…",
-    "reparse_failed": "Could not reparse this packet."
+    "reparse_failed": "Could not reparse this packet.",
+    "packet_bytes": "Complete packet",
+    "payload_bytes": "Payload only"
   },
   "sort_by": "Sort By",
   "sort": {

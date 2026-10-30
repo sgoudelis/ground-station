@@ -238,10 +238,6 @@ class LoRaDecoder(BaseDecoderProcess):
     def _get_decoder_type(self):
         return "lora"
 
-    def _strip_hdlc_flags(self, payload):
-        # 0x7e is ordinary application data in LoRa.
-        return payload
-
     def _get_payload_protocol(self):
         return "lora"
 

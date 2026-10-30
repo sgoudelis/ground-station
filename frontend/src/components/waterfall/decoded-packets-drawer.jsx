@@ -230,7 +230,7 @@ export const mapOutputsToRows = (outputs, rowLimit = DEFAULT_DRAWER_ROW_LIMIT) =
                 parser: output.output.telemetry?.parser || '-',
                 packetLength: fileSize,
                 vfo: output.vfo,
-                hasTelemetry: !!output.output.telemetry,
+                hasTelemetry: ['decoded', 'partial'].includes(output.output.telemetry?.payload_status),
                 telemetry: output.output.telemetry,
                 parameters: parameters,
                 framing: output.output.decoder_config?.framing || '-',

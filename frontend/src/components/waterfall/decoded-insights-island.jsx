@@ -234,7 +234,7 @@ const DecodedInsightsIsland = React.memo(function DecodedInsightsIsland() {
                 decoderTypes.add(decoderType);
             }
 
-            if (item?.output?.telemetry) {
+            if (['decoded', 'partial'].includes(item?.output?.telemetry?.payload_status)) {
                 telemetryCount += 1;
             }
             if (item?.output?.filename) {

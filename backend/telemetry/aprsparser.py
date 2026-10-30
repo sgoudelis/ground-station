@@ -7,6 +7,9 @@ from typing import Any, Callable, Dict, Optional, Tuple
 class APRSParser:
     """Decode common APRS 1.x packet types into UI-friendly structured data."""
 
+    parser_id = "aprs"
+    legacy_name = "aprs"
+
     DATA_TYPES = {
         "!": "position_without_timestamp",
         "=": "position_without_timestamp_with_messaging",

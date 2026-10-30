@@ -74,7 +74,7 @@ def register_builtin_payload_parsers(target: Any) -> None:
     """
     for key, parser_factory in _iter_builtin_ax25_parsers():
         try:
-            if key in target.payload_parsers:
+            if ("ax25", key, None) in target.payload_parsers:
                 continue
             target.register_payload_parser(key, parser_factory())
         except Exception as e:

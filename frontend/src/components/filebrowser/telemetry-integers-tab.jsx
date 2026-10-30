@@ -40,7 +40,7 @@ export default function IntegersTab({ packet, telemetry }) {
     const theme = useTheme();
 
     // Get hex data
-    const hexString = packet?.hex || telemetry?.raw?.packet_hex || '';
+    const hexString = packet?.hex ?? telemetry?.raw?.packet_hex ?? '';
 
     // Parse as uint16
     const uint16Values = useMemo(() => {

@@ -71,7 +71,7 @@ export default function HexAsciiTab({ packet, telemetry }) {
     const [selectedByte, setSelectedByte] = useState(null);
 
     // Get hex data
-    const hexString = packet?.hex || telemetry?.raw?.packet_hex || '';
+    const hexString = packet?.hex ?? telemetry?.raw?.packet_hex ?? '';
 
     // Parse hex string to bytes
     const bytes = useMemo(() => {

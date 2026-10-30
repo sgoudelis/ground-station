@@ -51,9 +51,6 @@ _SPEC_MISMATCH = (EOFError, kaitaistruct.KaitaiStructError, struct.error, IndexE
 
 # Per-spec generated classes, keyed by spec name.
 _generated: Dict[str, Any] = {}
-# Per-spec adapter subclasses, so TelemetryParser's `ax25+<Class>Parser` label
-# reads per satellite (e.g. ax25+Rs52sParser) instead of the generic name.
-_subclasses: Dict[str, type] = {}
 
 
 def load_generated_class(spec: str) -> Any:
@@ -125,7 +122,7 @@ def split_spec_fields(
 class KaitaiPayloadParser:
     """Registry-compatible wrapper around one generated Kaitai struct."""
 
-    # Fixed on per-spec subclasses created by `factory`; may also be passed.
+    # Explicit spec identifiers are independent of the adapter class name.
     SPEC: Optional[str] = None
     SATELLITE: Optional[str] = None
 
@@ -135,19 +132,16 @@ class KaitaiPayloadParser:
             raise ValueError("KaitaiPayloadParser requires a spec name")
         # Narrow to str after validation so lookups below stay type-safe.
         self.spec: str = spec_id
+        self.parser_id = spec_id
+        self.legacy_name = spec_id[:1].upper() + spec_id[1:] + "Parser"
         self.satellite = satellite if satellite is not None else self.SATELLITE
 
     @classmethod
     def factory(
         cls, spec: str, satellite: Optional[str] = None
     ) -> Callable[[], "KaitaiPayloadParser"]:
-        """Build a zero-arg callable for registry registration (subclass per spec)."""
-        sub = _subclasses.get(spec)
-        if sub is None:
-            name = spec[:1].upper() + spec[1:] + "Parser"
-            sub = type(name, (cls,), {"SPEC": spec, "SATELLITE": satellite})
-            _subclasses[spec] = sub
-        return partial(sub)
+        """Build a zero-arg callable for registry registration."""
+        return partial(cls, spec=spec, satellite=satellite)
 
     def parse(self, payload: bytes) -> Dict[str, Any]:
         """Decode one payload into engineering units; ValueError if it mismatches."""

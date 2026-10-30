@@ -726,12 +726,6 @@ class FSKDecoder(BaseDecoderProcess):
             "clock_recovery_limit": 0.004,
         }
 
-    def _get_payload_protocol(self):
-        """FSK uses AX.25 for ax25/usp framing, proprietary otherwise"""
-        if self.framing in AX25_FRAMINGS:
-            return "ax25"
-        return "proprietary"
-
     def _on_flowgraph_status(self, status, info=None):
         """Callback when flowgraph status changes"""
         self._send_status_update(status, info)

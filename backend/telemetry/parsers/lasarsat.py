@@ -188,6 +188,8 @@ PSU_CHANNELS = tuple(
 class LasarsatAx25Parser:
     """Decode a LASARSAT beacon after AX.25 addresses, control, and PID."""
 
+    parser_id = "lasarsat"
+
     def parse(self, payload: bytes) -> dict[str, Any]:
         result: dict[str, Any] = {"satellite": "LASARSAT", "length": len(payload)}
 

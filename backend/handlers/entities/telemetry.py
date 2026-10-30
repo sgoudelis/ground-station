@@ -19,7 +19,7 @@ import asyncio
 
 from common import auth
 from library.inventory import get_inventory, publish_ready_artifacts
-from telemetry.reparse import preview_packet, reparse_packet
+from telemetry.reparse import preview_packet, reparse_packet, view_packet
 
 
 async def preview_telemetry(_sio, data, logger, _sid):
@@ -34,6 +34,19 @@ async def preview_telemetry(_sio, data, logger, _sid):
         logger.warning("Could not preview packet: %s", exc)
         return {"success": False, "error": str(exc)}
     # Previewing must not rebuild the library or publish a file-change event.
+    return {"success": True, "data": metadata}
+
+
+async def view_telemetry(_sio, data, logger, _sid):
+    request = data if isinstance(data, dict) else {}
+    url = request.get("url")
+    if not isinstance(url, str) or not url:
+        return {"success": False, "error": "Packet URL is required"}
+    try:
+        metadata = await asyncio.to_thread(view_packet, get_inventory().roots.backend, url)
+    except (OSError, ValueError) as exc:
+        logger.warning("Could not read packet telemetry: %s", exc)
+        return {"success": False, "error": str(exc)}
     return {"success": True, "data": metadata}
 
 
@@ -62,6 +75,7 @@ def register_handlers(registry):
     registry.register_batch(
         {
             "filebrowser.preview-telemetry": (preview_telemetry, "api_call"),
+            "filebrowser.view-telemetry": (view_telemetry, "api_call"),
             "filebrowser.reparse-telemetry": (reparse_telemetry, "api_call"),
         }
     )

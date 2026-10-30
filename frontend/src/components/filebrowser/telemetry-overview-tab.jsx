@@ -14,10 +14,8 @@ import {
     Typography,
     Divider,
     Chip,
-    Stack,
     useTheme,
 } from '@mui/material';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { getDecoderDisplay, ModulationType } from '../../constants/modulations';
 import { useUserTimeSettings } from '../../hooks/useUserTimeSettings.jsx';
 import { formatDateTime } from '../../utils/date-time.js';
@@ -64,7 +62,7 @@ function InfoRow({ label, value, mono = false }) {
                     fontWeight: 500,
                 }}
             >
-                {value || '-'}
+                {value ?? '-'}
             </Typography>
         </Box>
     );
@@ -72,12 +70,11 @@ function InfoRow({ label, value, mono = false }) {
 
 export default function OverviewTab({ metadata, file, telemetry, packet, ax25 }) {
     const { t } = useTranslation('filebrowser');
-    const theme = useTheme();
     const { timezone, locale } = useUserTimeSettings();
 
     // Format timestamp
     const formatTimestamp = (ts) => {
-        if (!ts) return '-';
+        if (ts == null) return '-';
         try {
             const dateValue = typeof ts === 'number' ? ts * 1000 : ts;
             return formatDateTime(dateValue, { timezone, locale });
@@ -98,15 +95,12 @@ export default function OverviewTab({ metadata, file, telemetry, packet, ax25 })
     const geoscan = decoderConfig.geoscan || {};
     const framingParams = decoderConfig.framing_params || {};
     const telemetryParser = telemetry.parser || '';
-    // Payload parsers retain the AX.25 result while extending the parser name.
-    const hasDecodedAx25 = telemetry.success &&
-        (telemetry.protocol === 'ax25' || telemetryParser === 'ax25' || telemetryParser.startsWith('ax25+'));
+    const protocol = telemetry.protocol || metadata.parse_context?.protocol || payloadProtocol || 'unknown';
+    const isGeoscan = framing === 'geoscan' && protocol === 'proprietary';
+    const isLora = protocol === 'lora' || decoder.type === ModulationType.LORA;
+    const hasEncapsulatedAx25 = Boolean(frame.source && frame.destination);
+    const headers = telemetry.headers?.csp || telemetry.headers?.ccsds_primary || {};
 
-    const isGeoscan = framing === 'geoscan' || payloadProtocol === 'proprietary';
-    const isLora = telemetry.protocol === 'lora' || payloadProtocol === 'lora' || decoder.type === ModulationType.LORA;
-    // Encapsulated AX.25 detection: show AX.25 frame whenever telemetry.frame carries
-    // source/destination, regardless of which payload parser produced values.
-    const hasEncapsulatedAx25 = Boolean((telemetry?.frame && telemetry.frame.source && telemetry.frame.destination));
 
 
     return (
@@ -133,21 +127,26 @@ export default function OverviewTab({ metadata, file, telemetry, packet, ax25 })
                             />
                             <InfoRow
                                 label={t('telemetry_overview_tab.delivered_payload_length', { defaultValue: 'Delivered Payload Length' })}
-                                value={`${telemetry.raw?.payload_length || packet.length_bytes || '-'} bytes`}
+                                value={`${telemetry.raw?.payload_length ?? packet.length_bytes ?? '-'} bytes`}
                             />
                             <InfoRow
                                 label={t('telemetry_overview_tab.pn9_descrambler', { defaultValue: 'PN9 Descrambler' })}
-                                value={geoscan.pn9_descrambled === false ? 'No' : 'Yes'}
+                                value={geoscan.pn9_descrambled == null ? 'Unknown' : geoscan.pn9_descrambled ? 'Yes' : 'No'}
                             />
                             <InfoRow
                                 label={t('telemetry_overview_tab.cc11xx_crc', { defaultValue: 'CC11xx CRC' })}
-                                value={(geoscan.cc11xx_crc || 'ok').toUpperCase()}
+                                value={(geoscan.cc11xx_crc || 'Unknown').toUpperCase()}
                             />
                             <InfoRow
                                 label={t('telemetry_overview_tab.syncword_threshold', { defaultValue: 'Syncword Threshold' })}
                                 value={`${geoscan.syncword_threshold ?? framingParams.syncword_threshold ?? 4}`}
                             />
                             <InfoRow label={t('telemetry_overview_tab.parser', { defaultValue: 'Parser' })} value={telemetryParser || 'proprietary'} />
+                        </InfoSection>
+                    ) : protocol !== 'ax25' ? (
+                        <InfoSection title={`${protocol === 'unknown' ? t('telemetry_overview_tab.unknown_protocol', {defaultValue: 'Unknown protocol'}) : protocol.toUpperCase()} ${t('telemetry_overview_tab.header_information', {defaultValue: 'Header Information'})}`}>
+                            <InfoRow label={t('telemetry_overview_tab.parser', {defaultValue: 'Parser'})} value={telemetry.parser_id || telemetryParser} />
+                            {Object.entries(headers).map(([key, value]) => <InfoRow key={key} label={key.replaceAll('_', ' ')} value={value} />)}
                         </InfoSection>
                     ) : (
                         <InfoSection title={t('telemetry_overview_tab.ax_25_frame_information', { defaultValue: 'AX.25 Frame Information' })}>
@@ -200,11 +199,11 @@ export default function OverviewTab({ metadata, file, telemetry, packet, ax25 })
                         />
                         <InfoRow
                             label={t('telemetry_overview_tab.total_length', { defaultValue: 'Total Length' })}
-                            value={`${packet.length_bytes || packet.length || '-'} bytes`}
+                            value={`${packet.length_bytes ?? packet.length ?? '-'} bytes`}
                         />
                         <InfoRow
                             label={t('telemetry_overview_tab.payload_length', { defaultValue: 'Payload Length' })}
-                            value={`${telemetry.raw?.payload_length || '-'} bytes`}
+                            value={`${telemetry.raw?.payload_length ?? '-'} bytes`}
                         />
                         <InfoRow
                             label={t('telemetry_overview_tab.session_id', { defaultValue: 'Session ID' })}
@@ -278,99 +277,15 @@ export default function OverviewTab({ metadata, file, telemetry, packet, ax25 })
                 </Box>
             </Box>
 
-            {/* Validation Status - Full Width */}
-            <InfoSection title={t('telemetry_overview_tab.validation', { defaultValue: 'Validation' })}>
-                <Stack spacing={1}>
-                    {/* Show validation info based on decoder type */}
-                    {isLora ? (
-                        <>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <CheckCircleIcon sx={{ color: decoder.crc_valid === true ? theme.palette.success.main : theme.palette.text.secondary, fontSize: 20 }} />
-                                <Typography variant="body2">
-                                    {decoder.crc_valid === true ? 'LoRa payload CRC valid' : decoder.crc_present === false ? 'No payload CRC — unchecked' : 'CRC validation unavailable'}
-                                </Typography>
-                            </Box>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <CheckCircleIcon sx={{ color: theme.palette.success.main, fontSize: 20 }} />
-                                <Typography variant="body2">
-                                    {t('telemetry_overview_tab.spreading_factor_sf', { defaultValue: 'Spreading Factor: SF' })}{decoder.spreading_factor || metadata.demodulator_parameters?.spreading_factor}
-                                </Typography>
-                            </Box>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <CheckCircleIcon sx={{ color: theme.palette.success.main, fontSize: 20 }} />
-                                <Typography variant="body2">
-                                    {t('telemetry_overview_tab.forward_error_correction_cr', { defaultValue: 'Forward Error Correction: CR' })} {decoder.coding_rate || metadata.decoder?.coding_rate || '4/5'}
-                                </Typography>
-                            </Box>
-                            {hasDecodedAx25 ? (
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                    <CheckCircleIcon sx={{ color: theme.palette.success.main, fontSize: 20 }} />
-                                    <Typography variant="body2">
-                                        {t('telemetry_overview_tab.ax_25_frame_decoded_successfully', { defaultValue: 'AX.25 frame decoded successfully' })}
-                                    </Typography>
-                                </Box>
-                            ) : null}
-                        </>
-                    ) : isGeoscan ? (
-                        <>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <CheckCircleIcon sx={{ color: theme.palette.success.main, fontSize: 20 }} />
-                                <Typography variant="body2">
-                                    {t('telemetry_overview_tab.cc11xx_crc_validated_by_geoscan_deframer', { defaultValue: 'CC11xx CRC validated by GEOSCAN deframer' })}
-                                </Typography>
-                            </Box>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <CheckCircleIcon sx={{ color: theme.palette.success.main, fontSize: 20 }} />
-                                <Typography variant="body2">
-                                    {t('telemetry_overview_tab.pn9_descrambling_applied', { defaultValue: 'PN9 descrambling applied' })}
-                                </Typography>
-                            </Box>
-                            {hasEncapsulatedAx25 && (
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                    <CheckCircleIcon sx={{ color: theme.palette.success.main, fontSize: 20 }} />
-                                    <Typography variant="body2">
-                                        {t('telemetry_overview_tab.encapsulated_ax_25_frame_decoded_successfully', { defaultValue: 'Encapsulated AX.25 frame decoded successfully' })}
-                                    </Typography>
-                                </Box>
-                            )}
-                        </>
-                    ) : (
-                        <>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <CheckCircleIcon sx={{ color: theme.palette.success.main, fontSize: 20 }} />
-                                <Typography variant="body2">
-                                    {t('telemetry_overview_tab.crc_16_validated_by_hdlc_deframer', { defaultValue: 'CRC-16 validated by HDLC deframer' })}
-                                </Typography>
-                            </Box>
-                            {hasDecodedAx25 ? (
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                    <CheckCircleIcon sx={{ color: theme.palette.success.main, fontSize: 20 }} />
-                                    <Typography variant="body2">
-                                        {t('telemetry_overview_tab.ax_25_callsigns_decoded_correctly', { defaultValue: 'AX.25 callsigns decoded correctly' })}
-                                    </Typography>
-                                </Box>
-                            ) : null}
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <CheckCircleIcon sx={{ color: theme.palette.success.main, fontSize: 20 }} />
-                                <Typography variant="body2">
-                                    {t('telemetry_overview_tab.packet_integrity_confirmed', { defaultValue: 'Packet integrity confirmed' })}
-                                </Typography>
-                            </Box>
-                        </>
-                    )}
-                </Stack>
-
-                <Box sx={{ mt: 2, p: 1.5, bgcolor: theme.palette.info.main + '30', borderRadius: 1, border: `1px solid ${theme.palette.info.main}60` }}>
-                    <Typography variant="caption" sx={{ color: theme.palette.info.light, fontWeight: 500 }}>
-                        {isLora ? (
-                            <>LoRa uses forward error correction. Packets with a failed payload CRC are discarded; packets without a payload CRC are retained as unchecked.</>
-                        ) : isGeoscan ? (
-                            <>{t('telemetry_overview_tab.geoscan_frames_include_ti_cc11xx_crc_and_pn9_scrambling_', { defaultValue: 'ℹ️ GEOSCAN frames include TI CC11xx CRC and PN9 scrambling. The configured frame size typically includes a 2-byte CC11xx CRC that is removed after validation.' })}</>
-                        ) : (
-                            <>{t('telemetry_overview_tab.all_decoded_packets_have_passed_crc_16_ccitt_validation_', { defaultValue: 'ℹ️ All decoded packets have passed CRC-16-CCITT validation. Invalid packets are automatically discarded by the HDLC deframer.' })}</>
-                        )}
-                    </Typography>
-                </Box>
+            <InfoSection title={t('telemetry_overview_tab.validation', {defaultValue: 'Validation'})}>
+                <InfoRow label={t('telemetry_overview_tab.envelope_status', {defaultValue: 'Packet structure'})}
+                    value={t(`telemetry_overview_tab.statuses.${telemetry.envelope_status}`, {defaultValue: telemetry.envelope_status || 'Unknown'})} />
+                <InfoRow label={t('telemetry_overview_tab.payload_status', {defaultValue: 'Packet contents'})}
+                    value={t(`telemetry_overview_tab.statuses.${telemetry.payload_status}`, {defaultValue: telemetry.payload_status || 'Unknown'})} />
+                {isLora && <InfoRow label="CRC" value={decoder.crc_valid === true
+                    ? t('telemetry_overview_tab.crc_valid', {defaultValue: 'Valid'})
+                    : t('telemetry_overview_tab.crc_unchecked', {defaultValue: 'Unchecked or unavailable'})} />}
+                {isGeoscan && <InfoRow label="CC11xx CRC" value={geoscan.cc11xx_crc || t('telemetry_overview_tab.unknown', {defaultValue: 'Unknown'})} />}
             </InfoSection>
 
             {/* File Information - Full Width */}

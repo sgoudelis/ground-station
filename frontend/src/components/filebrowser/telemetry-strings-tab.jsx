@@ -56,15 +56,9 @@ export default function StringsTab({ packet, telemetry }) {
     const { t } = useTranslation('filebrowser');
     const theme = useTheme();
 
-    // Get string analysis from backend
+    // All inspection tabs use the byte source selected in the dialog.
     const stringAnalysis = useMemo(() => {
-        // First check if backend provided analysis
-        if (telemetry?.analysis?.as_strings) {
-            return telemetry.analysis.as_strings;
-        }
-
-        // Fallback: do client-side analysis if no backend data
-        const hexString = packet?.hex || telemetry?.raw?.packet_hex || '';
+        const hexString = packet?.hex ?? telemetry?.raw?.packet_hex ?? '';
         if (!hexString) return null;
 
         // Convert hex to bytes

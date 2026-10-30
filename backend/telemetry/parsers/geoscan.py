@@ -86,6 +86,8 @@ def _select_spec(payload_len: int, frame_size: Optional[int]) -> str:
 class GeoscanParser:
     """Layout-driven parser for GEOSCAN payloads (see module docstring)."""
 
+    parser_id = "geoscan"
+
     def parse(
         self,
         payload: bytes,

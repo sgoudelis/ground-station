@@ -66,7 +66,7 @@ export default function Float32Tab({ packet, telemetry }) {
     const [showAll, setShowAll] = useState(false);
 
     // Get hex data
-    const hexString = packet?.hex || telemetry?.raw?.packet_hex || '';
+    const hexString = packet?.hex ?? telemetry?.raw?.packet_hex ?? '';
 
     // Parse and interpret as float32
     const floatValues = useMemo(() => {

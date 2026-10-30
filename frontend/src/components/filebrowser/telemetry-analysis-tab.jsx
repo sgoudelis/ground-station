@@ -63,8 +63,8 @@ export default function AnalysisTab({ packet, telemetry }) {
     const theme = useTheme();
 
     // Get hex data
-    const hexString = packet?.hex || telemetry?.raw?.packet_hex || '';
-    const payloadHex = telemetry?.data?.hex || hexString;
+    const hexString = packet?.hex ?? telemetry?.raw?.packet_hex ?? '';
+    const payloadHex = hexString;
 
     // Analyze payload
     const analysis = useMemo(() => {

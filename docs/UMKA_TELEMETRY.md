@@ -36,16 +36,18 @@ it must not be substituted for the satellite's subsystem clock.
 `BaseDecoder` saves the complete parser result in the `.bin` file's JSON metadata file
 under `metadata.telemetry`. The file browser, observation dialog and live packet
 drawer fetch that metadata and pass it to `TelemetryViewerDialog`.
-`TelemetryValuesTab` reads `metadata.telemetry.telemetry.messages` for USP packets,
-grouping engineering values by message with labels and units from `field_info`.
-Other satellites continue to use the existing `values` / `raw_fields` representation.
+`TelemetryValuesTab` reads `metadata.telemetry.payload.records`, grouping each
+message's engineering values with labels, units and clocks supplied by the
+backend. The same common records serve every satellite; historical USP
+`telemetry.messages` remains available as a compatibility field.
 File-transfer, terminal and acknowledgement messages are identified without
 interpreting their bytes as temperatures or voltages. Unsupported message bodies
 remain available in the Hex + ASCII tab.
 
 Previously recorded JSON metadata contains the result from the parser available at
-capture time. It must be regenerated to use a new parser; adding the parser does
-not silently rewrite historical files. Only the `telemetry` key needs replacement,
+capture time. Read-only viewing normalizes older saved results and can parse previously
+unsupported captures for display. Only an explicit reparse saves a new parser
+interpretation; adding a parser never silently rewrites historical files. Only the `telemetry` key needs replacement,
 using the original binary, `decoder_config.payload_protocol`, and framing hints.
 Keep the original metadata before doing this. The three locally imported October
 21/23 observations were refreshed this way during development.

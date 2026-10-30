@@ -50,3 +50,23 @@ describe('Telemetry overview link information', () => {
         expect(screen.queryByText('LoRa Frame Information')).not.toBeInTheDocument();
     });
 });
+
+describe('Validated packet structure', () => {
+    it.each(['csp', 'ccsds'])('shows %s headers without AX.25 labels', (protocol) => {
+        render(<OverviewTab metadata={{}} file={{filename: 'packet.bin'}} packet={{}} ax25={{}}
+            telemetry={{protocol, envelope_status: 'parsed', payload_status: 'unsupported',
+                headers: {[protocol === 'csp' ? 'csp' : 'ccsds_primary']: {version: 0, source: 7}}}} />);
+        expect(screen.getByText(`${protocol.toUpperCase()} Header Information`)).toBeInTheDocument();
+        expect(screen.getByText('0')).toBeInTheDocument();
+        expect(screen.queryByText('AX.25 Frame Information')).not.toBeInTheDocument();
+        expect(screen.getByText('unsupported')).toBeInTheDocument();
+    });
+
+    it('does not report a successful CRC when GEOSCAN metadata has no CRC fact', () => {
+        render(<OverviewTab metadata={{decoder_config: {framing: 'geoscan'}}}
+            file={{filename: 'packet.bin'}} packet={{}} ax25={{}}
+            telemetry={{protocol: 'proprietary', envelope_status: 'opaque', payload_status: 'decoded'}} />);
+        expect(screen.queryByText('OK')).not.toBeInTheDocument();
+        expect(screen.getByText('opaque')).toBeInTheDocument();
+    });
+});

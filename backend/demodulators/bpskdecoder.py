@@ -685,12 +685,6 @@ class BPSKDecoder(BaseDecoderProcess):
             "clock_recovery_limit": 0.005,
         }
 
-    def _get_payload_protocol(self):
-        """BPSK uses CCSDS for DOKA, AX.25 otherwise"""
-        if self.framing == FramingType.DOKA:
-            return "ccsds"
-        return "ax25"
-
     def _is_vfo_in_sdr_bandwidth(self, vfo_center, sdr_center, sdr_sample_rate):
         """
         Check if VFO center frequency is within SDR bandwidth (with small edge margin).

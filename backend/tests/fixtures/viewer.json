@@ -1,0 +1,2844 @@
+{
+  "real": {
+    "geoscan": {
+      "packet": {
+        "hex": "10984605bd42486b2d4aa10100004906b4c9b4bab0ca098c4b4a97e83dc3aa43714565c3cd45849f12bfebb84ebd6d31313f515edf3e0000000000003b12203af0b16fbceeb037bc"
+      },
+      "parse_context": {
+        "protocol": "proprietary",
+        "framing": "geoscan",
+        "satellite": "GEOSCAN-6",
+        "frame_size": 74,
+        "csp_version": 1,
+        "hdlc_flags": false
+      },
+      "telemetry": {
+        "protocol": "proprietary",
+        "parser": "proprietary+GeoscanParser",
+        "success": true,
+        "envelope_status": "opaque",
+        "diagnostics": [],
+        "raw": {
+          "packet_hex": "10984605bd42486b2d4aa10100004906b4c9b4bab0ca098c4b4a97e83dc3aa43714565c3cd45849f12bfebb84ebd6d31313f515edf3e0000000000003b12203af0b16fbceeb037bc",
+          "payload_hex": "10984605bd42486b2d4aa10100004906b4c9b4bab0ca098c4b4a97e83dc3aa43714565c3cd45849f12bfebb84ebd6d31313f515edf3e0000000000003b12203af0b16fbceeb037bc",
+          "payload_length": 72
+        },
+        "parser_id": "geoscan",
+        "schema_version": 1,
+        "parser_revision": 1,
+        "payload_status": "decoded",
+        "payload": {
+          "kind": "telemetry",
+          "status": "decoded",
+          "records": [
+            {
+              "id": "0",
+              "title": null,
+              "status": "decoded",
+              "message_id": null,
+              "source": null,
+              "destination": null,
+              "length": 72,
+              "error": null,
+              "warning": null,
+              "clocks": [
+                {
+                  "kind": "power_system",
+                  "value": 2965025993
+                }
+              ],
+              "groups": [
+                {
+                  "id": "power",
+                  "title": "Power system",
+                  "values": {
+                    "v_pack_v": 43.715,
+                    "v_cell_v": 15.848,
+                    "vbus_v": 0.0,
+                    "eps_current_platform_a": 19.34,
+                    "eps_current_solar_a": 38.730000000000004,
+                    "temp_bat1_c": 69,
+                    "temp_bat2_c": 101,
+                    "eps_mode_enum": 202
+                  },
+                  "field_info": {
+                    "eps_current_platform_a": {
+                      "label": "Platform current",
+                      "unit": "A",
+                      "order": 3
+                    },
+                    "eps_current_solar_a": {
+                      "label": "Solar current",
+                      "unit": "A",
+                      "order": 4
+                    },
+                    "eps_mode_enum": {
+                      "label": "Power system mode",
+                      "unit": "",
+                      "order": 9
+                    },
+                    "temp_bat1_c": {
+                      "label": "Battery 1 temperature",
+                      "unit": "\u00b0C",
+                      "order": 7
+                    },
+                    "temp_bat2_c": {
+                      "label": "Battery 2 temperature",
+                      "unit": "\u00b0C",
+                      "order": 8
+                    },
+                    "v_cell_v": {
+                      "label": "Battery cell voltage",
+                      "unit": "V",
+                      "order": 1
+                    },
+                    "v_pack_v": {
+                      "label": "Battery pack voltage",
+                      "unit": "V",
+                      "order": 0
+                    },
+                    "vbus_v": {
+                      "label": "Bus voltage",
+                      "unit": "V",
+                      "order": 2
+                    }
+                  }
+                },
+                {
+                  "id": "obc",
+                  "title": "Onboard computer",
+                  "values": {
+                    "obc_activity": 235,
+                    "gnss_sat_count": 49,
+                    "camera_media_files_count": 81,
+                    "temp_x_p_c": -72,
+                    "temp_x_n_c": 78,
+                    "temp_y_p_c": -67,
+                    "temp_y_n_c": 109
+                  },
+                  "field_info": {
+                    "camera_media_files_count": {
+                      "label": "Camera media file count",
+                      "unit": "",
+                      "order": 15
+                    },
+                    "gnss_sat_count": {
+                      "label": "GNSS satellite count",
+                      "unit": "",
+                      "order": 14
+                    },
+                    "obc_activity": {
+                      "label": "Onboard computer activity",
+                      "unit": "",
+                      "order": 12
+                    },
+                    "temp_x_n_c": {
+                      "label": "\u2212X panel temperature",
+                      "unit": "\u00b0C",
+                      "order": 29
+                    },
+                    "temp_x_p_c": {
+                      "label": "+X panel temperature",
+                      "unit": "\u00b0C",
+                      "order": 28
+                    },
+                    "temp_y_n_c": {
+                      "label": "\u2212Y panel temperature",
+                      "unit": "\u00b0C",
+                      "order": 31
+                    },
+                    "temp_y_p_c": {
+                      "label": "+Y panel temperature",
+                      "unit": "\u00b0C",
+                      "order": 30
+                    }
+                  }
+                },
+                {
+                  "id": "communications",
+                  "title": "Communications",
+                  "values": {
+                    "rssi_last_dbm": 18,
+                    "rssi_min_dbm": 32,
+                    "tx_packets_count": 177,
+                    "qso_received_count": 176
+                  },
+                  "field_info": {
+                    "qso_received_count": {
+                      "label": "Received QSO count",
+                      "unit": "",
+                      "order": 21
+                    },
+                    "rssi_last_dbm": {
+                      "label": "Last received signal strength",
+                      "unit": "dBm",
+                      "order": 18
+                    },
+                    "rssi_min_dbm": {
+                      "label": "Minimum received signal strength",
+                      "unit": "dBm",
+                      "order": 19
+                    },
+                    "tx_packets_count": {
+                      "label": "Transmitted packet count",
+                      "unit": "",
+                      "order": 20
+                    }
+                  }
+                }
+              ],
+              "raw_fields": {
+                "ax25_addresses_raw": "10984605bd42486b2d4aa1010000",
+                "ax25_control_raw": 73,
+                "ax25_pid_raw": 6,
+                "mayak_id_raw": 180,
+                "eps_time_unix_s_raw": 2965025993,
+                "eps_mode_enum_raw": 202,
+                "eps_reserve_22_raw": 9,
+                "eps_current_platform_a_raw": 19340,
+                "eps_current_solar_a_raw": 38730,
+                "v_cell_v_raw": 15848,
+                "v_pack_v_raw": 43715,
+                "eps_reserve_bitfield_31_raw": 28995,
+                "temp_bat1_c_raw": 69,
+                "temp_bat2_c_raw": 101,
+                "eps_reserve_35_raw": 52675,
+                "eps_reserve_bitfield_37_raw": 69,
+                "eps_reserve_38_raw": 40836,
+                "obc_reserve_40_raw": 48914,
+                "obc_activity_raw": 235,
+                "temp_x_p_c_raw": -72,
+                "temp_x_n_c_raw": 78,
+                "temp_y_p_c_raw": -67,
+                "temp_y_n_c_raw": 109,
+                "gnss_sat_count_raw": 49,
+                "obc_reserve_48_enum_raw": 49,
+                "obc_reserve_49_raw": 63,
+                "camera_media_files_count_raw": 81,
+                "obc_reserve_51_enum_raw": 94,
+                "obc_reserve_52_4b_raw": 16095,
+                "commu_reserve_56_enum_raw": 0,
+                "vbus_v_raw": 0,
+                "commu_reserve_59_raw": 15104,
+                "rssi_last_dbm_raw": 18,
+                "rssi_min_dbm_raw": 32,
+                "commu_reserve_63_raw": 58,
+                "commu_reserve_64_raw": 240,
+                "tx_packets_count_raw": 177,
+                "commu_reserve_66_raw": 111,
+                "commu_reserve_67_enum_raw": 188,
+                "commu_reserve_68_signed_raw": -18,
+                "qso_received_count_raw": 176,
+                "commu_reserve_70_raw": 48183,
+                "ax25_control": 73,
+                "ax25_pid": 6,
+                "mayak_id": 180
+              },
+              "beacon_id": 180
+            }
+          ],
+          "satellite": "GEOSCAN-6",
+          "beacon_type": null,
+          "aprs": null,
+          "text": null
+        }
+      }
+    },
+    "uwe4": {
+      "packet": {
+        "hex": "7e888860aaae8a6088a060aaae90e103f025821f0f020101000e2e1f0005af2305ad9f4ea10100f00000031f09760000047f0b5e0b548a006810ab001c102a051100121200141b108b2fec7e"
+      },
+      "parse_context": {
+        "protocol": "ax25",
+        "framing": "ax25",
+        "satellite": null,
+        "frame_size": null,
+        "csp_version": 1,
+        "hdlc_flags": true
+      },
+      "telemetry": {
+        "protocol": "ax25",
+        "parser": "ax25+Uwe4Parser",
+        "success": true,
+        "envelope_status": "parsed",
+        "diagnostics": [],
+        "frame": {
+          "destination": "DD0UWE-0",
+          "source": "DP0UWH-0",
+          "control": "0x03",
+          "pid": "0xf0",
+          "repeaters": null
+        },
+        "raw": {
+          "packet_hex": "7e888860aaae8a6088a060aaae90e103f025821f0f020101000e2e1f0005af2305ad9f4ea10100f00000031f09760000047f0b5e0b548a006810ab001c102a051100121200141b108b2fec7e",
+          "payload_hex": "25821f0f020101000e2e1f0005af2305ad9f4ea10100f00000031f09760000047f0b5e0b548a006810ab001c102a051100121200141b108b2fec",
+          "payload_length": 58
+        },
+        "parser_id": "uwe4",
+        "schema_version": 1,
+        "parser_revision": 1,
+        "payload_status": "decoded",
+        "payload": {
+          "kind": "telemetry",
+          "status": "decoded",
+          "records": [
+            {
+              "id": "0",
+              "title": null,
+              "status": "decoded",
+              "message_id": null,
+              "source": null,
+              "destination": null,
+              "length": 58,
+              "error": null,
+              "warning": null,
+              "clocks": [],
+              "groups": [
+                {
+                  "id": "battery_a",
+                  "title": "Battery A",
+                  "values": {
+                    "batt_a_voltage_v": 4.2,
+                    "batt_a_current_ma": 138,
+                    "batt_a_soc_pct": 94,
+                    "batt_a_temp_c": 11
+                  },
+                  "field_info": {
+                    "batt_a_current_ma": {
+                      "label": "Battery A current",
+                      "unit": "mA",
+                      "order": 35
+                    },
+                    "batt_a_soc_pct": {
+                      "label": "Battery A state of charge",
+                      "unit": "%",
+                      "order": 36
+                    },
+                    "batt_a_temp_c": {
+                      "label": "Battery A temperature",
+                      "unit": "\u00b0C",
+                      "order": 37
+                    },
+                    "batt_a_voltage_v": {
+                      "label": "Battery A voltage",
+                      "unit": "V",
+                      "order": 34
+                    }
+                  }
+                },
+                {
+                  "id": "battery_b",
+                  "title": "Battery B",
+                  "values": {
+                    "batt_b_voltage_v": 4.124,
+                    "batt_b_current_ma": 171,
+                    "batt_b_soc_pct": 84,
+                    "batt_b_temp_c": 11
+                  },
+                  "field_info": {
+                    "batt_b_current_ma": {
+                      "label": "Battery B current",
+                      "unit": "mA",
+                      "order": 39
+                    },
+                    "batt_b_soc_pct": {
+                      "label": "Battery B state of charge",
+                      "unit": "%",
+                      "order": 40
+                    },
+                    "batt_b_temp_c": {
+                      "label": "Battery B temperature",
+                      "unit": "\u00b0C",
+                      "order": 41
+                    },
+                    "batt_b_voltage_v": {
+                      "label": "Battery B voltage",
+                      "unit": "V",
+                      "order": 38
+                    }
+                  }
+                },
+                {
+                  "id": "status",
+                  "title": "Satellite status",
+                  "values": {
+                    "uptime_s": 30217,
+                    "power_consumption_mw": 1322,
+                    "obc_temp_c": 17
+                  },
+                  "field_info": {
+                    "obc_temp_c": {
+                      "label": "Onboard computer temperature",
+                      "unit": "\u00b0C",
+                      "order": 24
+                    },
+                    "power_consumption_mw": {
+                      "label": "Power consumption",
+                      "unit": "mW",
+                      "order": 23
+                    },
+                    "uptime_s": {
+                      "label": "Uptime",
+                      "unit": "s",
+                      "order": 22
+                    }
+                  }
+                },
+                {
+                  "id": "panels",
+                  "title": "Panel temperatures",
+                  "values": {
+                    "panel_pos_x_temp_c": 0,
+                    "panel_neg_x_temp_c": 18,
+                    "panel_pos_y_temp_c": 18,
+                    "panel_neg_y_temp_c": 0,
+                    "panel_pos_z_temp_c": 20,
+                    "panel_neg_z_temp_c": 27
+                  },
+                  "field_info": {
+                    "panel_neg_x_temp_c": {
+                      "label": "\u2212X panel temperature",
+                      "unit": "\u00b0C",
+                      "order": 43
+                    },
+                    "panel_neg_y_temp_c": {
+                      "label": "\u2212Y panel temperature",
+                      "unit": "\u00b0C",
+                      "order": 45
+                    },
+                    "panel_neg_z_temp_c": {
+                      "label": "\u2212Z panel temperature",
+                      "unit": "\u00b0C",
+                      "order": 47
+                    },
+                    "panel_pos_x_temp_c": {
+                      "label": "+X panel temperature",
+                      "unit": "\u00b0C",
+                      "order": 42
+                    },
+                    "panel_pos_y_temp_c": {
+                      "label": "+Y panel temperature",
+                      "unit": "\u00b0C",
+                      "order": 44
+                    },
+                    "panel_pos_z_temp_c": {
+                      "label": "+Z panel temperature",
+                      "unit": "\u00b0C",
+                      "order": 46
+                    }
+                  }
+                },
+                {
+                  "id": "communications",
+                  "title": "Communications",
+                  "values": {
+                    "beacon_rate_s": 60.0,
+                    "freq_khz": 435600
+                  },
+                  "field_info": {
+                    "beacon_rate_s": {
+                      "label": "Beacon interval",
+                      "unit": "s",
+                      "order": 25
+                    },
+                    "freq_khz": {
+                      "label": "Downlink frequency",
+                      "unit": "kHz",
+                      "order": 26
+                    }
+                  }
+                }
+              ],
+              "raw_fields": {
+                "flags1_raw": 37,
+                "flags2_raw": 130,
+                "packet_id_raw": 3871,
+                "fm_system_id_raw": 2,
+                "fm_subsystem_id_raw": 1,
+                "to_system_id_raw": 1,
+                "to_subsystem_id_raw": 0,
+                "api_raw": 14,
+                "payload_size_raw": 46,
+                "command_raw": 31,
+                "var_id_raw": 1280,
+                "typeandlength_raw": 9135,
+                "timestamp_raw": [
+                  5,
+                  173,
+                  159,
+                  78,
+                  161,
+                  1
+                ],
+                "beacon_rate_raw": 61440,
+                "vals_out_of_range_raw": 7939,
+                "uptime_raw": 30217,
+                "subsystem_status_raw": 32516,
+                "batt_a_temp_raw": 11,
+                "batt_a_soc_raw": 94,
+                "batt_b_temp_raw": 11,
+                "batt_b_soc_raw": 84,
+                "batt_a_current_raw": 138,
+                "batt_a_voltage_raw": 4200,
+                "batt_b_current_raw": 171,
+                "batt_b_voltage_raw": 4124,
+                "power_consumption_raw": 1322,
+                "obc_temp_raw": 17,
+                "panel_pos_x_temp_raw": 0,
+                "panel_neg_x_temp_raw": 18,
+                "panel_pos_y_temp_raw": 18,
+                "panel_neg_y_temp_raw": 0,
+                "panel_pos_z_temp_raw": 20,
+                "panel_neg_z_temp_raw": 27,
+                "freq_raw": 35600,
+                "crc_raw": 60463,
+                "api": 14,
+                "packet_id": 3871,
+                "payload_size": 46
+              },
+              "beacon_id": null
+            }
+          ],
+          "satellite": "UWE-4",
+          "beacon_type": null,
+          "aprs": null,
+          "text": null
+        }
+      }
+    },
+    "umka": {
+      "packet": {
+        "hex": "7ea46688888c4060a4a66860a6406300f046420200010019000402ff772113250e6bb4db6ad6b20000802500002800301f0021de040001002e000b0007000500010000000100dbff0000260000000000db01ce01a901db0100200000281f04b30000c1ae955aef047e"
+      },
+      "parse_context": {
+        "protocol": "ax25",
+        "framing": "usp",
+        "satellite": null,
+        "frame_size": null,
+        "csp_version": 1,
+        "hdlc_flags": true
+      },
+      "telemetry": {
+        "protocol": "ax25",
+        "parser": "ax25+USPParser",
+        "success": true,
+        "envelope_status": "parsed",
+        "diagnostics": [],
+        "frame": {
+          "destination": "R3DDF-0",
+          "source": "RS40S-1",
+          "control": "0x00",
+          "pid": "0xf0",
+          "repeaters": null
+        },
+        "raw": {
+          "packet_hex": "7ea46688888c4060a4a66860a6406300f046420200010019000402ff772113250e6bb4db6ad6b20000802500002800301f0021de040001002e000b0007000500010000000100dbff0000260000000000db01ce01a901db0100200000281f04b30000c1ae955aef047e",
+          "payload_hex": "46420200010019000402ff772113250e6bb4db6ad6b20000802500002800301f0021de040001002e000b0007000500010000000100dbff0000260000000000db01ce01a901db0100200000281f04b30000c1ae955aef04",
+          "payload_length": 87
+        },
+        "parser_id": "usp",
+        "schema_version": 1,
+        "parser_revision": 1,
+        "payload_status": "decoded",
+        "payload": {
+          "kind": "telemetry",
+          "status": "decoded",
+          "records": [
+            {
+              "id": "0",
+              "title": "UHF radio beacon",
+              "status": "decoded",
+              "message_id": "0x4246",
+              "source": 2,
+              "destination": 1,
+              "length": 25,
+              "error": null,
+              "warning": null,
+              "clocks": [
+                {
+                  "kind": "spacecraft",
+                  "label": "Radio time (UTC)",
+                  "value": "2026-10-23T19:24:27+00:00"
+                }
+              ],
+              "groups": [
+                {
+                  "id": "values",
+                  "title": "Engineering Values",
+                  "values": {
+                    "amplifier_temperature": 4,
+                    "radio_temperature": 2,
+                    "received_signal_strength": -255,
+                    "idle_signal_strength": -119,
+                    "forward_power": 33,
+                    "reflected_power": 19,
+                    "reset_count": 37,
+                    "radio_flags": 14,
+                    "uptime": 45782,
+                    "receive_bitrate": 9600,
+                    "current": 40,
+                    "input_voltage": 7.984,
+                    "active_schedules": 0,
+                    "reset_during_schedule": false,
+                    "backup_schedule_active": false
+                  },
+                  "field_info": {
+                    "amplifier_temperature": {
+                      "label": "Amplifier temperature",
+                      "unit": "\u00b0C",
+                      "order": 48
+                    },
+                    "radio_temperature": {
+                      "label": "Radio temperature",
+                      "unit": "\u00b0C",
+                      "order": 48
+                    },
+                    "received_signal_strength": {
+                      "label": "Received signal strength",
+                      "unit": "dBm",
+                      "order": 48
+                    },
+                    "idle_signal_strength": {
+                      "label": "Idle signal strength",
+                      "unit": "dBm",
+                      "order": 48
+                    },
+                    "forward_power": {
+                      "label": "Forward RF power",
+                      "unit": "dBm",
+                      "order": 48
+                    },
+                    "reflected_power": {
+                      "label": "Reflected RF power",
+                      "unit": "dBm",
+                      "order": 48
+                    },
+                    "reset_count": {
+                      "label": "Radio reset count",
+                      "unit": "",
+                      "order": 48
+                    },
+                    "radio_flags": {
+                      "label": "Radio flags",
+                      "unit": "",
+                      "order": 48
+                    },
+                    "uptime": {
+                      "label": "Radio uptime",
+                      "unit": "s",
+                      "order": 48
+                    },
+                    "receive_bitrate": {
+                      "label": "Receive bitrate",
+                      "unit": "bit/s",
+                      "order": 48
+                    },
+                    "current": {
+                      "label": "Radio current",
+                      "unit": "mA",
+                      "order": 48
+                    },
+                    "input_voltage": {
+                      "label": "Radio input voltage",
+                      "unit": "V",
+                      "order": 48
+                    },
+                    "time_utc": {
+                      "label": "Radio time (UTC)",
+                      "unit": "",
+                      "order": 48
+                    },
+                    "active_schedules": {
+                      "label": "Active schedules",
+                      "unit": "",
+                      "order": 48
+                    },
+                    "reset_during_schedule": {
+                      "label": "Reset during schedule execution",
+                      "unit": "",
+                      "order": 48
+                    },
+                    "backup_schedule_active": {
+                      "label": "Backup schedule active",
+                      "unit": "",
+                      "order": 48
+                    }
+                  }
+                }
+              ],
+              "raw_fields": {
+                "amplifier_temperature": 4,
+                "radio_temperature": 2,
+                "received_signal_strength": 255,
+                "idle_signal_strength": 119,
+                "forward_power": 33,
+                "reflected_power": 19,
+                "reset_count": 37,
+                "radio_flags": 14,
+                "time_unix_s": 1792783467,
+                "uptime": 45782,
+                "receive_bitrate": 9600,
+                "current": 40,
+                "input_voltage": 7984,
+                "schedule_flags": 0
+              },
+              "beacon_id": null
+            },
+            {
+              "id": "1",
+              "title": "Power system telemetry",
+              "status": "decoded",
+              "message_id": "0xDE21",
+              "source": 4,
+              "destination": 1,
+              "length": 46,
+              "error": null,
+              "warning": null,
+              "clocks": [
+                {
+                  "kind": "spacecraft",
+                  "label": "Power system time (UTC)",
+                  "value": "2018-02-27T19:17:21+00:00"
+                }
+              ],
+              "groups": [
+                {
+                  "id": "values",
+                  "title": "Engineering Values",
+                  "values": {
+                    "panel_voltage_1": 0.011,
+                    "panel_voltage_2": 0.007,
+                    "panel_voltage_3": 0.005,
+                    "panel_current_1": 1,
+                    "panel_current_2": 0,
+                    "panel_current_3": 1,
+                    "battery_current": -37,
+                    "channel_current_1": 0,
+                    "channel_current_2": 38,
+                    "channel_current_3": 0,
+                    "channel_current_4": 0,
+                    "battery_temperature_1": 4.75,
+                    "battery_temperature_2": 4.62,
+                    "battery_temperature_3": 4.25,
+                    "battery_temperature_4": 4.75,
+                    "battery_voltage": 7.976,
+                    "record_id": 45828,
+                    "reset_count": 239,
+                    "reset_reason": 4,
+                    "battery_temperature_low": false,
+                    "battery_temperature_high": false,
+                    "heater_1_on": false,
+                    "heater_2_on": false,
+                    "heater_1_manual": false,
+                    "heater_2_manual": false,
+                    "battery_voltage_low": false,
+                    "battery_voltage_critical": false,
+                    "channel_1_fault": false,
+                    "channel_2_fault": false,
+                    "channel_3_fault": false,
+                    "channel_4_fault": false,
+                    "channel_1_on": false,
+                    "channel_2_on": true,
+                    "channel_3_on": false,
+                    "channel_4_on": false,
+                    "charger_connected": false,
+                    "power_switch_fault": false,
+                    "aux_channel_1_on": false,
+                    "aux_channel_2_on": false,
+                    "aux_channel_3_on": false
+                  },
+                  "field_info": {
+                    "panel_voltage_1": {
+                      "label": "Solar panel 1 voltage",
+                      "unit": "V",
+                      "order": 48
+                    },
+                    "panel_voltage_2": {
+                      "label": "Solar panel 2 voltage",
+                      "unit": "V",
+                      "order": 48
+                    },
+                    "panel_voltage_3": {
+                      "label": "Solar panel 3 voltage",
+                      "unit": "V",
+                      "order": 48
+                    },
+                    "panel_current_1": {
+                      "label": "Solar panel 1 current",
+                      "unit": "mA",
+                      "order": 48
+                    },
+                    "panel_current_2": {
+                      "label": "Solar panel 2 current",
+                      "unit": "mA",
+                      "order": 48
+                    },
+                    "panel_current_3": {
+                      "label": "Solar panel 3 current",
+                      "unit": "mA",
+                      "order": 48
+                    },
+                    "battery_current": {
+                      "label": "Battery current",
+                      "unit": "mA",
+                      "order": 48
+                    },
+                    "channel_current_1": {
+                      "label": "Output channel 1 current",
+                      "unit": "mA",
+                      "order": 48
+                    },
+                    "channel_current_2": {
+                      "label": "Output channel 2 current",
+                      "unit": "mA",
+                      "order": 48
+                    },
+                    "channel_current_3": {
+                      "label": "Output channel 3 current",
+                      "unit": "mA",
+                      "order": 48
+                    },
+                    "channel_current_4": {
+                      "label": "Output channel 4 current",
+                      "unit": "mA",
+                      "order": 48
+                    },
+                    "battery_temperature_1": {
+                      "label": "Battery temperature 1",
+                      "unit": "\u00b0C",
+                      "order": 48
+                    },
+                    "battery_temperature_2": {
+                      "label": "Battery temperature 2",
+                      "unit": "\u00b0C",
+                      "order": 48
+                    },
+                    "battery_temperature_3": {
+                      "label": "Battery temperature 3",
+                      "unit": "\u00b0C",
+                      "order": 48
+                    },
+                    "battery_temperature_4": {
+                      "label": "Battery temperature 4",
+                      "unit": "\u00b0C",
+                      "order": 48
+                    },
+                    "battery_voltage": {
+                      "label": "Battery voltage",
+                      "unit": "V",
+                      "order": 48
+                    },
+                    "record_id": {
+                      "label": "Power telemetry sequence",
+                      "unit": "",
+                      "order": 48
+                    },
+                    "reset_count": {
+                      "label": "Power system reset count",
+                      "unit": "",
+                      "order": 48
+                    },
+                    "reset_reason": {
+                      "label": "Power system reset reason",
+                      "unit": "",
+                      "order": 48
+                    },
+                    "time_utc": {
+                      "label": "Power system time (UTC)",
+                      "unit": "",
+                      "order": 48
+                    },
+                    "battery_temperature_low": {
+                      "label": "Battery temperature below minimum",
+                      "unit": "",
+                      "order": 48
+                    },
+                    "battery_temperature_high": {
+                      "label": "Battery temperature above maximum",
+                      "unit": "",
+                      "order": 48
+                    },
+                    "heater_1_on": {
+                      "label": "Battery heater 1 on",
+                      "unit": "",
+                      "order": 48
+                    },
+                    "heater_2_on": {
+                      "label": "Battery heater 2 on",
+                      "unit": "",
+                      "order": 48
+                    },
+                    "heater_1_manual": {
+                      "label": "Battery heater 1 manual mode",
+                      "unit": "",
+                      "order": 48
+                    },
+                    "heater_2_manual": {
+                      "label": "Battery heater 2 manual mode",
+                      "unit": "",
+                      "order": 48
+                    },
+                    "battery_voltage_low": {
+                      "label": "Battery voltage below minimum",
+                      "unit": "",
+                      "order": 48
+                    },
+                    "battery_voltage_critical": {
+                      "label": "Battery voltage critical",
+                      "unit": "",
+                      "order": 48
+                    },
+                    "channel_1_fault": {
+                      "label": "Output channel 1 current limit/fault",
+                      "unit": "",
+                      "order": 48
+                    },
+                    "channel_2_fault": {
+                      "label": "Output channel 2 current limit/fault",
+                      "unit": "",
+                      "order": 48
+                    },
+                    "channel_3_fault": {
+                      "label": "Output channel 3 current limit/fault",
+                      "unit": "",
+                      "order": 48
+                    },
+                    "channel_4_fault": {
+                      "label": "Output channel 4 current limit/fault",
+                      "unit": "",
+                      "order": 48
+                    },
+                    "channel_1_on": {
+                      "label": "Output channel 1 on",
+                      "unit": "",
+                      "order": 48
+                    },
+                    "channel_2_on": {
+                      "label": "Output channel 2 on",
+                      "unit": "",
+                      "order": 48
+                    },
+                    "channel_3_on": {
+                      "label": "Output channel 3 on",
+                      "unit": "",
+                      "order": 48
+                    },
+                    "channel_4_on": {
+                      "label": "Output channel 4 on",
+                      "unit": "",
+                      "order": 48
+                    },
+                    "charger_connected": {
+                      "label": "Charger connected",
+                      "unit": "",
+                      "order": 48
+                    },
+                    "power_switch_fault": {
+                      "label": "Power switch fault",
+                      "unit": "",
+                      "order": 48
+                    },
+                    "aux_channel_1_on": {
+                      "label": "Auxiliary channel 1 on",
+                      "unit": "",
+                      "order": 48
+                    },
+                    "aux_channel_2_on": {
+                      "label": "Auxiliary channel 2 on",
+                      "unit": "",
+                      "order": 48
+                    },
+                    "aux_channel_3_on": {
+                      "label": "Auxiliary channel 3 on",
+                      "unit": "",
+                      "order": 48
+                    }
+                  }
+                }
+              ],
+              "raw_fields": {
+                "panel_voltage_1": 11,
+                "panel_voltage_2": 7,
+                "panel_voltage_3": 5,
+                "panel_current_1": 1,
+                "panel_current_2": 0,
+                "panel_current_3": 1,
+                "battery_current": -37,
+                "channel_current_1": 0,
+                "channel_current_2": 38,
+                "channel_current_3": 0,
+                "channel_current_4": 0,
+                "battery_temperature_1": 475,
+                "battery_temperature_2": 462,
+                "battery_temperature_3": 425,
+                "battery_temperature_4": 475,
+                "power_flags": 8192,
+                "battery_voltage": 7976,
+                "record_id": 45828,
+                "time_unix_s": 1519759041,
+                "reset_count": 239,
+                "reset_reason": 4
+              },
+              "beacon_id": null
+            }
+          ],
+          "satellite": null,
+          "beacon_type": null,
+          "aprs": null,
+          "text": null
+        }
+      }
+    },
+    "tianqi": {
+      "packet": {
+        "hex": "ebf0e8109887ac123000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "parse_context": {
+        "protocol": "lora",
+        "framing": "lora",
+        "satellite": "Tianqi-39",
+        "frame_size": null,
+        "csp_version": 1,
+        "hdlc_flags": false
+      },
+      "telemetry": {
+        "protocol": "lora",
+        "parser": "lora+TianqiParser",
+        "success": true,
+        "envelope_status": "opaque",
+        "diagnostics": [],
+        "raw": {
+          "packet_hex": "ebf0e8109887ac123000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+          "payload_hex": "ebf0e8109887ac123000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+          "payload_length": 100
+        },
+        "parser_id": "tianqi",
+        "schema_version": 1,
+        "parser_revision": 1,
+        "payload_status": "decoded",
+        "payload": {
+          "kind": "telemetry",
+          "status": "decoded",
+          "records": [
+            {
+              "id": "0",
+              "title": null,
+              "status": "decoded",
+              "message_id": null,
+              "source": null,
+              "destination": null,
+              "length": 100,
+              "error": null,
+              "warning": null,
+              "clocks": [
+                {
+                  "kind": "spacecraft",
+                  "value": 1793196460
+                }
+              ],
+              "groups": [
+                {
+                  "id": "values",
+                  "title": "Engineering Values",
+                  "values": {
+                    "msg_type_id": 240,
+                    "sat_id": 18,
+                    "net_id": 235
+                  },
+                  "field_info": {
+                    "msg_type_id": {
+                      "label": "Message type",
+                      "unit": "",
+                      "order": 48
+                    },
+                    "sat_id": {
+                      "label": "Fleet satellite identifier",
+                      "unit": "",
+                      "order": 48
+                    },
+                    "net_id": {
+                      "label": "Network identifier",
+                      "unit": "",
+                      "order": 48
+                    }
+                  }
+                }
+              ],
+              "raw_fields": {
+                "net_id_raw": 235,
+                "msg_type_id_raw": 240,
+                "head_unk_raw": 232,
+                "timestamp_raw": 278431660,
+                "sat_id_raw": 18,
+                "status_unk_raw": 48,
+                "payload_data_raw": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+              },
+              "beacon_id": null
+            }
+          ],
+          "satellite": "Tianqi",
+          "beacon_type": null,
+          "aprs": null,
+          "text": null
+        }
+      }
+    },
+    "lasarsat0": {
+      "packet": {
+        "hex": "7e86a240404040609e966098a6a46103f0444f532c38302c302c302c302c2d3336322c313630322c2d3132312c313137302c3333362c33312c3132302c3132302c3131392c3131352c3136382c313635007e"
+      },
+      "parse_context": {
+        "protocol": "ax25",
+        "framing": "ax25",
+        "satellite": "LASARSAT",
+        "frame_size": null,
+        "csp_version": 1,
+        "hdlc_flags": true
+      },
+      "telemetry": {
+        "protocol": "ax25",
+        "parser": "ax25+LasarsatAx25Parser",
+        "success": true,
+        "envelope_status": "parsed",
+        "diagnostics": [],
+        "frame": {
+          "destination": "CQ-0",
+          "source": "OK0LSR-0",
+          "control": "0x03",
+          "pid": "0xf0",
+          "repeaters": null
+        },
+        "raw": {
+          "packet_hex": "7e86a240404040609e966098a6a46103f0444f532c38302c302c302c302c2d3336322c313630322c2d3132312c313137302c3333362c33312c3132302c3132302c3131392c3131352c3136382c313635007e",
+          "payload_hex": "444f532c38302c302c302c302c2d3336322c313630322c2d3132312c313137302c3333362c33312c3132302c3132302c3131392c3131352c3136382c31363500",
+          "payload_length": 64
+        },
+        "parser_id": "lasarsat",
+        "schema_version": 1,
+        "parser_revision": 1,
+        "payload_status": "decoded",
+        "payload": {
+          "kind": "telemetry",
+          "status": "decoded",
+          "records": [
+            {
+              "id": "0",
+              "title": null,
+              "status": "decoded",
+              "message_id": null,
+              "source": null,
+              "destination": null,
+              "length": 64,
+              "error": null,
+              "warning": null,
+              "clocks": [],
+              "groups": [
+                {
+                  "id": "power",
+                  "title": "Power system",
+                  "values": {
+                    "dos_bus_cur": 115,
+                    "dos_bus_vol": 168
+                  },
+                  "field_info": {
+                    "dos_bus_cur": {
+                      "label": "Bus current",
+                      "unit": "",
+                      "order": 13,
+                      "group": "power",
+                      "calibrated": false
+                    },
+                    "dos_bus_vol": {
+                      "label": "Bus voltage",
+                      "unit": "",
+                      "order": 14,
+                      "group": "power",
+                      "calibrated": false
+                    }
+                  }
+                },
+                {
+                  "id": "temperatures",
+                  "title": "Temperatures",
+                  "values": {
+                    "dos_gyr_t": 120,
+                    "dos_mag_t": 120
+                  },
+                  "field_info": {
+                    "dos_gyr_t": {
+                      "label": "Gyroscope temperature",
+                      "unit": "",
+                      "order": 10,
+                      "group": "temperatures",
+                      "calibrated": false
+                    },
+                    "dos_mag_t": {
+                      "label": "Magnetometer temperature",
+                      "unit": "",
+                      "order": 11,
+                      "group": "temperatures",
+                      "calibrated": false
+                    }
+                  }
+                },
+                {
+                  "id": "magnetometer",
+                  "title": "Magnetometer",
+                  "values": {
+                    "dos_mag_x": -362,
+                    "dos_mag_y": 1602,
+                    "dos_mag_z": -121
+                  },
+                  "field_info": {
+                    "dos_mag_x": {
+                      "label": "X reading",
+                      "unit": "",
+                      "order": 4,
+                      "group": "magnetometer",
+                      "calibrated": false
+                    },
+                    "dos_mag_y": {
+                      "label": "Y reading",
+                      "unit": "",
+                      "order": 5,
+                      "group": "magnetometer",
+                      "calibrated": false
+                    },
+                    "dos_mag_z": {
+                      "label": "Z reading",
+                      "unit": "",
+                      "order": 6,
+                      "group": "magnetometer",
+                      "calibrated": false
+                    }
+                  }
+                },
+                {
+                  "id": "gyroscope",
+                  "title": "Gyroscope",
+                  "values": {
+                    "dos_gyr_x": 0,
+                    "dos_gyr_y": 0,
+                    "dos_gyr_z": 0
+                  },
+                  "field_info": {
+                    "dos_gyr_x": {
+                      "label": "X reading",
+                      "unit": "",
+                      "order": 1,
+                      "group": "gyroscope",
+                      "calibrated": false
+                    },
+                    "dos_gyr_y": {
+                      "label": "Y reading",
+                      "unit": "",
+                      "order": 2,
+                      "group": "gyroscope",
+                      "calibrated": false
+                    },
+                    "dos_gyr_z": {
+                      "label": "Z reading",
+                      "unit": "",
+                      "order": 3,
+                      "group": "gyroscope",
+                      "calibrated": false
+                    }
+                  }
+                },
+                {
+                  "id": "payload",
+                  "title": "Payload",
+                  "values": {
+                    "dos_mode": 80,
+                    "dos_plasma": 1170,
+                    "dos_phd": 336,
+                    "dos_dozi": 31,
+                    "dos_lppa": 119,
+                    "dos_uptime": 165
+                  },
+                  "field_info": {
+                    "dos_mode": {
+                      "label": "Mode code",
+                      "unit": "",
+                      "order": 0,
+                      "group": "payload"
+                    },
+                    "dos_plasma": {
+                      "label": "Plasma reading",
+                      "unit": "",
+                      "order": 7,
+                      "group": "payload",
+                      "calibrated": false
+                    },
+                    "dos_phd": {
+                      "label": "PHD reading",
+                      "unit": "",
+                      "order": 8,
+                      "group": "payload",
+                      "calibrated": false
+                    },
+                    "dos_dozi": {
+                      "label": "DOZI reading",
+                      "unit": "",
+                      "order": 9,
+                      "group": "payload",
+                      "calibrated": false
+                    },
+                    "dos_lppa": {
+                      "label": "LPPA reading",
+                      "unit": "",
+                      "order": 12,
+                      "group": "payload",
+                      "calibrated": false
+                    },
+                    "dos_uptime": {
+                      "label": "Uptime",
+                      "unit": "",
+                      "order": 15,
+                      "group": "payload",
+                      "calibrated": false
+                    }
+                  }
+                }
+              ],
+              "raw_fields": {
+                "dos_mode": "80",
+                "dos_gyr_x": "0",
+                "dos_gyr_y": "0",
+                "dos_gyr_z": "0",
+                "dos_mag_x": "-362",
+                "dos_mag_y": "1602",
+                "dos_mag_z": "-121",
+                "dos_plasma": "1170",
+                "dos_phd": "336",
+                "dos_dozi": "31",
+                "dos_gyr_t": "120",
+                "dos_mag_t": "120",
+                "dos_lppa": "119",
+                "dos_bus_cur": "115",
+                "dos_bus_vol": "168",
+                "dos_uptime": "165"
+              },
+              "beacon_id": null
+            }
+          ],
+          "satellite": "LASARSAT",
+          "beacon_type": "DOS",
+          "aprs": null,
+          "text": "DOS,80,0,0,0,-362,1602,-121,1170,336,31,120,120,119,115,168,165"
+        }
+      }
+    },
+    "lasarsat1": {
+      "packet": {
+        "hex": "7e86a240404040609e966098a6a46103f0534f4c2c313538312c313437352c323836322c333330362c323738372c313831322c3136352c3133342c3838342c3133342c3432312c313336007e"
+      },
+      "parse_context": {
+        "protocol": "ax25",
+        "framing": "ax25",
+        "satellite": "LASARSAT",
+        "frame_size": null,
+        "csp_version": 1,
+        "hdlc_flags": true
+      },
+      "telemetry": {
+        "protocol": "ax25",
+        "parser": "ax25+LasarsatAx25Parser",
+        "success": true,
+        "envelope_status": "parsed",
+        "diagnostics": [],
+        "frame": {
+          "destination": "CQ-0",
+          "source": "OK0LSR-0",
+          "control": "0x03",
+          "pid": "0xf0",
+          "repeaters": null
+        },
+        "raw": {
+          "packet_hex": "7e86a240404040609e966098a6a46103f0534f4c2c313538312c313437352c323836322c333330362c323738372c313831322c3136352c3133342c3838342c3133342c3432312c313336007e",
+          "payload_hex": "534f4c2c313538312c313437352c323836322c333330362c323738372c313831322c3136352c3133342c3838342c3133342c3432312c31333600",
+          "payload_length": 58
+        },
+        "parser_id": "lasarsat",
+        "schema_version": 1,
+        "parser_revision": 1,
+        "payload_status": "decoded",
+        "payload": {
+          "kind": "telemetry",
+          "status": "decoded",
+          "records": [
+            {
+              "id": "0",
+              "title": null,
+              "status": "decoded",
+              "message_id": null,
+              "source": null,
+              "destination": null,
+              "length": 58,
+              "error": null,
+              "warning": null,
+              "clocks": [],
+              "groups": [
+                {
+                  "id": "panels",
+                  "title": "Panel temperatures",
+                  "values": {
+                    "sol_temp_zp": 1581,
+                    "sol_temp_xp": 1475,
+                    "sol_temp_yp": 2862,
+                    "sol_temp_zn": 3306,
+                    "sol_temp_xn": 2787,
+                    "sol_temp_yn": 1812
+                  },
+                  "field_info": {
+                    "sol_temp_zp": {
+                      "label": "+Z panel temperature",
+                      "unit": "",
+                      "order": 0,
+                      "group": "panels",
+                      "calibrated": false
+                    },
+                    "sol_temp_xp": {
+                      "label": "+X panel temperature",
+                      "unit": "",
+                      "order": 1,
+                      "group": "panels",
+                      "calibrated": false
+                    },
+                    "sol_temp_yp": {
+                      "label": "+Y panel temperature",
+                      "unit": "",
+                      "order": 2,
+                      "group": "panels",
+                      "calibrated": false
+                    },
+                    "sol_temp_zn": {
+                      "label": "\u2212Z panel temperature",
+                      "unit": "",
+                      "order": 3,
+                      "group": "panels",
+                      "calibrated": false
+                    },
+                    "sol_temp_xn": {
+                      "label": "\u2212X panel temperature",
+                      "unit": "",
+                      "order": 4,
+                      "group": "panels",
+                      "calibrated": false
+                    },
+                    "sol_temp_yn": {
+                      "label": "\u2212Y panel temperature",
+                      "unit": "",
+                      "order": 5,
+                      "group": "panels",
+                      "calibrated": false
+                    }
+                  }
+                },
+                {
+                  "id": "diodes",
+                  "title": "Diode readings",
+                  "values": {
+                    "sol_diode_zp": 165,
+                    "sol_diode_xp": 134,
+                    "sol_diode_yp": 884,
+                    "sol_diode_zn": 134,
+                    "sol_diode_xn": 421,
+                    "sol_diode_yn": 136
+                  },
+                  "field_info": {
+                    "sol_diode_zp": {
+                      "label": "+Z diode reading",
+                      "unit": "",
+                      "order": 6,
+                      "group": "diodes",
+                      "calibrated": false
+                    },
+                    "sol_diode_xp": {
+                      "label": "+X diode reading",
+                      "unit": "",
+                      "order": 7,
+                      "group": "diodes",
+                      "calibrated": false
+                    },
+                    "sol_diode_yp": {
+                      "label": "+Y diode reading",
+                      "unit": "",
+                      "order": 8,
+                      "group": "diodes",
+                      "calibrated": false
+                    },
+                    "sol_diode_zn": {
+                      "label": "\u2212Z diode reading",
+                      "unit": "",
+                      "order": 9,
+                      "group": "diodes",
+                      "calibrated": false
+                    },
+                    "sol_diode_xn": {
+                      "label": "\u2212X diode reading",
+                      "unit": "",
+                      "order": 10,
+                      "group": "diodes",
+                      "calibrated": false
+                    },
+                    "sol_diode_yn": {
+                      "label": "\u2212Y diode reading",
+                      "unit": "",
+                      "order": 11,
+                      "group": "diodes",
+                      "calibrated": false
+                    }
+                  }
+                }
+              ],
+              "raw_fields": {
+                "sol_temp_zp": "1581",
+                "sol_temp_xp": "1475",
+                "sol_temp_yp": "2862",
+                "sol_temp_zn": "3306",
+                "sol_temp_xn": "2787",
+                "sol_temp_yn": "1812",
+                "sol_diode_zp": "165",
+                "sol_diode_xp": "134",
+                "sol_diode_yp": "884",
+                "sol_diode_zn": "134",
+                "sol_diode_xn": "421",
+                "sol_diode_yn": "136"
+              },
+              "beacon_id": null
+            }
+          ],
+          "satellite": "LASARSAT",
+          "beacon_type": "SOL",
+          "aprs": null,
+          "text": "SOL,1581,1475,2862,3306,2787,1812,165,134,884,134,421,136"
+        }
+      }
+    },
+    "lasarsat2": {
+      "packet": {
+        "hex": "7e86a240404040609e966098a6a46103f0552c31363336303332372c33353039303731372c342c312c323936342c333035322c333131322c3838372c4f4d314154422c33353338312c323539333434382c38392c313133007e"
+      },
+      "parse_context": {
+        "protocol": "ax25",
+        "framing": "ax25",
+        "satellite": "LASARSAT",
+        "frame_size": null,
+        "csp_version": 1,
+        "hdlc_flags": true
+      },
+      "telemetry": {
+        "protocol": "ax25",
+        "parser": "ax25+LasarsatAx25Parser",
+        "success": true,
+        "envelope_status": "parsed",
+        "diagnostics": [],
+        "frame": {
+          "destination": "CQ-0",
+          "source": "OK0LSR-0",
+          "control": "0x03",
+          "pid": "0xf0",
+          "repeaters": null
+        },
+        "raw": {
+          "packet_hex": "7e86a240404040609e966098a6a46103f0552c31363336303332372c33353039303731372c342c312c323936342c333035322c333131322c3838372c4f4d314154422c33353338312c323539333434382c38392c313133007e",
+          "payload_hex": "552c31363336303332372c33353039303731372c342c312c323936342c333035322c333131322c3838372c4f4d314154422c33353338312c323539333434382c38392c31313300",
+          "payload_length": 71
+        },
+        "parser_id": "lasarsat",
+        "schema_version": 1,
+        "parser_revision": 1,
+        "payload_status": "decoded",
+        "payload": {
+          "kind": "telemetry",
+          "status": "decoded",
+          "records": [
+            {
+              "id": "0",
+              "title": null,
+              "status": "decoded",
+              "message_id": null,
+              "source": null,
+              "destination": null,
+              "length": 71,
+              "error": null,
+              "warning": null,
+              "clocks": [],
+              "groups": [
+                {
+                  "id": "temperatures",
+                  "title": "Temperatures",
+                  "values": {
+                    "uhf_trx_temp": 2964,
+                    "uhf_rf_temp": 3052,
+                    "uhf_pa_temp": 3112
+                  },
+                  "field_info": {
+                    "uhf_trx_temp": {
+                      "label": "Transceiver temperature",
+                      "unit": "",
+                      "order": 4,
+                      "group": "temperatures",
+                      "calibrated": false
+                    },
+                    "uhf_rf_temp": {
+                      "label": "RF temperature",
+                      "unit": "",
+                      "order": 5,
+                      "group": "temperatures",
+                      "calibrated": false
+                    },
+                    "uhf_pa_temp": {
+                      "label": "Amplifier temperature",
+                      "unit": "",
+                      "order": 6,
+                      "group": "temperatures",
+                      "calibrated": false
+                    }
+                  }
+                },
+                {
+                  "id": "communications",
+                  "title": "Communications",
+                  "values": {
+                    "uhf_uptime": 16360327,
+                    "uhf_uptime_tot": 35090717,
+                    "uhf_reset_cnt": 4,
+                    "uhf_rf_reset_cnt": 1,
+                    "uhf_digipeater_cnt": 887,
+                    "uhf_last_digipeater": "OM1ATB",
+                    "uhf_rx_cnt": 35381,
+                    "uhf_tx_cnt": 2593448,
+                    "uhf_act_rssi_raw": 89,
+                    "uhf_dcd_rssi_raw": 113
+                  },
+                  "field_info": {
+                    "uhf_uptime": {
+                      "label": "Uptime",
+                      "unit": "",
+                      "order": 0,
+                      "group": "communications",
+                      "calibrated": false
+                    },
+                    "uhf_uptime_tot": {
+                      "label": "Total uptime",
+                      "unit": "",
+                      "order": 1,
+                      "group": "communications",
+                      "calibrated": false
+                    },
+                    "uhf_reset_cnt": {
+                      "label": "Reset count",
+                      "unit": "",
+                      "order": 2,
+                      "group": "communications"
+                    },
+                    "uhf_rf_reset_cnt": {
+                      "label": "RF reset count",
+                      "unit": "",
+                      "order": 3,
+                      "group": "communications"
+                    },
+                    "uhf_digipeater_cnt": {
+                      "label": "Digipeater count",
+                      "unit": "",
+                      "order": 7,
+                      "group": "communications"
+                    },
+                    "uhf_last_digipeater": {
+                      "label": "Last digipeater",
+                      "unit": "",
+                      "order": 8,
+                      "group": "communications"
+                    },
+                    "uhf_rx_cnt": {
+                      "label": "Received packet count",
+                      "unit": "",
+                      "order": 9,
+                      "group": "communications"
+                    },
+                    "uhf_tx_cnt": {
+                      "label": "Transmitted packet count",
+                      "unit": "",
+                      "order": 10,
+                      "group": "communications"
+                    },
+                    "uhf_act_rssi_raw": {
+                      "label": "Current RSSI",
+                      "unit": "",
+                      "order": 11,
+                      "group": "communications",
+                      "calibrated": false
+                    },
+                    "uhf_dcd_rssi_raw": {
+                      "label": "DCD RSSI",
+                      "unit": "",
+                      "order": 12,
+                      "group": "communications",
+                      "calibrated": false
+                    }
+                  }
+                }
+              ],
+              "raw_fields": {
+                "uhf_uptime": "16360327",
+                "uhf_uptime_tot": "35090717",
+                "uhf_reset_cnt": "4",
+                "uhf_rf_reset_cnt": "1",
+                "uhf_trx_temp": "2964",
+                "uhf_rf_temp": "3052",
+                "uhf_pa_temp": "3112",
+                "uhf_digipeater_cnt": "887",
+                "uhf_last_digipeater": "OM1ATB",
+                "uhf_rx_cnt": "35381",
+                "uhf_tx_cnt": "2593448",
+                "uhf_act_rssi_raw": "89",
+                "uhf_dcd_rssi_raw": "113"
+              },
+              "beacon_id": null
+            }
+          ],
+          "satellite": "LASARSAT",
+          "beacon_type": "U",
+          "aprs": null,
+          "text": "U,16360327,35090717,4,1,2964,3052,3112,887,OM1ATB,35381,2593448,89,113"
+        }
+      }
+    },
+    "lasarsat3": {
+      "packet": {
+        "hex": "7e8baecc00000000971431055f31119a503349d09145001cf734ac727da94018c77a4231cd00274a3be697af349d462800279a29319e29d8e6801073cd28a3a1e051df9a003a5260f5a5efd28a0404d263d29451d3b503019f5a5a4a5009e94008452fb507838cd277f7a00060f3839a5cfb629ca8429248c7d69bdb3da801413c8a319340a5c771400d1919a427bd6a36f07e"
+      },
+      "parse_context": {
+        "protocol": "ax25",
+        "framing": "ax25",
+        "satellite": "LASARSAT",
+        "frame_size": null,
+        "csp_version": 1,
+        "hdlc_flags": true
+      },
+      "telemetry": {
+        "protocol": "ax25",
+        "parser": "ax25",
+        "success": false,
+        "envelope_status": "malformed",
+        "diagnostics": [
+          {
+            "stage": "envelope",
+            "code": "invalid_envelope",
+            "message": "Invalid destination callsign: 'EWf' (not valid AX.25 format)"
+          }
+        ],
+        "error": "Invalid destination callsign: 'EWf' (not valid AX.25 format)",
+        "payload_status": "malformed",
+        "raw": {
+          "packet_hex": "7e8baecc00000000971431055f31119a503349d09145001cf734ac727da94018c77a4231cd00274a3be697af349d462800279a29319e29d8e6801073cd28a3a1e051df9a003a5260f5a5efd28a0404d263d29451d3b503019f5a5a4a5009e94008452fb507838cd277f7a00060f3839a5cfb629ca8429248c7d69bdb3da801413c8a319340a5c771400d1919a427bd6a36f07e",
+          "payload_hex": "8baecc00000000971431055f31119a503349d09145001cf734ac727da94018c77a4231cd00274a3be697af349d462800279a29319e29d8e6801073cd28a3a1e051df9a003a5260f5a5efd28a0404d263d29451d3b503019f5a5a4a5009e94008452fb507838cd277f7a00060f3839a5cfb629ca8429248c7d69bdb3da801413c8a319340a5c771400d1919a427bd6a36f0",
+          "payload_length": 145
+        },
+        "schema_version": 1,
+        "parser_id": "ax25",
+        "parser_revision": 1,
+        "payload": {
+          "kind": "raw",
+          "status": "malformed",
+          "records": [],
+          "satellite": null,
+          "beacon_type": null,
+          "aprs": null,
+          "text": null
+        }
+      }
+    },
+    "rs52s": {
+      "packet": {
+        "hex": "86a24040404060a4a66a64a6406103f0874efa68af00280050c3204e151316140012191a40401fd007e2"
+      },
+      "parse_context": {
+        "protocol": "ax25",
+        "framing": null,
+        "satellite": null,
+        "frame_size": null,
+        "csp_version": 1,
+        "hdlc_flags": false
+      },
+      "telemetry": {
+        "protocol": "ax25",
+        "parser": "ax25+Rs52sParser",
+        "success": true,
+        "envelope_status": "parsed",
+        "diagnostics": [],
+        "frame": {
+          "destination": "CQ-0",
+          "source": "RS52S-0",
+          "control": "0x03",
+          "pid": "0xf0",
+          "repeaters": null
+        },
+        "raw": {
+          "packet_hex": "86a24040404060a4a66a64a6406103f0874efa68af00280050c3204e151316140012191a40401fd007e2",
+          "payload_hex": "874efa68af00280050c3204e151316140012191a40401fd007e2",
+          "payload_length": 26
+        },
+        "parser_id": "rs52s",
+        "schema_version": 1,
+        "parser_revision": 1,
+        "payload_status": "decoded",
+        "payload": {
+          "kind": "telemetry",
+          "status": "decoded",
+          "records": [
+            {
+              "id": "0",
+              "title": null,
+              "status": "decoded",
+              "message_id": null,
+              "source": null,
+              "destination": null,
+              "length": 26,
+              "error": null,
+              "warning": null,
+              "clocks": [
+                {
+                  "kind": "spacecraft",
+                  "value": 1761234567
+                }
+              ],
+              "groups": [
+                {
+                  "id": "power",
+                  "title": "Power system",
+                  "values": {
+                    "v_pack_v": 2.7712,
+                    "v_cell_v": 3.464,
+                    "battery_current_a": 0.013405,
+                    "panel_current_a": 0.0012304,
+                    "temp_bat1_c": 25,
+                    "temp_bat2_c": 26
+                  },
+                  "field_info": {
+                    "temp_bat1_c": {
+                      "label": "Battery 1 temperature",
+                      "unit": "\u00b0C",
+                      "order": 7
+                    },
+                    "temp_bat2_c": {
+                      "label": "Battery 2 temperature",
+                      "unit": "\u00b0C",
+                      "order": 8
+                    },
+                    "battery_current_a": {
+                      "label": "Battery current",
+                      "unit": "A",
+                      "order": 5
+                    },
+                    "panel_current_a": {
+                      "label": "Solar panel current",
+                      "unit": "A",
+                      "order": 6
+                    },
+                    "v_cell_v": {
+                      "label": "Battery cell voltage",
+                      "unit": "V",
+                      "order": 1
+                    },
+                    "v_pack_v": {
+                      "label": "Battery pack voltage",
+                      "unit": "V",
+                      "order": 0
+                    }
+                  }
+                },
+                {
+                  "id": "obc",
+                  "title": "Onboard computer",
+                  "values": {
+                    "cpu_load_pct": 25.0,
+                    "obc_counter": 524,
+                    "temp_x_p_c": 21,
+                    "temp_x_n_c": 19,
+                    "temp_y_p_c": 22,
+                    "temp_y_n_c": 20,
+                    "temp_z_n_c": 18
+                  },
+                  "field_info": {
+                    "temp_x_p_c": {
+                      "label": "+X panel temperature",
+                      "unit": "\u00b0C",
+                      "order": 28
+                    },
+                    "temp_x_n_c": {
+                      "label": "\u2212X panel temperature",
+                      "unit": "\u00b0C",
+                      "order": 29
+                    },
+                    "temp_y_p_c": {
+                      "label": "+Y panel temperature",
+                      "unit": "\u00b0C",
+                      "order": 30
+                    },
+                    "temp_y_n_c": {
+                      "label": "\u2212Y panel temperature",
+                      "unit": "\u00b0C",
+                      "order": 31
+                    },
+                    "temp_z_n_c": {
+                      "label": "\u2212Z panel temperature",
+                      "unit": "\u00b0C",
+                      "order": 33
+                    },
+                    "cpu_load_pct": {
+                      "label": "CPU load",
+                      "unit": "%",
+                      "order": 10
+                    },
+                    "obc_counter": {
+                      "label": "Onboard computer counter",
+                      "unit": "",
+                      "order": 11
+                    }
+                  }
+                },
+                {
+                  "id": "communications",
+                  "title": "Communications",
+                  "values": {
+                    "comm_counter": 495,
+                    "rssi_dbm": -129
+                  },
+                  "field_info": {
+                    "comm_counter": {
+                      "label": "Communications counter",
+                      "unit": "",
+                      "order": 16
+                    },
+                    "rssi_dbm": {
+                      "label": "Received signal strength",
+                      "unit": "dBm",
+                      "order": 17
+                    }
+                  }
+                }
+              ],
+              "raw_fields": {
+                "battery_current_raw": 175,
+                "panel_current_raw": 40,
+                "v_cell_raw": 50000,
+                "v_pack_raw": 20000,
+                "cpu_load_raw": 64,
+                "obc_counter_raw": 8000,
+                "comm_counter_raw": 2000,
+                "rssi_raw": -30,
+                "reserved_16": 0
+              },
+              "beacon_id": null
+            }
+          ],
+          "satellite": "RS52S",
+          "beacon_type": null,
+          "aprs": null,
+          "text": null
+        }
+      }
+    }
+  },
+  "legacy": {
+    "housekeeping": {
+      "telemetry": {
+        "parser": "proprietary+GeoscanParser",
+        "success": true,
+        "schema_version": 1,
+        "parser_id": "geoscan",
+        "parser_revision": 0,
+        "envelope_status": "parsed",
+        "payload_status": "decoded",
+        "diagnostics": [],
+        "payload": {
+          "kind": "telemetry",
+          "status": "decoded",
+          "records": [
+            {
+              "id": "0",
+              "title": null,
+              "status": "decoded",
+              "message_id": null,
+              "source": null,
+              "destination": null,
+              "length": null,
+              "error": null,
+              "warning": null,
+              "clocks": [
+                {
+                  "kind": "power_system",
+                  "value": 1768248238
+                }
+              ],
+              "groups": [
+                {
+                  "id": "power",
+                  "title": "Power system",
+                  "values": {
+                    "v_pack_v": 8.203,
+                    "v_cell_v": 4.142,
+                    "eps_current_platform_a": 0.222,
+                    "eps_current_solar_a": 0,
+                    "temp_bat1_c": 13,
+                    "temp_bat2_c": 12,
+                    "eps_mode_enum": 3
+                  },
+                  "field_info": {
+                    "eps_mode_enum": {
+                      "label": "Operating mode",
+                      "unit": "",
+                      "order": 9
+                    },
+                    "eps_current_platform_a": {
+                      "label": "Platform current",
+                      "unit": "A",
+                      "order": 3
+                    },
+                    "eps_current_solar_a": {
+                      "label": "Solar current",
+                      "unit": "A",
+                      "order": 4
+                    },
+                    "v_cell_v": {
+                      "label": "Battery cell voltage",
+                      "unit": "V",
+                      "order": 1
+                    },
+                    "v_pack_v": {
+                      "label": "Battery pack voltage",
+                      "unit": "V",
+                      "order": 0
+                    },
+                    "temp_bat1_c": {
+                      "label": "Battery 1 temperature",
+                      "unit": "\u00b0C",
+                      "order": 7
+                    },
+                    "temp_bat2_c": {
+                      "label": "Battery 2 temperature",
+                      "unit": "\u00b0C",
+                      "order": 8
+                    }
+                  }
+                }
+              ],
+              "raw_fields": {
+                "mayak_id": 1,
+                "eps_reserve_22": 255
+              },
+              "beacon_id": 1
+            }
+          ],
+          "satellite": null,
+          "beacon_type": null,
+          "aprs": null,
+          "text": null
+        },
+        "raw": {
+          "packet_hex": "",
+          "payload_hex": "",
+          "payload_length": 0
+        }
+      }
+    },
+    "unavailable": {
+      "telemetry": {
+        "success": true,
+        "schema_version": 1,
+        "parser_id": "uwe4",
+        "parser_revision": 0,
+        "envelope_status": "parsed",
+        "payload_status": "decoded",
+        "diagnostics": [],
+        "payload": {
+          "kind": "telemetry",
+          "status": "decoded",
+          "records": [
+            {
+              "id": "0",
+              "title": null,
+              "status": "decoded",
+              "message_id": null,
+              "source": null,
+              "destination": null,
+              "length": null,
+              "error": null,
+              "warning": null,
+              "clocks": [],
+              "groups": [
+                {
+                  "id": "battery_a",
+                  "title": "Battery A",
+                  "values": {
+                    "batt_a_voltage_v": 4.2,
+                    "batt_a_current_ma": null
+                  },
+                  "field_info": {
+                    "batt_a_voltage_v": {
+                      "label": "Measured battery voltage",
+                      "unit": "V",
+                      "order": 34
+                    },
+                    "batt_a_current_ma": {
+                      "label": "Battery A current",
+                      "unit": "mA",
+                      "order": 35,
+                      "error": "Sensor unavailable"
+                    }
+                  }
+                },
+                {
+                  "id": "battery_b",
+                  "title": "Battery B",
+                  "values": {
+                    "batt_b_voltage_v": null,
+                    "batt_b_current_ma": -171,
+                    "batt_b_soc_pct": 0
+                  },
+                  "field_info": {
+                    "batt_b_current_ma": {
+                      "label": "Battery B current",
+                      "unit": "mA",
+                      "order": 39
+                    },
+                    "batt_b_soc_pct": {
+                      "label": "Battery B state of charge",
+                      "unit": "%",
+                      "order": 40
+                    },
+                    "batt_b_voltage_v": {
+                      "label": "Battery B voltage",
+                      "unit": "V",
+                      "order": 38
+                    }
+                  }
+                },
+                {
+                  "id": "panels",
+                  "title": "Panel temperatures",
+                  "values": {
+                    "panel_pos_x_temp_c": 0,
+                    "panel_neg_x_temp_c": null
+                  },
+                  "field_info": {
+                    "panel_pos_x_temp_c": {
+                      "label": "+X panel temperature",
+                      "unit": "\u00b0C",
+                      "order": 42
+                    },
+                    "panel_neg_x_temp_c": {
+                      "label": "\u2212X panel temperature",
+                      "unit": "\u00b0C",
+                      "order": 43
+                    }
+                  }
+                },
+                {
+                  "id": "other",
+                  "title": "Other telemetry",
+                  "values": {
+                    "custom_count": 12
+                  },
+                  "field_info": {
+                    "custom_count": {
+                      "label": "Custom count",
+                      "unit": "",
+                      "order": 48
+                    }
+                  }
+                }
+              ],
+              "raw_fields": {},
+              "beacon_id": null
+            }
+          ],
+          "satellite": null,
+          "beacon_type": null,
+          "aprs": null,
+          "text": null
+        },
+        "raw": {
+          "packet_hex": "",
+          "payload_hex": "",
+          "payload_length": 0
+        }
+      }
+    },
+    "colibri": {
+      "telemetry": {
+        "success": true,
+        "schema_version": 1,
+        "parser_id": "colibri",
+        "parser_revision": 0,
+        "envelope_status": "parsed",
+        "payload_status": "decoded",
+        "diagnostics": [],
+        "payload": {
+          "kind": "telemetry",
+          "status": "decoded",
+          "records": [
+            {
+              "id": "0",
+              "title": null,
+              "status": "decoded",
+              "message_id": null,
+              "source": null,
+              "destination": null,
+              "length": null,
+              "error": null,
+              "warning": null,
+              "clocks": [],
+              "groups": [
+                {
+                  "id": "power",
+                  "title": "Power system",
+                  "values": {
+                    "v_pack_v": 8,
+                    "eps_mode_enum": 3
+                  },
+                  "field_info": {
+                    "v_pack_v": {
+                      "label": "Battery pack voltage",
+                      "unit": "V",
+                      "order": 0
+                    },
+                    "eps_mode_enum": {
+                      "label": "Operating mode",
+                      "unit": "",
+                      "order": 9
+                    }
+                  }
+                },
+                {
+                  "id": "obc",
+                  "title": "Onboard computer",
+                  "values": {
+                    "obc_activity_wheels": false,
+                    "obc_activity_camera": true,
+                    "gnss_sat_count": 5
+                  },
+                  "field_info": {
+                    "obc_activity_wheels": {
+                      "label": "Reaction wheels"
+                    },
+                    "obc_activity_camera": {
+                      "label": "Camera"
+                    },
+                    "gnss_sat_count": {
+                      "label": "GNSS satellite count",
+                      "unit": "",
+                      "order": 14
+                    }
+                  }
+                }
+              ],
+              "raw_fields": {},
+              "beacon_id": null
+            }
+          ],
+          "satellite": "COLIBRI-S",
+          "beacon_type": null,
+          "aprs": null,
+          "text": null
+        },
+        "raw": {
+          "packet_hex": "",
+          "payload_hex": "",
+          "payload_length": 0
+        }
+      }
+    },
+    "custom": {
+      "telemetry": {
+        "success": true,
+        "schema_version": 1,
+        "parser_id": "uwe4",
+        "parser_revision": 0,
+        "envelope_status": "parsed",
+        "payload_status": "decoded",
+        "diagnostics": [],
+        "payload": {
+          "kind": "telemetry",
+          "status": "decoded",
+          "records": [
+            {
+              "id": "0",
+              "title": null,
+              "status": "decoded",
+              "message_id": null,
+              "source": null,
+              "destination": null,
+              "length": null,
+              "error": null,
+              "warning": null,
+              "clocks": [],
+              "groups": [
+                {
+                  "id": "custom_sensors",
+                  "title": "Custom sensors",
+                  "values": {
+                    "new_sensor_raw": 0,
+                    "batt_a_current_ma": 138,
+                    "batt_a_voltage_v": 4.2
+                  },
+                  "field_info": {
+                    "batt_a_voltage_v": {
+                      "label": "Pack voltage",
+                      "unit": "V",
+                      "order": 20,
+                      "group": "custom_sensors"
+                    },
+                    "batt_a_current_ma": {
+                      "label": "Pack current",
+                      "unit": "mA",
+                      "order": 10,
+                      "group": "custom_sensors"
+                    },
+                    "new_sensor_raw": {
+                      "label": "New sensor",
+                      "unit": "",
+                      "order": 0,
+                      "group": "custom_sensors",
+                      "calibrated": false
+                    }
+                  }
+                }
+              ],
+              "raw_fields": {},
+              "beacon_id": null
+            }
+          ],
+          "satellite": null,
+          "beacon_type": null,
+          "aprs": null,
+          "text": null
+        },
+        "raw": {
+          "packet_hex": "",
+          "payload_hex": "",
+          "payload_length": 0
+        }
+      }
+    },
+    "rs52s": {
+      "telemetry": {
+        "success": true,
+        "schema_version": 1,
+        "parser_id": "rs52s",
+        "parser_revision": 0,
+        "envelope_status": "parsed",
+        "payload_status": "decoded",
+        "diagnostics": [],
+        "payload": {
+          "kind": "telemetry",
+          "status": "decoded",
+          "records": [
+            {
+              "id": "0",
+              "title": null,
+              "status": "decoded",
+              "message_id": null,
+              "source": null,
+              "destination": null,
+              "length": null,
+              "error": null,
+              "warning": null,
+              "clocks": [],
+              "groups": [
+                {
+                  "id": "power",
+                  "title": "Power system",
+                  "values": {
+                    "v_pack_v": 4.1,
+                    "battery_current_a": -0.125,
+                    "panel_current_a": 1.5
+                  },
+                  "field_info": {
+                    "battery_current_a": {
+                      "label": "Battery current",
+                      "unit": "A",
+                      "order": 5
+                    },
+                    "panel_current_a": {
+                      "label": "Solar panel current",
+                      "unit": "A",
+                      "order": 6
+                    },
+                    "v_pack_v": {
+                      "label": "Battery pack voltage",
+                      "unit": "V",
+                      "order": 0
+                    }
+                  }
+                },
+                {
+                  "id": "obc",
+                  "title": "Onboard computer",
+                  "values": {
+                    "cpu_load_pct": 25
+                  },
+                  "field_info": {
+                    "cpu_load_pct": {
+                      "label": "CPU load",
+                      "unit": "%",
+                      "order": 10
+                    }
+                  }
+                },
+                {
+                  "id": "communications",
+                  "title": "Communications",
+                  "values": {
+                    "comm_counter": 12
+                  },
+                  "field_info": {
+                    "comm_counter": {
+                      "label": "Communications counter",
+                      "unit": "",
+                      "order": 16
+                    }
+                  }
+                }
+              ],
+              "raw_fields": {
+                "reserved_16": 255
+              },
+              "beacon_id": null
+            }
+          ],
+          "satellite": null,
+          "beacon_type": null,
+          "aprs": null,
+          "text": null
+        },
+        "raw": {
+          "packet_hex": "",
+          "payload_hex": "",
+          "payload_length": 0
+        }
+      }
+    },
+    "clock": {
+      "telemetry": {
+        "success": true,
+        "schema_version": 1,
+        "parser_id": "raw",
+        "parser_revision": 0,
+        "envelope_status": "parsed",
+        "payload_status": "decoded",
+        "diagnostics": [],
+        "payload": {
+          "kind": "telemetry",
+          "status": "decoded",
+          "records": [
+            {
+              "id": "0",
+              "title": null,
+              "status": "decoded",
+              "message_id": null,
+              "source": null,
+              "destination": null,
+              "length": null,
+              "error": null,
+              "warning": null,
+              "clocks": [
+                {
+                  "kind": "spacecraft",
+                  "value": "2023-11-14 22:13:20"
+                }
+              ],
+              "groups": [],
+              "raw_fields": {},
+              "beacon_id": null
+            }
+          ],
+          "satellite": null,
+          "beacon_type": null,
+          "aprs": null,
+          "text": null
+        },
+        "raw": {
+          "packet_hex": "",
+          "payload_hex": "",
+          "payload_length": 0
+        }
+      }
+    },
+    "epoch": {
+      "telemetry": {
+        "success": true,
+        "schema_version": 1,
+        "parser_id": "geoscan",
+        "parser_revision": 0,
+        "envelope_status": "parsed",
+        "payload_status": "decoded",
+        "diagnostics": [],
+        "payload": {
+          "kind": "telemetry",
+          "status": "decoded",
+          "records": [
+            {
+              "id": "0",
+              "title": null,
+              "status": "decoded",
+              "message_id": null,
+              "source": null,
+              "destination": null,
+              "length": null,
+              "error": null,
+              "warning": null,
+              "clocks": [
+                {
+                  "kind": "power_system",
+                  "value": 0
+                }
+              ],
+              "groups": [],
+              "raw_fields": {},
+              "beacon_id": null
+            }
+          ],
+          "satellite": null,
+          "beacon_type": null,
+          "aprs": null,
+          "text": null
+        },
+        "raw": {
+          "packet_hex": "",
+          "payload_hex": "",
+          "payload_length": 0
+        }
+      }
+    },
+    "text": {
+      "telemetry": {
+        "success": true,
+        "schema_version": 1,
+        "parser_id": "lasarsat",
+        "parser_revision": 0,
+        "envelope_status": "parsed",
+        "payload_status": "decoded",
+        "diagnostics": [],
+        "payload": {
+          "kind": "text",
+          "status": "decoded",
+          "records": [],
+          "satellite": "LASARSAT",
+          "beacon_type": null,
+          "aprs": null,
+          "text": "Greetings from LASARSAT"
+        },
+        "raw": {
+          "packet_hex": "",
+          "payload_hex": "",
+          "payload_length": 0
+        }
+      }
+    },
+    "malformed": {
+      "telemetry": {
+        "success": true,
+        "schema_version": 1,
+        "parser_id": "lasarsat",
+        "parser_revision": 0,
+        "envelope_status": "parsed",
+        "payload_status": "malformed",
+        "diagnostics": [
+          {
+            "stage": "payload",
+            "code": "malformed",
+            "message": "Expected 11 PSU fields, received 3"
+          }
+        ],
+        "payload": {
+          "kind": "telemetry",
+          "status": "malformed",
+          "records": [
+            {
+              "id": "0",
+              "title": null,
+              "status": "malformed",
+              "message_id": null,
+              "source": null,
+              "destination": null,
+              "length": null,
+              "error": "Expected 11 PSU fields, received 3",
+              "warning": null,
+              "clocks": [],
+              "groups": [],
+              "raw_fields": {},
+              "beacon_id": null
+            }
+          ],
+          "satellite": "LASARSAT",
+          "beacon_type": "PSU",
+          "aprs": null,
+          "text": null
+        },
+        "raw": {
+          "packet_hex": "",
+          "payload_hex": "",
+          "payload_length": 0
+        }
+      }
+    },
+    "warning": {
+      "telemetry": {
+        "parser": "proprietary+GeoscanParser",
+        "success": true,
+        "schema_version": 1,
+        "parser_id": "geoscan",
+        "parser_revision": 0,
+        "envelope_status": "parsed",
+        "payload_status": "non_telemetry",
+        "diagnostics": [],
+        "payload": {
+          "kind": "telemetry",
+          "status": "non_telemetry",
+          "records": [
+            {
+              "id": "0",
+              "title": null,
+              "status": "non_telemetry",
+              "message_id": null,
+              "source": null,
+              "destination": null,
+              "length": null,
+              "error": null,
+              "warning": "GEOSCAN image packet detected.",
+              "clocks": [],
+              "groups": [],
+              "raw_fields": {},
+              "beacon_id": null
+            }
+          ],
+          "satellite": null,
+          "beacon_type": null,
+          "aprs": null,
+          "text": null
+        },
+        "raw": {
+          "packet_hex": "",
+          "payload_hex": "",
+          "payload_length": 0
+        }
+      }
+    },
+    "messages": {
+      "telemetry": {
+        "success": true,
+        "schema_version": 1,
+        "parser_id": "raw",
+        "parser_revision": 0,
+        "envelope_status": "parsed",
+        "payload_status": "partial",
+        "diagnostics": [],
+        "payload": {
+          "kind": "telemetry",
+          "status": "partial",
+          "records": [
+            {
+              "id": "0",
+              "title": "UHF radio beacon",
+              "status": "decoded",
+              "message_id": "0x4246",
+              "source": 2,
+              "destination": 1,
+              "length": 25,
+              "error": null,
+              "warning": null,
+              "clocks": [],
+              "groups": [
+                {
+                  "id": "values",
+                  "title": "Engineering Values",
+                  "values": {
+                    "temperature": -5,
+                    "current": 0
+                  },
+                  "field_info": {
+                    "temperature": {
+                      "label": "Amplifier temperature",
+                      "unit": "\u00b0C",
+                      "order": 48
+                    },
+                    "current": {
+                      "label": "Radio current",
+                      "unit": "mA",
+                      "order": 48
+                    }
+                  }
+                }
+              ],
+              "raw_fields": {
+                "temperature": -5
+              },
+              "beacon_id": null
+            },
+            {
+              "id": "1",
+              "title": "Power system telemetry",
+              "status": "decoded",
+              "message_id": "0xDE21",
+              "source": 4,
+              "destination": 1,
+              "length": 46,
+              "error": null,
+              "warning": null,
+              "clocks": [],
+              "groups": [
+                {
+                  "id": "values",
+                  "title": "Engineering Values",
+                  "values": {
+                    "battery_voltage": 7.976,
+                    "battery_temperature": 4.75,
+                    "heater": false
+                  },
+                  "field_info": {
+                    "battery_voltage": {
+                      "label": "Battery voltage",
+                      "unit": "V",
+                      "order": 48
+                    },
+                    "battery_temperature": {
+                      "label": "Battery temperature 1",
+                      "unit": "\u00b0C",
+                      "order": 48
+                    },
+                    "heater": {
+                      "label": "Battery heater 1 on",
+                      "unit": "",
+                      "order": 48
+                    }
+                  }
+                }
+              ],
+              "raw_fields": {
+                "battery_voltage": 7976
+              },
+              "beacon_id": null
+            },
+            {
+              "id": "2",
+              "title": "File transfer data",
+              "status": "non_telemetry",
+              "message_id": null,
+              "source": null,
+              "destination": null,
+              "length": null,
+              "error": null,
+              "warning": null,
+              "clocks": [],
+              "groups": [],
+              "raw_fields": {},
+              "beacon_id": null
+            },
+            {
+              "id": "3",
+              "title": "Unknown USP message",
+              "status": "unsupported",
+              "message_id": null,
+              "source": null,
+              "destination": null,
+              "length": null,
+              "error": null,
+              "warning": null,
+              "clocks": [],
+              "groups": [],
+              "raw_fields": {},
+              "beacon_id": null
+            },
+            {
+              "id": "4",
+              "title": "Broken message",
+              "status": "malformed",
+              "message_id": null,
+              "source": null,
+              "destination": null,
+              "length": null,
+              "error": "Truncated USP message",
+              "warning": null,
+              "clocks": [],
+              "groups": [],
+              "raw_fields": {},
+              "beacon_id": null
+            }
+          ],
+          "satellite": null,
+          "beacon_type": null,
+          "aprs": null,
+          "text": null
+        },
+        "raw": {
+          "packet_hex": "",
+          "payload_hex": "",
+          "payload_length": 0
+        }
+      }
+    },
+    "aprs": {
+      "decoder": {
+        "type": "aprs"
+      },
+      "telemetry": {
+        "success": true,
+        "schema_version": 1,
+        "parser_id": "aprs",
+        "parser_revision": 0,
+        "envelope_status": "parsed",
+        "payload_status": "decoded",
+        "diagnostics": [],
+        "payload": {
+          "kind": "aprs",
+          "status": "decoded",
+          "records": [],
+          "satellite": null,
+          "beacon_type": null,
+          "aprs": {
+            "format": "aprs",
+            "raw": "!L9y@)T<7Ca  GLoRa APRS|&:%X|",
+            "hex": "214c39794029543c3743612020474c6f526120415052537c263a25587c",
+            "length": 29,
+            "values": {
+              "latitude_degrees": 40.601269,
+              "longitude_degrees": 22.967211,
+              "telemetry_sequence": 480,
+              "telemetry_channel_1_raw": 419,
+              "comment": "GLoRa APRS"
+            },
+            "data_type_identifier": "!",
+            "data_type": "position_without_timestamp",
+            "supported": true,
+            "position": {
+              "latitude": 40.601269,
+              "longitude": 22.967211,
+              "format": "compressed",
+              "symbol_table": "L",
+              "symbol_code": "a"
+            },
+            "telemetry": {
+              "encoding": "base91",
+              "sequence": 480,
+              "channels": [
+                419
+              ],
+              "raw": "&:%X"
+            },
+            "comment": "GLoRa APRS"
+          },
+          "text": null
+        },
+        "raw": {
+          "packet_hex": "",
+          "payload_hex": "",
+          "payload_length": 0
+        }
+      }
+    }
+  }
+}

@@ -26,7 +26,7 @@ export function normalizeTelemetryValue(entry, fieldInfo = {}) {
   // scalar values and put their presentation metadata in field_info.
   const wrapped = entry && typeof entry === 'object' && !Array.isArray(entry)
     && ('value' in entry || 'error' in entry);
-  const error = wrapped ? entry.error : null;
+  const error = fieldInfo.error || (wrapped ? entry.error : null);
   const value = error ? null : wrapped ? entry.value : entry;
   const unit = fieldInfo.unit ?? (wrapped ? entry.unit : '') ?? '';
   return {

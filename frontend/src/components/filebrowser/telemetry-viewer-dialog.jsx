@@ -21,6 +21,8 @@ import {
     Typography,
     Alert,
     CircularProgress,
+    ToggleButton,
+    ToggleButtonGroup,
 } from '@mui/material';
 import DownloadIcon from '@mui/icons-material/Download';
 import RefreshIcon from '@mui/icons-material/Refresh';
@@ -55,18 +57,15 @@ function TabPanel({ children, value, index, ...other }) {
 export default function TelemetryViewerDialog({ open, onClose, file, metadata, socket, onMetadataChange }) {
     const { t } = useTranslation('filebrowser');
     const [activeTab, setActiveTab] = useState(0);
+    const [byteSource, setByteSource] = useState('packet');
     const [reparsing, setReparsing] = useState(false);
     const [reparseError, setReparseError] = useState(null);
     const [preview, setPreview] = useState(null);
     const reparseSequence = useRef(0);
 
-    const savedTelemetry = metadata?.telemetry;
-    const savedPayload = savedTelemetry?.telemetry;
-    const isLasarsat = metadata?.satellite?.name?.toUpperCase() === 'LASARSAT'
-        || savedPayload?.satellite === 'LASARSAT'
-        || /^OK0LSR(?:-|$)/.test(savedTelemetry?.frame?.source || '');
-    const hasGroups = Object.values(savedPayload?.field_info || {}).some((info) => info?.group);
-    const needsPreview = isLasarsat && !hasGroups && metadata?.decoder?.type !== 'aprs';
+    // Legacy interpretation belongs to the backend compatibility adapter.
+    // Every entry point shares this read-only request; saved files stay untouched.
+    const needsPreview = metadata?.telemetry?.schema_version !== 1;
 
     useEffect(() => {
         if (!open || !needsPreview || !file?.url?.endsWith('.bin') || !socket?.connected) {
@@ -77,10 +76,10 @@ export default function TelemetryViewerDialog({ open, onClose, file, metadata, s
         const source = metadata;
         const url = file.url;
         setPreview({source, url, loading: true});
-        // Old metadata may contain only generic ASCII analysis. Decode packets in
-        // the backend for this view; saving remains an explicit Reparse action.
+        // Normalize old saved results; unsupported old captures may be parsed
+        // for display. Saving always remains an explicit Reparse action.
         socket.timeout(30000).emit('api.call', {
-            cmd: 'filebrowser.preview-telemetry', data: {url},
+            cmd: 'filebrowser.view-telemetry', data: {url},
         }, (error, result) => {
             if (cancelled) return;
             if (error || !result?.success || !result.data?.telemetry) {
@@ -126,8 +125,9 @@ export default function TelemetryViewerDialog({ open, onClose, file, metadata, s
     useEffect(() => {
         if (open) {
             setActiveTab(0);
+            setByteSource('packet');
         }
-    }, [open]);
+    }, [open, file?.url]);
 
     const handleTabChange = (event, newValue) => {
         setActiveTab(newValue);
@@ -140,7 +140,9 @@ export default function TelemetryViewerDialog({ open, onClose, file, metadata, s
     const telemetry = displayedMetadata.telemetry || {};
     const packet = displayedMetadata.packet || {};
     const ax25 = displayedMetadata.ax25 || {};
-    const isAprs = metadata.decoder?.type === 'aprs';
+    const isAprs = telemetry.schema_version === 1 && telemetry.payload?.kind === 'aprs';
+    const inspectionPacket = {...packet, hex: byteSource === 'payload'
+        ? telemetry.raw?.payload_hex || '' : packet.hex || telemetry.raw?.packet_hex || ''};
 
     return (
         <Dialog
@@ -186,13 +188,13 @@ export default function TelemetryViewerDialog({ open, onClose, file, metadata, s
                     scrollButtons="auto"
                     sx={{ px: 2 }}
                 >
-                    <Tab label={t('telemetry_viewer_dialog.overview', { defaultValue: 'Overview' })} id="telemetry-tab-0" />
-                    <Tab label={isAprs ? 'APRS' : 'Telemetry'} id="telemetry-tab-6" />
-                    <Tab label={t('telemetry_viewer_dialog.hex_ascii', { defaultValue: 'Hex + ASCII' })} id="telemetry-tab-1" />
-                    <Tab label={t('telemetry_viewer_dialog.as_float32', { defaultValue: 'As Float32' })} id="telemetry-tab-2" />
-                    <Tab label={t('telemetry_viewer_dialog.as_integers', { defaultValue: 'As Integers' })} id="telemetry-tab-3" />
-                    <Tab label={t('telemetry_viewer_dialog.as_strings', { defaultValue: 'As Strings' })} id="telemetry-tab-4" />
-                    <Tab label={t('telemetry_viewer_dialog.analysis', { defaultValue: 'Analysis' })} id="telemetry-tab-5" />
+                    <Tab label={t('telemetry_viewer_dialog.overview', { defaultValue: 'Overview' })} id="telemetry-tab-0" aria-controls="telemetry-tabpanel-0" />
+                    <Tab label={isAprs ? 'APRS' : 'Telemetry'} id="telemetry-tab-1" aria-controls="telemetry-tabpanel-1" />
+                    <Tab label={t('telemetry_viewer_dialog.hex_ascii', { defaultValue: 'Hex + ASCII' })} id="telemetry-tab-2" aria-controls="telemetry-tabpanel-2" />
+                    <Tab label={t('telemetry_viewer_dialog.as_float32', { defaultValue: 'As Float32' })} id="telemetry-tab-3" aria-controls="telemetry-tabpanel-3" />
+                    <Tab label={t('telemetry_viewer_dialog.as_integers', { defaultValue: 'As Integers' })} id="telemetry-tab-4" aria-controls="telemetry-tabpanel-4" />
+                    <Tab label={t('telemetry_viewer_dialog.as_strings', { defaultValue: 'As Strings' })} id="telemetry-tab-5" aria-controls="telemetry-tabpanel-5" />
+                    <Tab label={t('telemetry_viewer_dialog.analysis', { defaultValue: 'Analysis' })} id="telemetry-tab-6" aria-controls="telemetry-tabpanel-6" />
                 </Tabs>
             </Box>
 
@@ -203,6 +205,16 @@ export default function TelemetryViewerDialog({ open, onClose, file, metadata, s
                 }}
             >
                 {reparseError && <Alert severity="error" sx={{ m: 3 }}>{reparseError}</Alert>}
+                {activeTab >= 2 && <Box sx={{px: 3, pt: 2}}>
+                    <ToggleButtonGroup size="small" exclusive value={byteSource}
+                        aria-label="Bytes to inspect" onChange={(_, value) => value && setByteSource(value)}>
+                        <ToggleButton value="packet">{t('telemetry_viewer_dialog.packet_bytes', {defaultValue: 'Complete packet'})}</ToggleButton>
+                        <ToggleButton value="payload" disabled={!telemetry.raw?.payload_hex}>
+                            {t('telemetry_viewer_dialog.payload_bytes', {defaultValue: 'Payload only'})}
+                        </ToggleButton>
+                    </ToggleButtonGroup>
+                </Box>}
+
                 <TabPanel value={activeTab} index={0}>
                     <Box sx={{ px: 3, pb: 2 }}>
                         <OverviewTab
@@ -220,7 +232,7 @@ export default function TelemetryViewerDialog({ open, onClose, file, metadata, s
                         {activePreview?.loading ? (
                             <Box role="status" sx={{display: 'flex', alignItems: 'center', gap: 1}}>
                                 <CircularProgress size={20} />
-                                {t('telemetry_viewer_dialog.preview_loading', {defaultValue: 'Decoding saved packet…'})}
+                                {t('telemetry_viewer_dialog.preview_loading', {defaultValue: 'Preparing saved telemetry…'})}
                             </Box>
                         ) : isAprs ? (
                             <APRSTab metadata={displayedMetadata} />
@@ -228,7 +240,7 @@ export default function TelemetryViewerDialog({ open, onClose, file, metadata, s
                             <>
                                 {activePreview?.failed && <Alert severity="warning" sx={{mb: 2}}>
                                     {activePreview.error || t('telemetry_viewer_dialog.preview_failed', {
-                                        defaultValue: 'Could not decode this saved packet. Try Reparse telemetry.',
+                                        defaultValue: 'Could not prepare this saved telemetry. Try Reparse telemetry.',
                                     })}
                                 </Alert>}
                                 <TelemetryValuesTab telemetry={telemetry} satellite={displayedMetadata.satellite?.name}
@@ -241,7 +253,7 @@ export default function TelemetryViewerDialog({ open, onClose, file, metadata, s
                 <TabPanel value={activeTab} index={2}>
                     <Box sx={{ px: 3, pb: 2 }}>
                         <HexAsciiTab
-                            packet={packet}
+                            packet={inspectionPacket}
                             telemetry={telemetry}
                         />
                     </Box>
@@ -250,7 +262,7 @@ export default function TelemetryViewerDialog({ open, onClose, file, metadata, s
                 <TabPanel value={activeTab} index={3}>
                     <Box sx={{ px: 3, pb: 2 }}>
                         <Float32Tab
-                            packet={packet}
+                            packet={inspectionPacket}
                             telemetry={telemetry}
                         />
                     </Box>
@@ -259,7 +271,7 @@ export default function TelemetryViewerDialog({ open, onClose, file, metadata, s
                 <TabPanel value={activeTab} index={4}>
                     <Box sx={{ px: 3, pb: 2 }}>
                         <IntegersTab
-                            packet={packet}
+                            packet={inspectionPacket}
                             telemetry={telemetry}
                         />
                     </Box>
@@ -268,7 +280,7 @@ export default function TelemetryViewerDialog({ open, onClose, file, metadata, s
                 <TabPanel value={activeTab} index={5}>
                     <Box sx={{ px: 3, pb: 2 }}>
                         <StringsTab
-                            packet={packet}
+                            packet={inspectionPacket}
                             telemetry={telemetry}
                         />
                     </Box>
@@ -277,7 +289,7 @@ export default function TelemetryViewerDialog({ open, onClose, file, metadata, s
                 <TabPanel value={activeTab} index={6}>
                     <Box sx={{ px: 3, pb: 2 }}>
                         <AnalysisTab
-                            packet={packet}
+                            packet={inspectionPacket}
                             telemetry={telemetry}
                         />
                     </Box>
