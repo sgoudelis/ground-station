@@ -212,7 +212,6 @@ const SatelliteSearchAutocomplete = ({
             // Fetch the satellite with transmitters using async thunk
             dispatch(fetchSatelliteWithTransmitters({
                 socket,
-                satelliteName: initialSatellite.name,
                 noradId: initialSatellite.norad_id
             }))
                 .unwrap()

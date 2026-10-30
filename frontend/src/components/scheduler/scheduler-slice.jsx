@@ -445,29 +445,31 @@ export const fetchNextPassesForScheduler = createAsyncThunk(
     }
 );
 
-// Fetch satellite with transmitters by name
+// Load a saved satellite by identity; autocomplete can omit it after the result limit.
 export const fetchSatelliteWithTransmitters = createAsyncThunk(
     'scheduler/fetchSatelliteWithTransmitters',
-    async ({ socket, satelliteName, noradId }, { rejectWithValue }) => {
+    async ({ socket, noradId }, { rejectWithValue }) => {
         try {
-            return await new Promise((resolve, reject) => {
-                socket.emit("api.call", {
-  cmd: 'get-satellite-search',
-  data: satelliteName
-}, response => {
-  if (response.success && response.data.length > 0) {
-    // Find the exact satellite by norad_id
-    const satellite = response.data.find(sat => sat.norad_id === noradId);
-    if (satellite) {
-      resolve(satellite);
-    } else {
-      reject(new Error('Satellite not found in search results'));
-    }
-  } else {
-    reject(new Error('Failed to fetch satellite'));
-  }
-});
-            });
+            // Both endpoints use the NORAD ID and avoid orbit-path calculation.
+            const [satellites, transmitters] = await Promise.all([
+                new Promise((resolve, reject) => {
+                    socket.emit('api.call', { cmd: 'get-satellites', data: noradId }, response => {
+                        if (response.success) resolve(response.data);
+                        else reject(new Error(response.error || 'Failed to fetch satellite'));
+                    });
+                }),
+                new Promise((resolve, reject) => {
+                    socket.emit('api.call', {
+                        cmd: 'get-transmitters', data: { norad_cat_id: noradId },
+                    }, response => {
+                        if (response.success) resolve(response.data);
+                        else reject(new Error(response.error || 'Failed to fetch transmitters'));
+                    });
+                }),
+            ]);
+            const satellite = satellites.find(sat => String(sat.norad_id) === String(noradId));
+            if (!satellite) throw new Error('Satellite not found');
+            return { ...satellite, transmitters };
         } catch (error) {
             return rejectWithValue(error.message);
         }

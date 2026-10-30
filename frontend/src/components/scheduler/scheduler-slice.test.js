@@ -1,10 +1,12 @@
-import { describe, expect, it } from 'vitest';
+import { configureStore } from '@reduxjs/toolkit';
+import { describe, expect, it, vi } from 'vitest';
 
 import reducer, {
     addMonitoredSatellite,
     addObservation,
     deleteObservations,
     createMonitoredSatellite,
+    fetchSatelliteWithTransmitters,
     fetchSDRParameters,
     observationStatusUpdated,
     setMonitoredSatelliteDialogOpen,
@@ -15,6 +17,44 @@ import reducer, {
 } from './scheduler-slice.jsx';
 
 describe('scheduler slice', () => {
+    it('loads the current satellite name and an empty transmitter list by NORAD ID', async () => {
+        const satellite = { norad_id: 57166, name: 'Updated catalog name' };
+        const socket = { emit: vi.fn((_event, request, acknowledge) => {
+            acknowledge({ success: true, data: request.cmd === 'get-satellites' ? [satellite] : [] });
+        }) };
+        const store = configureStore({ reducer });
+
+        const result = await store.dispatch(fetchSatelliteWithTransmitters({ socket, noradId: '57166' })).unwrap();
+
+        expect(result).toEqual({ ...satellite, transmitters: [] });
+        expect(socket.emit.mock.calls.map(([, request]) => request)).toEqual([
+            { cmd: 'get-satellites', data: '57166' },
+            { cmd: 'get-transmitters', data: { norad_cat_id: '57166' } },
+        ]);
+    });
+
+    it.each(['get-satellites', 'get-transmitters'])('rejects a failed %s lookup', async (failedCommand) => {
+        const socket = { emit: (_event, request, acknowledge) => {
+            acknowledge(request.cmd === failedCommand
+                ? { success: false, error: 'Lookup unavailable' }
+                : { success: true, data: [{ norad_id: 57166 }] });
+        } };
+        const store = configureStore({ reducer });
+
+        await expect(store.dispatch(fetchSatelliteWithTransmitters({ socket, noradId: 57166 })).unwrap())
+            .rejects.toBe('Lookup unavailable');
+    });
+
+    it('rejects a missing saved satellite instead of selecting another satellite', async () => {
+        const socket = { emit: (_event, _request, acknowledge) => {
+            acknowledge({ success: true, data: [{ norad_id: 59051 }] });
+        } };
+        const store = configureStore({ reducer });
+
+        await expect(store.dispatch(fetchSatelliteWithTransmitters({ socket, noradId: 57166 })).unwrap())
+            .rejects.toBe('Satellite not found');
+    });
+
     it('maintains observation state for socket and local updates', () => {
         let state = reducer(undefined, { type: '@@INIT' });
         state = reducer(state, addObservation({ id: 'obs-1', enabled: true, status: 'scheduled' }));
