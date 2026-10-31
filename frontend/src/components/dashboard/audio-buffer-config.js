@@ -1,8 +1,12 @@
 // Centralized frontend audio buffering constants (UI playback path)
 
-export const AUDIO_WORKER_MAX_QUEUE_SIZE = 3;
-export const AUDIO_WORKER_MAX_QUEUE_FOR_CATCHUP = 5;
-export const AUDIO_WORKER_CATCHUP_RETAIN_CHUNKS = 2;
+// Lead applied when a VFO starts (or recovers from an underrun). Incoming
+// chunks are scheduled this far ahead of the AudioContext clock, so a main
+// thread stall shorter than this stays inaudible. Costs the same amount of
+// latency.
+export const AUDIO_JITTER_BUFFER_SECONDS = 0.2;
 
-export const AUDIO_AUTO_FLUSH_MAX_BUFFER_SECONDS = 0.65;
-export const AUDIO_AUTO_FLUSH_CHECK_INTERVAL_MS = 250;
+// Once the scheduled-ahead audio exceeds this (typically after a long stall
+// delivered a burst of chunks), incoming chunks are skipped until we are back
+// under the limit. Skipping trims latency without overlapping sources.
+export const AUDIO_MAX_BUFFER_SECONDS = 0.8;

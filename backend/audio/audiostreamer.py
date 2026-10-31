@@ -154,9 +154,13 @@ class WebAudioStreamer(threading.Thread):
                     processed_audio = np.clip(processed_audio, -1.0, 1.0)
                     self.timing.record_since("prepare", prepare_started)
 
-                    # Convert to a list for JSON serialization
+                    # Ship raw little-endian float32 PCM as a Socket.IO binary
+                    # attachment. The browser wraps the ArrayBuffer in a
+                    # Float32Array directly, so there is no JSON float parsing on
+                    # the client's main thread (a JSON list was ~5x the bytes).
                     encode_started = self.timing.start()
-                    audio_data = processed_audio.tolist()
+                    sample_count = int(processed_audio.size)
+                    audio_data = processed_audio.tobytes()
                     self.timing.record_since("encode", encode_started)
 
                     # Detect if audio is stereo (interleaved L/R) or mono
@@ -191,10 +195,9 @@ class WebAudioStreamer(threading.Thread):
                                 "samples": audio_data,
                                 "sample_rate": 44100,
                                 "channels": channels,  # Mono (1) or Stereo (2)
-                                "format": "float32",  # Specify format
-                                "length": len(
-                                    audio_data
-                                ),  # Number of samples (including both L and R for stereo)
+                                "format": "float32",  # Little-endian float32 PCM bytes
+                                # Number of samples (including both L and R for stereo)
+                                "length": sample_count,
                                 "vfo": vfo_data,
                                 "session_id": originating_session_id,
                                 "rf_power_db": audio_message.get(
