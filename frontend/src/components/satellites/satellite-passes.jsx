@@ -293,7 +293,7 @@ const SatellitePasses = ({noradId, enabled = true}) => {
                     <Table stickyHeader size="small" aria-label={t('satellite_info.future_passes.table_label')}>
                         <TableHead>
                             <TableRow>
-                                <TableCell width={120}>{tEarthView('satellites_table.status')}</TableCell>
+                                <TableCell width={120} align="center">{tEarthView('satellites_table.status')}</TableCell>
                                 <TableCell align="center">{tEarthView('passes_table.peak_elevation')}</TableCell>
                                 <TableCell align="center" sx={{display: {xs: 'none', md: 'table-cell'}}}>
                                     {tEarthView('passes_table.duration')}
@@ -322,7 +322,7 @@ const SatellitePasses = ({noradId, enabled = true}) => {
                                 const statusColor = passStatusColors[status] || 'info';
                                 return (
                                     <TableRow key={pass.id ?? `${pass.event_start}-${index}`} hover className={getPassRowClassName(pass, nowMs)}>
-                                        <TableCell sx={{whiteSpace: 'nowrap'}}>
+                                        <TableCell align="center" sx={{whiteSpace: 'nowrap'}}>
                                             <Chip
                                                 size="small"
                                                 color={statusColor}
