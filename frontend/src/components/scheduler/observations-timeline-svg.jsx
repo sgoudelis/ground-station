@@ -273,7 +273,7 @@ const ObservationsTimeline = () => {
         <Box>
             <Box display="flex" justifyContent="space-between" alignItems="center">
                 <Stack direction="row" spacing={2} alignItems="center">
-                    <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'text.primary' }}>{t('observations_timeline_svg.timeline', { defaultValue: 'Timeline' })}</Typography>
+                    <Typography variant="h6" sx={{ fontWeight: 700, color: 'text.primary' }}>{t('observations_timeline_svg.timeline', { defaultValue: 'Timeline' })}</Typography>
                 </Stack>
                 <Stack direction="row" spacing={2} alignItems="center">
                     <FormControl size="small" sx={{ minWidth: 85, '& .MuiInputBase-root': { fontSize: '0.875rem' } }}>
