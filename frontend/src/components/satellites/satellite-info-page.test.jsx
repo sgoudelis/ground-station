@@ -13,7 +13,9 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { configureStore } from '@reduxjs/toolkit';
 import { Provider } from 'react-redux';
 import { MemoryRouter } from 'react-router';
+import { ThemeProvider } from '@mui/material/styles';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { setupTheme } from '../../theme.js';
 import '../../i18n/config.js';
 import { SatelliteInfoDialog } from './satellite-info-page.jsx';
 
@@ -63,17 +65,19 @@ const renderDialog = (satelliteData, onUpdated = undefined, open = true, livePos
         },
     });
     render(
-        <Provider store={store}>
-            <MemoryRouter>
-                <SatelliteInfoDialog
-                    open={open}
-                    onClose={vi.fn()}
-                    satelliteData={satelliteData}
-                    livePosition={livePosition}
-                    onUpdated={onUpdated}
-                />
-            </MemoryRouter>
-        </Provider>
+        <ThemeProvider theme={setupTheme()}>
+            <Provider store={store}>
+                <MemoryRouter>
+                    <SatelliteInfoDialog
+                        open={open}
+                        onClose={vi.fn()}
+                        satelliteData={satelliteData}
+                        livePosition={livePosition}
+                        onUpdated={onUpdated}
+                    />
+                </MemoryRouter>
+            </Provider>
+        </ThemeProvider>
     );
 };
 

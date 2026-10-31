@@ -138,7 +138,8 @@ describe('shared image viewer entry points', () => {
         fireEvent.click(within(viewer).getByRole('button', { name: 'Download' }));
         expect(download).toHaveBeenCalledWith(artifact.url, '_blank');
 
-        fireEvent.click(within(viewer).getByRole('button', { name: 'Close' }));
+        // The viewer has both a title-bar icon and a footer button named Close.
+        fireEvent.click(within(viewer).getByText('Close', { selector: 'button' }));
         await waitFor(() => expect(screen.getByRole('dialog')).toHaveTextContent('Observation artifacts'));
         expect(within(screen.getByRole('dialog')).getByText(folder.foldername)).toBeInTheDocument();
     });
