@@ -1064,17 +1064,22 @@ class PerformanceMonitor(threading.Thread):
                 decoder_type = type(decoder_instance).__name__
                 decoder_name = vfo_num  # Using vfo_num as decoder name based on the key structure
 
-                # Check if this is an IQ-based decoder by type name (not attribute check)
-                # IQ-based: packet decoders plus SSTV/GNSS with integrated demodulation.
-                is_iq_decoder = decoder_type in [
-                    "APRSDecoder",
-                    "BPSKDecoder",
-                    "FSKDecoder",
-                    "GFSKDecoder",
-                    "GMSKDecoder",
-                    "SSTVDecoder",
-                    "GNSSSdrDecoder",
-                ]
+                # The manager resolves input capabilities when subscribing the
+                # decoder. Use that same decision for topology and throughput;
+                # older entries without the flag retain their type-name fallback.
+                is_iq_decoder = decoder_entry.get(
+                    "needs_raw_iq",
+                    decoder_type
+                    in [
+                        "APRSDecoder",
+                        "BPSKDecoder",
+                        "FSKDecoder",
+                        "GFSKDecoder",
+                        "GMSKDecoder",
+                        "SSTVDecoder",
+                        "GNSSSdrDecoder",
+                    ],
+                )
 
                 if is_iq_decoder:
                     # IQ-based decoder receives from IQ broadcaster
