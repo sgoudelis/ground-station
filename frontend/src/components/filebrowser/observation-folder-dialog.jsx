@@ -39,13 +39,13 @@ const TELEMETRY_BADGES = {
     telemetry: { label: 'Telemetry', color: 'success', hint: 'This file contains decoded telemetry values.' },
     partial: { label: 'Partial telemetry', color: 'warning', hint: 'This file contains telemetry values alongside parsing failures or unsupported content.' },
     other: { label: 'Other data', color: 'default', hint: 'This packet contains recognized data without decoded telemetry values.' },
-    unsupported: { label: 'Unsupported', color: 'default', hint: 'This packet is not supported by the telemetry parser. Telemetry presence is unknown.' },
     error: { label: 'Parse error', color: 'warning', hint: 'This packet could not be parsed. Telemetry presence is unknown.' },
     unknown: { label: 'Unknown', color: 'default', hint: 'Could not determine whether this file contains telemetry.' },
 };
 
 function TelemetryBadge({ status }) {
     const { t } = useTranslation('filebrowser');
+    if (status === 'unsupported') return null;
     const badge = TELEMETRY_BADGES[status];
     return (
         <Tooltip title={t(`observation_folder_dialog.telemetry_status.${status}_hint`, { defaultValue: badge.hint })}>

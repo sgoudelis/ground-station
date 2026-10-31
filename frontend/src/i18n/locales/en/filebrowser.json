@@ -10,8 +10,6 @@
       "partial_hint": "This file contains telemetry values alongside parsing failures or unsupported content.",
       "other": "Other data",
       "other_hint": "This packet contains recognized data without decoded telemetry values.",
-      "unsupported": "Unsupported",
-      "unsupported_hint": "This packet is not supported by the telemetry parser. Telemetry presence is unknown.",
       "error": "Parse error",
       "error_hint": "This packet could not be parsed. Telemetry presence is unknown.",
       "unknown": "Unknown",
