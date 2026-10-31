@@ -1210,13 +1210,7 @@ const LocationPage = ({
                 statusText={statusLabel}
                 sticky
                 mobileInline
-                sx={{
-                    backgroundColor: (theme) => (
-                        theme.palette.mode === 'dark'
-                            ? alpha(theme.palette.grey[700], 0.18)
-                            : alpha(theme.palette.grey[100], 0.9)
-                    ),
-                }}
+                sx={{ bgcolor: 'surface.raised' }}
             >
                 <Button
                     variant="outlined"
