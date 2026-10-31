@@ -18,6 +18,9 @@ class WorkerOperations:
         self.epoch = None
         self.generation = str(uuid.uuid4())
         self.started_at = time.time()
+        # Last hardware snapshot content that was published, for change detection.
+        self._last_published = None
+        self._last_published_at = 0.0
 
     def snapshot(self):
         self.sequence += 1
@@ -290,5 +293,22 @@ class WorkerOperations:
                 self.emit(operation, "succeeded", reason)
                 del self.pending[key]
 
-    def publish(self):
+    # Idle trackers must still prove they are alive: the UI marks hardware stale
+    # after 15s without a snapshot, so repeat unchanged state well inside that.
+    HEARTBEAT_SECONDS = 5.0
+
+    def publish(self, force=False):
+        # Every published snapshot costs the browser a full tracking-page
+        # render, so skip the tick when nothing the UI shows has changed.
+        current = (
+            dict(self.tracker.input_tracking_state or {}),
+            self.tracker.rotator_data,
+            self.tracker.rig_data,
+        )
+        now = time.time()
+        unchanged = self._last_published is not None and current == self._last_published
+        if not force and unchanged and now - self._last_published_at < self.HEARTBEAT_SECONDS:
+            return
+        self._last_published = copy.deepcopy(current)
+        self._last_published_at = now
         self.tracker.queue_out.put({"event": "tracker-hardware-state", "data": self.snapshot()})

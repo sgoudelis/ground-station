@@ -22,6 +22,7 @@ import { useDispatch } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { submitOrEditSatellite } from './satellite-slice.jsx';
 import { useSocket } from '../common/socket.jsx';
+import { useDelayedUnmount } from '../../hooks/useDelayedUnmount.js';
 
 export const normalizeSatelliteFormValues = (satelliteData) => {
     if (!satelliteData) {
@@ -112,7 +113,7 @@ export const normalizeSatelliteFormValues = (satelliteData) => {
     };
 };
 
-const SatelliteEditDialog = ({ open, onClose, satelliteData, onSaved }) => {
+const SatelliteEditDialogContent = ({ open, onClose, satelliteData, onSaved }) => {
     const { t } = useTranslation('satellites');
     const dispatch = useDispatch();
     const { socket } = useSocket();
@@ -628,6 +629,13 @@ const SatelliteEditDialog = ({ open, onClose, satelliteData, onSaved }) => {
             </DialogActions>
         </Dialog>
     );
+};
+
+// Skip the dialog's hooks and subtree entirely while it is closed (after the exit transition);
+// closed dialogs otherwise re-render on every parent update.
+const SatelliteEditDialog = (props) => {
+    const shouldRender = useDelayedUnmount(props.open);
+    return shouldRender ? <SatelliteEditDialogContent {...props} /> : null;
 };
 
 export default SatelliteEditDialog;

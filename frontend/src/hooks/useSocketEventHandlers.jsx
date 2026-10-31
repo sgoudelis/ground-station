@@ -24,6 +24,9 @@ import { Box } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 
 // Toast message component with title and body
+// Wide enough to catch one tick from every tracker process, short enough to be invisible.
+const TRACKER_BATCH_WINDOW_MS = 100;
+
 const ToastMessage = ({ title, body }) => (
     <div>
         <div style={{ fontWeight: 600, marginBottom: '4px' }}>{title}</div>
@@ -47,6 +50,7 @@ import { buildTargetKeyFromTrackingState } from '../components/target/celestial-
 import { setTrackerInstances } from '../components/target/tracker-instances-slice.jsx';
 import { setSynchronizing } from '../components/satellites/synchronize-slice.jsx';
 import { initializeAppData } from '../services/data-sync.js';
+import { createDispatchBatcher } from './dispatchBatch.js';
 import { fetchVersionInfo } from '../components/dashboard/version-slice.jsx';
 import {
     setIsRecording,
@@ -142,6 +146,10 @@ export const useSocketEventHandlers = (socket, enabled = true) => {
     useEffect(() => {
         if (!socket || !enabled) return;
         let lastBootstrappedSocketId = null;
+        // Tracker processes tick together, so per-tick telemetry arrives as a
+        // burst of separate tasks. Coalesce them so the tracking page renders
+        // once per burst instead of once per message (see dispatchBatch.js).
+        const trackerBatch = createDispatchBatcher({ windowMs: TRACKER_BATCH_WINDOW_MS });
         const isCurrentSession = (generation, socketId) =>
             bootstrapGenerationRef.current === generation
             && socket.connected
@@ -347,7 +355,7 @@ export const useSocketEventHandlers = (socket, enabled = true) => {
 
         // UI tracker state event
         socket.on("ui-tracker-state", (data) => {
-            store.dispatch(setUITrackerValues(data));
+            trackerBatch.enqueue(() => store.dispatch(setUITrackerValues(data)));
         });
 
         socket.on("tracker-command-status", (data) => {
@@ -355,7 +363,9 @@ export const useSocketEventHandlers = (socket, enabled = true) => {
             if (data.snapshot) store.dispatch(setHardwareSnapshot(data.snapshot));
         });
 
-        socket.on('tracker-hardware-state', data => store.dispatch(setHardwareSnapshot(data)));
+        socket.on('tracker-hardware-state', (data) => {
+            trackerBatch.enqueue(() => store.dispatch(setHardwareSnapshot(data)));
+        });
         let reconcilingCommands = false;
         const commandTimer = window.setInterval(async () => {
             if (!socket.connected || reconcilingCommands) return;
@@ -521,7 +531,7 @@ export const useSocketEventHandlers = (socket, enabled = true) => {
         });
 
         // Satellite tracking events
-        socket.on("satellite-tracking", (message) => {
+        const handleSatelliteTracking = (message) => {
             store.dispatch(setSatelliteData(message));
             const trackingState = message?.tracking_state || {};
             const targetKey = buildTargetKeyFromTrackingState(trackingState);
@@ -627,10 +637,13 @@ export const useSocketEventHandlers = (socket, enabled = true) => {
                     }
                 });
             }
+        };
+        socket.on("satellite-tracking", (message) => {
+            trackerBatch.enqueue(() => handleSatelliteTracking(message));
         });
 
         socket.on('satellite-tracking-context', (message) => {
-            store.dispatch(setSatelliteContext(message));
+            trackerBatch.enqueue(() => store.dispatch(setSatelliteContext(message)));
         });
 
         socket.on('observer-sky-update', (message) => {
@@ -1009,7 +1022,7 @@ export const useSocketEventHandlers = (socket, enabled = true) => {
             dispatch(setCelestialTracksLive(data));
         });
         socket.on('celestial-tracks-live-update', (data) => {
-            dispatch(applyCelestialTracksLiveDelta(data));
+            trackerBatch.enqueue(() => dispatch(applyCelestialTracksLiveDelta(data)));
         });
         socket.on('celestial-track-row-update', handleCelestialTrackRowUpdate);
         socket.on('solar-system-body-update', handleSolarSystemBodyUpdate);
@@ -1098,6 +1111,7 @@ export const useSocketEventHandlers = (socket, enabled = true) => {
             socket.off('system-info');
             socket.off('session-runtime-snapshot');
             socket.off("sat-sync-events");
+            trackerBatch.dispose();
             socket.off("satellite-tracking");
             socket.off("satellite-tracking-context");
             socket.off("observer-sky-update");

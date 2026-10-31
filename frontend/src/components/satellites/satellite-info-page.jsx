@@ -58,6 +58,7 @@ import { formatAlternativeSatelliteNames } from '../common/satellite-names.js';
 import { formatDateTime } from '../../utils/date-time.js';
 import { useSatelliteLiveOrbit } from '../../hooks/liveorbit.js';
 import SatellitePasses from './satellite-passes.jsx';
+import { useDelayedUnmount } from '../../hooks/useDelayedUnmount.js';
 
 
 // Fix for default markers in react-leaflet
@@ -955,7 +956,7 @@ const SatelliteInfoPage = () => {
 };
 
 // Dialog wrapper component for use in other parts of the app
-export const SatelliteInfoDialog = ({ open, onClose, satelliteData, livePosition = null, onUpdated = null, targetGroupId = null }) => {
+const SatelliteInfoDialogContent = ({ open, onClose, satelliteData, livePosition = null, onUpdated = null, targetGroupId = null }) => {
     const { t } = useTranslation('satellites');
     const dispatch = useDispatch();
     const { socket } = useSocket();
@@ -1088,6 +1089,13 @@ export const SatelliteInfoDialog = ({ open, onClose, satelliteData, livePosition
             {targetSelectionDialog}
         </>
     );
+};
+
+// Skip the dialog's hooks and subtree entirely while it is closed (after the exit transition);
+// closed dialogs otherwise re-render on every parent update.
+export const SatelliteInfoDialog = (props) => {
+    const shouldRender = useDelayedUnmount(props.open);
+    return shouldRender ? <SatelliteInfoDialogContent {...props} /> : null;
 };
 
 export default SatelliteInfoPage;

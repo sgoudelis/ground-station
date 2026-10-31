@@ -8,6 +8,7 @@ import EventOutlinedIcon from '@mui/icons-material/EventOutlined';
 import MyLocationOutlinedIcon from '@mui/icons-material/MyLocationOutlined';
 import SummarizeOutlinedIcon from '@mui/icons-material/SummarizeOutlined';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
+import { useDelayedUnmount } from '../../hooks/useDelayedUnmount.js';
 
 const ITEM_ICONS = {
     'set-target': <MyLocationOutlinedIcon />,
@@ -26,7 +27,7 @@ const formatItemLabel = (item) => {
     return `${label.replace(/(?:\.\.\.|…)\s*$/, '')}...`;
 };
 
-export default function RowContextMenu({
+function RowContextMenuContent({
     open,
     onClose,
     onSuppressNativeContextMenu,
@@ -146,4 +147,10 @@ export default function RowContextMenu({
             })}
         </Menu>
     );
+}
+
+// Skip the menu's subtree while closed; it is mounted on busy tracking islands.
+export default function RowContextMenu(props) {
+    const shouldRender = useDelayedUnmount(props.open, 0);
+    return shouldRender ? <RowContextMenuContent {...props} /> : null;
 }

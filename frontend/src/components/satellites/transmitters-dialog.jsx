@@ -6,8 +6,9 @@ import React, { useState } from 'react';
 import { Box, Dialog, DialogContent, DialogTitle, IconButton, Typography } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import TransmittersTable from './transmitters-table.jsx';
+import { useDelayedUnmount } from '../../hooks/useDelayedUnmount.js';
 
-const TransmittersDialog = ({
+const TransmittersDialogContent = ({
     open,
     onClose,
     title,
@@ -79,6 +80,13 @@ const TransmittersDialog = ({
             </DialogContent>
         </Dialog>
     );
+};
+
+// Skip the dialog's hooks and subtree entirely while it is closed (after the exit transition);
+// closed dialogs otherwise re-render on every parent update.
+const TransmittersDialog = (props) => {
+    const shouldRender = useDelayedUnmount(props.open);
+    return shouldRender ? <TransmittersDialogContent {...props} /> : null;
 };
 
 export default TransmittersDialog;

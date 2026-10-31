@@ -1134,3 +1134,46 @@ async def test_late_worker_result_cannot_overwrite_newer_desired_state(monkeypat
     await manager.reconcile_operation(command, snapshot)
     assert (await manager.get_tracking_state())["rotator_state"] == "stopped"
     assert snapshot["desired_state"]["rotator_state"] == "stopped"
+
+
+def _fake_worker_tracker():
+    outbox = []
+    return (
+        SimpleNamespace(
+            tracker_id="target-1",
+            input_tracking_state={"rotator_state": "stopped"},
+            rotator_data={"az": 10.0, "el": 5.0, "connected": True},
+            rig_data={"frequency": 145800000, "connected": True},
+            queue_out=SimpleNamespace(put=outbox.append),
+        ),
+        outbox,
+    )
+
+
+def test_publish_skips_unchanged_snapshots_until_heartbeat(monkeypatch):
+    tracker, outbox = _fake_worker_tracker()
+    operations = WorkerOperations(tracker)
+    clock = [1000.0]
+    monkeypatch.setattr("tracker.execution.time.time", lambda: clock[0])
+
+    operations.publish()
+    operations.publish()
+    assert len(outbox) == 1, "identical hardware state must not be re-published every tick"
+
+    # A real change goes out immediately and bumps the sequence.
+    tracker.rotator_data["az"] = 11.0
+    operations.publish()
+    assert len(outbox) == 2
+    assert outbox[-1]["data"]["sequence"] == 2
+    assert outbox[-1]["data"]["rotator_data"]["az"] == 11.0
+
+    # Unchanged state is still repeated as a heartbeat so the UI never marks it stale.
+    clock[0] += WorkerOperations.HEARTBEAT_SECONDS
+    operations.publish()
+    assert len(outbox) == 3
+
+    # Mutating the live dict after publishing must still register as a change
+    # (the comparison baseline is a copy, not a reference).
+    tracker.rig_data["frequency"] = 145801000
+    operations.publish()
+    assert len(outbox) == 4

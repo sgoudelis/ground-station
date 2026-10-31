@@ -37,12 +37,13 @@ import {
 } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
+import { useDelayedUnmount } from '../../hooks/useDelayedUnmount.js';
 import {
     setPassesTableColumnVisibility,
     setPassesTablePageSize,
 } from './target-slice.jsx';
 
-const TargetPassesTableSettingsDialog = ({ open, onClose }) => {
+const TargetPassesTableSettingsDialogContent = ({ open, onClose }) => {
     const { t } = useTranslation('target');
     const dispatch = useDispatch();
     const columnVisibility = useSelector(state => state.targetSatTrack.passesTableColumnVisibility);
@@ -159,6 +160,13 @@ const TargetPassesTableSettingsDialog = ({ open, onClose }) => {
             </DialogActions>
         </Dialog>
     );
+};
+
+// Skip the dialog's hooks and subtree entirely while it is closed (after the exit transition);
+// closed dialogs otherwise re-render on every parent update.
+const TargetPassesTableSettingsDialog = (props) => {
+    const shouldRender = useDelayedUnmount(props.open);
+    return shouldRender ? <TargetPassesTableSettingsDialogContent {...props} /> : null;
 };
 
 export default TargetPassesTableSettingsDialog;
