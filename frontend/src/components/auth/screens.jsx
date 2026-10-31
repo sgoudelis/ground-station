@@ -50,8 +50,12 @@ import { useTranslation } from 'react-i18next';
 import { GroundStationLogoGreenBlue } from '../common/dataurl-icons.jsx';
 import { useSocket } from '../common/socket.jsx';
 import { fetchLocationForUserId } from '../settings/location-slice.jsx';
-import LocationPage from '../settings/location-form.jsx';
+import DeferredIslandPlaceholder from '../common/deferredplaceholder.jsx';
 import { loadAuthStatus, loginUser, setupAdmin } from './auth-slice.jsx';
+
+// The location wizard pulls in maplibre and timezone data; only the first-run
+// setup screen needs it, so fetch it on demand instead of with the shell.
+const LocationPage = React.lazy(() => import('../settings/location-form.jsx'));
 
 const shellSx = {
     minHeight: '100vh',
@@ -616,11 +620,13 @@ function SetupWizardScreen() {
                 }}
             >
                 <Box sx={{ flex: 1, minHeight: 0, display: 'flex' }}>
-                    <LocationPage
-                        wizardMode
-                        wizardRequireAdminSetup
-                        wizardBackendReady={wizardBackendReady}
-                    />
+                    <React.Suspense fallback={<DeferredIslandPlaceholder />}>
+                        <LocationPage
+                            wizardMode
+                            wizardRequireAdminSetup
+                            wizardBackendReady={wizardBackendReady}
+                        />
+                    </React.Suspense>
                 </Box>
                 {showConnectionOverlay && (
                     <Box

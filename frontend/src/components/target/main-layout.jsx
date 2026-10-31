@@ -76,7 +76,7 @@ const FIXED_ISLAND_HEIGHTS = {
     xs: {'rotator-control': 29, 'rig-control': 29},
     xxs: {'rotator-control': 29, 'rig-control': 29},
 };
-const DEFERRED_TRACKING_ISLAND_COUNT = 5;
+const DEFERRED_TRACKING_ISLAND_COUNT = 6;
 
 // -------------------------------------------------
 // Leaflet icon path fix for React
@@ -663,8 +663,9 @@ const TrackingLayout = React.memo(function TrackingLayout() {
         const mountNextIsland = () => {
             if (cancelled) return;
 
-            // Keep route navigation responsive by mounting the target map before
-            // the data grids and hardware control islands.
+            // Keep route navigation responsive: the route commit renders only the
+            // grid shell, then the map mounts on the next frame, followed by the
+            // data grids and hardware control islands one frame at a time.
             React.startTransition(() => {
                 setDeferredIslandCount(nextIslandCount);
             });
@@ -722,24 +723,24 @@ const TrackingLayout = React.memo(function TrackingLayout() {
     // pre-make the components
     let gridContents = [
         <StyledIslandParent key="map">
-            <TargetViewRouter/>
+            {deferredIslandCount >= 1 ? <TargetViewRouter/> : <DeferredIslandPlaceholder/>}
         </StyledIslandParent>,
         <StyledIslandParentScrollbar key="info">
-            {deferredIslandCount >= 1 ? <TargetInfoIsland/> : <DeferredIslandPlaceholder/>}
+            {deferredIslandCount >= 2 ? <TargetInfoIsland/> : <DeferredIslandPlaceholder/>}
         </StyledIslandParentScrollbar>,
         <StyledIslandParentNoScrollbar key="passes">
-            {deferredIslandCount >= 5 ? <NextPassesIsland/> : <DeferredIslandPlaceholder/>}
+            {deferredIslandCount >= 6 ? <NextPassesIsland/> : <DeferredIslandPlaceholder/>}
         </StyledIslandParentNoScrollbar>,
         <StyledIslandParentNoScrollbar key="timeline">
-            {deferredIslandCount >= 4 ? (
+            {deferredIslandCount >= 5 ? (
                 <TrackingTimelineIsland />
             ) : <DeferredIslandPlaceholder/>}
         </StyledIslandParentNoScrollbar>,
         <StyledIslandParentScrollbar key="rotator-control">
-            {deferredIslandCount >= 2 ? <RotatorControl/> : <DeferredIslandPlaceholder/>}
+            {deferredIslandCount >= 3 ? <RotatorControl/> : <DeferredIslandPlaceholder/>}
         </StyledIslandParentScrollbar>,
         <StyledIslandParentScrollbar key="rig-control">
-            {deferredIslandCount >= 3 ? <RigControl/> : <DeferredIslandPlaceholder/>}
+            {deferredIslandCount >= 4 ? <RigControl/> : <DeferredIslandPlaceholder/>}
         </StyledIslandParentScrollbar>,
     ];
 

@@ -11,7 +11,7 @@ import LanIcon from '@mui/icons-material/Lan';
 import SettingsInputAntennaIcon from '@mui/icons-material/SettingsInputAntenna';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import {Avatar, Box, Button, Divider, IconButton, LinearProgress, ListItemIcon, ListItemText, MenuItem, MenuList, Popover} from "@mui/material";
-import {GroundStationLogoGreenBlue} from "../common/dataurl-icons.jsx";
+import {GroundStationLogoGreenBlue} from "../common/logo-dataurl.js";
 import {Account, AccountPopoverFooter, AccountPreview, SignOutButton} from "@toolpad/core";
 import * as React from "react";
 import {stringAvatar} from "../common/common.jsx";

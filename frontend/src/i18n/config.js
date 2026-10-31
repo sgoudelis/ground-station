@@ -20,7 +20,10 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 
-// Import translation files
+// English is the default and fallback language, so it ships with the app shell
+// and is available synchronously. Every other language is fetched on demand the
+// first time it is selected; bundling all of them statically added ~1 MB to the
+// initial download for strings most installs never display.
 import commonEN from './locales/en/common.json';
 import navigationEN from './locales/en/navigation.json';
 import hardwareEN from './locales/en/hardware.json';
@@ -34,98 +37,7 @@ import waterfallEN from './locales/en/waterfall.json';
 import filebrowserEN from './locales/en/filebrowser.json';
 import celestialEN from './locales/en/celestial.json';
 
-import commonEL from './locales/el/common.json';
-import navigationEL from './locales/el/navigation.json';
-import hardwareEL from './locales/el/hardware.json';
-import settingsEL from './locales/el/settings.json';
-import satellitesEL from './locales/el/satellites.json';
-import trackingEL from './locales/el/tracking.json';
-import earthviewEL from './locales/el/earthview.json';
-import targetEL from './locales/el/target.json';
-import dashboardEL from './locales/el/dashboard.json';
-import waterfallEL from './locales/el/waterfall.json';
-import filebrowserEL from './locales/el/filebrowser.json';
-import celestialEL from './locales/el/celestial.json';
-
-import commonFR from './locales/fr/common.json';
-import navigationFR from './locales/fr/navigation.json';
-import hardwareFR from './locales/fr/hardware.json';
-import settingsFR from './locales/fr/settings.json';
-import satellitesFR from './locales/fr/satellites.json';
-import trackingFR from './locales/fr/tracking.json';
-import earthviewFR from './locales/fr/earthview.json';
-import targetFR from './locales/fr/target.json';
-import dashboardFR from './locales/fr/dashboard.json';
-import waterfallFR from './locales/fr/waterfall.json';
-import filebrowserFR from './locales/fr/filebrowser.json';
-import celestialFR from './locales/fr/celestial.json';
-
-import commonES from './locales/es/common.json';
-import navigationES from './locales/es/navigation.json';
-import hardwareES from './locales/es/hardware.json';
-import settingsES from './locales/es/settings.json';
-import satellitesES from './locales/es/satellites.json';
-import trackingES from './locales/es/tracking.json';
-import earthviewES from './locales/es/earthview.json';
-import targetES from './locales/es/target.json';
-import dashboardES from './locales/es/dashboard.json';
-import waterfallES from './locales/es/waterfall.json';
-import filebrowserES from './locales/es/filebrowser.json';
-import celestialES from './locales/es/celestial.json';
-
-import commonDE from './locales/de/common.json';
-import navigationDE from './locales/de/navigation.json';
-import hardwareDE from './locales/de/hardware.json';
-import settingsDE from './locales/de/settings.json';
-import satellitesDE from './locales/de/satellites.json';
-import trackingDE from './locales/de/tracking.json';
-import earthviewDE from './locales/de/earthview.json';
-import targetDE from './locales/de/target.json';
-import dashboardDE from './locales/de/dashboard.json';
-import waterfallDE from './locales/de/waterfall.json';
-import filebrowserDE from './locales/de/filebrowser.json';
-import celestialDE from './locales/de/celestial.json';
-
-import commonNL from './locales/nl/common.json';
-import navigationNL from './locales/nl/navigation.json';
-import hardwareNL from './locales/nl/hardware.json';
-import settingsNL from './locales/nl/settings.json';
-import satellitesNL from './locales/nl/satellites.json';
-import trackingNL from './locales/nl/tracking.json';
-import earthviewNL from './locales/nl/earthview.json';
-import targetNL from './locales/nl/target.json';
-import dashboardNL from './locales/nl/dashboard.json';
-import waterfallNL from './locales/nl/waterfall.json';
-import filebrowserNL from './locales/nl/filebrowser.json';
-import celestialNL from './locales/nl/celestial.json';
-
-import commonIT from './locales/it/common.json';
-import navigationIT from './locales/it/navigation.json';
-import hardwareIT from './locales/it/hardware.json';
-import settingsIT from './locales/it/settings.json';
-import satellitesIT from './locales/it/satellites.json';
-import trackingIT from './locales/it/tracking.json';
-import earthviewIT from './locales/it/earthview.json';
-import targetIT from './locales/it/target.json';
-import dashboardIT from './locales/it/dashboard.json';
-import waterfallIT from './locales/it/waterfall.json';
-import filebrowserIT from './locales/it/filebrowser.json';
-import celestialIT from './locales/it/celestial.json';
-
-import commonZH from './locales/zh/common.json';
-import navigationZH from './locales/zh/navigation.json';
-import hardwareZH from './locales/zh/hardware.json';
-import settingsZH from './locales/zh/settings.json';
-import satellitesZH from './locales/zh/satellites.json';
-import trackingZH from './locales/zh/tracking.json';
-import earthviewZH from './locales/zh/earthview.json';
-import targetZH from './locales/zh/target.json';
-import dashboardZH from './locales/zh/dashboard.json';
-import waterfallZH from './locales/zh/waterfall.json';
-import filebrowserZH from './locales/zh/filebrowser.json';
-import celestialZH from './locales/zh/celestial.json';
-
-const resources = {
+const bundledResources = {
     en: {
         common: commonEN,
         navigation: navigationEN,
@@ -140,110 +52,44 @@ const resources = {
         filebrowser: filebrowserEN,
         celestial: celestialEN,
     },
-    el: {
-        common: commonEL,
-        navigation: navigationEL,
-        hardware: hardwareEL,
-        settings: settingsEL,
-        satellites: satellitesEL,
-        tracking: trackingEL,
-        earthview: earthviewEL,
-        target: targetEL,
-        dashboard: dashboardEL,
-        waterfall: waterfallEL,
-        filebrowser: filebrowserEL,
-        celestial: celestialEL,
-    },
-    fr: {
-        common: commonFR,
-        navigation: navigationFR,
-        hardware: hardwareFR,
-        settings: settingsFR,
-        satellites: satellitesFR,
-        tracking: trackingFR,
-        earthview: earthviewFR,
-        target: targetFR,
-        dashboard: dashboardFR,
-        waterfall: waterfallFR,
-        filebrowser: filebrowserFR,
-        celestial: celestialFR,
-    },
-    es: {
-        common: commonES,
-        navigation: navigationES,
-        hardware: hardwareES,
-        settings: settingsES,
-        satellites: satellitesES,
-        tracking: trackingES,
-        earthview: earthviewES,
-        target: targetES,
-        dashboard: dashboardES,
-        waterfall: waterfallES,
-        filebrowser: filebrowserES,
-        celestial: celestialES,
-    },
-    de: {
-        common: commonDE,
-        navigation: navigationDE,
-        hardware: hardwareDE,
-        settings: settingsDE,
-        satellites: satellitesDE,
-        tracking: trackingDE,
-        earthview: earthviewDE,
-        target: targetDE,
-        dashboard: dashboardDE,
-        waterfall: waterfallDE,
-        filebrowser: filebrowserDE,
-        celestial: celestialDE,
-    },
-    nl: {
-        common: commonNL,
-        navigation: navigationNL,
-        hardware: hardwareNL,
-        settings: settingsNL,
-        satellites: satellitesNL,
-        tracking: trackingNL,
-        earthview: earthviewNL,
-        target: targetNL,
-        dashboard: dashboardNL,
-        waterfall: waterfallNL,
-        filebrowser: filebrowserNL,
-        celestial: celestialNL,
-    },
-    it: {
-        common: commonIT,
-        navigation: navigationIT,
-        hardware: hardwareIT,
-        settings: settingsIT,
-        satellites: satellitesIT,
-        tracking: trackingIT,
-        earthview: earthviewIT,
-        target: targetIT,
-        dashboard: dashboardIT,
-        waterfall: waterfallIT,
-        filebrowser: filebrowserIT,
-        celestial: celestialIT,
-    },
-    zh: {
-        common: commonZH,
-        navigation: navigationZH,
-        hardware: hardwareZH,
-        settings: settingsZH,
-        satellites: satellitesZH,
-        tracking: trackingZH,
-        earthview: earthviewZH,
-        target: targetZH,
-        dashboard: dashboardZH,
-        waterfall: waterfallZH,
-        filebrowser: filebrowserZH,
-        celestial: celestialZH,
+};
+
+export const NAMESPACES = Object.keys(bundledResources.en);
+
+// Lazy loaders keyed by './locales/<lng>/<ns>.json'; Vite emits one chunk per file.
+const localeLoaders = import.meta.glob(['./locales/*/*.json', '!./locales/en/*.json']);
+
+export const SUPPORTED_LANGUAGES = [
+    'en',
+    ...new Set(Object.keys(localeLoaders).map((path) => path.split('/')[2])),
+];
+
+// Minimal i18next backend that resolves a namespace from the glob map.
+// `changeLanguage()` awaits these reads before switching, so the UI never
+// renders a half-loaded language; missing files fall back to English per key.
+const lazyLocaleBackend = {
+    type: 'backend',
+    init() {},
+    read(language, namespace, callback) {
+        const load = localeLoaders[`./locales/${language}/${namespace}.json`];
+        if (!load) {
+            callback(null, {});
+            return;
+        }
+        load()
+            .then((module) => callback(null, module.default ?? module))
+            .catch((error) => callback(error, false));
     },
 };
 
 i18n
+    .use(lazyLocaleBackend)
     .use(initReactI18next)
     .init({
-        resources,
+        resources: bundledResources,
+        // Bundled English is complete; only request other languages from the backend.
+        partialBundledLanguages: true,
+        ns: NAMESPACES,
         lng: 'en', // default language
         fallbackLng: 'en',
         defaultNS: 'common',

@@ -23,8 +23,9 @@ import {ThemeSwitcher} from "@toolpad/core/DashboardLayout";
 import Typography from "@mui/material/Typography";
 import PropTypes from "prop-types";
 import * as React from "react";
-import {Outlet, useNavigate, useLocation} from "react-router";
+import {Outlet, useNavigate, useLocation, useNavigation} from "react-router";
 import {
+    LinearProgress,
     AppBar,
     Avatar,
     Backdrop,
@@ -56,8 +57,8 @@ import {
     styled
 } from "@mui/material";
 import {Account, AccountPopoverFooter, AccountPreview, SignOutButton} from "@toolpad/core";
-import {GroundStationLogoGreenBlue} from "../common/dataurl-icons.jsx";
-import {stringAvatar} from "../common/common.jsx";
+import {GroundStationLogoGreenBlue} from "../common/logo-dataurl.js";
+import {stringAvatar} from "../common/string-avatar.js";
 import Grid from "@mui/material/Grid";
 import BorderColorIcon from '@mui/icons-material/BorderColor';
 import {useEffect, useRef, useState} from "react";
@@ -84,11 +85,15 @@ import VersionInfo from "./version-info.jsx";
 import VersionUpdateOverlay from "./version-update-overlay.jsx";
 import UpdateIndicator from "./update-indicator.jsx";
 import ApplicationFooter from "./application-footer.jsx";
-import PerformanceMetricsDialog from "../performance/performance-metrics-dialog.jsx";
+// Heavy, rarely-opened dialogs are code-split so the shell does not ship
+// maplibre/moment-timezone (location wizard) or xyflow (performance graph).
+const PerformanceMetricsDialog = React.lazy(() => import("../performance/performance-metrics-dialog.jsx"));
 import SchedulerDialogHost from "../scheduler/scheduler-dialog-host.jsx";
 import BackgroundTasksPopover from "../tasks/tasks-popover.jsx";
 import VfoAudioPopover from "./vfoaudio.jsx";
-import LocationPage from "../settings/location-form.jsx";
+const LocationPage = React.lazy(() => import("../settings/location-form.jsx"));
+import DeferredIslandPlaceholder from "../common/deferredplaceholder.jsx";
+import { useDelayedUnmount } from "../../hooks/useDelayedUnmount.js";
 import MenuIcon from '@mui/icons-material/Menu';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
@@ -896,6 +901,11 @@ export default function Layout() {
     const dispatch = useDispatch();
     const navigate = useNavigate();
     const location = useLocation();
+    // Router-level state: "loading" while a code-split page chunk is being fetched.
+    const routeNavigation = useNavigation();
+    const performanceDialogOpen = useSelector((state) => Boolean(state.performance?.dialogOpen));
+    // Keep the dialog mounted briefly after closing so its own close effects run.
+    const renderPerformanceDialog = useDelayedUnmount(performanceDialogOpen);
     const { socket } = useSocket();
     const { t } = useTranslation();
     const [open, setOpen] = React.useState(false);
@@ -1673,12 +1683,23 @@ export default function Layout() {
                     flexDirection: 'column',
                 }}
             >
-                <Box sx={{ flexGrow: 1, minHeight: 0 }}>
+                <Box sx={{ flexGrow: 1, minHeight: 0, position: 'relative' }}>
+                    {/* Pages are code-split; show progress while a route's chunk is fetched. */}
+                    {routeNavigation.state === 'loading' && (
+                        <LinearProgress
+                            aria-label={t('dashboard_layout.loading_page', { defaultValue: 'Loading page' })}
+                            sx={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: (theme) => theme.zIndex.appBar - 1 }}
+                        />
+                    )}
                     {connected && !initialDataLoading && !hasVersionChanged ? <Outlet /> : <ConnectionOverlay />}
                 </Box>
                 <ApplicationFooter />
                 {hasVersionChanged && <VersionUpdateOverlay />}
-                <PerformanceMetricsDialog />
+                {renderPerformanceDialog && (
+                    <React.Suspense fallback={null}>
+                        <PerformanceMetricsDialog />
+                    </React.Suspense>
+                )}
                 {/* The host stays available on every page; it mounts forms when opened. */}
                 <SchedulerDialogHost />
             </Box>
@@ -1735,10 +1756,12 @@ export default function Layout() {
                     }}
                 >
                     <Box sx={{ flex: 1, minHeight: 0, display: 'flex' }}>
-                        <LocationPage
-                            wizardMode
-                            onWizardCompleted={() => dispatch(setShowLocationSetupDialog(false))}
-                        />
+                        <React.Suspense fallback={<DeferredIslandPlaceholder />}>
+                            <LocationPage
+                                wizardMode
+                                onWizardCompleted={() => dispatch(setShowLocationSetupDialog(false))}
+                            />
+                        </React.Suspense>
                     </Box>
                 </DialogContent>
             </Dialog>

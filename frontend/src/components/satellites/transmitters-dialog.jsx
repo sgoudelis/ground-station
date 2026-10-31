@@ -2,10 +2,12 @@
  * Shared Transmitters dialog wrapper.
  */
 
-import React, { useState } from 'react';
+import React, { Suspense, useState } from 'react';
 import { Box, Dialog, DialogContent, DialogTitle, IconButton, Typography } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
-import TransmittersTable from './transmitters-table.jsx';
+// The table pulls in MUI X DataGrid; load it only when a dialog actually opens.
+const TransmittersTable = React.lazy(() => import('./transmitters-table.jsx'));
+import DeferredIslandPlaceholder from '../common/deferredplaceholder.jsx';
 import { useDelayedUnmount } from '../../hooks/useDelayedUnmount.js';
 
 const TransmittersDialogContent = ({
@@ -71,11 +73,13 @@ const TransmittersDialogContent = ({
                 }}
             >
                 {satelliteData && (
-                    <TransmittersTable
-                        satelliteData={satelliteData}
-                        inDialog
-                        actionsPortalTarget={actionsTarget}
-                    />
+                    <Suspense fallback={<DeferredIslandPlaceholder />}>
+                        <TransmittersTable
+                            satelliteData={satelliteData}
+                            inDialog
+                            actionsPortalTarget={actionsTarget}
+                        />
+                    </Suspense>
                 )}
             </DialogContent>
         </Dialog>

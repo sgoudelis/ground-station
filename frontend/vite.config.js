@@ -125,6 +125,26 @@ export default defineConfig(({ mode }) => {
             ) {
               return 'vendor';
             }
+            // Tiny helpers shared by many libraries must not be hoisted into one of
+            // the big UI chunks, or every page would preload that chunk for them.
+            if (
+              id.includes('/@babel/runtime/') ||
+              id.includes('/clsx/') ||
+              id.includes('/prop-types/') ||
+              id.includes('/react-is/') ||
+              id.includes('/tslib/') ||
+              // react-redux / RTK runtime deps; otherwise hoisted next to DataGrid.
+              id.includes('/use-sync-external-store/') ||
+              id.includes('/reselect/')
+            ) {
+              return 'vendor';
+            }
+            // Large, rarely-changing UI libraries get their own long-lived chunks so
+            // an app deploy does not force clients to re-download them.
+            // MUI X (DataGrid) is deliberately not pinned: it is only used by pages,
+            // so letting the bundler split it by usage keeps it off the first paint.
+            if (id.includes('/@mui/x-')) return;
+            if (id.includes('/@mui/') || id.includes('/@emotion/')) return 'mui';
           },
         },
       },

@@ -272,35 +272,8 @@ export function InternationalDateLinePolyline() {
     ];
 }
 
-function stringToColor(string) {
-    let hash = 0;
-    let i;
-
-    for (i = 0; i < string.length; i += 1) {
-        hash = string.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    let color = '#';
-    for (i = 0; i < 3; i += 1) {
-        const value = (hash >> (i * 8)) & 0xff;
-        color += `00${value.toString(16)}`.slice(-2);
-    }
-
-    return color;
-}
-
-export function stringAvatar(name) {
-    const normalizedName = String(name || '').trim();
-    const nameParts = normalizedName.split(/\s+/).filter(Boolean);
-    const firstInitial = nameParts[0]?.[0] || '?';
-    const secondInitial = nameParts[1]?.[0] || firstInitial;
-
-    return {
-        sx: {
-            bgcolor: stringToColor(normalizedName || 'unknown-user'),
-        },
-        children: `${firstInitial}${secondInitial}`.toUpperCase(),
-    };
-}
+// Re-exported for existing importers; defined in a leaflet-free module.
+export { stringAvatar, stringToColor } from './string-avatar.js';
 
 export const humanizeDate = (isoString) => {
     if (!isoString) return i18n.t('common:humanize.date.never');

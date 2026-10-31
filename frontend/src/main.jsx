@@ -22,41 +22,42 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './i18n/config.js'
 import {createBrowserRouter, Navigate, RouterProvider, useParams} from "react-router";
-import {
-    AdminCelestialCatalogPage,
-    AdminCelestialEphemerisPage,
-    AdminSatellitesCatalogPage,
-    AdminSatellitesGroupsPage,
-    AdminSatellitesOrbitalDataPage,
-    AdminSatellitesSourcesPage,
-    AdminSystemAboutPage,
-    AdminSystemGeneralPage,
-    AdminSystemHardwarePage,
-    AdminSystemLocationPage,
-    AdminSystemMaintenancePage,
-    AdminSystemUsersPage,
-    UserAccountPageLayout,
-    UserPreferencesPage,
-} from "./components/settings/settings.jsx";
-import EarthViewLayout from "./components/earthview/main-layout.jsx";
 import App from "./App.jsx";
 import Layout from "./components/dashboard/dashboard-layout.jsx";
-import TrackingLayout from "./components/target/main-layout.jsx";
 import {SocketProvider} from './components/common/socket.jsx';
 import { Provider as ReduxProvider} from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
 import { store, persistor } from './components/common/store.jsx';
 import ErrorPage from './components/common/error-page.jsx';
 import NotFoundPage from './components/common/not-found-page.jsx';
-import MainLayout from "./components/waterfall/main-layout.jsx";
 import {WakeLockProvider} from "./components/dashboard/wake-lock-provider.jsx";
-import SatelliteInfoPage from "./components/satellites/satellite-info-page.jsx";
-import FileBrowserMain from "./components/filebrowser/filebrowser-main.jsx";
-import ScheduledObservationsLayout from "./components/scheduler/main-layout.jsx";
-import CelestialMainLayout from "./components/celestial/main-layout.jsx";
-import ApiTokensPage from "./components/auth/tokens.jsx";
 
 const enableStrictMode = import.meta.env.VITE_REACT_STRICT_MODE !== 'false';
+
+// Route-level code splitting. Each page's module graph is fetched the first
+// time its route is visited, so the shell ships a much smaller bundle and a
+// navigation only evaluates the code it needs. React Router awaits the import
+// before committing the route, so no Suspense fallback is required.
+const lazyPage = (load) => async () => ({ Component: (await load()).default });
+const lazySettingsPage = (exportName) => async () => ({
+    Component: (await import("./components/settings/settings.jsx"))[exportName],
+});
+const pages = {
+    earthView: lazyPage(() => import("./components/earthview/main-layout.jsx")),
+    tracking: lazyPage(() => import("./components/target/main-layout.jsx")),
+    waterfall: lazyPage(() => import("./components/waterfall/main-layout.jsx")),
+    files: lazyPage(() => import("./components/filebrowser/filebrowser-main.jsx")),
+    scheduler: lazyPage(() => import("./components/scheduler/main-layout.jsx")),
+    solarSystem: lazyPage(() => import("./components/celestial/main-layout.jsx")),
+    satelliteInfo: lazyPage(() => import("./components/satellites/satellite-info-page.jsx")),
+    accountTokens: async () => {
+        const [{ UserAccountPageLayout }, { default: ApiTokensPage }] = await Promise.all([
+            import("./components/settings/settings.jsx"),
+            import("./components/auth/tokens.jsx"),
+        ]);
+        return { element: <UserAccountPageLayout activeTab="tokens"><ApiTokensPage /></UserAccountPageLayout> };
+    },
+};
 
 function LegacySatellitePathRedirect() {
     const { noradId } = useParams();
@@ -80,11 +81,11 @@ const router = createBrowserRouter([
                     },
                     {
                         path: "earthview",
-                        Component: EarthViewLayout,
+                        lazy: pages.earthView,
                     },
                     {
                         path: "tracking",
-                        Component: TrackingLayout,
+                        lazy: pages.tracking,
                     },
                     {
                         // Backward-compatible alias for older links/bookmarks.
@@ -93,11 +94,11 @@ const router = createBrowserRouter([
                     },
                     {
                         path: "waterfall",
-                        Component: MainLayout,
+                        lazy: pages.waterfall,
                     },
                     {
                         path: "files",
-                        Component: FileBrowserMain,
+                        lazy: pages.files,
                     },
                     {
                         // Backward-compatible alias for older links/bookmarks.
@@ -106,19 +107,19 @@ const router = createBrowserRouter([
                     },
                     {
                         path: "scheduler",
-                        Component: ScheduledObservationsLayout,
+                        lazy: pages.scheduler,
                     },
                     {
                         path: "preferences",
-                        Component: UserPreferencesPage,
+                        lazy: lazySettingsPage("UserPreferencesPage"),
                     },
                     {
                         path: "account/tokens",
-                        element: <UserAccountPageLayout activeTab="tokens"><ApiTokensPage /></UserAccountPageLayout>,
+                        lazy: pages.accountTokens,
                     },
                     {
                         path: "solarsystem",
-                        Component: CelestialMainLayout,
+                        lazy: pages.solarSystem,
                     },
                     {
                         // Backward-compatible alias for older links/bookmarks.
@@ -127,7 +128,7 @@ const router = createBrowserRouter([
                     },
                     {
                         path: "satellites/:noradId",
-                        Component: SatelliteInfoPage,
+                        lazy: pages.satelliteInfo,
                     },
                     {
                         // Backward-compatible alias for older links/bookmarks.
@@ -171,19 +172,19 @@ const router = createBrowserRouter([
                                     },
                                     {
                                         path: "orbital-data",
-                                        Component: AdminSatellitesOrbitalDataPage,
+                                        lazy: lazySettingsPage("AdminSatellitesOrbitalDataPage"),
                                     },
                                     {
                                         path: "sources",
-                                        Component: AdminSatellitesSourcesPage,
+                                        lazy: lazySettingsPage("AdminSatellitesSourcesPage"),
                                     },
                                     {
                                         path: "catalog",
-                                        Component: AdminSatellitesCatalogPage,
+                                        lazy: lazySettingsPage("AdminSatellitesCatalogPage"),
                                     },
                                     {
                                         path: "groups",
-                                        Component: AdminSatellitesGroupsPage,
+                                        lazy: lazySettingsPage("AdminSatellitesGroupsPage"),
                                     },
                                 ],
                             },
@@ -196,11 +197,11 @@ const router = createBrowserRouter([
                                     },
                                     {
                                         path: "ephemeris",
-                                        Component: AdminCelestialEphemerisPage,
+                                        lazy: lazySettingsPage("AdminCelestialEphemerisPage"),
                                     },
                                     {
                                         path: "catalog",
-                                        Component: AdminCelestialCatalogPage,
+                                        lazy: lazySettingsPage("AdminCelestialCatalogPage"),
                                     },
                                     {
                                         path: "targets",
@@ -217,7 +218,7 @@ const router = createBrowserRouter([
                                     },
                                     {
                                         path: "general",
-                                        Component: AdminSystemGeneralPage,
+                                        lazy: lazySettingsPage("AdminSystemGeneralPage"),
                                     },
                                     {
                                         path: "preferences",
@@ -229,11 +230,11 @@ const router = createBrowserRouter([
                                     },
                                     {
                                         path: "location",
-                                        Component: AdminSystemLocationPage,
+                                        lazy: lazySettingsPage("AdminSystemLocationPage"),
                                     },
                                     {
                                         path: "users",
-                                        Component: AdminSystemUsersPage,
+                                        lazy: lazySettingsPage("AdminSystemUsersPage"),
                                     },
                                     {
                                         path: "hardware",
@@ -244,25 +245,25 @@ const router = createBrowserRouter([
                                             },
                                             {
                                                 path: "rigs",
-                                                Component: AdminSystemHardwarePage,
+                                                lazy: lazySettingsPage("AdminSystemHardwarePage"),
                                             },
                                             {
                                                 path: "rotators",
-                                                Component: AdminSystemHardwarePage,
+                                                lazy: lazySettingsPage("AdminSystemHardwarePage"),
                                             },
                                             {
                                                 path: "sdrs",
-                                                Component: AdminSystemHardwarePage,
+                                                lazy: lazySettingsPage("AdminSystemHardwarePage"),
                                             },
                                         ],
                                     },
                                     {
                                         path: "maintenance",
-                                        Component: AdminSystemMaintenancePage,
+                                        lazy: lazySettingsPage("AdminSystemMaintenancePage"),
                                     },
                                     {
                                         path: "about",
-                                        Component: AdminSystemAboutPage,
+                                        lazy: lazySettingsPage("AdminSystemAboutPage"),
                                     },
                                 ],
                             },
