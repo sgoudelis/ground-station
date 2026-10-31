@@ -1,8 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
-import { screen } from '@testing-library/react';
+import { act, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '../../../test/test-utils.jsx';
 import ObservationFolderDialog from '../observation-folder-dialog.jsx';
+import fixtures from '../../../../../backend/tests/fixtures/viewer.json';
 
 const BUNDLE = 'ALFEROV_20260816_121242.gsobs';
 const BASE = 'capture_iq_1';
@@ -113,6 +114,30 @@ const folder = {
 };
 
 describe('ObservationFolderDialog', () => {
+    it('shows telemetry badges on decoded binary rows and preserves opening the viewer', async () => {
+        const socket = { connected: true, emit: vi.fn() };
+        socket.timeout = vi.fn(() => socket);
+        const onOpenArtifact = vi.fn();
+        renderWithProviders(
+            <ObservationFolderDialog open folder={folder} socket={socket} onOpenArtifact={onOpenArtifact} />
+        );
+
+        const row = screen.getByRole('button', { name: /telemetry\.bin/ });
+        expect(within(row).getByText('Checking…')).toBeInTheDocument();
+        expect(socket.emit).toHaveBeenCalledTimes(1);
+        await act(async () => socket.emit.mock.calls[0][2](null, { success: true, data: fixtures.real.uwe4 }));
+        expect(within(row).getByText('Telemetry')).toBeInTheDocument();
+        expect(within(row).queryByText('Checking…')).not.toBeInTheDocument();
+        expect(within(screen.getByRole('button', { name: /downlink\.wav/ })).queryByText('Telemetry')).not.toBeInTheDocument();
+        await userEvent.click(row);
+        expect(onOpenArtifact).toHaveBeenCalledExactlyOnceWith(telemetryArtifact);
+    });
+
+    it('shows unknown telemetry status while disconnected', () => {
+        renderWithProviders(<ObservationFolderDialog open folder={folder} />);
+        expect(within(screen.getByRole('button', { name: /telemetry\.bin/ })).getByText('Unknown')).toBeInTheDocument();
+    });
+
     it('shows observation metadata before its artifacts', () => {
         renderWithProviders(
             <ObservationFolderDialog open onClose={vi.fn()} folder={folder} onOpenArtifact={vi.fn()} />

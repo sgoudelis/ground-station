@@ -31,8 +31,34 @@ import SatelliteAltIcon from '@mui/icons-material/SatelliteAlt';
 import { useTranslation } from 'react-i18next';
 import { isWaterfallRunningForItem } from './waterfall-task-status.js';
 import WaterfallGenerationOverlay from './waterfall-generation-overlay.jsx';
+import { useObservationTelemetry } from './observation-telemetry.js';
 
 const IMAGE_FILE_TYPES = ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp'];
+const TELEMETRY_BADGES = {
+    loading: { label: 'Checking…', color: 'default', hint: 'Checking this file for decoded telemetry.' },
+    telemetry: { label: 'Telemetry', color: 'success', hint: 'This file contains decoded telemetry values.' },
+    partial: { label: 'Partial telemetry', color: 'warning', hint: 'This file contains telemetry values alongside parsing failures or unsupported content.' },
+    other: { label: 'Other data', color: 'default', hint: 'This packet contains recognized data without decoded telemetry values.' },
+    unsupported: { label: 'Unsupported', color: 'default', hint: 'This packet is not supported by the telemetry parser. Telemetry presence is unknown.' },
+    error: { label: 'Parse error', color: 'warning', hint: 'This packet could not be parsed. Telemetry presence is unknown.' },
+    unknown: { label: 'Unknown', color: 'default', hint: 'Could not determine whether this file contains telemetry.' },
+};
+
+function TelemetryBadge({ status }) {
+    const { t } = useTranslation('filebrowser');
+    const badge = TELEMETRY_BADGES[status];
+    return (
+        <Tooltip title={t(`observation_folder_dialog.telemetry_status.${status}_hint`, { defaultValue: badge.hint })}>
+            <Chip
+                label={t(`observation_folder_dialog.telemetry_status.${status}`, { defaultValue: badge.label })}
+                size="small"
+                color={badge.color}
+                variant="outlined"
+                sx={{ mx: 1, flexShrink: 0 }}
+            />
+        </Tooltip>
+    );
+}
 
 function formatBytes(bytes) {
     if (!bytes) return '0 Bytes';
@@ -99,9 +125,12 @@ export default function ObservationFolderDialog({
     onGenerateWaterfall,
     onDelete,
     runningWaterfallPaths,
+    socket,
+    telemetryRevision,
 }) {
     const { t } = useTranslation('filebrowser');
     const [recordingMenu, setRecordingMenu] = useState(null);
+    const telemetryStatuses = useObservationTelemetry({ open, folder, socket, revision: telemetryRevision });
 
     useEffect(() => {
         if (!open) setRecordingMenu(null);
@@ -481,6 +510,9 @@ export default function ObservationFolderDialog({
                                             primaryTypographyProps={{ noWrap: true, fontWeight: 600 }}
                                             secondaryTypographyProps={{ noWrap: true }}
                                         />
+                                        {section.id === 'decoded' && artifact.file_type === '.bin' && (
+                                            <TelemetryBadge status={telemetryStatuses[artifact.url] || (socket?.connected ? 'loading' : 'unknown')} />
+                                        )}
                                         <Tooltip title={t('observation_folder_dialog.open_in_dedicated_viewer', { defaultValue: 'Open in dedicated viewer' })}>
                                             <IconButton edge="end" onClick={(event) => { event.stopPropagation(); openArtifact(artifact); }}><DownloadIcon /></IconButton>
                                         </Tooltip>

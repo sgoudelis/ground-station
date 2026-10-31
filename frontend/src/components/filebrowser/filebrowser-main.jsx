@@ -346,6 +346,7 @@ export default function FileBrowserMain() {
     const [telemetryViewerOpen, setTelemetryViewerOpen] = useState(false);
     const [telemetryFile, setTelemetryFile] = useState(null);
     const [telemetryMetadata, setTelemetryMetadata] = useState(null);
+    const [telemetryRevision, setTelemetryRevision] = useState(0);
     const [audioDialogOpen, setAudioDialogOpen] = useState(false);
     const [audioFile, setAudioFile] = useState(null);
     const [audioMetadata, setAudioMetadata] = useState(null);
@@ -2559,7 +2560,12 @@ export default function FileBrowserMain() {
                 file={telemetryFile}
                 metadata={telemetryMetadata}
                 socket={socket}
-                onMetadataChange={setTelemetryMetadata}
+                onMetadataChange={(metadata) => {
+                    setTelemetryMetadata(metadata);
+                    // An explicit reparse can change which observation files
+                    // contain decoded values, so refresh their cached badges.
+                    setTelemetryRevision((revision) => revision + 1);
+                }}
             />
 
             {/* Audio Dialog */}
@@ -2595,6 +2601,8 @@ export default function FileBrowserMain() {
                 open={observationFolderDialogOpen}
                 onClose={() => setObservationFolderDialogOpen(false)}
                 folder={observationFolder}
+                socket={socket}
+                telemetryRevision={telemetryRevision}
                 runningWaterfallPaths={runningWaterfallPaths}
                 onOpenArtifact={handleObservationArtifact}
                 onGenerateWaterfall={handleOpenWaterfallDialog}
