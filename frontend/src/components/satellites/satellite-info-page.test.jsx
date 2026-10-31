@@ -125,7 +125,7 @@ describe('SatelliteInfoDialog overview', () => {
         expect(screen.getAllByRole('heading', { name: 'TestSat' })).toHaveLength(1);
         expect(screen.getByRole('img', { name: 'TestSat' }).closest('.MuiDialogTitle-root')).toBeInTheDocument();
         expect(screen.getByRole('dialog', { name: 'TestSat' })).toBeInTheDocument();
-        expect(screen.getByText('Also known as Earlier name')).toBeInTheDocument();
+        expect(heading.closest('.MuiDialogTitle-root')).toHaveTextContent('NORAD 12345 · Also known as Earlier name');
         expect(screen.getByTestId('satellite-map')).toBeInTheDocument();
         expect(screen.getByText('Coverage map')).toBeInTheDocument();
         expect(screen.getByText('Mission and orbit')).toBeInTheDocument();
@@ -211,7 +211,7 @@ describe('SatelliteInfoDialog overview', () => {
 
         expect(await screen.findByRole('table', {name: 'Future satellite passes'})).toBeInTheDocument();
         expect(screen.getByText('Future passes · next 24 hours')).toBeInTheDocument();
-        expect(screen.getByText('10:00')).toBeInTheDocument();
+        expect(screen.getByRole('cell', { name: 'Oct 8, 2026, 10:00:00 AM' })).toBeInTheDocument();
         expect(screen.getByText('42.50°')).toBeInTheDocument();
         expect(screen.queryByRole('columnheader', { name: 'Current Elevation' })).not.toBeInTheDocument();
         expect(screen.queryByRole('columnheader', { name: 'Current Azimuth' })).not.toBeInTheDocument();
