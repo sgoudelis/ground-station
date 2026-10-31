@@ -31,7 +31,9 @@ import {
     Stack,
     Tooltip,
 } from '@mui/material';
+import {compactDialogTitleSx, mobileFullScreenPaperSx} from '../common/dialog-layout.js';
 import GraphicEqIcon from '@mui/icons-material/GraphicEq';
+import CloseIcon from '@mui/icons-material/Close';
 import DownloadIcon from '@mui/icons-material/Download';
 import DescriptionIcon from '@mui/icons-material/Description';
 import ImageIcon from '@mui/icons-material/Image';
@@ -192,20 +194,22 @@ export default function RecordingDialog({ open, onClose, recording, socket }) {
                     bgcolor: 'background.paper',
                     border: (theme) => `1px solid ${theme.palette.divider}`,
                     borderRadius: 2,
+                    ...mobileFullScreenPaperSx,
                 },
             }}
         >
             <DialogTitle
                 sx={{
+                    ...compactDialogTitleSx,
                     bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'grey.900' : 'grey.100'),
                     borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
-                    py: 2.5,
-                    px: 3,
                 }}
             >
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Typography variant="h6">{t('recording_dialog.recording_details', { defaultValue: 'Recording Details' })}</Typography>
-                    <Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1, minWidth: 0 }}>
+                    <Typography variant="h6" noWrap sx={{ flex: '1 1 auto', minWidth: 0 }}>
+                        {t('recording_dialog.recording_details', { defaultValue: 'Recording Details' })}
+                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
                         {recording?.snapshot?.width && recording?.snapshot?.height && (
                             <Chip
                                 label={`${recording.snapshot.width}×${recording.snapshot.height}`}
@@ -214,6 +218,9 @@ export default function RecordingDialog({ open, onClose, recording, socket }) {
                             />
                         )}
                         <Chip label={formatBytes(recording?.data_size || 0)} size="small" sx={{ height: '20px', fontSize: '0.65rem', '& .MuiChip-label': { px: 0.75 } }} />
+                        <IconButton onClick={onClose} size="small" aria-label={t('common:close', { defaultValue: 'Close' })}>
+                            <CloseIcon fontSize="small" />
+                        </IconButton>
                     </Box>
                 </Box>
             </DialogTitle>

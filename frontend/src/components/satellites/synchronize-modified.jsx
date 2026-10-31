@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Typography, Paper, Tooltip, Chip, Link, CircularProgress } from '@mui/material';
+import { Box, Typography, Paper, Tooltip, Chip, Link } from '@mui/material';
 import SatelliteAltIcon from '@mui/icons-material/SatelliteAlt';
 import RadioIcon from '@mui/icons-material/Radio';
 import PropTypes from 'prop-types';
@@ -180,7 +180,6 @@ const ModifiedItemsTable = ({ modifiedSatellitesCount, modifiedTransmittersCount
                                 }}
                             >
                                 {sat.name || sat.norad_id}
-                                {loadingNoradId === Number(sat.norad_id) && <CircularProgress size={10} sx={{ ml: 0.5 }} />}
                             </Link>
                         </Box>
                         <Box sx={{

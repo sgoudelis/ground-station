@@ -5,10 +5,12 @@
  */
 
 import React, { useId } from 'react';
-import { Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Typography } from '@mui/material';
+import { Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, IconButton, Typography } from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
 import DownloadIcon from '@mui/icons-material/Download';
 import { useTranslation } from 'react-i18next';
 import ZoomableImage from './zoomable-image.jsx';
+import {compactDialogTitleSx, mobileFullScreenPaperSx} from './dialog-layout.js';
 import { formatDateTime } from '../../utils/date-time.js';
 
 // Observation artifacts, standalone files and live decoder output all use
@@ -87,17 +89,23 @@ export default function ImageViewerDialog({
                         my: 1,
                         height: '90dvh',
                         maxHeight: 'calc(100dvh - 16px)',
+                        ...mobileFullScreenPaperSx,
                     },
                 },
             }}
         >
-            <DialogTitle id={titleId} sx={{ borderBottom: '1px solid', borderColor: 'divider', px: 3, py: 2 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
-                    <Typography component="span" variant="h6" sx={{ overflowWrap: 'anywhere' }}>{title}</Typography>
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                        {metadata?.decoder?.mode && <Chip label={metadata.decoder.mode} size="small" color="success" />}
-                        {width && height && <Chip label={`${width}×${height}`} size="small" />}
-                        {sizeLabel && <Chip label={sizeLabel} size="small" />}
+            <DialogTitle id={titleId} sx={{ ...compactDialogTitleSx, py: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'nowrap', gap: 1, minWidth: 0 }}>
+                    <Typography component="span" variant="h6" noWrap sx={{ minWidth: 0, flex: '1 1 auto' }}>{title}</Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0, minWidth: 0 }}>
+                        <Box sx={{ display: 'flex', flexWrap: 'nowrap', justifyContent: 'flex-end', alignItems: 'center', gap: 0.5, overflow: 'hidden', maxWidth: { xs: '40vw', sm: 'none' } }}>
+                            {metadata?.decoder?.mode && <Chip label={metadata.decoder.mode} size="small" color="success" />}
+                            {width && height && <Chip label={`${width}×${height}`} size="small" />}
+                            {sizeLabel && <Chip label={sizeLabel} size="small" />}
+                        </Box>
+                        <IconButton onClick={onClose} size="small" aria-label={t('common:close', { defaultValue: 'Close' })}>
+                            <CloseIcon fontSize="small" />
+                        </IconButton>
                     </Box>
                 </Box>
             </DialogTitle>

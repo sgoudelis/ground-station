@@ -33,6 +33,7 @@ import {
     CardMedia,
     CardContent,
     Chip,
+    IconButton,
     Paper,
     Table,
     TableBody,
@@ -40,6 +41,8 @@ import {
     TableContainer,
     TableRow,
 } from '@mui/material';
+import {compactDialogTitleSx, mobileFullScreenPaperSx} from '../common/dialog-layout.js';
+import CloseIcon from '@mui/icons-material/Close';
 import DownloadIcon from '@mui/icons-material/Download';
 import SatelliteAltIcon from '@mui/icons-material/SatelliteAlt';
 import ImageIcon from '@mui/icons-material/Image';
@@ -165,51 +168,55 @@ export default function MeteorHrptFolderDialog({ open, onClose, folder }) {
                         borderRadius: 2,
                         height: '90vh',
                         maxHeight: '90vh',
+                        ...mobileFullScreenPaperSx,
                     }
                 }}
             >
                 <DialogTitle
                     sx={{
+                        ...compactDialogTitleSx,
                         bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'grey.900' : 'grey.100'),
                         borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
-                        py: 2.5,
-                        px: 3,
                     }}
                 >
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <Box>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <SatelliteAltIcon color="primary" />
-                                <Typography variant="h6">
-                                    {folder.satellite_name || 'METEOR Satellite'}
-                                </Typography>
-                            </Box>
-                            <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
-                                {folder.foldername}
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, minWidth: 0 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: '1 1 auto', minWidth: 0 }}>
+                            <SatelliteAltIcon color="primary" />
+                            <Typography variant="h6" noWrap sx={{ minWidth: 0 }}>
+                                <Box component="span">{folder.satellite_name || 'METEOR Satellite'}</Box>
+                                {' · '}
+                                <Box component="span" sx={{ fontSize: '0.78em', fontWeight: 400, color: 'text.secondary' }}>
+                                    {folder.foldername}
+                                </Box>
                             </Typography>
                         </Box>
-                        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                            <Chip
-                                label={`${folder.image_count} images`}
-                                icon={<ImageIcon />}
-                                color="success"
-                                size="small"
-                            />
-                            {folder.pipeline && (
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0, minWidth: 0 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'nowrap', overflow: 'hidden', maxWidth: { xs: '35vw', sm: 'none' } }}>
                                 <Chip
-                                    label={folder.pipeline.toUpperCase()}
-                                    color="info"
+                                    label={`${folder.image_count} images`}
+                                    icon={<ImageIcon />}
+                                    color="success"
                                     size="small"
                                 />
-                            )}
-                            {productNames.map((name) => (
-                                <Chip key={name} label={name} size="small" variant="outlined" />
-                            ))}
-                            <Chip
-                                label={formatBytes(folder.size)}
-                                size="small"
-                                variant="outlined"
-                            />
+                                {folder.pipeline && (
+                                    <Chip
+                                        label={folder.pipeline.toUpperCase()}
+                                        color="info"
+                                        size="small"
+                                    />
+                                )}
+                                {productNames.map((name) => (
+                                    <Chip key={name} label={name} size="small" variant="outlined" />
+                                ))}
+                                <Chip
+                                    label={formatBytes(folder.size)}
+                                    size="small"
+                                    variant="outlined"
+                                />
+                            </Box>
+                            <IconButton onClick={onClose} size="small" aria-label={t('common:close', { defaultValue: 'Close' })}>
+                                <CloseIcon fontSize="small" />
+                            </IconButton>
                         </Box>
                     </Box>
                 </DialogTitle>
@@ -451,22 +458,22 @@ export default function MeteorHrptFolderDialog({ open, onClose, folder }) {
                             bgcolor: 'background.paper',
                             border: (theme) => `1px solid ${theme.palette.divider}`,
                             borderRadius: 2,
+                            ...mobileFullScreenPaperSx,
                         },
                     }}
                 >
                     <DialogTitle
                         sx={{
+                            ...compactDialogTitleSx,
                             bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'grey.900' : 'grey.100'),
                             borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
-                            py: 2.5,
-                            px: 3,
                         }}
                     >
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <Typography variant="h6" sx={{ fontFamily: 'monospace', fontSize: '0.9rem' }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1, minWidth: 0 }}>
+                            <Typography variant="h6" noWrap sx={{ fontFamily: 'monospace', fontSize: '0.9rem', minWidth: 0, flex: '1 1 auto' }}>
                                 {getImageLabel(selectedImage)}
                             </Typography>
-                            <Box sx={{ display: 'flex', gap: 1 }}>
+                            <Box sx={{ display: 'flex', flexWrap: 'nowrap', gap: 0.5, justifyContent: 'flex-end', alignItems: 'center', flexShrink: 0 }}>
                                 {selectedImage.width && selectedImage.height && (
                                     <Chip
                                         label={`${selectedImage.width}×${selectedImage.height}`}
@@ -479,6 +486,9 @@ export default function MeteorHrptFolderDialog({ open, onClose, folder }) {
                                     size="small"
                                     variant="outlined"
                                 />
+                                <IconButton onClick={() => setSelectedImage(null)} size="small" aria-label={t('common:close', { defaultValue: 'Close' })}>
+                                    <CloseIcon fontSize="small" />
+                                </IconButton>
                             </Box>
                         </Box>
                     </DialogTitle>

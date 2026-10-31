@@ -17,7 +17,7 @@
  *
  */
 
-import {Accordion, AccordionDetails, AccordionSummary, Box, Chip, Dialog, DialogActions, DialogContent, DialogTitle, IconButton, Stack, Tooltip, Typography} from "@mui/material";
+import {Accordion, AccordionDetails, AccordionSummary, Backdrop, Box, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, IconButton, Stack, Tooltip, Typography} from "@mui/material";
 import {
     betterStatusValue,
     getFrequencyBand,
@@ -59,6 +59,7 @@ import { formatDateTime } from '../../utils/date-time.js';
 import { useSatelliteLiveOrbit } from '../../hooks/liveorbit.js';
 import SatellitePasses from './satellite-passes.jsx';
 import { useDelayedUnmount } from '../../hooks/useDelayedUnmount.js';
+import {compactDialogTitleSx} from '../common/dialog-layout.js';
 
 
 // Fix for default markers in react-leaflet
@@ -114,7 +115,9 @@ const SatelliteIdentityHeader = ({ satelliteData, trailingAction = null, inDialo
             sx={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: 2,
+                gap: inDialog ? 1 : 2,
+                width: inDialog ? 'auto' : '100%',
+                minWidth: 0,
                 ...(!inDialog && {
                     p: { xs: 1.5, sm: 2 },
                     mb: 2,
@@ -127,18 +130,18 @@ const SatelliteIdentityHeader = ({ satelliteData, trailingAction = null, inDialo
         >
             <Box
                 sx={{
-                    width: { xs: 64, sm: 80 },
-                    height: { xs: 64, sm: 80 },
+                    width: inDialog ? 32 : { xs: 64, sm: 80 },
+                    height: inDialog ? 32 : { xs: 64, sm: 80 },
                     flexShrink: 0,
                     display: 'grid',
                     placeItems: 'center',
                     overflow: 'hidden',
-                    borderRadius: 1.5,
+                    borderRadius: inDialog ? 1 : 1.5,
                     bgcolor: 'background.elevated',
                 }}
             >
                 {imageError ? (
-                    <SatelliteAltIcon sx={{ fontSize: 36, color: 'text.secondary' }} />
+                    <SatelliteAltIcon sx={{ fontSize: inDialog ? 22 : 36, color: 'text.secondary' }} />
                 ) : (
                     <Box
                         component="img"
@@ -149,21 +152,42 @@ const SatelliteIdentityHeader = ({ satelliteData, trailingAction = null, inDialo
                     />
                 )}
             </Box>
-            <Stack spacing={0.75} sx={{ minWidth: 0, flex: 1 }}>
-                <Stack direction="row" alignItems="center" gap={1} flexWrap="wrap" useFlexGap>
-                    <Typography variant="h5" component="h2" sx={{ fontWeight: 700, overflowWrap: 'anywhere' }}>
-                        {satelliteData.name}
-                    </Typography>
-                    {betterStatusValue(satelliteData.status)}
-                </Stack>
-                <Stack direction="row" alignItems="center" gap={1} flexWrap="wrap" useFlexGap>
-                    <Chip size="small" variant="outlined" label={'NORAD ' + satelliteData.norad_id} />
-                    {aliases && (
-                        <Typography variant="body2" color="text.secondary">
-                            {t('satellite_info.also_known_as', { names: aliases })}
+            <Stack spacing={inDialog ? 0 : 0.75} sx={{ minWidth: 0, flex: 1 }}>
+                {inDialog ? (
+                    <Stack direction="row" alignItems="center" gap={0.75} sx={{ minWidth: 0, flexWrap: 'nowrap' }}>
+                        <Typography
+                            variant="subtitle1"
+                            component="h2"
+                            noWrap
+                            sx={{ fontWeight: 700, minWidth: 0, maxWidth: { xs: '42%', sm: 'none' }, flex: '0 1 auto' }}
+                        >
+                            {satelliteData.name}
                         </Typography>
-                    )}
-                </Stack>
+                        <Typography component="span" color="text.disabled" aria-hidden="true" sx={{ flexShrink: 0 }}>·</Typography>
+                        <Typography variant="body2" color="text.secondary" noWrap sx={{ minWidth: 0, flex: '1 1 auto' }}>
+                            {'NORAD ' + satelliteData.norad_id}
+                            {aliases && ` · ${t('satellite_info.also_known_as', { names: aliases })}`}
+                        </Typography>
+                        {betterStatusValue(satelliteData.status)}
+                    </Stack>
+                ) : (
+                    <>
+                        <Stack direction="row" alignItems="center" gap={1} flexWrap="wrap" useFlexGap>
+                            <Typography variant="h5" component="h2" sx={{ fontWeight: 700, overflowWrap: 'anywhere' }}>
+                                {satelliteData.name}
+                            </Typography>
+                            {betterStatusValue(satelliteData.status)}
+                        </Stack>
+                        <Stack direction="row" alignItems="center" gap={1} flexWrap="wrap" useFlexGap>
+                            <Chip size="small" variant="outlined" label={'NORAD ' + satelliteData.norad_id} />
+                            {aliases && (
+                                <Typography variant="body2" color="text.secondary">
+                                    {t('satellite_info.also_known_as', { names: aliases })}
+                                </Typography>
+                            )}
+                        </Stack>
+                    </>
+                )}
             </Stack>
             {trailingAction}
         </Box>
@@ -186,6 +210,7 @@ const SatelliteInfoContent = ({
     liveUpdatesEnabled = true,
 }) => {
     const { t } = useTranslation('satellites');
+    const sectionBorderRadius = asDialog ? 1 : 2;
     const dispatch = useDispatch();
     const {socket} = useSocket();
     const navigate = useNavigate();
@@ -497,7 +522,7 @@ const SatelliteInfoContent = ({
                             overflow: 'hidden',
                             border: '1px solid',
                             borderColor: 'divider',
-                            borderRadius: 2,
+                            borderRadius: sectionBorderRadius,
                             bgcolor: 'background.paper',
                         }}
                     >
@@ -539,7 +564,7 @@ const SatelliteInfoContent = ({
                             p: 2,
                             border: '1px solid',
                             borderColor: 'divider',
-                            borderRadius: 2,
+                            borderRadius: sectionBorderRadius,
                             bgcolor: 'background.paper',
                         }}
                     >
@@ -616,7 +641,7 @@ const SatelliteInfoContent = ({
                                 p: 1.5,
                                 border: '1px solid',
                                 borderColor: 'divider',
-                                borderRadius: 2,
+                                borderRadius: sectionBorderRadius,
                                 bgcolor: 'background.paper',
                             }}>
                                 <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
@@ -672,7 +697,7 @@ const SatelliteInfoContent = ({
                                 p: 1.5,
                                 border: '1px solid',
                                 borderColor: 'divider',
-                                borderRadius: 2,
+                                borderRadius: sectionBorderRadius,
                                 bgcolor: 'background.paper',
                             }}>
                                 <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
@@ -956,7 +981,7 @@ const SatelliteInfoPage = () => {
 };
 
 // Dialog wrapper component for use in other parts of the app
-const SatelliteInfoDialogContent = ({ open, onClose, satelliteData, livePosition = null, onUpdated = null, targetGroupId = null }) => {
+const SatelliteInfoDialogContent = ({ open, onClose, satelliteData, livePosition = null, onUpdated = null, targetGroupId = null, loading = false }) => {
     const { t } = useTranslation('satellites');
     const dispatch = useDispatch();
     const { socket } = useSocket();
@@ -1034,15 +1059,19 @@ const SatelliteInfoDialogContent = ({ open, onClose, satelliteData, livePosition
                 <DialogTitle
                     component="div"
                     aria-label={currentSatellite?.name || t('satellite_info.title')}
-                    sx={{ px: { xs: 1.5, sm: 2.5 }, py: 1.5 }}
+                    sx={{
+                        ...compactDialogTitleSx,
+                        borderBottom: '1px solid',
+                        borderColor: 'divider',
+                    }}
                 >
                     {currentSatellite?.norad_id != null ? (
                         <SatelliteIdentityHeader
                             satelliteData={currentSatellite}
                             inDialog
                             trailingAction={(
-                                <IconButton onClick={onClose} size="small" aria-label={t('common:close')} sx={{ alignSelf: 'flex-start' }}>
-                                    <CloseIcon />
+                                <IconButton onClick={onClose} size="small" aria-label={t('common:close')} sx={{ flexShrink: 0 }}>
+                                    <CloseIcon fontSize="small" />
                                 </IconButton>
                             )}
                         />
@@ -1055,7 +1084,7 @@ const SatelliteInfoDialogContent = ({ open, onClose, satelliteData, livePosition
                         </Box>
                     )}
                 </DialogTitle>
-                <DialogContent dividers sx={{ p: { xs: 1.5, sm: 2.5 } }}>
+                <DialogContent dividers aria-busy={loading} sx={{ p: { xs: 1.5, sm: 2.5 }, position: 'relative' }}>
                     <SatelliteInfoContent
                         key={currentSatellite?.norad_id}
                         satelliteData={currentSatellite}
@@ -1069,6 +1098,20 @@ const SatelliteInfoDialogContent = ({ open, onClose, satelliteData, livePosition
                         showDeleteButton={false}
                         liveUpdatesEnabled={open}
                     />
+                    <Backdrop
+                        open={loading}
+                        sx={(theme) => ({
+                            position: 'absolute',
+                            inset: 0,
+                            zIndex: 1,
+                            color: 'primary.main',
+                            backgroundColor: theme.palette.mode === 'dark'
+                                ? 'rgba(0, 0, 0, 0.55)'
+                                : 'rgba(255, 255, 255, 0.65)',
+                        })}
+                    >
+                        <CircularProgress color="inherit" aria-label={t('satellite_info.loading')} />
+                    </Backdrop>
                 </DialogContent>
             </Dialog>
             <SatelliteEditDialog

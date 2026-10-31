@@ -42,7 +42,13 @@ const SyncResultsTable = ({
         // A later click or an unmount must not open an earlier request's dialog.
         const requestId = ++latestRequestRef.current;
         setLoadingNoradId(noradId);
-        setSatelliteInfo(null);
+        // Show the selected satellite's dialog immediately while full details load.
+        setSatelliteInfo({
+            norad_id: noradId,
+            name: satellite?.name || '',
+            position: null,
+            transmitters: [],
+        });
         try {
             const response = await dispatch(fetchSatellite({ socket, noradId })).unwrap();
             if (latestRequestRef.current !== requestId) return;
@@ -56,6 +62,7 @@ const SyncResultsTable = ({
             });
         } catch (error) {
             if (latestRequestRef.current === requestId) {
+                setSatelliteInfo(null);
                 toast.error(t('satellite_database.failed_load'));
             }
         } finally {
@@ -112,6 +119,7 @@ const SyncResultsTable = ({
                 open={Boolean(satelliteInfo)}
                 onClose={handleCloseSatellite}
                 satelliteData={satelliteInfo}
+                loading={loadingNoradId !== null}
             />
         </Box>
     );

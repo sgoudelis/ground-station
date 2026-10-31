@@ -208,9 +208,11 @@ describe('SatelliteInfoDialog overview', () => {
         expect(await screen.findByRole('table', {name: 'Future satellite passes'})).toBeInTheDocument();
         expect(screen.getByText('Future passes · next 24 hours')).toBeInTheDocument();
         expect(screen.getByText('10:00')).toBeInTheDocument();
-        expect(screen.getByText('42.5°')).toBeInTheDocument();
-        expect(screen.getByText('125° → 279°')).toBeInTheDocument();
-        expect(screen.getByText('512 km')).toBeInTheDocument();
+        expect(screen.getByText('42.50°')).toBeInTheDocument();
+        expect(screen.queryByRole('columnheader', { name: 'Current Elevation' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('columnheader', { name: 'Current Azimuth' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('columnheader', { name: 'Progress' })).not.toBeInTheDocument();
+        expect(screen.getByText('512.40 km')).toBeInTheDocument();
         expect(testSocket.emit).toHaveBeenCalledWith('api.call', {
             cmd: 'fetch-next-passes',
             data: {

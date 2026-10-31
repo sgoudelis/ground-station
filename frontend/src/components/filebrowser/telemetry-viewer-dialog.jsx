@@ -21,9 +21,12 @@ import {
     Typography,
     Alert,
     CircularProgress,
+    IconButton,
     ToggleButton,
     ToggleButtonGroup,
 } from '@mui/material';
+import {compactDialogTitleSx, mobileFullScreenPaperSx} from '../common/dialog-layout.js';
+import CloseIcon from '@mui/icons-material/Close';
 import DownloadIcon from '@mui/icons-material/Download';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import OverviewTab from './telemetry-overview-tab';
@@ -158,22 +161,30 @@ export default function TelemetryViewerDialog({ open, onClose, file, metadata, s
                     borderRadius: 2,
                     minHeight: '80vh',
                     maxHeight: '90vh',
+                    ...mobileFullScreenPaperSx,
                 }
             }}
         >
             <DialogTitle sx={{
+                ...compactDialogTitleSx,
                 bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'grey.900' : 'grey.100'),
                 borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
-                py: 2.5,
-                px: 3,
             }}>
-                <Box>
-                    <Typography variant="h6">
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, minWidth: 0 }}>
+                    <Typography variant="h6" noWrap sx={{ flex: '1 1 auto', minWidth: 0 }}>
                         {t('telemetry_viewer_dialog.telemetry_packet_viewer', { defaultValue: 'Telemetry Packet Viewer' })}
+                        {(file.filename || file.name) && (
+                            <>
+                                {' · '}
+                                <Box component="span" sx={{ fontSize: '0.78em', fontWeight: 400, color: 'text.secondary' }}>
+                                    {file.filename || file.name}
+                                </Box>
+                            </>
+                        )}
                     </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                        {file.filename || file.name}
-                    </Typography>
+                    <IconButton onClick={onClose} size="small" aria-label={t('common:close', { defaultValue: 'Close' })}>
+                        <CloseIcon fontSize="small" />
+                    </IconButton>
                 </Box>
             </DialogTitle>
 

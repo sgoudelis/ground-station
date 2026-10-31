@@ -20,6 +20,8 @@ import {
     Tooltip,
     Typography,
 } from '@mui/material';
+import {compactDialogTitleSx, mobileFullScreenPaperSx} from '../common/dialog-layout.js';
+import CloseIcon from '@mui/icons-material/Close';
 import AudioFileIcon from '@mui/icons-material/AudioFile';
 import DescriptionIcon from '@mui/icons-material/Description';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -229,39 +231,45 @@ export default function ObservationFolderDialog({
                     borderRadius: 2,
                     height: '90vh',
                     maxHeight: '90vh',
+                    ...mobileFullScreenPaperSx,
                 }
             }}
         >
             <DialogTitle sx={{
+                ...compactDialogTitleSx,
                 bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'grey.900' : 'grey.100'),
                 borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
-                py: 2.5,
-                px: 3,
             }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
-                    <Box sx={{ minWidth: 0 }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <SatelliteAltIcon color="primary" />
-                            <Typography variant="h6">{folder.satellite_name || 'Automated Observation'}</Typography>
-                        </Box>
-                        <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
-                            {folder.foldername}
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, minWidth: 0 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: '1 1 auto', minWidth: 0 }}>
+                        <SatelliteAltIcon color="primary" />
+                        <Typography variant="h6" noWrap sx={{ minWidth: 0 }}>
+                            <Box component="span">{folder.satellite_name || 'Automated Observation'}</Box>
+                            {' · '}
+                            <Box component="span" sx={{ fontSize: '0.78em', fontWeight: 400, color: 'text.secondary' }}>
+                                {folder.foldername}
+                            </Box>
                         </Typography>
                     </Box>
-                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexShrink: 0 }}>
-                        {folder.observation_in_progress && (
-                            <Chip label={t('observation_folder_dialog.in_progress', { defaultValue: 'In progress' })} size="small" color="warning" />
-                        )}
-                        {recordings.length > 0 && (
-                            <Chip
-                                label={`${recordings.length} ${recordings.length === 1 ? 'recording' : 'recordings'}`}
-                                size="small"
-                                color="error"
-                                variant="outlined"
-                            />
-                        )}
-                        <Chip label={`${folder.artifact_count || 0} files`} size="small" color="info" />
-                        <Chip label={formatBytes(observationSize)} size="small" variant="outlined" />
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0, minWidth: 0 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'nowrap', overflow: 'hidden', maxWidth: { xs: '35vw', sm: 'none' } }}>
+                            {folder.observation_in_progress && (
+                                <Chip label={t('observation_folder_dialog.in_progress', { defaultValue: 'In progress' })} size="small" color="warning" />
+                            )}
+                            {recordings.length > 0 && (
+                                <Chip
+                                    label={`${recordings.length} ${recordings.length === 1 ? 'recording' : 'recordings'}`}
+                                    size="small"
+                                    color="error"
+                                    variant="outlined"
+                                />
+                            )}
+                            <Chip label={`${folder.artifact_count || 0} files`} size="small" color="info" />
+                            <Chip label={formatBytes(observationSize)} size="small" variant="outlined" />
+                        </Box>
+                        <IconButton onClick={onClose} size="small" aria-label={t('common:close', { defaultValue: 'Close' })}>
+                            <CloseIcon fontSize="small" />
+                        </IconButton>
                     </Box>
                 </Box>
             </DialogTitle>
@@ -326,14 +334,16 @@ export default function ObservationFolderDialog({
                                 {observationDetails.map((detail) => (
                                     <Box
                                         key={detail.label}
-                                        sx={{
+                                        sx={(theme) => ({
                                             px: 2.25,
                                             py: 1.25,
                                             minWidth: 0,
-                                            borderBottom: { xs: '1px solid', md: 0 },
-                                            borderColor: 'divider',
+                                            borderBottom: {
+                                                xs: `1px solid ${theme.palette.border?.main || theme.palette.divider}`,
+                                                md: 0,
+                                            },
                                             '&:last-child': { borderBottom: 0 },
-                                        }}
+                                        })}
                                     >
                                         <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
                                             {detail.label}

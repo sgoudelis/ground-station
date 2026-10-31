@@ -39,7 +39,10 @@ import {
     LinearProgress,
     Stack,
     Paper,
+    IconButton,
 } from '@mui/material';
+import {compactDialogTitleSx, mobileFullScreenPaperSx} from '../common/dialog-layout.js';
+import CloseIcon from '@mui/icons-material/Close';
 import BuildIcon from '@mui/icons-material/Build';
 import PlaylistPlayIcon from '@mui/icons-material/PlaylistPlay';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -318,30 +321,36 @@ export default function ProcessingDialog({ open, onClose, recording }) {
                     bgcolor: 'background.paper',
                     border: (theme) => `1px solid ${theme.palette.divider}`,
                     borderRadius: 2,
+                    ...mobileFullScreenPaperSx,
                 },
             }}
         >
             <DialogTitle
                 sx={{
+                    ...compactDialogTitleSx,
                     bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'grey.900' : 'grey.100'),
                     borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
-                    fontSize: '1.25rem',
-                    fontWeight: 'bold',
-                    py: 2.5,
-                    px: 3,
                 }}
             >
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', flex: '1 1 auto', gap: 1, minWidth: 0, overflow: 'hidden' }}>
                         <BuildIcon color="primary" />
-                        <Typography variant="h6">
+                        <Typography variant="h6" noWrap sx={{ minWidth: 0 }}>
                             {t('processing_dialog.process_iq_recording', { defaultValue: 'Process IQ Recording' })}
+                            {recording.name && (
+                                <>
+                                    {' · '}
+                                    <Box component="span" sx={{ fontSize: '0.78em', fontWeight: 400, color: 'text.secondary' }}>
+                                        {recording.name}
+                                    </Box>
+                                </>
+                            )}
                         </Typography>
                     </Box>
+                    <IconButton onClick={onClose} size="small" aria-label={t('common:close', { defaultValue: 'Close' })}>
+                        <CloseIcon fontSize="small" />
+                    </IconButton>
                 </Box>
-                <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
-                    {recording.name}
-                </Typography>
             </DialogTitle>
 
             <DialogContent

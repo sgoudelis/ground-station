@@ -27,8 +27,11 @@ import {
     DialogTitle,
     DialogContent,
     DialogActions,
+    IconButton,
     LinearProgress,
 } from '@mui/material';
+import {compactDialogTitleSx, mobileFullScreenPaperSx} from '../common/dialog-layout.js';
+import CloseIcon from '@mui/icons-material/Close';
 import DownloadIcon from '@mui/icons-material/Download';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import PauseIcon from '@mui/icons-material/Pause';
@@ -399,20 +402,22 @@ export default function AudioDialog({ open, onClose, audio, metadata }) {
                     bgcolor: 'background.paper',
                     border: (theme) => `1px solid ${theme.palette.divider}`,
                     borderRadius: 2,
+                    ...mobileFullScreenPaperSx,
                 },
             }}
         >
             <DialogTitle
                 sx={{
+                    ...compactDialogTitleSx,
                     bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'grey.900' : 'grey.100'),
                     borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
-                    py: 2.5,
-                    px: 3,
                 }}
             >
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Typography variant="h6">{t('audio_dialog.audio_recording_details', { defaultValue: 'Audio Recording Details' })}</Typography>
-                    <Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1, minWidth: 0 }}>
+                    <Typography variant="h6" noWrap sx={{ flex: '1 1 auto', minWidth: 0 }}>
+                        {t('audio_dialog.audio_recording_details', { defaultValue: 'Audio Recording Details' })}
+                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
                         {metadata?.sample_rate && (
                             <Chip
                                 label={`${metadata.sample_rate / 1000} kHz`}
@@ -428,6 +433,9 @@ export default function AudioDialog({ open, onClose, audio, metadata }) {
                                 sx={{ height: '20px', fontSize: '0.65rem', '& .MuiChip-label': { px: 0.75 } }}
                             />
                         )}
+                        <IconButton onClick={onClose} size="small" aria-label={t('common:close', { defaultValue: 'Close' })}>
+                            <CloseIcon fontSize="small" />
+                        </IconButton>
                     </Box>
                 </Box>
             </DialogTitle>
