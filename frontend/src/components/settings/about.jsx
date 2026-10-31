@@ -74,6 +74,7 @@ const AboutPage = () => {
         { name: 'pyrtlsdr', description: t('about.python_wrapper_for_rtl_sdr', { defaultValue: 'Python wrapper for RTL-SDR.' }), url: 'https://pypi.org/project/pyrtlsdr/' },
         { name: 'SoapySDR', description: t('about.vendor_neutral_sdr_support_library', { defaultValue: 'Vendor-neutral SDR support library.' }), url: 'https://pypi.org/project/SoapySDR/' },
         { name: 'SatDump', description: t('about.satellite_decoder_suite_for_weather_image_workfl', { defaultValue: 'Satellite decoder suite for weather image workflows.' }), url: 'https://github.com/SatDump/SatDump' },
+        { name: 'RS (rs1729)', description: t('about.rs_radiosonde_decoder', { defaultValue: 'Radiosonde detection and telemetry decoding for RS41, DFM and M10/M20.' }), url: 'https://github.com/rs1729/RS' },
         { name: 'gr-satellites', description: t('about.gnu_radio_modules_for_satellite_communications', { defaultValue: 'GNU Radio modules for satellite communications.' }), url: 'https://github.com/daniestevez/gr-satellites' },
         { name: 'GNSS-SDR', description: t('about.open_source_software_defined_gnss_receiver_used_', { defaultValue: 'Open-source software-defined GNSS receiver used by the GNSS decoder path.' }), url: 'https://github.com/gnss-sdr/gnss-sdr' },
     ];

@@ -56,6 +56,11 @@ export const formatDecoderParamsSummary = (vfo) => {
         return `SF${sf} BW${bwKhz}kHz CR4/${cr + 4}`;
     }
 
+    if (decoder === 'radiosonde') {
+        const family = { auto: 'Auto', rs41: 'RS41', dfm: 'DFM', m10m20: 'M10/M20' }[params.radiosonde_type ?? 'auto'];
+        return `${family} ${(params.radiosonde_sample_rate ?? 48000) / 1000}kS/s`;
+    }
+
     if (decoder === 'gnss') {
         const sampleRate = params.gnss_sample_rate ?? 4000000;
         const channels = params.gnss_total_channels ?? 24;

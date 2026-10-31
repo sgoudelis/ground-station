@@ -5,7 +5,7 @@ from typing import Any
 
 from constants import AX25_FRAMINGS, payload_protocol_from_framing
 
-PROTOCOLS = {"ax25", "csp", "ccsds", "proprietary", "lora", "unknown"}
+PROTOCOLS = {"ax25", "csp", "ccsds", "proprietary", "lora", "radiosonde", "unknown"}
 
 
 @dataclass(frozen=True)
@@ -16,6 +16,9 @@ class ParseContext:
     frame_size: int | None = None
     csp_version: int = 1
     hdlc_flags: bool = False
+    # External codecs may accumulate calibration across many radio frames.
+    # Keep their report so a single saved frame can be interpreted independently.
+    decoder_report: dict[str, Any] | None = None
 
     def __post_init__(self):
         if not isinstance(self.protocol, str) or self.protocol not in PROTOCOLS:
@@ -34,9 +37,16 @@ class ParseContext:
             raise ValueError("Invalid packet byte representation")
         if self.hdlc_flags and self.protocol != "ax25":
             raise ValueError("HDLC recorder flags require AX.25")
+        if self.decoder_report is not None and (
+            self.protocol != "radiosonde" or not isinstance(self.decoder_report, dict)
+        ):
+            raise ValueError("Invalid external decoder report")
 
     def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
+        result = asdict(self)
+        if self.decoder_report is None:
+            result.pop("decoder_report")
+        return result
 
     def packet_bytes(self, original: bytes) -> bytes:
         # Flags are a recorder convention for AX.25, never a byte-value guess

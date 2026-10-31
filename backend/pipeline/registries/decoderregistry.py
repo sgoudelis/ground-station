@@ -86,6 +86,17 @@ except Exception as error:
     GNSSSdrDecoder = None
 
 
+RadiosondeDecoder: Optional[Type] = None
+try:
+    from demodulators.radiosondedecoder import RadiosondeDecoder as _RadiosondeDecoder
+
+    RadiosondeDecoder = _RadiosondeDecoder
+except Exception as error:
+    logger.warning("Radiosonde decoder is unavailable: %s", error)
+    unavailable_decoder_reasons["radiosonde"] = f"{type(error).__name__}: {error}"
+    RadiosondeDecoder = None
+
+
 LoRaDecoder: Optional[Type] = None
 try:
     from demodulators.loradecoder import LoRaDecoder as _LoRaDecoder
@@ -144,6 +155,19 @@ class DecoderRegistry:
 
         # Define capabilities for each decoder (only when class imports succeeded)
         self._decoders = {}
+
+        if RadiosondeDecoder is not None:
+            self._decoders["radiosonde"] = DecoderCapabilities(
+                name="radiosonde",
+                decoder_class=RadiosondeDecoder,
+                needs_raw_iq=True,
+                required_demodulator=None,
+                demodulator_mode=None,
+                default_bandwidth=20000,
+                supports_transmitter_config=False,
+                restart_on_params=["radiosonde_type", "radiosonde_sample_rate"],
+                description="Automatic RS41, DFM and M10/M20 telemetry from VFO-centered IQ (RS)",
+            )
 
         if LoRaDecoder is not None:
             self._decoders["lora"] = DecoderCapabilities(

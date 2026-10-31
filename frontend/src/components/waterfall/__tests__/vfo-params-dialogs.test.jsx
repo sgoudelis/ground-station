@@ -46,6 +46,21 @@ const renderDecoderDialog = (vfo, onVFOPropertyChange = vi.fn(), onClose = vi.fn
 );
 
 describe('Waterfall VFO parameter dialogs', () => {
+    it('applies a radiosonde processing rate through the existing parameter dialog', () => {
+        const onVFOPropertyChange = vi.fn();
+        renderDecoderDialog({
+            decoder: 'radiosonde', parametersEnabled: true,
+            parameters: { radiosonde_type: 'auto', radiosonde_sample_rate: 48000 },
+        }, onVFOPropertyChange);
+        chooseOption('Sonde type', 'DFM');
+        chooseOption('Processing sample rate', '96 kS/s');
+        expect(onVFOPropertyChange).not.toHaveBeenCalled();
+        fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
+        expect(onVFOPropertyChange).toHaveBeenCalledExactlyOnceWith(1, {
+            parameters: { radiosonde_type: 'dfm', radiosonde_sample_rate: 96000 },
+        });
+    });
+
     it('loads and applies a custom LoRa preamble as an integer only after Apply', () => {
         const onVFOPropertyChange = vi.fn();
         renderDecoderDialog({

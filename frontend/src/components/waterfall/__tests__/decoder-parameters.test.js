@@ -8,6 +8,21 @@ import {
     mapParametersToBackend,
 } from '../decoder-parameters.js';
 
+describe('Radiosonde decoder parameters', () => {
+    it('offers Auto and all sonde families and maps settings to the backend', () => {
+        expect(DECODER_SUPPORT.radiosonde).toBe(true);
+        expect(getDecoderDefaultParameters('radiosonde')).toEqual({ radiosonde_type: 'auto', radiosonde_sample_rate: 48000 });
+        expect(getDecoderParameters('radiosonde').radiosonde_type.options.map(option => option.value))
+            .toEqual(['auto', 'rs41', 'dfm', 'm10m20']);
+        expect(mapParametersToBackend('radiosonde', { radiosonde_type: 'dfm' }))
+            .toEqual({ radiosonde_type: 'dfm', radiosonde_sample_rate: 48000 });
+        expect(getDecoderParameters('radiosonde').radiosonde_sample_rate.options.map(option => option.value))
+            .toEqual([48000, 96000]);
+        expect(mapParametersToBackend('radiosonde', { radiosonde_sample_rate: 96000 }))
+            .toEqual({ radiosonde_type: 'auto', radiosonde_sample_rate: 96000 });
+    });
+});
+
 describe('APRS decoder parameters', () => {
     it('offers APRS and keeps the legacy AFSK decoder disabled', () => {
         expect(DECODER_SUPPORT.aprs).toBe(true);

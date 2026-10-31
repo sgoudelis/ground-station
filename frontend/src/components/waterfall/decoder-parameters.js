@@ -550,10 +550,33 @@ export const getGnssParameters = (t = englishFallback) => ({
     }
 });
 
-/**
- * Decoder support flags
- * Use this map to disable unsupported decoders in the UI.
- */
+/** Radiosonde family selection and processing parameters. */
+export const getRadiosondeParameters = (t = englishFallback) => ({
+    radiosonde_type: {
+        label: t('decoder_parameters.radiosonde_type', { defaultValue: 'Sonde type' }),
+        description: t('decoder_parameters.radiosonde_type_help', { defaultValue: 'Automatically detect RS41, DFM and M10/M20, or choose a family.' }),
+        type: 'select',
+        default: 'auto',
+        options: [
+            { value: 'auto', label: 'Auto' },
+            { value: 'rs41', label: 'RS41' },
+            { value: 'dfm', label: 'DFM' },
+            { value: 'm10m20', label: 'M10 / M20' }
+        ]
+    },
+    radiosonde_sample_rate: {
+        label: t('decoder_parameters.radiosonde_processing_rate', { defaultValue: 'Processing sample rate' }),
+        description: t('decoder_parameters.radiosonde_processing_rate_help', { defaultValue: 'The selected VFO channel is resampled to this rate for radiosonde decoding.' }),
+        type: 'select',
+        default: 48000,
+        options: [
+            { value: 48000, label: '48 kS/s' },
+            { value: 96000, label: '96 kS/s' }
+        ]
+    }
+});
+
+/** Decoder availability in the VFO controls. */
 export const DECODER_SUPPORT = {
     sstv: true,
     geoscanimage: true,
@@ -566,7 +589,8 @@ export const DECODER_SUPPORT = {
     morse: false,
     afsk: false,
     aprs: true,
-    gnss: true
+    gnss: true,
+    radiosonde: true
 };
 
 /**
@@ -605,6 +629,7 @@ export const getDecoderParameterDefinitions = (t = englishFallback) => ({
     ...getGeoscanImageParameters(t),
     ...getAprsParameters(t),
     ...getGnssParameters(t),
+    ...getRadiosondeParameters(t),
     ...getSstvParameters(t)
 });
 
@@ -747,6 +772,13 @@ export function mapParametersToBackend(decoder, parameters) {
     if (decoder === 'sstv') {
         return {
             sstv_mode: parameters.sstv_mode ?? 'auto'
+        };
+    }
+
+    if (decoder === 'radiosonde') {
+        return {
+            radiosonde_type: parameters.radiosonde_type ?? 'auto',
+            radiosonde_sample_rate: parameters.radiosonde_sample_rate ?? 48000
         };
     }
 

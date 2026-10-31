@@ -72,6 +72,10 @@ class DecoderConfig:
         None  # Target sample rate for pipeline (e.g., 48000 for APT)
     )
 
+    # Radiosonde family selection and input rate after VFO channelization
+    radiosonde_sample_rate: int = 48000
+    radiosonde_type: str = "auto"
+
     # GNSS-SDR specific parameters
     gnss_sample_rate: Optional[int] = None  # Input sample rate expected by GNSS-SDR
     gnss_total_channels: Optional[int] = None  # Total acquisition/tracking channels
@@ -115,6 +119,8 @@ class DecoderConfig:
             and self.af_carrier == other.af_carrier
             and self.differential == other.differential
             and self.sstv_mode == other.sstv_mode
+            and self.radiosonde_type == other.radiosonde_type
+            and self.radiosonde_sample_rate == other.radiosonde_sample_rate
             and self.sf == other.sf
             and self.bw == other.bw
             and self.cr == other.cr
@@ -157,6 +163,8 @@ class DecoderConfig:
                 self.af_carrier,
                 self.differential,
                 self.sstv_mode,
+                self.radiosonde_type,
+                self.radiosonde_sample_rate,
                 self.sf,
                 self.bw,
                 self.cr,
@@ -193,6 +201,8 @@ class DecoderConfig:
             "af_carrier": self.af_carrier,
             "differential": self.differential,
             "sstv_mode": self.sstv_mode,
+            "radiosonde_type": self.radiosonde_type,
+            "radiosonde_sample_rate": self.radiosonde_sample_rate,
             "sf": self.sf,
             "bw": self.bw,
             "cr": self.cr,

@@ -107,11 +107,13 @@ const DECODER_TYPES = [
     { value: 'bpsk', labelKey: 'decoder_type_bpsk' },
     { value: 'aprs', labelKey: 'decoder_type_aprs' },
     { value: 'sstv', labelKey: 'decoder_type_sstv' },
+    { value: 'radiosonde', label: 'Radiosonde' },
     { value: 'lora', label: 'LoRa', labelKey: 'decoder_type_lora' },
 ];
 
 const SSTV_DEFAULT_BANDWIDTH = 12500;
 const GEOSCANIMAGE_DEFAULT_BANDWIDTH = 20000;
+const RADIOSONDE_DEFAULT_BANDWIDTH = 20000;
 
 const DEMODULATOR_TYPES = [
     { value: 'fm', labelKey: 'demodulator_fm' },
@@ -923,11 +925,13 @@ const ObservationFormDialog = ({ onExited }) => {
 
             // If changing decoder_type, reset parameters to defaults
             if (field === 'decoder_type' && currentTask.type === 'decoder') {
-                const nextBandwidth = value === 'sstv'
-                    ? (currentTask.config.bandwidth ?? SSTV_DEFAULT_BANDWIDTH)
-                    : value === 'geoscanimage'
-                        ? (currentTask.config.bandwidth ?? GEOSCANIMAGE_DEFAULT_BANDWIDTH)
-                        : undefined;
+                const nextBandwidth = value === 'radiosonde'
+                    ? RADIOSONDE_DEFAULT_BANDWIDTH
+                    : value === 'sstv'
+                        ? (currentTask.config.bandwidth ?? SSTV_DEFAULT_BANDWIDTH)
+                        : value === 'geoscanimage'
+                            ? (currentTask.config.bandwidth ?? GEOSCANIMAGE_DEFAULT_BANDWIDTH)
+                            : undefined;
                 newTasks[index] = {
                     ...currentTask,
                     config: {
@@ -2293,6 +2297,9 @@ const ObservationFormDialog = ({ onExited }) => {
                                                                     if (config.framing_params?.frame_size) newParams.geoscanimage_frame_size = config.framing_params.frame_size;
                                                                     if (config.framing_params?.syncword_threshold !== undefined) newParams.geoscanimage_syncword_threshold = config.framing_params.syncword_threshold;
                                                                     if (config.framing_params?.satellite_id !== undefined) newParams.geoscanimage_satellite_id = config.framing_params.satellite_id;
+                                                                } else if (decoderType === 'radiosonde') {
+                                                                    newParams.radiosonde_type = config.radiosonde_type ?? 'auto';
+                                                                    newParams.radiosonde_sample_rate = config.radiosonde_sample_rate ?? 48000;
                                                                 } else if (decoderType === 'aprs') {
                                                                     if (config.baudrate) newParams.aprs_baudrate = config.baudrate;
                                                                     if (config.deviation !== null && config.deviation !== undefined) {

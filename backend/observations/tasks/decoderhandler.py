@@ -56,6 +56,8 @@ _BACKEND_OVERRIDE_KEYS = {
     "gnss_enable_qzss",
     "packet_size",
     "sstv_mode",
+    "radiosonde_sample_rate",
+    "radiosonde_type",
 }
 
 
@@ -103,6 +105,11 @@ def map_scheduler_decoder_parameters(decoder_type: str, parameters: Any) -> Dict
             "lora_has_crc": "has_crc",
             "lora_invert_iq": "invert_iq",
             "lora_fldro": "fldro",
+        }
+    elif decoder_type == "radiosonde":
+        frontend_to_backend = {
+            "radiosonde_sample_rate": "radiosonde_sample_rate",
+            "radiosonde_type": "radiosonde_type",
         }
     elif decoder_type == "sstv":
         frontend_to_backend = {"sstv_mode": "sstv_mode"}
@@ -188,7 +195,10 @@ class DecoderHandler:
             )
             center_freq = task_config.get("frequency", sdr_config["center_freq"])
             modulation = task_config.get("modulation", "none")
-            bandwidth = task_config.get("bandwidth", 40000)
+            # The legacy 40-kHz fallback exceeds the radiosonde worker's 48-kS/s
+            # channel limit. API-created sonde tasks need its receiver default.
+            default_bandwidth = 20000 if decoder_type == "radiosonde" else 40000
+            bandwidth = task_config.get("bandwidth") or default_bandwidth
 
             # Fetch transmitter and satellite info from database
             transmitter_info = None

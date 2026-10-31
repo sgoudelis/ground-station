@@ -409,6 +409,20 @@ RUN git clone --depth=1 --branch=maint-3.10 --recursive https://github.com/gnura
 RUN cp -r /usr/local/lib/python3.12/site-packages/gnuradio* /app/venv/lib/python3.12/site-packages/ || true
 RUN cp -r /usr/local/lib/python3.12/site-packages/pmt* /app/venv/lib/python3.12/site-packages/ || true
 
+# Build the detector and all three radiosonde codecs used by the IQ worker.
+# Keep its GPL license with the binary and pin decoding behavior for reproducibility.
+WORKDIR /src
+ARG RADIOSONDE_RS_COMMIT=89b1ea7f3371d99c630f6734c42014d88e667853
+RUN git clone https://github.com/rs1729/RS.git radiosonde-rs && \
+    cd radiosonde-rs && \
+    git checkout ${RADIOSONDE_RS_COMMIT} && \
+    cd demod/mod && \
+    make rs41mod dfm09mod m10m20mod && \
+    gcc -O2 ../../scan/dft_detect.c -lm -o dft_detect && \
+    install -m 755 rs41mod dfm09mod m10m20mod dft_detect /usr/local/bin/ && \
+    install -D -m 644 ../../LICENSE /usr/local/share/licenses/radiosonde-rs/LICENSE && \
+    rs41mod --help && dfm09mod --help && m10m20mod --help && dft_detect --help
+
 # Compile GNSS-SDR CLI using the upstream build flow from gnss-sdr.org docs.
 # We pin to an explicit commit so image builds remain reproducible.
 WORKDIR /src

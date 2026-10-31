@@ -240,13 +240,7 @@ class BaseDecoder:
             # Capture and reparse resolve exactly the same context and byte
             # convention. Store it so future parser changes need no guessing.
             try:
-                parse_context = ParseContext.from_metadata(
-                    {
-                        "decoder_config": self._get_decoder_config_metadata(),
-                        "decoder": {"type": decoder_type},
-                        "satellite": self.satellite or {},
-                    }
-                )
+                parse_context = self._get_parse_context()
                 telemetry_result = parse_packet(payload, parse_context, self.telemetry_parser)
             except Exception as exc:
                 logger.exception("Could not resolve packet parsing context")
@@ -304,6 +298,16 @@ class BaseDecoder:
             logger.exception(e)
             with self.stats_lock:
                 self.stats["errors"] += 1
+
+    def _get_parse_context(self) -> ParseContext:
+        """Allow external codecs to preserve state needed to interpret a frame."""
+        return ParseContext.from_metadata(
+            {
+                "decoder_config": self._get_decoder_config_metadata(),
+                "decoder": {"type": self._get_decoder_type()},
+                "satellite": self.satellite or {},
+            }
+        )
 
     def _should_accept_packet(self, payload: bytes, callsigns: Optional[Dict[str, str]]) -> bool:
         """

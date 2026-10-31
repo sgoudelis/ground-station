@@ -21,6 +21,7 @@ def parse_packet(original: bytes, context: ParseContext, parser=None) -> dict[st
                 "framing": context.framing,
                 "frame_size": context.frame_size,
                 "csp_version": context.csp_version,
+                "decoder_report": context.decoder_report,
             },
         )
         if (

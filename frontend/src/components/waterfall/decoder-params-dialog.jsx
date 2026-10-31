@@ -179,6 +179,9 @@ const DecoderParamsDialog = ({
                 if (config.framing_params?.frame_size) parameters.geoscanimage_frame_size = config.framing_params.frame_size;
                 if (config.framing_params?.syncword_threshold !== undefined) parameters.geoscanimage_syncword_threshold = config.framing_params.syncword_threshold;
                 if (config.framing_params?.satellite_id !== undefined) parameters.geoscanimage_satellite_id = config.framing_params.satellite_id;
+            } else if (decoder === 'radiosonde') {
+                parameters.radiosonde_type = config.radiosonde_type ?? 'auto';
+                parameters.radiosonde_sample_rate = config.radiosonde_sample_rate ?? 48000;
             } else if (decoder === 'aprs') {
                 if (config.baudrate) parameters.aprs_baudrate = config.baudrate;
                 if (config.deviation !== null && config.deviation !== undefined) parameters.aprs_deviation = config.deviation;

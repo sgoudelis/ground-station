@@ -122,6 +122,8 @@ async def update_vfo_parameters(
         "pipeline",
         "target_sample_rate",  # Other decoders
         "sstv_mode",
+        "radiosonde_type",
+        "radiosonde_sample_rate",
         # Live VFO controls use the same PHY fields as the LoRa config resolver.
         # Keep the legacy forced-LDRO alias for saved client configurations.
         *LORA_DEFAULTS,

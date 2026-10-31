@@ -1,9 +1,20 @@
+from types import SimpleNamespace
+
 from observations.tasks.decoderhandler import (
     DecoderHandler,
     VFOManager,
     decoder_registry,
     map_scheduler_decoder_parameters,
 )
+
+
+def test_maps_radiosonde_scheduler_parameters_to_decoder_overrides():
+    assert map_scheduler_decoder_parameters(
+        "radiosonde", {"radiosonde_type": "dfm", "radiosonde_sample_rate": 96000}
+    ) == {
+        "radiosonde_sample_rate": 96000,
+        "radiosonde_type": "dfm",
+    }
 
 
 def test_maps_aprs_scheduler_parameters_to_decoder_overrides():
@@ -113,6 +124,41 @@ async def test_scheduled_aprs_parameters_reach_process_manager(monkeypatch):
         "af_carrier": 1810,
         "deviation": 565,
     }
+
+
+async def test_scheduled_radiosonde_uses_channel_default_and_bundle_directory(
+    monkeypatch, tmp_path
+):
+    configured = {}
+    started = {}
+    manager = SimpleNamespace(
+        processes={"sdr-1": {"data_queue": object()}},
+        start_decoder=lambda **kwargs: started.update(kwargs) or True,
+    )
+    monkeypatch.setattr(
+        VFOManager,
+        "configure_internal_vfo",
+        lambda _manager, **kwargs: configured.update(kwargs),
+    )
+    assert await DecoderHandler(manager).start_decoder_task(
+        observation_id="sonde-1",
+        session_id="session-1",
+        sdr_id="sdr-1",
+        sdr_config={"center_freq": 403_000_000},
+        task_config={
+            "decoder_type": "radiosonde",
+            "parameters": {"radiosonde_type": "auto", "radiosonde_sample_rate": 96000},
+        },
+        vfo_number=2,
+        bundle_dir=tmp_path,
+    )
+    assert configured["bandwidth"] == 20000
+    assert configured["decoder"] == "radiosonde"
+    assert started["decoder_param_overrides"] == {
+        "radiosonde_type": "auto",
+        "radiosonde_sample_rate": 96000,
+    }
+    assert started["output_dir"] == str(tmp_path / "decoded")
 
 
 def test_maps_complete_lora_scheduler_parameters():

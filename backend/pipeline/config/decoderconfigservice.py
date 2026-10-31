@@ -92,6 +92,25 @@ class DecoderConfigService:
         transmitter = transmitter or {}
         overrides = overrides or {}
 
+        if decoder_type == "radiosonde":
+            # Sonde framing and symbol rate are fixed by the selected protocol;
+            # satellite metadata must not turn this into an AX.25 receiver.
+            rate = overrides.get("radiosonde_sample_rate", 48000)
+            if type(rate) is not int or rate not in (48000, 96000):
+                raise ValueError("Radiosonde sample rate must be 48000 or 96000")
+            family = overrides.get("radiosonde_type", "auto")
+            if not isinstance(family, str) or family not in ("auto", "rs41", "dfm", "m10m20"):
+                raise ValueError("Radiosonde type must be auto, rs41, dfm or m10m20")
+            return DecoderConfig(
+                baudrate={"auto": 0, "rs41": 4800, "dfm": 2500, "m10m20": 9600}[family],
+                framing=family,
+                radiosonde_type=family,
+                config_source="manual" if overrides else "radiosonde_defaults",
+                radiosonde_sample_rate=rate,
+                satellite=satellite or None,
+                transmitter=transmitter or None,
+            )
+
         if decoder_type == "lora":
             detected = lora_metadata(transmitter)
             params = normalize_lora({**detected, **overrides})

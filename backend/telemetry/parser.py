@@ -30,6 +30,7 @@ from .ccsdsparser import CCSDSParser
 from .cspparser import CSPParser
 from .parsers.geoscan import GeoscanParser
 from .parsers.registry import register_builtin_payload_parsers
+from .radiosonde import RadiosondeParser
 from .result import failure_result, normalize_result
 
 logger = logging.getLogger("telemetry.parser")
@@ -133,6 +134,9 @@ class TelemetryParser:
                 if sat_key.startswith(prefix):
                     payload_parser = self.lora_parsers[prefix]
                     break
+        elif protocol == "radiosonde":
+            payload_parser = RadiosondeParser()
+            parse_kwargs = {"report": options.get("decoder_report")}
         else:
             result["protocol"] = "unknown"
             result["parser"] = "raw"

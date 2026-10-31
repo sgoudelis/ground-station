@@ -140,6 +140,7 @@ single web interface.
 *   **IQ Recording (SigMF):** Record IQ as `.sigmf-data` + `.sigmf-meta` with center frequency, sample rate, session stats, and target satellite metadata.
 *   **SigMF Playback:** Replay recorded IQ through the same processing pipeline used for live SDR operation.
 *   **Data Decoding + Framing Protocols:** Supported decoder paths include SSTV, APRS, FSK, GFSK, GMSK, BPSK, and GNSS, with AX.25/USP/GEOSCAN framing support in the packet pipelines.
+*   **Radiosonde Telemetry:** Automatic RS41, DFM and M10/M20 detection and decoding from the selected VFO, with binary frames, JSON telemetry and live packet display.
 *   **APRS Packet Decoding:** Dedicated raw-IQ APRS decoding with integrated NBFM/Bell 202 demodulation, AX.25 parsing, batch-boundary recovery, and decoded packet/metadata output files.
 *   **Transcription Services:** Demodulated-audio transcription via Gemini Live, Deepgram, or Parakeet, with optional translation and file output under `backend/data/transcriptions/`.
 *   **Scheduled Observations:** APScheduler-driven AOS/LOS orchestration for automatic start/stop of tracking, SDR, decoding, recording, and transcription tasks.
@@ -410,6 +411,7 @@ flowchart TB
 *   **[pyrtlsdr](https://pypi.org/project/pyrtlsdr/):** A Python wrapper for the RTL-SDR library.
 *   **[SoapySDR](https://pypi.org/project/SoapySDR/):** A vendor and platform neutral SDR support library.
 *   **[SatDump](https://github.com/SatDump/SatDump):** Satellite decoder suite used for weather image decoding workflows.
+*   **[RS (rs1729)](https://github.com/rs1729/RS):** Radiosonde detection and telemetry decoding for RS41, DFM and M10/M20 from VFO-centered IQ, with automatic decoder selection.
 *   **[gr-satellites](https://github.com/daniestevez/gr-satellites):** GNU Radio out-of-tree modules for satellite communications decoding.
 *   **[GNSS-SDR](https://github.com/gnss-sdr/gnss-sdr):** Open-source software-defined GNSS receiver used by the GNSS decoder path.
 
