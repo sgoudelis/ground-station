@@ -508,5 +508,80 @@
       "transcription_one": "{{count}} transcription",
       "transcription_other": "{{count}} transcriptions"
     }
+  },
+  "aircraft": {
+    "details": "Aircraft details",
+    "military": "Military",
+    "unclassified": "Unclassified",
+    "fields": {
+      "registration": "Registration",
+      "type_code": "Aircraft type",
+      "model": "Model",
+      "military_status": "Military status",
+      "category": "Broadcast category",
+      "aircraft_class": "Aircraft class",
+      "engine_count": "Engines",
+      "engine_type": "Engine type",
+      "wake_category": "Wake category",
+      "operator_name": "Operator (inferred)",
+      "operator_code": "Operator code",
+      "operator_country": "Operator country",
+      "operator_callsign": "Operator radio callsign",
+      "interesting": "Marked interesting",
+      "type_description": "Type specification",
+      "owner": "Owner / operator",
+      "year": "Manufacture year"
+    },
+    "aircraft_class": {
+      "L": "Landplane",
+      "S": "Seaplane",
+      "A": "Amphibian",
+      "H": "Helicopter",
+      "G": "Gyroplane",
+      "T": "Tiltrotor",
+      "B": "Balloon",
+      "D": "Drone",
+      "P": "Powered parachute",
+      "V": "Powered lift"
+    },
+    "engine_type": {
+      "P": "Piston",
+      "T": "Turboprop / turboshaft",
+      "J": "Jet",
+      "E": "Electric",
+      "R": "Rocket"
+    },
+    "wake_category": {
+      "L": "Light",
+      "M": "Medium",
+      "H": "Heavy",
+      "J": "Super"
+    },
+    "category": {
+      "A1": "Light aircraft",
+      "A2": "Small aircraft",
+      "A3": "Large aircraft",
+      "A4": "High-vortex aircraft",
+      "A5": "Heavy aircraft",
+      "A6": "High-performance aircraft",
+      "A7": "Rotorcraft",
+      "B1": "Glider / sailplane",
+      "B2": "Lighter-than-air",
+      "B3": "Ultralight / hang-glider / paraglider",
+      "B4": "Parachutist / skydiver",
+      "B6": "Unmanned aircraft",
+      "B7": "Space vehicle",
+      "C1": "Emergency surface vehicle",
+      "C2": "Service surface vehicle",
+      "C3": "Point obstacle",
+      "C4": "Cluster obstacle",
+      "C5": "Line obstacle"
+    },
+    "classification_note": "Military markings come from database flags or ICAO address ranges. Unclassified does not establish civilian or recreational use.",
+    "operator_note": "Operator details are inferred from the broadcast callsign prefix and do not establish aircraft ownership.",
+    "attribution_prefix": "Contains information from the",
+    "attribution_license": "available under the",
+    "database_version": "Version",
+    "snapshot": "Snapshot"
   }
 }

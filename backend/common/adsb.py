@@ -4,13 +4,14 @@ import math
 from datetime import datetime, timezone
 
 from common.adsbstorage import aircraft_address
+from common.aircraft import aircraft_metadata
 
 
 def number(value):
     return float(value) if type(value) in (int, float) and math.isfinite(value) else None
 
 
-def aircraft_record(report, timestamp, provenance):
+def aircraft_record(report, timestamp, provenance, database=None):
     address = aircraft_address(report.get("hex"))
     seen = number(report.get("seen"))
     position_age = number(report.get("seen_pos"))
@@ -49,6 +50,7 @@ def aircraft_record(report, timestamp, provenance):
         "squawk": report.get("squawk"),
         "emergency": report.get("emergency"),
         "on_ground": report.get("alt_baro") == "ground",
+        "aircraft": aircraft_metadata(report, database),
         "readsb": report,
         **provenance,
     }

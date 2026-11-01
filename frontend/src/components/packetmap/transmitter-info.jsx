@@ -15,6 +15,7 @@ import {useUserTimeSettings} from '../../hooks/useUserTimeSettings.jsx';
 import {formatDateTime} from '../../utils/date-time.js';
 import {detailLabel, flattenDetails, typeColor, typeLabel} from './transmitters.js';
 import AircraftFlag from '../common/aircraft-flag.jsx';
+import AircraftDetails from '../common/aircraft-details.jsx';
 import {aircraftCountry} from '../../utils/aircraft-country.js';
 
 function InfoSection({title, icon: Icon, fields}) {
@@ -51,6 +52,8 @@ export default function TransmitterInfo({transmitter, selectedTransmitterId = nu
     const groups = useMemo(() => {
         const grouped = new Map();
         for (const [path, value] of Object.entries(flattenDetails(transmitter?.details))) {
+            // Aircraft metadata has its own translated section and attribution.
+            if (transmitter?.kind === 'adsb' && path.startsWith('telemetry.aircraft.')) continue;
             const [group, ...parts] = path.split('.');
             if (!grouped.has(group)) grouped.set(group, []);
             grouped.get(group).push({
@@ -101,6 +104,7 @@ export default function TransmitterInfo({transmitter, selectedTransmitterId = nu
                 </Typography>
             </Box>
             <Box sx={{flex: 1, minHeight: 0, overflowY: 'auto', p: 1.5}}>
+                {transmitter.kind === 'adsb' && <AircraftDetails aircraft={transmitter.details?.telemetry?.aircraft} />}
                 <InfoSection title={label('info.position', 'Latest position')} icon={ExploreIcon} fields={[
                     {label: label('latitude', 'Latitude'), value: formatNumber(transmitter.latitude, 6)},
                     {label: label('longitude', 'Longitude'), value: formatNumber(transmitter.longitude, 6)},

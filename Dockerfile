@@ -591,6 +591,11 @@ WORKDIR /app
 # Copy backend code
 COPY backend/ ./backend/
 
+# The licensed aircraft snapshot lives outside the persistent data mount. Native
+# installs use this same checksum-verified converter and retain LICENSE/NOTICE.
+RUN /app/venv/bin/python /app/backend/tools/aircraftdb.py \
+    --output /usr/local/share/ground-station/adsb
+
 # Copy and set permissions for startup script
 COPY backend/startup.sh /app/startup.sh
 RUN chmod +x /app/startup.sh

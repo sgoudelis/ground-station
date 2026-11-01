@@ -18,6 +18,7 @@ from scipy import signal
 
 from common.adsb import aircraft_record
 from common.adsbstorage import AdsbStorage
+from common.aircraft import AircraftDatabase, aircraft_database
 from common.iqsamples import require_complex64
 from common.resampler import StreamResampler
 from demodulators.basedecoderprocess import BaseDecoderProcess
@@ -78,6 +79,7 @@ class AdsbDecoder(BaseDecoderProcess):
         self.samples_in = 0
         self.sdr_sample_rate = None
         self.sdr_center_freq = None
+        self.aircraft_database: AircraftDatabase | None = None
 
     def _get_decoder_type_for_init(self):
         return "ADSB"
@@ -137,6 +139,13 @@ class AdsbDecoder(BaseDecoderProcess):
             "--write-json-every",
             "1",
         ]
+        aircraft_database.cache_clear()
+        self.aircraft_database = aircraft_database()
+        if self.aircraft_database.path:
+            command.extend(["--db-file", str(self.aircraft_database.path), "--db-file-lt"])
+            logger.info("Using aircraft database %s", self.aircraft_database.path)
+        else:
+            logger.warning("Aircraft database unavailable; run tools/aircraftdb.py to install it")
         # stdout must be drained while writing IQ. stdbuf prevents small raw
         # bursts from remaining hidden in C stdio until a buffer fills.
         stdbuf = shutil.which("stdbuf")
@@ -243,7 +252,9 @@ class AdsbDecoder(BaseDecoderProcess):
             return
         for aircraft in report.get("aircraft", []):
             try:
-                record = aircraft_record(aircraft, timestamp, self._provenance())
+                record = aircraft_record(
+                    aircraft, timestamp, self._provenance(), self.aircraft_database
+                )
             except (ValueError, TypeError, AttributeError):
                 continue
             address = record["icao"]

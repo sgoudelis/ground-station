@@ -5,9 +5,12 @@ import {useTranslation} from 'react-i18next';
 import {callLibrary} from '../packetmap/use-packet-positions.js';
 import {useUserTimeSettings} from '../../hooks/useUserTimeSettings.jsx';
 import {formatDateTime} from '../../utils/date-time.js';
+import AircraftDetails from '../common/aircraft-details.jsx';
+import {aircraftValue} from '../../utils/aircraft-metadata.js';
 
 export default function AircraftFolderDialog({folder, socket, onClose, onDelete}) {
     const {t} = useTranslation('filebrowser');
+    const {t: aircraftT} = useTranslation('common');
     const timeSettings = useUserTimeSettings();
     const [detail, setDetail] = useState(folder);
     const [run, setRun] = useState('');
@@ -80,10 +83,14 @@ export default function AircraftFolderDialog({folder, socket, onClose, onDelete}
                 {(detail.runs || []).map((item) => <MenuItem key={item.name} value={item.name}>{item.name}</MenuItem>)}
             </TextField>
             {error && <Alert severity="error">{error}</Alert>}
+            <AircraftDetails aircraft={(selected || records.at(-1))?.aircraft || detail.aircraft} />
             <Box sx={{overflow: 'auto'}}>
                 <Table size="small">
                     <TableHead><TableRow>
                         {['Received', 'Callsign', 'Baro altitude (m)', 'Speed (m/s)', 'Squawk', 'Position'].map((label) => <TableCell key={label}>{label}</TableCell>)}
+                        {['registration', 'type_code', 'military_status'].map((key) => <TableCell key={key}>
+                            {aircraftT(`aircraft.fields.${key}`, {registration: 'Registration', type_code: 'Aircraft type', military_status: 'Military status'}[key])}
+                        </TableCell>)}
                     </TableRow></TableHead>
                     <TableBody>{[...records].reverse().map((record, index) => <TableRow hover key={`${record.receiver_id}:${record.timestamp}:${index}`}
                         onClick={() => setSelected(record)} sx={{cursor: 'pointer'}}>
@@ -93,6 +100,9 @@ export default function AircraftFolderDialog({folder, socket, onClose, onDelete}
                         <TableCell>{record.groundspeed_mps?.toFixed(1) ?? '—'}</TableCell>
                         <TableCell>{record.squawk || '—'}</TableCell>
                         <TableCell>{record.latitude == null ? '—' : `${record.latitude}, ${record.longitude}`}</TableCell>
+                        {['registration', 'type_code', 'military_status'].map((key) => <TableCell key={key}>
+                            {aircraftValue(record.aircraft, key, aircraftT)}
+                        </TableCell>)}
                     </TableRow>)}</TableBody>
                 </Table>
             </Box>

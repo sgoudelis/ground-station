@@ -35,6 +35,26 @@ function renderPanel(receiver = {lat: '0', lon: '0'}) {
 const rowOrder = () => screen.getAllByRole('row')
     .filter((row) => row.hasAttribute('data-id')).map((row) => row.getAttribute('data-id'));
 
+it('displays enriched aircraft and opens translated metadata with attribution', () => {
+    live.aircraft = [{icao: '40621d', callsign: 'EZY123', aircraft: {
+        registration: 'G-TEST', type_code: 'C172', model: 'CESSNA 172 Skyhawk', military_status: 'military',
+        category: 'A1', aircraft_class: 'L', engine_count: 1, engine_type: 'P', wake_category: 'L',
+        operator_name: 'Easyjet Uk', operator_country: 'United Kingdom', operator_callsign: 'EASY',
+        database: {version: 529, date: '2026-11-01'},
+    }}];
+    renderPanel();
+    const row = screen.getByRole('row', {name: /40621D/});
+    expect(row).toHaveTextContent('G-TEST');
+    expect(row).toHaveTextContent('Military');
+    fireEvent.click(within(row).getByRole('button', {name: 'Aircraft details'}));
+    const dialog = within(screen.getByRole('dialog'));
+    expect(dialog.getByText('Piston')).toBeInTheDocument();
+    expect(dialog.getByText('United Kingdom')).toBeInTheDocument();
+    expect(dialog.getByText('EASY')).toBeInTheDocument();
+    expect(dialog.getByRole('link', {name: 'Mictronics Aircraft Database'})).toHaveAttribute('href', 'https://github.com/Mictronics/aircraft-database');
+    expect(dialog.getByText(/Unclassified does not establish civilian/)).toBeInTheDocument();
+});
+
 it('shows registration flags beside ICAO addresses with country tooltips and leaves unknown flags empty', async () => {
     renderPanel();
     const maltese = screen.getByRole('row', {name: /4D2406/});

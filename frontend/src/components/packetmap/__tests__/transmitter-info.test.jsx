@@ -35,6 +35,23 @@ function wrapper({children}) {
 }
 
 describe('Transmitter information', () => {
+    it('shows aircraft specifications and inferred operator details for saved map records', () => {
+        const aircraft = {...transmitter, kind: 'adsb', source: '40621D', details: {telemetry: {aircraft: {
+            registration: 'G-TEST', type_code: 'C172', aircraft_class: 'L', engine_type: 'P', engine_count: 1,
+            military_status: 'unclassified', operator_name: 'Easyjet Uk', operator_source: 'callsign_prefix',
+            database: {version: 529},
+        }}}};
+        render(<TransmitterInfo transmitter={aircraft} />, {wrapper});
+        const details = within(screen.getByRole('region', {name: 'Aircraft details'}));
+        expect(details.getByText('G-TEST')).toBeInTheDocument();
+        expect(details.getByText('Landplane')).toBeInTheDocument();
+        expect(details.getByText('Piston')).toBeInTheDocument();
+        expect(details.getByText('Unclassified')).toBeInTheDocument();
+        expect(details.getByText('Easyjet Uk')).toBeInTheDocument();
+        expect(details.getByRole('link', {name: 'ODC Attribution License'})).toBeInTheDocument();
+        expect(screen.queryByText('Aircraft · Operator Name')).not.toBeInTheDocument();
+    });
+
     it('derives aircraft registration country from saved ICAO addresses without stored enrichment', () => {
         const aircraft = {...transmitter, id: 'adsb:4d2406', kind: 'adsb', source: '4D2406', name: 'EWG46A', details: {}};
         const {rerender} = render(<TransmitterInfo transmitter={aircraft} />, {wrapper});

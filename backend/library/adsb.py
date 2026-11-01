@@ -7,6 +7,7 @@ from urllib.parse import quote
 
 from common.adsb import aircraft_position, number
 from common.adsbstorage import aircraft_address
+from common.aircraft import enrich_aircraft_record
 
 
 class AdsbFiles:
@@ -56,6 +57,13 @@ class AdsbFiles:
                         record = json.loads(line)
                         if record.get("icao") != address or number(record.get("timestamp")) is None:
                             continue
+                        record = enrich_aircraft_record(record)
+                        # Thousands of track points normally share the same static
+                        # metadata. Reuse it instead of retaining a copy per fix.
+                        if record["aircraft"] == cache["aircraft"]:
+                            record["aircraft"] = cache["aircraft"]
+                        else:
+                            cache["aircraft"] = record["aircraft"]
                         relative = path.relative_to(folder).as_posix()
                         row = {
                             "path": relative,
@@ -88,6 +96,7 @@ class AdsbFiles:
                                         "groundspeed_mps",
                                         "vertical_rate_mps",
                                         "on_ground",
+                                        "aircraft",
                                     )
                                 }
                             }
@@ -116,6 +125,7 @@ class AdsbFiles:
             "display_name": address.upper(),
             "icao": address,
             "callsign": latest.get("callsign"),
+            "aircraft": latest.get("aircraft"),
             "decoder_type": "ADSB",
             "packet_count": len(rows),
             "run_count": len(runs),
@@ -147,6 +157,7 @@ class AdsbFiles:
             "rows": [],
             "positions": [],
             "latest": {},
+            "aircraft": None,
             "first": float("inf"),
             "last": 0,
             "runs": {},
@@ -163,7 +174,7 @@ class AdsbFiles:
                 with path.open("rb") as stream:
                     stream.seek(row["offset"])
                     record = json.loads(stream.readline(262145))
-                records.append(record)
+                records.append(enrich_aircraft_record(record))
             except (OSError, ValueError):
                 continue
         return records

@@ -1,5 +1,6 @@
 """Demodulate a synthetic airborne position through the actual readsb pipe."""
 
+import gzip
 import json
 import math
 import queue
@@ -63,9 +64,28 @@ def position_samples(input_rate, offset, longitude):
 @pytest.mark.parametrize(
     "input_rate,offset", [(2_400_000, 0), (4_000_000, 0), (4_000_000, 300_000)]
 )
-def test_readsb_receives_resampled_vfo_iq_and_saves_position(tmp_path, input_rate, offset):
+def test_readsb_receives_resampled_vfo_iq_and_saves_position(
+    tmp_path, input_rate, offset, monkeypatch
+):
     if not AdsbDecoder._binary():
         pytest.skip("readsb is not installed")
+    database = tmp_path / "database"
+    database.mkdir()
+    with gzip.open(database / "aircraft.csv.gz", "wt") as stream:
+        # readsb rejects snapshots smaller than 1,000 uncompressed bytes.
+        for address in range(1, 65):
+            stream.write(f"{address:06X};N{address};C172;00;CESSNA 172 Skyhawk;;;\n")
+        stream.write("40621D;G-TEST;C172;10;CESSNA 172 Skyhawk;;;\n")
+    (database / "metadata.json").write_text(
+        json.dumps(
+            {
+                "types": {"C172": ["CESSNA 172 Skyhawk", "L1P", "L"]},
+                "operators": {},
+                "database": {"version": "integration-fixture"},
+            }
+        )
+    )
+    monkeypatch.setenv("GS_ADSB_DB_DIR", str(database))
     config = DecoderConfigService().get_config("adsb", overrides={"adsb_capture_messages": True})
     worker = AdsbDecoder(queue.Queue(), queue.Queue(), "integration", config, str(tmp_path), 1)
     try:
@@ -93,12 +113,20 @@ def test_readsb_receives_resampled_vfo_iq_and_saves_position(tmp_path, input_rat
         latest = worker.latest["40621d"]
         assert latest["latitude"] == pytest.approx(40.5, abs=0.002)
         assert latest["longitude"] == pytest.approx(23.1, abs=0.002)
+        assert "--db-file" in worker.child.args
+        assert "--db-file-lt" in worker.child.args
+        assert latest["aircraft"]["registration"] == "G-TEST"
+        assert latest["aircraft"]["model"] == "CESSNA 172 Skyhawk"
+        assert latest["aircraft"]["military_status"] == "military"
+        assert latest["aircraft"]["engine_type"] == "P"
+        assert latest["aircraft"]["database"]["version"] == "integration-fixture"
         worker._service(force=True)
         records = [
             json.loads(line)
             for line in next(tmp_path.rglob("track_*.jsonl")).read_text().splitlines()
         ]
         assert any(record["latitude"] is not None for record in records)
+        assert records[-1]["aircraft"]["registration"] == "G-TEST"
         assert next(tmp_path.rglob("messages_*.jsonl")).stat().st_size > 0
     finally:
         worker._stop_child()

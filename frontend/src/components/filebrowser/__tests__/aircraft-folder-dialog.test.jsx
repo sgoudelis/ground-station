@@ -21,7 +21,8 @@ it('tails history with its cursor, updates counts and replaces rows when a log r
             else requests.push({request, reply});
         }),
     };
-    const state = (callsign) => ({icao: '406b90', callsign, timestamp: 1, captured_at: '2026-11-01', receiver_id: 'rx'});
+    const state = (callsign) => ({icao: '406b90', callsign, timestamp: 1, captured_at: '2026-11-01', receiver_id: 'rx',
+        aircraft: {registration: `G-${callsign}`, engine_type: 'P', military_status: 'unclassified', database: {version: 529}}});
     const respond = async (index, data) => act(async () => requests[index].reply(null, {success: true, data}));
     const {unmount} = render(<AircraftFolderDialog folder={folder} socket={socket} onClose={vi.fn()} onDelete={vi.fn()} />);
     await respond(0, {records: [state('FIRST')], cursor: {offset: 1, generation: 'a'}, start: 0, summary: folder});
@@ -37,6 +38,8 @@ it('tails history with its cursor, updates counts and replaces rows when a log r
     expect(screen.queryByText('FIRST')).not.toBeInTheDocument();
     expect(screen.getByText('REPLACED')).toBeInTheDocument();
     fireEvent.click(screen.getByText('REPLACED'));
+    expect(screen.getByRole('region', {name: 'Aircraft details'})).toHaveTextContent('G-REPLACED');
+    expect(screen.getByText('Piston')).toBeInTheDocument();
     await waitFor(() => expect(screen.getByText(/"callsign": "REPLACED"/)).toBeInTheDocument());
     unmount();
     expect(handlers.size).toBe(0);

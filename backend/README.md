@@ -30,6 +30,46 @@ make -j4 DISABLE_INTERACTIVE=yes
 Install the binary on the backend's PATH or into `backend/venv/bin/`, retaining
 its LICENSE with the installation. A missing executable appears as a decoder error.
 
+### Aircraft database
+
+Install the pinned Mictronics aircraft snapshot for native development from `backend/`:
+
+```bash
+./venv/bin/python tools/aircraftdb.py
+```
+
+The installer verifies SHA-256 checksums, combines the detailed aircraft export with
+the type/operator tables, and writes `data/adsb/aircraft.csv.gz`, `metadata.json`,
+`LICENSE`, and `NOTICE`. It requires network access only when installing. The data
+is ignored by Git. Docker runs the same installer at build time and includes the
+snapshot at `/usr/local/share/ground-station/adsb`, outside the persistent data mount.
+
+The decoder automatically selects `GS_ADSB_DB_DIR` (if set), then `backend/data/adsb`,
+then the bundled Docker snapshot. An override directory must contain the CSV and
+matching metadata files produced by the installer. Unavailable/invalid snapshots
+are logged and skipped; decoding continues without database enrichment. Restart
+the ADS-B decoder after installing/replacing a snapshot so its lookup tables and
+readsb use the same version. Updating the pinned upstream revision requires changing
+the installer revision, date, and archive checksums together.
+
+With a database installed, readsb receives `--db-file <path> --db-file-lt`. Live
+aircraft, saved states, and Packet Map details include registration, type/model,
+military/interesting flags, aircraft class, engine count/type, wake category,
+broadcast emitter category, and inferred operator name/country/radio callsign.
+Select an aircraft row or its details button to inspect all metadata; additional
+table columns can be enabled using the column menu. Owner and manufacture year
+appear only if the readsb report actually supplies them; Mictronics does not.
+Military markings can also originate from readsb's ICAO address-range rules.
+Unclassified does not establish civilian ownership, and aircraft class does not
+establish recreational use. Operator matches use the broadcast ICAO callsign prefix
+and do not establish ownership. Older saved states recover metadata from their
+retained readsb reports without rewriting capture files.
+
+Contains information from the [Mictronics Aircraft Database](https://github.com/Mictronics/aircraft-database),
+which is made available under the [ODC Attribution License](https://opendatacommons.org/licenses/by/1-0/).
+The converted database remains under ODC-By, separately from the application code.
+License/notice files accompany the installed data, and aircraft views display attribution.
+
 Open the **ADS-B** tab in the waterfall's decoded-data panel for live aircraft,
 or the Packet Map for positions. These views share a subscription: aircraft
 changes are batched once per second, never inserted into the generic packet
