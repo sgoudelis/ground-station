@@ -197,12 +197,16 @@ export const mapOutputsToRows = (outputs, rowLimit = DEFAULT_DRAWER_ROW_LIMIT) =
             const noradId = output.output.callsigns?.identified_norad_id || output.output.satellite?.norad_id;
             const satelliteName = output.output.callsigns?.identified_satellite || output.output.satellite?.name || '-';
 
+            const decodedFrom = output.output.callsigns?.from;
+            // Radiosondes identify the sender by serial in the normalized telemetry.
+            const sondeSerial = output.decoder_type === 'radiosonde'
+                ? output.output.telemetry?.payload?.records?.[0]?.groups?.find(group => group.values?.id)?.values.id
+                : null;
             // A LoRa payload has no callsign. Show the satellite associated with
             // the locked transmitter as a hint, rather than a decoded identity.
-            const decodedFrom = output.output.callsigns?.from;
             const lockedSatelliteName = output.output.satellite?.name?.trim();
             const fromCallsign = isImage ? '-'
-                : (decodedFrom || (isLora && lockedSatelliteName ? `(${lockedSatelliteName})` : '-'));
+                : (decodedFrom || sondeSerial || (isLora && lockedSatelliteName ? `(${lockedSatelliteName})` : '-'));
             const toCallsign = isImage ? '-' : (output.output.callsigns?.to || '-');
             const fromIsSatelliteHint = Boolean(isLora && !decodedFrom && lockedSatelliteName);
             const fromSatelliteNoradId = fromIsSatelliteHint
