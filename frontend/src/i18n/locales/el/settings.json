@@ -30,6 +30,8 @@
     "notifications": "Ειδοποιησεις",
     "api_configuration": "Διαμορφωση API",
     "stadia_maps_api_key": "Κλειδι API Stadia Maps",
+    "carto_maps_api_key": "Κλειδί API CARTO Maps",
+    "carto_api_help": "Χρησιμοποιείται για τα επίπεδα χάρτη CARTO όταν έχει οριστεί κλειδί API.",
     "ground_station_configuration": "Διαμορφωση Σταθμου Εδαφους",
     "minimum_elevation": "Ελαχιστη Ανυψωση (μοίρες)",
     "save_preferences": "ΑΠΟΘΗΚΕΥΣΗ ΠΡΟΤΙΜΗΣΕΩΝ",

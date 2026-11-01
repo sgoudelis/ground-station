@@ -1,81 +1,98 @@
 /** Copyright (c) 2026 Efstratios Goudelis — GPL-3.0-or-later */
 
-import React, {useEffect, useState} from 'react';
-import {Box, Button, Slider, Stack, TextField, Tooltip, Typography} from '@mui/material';
+import React, {useEffect, useMemo, useState} from 'react';
+import {Box, Button, IconButton, Stack, Tooltip} from '@mui/material';
+import {DateTimePicker} from '@mui/x-date-pickers/DateTimePicker';
+import {LocalizationProvider} from '@mui/x-date-pickers/LocalizationProvider';
+import {AdapterMoment} from '@mui/x-date-pickers/AdapterMoment';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import CheckIcon from '@mui/icons-material/Check';
 import moment from 'moment-timezone';
 import {useTranslation} from 'react-i18next';
 import {useUserTimeSettings} from '../../hooks/useUserTimeSettings.jsx';
 import {formatDateTime} from '../../utils/date-time.js';
+import DateRangeSelector from './date-range-selector.jsx';
+import {datePickerLocalization} from './date-picker-localization.js';
 
-function RangeValueLabel({children, open, value}) {
-    // Portal the date tooltip so the scrolling toolbar cannot clip it.
-    return <Tooltip open={open} title={value} placement="bottom" enterTouchDelay={0}>
-        {children}
-    </Tooltip>;
-}
+const datePickerSx = {
+    width: 190,
+    '& .MuiInputBase-root': {height: 32, fontSize: '0.75rem', pr: 0.5},
+    '& input': {px: 1},
+    '& .MuiInputAdornment-root': {ml: 0},
+    // Cancel MUI's negative end-edge margin inside the compact field.
+    '& .MuiIconButton-root': {p: 0.5, mr: 0},
+    '& .MuiSvgIcon-root': {fontSize: 18},
+};
 
-export default function DateRangeBar({range, availableRange, onChange, onRefresh, loading}) {
+export default function DateRangeBar({range, availableRange, positions, onChange, playbackTime, onPlaybackTimeChange, onRefresh, loading}) {
     const {t} = useTranslation('navigation');
+    const applyLabel = t('packet_map.apply', {defaultValue: 'Apply'});
     const {timezone, locale} = useUserTimeSettings();
-    const toInput = (date) => moment.tz(date, timezone).format('YYYY-MM-DDTHH:mm');
+    // The fields edit minutes. Hidden capture seconds must not carry into a
+    // changed date; unchanged fields retain the exact original server bounds.
+    const toInput = (date) => moment.tz(date, timezone).startOf('minute');
+    const pickerLocalization = useMemo(() => datePickerLocalization(locale), [locale]);
     const [draft, setDraft] = useState(() => ({start: toInput(range.start), end: toInput(range.end)}));
-    const [slider, setSlider] = useState([Date.parse(range.start), Date.parse(range.end)]);
     useEffect(() => {
         setDraft({start: toInput(range.start), end: toInput(range.end)});
-        setSlider([Date.parse(range.start), Date.parse(range.end)]);
     }, [range, timezone]);
 
-    const minimum = Math.min(Date.parse(availableRange?.start || range.start), Date.parse(range.start));
-    const maximum = Math.max(Date.parse(availableRange?.end || range.end), Date.parse(range.end), minimum + 60000);
-    const start = moment.tz(draft.start, 'YYYY-MM-DDTHH:mm', true, timezone);
-    const end = moment.tz(draft.end, 'YYYY-MM-DDTHH:mm', true, timezone);
-    const valid = start.isValid() && end.isValid() && start.valueOf() <= end.valueOf();
-    const format = (value) => formatDateTime(value, {timezone, locale, options: {dateStyle: 'short', timeStyle: 'short'}});
+    // Playback covers exactly the applied query window, independently of the
+    // library's availability and any unapplied edits in the date inputs.
+    const minimum = Date.parse(range.start);
+    const maximum = Date.parse(range.end);
+    const selectedTime = Math.max(minimum, Math.min(maximum, playbackTime ?? maximum));
+    const {start, end} = draft;
+    const valid = start?.isValid() && end?.isValid() && start.valueOf() <= end.valueOf();
+    const format = (value) => formatDateTime(value, {timezone, locale, options: {
+        year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit',
+    }});
     const recent = (hours) => {
         const now = Date.now();
         onChange({start: new Date(now - hours * 3600000).toISOString(), end: new Date(now).toISOString()});
     };
-    const sliderDate = (value, edge) => {
-        // JavaScript dates lose the capture's microseconds. Keep exact server
-        // bounds when a handle stays put or reaches the available endpoint.
-        if (value === Date.parse(range[edge])) return range[edge];
-        if (availableRange && value === Date.parse(availableRange[edge])) return availableRange[edge];
-        return new Date(value).toISOString();
-    };
-
-    // Validate dates here; the slider's second-sized steps must not make a
-    // capture with fractional seconds block native form submission.
-    return <Box component="form" noValidate onSubmit={(event) => {
+    // Preserve exact server bounds, including microseconds, for unchanged inputs.
+    return <LocalizationProvider dateAdapter={AdapterMoment} dateLibInstance={moment} adapterLocale={pickerLocalization.adapterLocale}>
+        <Box component="form" noValidate onSubmit={(event) => {
         event.preventDefault();
         if (valid) onChange({
-            start: draft.start === toInput(range.start) ? range.start : start.toISOString(),
-            end: draft.end === toInput(range.end) ? range.end : end.toISOString(),
+            start: start.valueOf() === toInput(range.start).valueOf() ? range.start : start.toISOString(),
+            end: end.valueOf() === toInput(range.end).valueOf() ? range.end : end.toISOString(),
         });
-    }} sx={{px: 1.5, py: 1, minWidth: 0, overflowX: 'auto'}}>
+    }} sx={{px: 1.5, py: 1, minWidth: 0, overflowX: 'auto',
+        // The active thumb's enlarged hit area must not create a vertical scrollbar.
+        overflowY: 'hidden'}}>
         {/* Keep the date controls on one row; narrow screens can scroll the bar. */}
         <Stack direction="row" spacing={1} alignItems="center" useFlexGap
             sx={{width: '100%', minWidth: 'max-content', whiteSpace: 'nowrap', '& > *': {flexShrink: 0},
                 '& .MuiButton-root': {minWidth: 0, px: 1, height: 32}}}>
-            <TextField size="small" type="datetime-local" label={t('packet_map.from', {defaultValue: 'From'})}
-                value={draft.start} onChange={(event) => setDraft({...draft, start: event.target.value})}
-                slotProps={{inputLabel: {shrink: true}}}
-                sx={{width: 190, '& .MuiInputBase-root': {height: 32, fontSize: '0.75rem'}, '& input': {px: 1}}} />
-            <TextField size="small" type="datetime-local" label={t('packet_map.to', {defaultValue: 'To'})}
-                value={draft.end} onChange={(event) => setDraft({...draft, end: event.target.value})}
-                error={!valid} slotProps={{inputLabel: {shrink: true}}}
-                sx={{width: 190, '& .MuiInputBase-root': {height: 32, fontSize: '0.75rem'}, '& input': {px: 1}}} />
-            <Button type="submit" size="small" disabled={!valid}>{t('packet_map.apply', {defaultValue: 'Apply'})}</Button>
-            <Typography variant="caption" color="text.secondary">{timezone}</Typography>
-            <Box sx={{flex: '1 0 180px', minWidth: 180, px: 1}}>
-                <Slider value={slider} min={minimum} max={maximum} step={1000}
-                    slots={{valueLabel: RangeValueLabel}}
-                    getAriaLabel={(index) => index === 0 ? t('packet_map.range_start', {defaultValue: 'Range start'})
-                    : t('packet_map.range_end', {defaultValue: 'Range end'})}
-                    getAriaValueText={format} valueLabelDisplay="auto" valueLabelFormat={format}
-                    onChange={(_event, value) => setSlider(value)}
-                    onChangeCommitted={(_event, value) => onChange({start: sliderDate(value[0], 'start'), end: sliderDate(value[1], 'end')})}
-                    sx={{verticalAlign: 'middle', '& .MuiSlider-thumb': {width: 12, height: 12}}} />
+            <DateTimePicker label={t('packet_map.from', {defaultValue: 'From'})} timezone={timezone}
+                format={pickerLocalization.format} ampm={pickerLocalization.ampm} enableAccessibleFieldDOMStructure={false}
+                value={start} onChange={(value) => setDraft({...draft, start: value})}
+                slotProps={{textField: {size: 'small', error: !start?.isValid(), slotProps: {inputLabel: {shrink: true}}}}}
+                sx={datePickerSx} />
+            <DateTimePicker label={t('packet_map.to', {defaultValue: 'To'})} timezone={timezone}
+                format={pickerLocalization.format} ampm={pickerLocalization.ampm} enableAccessibleFieldDOMStructure={false}
+                value={end} onChange={(value) => setDraft({...draft, end: value})}
+                slotProps={{textField: {size: 'small', error: !valid, slotProps: {inputLabel: {shrink: true}}}}}
+                sx={datePickerSx} />
+            <Tooltip title={applyLabel}>
+                <Box component="span" sx={{display: 'inline-flex'}}>
+                    <IconButton type="submit" size="small" color="primary" disabled={!valid}
+                        aria-label={applyLabel} sx={{width: 32, height: 32}}>
+                        <CheckIcon fontSize="small" />
+                    </IconButton>
+                </Box>
+            </Tooltip>
+            <Box sx={{flex: '1 0 400px', minWidth: 400}}>
+                <DateRangeSelector value={selectedTime} min={minimum} max={maximum} positions={positions}
+                    label={t('packet_map.playback_time', {defaultValue: 'Playback time'})}
+                    formatValue={format}
+                    formatTick={(date) => formatDateTime(date, {timezone, locale, options:
+                        maximum - minimum <= 86400000 ? {hour: '2-digit', minute: '2-digit',
+                            ...(maximum - minimum < 3600000 ? {second: '2-digit'} : {})} : {day: 'numeric', month: 'short'},
+                    })}
+                    onChange={(_event, value) => onPlaybackTimeChange?.(value)} />
             </Box>
             <Button size="small" onClick={() => recent(24)}>24h</Button>
             <Button size="small" onClick={() => recent(168)}>7d</Button>
@@ -86,5 +103,6 @@ export default function DateRangeBar({range, availableRange, onChange, onRefresh
                 {t('packet_map.refresh', {defaultValue: 'Refresh'})}
             </Button>
         </Stack>
-    </Box>;
+        </Box>
+    </LocalizationProvider>;
 }

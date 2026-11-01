@@ -69,6 +69,7 @@ const USER_EDITABLE_KEYS = [
 
 const SYSTEM_EDITABLE_KEYS = [
     'stadia_maps_api_key',
+    'carto_maps_api_key',
     'gemini_api_key',
     'deepgram_api_key',
     'google_translate_api_key',
@@ -254,6 +255,7 @@ const PreferencesForm = ({ mode = 'preferences' }) => {
 
     const [visibleSecrets, setVisibleSecrets] = useState({
         stadia_maps_api_key: false,
+        carto_maps_api_key: false,
         gemini_api_key: false,
         deepgram_api_key: false,
         google_translate_api_key: false,
@@ -320,6 +322,7 @@ const PreferencesForm = ({ mode = 'preferences' }) => {
         setDraft(savedSnapshot);
         setVisibleSecrets({
             stadia_maps_api_key: false,
+            carto_maps_api_key: false,
             gemini_api_key: false,
             deepgram_api_key: false,
             google_translate_api_key: false,
@@ -578,6 +581,24 @@ const PreferencesForm = ({ mode = 'preferences' }) => {
                                         </Box>
                                     </Grid>
                                     <Grid size={{ xs: 12, md: 6 }}>
+                                        <Box sx={preferenceCardSx}>
+                                            <SecretsField
+                                                fieldKey="carto_maps_api_key"
+                                                label={t('preferences.carto_maps_api_key', { defaultValue: 'CARTO Maps API Key' })}
+                                                value={draft.carto_maps_api_key || ''}
+                                                placeholder={t('preferences.api_key_placeholder', { defaultValue: 'Paste API key' })}
+                                                helperText={t('preferences.carto_api_help', { defaultValue: 'Used for CARTO map layers when an API key is set.' })}
+                                                statusLabel={draft.carto_maps_api_key
+                                                    ? t('preferences.configured', { defaultValue: 'Configured' })
+                                                    : t('preferences.not_configured', { defaultValue: 'Not configured' })}
+                                                visible={visibleSecrets.carto_maps_api_key}
+                                                onToggleVisibility={() => toggleSecretVisibility('carto_maps_api_key')}
+                                                onChange={(value) => handleDraftChange('carto_maps_api_key', value)}
+                                                disabled={isSaving || isLoading}
+                                            />
+                                        </Box>
+                                    </Grid>
+                                    <Grid size={{ xs: 12, md: 6 }}>
                                         <Stack spacing={1.25}>
                                         <Accordion
                                             disableGutters
@@ -777,7 +798,6 @@ const PreferencesForm = ({ mode = 'preferences' }) => {
                             mobileInline
                             sx={{
                                 mt: 1,
-                                backgroundColor: (theme) => getPreferenceCardBackground(theme),
                             }}
                         >
                             <Button

@@ -146,6 +146,15 @@ export const getTileLayers = (t) => [
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
     },
     {
+        id: 'esridarkcanvas',
+        name: 'Esri dark gray',
+        description: t('tile_layers.dark_gray_basemap_without_api_key', { defaultValue: 'Dark gray basemap from Esri, available without an API key.' }),
+        engines: [MAP_ENGINE_LEAFLET, MAP_ENGINE_MAPLIBRE],
+        projection: 'EPSG3857',
+        url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+        attribution: 'Tiles &copy; Esri &mdash; Esri, HERE, Garmin, &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, and the GIS user community',
+    },
+    {
         id: 'esrigreycanvas',
         name: 'Esri grey',
         description: t('tile_layers.muted_light_gray_reference_basemap', { defaultValue: 'Muted light-gray reference basemap.' }),
@@ -267,6 +276,7 @@ export const getTileLayers = (t) => [
  * @param {Object} [options] - Lookup options.
  * @param {string} [options.mapEngine] - Map engine the layer must be compatible with.
  * @param {Function} [options.t] - Active translation function, forwarded to the layer catalogue.
+ * @param {Array} [options.preferences] - Reactive preferences supplied by map components.
  * @returns {Object|null} - The tile layer object if found, otherwise null.
  */
 export function getTileLayerById(id, options = {}) {
@@ -283,11 +293,19 @@ export function getTileLayerById(id, options = {}) {
     };
 
     if (tileLayer.id === 'stadiadark') {
-        const state = store.getState();
-        const preferences = state.preferences.preferences;
+        const preferences = options.preferences ?? store.getState().preferences.preferences;
         const apiKey = preferences.find(pref => pref.name === "stadia_maps_api_key");
         if (apiKey) {
             tileLayer.url = tileLayer.url.replace("{APIKEY}", apiKey.value);
+        }
+    }
+
+    if (tileLayer.id === 'cartodark' || tileLayer.id === 'cartodbvoyager') {
+        const preferences = options.preferences ?? store.getState().preferences.preferences;
+        const apiKey = preferences.find(pref => pref.name === 'carto_maps_api_key')?.value?.trim();
+        // CARTO basemaps use "key"; Stadia uses "api_key".
+        if (apiKey) {
+            tileLayer.url += `?key=${encodeURIComponent(apiKey)}`;
         }
     }
 

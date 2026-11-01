@@ -30,6 +30,8 @@
     "notifications": "Benachrichtigungen",
     "api_configuration": "API-Konfiguration",
     "stadia_maps_api_key": "Stadia Maps API-Schlüssel",
+    "carto_maps_api_key": "CARTO Maps API-Schlüssel",
+    "carto_api_help": "Wird für CARTO-Kartenebenen verwendet, wenn ein API-Schlüssel festgelegt ist.",
     "ground_station_configuration": "Bodenstationskonfiguration",
     "minimum_elevation": "Minimale Elevation (Grad)",
     "save_preferences": "EINSTELLUNGEN SPEICHERN",

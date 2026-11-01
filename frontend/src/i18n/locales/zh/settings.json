@@ -40,6 +40,8 @@
     "notifications": "通知",
     "api_configuration": "API 配置",
     "stadia_maps_api_key": "Stadia Maps API 密钥",
+    "carto_maps_api_key": "CARTO Maps API 密钥",
+    "carto_api_help": "设置 API 密钥后，将用于 CARTO 地图图层。",
     "stadia_api_help": "用于需要 API 令牌的地图瓦片提供商。",
     "ground_station_configuration": "地面站配置",
     "minimum_elevation": "最低仰角（度）",

@@ -42,6 +42,8 @@
     "notifications": "Notifications",
     "api_configuration": "API Configuration",
     "stadia_maps_api_key": "Stadia Maps API Key",
+    "carto_maps_api_key": "CARTO Maps API Key",
+    "carto_api_help": "Used for CARTO map layers when an API key is set.",
     "stadia_api_help": "Used for map tile providers that require an API token.",
     "ground_station_configuration": "Ground Station Configuration",
     "minimum_elevation": "Minimum Elevation (degrees)",

@@ -187,9 +187,11 @@ const LeafletEarthViewMapRenderer = ({
         }
         return normalizedMapEngine === 'maplibre' ? -6 : 1.5;
     }, [mapZoomByEngine, normalizedMapEngine]);
+    // Rebuild keyed tile URLs when preferences finish loading or change.
+    const preferences = useSelector((state) => state.preferences?.preferences);
     const selectedTileLayer = useMemo(
-        () => getTileLayerById(tileLayerID, { mapEngine: normalizedMapEngine, t }),
-        [normalizedMapEngine, tileLayerID, t]
+        () => getTileLayerById(tileLayerID, { mapEngine: normalizedMapEngine, t, preferences }),
+        [normalizedMapEngine, tileLayerID, t, preferences]
     );
     const attributionHtml = useMemo(
         () => `<a href="https://leafletjs.com" title="A JavaScript library for interactive maps" target="_blank" rel="noopener noreferrer">Leaflet</a> | ${selectedTileLayer.attribution}`,

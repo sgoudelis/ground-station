@@ -30,6 +30,8 @@
     "notifications": "Meldingen",
     "api_configuration": "API-configuratie",
     "stadia_maps_api_key": "Stadia Maps API-sleutel",
+    "carto_maps_api_key": "CARTO Maps API-sleutel",
+    "carto_api_help": "Wordt gebruikt voor CARTO-kaartlagen wanneer een API-sleutel is ingesteld.",
     "ground_station_configuration": "Grondstationconfiguratie",
     "minimum_elevation": "Minimale elevatie (graden)",
     "save_preferences": "VOORKEUREN OPSLAAN",

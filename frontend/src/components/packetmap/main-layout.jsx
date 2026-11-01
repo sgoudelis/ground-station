@@ -14,10 +14,10 @@ import PacketMap from './packet-map.jsx';
 import DateRangeBar from './date-range-bar.jsx';
 import usePacketPositions, {callLibrary} from './use-packet-positions.js';
 import {gridLayoutStoreName, hiddenTypesStoreName, readStored, writeStored} from './storage.js';
-import {columns, LAYOUT_VERSION, loadLayouts} from './layouts.js';
+import {columns, LAYOUT_SCHEMA_VERSION, loadLayouts} from './layouts.js';
 import {transmitterRows} from './transmitters.js';
 import TransmitterTable from './transmitter-table.jsx';
-import TransmitterTypes from './transmitter-types.jsx';
+import TransmitterInfo from './transmitter-info.jsx';
 
 export {gridLayoutStoreName} from './storage.js';
 
@@ -30,17 +30,30 @@ export default function PacketMapLayout() {
         const now = Date.now();
         return {start: new Date(now - 86400000).toISOString(), end: new Date(now).toISOString()};
     });
+    const [playbackTime, setPlaybackTime] = useState(() => Date.parse(range.end));
+    const applyRange = (nextRange) => {
+        setRange(nextRange);
+        // Start at the latest fix whenever a new filesystem window is applied.
+        setPlaybackTime(Date.parse(nextRange.end));
+    };
     const {positions, transmitters, available_range, loading, error, refresh} = usePacketPositions(socket, range);
     const rows = useMemo(() => transmitterRows(positions, transmitters), [positions, transmitters]);
+    const [selectedTransmitterId, setSelectedTransmitterId] = useState(null);
+    const selectedTransmitter = rows.find((row) => row.id === selectedTransmitterId) || null;
     const [hiddenTypes, setHiddenTypes] = useState(() => {
         const saved = readStored(hiddenTypesStoreName);
         return Array.isArray(saved) ? saved.filter((kind) => typeof kind === 'string') : [];
     });
     const visiblePositions = useMemo(() => positions.filter((point) => !hiddenTypes.includes(point.kind)), [positions, hiddenTypes]);
-    const toggleType = (kind) => {
-        const next = hiddenTypes.includes(kind) ? hiddenTypes.filter((value) => value !== kind) : [...hiddenTypes, kind];
+    const changeHiddenTypes = (next) => {
         setHiddenTypes(next);
         writeStored(hiddenTypesStoreName, next);
+    };
+    const selectTransmitter = (id) => {
+        setSelectedTransmitterId(id);
+        const kind = rows.find((row) => row.id === id)?.kind;
+        // Selecting a hidden transmitter should reveal the path being fitted.
+        if (hiddenTypes.includes(kind)) changeHiddenTypes(hiddenTypes.filter((value) => value !== kind));
     };
     const [refreshError, setRefreshError] = useState('');
     const [reconciling, setReconciling] = useState(false);
@@ -59,11 +72,12 @@ export default function PacketMapLayout() {
     };
     const updateLayout = useCallback((_current, all) => {
         setLayouts(all);
-        writeStored(gridLayoutStoreName, {version: LAYOUT_VERSION, layouts: all});
+        writeStored(gridLayoutStoreName, {version: LAYOUT_SCHEMA_VERSION, layouts: all});
     }, []);
 
     return <PageTabsLayout sx={{bgcolor: 'transparent'}} tabs={<DateRangeBar
-        range={range} availableRange={available_range} onChange={setRange}
+        range={range} availableRange={available_range} positions={positions} onChange={applyRange}
+        playbackTime={playbackTime} onPlaybackTimeChange={setPlaybackTime}
         onRefresh={reconcile} loading={loading || reconciling} />}>
         <Box sx={{height: 3}}>{(loading || reconciling) && <LinearProgress sx={{height: 3}} />}</Box>
         {(error || refreshError) && <Alert severity="error" sx={{mx: 1}}>{error || refreshError}</Alert>}
@@ -74,13 +88,18 @@ export default function PacketMapLayout() {
                 dragConfig={{enabled: gridEditable, handle: '.react-grid-draggable', cancel: 'button,input,.MuiSelect-root'}}
                 resizeConfig={{enabled: gridEditable}}>
                 <StyledIslandParentNoScrollbar key="packet-map">
-                    <PacketMap positions={visiblePositions} hasPositions={positions.length > 0} loading={loading} gridEditable={gridEditable} fitRequest={0} />
+                    <PacketMap positions={visiblePositions} transmitters={rows} playbackTime={playbackTime}
+                        hasPositions={positions.length > 0} loading={loading} gridEditable={gridEditable}
+                        fitRequest={0} selectedTransmitterId={selectedTransmitterId} onSelectTransmitter={selectTransmitter}
+                        hiddenTypes={hiddenTypes} onHiddenTypesChange={changeHiddenTypes} onFitAll={() => setSelectedTransmitterId(null)} />
                 </StyledIslandParentNoScrollbar>
-                <StyledIslandParentNoScrollbar key="transmitter-types">
-                    <TransmitterTypes rows={rows} positions={positions} hiddenTypes={hiddenTypes} onToggle={toggleType} gridEditable={gridEditable} />
+                <StyledIslandParentNoScrollbar key="transmitter-info">
+                    <TransmitterInfo transmitter={selectedTransmitter} selectedTransmitterId={selectedTransmitterId}
+                        loading={loading} gridEditable={gridEditable} onClearSelection={() => setSelectedTransmitterId(null)} />
                 </StyledIslandParentNoScrollbar>
                 <StyledIslandParentNoScrollbar key="transmitters">
-                    <TransmitterTable rows={rows} loading={loading} hiddenTypes={hiddenTypes} gridEditable={gridEditable} />
+                    <TransmitterTable rows={rows} loading={loading} hiddenTypes={hiddenTypes} gridEditable={gridEditable}
+                        selectedTransmitterId={selectedTransmitterId} onSelectTransmitter={selectTransmitter} />
                 </StyledIslandParentNoScrollbar>
             </Responsive>}
         </div>

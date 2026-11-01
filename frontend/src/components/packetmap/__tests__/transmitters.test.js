@@ -1,6 +1,6 @@
 import {beforeEach, describe, expect, it} from 'vitest';
 import {detailLabel, flattenDetails, transmitterRows} from '../transmitters.js';
-import {columns, defaultLayouts, LAYOUT_VERSION, loadLayouts} from '../layouts.js';
+import {columns, defaultLayouts, LAYOUT_SCHEMA_VERSION, loadLayouts} from '../layouts.js';
 import {gridLayoutStoreName, mapViewStoreName} from '../storage.js';
 
 beforeEach(() => localStorage.clear());
@@ -29,27 +29,33 @@ describe('Transmitter summaries', () => {
 });
 
 describe('Three-window layouts', () => {
-    it('puts types beside the map and the table below, stacking on phones', () => {
+    it('puts transmitter info beside the map and the table below, stacking on phones', () => {
         for (const [breakpoint, layout] of Object.entries(defaultLayouts())) {
-            const [map, types, table] = layout;
+            const [map, info, table] = layout;
+            expect(info.i).toBe('transmitter-info');
             expect(table.w).toBe(columns[breakpoint]);
             expect(table.y).toBeGreaterThanOrEqual(map.h);
-            if (map.w === columns[breakpoint]) expect(types.y).toBe(map.h);
-            else expect(types.x).toBe(map.w);
+            if (map.w === columns[breakpoint]) expect(info.y).toBe(map.h);
+            else expect(info.x).toBe(map.w);
         }
     });
 
-    it('upgrades the old grid without losing the map view and rejects corrupt layouts', () => {
+    it.each([undefined, 1, 2, LAYOUT_SCHEMA_VERSION + 1])('resets layouts with schema version %s without losing map navigation', (version) => {
         localStorage.setItem(mapViewStoreName, JSON.stringify({center: [40, 23], zoom: 8}));
-        localStorage.setItem(gridLayoutStoreName, JSON.stringify({version: 1, layouts: {lg: []}}));
+        const layouts = defaultLayouts();
+        layouts.lg[1] = {...layouts.lg[1], x: 32, y: 4, w: 16, h: 42};
+        localStorage.setItem(gridLayoutStoreName, JSON.stringify({version, layouts}));
         expect(loadLayouts()).toEqual(defaultLayouts());
-        expect(JSON.parse(localStorage.getItem(mapViewStoreName)).zoom).toBe(8);
+        expect(JSON.parse(localStorage.getItem(mapViewStoreName))).toEqual({center: [40, 23], zoom: 8});
+    });
+
+    it('preserves current-version custom geometry and rejects corrupt layouts', () => {
         const layouts = defaultLayouts();
         layouts.lg[2].h = 30;
-        localStorage.setItem(gridLayoutStoreName, JSON.stringify({version: LAYOUT_VERSION, layouts}));
+        localStorage.setItem(gridLayoutStoreName, JSON.stringify({version: LAYOUT_SCHEMA_VERSION, layouts}));
         expect(loadLayouts().lg[2].h).toBe(30);
         layouts.md[1] = null;
-        localStorage.setItem(gridLayoutStoreName, JSON.stringify({version: LAYOUT_VERSION, layouts}));
+        localStorage.setItem(gridLayoutStoreName, JSON.stringify({version: LAYOUT_SCHEMA_VERSION, layouts}));
         expect(loadLayouts()).toEqual(defaultLayouts());
     });
 });

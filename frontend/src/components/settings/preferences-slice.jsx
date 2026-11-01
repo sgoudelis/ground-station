@@ -26,6 +26,7 @@ const USER_DEFAULT_PREFERENCES = [
     { id: null, name: 'locale', value: 'browser' },
     { id: null, name: 'toast_position', value: 'bottom-center' },
     { id: null, name: 'stadia_maps_api_key', value: '' },
+    { id: null, name: 'carto_maps_api_key', value: '' },
     { id: null, name: 'gemini_api_key', value: '' },
     { id: null, name: 'deepgram_api_key', value: '' },
     { id: null, name: 'google_translate_api_key', value: '' },

@@ -391,17 +391,19 @@ const MapLibreEarthViewMapRenderer = ({
         }
         return normalizedMapEngine === 'maplibre' ? 0.5 : 1.5;
     }, [mapZoomByEngine, normalizedMapEngine]);
+    // Rebuild keyed tile URLs when preferences finish loading or change.
+    const preferences = useSelector((state) => state.preferences?.preferences);
     const selectedTileLayer = useMemo(
-        () => getTileLayerById(tileLayerID, {mapEngine: normalizedMapEngine, t}),
-        [normalizedMapEngine, tileLayerID, t]
+        () => getTileLayerById(tileLayerID, {mapEngine: normalizedMapEngine, t, preferences}),
+        [normalizedMapEngine, tileLayerID, t, preferences]
     );
     const attributionHtml = useMemo(
         () => `<a href="https://maplibre.org/" title="Open source map rendering" target="_blank" rel="noopener noreferrer">MapLibre</a> | ${selectedTileLayer.attribution}`,
         [selectedTileLayer.attribution]
     );
     const selectedTileURL = useMemo(
-        () => getMapLibreTileURL(tileLayerID, {mapEngine: normalizedMapEngine, t}),
-        [normalizedMapEngine, tileLayerID]
+        () => getMapLibreTileURL(tileLayerID, {mapEngine: normalizedMapEngine, t, preferences}),
+        [normalizedMapEngine, tileLayerID, t, preferences]
     );
 
     const mapStyle = useMemo(

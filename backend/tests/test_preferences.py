@@ -23,7 +23,10 @@ from db.models import Preferences, PreferenceScope, UserRole, Users
 
 
 @pytest.mark.asyncio
-async def test_set_user_preferences_is_idempotent_for_unchanged_values(db_session):
+@pytest.mark.parametrize(
+    ("name", "value"), [("theme", "auto"), ("carto_maps_api_key", "carto-test-key")]
+)
+async def test_set_user_preferences_is_idempotent_for_unchanged_values(db_session, name, value):
     user = Users(
         id=uuid.uuid4(),
         username="operator",
@@ -38,17 +41,20 @@ async def test_set_user_preferences_is_idempotent_for_unchanged_values(db_sessio
     initial = await preferences_crud.set_user_preferences(
         db_session,
         user.id,
-        [{"name": "theme", "value": "auto"}],
+        [{"name": name, "value": value}],
     )
     assert initial["success"] is True
+    assert next(pref["value"] for pref in initial["data"] if pref["name"] == name) == value
 
     # Re-saving unchanged value should not fail with rowcount/stale update issues.
     second = await preferences_crud.set_user_preferences(
         db_session,
         user.id,
-        [{"name": "theme", "value": "auto"}],
+        [{"name": name, "value": value}],
     )
     assert second["success"] is True
+    fetched = await preferences_crud.fetch_user_preferences(db_session, user.id)
+    assert next(pref["value"] for pref in fetched["data"] if pref["name"] == name) == value
 
 
 @pytest.mark.asyncio

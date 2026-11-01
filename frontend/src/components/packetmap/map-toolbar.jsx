@@ -1,7 +1,6 @@
 /** Copyright (c) 2026 Efstratios Goudelis — GPL-3.0-or-later */
 
 import React from 'react';
-import {MenuItem, Select} from '@mui/material';
 import HomeIcon from '@mui/icons-material/Home';
 import FilterCenterFocusIcon from '@mui/icons-material/FilterCenterFocus';
 import CenterFocusStrongIcon from '@mui/icons-material/CenterFocusStrong';
@@ -16,7 +15,7 @@ import {useTranslation} from 'react-i18next';
 import ScrollableMapToolbar from '../common/map-toolbar.jsx';
 
 export default function PacketMapToolbar({mapRef, home, onFitAll, settings, onToggleSetting,
-    tileLayerId, onLayerChange, isFullscreen, onFullscreen, tooltipContainer}) {
+    isFullscreen, onFullscreen, tooltipContainer}) {
     const {t} = useTranslation('earthview');
     const {t: navigationT} = useTranslation('navigation');
     const label = (key, fallback) => t(`map_controls.${key}`, {defaultValue: fallback});
@@ -36,14 +35,6 @@ export default function PacketMapToolbar({mapRef, home, onFitAll, settings, onTo
         {key: 'divider-2'},
         {key: 'tracks', label: navigationT('packet_map.show_tracks', {defaultValue: 'Show transmitter tracks'}), icon: <HistoryIcon />,
             pressed: settings.showTracks, onClick: () => onToggleSetting('showTracks')},
-        {key: 'layer', content: <Select size="small" value={tileLayerId} onChange={(event) => onLayerChange(event.target.value)}
-            inputProps={{'aria-label': navigationT('packet_map.layer', {defaultValue: 'Map layer'})}}
-            MenuProps={{container: tooltipContainer}} sx={{height: 28, fontSize: '0.75rem', borderRadius: 0}}>
-            <MenuItem value="osm">OpenStreetMap</MenuItem>
-            <MenuItem value="satellite">Satellite</MenuItem>
-            <MenuItem value="topo">Topographic</MenuItem>
-            <MenuItem value="cartodark">Dark</MenuItem>
-        </Select>},
         {key: 'divider-3'},
         {key: 'fullscreen', label: isFullscreen ? label('exit_fullscreen', 'Exit fullscreen') : label('go_fullscreen', 'Go fullscreen'),
             icon: isFullscreen ? <FullscreenExitIcon /> : <FullscreenIcon />, pressed: isFullscreen, onClick: onFullscreen},

@@ -1,5 +1,5 @@
 import React from 'react';
-import {act, fireEvent, render, screen} from '@testing-library/react';
+import {act, fireEvent, render, screen, within} from '@testing-library/react';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 import {Provider} from 'react-redux';
 import {configureStore} from '@reduxjs/toolkit';
@@ -7,9 +7,12 @@ import {createTheme, ThemeProvider} from '@mui/material/styles';
 import i18n from 'i18next';
 import {initReactI18next} from 'react-i18next';
 import PacketMap, {MapViewport} from '../packet-map.jsx';
+import TransmitterTable from '../transmitter-table.jsx';
 import {mapSettingsStoreName, mapViewStoreName} from '../storage.js';
 
-await i18n.use(initReactI18next).init({lng: 'en', resources: {}, interpolation: {escapeValue: false}});
+await i18n.use(initReactI18next).init({lng: 'en', resources: {
+    en: {earthview: {map_settings: {title: 'Map Settings'}}},
+}, interpolation: {escapeValue: false}});
 
 const {map, listeners} = vi.hoisted(() => {
     const listeners = new Map();
@@ -34,15 +37,17 @@ vi.mock('react-leaflet', () => ({
         return <div data-testid="map" data-snap={zoomSnap} data-delta={zoomDelta}
             data-zoom-control={String(zoomControl)} data-keyboard={String(keyboard)}>{children}</div>;
     },
-    CircleMarker: ({center, children}) => <div data-testid="position" data-center={JSON.stringify(center)}>{children}</div>,
-    Marker: ({position, children}) => <div data-testid="home" data-center={JSON.stringify(position)}>{children}</div>,
+    CircleMarker: ({center, children, eventHandlers}) => <div data-testid="position" onClick={eventHandlers?.click} data-center={JSON.stringify(center)}>{children}</div>,
+    Marker: ({position, children, icon, eventHandlers}) => <div onClick={eventHandlers?.click} data-testid={icon?.options?.className === 'packet-radiosonde-marker' ? 'sonde-marker' : 'home'}
+        data-center={JSON.stringify(position)} data-icon-html={icon?.options?.html}>{children}</div>,
     Polyline: ({positions}) => <div data-testid="track" data-positions={JSON.stringify(positions)} />,
-    Popup: ({children}) => <div>{children}</div>, Tooltip: ({children}) => <span>{children}</span>, TileLayer: () => null,
+    Popup: ({children}) => <div>{children}</div>, Tooltip: ({children}) => <span>{children}</span>,
+    TileLayer: ({url, zIndex}) => <div data-testid="tile-layer" data-url={url} data-z-index={zIndex} />,
 }));
 vi.mock('../../common/tile-layers.jsx', () => ({getTileLayerById: () => ({url: 'tiles', attribution: 'OSM'})}));
 vi.mock('../../common/dataurl-icons.jsx', () => ({homeIcon: {}}));
 vi.mock('../../common/common.jsx', () => ({
-    TitleBar: ({children}) => <div>{children}</div>,
+    TitleBar: ({children}) => <div data-testid="map-title">{children}</div>,
     MapStatusBar: ({children}) => <div>{children}</div>,
     islandTitleBarCompactSx: {},
     getClassNamesBasedOnGridEditing: () => '',
@@ -132,26 +137,103 @@ describe('Packet map viewport', () => {
     });
 });
 
-it('renders home and separate transmitter tracks with packet details', () => {
+it('renders smooth transmitter paths with only start and end markers and packet details', () => {
     const state = {location: {location: {lat: '40.6', lon: '22.9'}}};
     const store = configureStore({reducer: () => state});
     const points = [
         {id: '1', file_id: 'decoded:first.bin', transmitter_id: 'aprs:A', kind: 'aprs', name: 'A', latitude: 40, longitude: 23, altitude: null, captured_at: '2026-11-01T00:00:00Z'},
+        {id: 'middle', file_id: 'decoded:middle.bin', transmitter_id: 'aprs:A', kind: 'aprs', name: 'A', latitude: 40.4, longitude: 23.6, altitude: null, captured_at: '2026-11-01T00:30:00Z'},
         {id: '2', file_id: 'decoded:second.bin', transmitter_id: 'aprs:A', kind: 'aprs', name: 'A', latitude: 41, longitude: 24, altitude: 100, captured_at: '2026-11-01T01:00:00Z'},
         {id: '3', file_id: 'decoded:sonde.bin', transmitter_id: 'radiosonde:S', kind: 'radiosonde', name: 'S', latitude: 42, longitude: 25, altitude: 10000, captured_at: '2026-11-01T02:00:00Z'},
     ];
-    render(<Provider store={store}><ThemeProvider theme={createTheme()}>
+    const element = <Provider store={store}><ThemeProvider theme={createTheme()}>
         <PacketMap positions={points} loading={false} fitRequest={0} />
-    </ThemeProvider></Provider>);
+    </ThemeProvider></Provider>;
+    const {unmount} = render(element);
     expect(screen.getByTestId('home')).toHaveAttribute('data-center', '[40.6,22.9]');
-    expect(screen.getAllByTestId('position')).toHaveLength(3);
-    expect(screen.getByTestId('track')).toHaveAttribute('data-positions', '[[40,23],[41,24]]');
+    expect(screen.getAllByTestId('position')).toHaveLength(2);
+    expect(screen.getAllByTestId('position').map((marker) => JSON.parse(marker.dataset.center)))
+        .toEqual([[40, 23], [41, 24]]);
+    expect(screen.getByTestId('sonde-marker')).toHaveAttribute('data-center', '[42,25]');
+    const path = JSON.parse(screen.getByTestId('track').dataset.positions);
+    expect(path.length).toBeGreaterThan(3);
+    expect(path[0]).toEqual([40, 23]);
+    expect(path.at(-1)).toEqual([41, 24]);
+    expect(path).toContainEqual([40.4, 23.6]);
     expect(screen.getByText('File: sonde.bin')).toBeInTheDocument();
     expect(screen.getByText('2 transmitters')).toBeInTheDocument();
-    expect(map.fitBounds).toHaveBeenLastCalledWith([[40, 23], [41, 24], [42, 25], [40.6, 22.9]], expect.any(Object));
+    const legend = screen.getByRole('list', {name: 'Transmitter types'});
+    expect(legend).toHaveTextContent('APRS');
+    expect(legend).toHaveTextContent('Radiosonde');
+    expect(screen.getByTestId('map-title')).not.toContainElement(legend);
+    expect(map.fitBounds).toHaveBeenLastCalledWith([...path, [42, 25], [40.6, 22.9]], expect.any(Object));
     fireEvent.click(screen.getByRole('button', {name: 'Show transmitter tracks'}));
     expect(screen.queryByTestId('track')).not.toBeInTheDocument();
-    expect(screen.getAllByTestId('position')).toHaveLength(3);
+    expect(screen.getAllByTestId('position')).toHaveLength(2);
+
+    fireEvent.click(screen.getByRole('button', {name: 'Map Settings'}));
+    const dialog = within(screen.getByRole('dialog', {name: 'Map Settings'}));
+    fireEvent.click(dialog.getByRole('switch', {name: 'Show transmitter tracks'}));
+    fireEvent.click(dialog.getByRole('switch', {name: 'Show transmitter legend'}));
+    fireEvent.mouseDown(dialog.getByRole('combobox', {name: 'Map layer'}));
+    fireEvent.click(screen.getByRole('option', {name: 'Satellite + streets'}));
+    // Options stay local to the dialog until Apply, preserving quick controls.
+    expect(screen.queryByTestId('track')).not.toBeInTheDocument();
+    expect(legend).toBeInTheDocument();
+    expect(screen.getAllByTestId('tile-layer')).toHaveLength(1);
+    fireEvent.click(dialog.getByRole('button', {name: 'Apply'}));
+    expect(screen.getByTestId('track')).toBeInTheDocument();
+    expect(legend).not.toBeInTheDocument();
+    expect(JSON.parse(localStorage.getItem(mapSettingsStoreName))).toMatchObject({showTracks: true, showLegend: false, tileLayerId: 'hybrid'});
+    expect(screen.getAllByTestId('tile-layer').map((tile) => [tile.dataset.url, tile.dataset.zIndex])).toEqual([
+        ['tiles', '0'],
+        ['https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}', '1'],
+        ['https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', '2'],
+    ]);
+    fireEvent.click(dialog.getByRole('switch', {name: 'Show transmitter tracks'}));
+    fireEvent.click(dialog.getByRole('button', {name: 'Close'}));
+    expect(screen.getByTestId('track')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', {name: 'Map Settings'}));
+    expect(within(screen.getByRole('dialog')).getByRole('switch', {name: 'Show transmitter tracks'})).toBeChecked();
+    unmount();
+    render(element);
+    expect(screen.getAllByTestId('tile-layer')).toHaveLength(3);
+    fireEvent.click(screen.getByRole('button', {name: 'Map Settings'}));
+    const restoredDialog = within(screen.getByRole('dialog'));
+    expect(restoredDialog.getByRole('combobox', {name: 'Map layer'})).toHaveTextContent('Satellite + streets');
+    fireEvent.mouseDown(restoredDialog.getByRole('combobox', {name: 'Map layer'}));
+    fireEvent.click(screen.getByRole('option', {name: 'Satellite', exact: true}));
+    map.fitBounds.mockClear();
+    map.setView.mockClear();
+    fireEvent.click(restoredDialog.getByRole('button', {name: 'Apply'}));
+    expect(screen.getAllByTestId('tile-layer')).toHaveLength(1);
+    expect(map.fitBounds).not.toHaveBeenCalled();
+    expect(map.setView).not.toHaveBeenCalled();
+});
+
+it('edits type visibility in map settings, discards cancelled edits and restores defaults', () => {
+    const store = configureStore({reducer: () => ({location: {location: null}})});
+    const onHiddenTypesChange = vi.fn();
+    render(<Provider store={store}><ThemeProvider theme={createTheme()}>
+        <PacketMap positions={[]} transmitters={[{id: 'custom:A', kind: 'custom'}]} loading={false} fitRequest={0}
+            hiddenTypes={['aprs']} onHiddenTypesChange={onHiddenTypesChange} />
+    </ThemeProvider></Provider>);
+    fireEvent.click(screen.getByRole('button', {name: 'Map Settings'}));
+    const dialog = () => within(screen.getByRole('dialog', {name: 'Map Settings'}));
+    expect(dialog().getByRole('switch', {name: 'APRS'})).not.toBeChecked();
+    expect(dialog().getByRole('switch', {name: 'custom'})).toBeChecked();
+    fireEvent.click(dialog().getByRole('switch', {name: 'APRS'}));
+    fireEvent.click(dialog().getByRole('button', {name: 'Close'}));
+    expect(onHiddenTypesChange).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', {name: 'Map Settings'}));
+    expect(dialog().getByRole('switch', {name: 'APRS'})).not.toBeChecked();
+    fireEvent.click(dialog().getByRole('switch', {name: 'Radiosonde'}));
+    fireEvent.click(dialog().getByRole('button', {name: 'Apply'}));
+    expect(onHiddenTypesChange).toHaveBeenLastCalledWith(['aprs', 'radiosonde']);
+    fireEvent.click(dialog().getByRole('button', {name: 'Reset Defaults'}));
+    expect(dialog().getByRole('switch', {name: 'APRS'})).toBeChecked();
+    fireEvent.click(dialog().getByRole('button', {name: 'Apply'}));
+    expect(onHiddenTypesChange).toHaveBeenLastCalledWith([]);
 });
 
 it('matches Earth view gestures, updates live handlers without resetting the view, and remembers toggles', () => {
@@ -197,4 +279,82 @@ it('matches Earth view gestures, updates live handlers without resetting the vie
     fireEvent.click(screen.getByRole('button', {name: 'Enable gesture zoom'}));
     expect(map.touchZoom.disable).toHaveBeenCalledOnce();
     expect(map.scrollWheelZoom.disable).toHaveBeenCalledOnce();
+});
+
+it('scrubs sonde symbols and historical flight phases while keeping the full path and viewport fixed', () => {
+    const store = configureStore({reducer: () => ({location: {location: null}})});
+    const points = [
+        {id: 'first', file_id: 'decoded:first.bin', transmitter_id: 'radiosonde:S', kind: 'radiosonde', name: 'S',
+            latitude: 40, longitude: 23, altitude: 0, captured_at: '2026-11-01T00:00:00Z'},
+        {id: 'apex', file_id: 'decoded:apex.bin', transmitter_id: 'radiosonde:S', kind: 'radiosonde', name: 'S',
+            latitude: 41, longitude: 24, altitude: 10000, captured_at: '2026-11-01T00:01:00Z'},
+        {id: 'last', file_id: 'decoded:last.bin', transmitter_id: 'radiosonde:S', kind: 'radiosonde', name: 'S',
+            latitude: 40, longitude: 25, altitude: 0, captured_at: '2026-11-01T00:02:00Z'},
+    ];
+    const transmitters = [{id: 'radiosonde:S', details: {telemetry: {vel_v: -10}}}];
+    const element = (time) => <Provider store={store}><ThemeProvider theme={createTheme()}>
+        <PacketMap positions={points} transmitters={transmitters} playbackTime={Date.parse(time)} loading={false} fitRequest={0} />
+    </ThemeProvider></Provider>;
+    const {rerender} = render(element('2026-11-01T00:00:30Z'));
+    const track = screen.getByTestId('track').dataset.positions;
+    const ascendingPosition = screen.getByTestId('sonde-marker').dataset.center;
+    expect(screen.getByTestId('sonde-marker').dataset.iconHtml).toContain('data-flight-phase="ascending"');
+    expect(screen.getByTestId('sonde-marker')).toHaveTextContent('Interpolated position');
+    expect(screen.getAllByTestId('position')).toHaveLength(2);
+    map.fitBounds.mockClear();
+    map.setView.mockClear();
+    rerender(element('2026-11-01T00:01:30Z'));
+    expect(screen.getByTestId('sonde-marker').dataset.iconHtml).toContain('data-flight-phase="descending"');
+    expect(screen.getByTestId('sonde-marker').dataset.center).not.toBe(ascendingPosition);
+    expect(screen.getByTestId('track')).toHaveAttribute('data-positions', track);
+    expect(map.fitBounds).not.toHaveBeenCalled();
+    expect(map.setView).not.toHaveBeenCalled();
+    rerender(element('2026-10-31T23:59:59Z'));
+    expect(screen.queryByTestId('sonde-marker')).not.toBeInTheDocument();
+    expect(screen.getByTestId('track')).toHaveAttribute('data-positions', track);
+    rerender(element('2026-11-01T00:03:00Z'));
+    expect(screen.getByTestId('sonde-marker')).toHaveAttribute('data-center', '[40,25]');
+});
+
+it('selects table rows and fits their whole paths, then restores all bounds with Fit all', () => {
+    localStorage.setItem(mapViewStoreName, JSON.stringify({center: [10, 10], zoom: 4}));
+    const store = configureStore({reducer: () => ({location: {location: {lat: 0, lon: 0}}})});
+    const points = [
+        {id: '1', file_id: 'decoded:first.bin', transmitter_id: 'aprs:A', kind: 'aprs', name: 'A', source: 'SV1A', latitude: 40, longitude: 23, altitude: null, captured_at: '2026-11-01T00:00:00Z'},
+        {id: '2', file_id: 'decoded:second.bin', transmitter_id: 'aprs:A', kind: 'aprs', name: 'A', source: 'SV1A', latitude: 41, longitude: 24, altitude: 100, captured_at: '2026-11-01T01:00:00Z'},
+        {id: '3', file_id: 'decoded:sonde.bin', transmitter_id: 'radiosonde:S', kind: 'radiosonde', name: 'S', source: 'SONDE', latitude: 42, longitude: 25, altitude: 10000, captured_at: '2026-11-01T02:00:00Z'},
+    ];
+    const rows = [points[1], points[2]].map((point) => ({...point, id: point.transmitter_id,
+        packet_count: point.kind === 'aprs' ? 2 : 1, first_seen: points[0].captured_at, last_seen: point.captured_at}));
+    function Harness() {
+        const [selectedTransmitterId, setSelectedTransmitterId] = React.useState(null);
+        return <>
+            <PacketMap positions={points} loading={false} fitRequest={0} selectedTransmitterId={selectedTransmitterId}
+                onSelectTransmitter={setSelectedTransmitterId}
+                onFitAll={() => setSelectedTransmitterId(null)} />
+            <TransmitterTable rows={rows} loading={false} hiddenTypes={[]} selectedTransmitterId={selectedTransmitterId}
+                onSelectTransmitter={setSelectedTransmitterId} />
+        </>;
+    }
+    render(<Provider store={store}><ThemeProvider theme={createTheme()}><Harness /></ThemeProvider></Provider>);
+    expect(map.fitBounds).not.toHaveBeenCalled();
+    const aprsRow = screen.getByRole('row', {name: /A APRS/});
+    fireEvent.click(within(aprsRow).getByRole('button', {name: 'A'}));
+    expect(aprsRow).toHaveAttribute('aria-selected', 'true');
+    expect(map.fitBounds).toHaveBeenLastCalledWith([[40, 23], [41, 24]], expect.any(Object));
+    expect(screen.getByTestId('track')).toHaveAttribute('data-positions', '[[40,23],[41,24]]');
+    expect(screen.getAllByTestId('position')).toHaveLength(2);
+
+    act(() => { listeners.get('movestart')(); listeners.get('moveend')(); });
+    const sondeRow = screen.getByRole('row', {name: /S Radiosonde/});
+    fireEvent.click(within(sondeRow).getByText('SONDE'));
+    expect(sondeRow).toHaveAttribute('aria-selected', 'true');
+    expect(aprsRow).toHaveAttribute('aria-selected', 'false');
+    expect(map.fitBounds).toHaveBeenLastCalledWith([[42, 25]], expect.any(Object));
+
+    fireEvent.click(screen.getByRole('button', {name: 'Fit all'}));
+    expect(sondeRow).toHaveAttribute('aria-selected', 'false');
+    expect(map.fitBounds).toHaveBeenLastCalledWith([[40, 23], [41, 24], [42, 25], [0, 0]], expect.any(Object));
+    fireEvent.click(screen.getByTestId('sonde-marker'));
+    expect(sondeRow).toHaveAttribute('aria-selected', 'true');
 });

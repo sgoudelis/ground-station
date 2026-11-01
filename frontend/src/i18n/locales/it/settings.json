@@ -27,6 +27,8 @@
     "notifications": "Notifiche",
     "api_configuration": "Configurazione API",
     "stadia_maps_api_key": "Chiave API Stadia Maps",
+    "carto_maps_api_key": "Chiave API CARTO Maps",
+    "carto_api_help": "Utilizzata per i livelli della mappa CARTO quando è impostata una chiave API.",
     "ground_station_configuration": "Configurazione Stazione di Terra",
     "minimum_elevation": "Elevazione minima (gradi)",
     "save_preferences": "Salva Preferenze",

@@ -27,6 +27,7 @@ from db.models import Preferences, PreferenceScope, TrackingState, UserRole, Use
 
 INTEGRATION_PREFERENCE_DEFAULTS: Dict[str, str] = {
     "stadia_maps_api_key": "",  # Stadia map tiles API key used by frontend map providers.
+    "carto_maps_api_key": "",  # CARTO map tiles API key used by frontend map providers.
     "gemini_api_key": "",  # Google Gemini API key for transcription
     "deepgram_api_key": "",  # Deepgram API key for transcription
     "google_translate_api_key": "",  # Google Cloud Translation API key for translating Deepgram transcriptions

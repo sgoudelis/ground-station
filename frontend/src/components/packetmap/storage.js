@@ -5,12 +5,23 @@ export const mapViewStoreName = 'packet-map-view';
 export const hiddenTypesStoreName = 'packet-map-hidden-types';
 export const mapSettingsStoreName = 'packet-map-settings';
 
+export const defaultMapSettings = {
+    enableMapDragging: false,
+    enableMapZooming: false,
+    showTracks: true,
+    showLegend: true,
+    tileLayerId: 'satellite',
+};
+
 export function readMapSettings() {
     const saved = readStored(mapSettingsStoreName);
     return {
         enableMapDragging: saved?.enableMapDragging === true,
         enableMapZooming: saved?.enableMapZooming === true,
         showTracks: saved?.showTracks !== false,
+        showLegend: saved?.showLegend !== false,
+        tileLayerId: ['osm', 'satellite', 'hybrid', 'topo', 'cartodark', 'esridarkcanvas'].includes(saved?.tileLayerId)
+            ? saved.tileLayerId : defaultMapSettings.tileLayerId,
     };
 }
 

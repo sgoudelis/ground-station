@@ -1,0 +1,10 @@
+{
+  "tabler-license": "https://raw.githubusercontent.com/tabler/tabler-icons/main/LICENSE",
+  "tabler-balloon.svg": "https://raw.githubusercontent.com/tabler/tabler-icons/main/icons/outline/balloon.svg",
+  "tabler-parachute.svg": "https://raw.githubusercontent.com/tabler/tabler-icons/main/icons/outline/parachute.svg",
+  "phosphor-license": "https://raw.githubusercontent.com/phosphor-icons/core/main/LICENSE",
+  "phosphor-regular-balloon.svg": "https://raw.githubusercontent.com/phosphor-icons/core/main/assets/regular/balloon.svg",
+  "phosphor-regular-parachute.svg": "https://raw.githubusercontent.com/phosphor-icons/core/main/assets/regular/parachute.svg",
+  "phosphor-duotone-balloon.svg": "https://raw.githubusercontent.com/phosphor-icons/core/main/assets/duotone/balloon-duotone.svg",
+  "phosphor-duotone-parachute.svg": "https://raw.githubusercontent.com/phosphor-icons/core/main/assets/duotone/parachute-duotone.svg"
+}
