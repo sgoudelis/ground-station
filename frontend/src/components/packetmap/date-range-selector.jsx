@@ -18,7 +18,7 @@ function RangeValueLabel({children, open, value}) {
     </Tooltip>;
 }
 
-export default function DateRangeSelector({value, min, max, positions = EMPTY_POSITIONS, onChange, formatValue, formatTick, label}) {
+export default function DateRangeSelector({value, min, max, positions = EMPTY_POSITIONS, onChange, formatValue, formatTick, label, disabled = false}) {
     const position = (date) => TRACK_START + (max > min ? (date - min) / (max - min) : 0) * (TRACK_END - TRACK_START);
     const ticks = max > min ? Array.from({length: 7}, (_, index) => min + (max - min) * index / 6) : [min];
     // Scrubbing moves only the pointer; packet availability stays fixed.
@@ -54,7 +54,7 @@ export default function DateRangeSelector({value, min, max, positions = EMPTY_PO
                 {formatTick(date)}
             </Typography>)}
         </Box>
-        <Slider value={value} min={min} max={max} step={Math.min(1000, max - min || 1)} track={false} disabled={max <= min}
+        <Slider value={value} min={min} max={max} step={Math.min(1000, max - min || 1)} track={false} disabled={disabled || max <= min}
             slots={{valueLabel: RangeValueLabel}} aria-label={label}
             getAriaValueText={formatValue} valueLabelDisplay="auto" valueLabelFormat={formatValue}
             onChange={onChange}

@@ -61,6 +61,36 @@ describe('Packet map dates', () => {
         expect(onChange.mock.lastCall[0]).toEqual({start: '2026-10-15T02:00:00.000Z', end: precise.end});
     });
 
+    it('enters LIVE without an end date, follows the latest time and applies start-only edits', () => {
+        const onChange = vi.fn();
+        const onPresetChange = vi.fn();
+        const onPlaybackTimeChange = vi.fn();
+        const props = {range, onChange, onPresetChange, onPlaybackTimeChange};
+        const {rerender} = render(<DateRangeBar {...props} />);
+        expect(screen.getByRole('button', {name: 'LIVE', exact: true})).toHaveAttribute('aria-pressed', 'false');
+        fireEvent.click(screen.getByRole('button', {name: 'LIVE', exact: true}));
+        expect(onPresetChange).toHaveBeenCalledExactlyOnceWith({start: range.start, end: null});
+        expect(onChange).not.toHaveBeenCalled();
+        const liveRange = {...range, end: null};
+        const now = Date.parse(range.end);
+        rerender(<DateRangeBar {...props} range={liveRange} playbackTime={now} />);
+        expect(screen.getByLabelText('To')).toBeDisabled();
+        expect(screen.getByLabelText('To')).toHaveValue('02/11/2026, 02:00');
+        expect(screen.getByRole('button', {name: 'LIVE', exact: true})).toHaveAttribute('aria-pressed', 'true');
+        const slider = screen.getByRole('slider', {name: 'Live time'});
+        expect(slider).toBeDisabled();
+        expect(slider).toHaveValue(String(now));
+        rerender(<DateRangeBar {...props} range={liveRange} playbackTime={now + 3600000} />);
+        expect(slider).toHaveValue(String(now + 3600000));
+        expect(slider).toHaveAttribute('max', String(now + 3600000));
+        expect(screen.getByLabelText('To')).toHaveValue('02/11/2026, 03:00');
+        fireEvent.change(slider, {target: {value: now}});
+        expect(onPlaybackTimeChange).not.toHaveBeenCalled();
+        fireEvent.change(screen.getByLabelText('From'), {target: {value: '01/11/2026, 05:00'}});
+        fireEvent.click(screen.getByRole('button', {name: 'Apply'}));
+        expect(onChange).toHaveBeenCalledExactlyOnceWith({start: '2026-11-01T03:00:00.000Z', end: null});
+    });
+
     it('highlights packet activity independently of the pointer and clears it with new results', () => {
         const positions = [
             {kind: 'aprs', captured_at: '2026-11-01T06:00:00Z'},

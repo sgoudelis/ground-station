@@ -69,4 +69,58 @@ describe('Packet position loading', () => {
         expect(requests).toHaveLength(2);
         expect(socket.off).toHaveBeenCalledWith('library.changed', expect.any(Function));
     });
+
+    it('retains live data while loading and queues changes during slow responses', async () => {
+        vi.useFakeTimers();
+        const {socket, requests, handlers} = socketMock();
+        const liveRange = {...first, end: null};
+        const {result, unmount} = renderHook(() => usePacketPositions(socket, liveRange));
+        const initial = {positions: [{id: 'first'}], transmitters: [{id: 'sonde:A'}]};
+        await act(async () => requests[0].reply(null, {success: true, data: initial}));
+        act(() => {handlers.get('library.changed')(); vi.advanceTimersByTime(750);});
+        expect(result.current).toMatchObject({...initial, loading: true});
+        expect(requests[1].request.data).toEqual(liveRange);
+        for (let index = 0; index < 3; index += 1) {
+            act(() => {handlers.get('library.changed')(); vi.advanceTimersByTime(750);});
+        }
+        expect(requests).toHaveLength(2);
+        await act(async () => requests[1].reply(null, {success: true, data: {positions: [{id: 'second'}]}}));
+        expect(result.current.positions).toEqual([{id: 'second'}]);
+        expect(requests).toHaveLength(3);
+        await act(async () => requests[2].reply(null, {success: true, data: {positions: [{id: 'new-sonde'}]}}));
+        expect(result.current.positions).toEqual([{id: 'new-sonde'}]);
+        expect(result.current.loading).toBe(false);
+        unmount();
+    });
+
+    it('supports LIVE on older servers by advancing the end date on each update', async () => {
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date(first.end));
+        const {socket, requests, handlers} = socketMock();
+        const liveRange = {...first, end: null};
+        const {result} = renderHook(() => usePacketPositions(socket, liveRange));
+        await act(async () => requests[0].reply(null, {success: false,
+            error: 'start and end must be timezone-aware ISO dates or epoch seconds'}));
+        expect(requests).toHaveLength(2);
+        expect(requests[1].request.data).toEqual({...liveRange, end: new Date().toISOString()});
+        await act(async () => requests[1].reply(null, {success: true, data: {positions: [{id: 'first'}]}}));
+        expect(result.current.error).toBe('');
+        vi.advanceTimersByTime(3600000);
+        act(() => {handlers.get('library.changed')(); vi.advanceTimersByTime(750);});
+        expect(requests).toHaveLength(3);
+        expect(Date.parse(requests[2].request.data.end)).toBeGreaterThan(Date.parse(requests[1].request.data.end));
+        expect(requests[2].request.data.start).toBe(liveRange.start);
+        await act(async () => requests[2].reply(null, {success: true, data: {positions: [{id: 'new-sonde'}]}}));
+        expect(result.current.positions).toEqual([{id: 'new-sonde'}]);
+        expect(result.current.error).toBe('');
+    });
+
+    it('does not expose legacy date parser errors or retry invalid historical ranges', async () => {
+        const {socket, requests} = socketMock();
+        const {result} = renderHook(() => usePacketPositions(socket, first));
+        await act(async () => requests[0].reply(null, {success: false,
+            error: 'start and end must be timezone-aware ISO dates or epoch seconds'}));
+        expect(result.current.error).toBe('Choose a valid date range.');
+        expect(requests).toHaveLength(1);
+    });
 });

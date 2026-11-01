@@ -158,6 +158,21 @@ def test_positions_follow_inventory_reconciliation_and_deletion(tmp_path):
     assert inventory.query_positions(*bounds)["total"] == 0
 
 
+def test_live_positions_keep_start_and_include_new_transmitters_without_an_end(tmp_path):
+    save(tmp_path, "earlier", aprs(), "2026-10-31T23:59:59Z")
+    save(tmp_path, "first", sonde(), "2026-11-01T00:00:00Z")
+    inventory = LibraryInventory(tmp_path)
+    start = "2026-11-01T00:00:00Z"
+    assert inventory.query_positions(start, None)["total"] == 1
+
+    save(tmp_path, "new", sonde(id="NEWSONDE", lat=42), "2026-11-02T03:00:00Z")
+    inventory.rebuild()
+    live = inventory.query_positions(start)
+    assert [point["name"] for point in live["positions"]] == ["SONDE42", "NEWSONDE"]
+    assert len(live["transmitters"]) == 2
+    assert inventory.query_positions(start, "2026-11-01T12:00:00Z")["total"] == 1
+
+
 def test_observation_positions_use_packet_dates_and_follow_bundle_deletion(tmp_path):
     folder = tmp_path / "data" / "observations" / "station.gsobs"
     decoded = folder / "decoded"
@@ -194,6 +209,9 @@ def test_observation_positions_use_packet_dates_and_follow_bundle_deletion(tmp_p
         (None, None),
         ("2026-11-01", "2026-11-02"),
         ("bad", "2026-11-02T00:00:00Z"),
+        ("2026-11-01T00:00:00Z", "bad"),
+        ("2026-11-01T00:00:00Z", ""),
+        ("bad", None),
         ("2026-11-02T00:00:00Z", "2026-11-01T00:00:00Z"),
     ],
 )
@@ -214,5 +232,19 @@ async def test_position_rpc_returns_dated_packets(tmp_path, monkeypatch):
         logging.getLogger(),
         "client",
     )
+    assert reply["success"] is True
+    assert reply["data"]["positions"][0]["kind"] == "radiosonde"
+
+
+@pytest.mark.parametrize("include_end", [True, False])
+async def test_position_rpc_accepts_null_or_omitted_end_for_live(
+    tmp_path, monkeypatch, include_end
+):
+    save(tmp_path, "packet", sonde())
+    monkeypatch.setattr(library, "get_inventory", lambda: LibraryInventory(tmp_path))
+    request = {"start": "2026-11-01T00:00:00Z"}
+    if include_end:
+        request["end"] = None
+    reply = await library.query_positions(None, request, logging.getLogger(), "client")
     assert reply["success"] is True
     assert reply["data"]["positions"][0]["kind"] == "radiosonde"

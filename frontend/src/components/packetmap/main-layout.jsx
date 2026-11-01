@@ -34,11 +34,26 @@ export default function PacketMapLayout() {
     const applyRange = (nextRange) => {
         setRange(nextRange);
         // Start at the latest fix whenever a new filesystem window is applied.
-        setPlaybackTime(Date.parse(nextRange.end));
+        setPlaybackTime(nextRange.end === null ? null : Date.parse(nextRange.end));
     };
     const {positions, transmitters, available_range, loading, error, refresh} = usePacketPositions(socket, range);
+    const isLive = range.end === null;
+    const liveTime = useMemo(() => positions.reduce((latest, point) => {
+        const capturedAt = Date.parse(point.captured_at);
+        return capturedAt > latest ? capturedAt : latest;
+    }, Math.max(Date.now(), Date.parse(range.start))), [positions, range.start]);
+    // Live playback follows every transmitter's newest fix, including new IDs.
+    const currentPlaybackTime = isLive ? liveTime : playbackTime;
     const rows = useMemo(() => transmitterRows(positions, transmitters), [positions, transmitters]);
     const [selectedTransmitterId, setSelectedTransmitterId] = useState(null);
+    const [fitRequest, setFitRequest] = useState(0);
+    const applyPresetRange = (nextRange) => {
+        applyRange(nextRange);
+        setSelectedTransmitterId(null);
+        // Explicit requests override a saved or manually panned view, even when
+        // no transmitter is selected or the same preset is clicked again.
+        setFitRequest((value) => value + 1);
+    };
     const selectedTransmitter = rows.find((row) => row.id === selectedTransmitterId) || null;
     const [hiddenTypes, setHiddenTypes] = useState(() => {
         const saved = readStored(hiddenTypesStoreName);
@@ -77,7 +92,8 @@ export default function PacketMapLayout() {
 
     return <PageTabsLayout sx={{bgcolor: 'transparent'}} tabs={<DateRangeBar
         range={range} availableRange={available_range} positions={positions} onChange={applyRange}
-        playbackTime={playbackTime} onPlaybackTimeChange={setPlaybackTime}
+        onPresetChange={applyPresetRange}
+        playbackTime={currentPlaybackTime} onPlaybackTimeChange={setPlaybackTime}
         onRefresh={reconcile} loading={loading || reconciling} />}>
         <Box sx={{height: 3}}>{(loading || reconciling) && <LinearProgress sx={{height: 3}} />}</Box>
         {(error || refreshError) && <Alert severity="error" sx={{mx: 1}}>{error || refreshError}</Alert>}
@@ -88,9 +104,9 @@ export default function PacketMapLayout() {
                 dragConfig={{enabled: gridEditable, handle: '.react-grid-draggable', cancel: 'button,input,.MuiSelect-root'}}
                 resizeConfig={{enabled: gridEditable}}>
                 <StyledIslandParentNoScrollbar key="packet-map">
-                    <PacketMap positions={visiblePositions} transmitters={rows} playbackTime={playbackTime}
+                    <PacketMap positions={visiblePositions} transmitters={rows} playbackTime={currentPlaybackTime}
                         hasPositions={positions.length > 0} loading={loading} gridEditable={gridEditable}
-                        fitRequest={0} selectedTransmitterId={selectedTransmitterId} onSelectTransmitter={selectTransmitter}
+                        fitRequest={fitRequest} selectedTransmitterId={selectedTransmitterId} onSelectTransmitter={selectTransmitter}
                         hiddenTypes={hiddenTypes} onHiddenTypesChange={changeHiddenTypes} onFitAll={() => setSelectedTransmitterId(null)} />
                 </StyledIslandParentNoScrollbar>
                 <StyledIslandParentNoScrollbar key="transmitter-info">

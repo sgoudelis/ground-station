@@ -98,6 +98,20 @@ describe('Packet map viewport', () => {
         expect(JSON.parse(localStorage.getItem(mapViewStoreName))).toBeNull();
     });
 
+    it('defers an explicit fit until new range results arrive after manual navigation', () => {
+        const {rerender} = render(<MapViewport ready bounds={[[40, 23]]} fitRequest={0} />);
+        act(() => { listeners.get('movestart')(); listeners.get('moveend')(); });
+        map.fitBounds.mockClear();
+        rerender(<MapViewport ready={false} bounds={[[40, 23]]} fitRequest={1} />);
+        expect(map.fitBounds).not.toHaveBeenCalled();
+        expect(JSON.parse(localStorage.getItem(mapViewStoreName))).toBeNull();
+        rerender(<MapViewport ready={false} bounds={[]} fitRequest={1} />);
+        expect(map.fitBounds).not.toHaveBeenCalled();
+        const newBounds = [[48, 12], [52, 16]];
+        rerender(<MapViewport ready bounds={newBounds} fitRequest={1} />);
+        expect(map.fitBounds).toHaveBeenCalledExactlyOnceWith(newBounds, expect.any(Object));
+    });
+
     it('persists button-driven panning and removes map listeners on unmount', () => {
         const {rerender, unmount} = render(<MapViewport ready bounds={[[40, 23]]} fitRequest={0} />);
         // Arrow controls emit move events without Leaflet drag events.

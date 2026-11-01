@@ -16,12 +16,12 @@ import {detailLabel, flattenDetails, typeColor, typeLabel} from './transmitters.
 const visibleDetails = new Set([
     'signal.frequency_hz', 'telemetry.vel_h', 'telemetry.vel_v', 'telemetry.heading',
     'telemetry.pressure',
-    'telemetry.position.speed_knots', 'telemetry.position.course_degrees', 'telemetry.comment',
+    'telemetry.position.speed_knots', 'telemetry.position.course_degrees',
 ]);
 const excludedDetails = new Set([
     'telemetry.id', 'telemetry.lat', 'telemetry.lon', 'telemetry.alt',
     'telemetry.position.latitude', 'telemetry.position.longitude', 'telemetry.position.altitude_meters',
-    'telemetry.temp', 'telemetry.humidity', 'telemetry.batt',
+    'telemetry.temp', 'telemetry.humidity', 'telemetry.batt', 'telemetry.comment',
 ]);
 
 function TransmitterTableToolbar({container}) {

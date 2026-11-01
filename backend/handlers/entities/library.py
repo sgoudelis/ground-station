@@ -84,7 +84,7 @@ async def get_library_item(
 async def query_positions(
     _sio: Any, data: Optional[Dict], _logger: Any, _sid: str
 ) -> Dict[str, Any]:
-    """Read dated geographic packets without returning full telemetry sidecars."""
+    """Read geographic packets; an omitted/null end follows incoming captures."""
     request = data if isinstance(data, dict) else {}
     try:
         result = await asyncio.to_thread(

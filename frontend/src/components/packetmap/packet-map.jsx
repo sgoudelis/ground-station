@@ -92,7 +92,9 @@ export function MapViewport({bounds, ready, fitRequest, paddingTop = 42}) {
             hasUserView.current = false;
             writeStored(mapViewStoreName, null);
         }
-        if ((!ready && !explicitFit) || hasUserView.current || !bounds.length) return;
+        // Keep the fit request active while the new range is loading; fit its
+        // results once ready instead of fitting the previous range's bounds.
+        if (!ready || hasUserView.current || !bounds.length) return;
         programmatic.current = true;
         map.invalidateSize({pan: false});
         map.fitBounds(bounds, fitOptions);

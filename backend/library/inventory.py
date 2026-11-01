@@ -345,13 +345,15 @@ class LibraryInventory:
             "diskUsage": self._disk_usage(),
         }
 
-    def query_positions(self, start: Any, end: Any) -> Dict[str, Any]:
-        """Return geographic packets in an inclusive UTC reception interval."""
+    def query_positions(self, start: Any, end: Any = None) -> Dict[str, Any]:
+        """Return dated geographic packets, with no upper bound in live mode."""
         start_time, end_time = parse_artifact_time(start), parse_artifact_time(end)
-        if start_time is None or end_time is None:
-            raise ValueError("start and end must be timezone-aware ISO dates or epoch seconds")
-        if start_time > end_time:
-            raise ValueError("start must be before or equal to end")
+        if start_time is None:
+            raise ValueError("Choose a valid From date.")
+        if end is not None and end_time is None:
+            raise ValueError("Choose a valid To date, or select LIVE.")
+        if end_time is not None and start_time > end_time:
+            raise ValueError("The From date must be before or equal to the To date.")
         if not self._ready:
             self.rebuild()
         with self._lock:
@@ -367,8 +369,14 @@ class LibraryInventory:
         )
         # Capture dates have a canonical UTC representation from artifact_dates.
         start_iso = start_time.isoformat(timespec="microseconds")
-        end_iso = end_time.isoformat(timespec="microseconds")
-        selected = [point for point in points if start_iso <= point["captured_at"] <= end_iso]
+        # A null end stays open on every refresh rather than freezing at request time.
+        end_iso = end_time.isoformat(timespec="microseconds") if end_time is not None else None
+        selected = [
+            point
+            for point in points
+            if start_iso <= point["captured_at"]
+            and (end_iso is None or point["captured_at"] <= end_iso)
+        ]
         transmitters: Dict[str, Dict[str, Any]] = {}
         positions = []
         for point in selected:
