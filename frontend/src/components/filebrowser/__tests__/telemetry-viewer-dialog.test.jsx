@@ -2,6 +2,8 @@ import './telemetry-i18n.js';
 import React from 'react';
 import {act, fireEvent, render, screen} from '@testing-library/react';
 import {describe, expect, it, vi} from 'vitest';
+import {Provider} from 'react-redux';
+import {configureStore} from '@reduxjs/toolkit';
 import TelemetryViewerDialog from '../telemetry-viewer-dialog.jsx';
 import fixtures from '../../../../../backend/tests/fixtures/viewer.json';
 
@@ -49,7 +51,10 @@ describe('Packet dialog routing and byte selection', () => {
                 field_info: {temp: {label: 'Temperature', unit: '°C'}},
             }]}],
         }}};
-        render(<TelemetryViewerDialog open onClose={() => {}} file={file} metadata={metadata} />);
+        const store = configureStore({reducer: () => ({location: {location: {lat: 40.6, lon: 22.9}}})});
+        render(<Provider store={store}>
+            <TelemetryViewerDialog open onClose={() => {}} file={file} metadata={metadata} />
+        </Provider>);
         fireEvent.click(screen.getByRole('tab', {name: 'Telemetry'}));
         expect(screen.getByText('Position of TEST0042')).toBeInTheDocument();
         expect(screen.getByText('-12.5 °C')).toBeInTheDocument();

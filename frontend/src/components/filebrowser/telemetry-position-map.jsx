@@ -15,7 +15,7 @@ import 'leaflet/dist/leaflet.css';
 import {getTileLayerById} from '../common/tile-layers.jsx';
 import {homeIcon} from '../common/dataurl-icons.jsx';
 import {MapStatusBar, MapTitleBar, SimpleTruncatedHtml} from '../common/common.jsx';
-import {isValidMapPosition} from './position-utils.js';
+import {isValidMapPosition, toLocationNumber} from './position-utils.js';
 
 const MAP_LAYERS = [
     {id: 'satellite', label: 'Satellite'},
@@ -24,12 +24,20 @@ const MAP_LAYERS = [
     {id: 'cartodark', label: 'Dark'},
 ];
 
-function ResizeMap() {
+function FitPositionMap({latitude, longitude, receiverLatitude, receiverLongitude, showReceiver}) {
     const map = useMap();
     useEffect(() => {
-        const timer = window.setTimeout(() => map.invalidateSize(), 0);
+        // Wait for the tab layout before fitting both markers with room for labels.
+        const timer = window.setTimeout(() => {
+            map.invalidateSize();
+            const bounds = [[latitude, longitude]];
+            if (showReceiver && isValidMapPosition(receiverLatitude, receiverLongitude)) {
+                bounds.push([receiverLatitude, receiverLongitude]);
+            }
+            map.fitBounds(bounds, {padding: [48, 48], maxZoom: 13, animate: false});
+        }, 0);
         return () => window.clearTimeout(timer);
-    }, [map]);
+    }, [map, latitude, longitude, receiverLatitude, receiverLongitude, showReceiver]);
     return null;
 }
 
@@ -47,9 +55,8 @@ function PositionMap({position, source, label, title}) {
     const [showReceiver, setShowReceiver] = useState(true);
     const [showRadioPath, setShowRadioPath] = useState(true);
     const tileLayer = getTileLayerById(tileLayerId, { t });
-    // Saved station coordinates can be strings; an unset value is never zero.
-    const receiverLatitude = receiver?.lat != null && String(receiver.lat).trim() !== '' ? Number(receiver.lat) : NaN;
-    const receiverLongitude = receiver?.lon != null && String(receiver.lon).trim() !== '' ? Number(receiver.lon) : NaN;
+    const receiverLatitude = toLocationNumber(receiver?.lat);
+    const receiverLongitude = toLocationNumber(receiver?.lon);
     const hasReceiver = isValidMapPosition(receiverLatitude, receiverLongitude);
 
     useEffect(() => {
@@ -129,10 +136,16 @@ function PositionMap({position, source, label, title}) {
                     boxZoom={enableMapZooming}
                     keyboard={false}
                     attributionControl={false}
-                    zoomSnap={0.25}
-                    zoomDelta={0.25}
+                    zoomSnap={1}
+                    zoomDelta={1}
                 >
-                    <ResizeMap />
+                    <FitPositionMap
+                        latitude={latitude}
+                        longitude={longitude}
+                        receiverLatitude={receiverLatitude}
+                        receiverLongitude={receiverLongitude}
+                        showReceiver={showReceiver}
+                    />
                     <TileLayer url={tileLayer.url} />
                     {hasReceiver && showReceiver && (
                         <Marker position={[receiverLatitude, receiverLongitude]} icon={homeIcon} opacity={0.85}>

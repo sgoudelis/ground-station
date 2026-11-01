@@ -305,11 +305,10 @@ class RadiosondeDecoder(BaseDecoderProcess):
             self.buffers[name] = lines.pop()
             if len(self.buffers[name]) > 65536:
                 raise RuntimeError("RS decoder emitted an oversized output line")
+            # Drain stderr silently: RS emits routine diagnostics on every restart.
             for line in lines:
                 if name == "stdout":
                     self._handle_stdout(line)
-                else:
-                    logger.debug("RS: %s", line.decode("utf-8", errors="replace"))
 
     def _write_iq(self, samples):
         # Nonblocking writes allow output draining and stop requests while RS

@@ -10,7 +10,11 @@
   },
   "telemetry_radiosonde_tab": {
     "position": "Radiosonde Position",
-    "no_position": "No position is available in this packet."
+    "no_position": "No position is available in this packet.",
+    "receiver_distance": "Distance to receiver",
+    "ground_distance": "Ground distance",
+    "slant_distance": "Approx. straight-line distance",
+    "distance_reference": "Calculated from the packet position and your current receiver location."
   },
   "observation_folder_dialog": {
     "telemetry_status": {
