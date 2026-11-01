@@ -26,6 +26,7 @@ it('tails history with its cursor, updates counts and replaces rows when a log r
     const respond = async (index, data) => act(async () => requests[index].reply(null, {success: true, data}));
     const {unmount} = render(<AircraftFolderDialog folder={folder} socket={socket} onClose={vi.fn()} onDelete={vi.fn()} />);
     await respond(0, {records: [state('FIRST')], cursor: {offset: 1, generation: 'a'}, start: 0, summary: folder});
+    expect(screen.getByRole('columnheader', {name: 'Classification'})).toBeInTheDocument();
     expect(screen.getByText('FIRST')).toBeInTheDocument();
     act(() => handlers.get('library.changed')({changes: [{id: folder.id}]}));
     expect(requests[1].request.data.cursor).toEqual({offset: 1, generation: 'a'});

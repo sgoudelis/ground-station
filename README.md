@@ -700,6 +700,12 @@ considered through the project's normal process.
 
 This project uses the SatNOGS API for transmitter information.
 
+Contains information from the [Mictronics Aircraft Database](https://github.com/Mictronics/aircraft-database),
+which is made available under the [ODC Attribution License](https://opendatacommons.org/licenses/by/1-0/).
+The bundled snapshot is version **529**, dated **2026-11-01**. Its license and notices
+are included with the installed database; the database remains under ODC-By separately
+from Ground Station's application code.
+
 ## License
 
 This project is licensed under the GNU GPL v3. See the [LICENSE](LICENSE) file for details.

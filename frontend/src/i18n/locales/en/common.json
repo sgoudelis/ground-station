@@ -512,12 +512,13 @@
   "aircraft": {
     "details": "Aircraft details",
     "military": "Military",
+    "interesting": "Interesting",
     "unclassified": "Unclassified",
     "fields": {
       "registration": "Registration",
       "type_code": "Aircraft type",
       "model": "Model",
-      "military_status": "Military status",
+      "classification": "Classification",
       "category": "Broadcast category",
       "aircraft_class": "Aircraft class",
       "engine_count": "Engines",
@@ -577,9 +578,10 @@
       "C4": "Cluster obstacle",
       "C5": "Line obstacle"
     },
-    "classification_note": "Military markings come from database flags or ICAO address ranges. Unclassified does not establish civilian or recreational use.",
+    "classification_note": "Military markings come from database flags or ICAO address ranges. Other labels describe the broadcast category or database aircraft class; Interesting is a database flag. Unclassified does not establish civilian or recreational use.",
     "operator_note": "Operator details are inferred from the broadcast callsign prefix and do not establish aircraft ownership.",
     "attribution_prefix": "Contains information from the",
+    "database_title": "Aircraft database",
     "attribution_license": "available under the",
     "database_version": "Version",
     "snapshot": "Snapshot"

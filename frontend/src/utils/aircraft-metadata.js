@@ -2,7 +2,7 @@
 
 export const AIRCRAFT_FIELDS = {
     registration: 'Registration', type_code: 'Aircraft type', model: 'Model',
-    military_status: 'Military status', category: 'Broadcast category', aircraft_class: 'Aircraft class',
+    classification: 'Classification', category: 'Broadcast category', aircraft_class: 'Aircraft class',
     engine_count: 'Engines', engine_type: 'Engine type', wake_category: 'Wake category',
     operator_name: 'Operator (inferred)', operator_code: 'Operator code', operator_country: 'Operator country',
     operator_callsign: 'Operator radio callsign', interesting: 'Marked interesting',
@@ -28,6 +28,17 @@ export function aircraftLabel(key, t) {
 
 export function aircraftValue(aircraft, key, t) {
     const value = aircraft?.[key];
+    if (key === 'classification') {
+        const labels = [];
+        if (aircraft?.military_status === 'military') labels.push(t('aircraft.military', 'Military'));
+        if (aircraft?.interesting === true) labels.push(t('aircraft.interesting', 'Interesting'));
+        // These labels describe known flags and aircraft kinds, never inferred ownership or use.
+        // Reserved broadcast categories fall back to the database class when available.
+        const kind = CATEGORIES[aircraft?.category] ? 'category'
+            : CLASSES[aircraft?.aircraft_class] ? 'aircraft_class' : null;
+        if (kind) labels.push(aircraftValue(aircraft, kind, t));
+        return labels.length ? labels.join(' · ') : t('aircraft.unclassified', 'Unclassified');
+    }
     if (key === 'military_status') return value === 'military'
         ? t('aircraft.military', 'Military') : t('aircraft.unclassified', 'Unclassified');
     if (value === null || value === undefined || value === '') return '—';

@@ -44,7 +44,9 @@ import { GroundStationLogoGreenBlue } from '../common/dataurl-icons.jsx';
 const AboutPage = () => {
     const theme = useTheme();
     const { t } = useTranslation('settings');
+    const { t: aircraftT } = useTranslation('common');
     const versionInfo = useSelector((state) => state.version?.data);
+    const aircraftDatabase = versionInfo?.aircraftDatabase;
 
     const featureItems = [
         t('about.real_time_orbit_tracking', { defaultValue: 'Real-time Orbit Tracking: Track Earth-orbiting targets using Skyfield/SGP4 propagation from stored orbital elements.' }),
@@ -321,6 +323,24 @@ const AboutPage = () => {
                         </Grid>
                     </AccordionDetails>
                 </Accordion>
+
+                <Card elevation={1} sx={{ p: 2 }}>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                        {aircraftT('aircraft.database_title', 'Aircraft database')}
+                    </Typography>
+                    <Typography component="div" variant="body2" color="text.secondary">
+                        {aircraftT('aircraft.attribution_prefix', 'Contains information from the')}{' '}
+                        <Link href="https://github.com/Mictronics/aircraft-database" target="_blank" rel="noopener noreferrer">
+                            Mictronics Aircraft Database
+                        </Link>{' '}
+                        {aircraftT('aircraft.attribution_license', 'available under the')}{' '}
+                        <Link href="https://opendatacommons.org/licenses/by/1-0/" target="_blank" rel="noopener noreferrer">
+                            ODC Attribution License
+                        </Link>.
+                        {aircraftDatabase?.version != null && <> {aircraftT('aircraft.database_version', 'Version')}: {aircraftDatabase.version}.</>}
+                        {aircraftDatabase?.date && <> {aircraftT('aircraft.snapshot', 'Snapshot')}: {aircraftDatabase.date}.</>}
+                    </Typography>
+                </Card>
 
                 <Card elevation={1} sx={{ p: 2, border: `1px solid ${theme.palette.info.main}33` }}>
                     <Typography variant="body2" color="text.secondary">

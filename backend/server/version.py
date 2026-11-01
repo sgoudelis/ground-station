@@ -10,6 +10,7 @@ from typing import Any, Optional, TypedDict, cast
 import httpx
 import psutil
 
+from common.aircraft import aircraft_database
 from common.logger import logger
 
 # Path to the version.json file containing the base version
@@ -417,6 +418,7 @@ def get_full_version_info():
 
     # Do not include live system info here; only provide static version data
     full_info = _version_info.copy()
+    full_info["aircraftDatabase"] = aircraft_database().info or None
     try:
         full_info["cpuArchitecture"] = platform.machine()
     except Exception:

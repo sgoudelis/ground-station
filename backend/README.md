@@ -68,7 +68,8 @@ retained readsb reports without rewriting capture files.
 Contains information from the [Mictronics Aircraft Database](https://github.com/Mictronics/aircraft-database),
 which is made available under the [ODC Attribution License](https://opendatacommons.org/licenses/by/1-0/).
 The converted database remains under ODC-By, separately from the application code.
-License/notice files accompany the installed data, and aircraft views display attribution.
+License/notice files accompany the installed data. Attribution appears on the About
+page and in the main README; the About page also shows the installed snapshot version/date.
 
 Open the **ADS-B** tab in the waterfall's decoded-data panel for live aircraft,
 or the Packet Map for positions. These views share a subscription: aircraft

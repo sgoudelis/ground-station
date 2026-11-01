@@ -44,11 +44,11 @@ describe('Transmitter information', () => {
         render(<TransmitterInfo transmitter={aircraft} />, {wrapper});
         const details = within(screen.getByRole('region', {name: 'Aircraft details'}));
         expect(details.getByText('G-TEST')).toBeInTheDocument();
-        expect(details.getByText('Landplane')).toBeInTheDocument();
+        expect(details.getByText('Aircraft class').parentElement).toHaveTextContent('Landplane');
         expect(details.getByText('Piston')).toBeInTheDocument();
-        expect(details.getByText('Unclassified')).toBeInTheDocument();
+        expect(details.getByText('Classification').parentElement).toHaveTextContent('Landplane');
         expect(details.getByText('Easyjet Uk')).toBeInTheDocument();
-        expect(details.getByRole('link', {name: 'ODC Attribution License'})).toBeInTheDocument();
+        expect(details.queryByRole('link', {name: 'ODC Attribution License'})).not.toBeInTheDocument();
         expect(screen.queryByText('Aircraft · Operator Name')).not.toBeInTheDocument();
     });
 

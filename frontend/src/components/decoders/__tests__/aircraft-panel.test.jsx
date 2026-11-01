@@ -35,7 +35,7 @@ function renderPanel(receiver = {lat: '0', lon: '0'}) {
 const rowOrder = () => screen.getAllByRole('row')
     .filter((row) => row.hasAttribute('data-id')).map((row) => row.getAttribute('data-id'));
 
-it('displays enriched aircraft and opens translated metadata with attribution', () => {
+it('displays enriched aircraft and opens translated metadata', () => {
     live.aircraft = [{icao: '40621d', callsign: 'EZY123', aircraft: {
         registration: 'G-TEST', type_code: 'C172', model: 'CESSNA 172 Skyhawk', military_status: 'military',
         category: 'A1', aircraft_class: 'L', engine_count: 1, engine_type: 'P', wake_category: 'L',
@@ -44,15 +44,36 @@ it('displays enriched aircraft and opens translated metadata with attribution', 
     }}];
     renderPanel();
     const row = screen.getByRole('row', {name: /40621D/});
+    expect(screen.getByRole('columnheader', {name: /^Classification/})).toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', {name: /^Military status/})).not.toBeInTheDocument();
     expect(row).toHaveTextContent('G-TEST');
-    expect(row).toHaveTextContent('Military');
+    expect(row.querySelector('[data-field="classification"]')).toHaveTextContent('Military · Light aircraft');
     fireEvent.click(within(row).getByRole('button', {name: 'Aircraft details'}));
     const dialog = within(screen.getByRole('dialog'));
     expect(dialog.getByText('Piston')).toBeInTheDocument();
     expect(dialog.getByText('United Kingdom')).toBeInTheDocument();
     expect(dialog.getByText('EASY')).toBeInTheDocument();
-    expect(dialog.getByRole('link', {name: 'Mictronics Aircraft Database'})).toHaveAttribute('href', 'https://github.com/Mictronics/aircraft-database');
+    expect(screen.queryByRole('link', {name: 'Mictronics Aircraft Database'})).not.toBeInTheDocument();
     expect(dialog.getByText(/Unclassified does not establish civilian/)).toBeInTheDocument();
+});
+
+it('shows non-military classifications and updates flags in the same column', () => {
+    live.aircraft = [
+        {icao: '4d2406', aircraft: {military_status: 'unclassified', category: 'B1'}},
+        {icao: '46b825', aircraft: {aircraft_class: 'D', interesting: true}},
+        {icao: 'ffffff'},
+    ];
+    const {rerender} = renderPanel();
+    const classification = (icao) => screen.getByRole('row', {name: icao})
+        .querySelector('[data-field="classification"]');
+    expect(classification(/4D2406/)).toHaveTextContent('Glider / sailplane');
+    expect(classification(/46B825/)).toHaveTextContent('Interesting · Drone');
+    expect(classification(/FFFFFF/)).toHaveTextContent('Unclassified');
+
+    live.aircraft = live.aircraft.map((record) => record.icao === '4d2406'
+        ? {...record, aircraft: {...record.aircraft, military_status: 'military'}} : record);
+    rerender(<AircraftPanel />);
+    expect(classification(/4D2406/)).toHaveTextContent('Military · Glider / sailplane');
 });
 
 it('shows registration flags beside ICAO addresses with country tooltips and leaves unknown flags empty', async () => {
@@ -79,8 +100,8 @@ it('defaults to nearest first with ICAO ties and keeps missing positions last in
     const distanceHeader = screen.getByRole('columnheader', {name: /^Distance \(km\)/});
     expect(distanceHeader).toHaveAttribute('aria-sort', 'ascending');
     expect(rowOrder()).toEqual(['400000', '406b90', '46b825', '4d2406', '000001', 'ffffff']);
-    expect(within(screen.getByRole('row', {name: /400000/})).getByText('0.0')).toBeInTheDocument();
-    expect(within(screen.getByRole('row', {name: /4D2406/})).getByText('222.4')).toBeInTheDocument();
+    expect(within(screen.getByRole('row', {name: /400000/})).getByText('0.0 km')).toBeInTheDocument();
+    expect(within(screen.getByRole('row', {name: /4D2406/})).getByText('222.4 km')).toBeInTheDocument();
     expect(screen.getByRole('row', {name: /FFFFFF/}).querySelector('[data-field="distance_km"]'))
         .toHaveTextContent('—');
 
