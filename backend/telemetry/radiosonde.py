@@ -1,5 +1,6 @@
 """Adapt RS reports to the common telemetry schema without losing calibration."""
 
+from binascii import crc_hqx
 from typing import Any
 
 from .result import json_safe
@@ -45,11 +46,35 @@ class RadiosondeParser:
         if family == "RS41":
             if len(payload) not in (320, 518) or payload[:8] != bytes.fromhex("8635f44093df1a60"):
                 raise ValueError("Invalid RS41 frame")
+            # Newer firmware can put a 0x960A block before the 0x7928 status
+            # block. Follow length-delimited blocks, as RS does, rather than
+            # reading identity at offsets that only fit the older layout.
+            position = 0x39
+            while position + 4 <= len(payload):
+                length = payload[position + 1]
+                end = position + length + 4  # Type, length, data, little-endian CRC.
+                if end > len(payload):
+                    raise ValueError(f"Invalid RS41 block length at 0x{position:03x}")
+                data = payload[position + 2 : end - 2]
+                checksum = int.from_bytes(payload[end - 2 : end], "little")
+                if crc_hqx(data, 0xFFFF) != checksum:
+                    raise ValueError(f"Invalid RS41 block checksum at 0x{position:03x}")
+                if payload[position] == 0x79:
+                    if length != 0x28:
+                        raise ValueError("Invalid RS41 status block length")
+                    break
+                position = end
+            else:
+                raise ValueError("Missing RS41 status block")
             # Pairing a report with a neighbouring frame would silently corrupt files.
-            serial = payload[0x3D:0x45].decode("ascii", errors="replace")
-            number = int.from_bytes(payload[0x3B:0x3D], "little")
+            serial = data[2:10].decode("ascii", errors="replace")
+            number = int.from_bytes(data[:2], "little")
             if report["id"] != serial or report["frame"] != number:
-                raise ValueError("RS decoder report does not match the recorded frame")
+                raise ValueError(
+                    "RS decoder report does not match the recorded frame "
+                    f"(report id={report['id']!r}, frame={report['frame']}; "
+                    f"recorded id={serial!r}, frame={number})"
+                )
         elif family == "DFM":
             # RS assembles DFM navigation and identity across several frames.
             # This is the last encoded radio frame, not an independent GPS fix;

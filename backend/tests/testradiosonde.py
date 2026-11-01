@@ -160,6 +160,54 @@ def test_frame_and_report_pairing_never_reuses_previous_report(tmp_path):
     assert decoder.stats["errors"] == 1
 
 
+def test_rs41_leading_block_preserves_live_packet_and_reparsed_report(tmp_path):
+    payload = bytes.fromhex(
+        (Path(__file__).parent / "fixtures/radiosonde/rs41gnss.hex").read_text()
+    )
+    report = {
+        "type": "RS41",
+        "id": "Y2743564",
+        "frame": 6149,
+        "datetime": "2026-11-01T12:53:19.000Z",
+        "lat": 43.02482,
+        "lon": 23.53300,
+        "alt": 18519.86629,
+    }
+    decoder = _decoder(tmp_path / "data/decoded")
+    decoder._handle_stdout(payload.hex().encode())
+    decoder._handle_stdout(json.dumps(report).encode())
+    assert decoder.packet_count == 1
+    assert decoder.stats["errors"] == 0
+    output = decoder.data_queue.get_nowait()["output"]
+    packet = Path(output["filepath"])
+    assert packet.read_bytes() == payload
+    assert packet.parent.parent.name == "radiosonde_RS41_Y2743564"
+    assert output["telemetry"]["telemetry"]["values"] == report
+    url = "/" + packet.relative_to(tmp_path / "data").as_posix()
+    assert reparse_packet(tmp_path, url)["telemetry"] == output["telemetry"]
+
+
+@pytest.mark.parametrize("changes", [{"id": "OTHER123"}, {"frame": 6150}])
+def test_rs41_leading_block_still_rejects_wrong_report_identity(changes):
+    payload = bytes.fromhex(
+        (Path(__file__).parent / "fixtures/radiosonde/rs41gnss.hex").read_text()
+    )
+    report = {"type": "RS41", "id": "Y2743564", "frame": 6149, **changes}
+    with pytest.raises(ValueError, match="report does not match the recorded frame"):
+        RadiosondeParser().parse(payload, report)
+
+
+@pytest.mark.parametrize("offset", [0x3B, 0x49])
+def test_rs41_leading_and_status_blocks_require_valid_checksums(offset):
+    payload = bytearray.fromhex(
+        (Path(__file__).parent / "fixtures/radiosonde/rs41gnss.hex").read_text()
+    )
+    payload[offset] ^= 1
+    report = {"type": "RS41", "id": "Y2743564", "frame": 6149}
+    with pytest.raises(ValueError, match="Invalid RS41 block checksum"):
+        RadiosondeParser().parse(bytes(payload), report)
+
+
 def test_encrypted_reports_do_not_present_placeholder_positions():
     result = parse_packet(
         FRAME,

@@ -5,6 +5,12 @@ interleaved shortened RS(255,231) codewords were encoded with rs1729/RS's
 `rs_encode` at revision 89b1ea7f3371d99c630f6734c42014d88e667853. It contains
 no sensor calibration and does not represent a real flight.
 
+`rs41gnss.hex` is a received RS41 frame from sonde Y2743564, counter 6149,
+captured on 2026-11-01. It has a CRC-valid `0x960A` block before its `0x7928`
+status block, placing the frame counter at `0x49` and serial at `0x4B` instead
+of the older `0x3B`/`0x3D` offsets. The GNSS blocks use `0x8226` and `0x8329`.
+It reproduces the rejection of valid reports by fixed-offset identity checks.
+
 `m10.hex` and `m20.hex` are synthetic, checksum-valid frames with GPS week
 2400, time-of-week 172800 s, latitude/longitude 0, and altitude 1000 m. Serial
 bytes are `0100234506` (M10-203-1-01605) and `552310` (M20-702-7-01032).
