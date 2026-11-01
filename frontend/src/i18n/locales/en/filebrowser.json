@@ -1,5 +1,17 @@
 {
   "title": "File Browser",
+  "telemetry_position_map": {
+    "receiver": "Receiver",
+    "path": "Path",
+    "zoom_gestures": "Zoom gestures",
+    "enable_zoom": "Enable {{label}} map zoom gestures",
+    "map_layer": "{{label}} map layer",
+    "open_map": "Open map"
+  },
+  "telemetry_radiosonde_tab": {
+    "position": "Radiosonde Position",
+    "no_position": "No position is available in this packet."
+  },
   "observation_folder_dialog": {
     "telemetry_status": {
       "loading": "Checking…",

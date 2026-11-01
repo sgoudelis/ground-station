@@ -1,4 +1,11 @@
 {
+  "telemetry_position_map": {
+    "receiver": "接收机",
+    "path": "路径",
+    "zoom_gestures": "缩放手势",
+    "open_map": "打开地图",
+    "map_layer": "{{label}} 地图图层"
+  },
   "dates": {
     "unavailable": "日期不可用",
     "approximate": "根据文件修改时间估算的采集日期"

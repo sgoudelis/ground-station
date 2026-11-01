@@ -37,6 +37,7 @@ import StringsTab from './telemetry-strings-tab';
 import AnalysisTab from './telemetry-analysis-tab';
 import TelemetryValuesTab from './telemetry-values-tab';
 import APRSTab from './telemetry-aprs-tab.jsx';
+import RadiosondeTab from './telemetry-radiosonde-tab.jsx';
 import { useTranslation } from 'react-i18next';
 
 function TabPanel({ children, value, index, ...other }) {
@@ -145,6 +146,7 @@ export default function TelemetryViewerDialog({ open, onClose, file, metadata, s
     const packet = displayedMetadata.packet || {};
     const ax25 = displayedMetadata.ax25 || {};
     const isAprs = telemetry.schema_version === 1 && telemetry.payload?.kind === 'aprs';
+    const isRadiosonde = telemetry.schema_version === 1 && telemetry.parser_id === 'radiosonde_rs';
     const inspectionPacket = {...packet, hex: byteSource === 'payload'
         ? telemetry.raw?.payload_hex || '' : packet.hex || telemetry.raw?.packet_hex || ''};
 
@@ -248,6 +250,8 @@ export default function TelemetryViewerDialog({ open, onClose, file, metadata, s
                             </Box>
                         ) : isAprs ? (
                             <APRSTab metadata={displayedMetadata} />
+                        ) : isRadiosonde ? (
+                            <RadiosondeTab metadata={displayedMetadata} />
                         ) : (
                             <>
                                 {activePreview?.failed && <Alert severity="warning" sx={{mb: 2}}>

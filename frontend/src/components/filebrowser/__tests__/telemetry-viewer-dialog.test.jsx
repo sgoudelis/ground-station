@@ -6,6 +6,7 @@ import TelemetryViewerDialog from '../telemetry-viewer-dialog.jsx';
 import fixtures from '../../../../../backend/tests/fixtures/viewer.json';
 
 vi.mock('../telemetry-aprs-tab.jsx', () => ({default: () => <div>Dedicated APRS packet view</div>}));
+vi.mock('../telemetry-position-map.jsx', () => ({default: ({source}) => <div>Position of {source}</div>}));
 vi.mock('../telemetry-overview-tab', () => ({default: () => <div>Packet overview</div>}));
 vi.mock('../telemetry-hex-ascii-tab', () => ({default: ({packet}) => <div data-testid="hex-bytes">{packet.hex}</div>}));
 vi.mock('../telemetry-float32-tab', () => ({default: ({packet}) => <div data-testid="float-bytes">{packet.hex}</div>}));
@@ -38,6 +39,25 @@ describe('Packet dialog routing and byte selection', () => {
     it('does not guess APRS content from decoder type', () => {
         render(<TelemetryViewerDialog open onClose={() => {}} file={file}
             metadata={{...current, decoder: {type: 'aprs'}}} />);
+        expect(screen.getByRole('tab', {name: 'Telemetry'})).toBeInTheDocument();
+    });
+
+    it('routes parsed radiosonde packets to a map while retaining telemetry readings', () => {
+        const metadata = {telemetry: {schema_version: 1, parser_id: 'radiosonde_rs', payload: {
+            kind: 'telemetry', records: [{id: '0', groups: [{id: 'values', title: 'Values',
+                values: {id: 'TEST0042', lat: 40.5, lon: 23, temp: -12.5},
+                field_info: {temp: {label: 'Temperature', unit: '°C'}},
+            }]}],
+        }}};
+        render(<TelemetryViewerDialog open onClose={() => {}} file={file} metadata={metadata} />);
+        fireEvent.click(screen.getByRole('tab', {name: 'Telemetry'}));
+        expect(screen.getByText('Position of TEST0042')).toBeInTheDocument();
+        expect(screen.getByText('-12.5 °C')).toBeInTheDocument();
+    });
+
+    it('does not guess radiosonde positions from decoder type', () => {
+        render(<TelemetryViewerDialog open onClose={() => {}} file={file}
+            metadata={{...current, decoder: {type: 'radiosonde'}}} />);
         expect(screen.getByRole('tab', {name: 'Telemetry'})).toBeInTheDocument();
     });
 
