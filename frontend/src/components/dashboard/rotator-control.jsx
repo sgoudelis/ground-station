@@ -36,7 +36,6 @@ import Typography from "@mui/material/Typography";
 import SettingsIcon from '@mui/icons-material/Settings';
 import { GaugeAz, GaugeEl } from '../target/rotator-gauges.jsx';
 import {
-    canControlRotator,
     canStartTracking,
     canStopTracking,
     canConnectRotator,
@@ -50,6 +49,7 @@ import {
 } from '../target/celestial-target-utils.js';
 
 import {useHardwareCommand} from '../target/use-hardware-command.js';
+import {canStopManualRotator, getManualRotatorState} from '../target/manual-rotator-state.js';
 import HardwareControlHeader from './hardware-control-header.jsx';
 import ErrorDialog from '../common/error-dialog.jsx';
 
@@ -158,7 +158,6 @@ const RotatorControl = React.memo(function RotatorControl({ trackerId: trackerId
     const isStopActionPending = isPending(ROTATOR_STATES.STOPPED);
     const isParkActionPending = isPending(ROTATOR_STATES.PARKED);
     const motionUnconfirmed = Boolean(effectiveRotatorData?.motion_unconfirmed);
-    const retryStop = activeRotatorCommand?.action === 'stop' && ['failed', 'unknown'].includes(activeRotatorCommand.status);
     const [openQuickEditDialog, setOpenQuickEditDialog] = React.useState(false);
     const [openManualControlDialog, setOpenManualControlDialog] = React.useState(false);
     const [rotatorErrorMessage, setRotatorErrorMessage] = React.useState('');
@@ -297,7 +296,10 @@ const RotatorControl = React.memo(function RotatorControl({ trackerId: trackerId
             ? 'Select a target and rotator, then connect first'
             : null;
 
-    const stopDisabled = !hasTargets || !isSocketConnected || isStopActionPending || (!isRotatorCommandBusy && (!effectiveRotatorData.connected || (!motionUnconfirmed && !retryStop && !effectiveRotatorData.tracking && !effectiveRotatorData.slewing && !effectiveRotatorData.park_requested)));
+    const stopDisabled = !canStopManualRotator({
+        hasTargets, connected: isSocketConnected, command: activeRotatorCommand,
+        busy: isRotatorCommandBusy, isStopPending: isStopActionPending, rotatorData: effectiveRotatorData,
+    });
     const stopDisabledReason = !hasTargets
         ? 'No targets configured'
         : isRotatorCommandBusy
@@ -306,52 +308,14 @@ const RotatorControl = React.memo(function RotatorControl({ trackerId: trackerId
             ? 'Rotator is not currently tracking'
             : null;
 
-    const manualLimits = React.useMemo(() => {
-        const minAz = finiteOrNull(effectiveRotatorData?.minaz) ?? finiteOrNull(selectedRotatorDevice?.minaz) ?? 0;
-        const configuredMaxAz = finiteOrNull(effectiveRotatorData?.maxaz) ?? finiteOrNull(selectedRotatorDevice?.maxaz) ?? 360;
-        return {
-            minAz,
-            // The extra 360–450° overlap lane is for automatic tracking only.
-            maxAz: selectedRotatorDevice?.azimuth_mode === '0_450' ? Math.min(configuredMaxAz, 360) : configuredMaxAz,
-            minEl: finiteOrNull(effectiveRotatorData?.minel) ?? finiteOrNull(selectedRotatorDevice?.minel) ?? 0,
-            maxEl: finiteOrNull(effectiveRotatorData?.maxel) ?? finiteOrNull(selectedRotatorDevice?.maxel) ?? 90,
-        };
-    }, [effectiveRotatorData?.maxaz, effectiveRotatorData?.maxel, effectiveRotatorData?.minaz, effectiveRotatorData?.minel, selectedRotatorDevice]);
-    const rotatorIsParked = effectiveTrackingState?.rotator_state === ROTATOR_STATES.PARKED
-        || Boolean(effectiveRotatorData?.parked);
-    const manualCurrentAz = React.useMemo(() => {
-        const currentAz = finiteOrNull(effectiveRotatorData?.az);
-        if (currentAz === null || selectedRotatorDevice?.azimuth_mode !== '0_450') return currentAz;
-        // Show the physical bearing on the conventional manual 0–360° dial.
-        return ((currentAz % 360) + 360) % 360;
-    }, [effectiveRotatorData?.az, selectedRotatorDevice?.azimuth_mode]);
-    const rotatorLiveStatus = React.useMemo(() => {
-        if (!effectiveRotatorData?.connected) {
-            return { value: 'Disconnected', bgColor: 'grey.600', fgColor: 'grey.800' };
-        }
-        if (effectiveRotatorData.error) {
-            return { value: 'Error', bgColor: 'error.light', fgColor: 'error.dark' };
-        }
-        if (motionUnconfirmed) return {value: 'Motion unconfirmed', bgColor: 'warning.light', fgColor: 'warning.dark'};
-        if (effectiveRotatorData.slewing) {
-            return { value: 'Slewing', bgColor: 'warning.light', fgColor: 'warning.dark' };
-        }
-        if (effectiveTrackingState?.rotator_state === ROTATOR_STATES.TRACKING || effectiveRotatorData.tracking) {
-            return { value: 'Tracking', bgColor: 'success.light', fgColor: 'success.dark' };
-        }
-        if (effectiveRotatorData.park_requested) return {value: 'Park command sent', bgColor: 'warning.light', fgColor: 'warning.dark'};
-        if (effectiveRotatorData.parked) {
-            return { value: 'Parked', bgColor: 'warning.light', fgColor: 'warning.dark' };
-        }
-        if (effectiveRotatorData.stopped) {
-            return { value: 'Stopped', bgColor: 'info.light', fgColor: 'info.dark' };
-        }
-        return { value: 'Connected', bgColor: 'success.light', fgColor: 'success.dark' };
-    }, [motionUnconfirmed, effectiveRotatorData?.connected, effectiveRotatorData?.error, effectiveRotatorData?.slewing, effectiveRotatorData?.stopped, effectiveRotatorData?.tracking, effectiveTrackingState?.rotator_state]);
-    const manualControlDisabled = !hardwareReady || !canControlRotator(effectiveRotatorData, confirmedTrackingState) || rotatorIsParked;
-    const manualControlDisabledReason = motionUnconfirmed ? 'Waiting for stationary position readings' : rotatorIsParked
-        ? 'Unpark the rotator before using manual control'
-        : 'Connect the rotator and stop automatic tracking first';
+    const manualControl = getManualRotatorState({
+        rotator: selectedRotatorDevice,
+        rotatorData: effectiveRotatorData,
+        trackingState: effectiveTrackingState,
+        confirmedTrackingState,
+        hardwareReady,
+    });
+    const rotatorLiveStatus = manualControl.rotatorStatus;
 
     const submitRotatorState = (rotatorState) => {
         const changes = {rotator_state: rotatorState};
@@ -807,10 +771,10 @@ const RotatorControl = React.memo(function RotatorControl({ trackerId: trackerId
                             </Tooltip>
                         </Grid>
                         <Grid size="grow" style={{paddingLeft: '0.5rem'}}>
-                            <Tooltip title={manualControlDisabled ? manualControlDisabledReason : ''}>
+                            <Tooltip title={manualControl.disabled ? manualControl.disabledReason : ''}>
                                 <span style={{ display: 'block' }}>
                                     <Button
-                                        disabled={manualControlDisabled}
+                                        disabled={manualControl.disabled}
                                         fullWidth={true}
                                         variant="outlined"
                                         style={{height: '60px'}}
@@ -836,14 +800,7 @@ const RotatorControl = React.memo(function RotatorControl({ trackerId: trackerId
                 onMove={handleManualMove}
                 onStop={handleManualStop}
                 rotator={selectedRotatorDevice || null}
-                rotatorStatus={rotatorLiveStatus}
-                currentAz={manualCurrentAz}
-                currentEl={effectiveRotatorData?.el}
-                minAz={manualLimits.minAz}
-                maxAz={manualLimits.maxAz}
-                minEl={manualLimits.minEl}
-                maxEl={manualLimits.maxEl}
-                disabled={manualControlDisabled}
+                {...manualControl}
                 command={activeRotatorCommand}
                 canStop={!stopDisabled}
             />

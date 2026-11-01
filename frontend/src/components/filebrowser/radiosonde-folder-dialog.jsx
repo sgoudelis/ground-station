@@ -77,6 +77,11 @@ export default function RadiosondeFolderDialog({ folder, socket, onClose, onOpen
                 </Typography>
                 <TextField select fullWidth size="small" value={run} sx={{ mb: 2 }}
                     label={t('radiosonde_folder.flight', 'Flight')}
+                    slotProps={{
+                        // The empty filter still has an option label to display.
+                        select: { displayEmpty: true },
+                        inputLabel: { shrink: true },
+                    }}
                     helperText={t('radiosonde_folder.window', 'Each flight covers 12 hours from its first received packet.')}
                     onChange={(event) => { setRun(event.target.value); setPage(1); }}>
                     <MenuItem value="">{t('radiosonde_folder.all_flights', 'All flights')}</MenuItem>

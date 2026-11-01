@@ -224,6 +224,7 @@ class RadiosondeDecoder(BaseDecoderProcess):
             if self.active_type == "m10m20":
                 options += ["-vv"]  # Include humidity in M10 JSON.
         command = [stdbuf, "-oL", binary, *options, "-", str(self.sample_rate), "32"]
+        logger.debug("Starting RS decoder (vfo=%s): %r", self.vfo, command)
         self.rs_process = subprocess.Popen(
             command,
             stdin=subprocess.PIPE,
@@ -263,15 +264,37 @@ class RadiosondeDecoder(BaseDecoderProcess):
                     self.pending_frame = bytes.fromhex(b"".join(match.groups()).decode("ascii"))
                 elif line.startswith((b"+<", b"-<")):
                     self.pending_frame = None
+                    logger.debug(
+                        "Unrecognized DFM raw frame (vfo=%s, line_bytes=%d): %r",
+                        self.vfo,
+                        len(line),
+                        line[:2048],
+                    )
                 return
             # RS41 and M10/M20 emit one hex frame immediately before its JSON.
             self.pending_frame = None
             token = line.split(None, 1)[0]
             if re.fullmatch(rb"[0-9A-Fa-f]+", token) and len(token) % 2 == 0:
                 self.pending_frame = bytes.fromhex(token.decode("ascii"))
+            else:
+                logger.debug(
+                    "Ignoring non-frame RS stdout (decoder=%s, vfo=%s, line_bytes=%d): %r",
+                    self.active_type,
+                    self.vfo,
+                    len(line),
+                    line[:2048],
+                )
             return
         frame, self.pending_frame = self.pending_frame, None
         if frame is None:
+            logger.debug(
+                "Discarding RS report without a preceding raw frame "
+                "(decoder=%s, vfo=%s, report_bytes=%d): %r",
+                self.active_type,
+                self.vfo,
+                len(line),
+                line[:2048],
+            )
             return
         try:
             report = json.loads(line)
@@ -281,9 +304,35 @@ class RadiosondeDecoder(BaseDecoderProcess):
             ):
                 raise ValueError("Report type does not match selected decoder")
             RadiosondeParser().parse(frame, report=report)
-        except (ValueError, TypeError):
+        except (ValueError, TypeError) as exc:
             self.stats["errors"] += 1
-            logger.warning("Discarding an unmatched or malformed radiosonde report")
+            # Keep the reason and bounded previews visible at normal log levels.
+            # Bytes repr preserves malformed output while escaping line breaks.
+            state = self.cached_vfo_state or {}
+            logger.warning(
+                "Discarding an unmatched or malformed radiosonde report: %s "
+                "(decoder=%s, vfo=%s, frequency_hz=%s, bandwidth_hz=%s, power_dbfs=%s, "
+                "frame_bytes=%d, frame_prefix=%s, report_bytes=%d, report=%r)",
+                exc,
+                self.active_type,
+                self.vfo,
+                state.get("center_freq"),
+                state.get("bandwidth"),
+                self.current_power_dbfs,
+                len(frame),
+                frame[:80].hex(),
+                len(line),
+                line[:2048],
+            )
+            # Full bytes allow reproducing parser failures without saving bad packets.
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug(
+                    "Rejected RS output (decoder=%s, vfo=%s): frame_hex=%s report=%r",
+                    self.active_type,
+                    self.vfo,
+                    frame.hex(),
+                    line,
+                )
             return
         self.confirmed = True
         self.last_report_sample = self.stream_samples
@@ -315,10 +364,19 @@ class RadiosondeDecoder(BaseDecoderProcess):
             self.buffers[name] = lines.pop()
             if len(self.buffers[name]) > 65536:
                 raise RuntimeError("RS decoder emitted an oversized output line")
-            # Drain stderr silently: RS emits routine diagnostics on every restart.
+            # RS stderr includes routine startup messages as well as useful codec
+            # diagnostics; expose it at DEBUG without treating it as a failure.
             for line in lines:
                 if name == "stdout":
                     self._handle_stdout(line)
+                else:
+                    logger.debug(
+                        "RS stderr (decoder=%s, vfo=%s, line_bytes=%d): %r",
+                        self.active_type or "dft_detect",
+                        self.vfo,
+                        len(line),
+                        line[:2048],
+                    )
 
     def _write_iq(self, samples):
         # Nonblocking writes allow output draining and stop requests while RS

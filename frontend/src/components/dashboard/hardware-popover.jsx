@@ -36,8 +36,12 @@ import LinkIcon from '@mui/icons-material/Link';
 import LinkOffIcon from '@mui/icons-material/LinkOff';
 import TrackChangesIcon from '@mui/icons-material/TrackChanges';
 import StopCircleOutlinedIcon from '@mui/icons-material/StopCircleOutlined';
-import { setTrackerId, setTrackingStateInBackend } from "../target/target-slice.jsx";
+import GamepadIcon from '@mui/icons-material/Gamepad';
+import {moveRotatorToPosition, setTrackerId, setTrackingStateInBackend, stopRotator} from "../target/target-slice.jsx";
 import FleetTargetRow from "../common/fleet-target-row.jsx";
+import ManualRotatorDialog from './manual-rotator-dialog.jsx';
+import {canStopManualRotator, getManualRotatorState} from '../target/manual-rotator-state.js';
+import {isHardwareReady, useHardwareCommand} from '../target/use-hardware-command.js';
 import {
     hasAssignedHardwareId,
     resolveAssignedHardwareId,
@@ -57,8 +61,8 @@ const HardwareSettingsPopover = () => {
     const [anchorEl, setAnchorEl] = useState(buttonRef.current);
     const open = Boolean(anchorEl);
     const [activeIcon, setActiveIcon] = useState(null);
-    const [connected, setConnected] = useState(false);
     const [rowErrors, setRowErrors] = useState({});
+    const [manualTrackerId, setManualTrackerId] = useState(null);
     const trackerId = useSelector((state) => state.targetSatTrack?.trackerId || "");
     const trackerInstances = useSelector((state) => state.trackerInstances?.instances || []);
     const trackerViews = useSelector((state) => state.targetSatTrack?.trackerViews || {});
@@ -66,6 +70,23 @@ const HardwareSettingsPopover = () => {
     const rotators = useSelector((state) => state.rotators?.rotators || []);
     const rigs = useSelector((state) => state.rigs?.rigs || []);
     const latestActiveTrackerIdRef = useRef(trackerId);
+    const manualView = trackerViews[manualTrackerId];
+    const manualInstance = trackerInstances.find((instance) => instance.tracker_id === manualTrackerId);
+    const manualTrackingState = manualView?.trackingState || manualInstance?.tracking_state || {};
+    const manualRotatorId = resolveAssignedHardwareId(manualView?.selectedRotator, manualTrackingState.rotator_id, manualInstance?.rotator_id);
+    const manualRotator = rotators.find((rotator) => String(rotator.id) === String(manualRotatorId));
+    const manualHardware = useHardwareCommand({
+        socket, view: manualView, commands: trackerCommandsById, trackerId: manualTrackerId,
+        scope: 'rotator', deviceId: manualRotatorId,
+    });
+    const {connected} = manualHardware;
+    const manualControl = getManualRotatorState({
+        rotator: manualRotator,
+        rotatorData: manualView?.rotatorData,
+        trackingState: manualTrackingState,
+        confirmedTrackingState: manualView?.confirmedTrackingState,
+        hardwareReady: Boolean(manualInstance) && hasAssignedHardwareId(manualRotatorId) && manualHardware.ready,
+    });
 
     useEffect(() => {
         latestActiveTrackerIdRef.current = trackerId;
@@ -82,33 +103,6 @@ const HardwareSettingsPopover = () => {
             return !['', 'none', null, undefined].includes(noradId);
         });
     }, [trackerInstances, trackerViews]);
-
-    // Socket connection event handlers
-    useEffect(() => {
-        if (!socket) return;
-
-        // Component can mount after the socket is already connected
-        // (e.g. after app-provider remount when navigation changes).
-        setConnected(Boolean(socket.connected));
-
-        const handleConnect = () => {
-            setConnected(true);
-        };
-
-        const handleDisconnect = () => {
-            setConnected(false);
-        };
-
-        // Add event listeners
-        socket.on('connect', handleConnect);
-        socket.on('disconnect', handleDisconnect);
-
-        // Cleanup function to remove listeners
-        return () => {
-            socket.off('connect', handleConnect);
-            socket.off('disconnect', handleDisconnect);
-        };
-    }, [socket]);
 
     const handleClick = (event, iconType) => {
         if (!connected) return; // Don't open popover when socket is disconnected
@@ -420,6 +414,14 @@ const HardwareSettingsPopover = () => {
                 </Typography>
                 <Stack spacing={0.65} sx={{ mt: 0.7 }}>
                     {fleetRows.map((row) => {
+                        const rowView = trackerViews[row.trackerId];
+                        const rowManualControl = isRotatorPanel ? getManualRotatorState({
+                            rotatorData: row.rotatorData,
+                            trackingState: row.trackingState,
+                            confirmedTrackingState: rowView?.confirmedTrackingState,
+                            hardwareReady: hasAssignedHardwareId(row.rotatorId)
+                                && isHardwareReady(rowView, manualHardware.connected, manualHardware.now),
+                        }) : null;
                         const statusLabel = isRotatorPanel
                             ? (
                                 row.rotatorData?.connected && row.rotatorData?.motion_unconfirmed ? 'Motion unconfirmed' : row.rotatorData?.slewing
@@ -666,6 +668,25 @@ const HardwareSettingsPopover = () => {
                                     )}
                                     actions={(
                                         <Stack direction="row" spacing={0.5}>
+                                        {isRotatorPanel && (
+                                            <Tooltip title={rowManualControl.disabled ? rowManualControl.disabledReason : t('rotator_control.manual_control', {ns: 'target'})}>
+                                                <span>
+                                                    <Button
+                                                        aria-label={t('rotator_control.manual_control', {ns: 'target'})}
+                                                        size="small"
+                                                        variant="outlined"
+                                                        disabled={rowManualControl.disabled}
+                                                        onClick={() => {
+                                                            setManualTrackerId(row.trackerId);
+                                                            handleClose();
+                                                        }}
+                                                        sx={actionButtonSx}
+                                                    >
+                                                        <GamepadIcon fontSize="small" />
+                                                    </Button>
+                                                </span>
+                                            </Tooltip>
+                                        )}
                                         <Tooltip title={actionState.connect.reason}>
                                             <span>
                                                 <Button
@@ -839,6 +860,26 @@ const HardwareSettingsPopover = () => {
                 {renderCompactFleetPanel()}
             </Box>
         </Popover>
+        {/* Keep the dialog outside the popover so closing the menu preserves it on every page. */}
+        <ManualRotatorDialog
+            key={manualTrackerId || 'closed'}
+            open={Boolean(manualTrackerId)}
+            onClose={() => setManualTrackerId(null)}
+            rotator={manualRotator || null}
+            {...manualControl}
+            command={manualHardware.command}
+            canStop={canStopManualRotator({
+                hasTargets: Boolean(manualInstance), connected: manualHardware.connected,
+                command: manualHardware.command, busy: manualHardware.busy,
+                isStopPending: manualHardware.isPending('stopped'), rotatorData: manualView?.rotatorData,
+            })}
+            onMove={(az, el) => dispatch(moveRotatorToPosition({
+                socket, trackerId: manualTrackerId, rotatorId: manualRotatorId, az, el,
+            })).unwrap()}
+            onStop={() => dispatch(stopRotator({
+                socket, trackerId: manualTrackerId, rotatorId: manualRotatorId,
+            })).unwrap()}
+        />
     </>);
 };
 

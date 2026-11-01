@@ -1,6 +1,10 @@
 import {useEffect, useMemo, useState} from 'react';
 import {isCommandActionPending, isCommandOutstanding, selectTrackerCommand} from './tracker-command-state.js';
 
+export function isHardwareReady(view, connected, now = Date.now()) {
+    return connected && Boolean(view?.hardwareObservedAt) && now - view.hardwareReceivedAt < 15000;
+}
+
 export function useHardwareCommand({socket, view, commands, trackerId, scope, deviceId}) {
     const [connected, setConnected] = useState(Boolean(socket?.connected));
     const [now, setNow] = useState(Date.now());
@@ -29,7 +33,7 @@ export function useHardwareCommand({socket, view, commands, trackerId, scope, de
         isPending: state => isCommandActionPending(command, scope, state),
         connected,
         now,
-        ready: connected && Boolean(view?.hardwareObservedAt) && now - view.hardwareReceivedAt < 15000,
+        ready: isHardwareReady(view, connected, now),
         lastUpdateAge: Math.max(0, Math.floor((now - (view?.hardwareReceivedAt || now)) / 1000)),
     };
 }

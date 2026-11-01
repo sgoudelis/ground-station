@@ -32,6 +32,23 @@ Open it to filter by flight, page through packets, view telemetry, download a pa
 or download all captures as a ZIP. Deleting/purging the sonde folder removes all
 its runs. Packet map history includes every packet with a valid position.
 
+## Decoder diagnostics
+
+Rejected-report warnings include the validation error, selected decoder, VFO,
+tuned frequency, bandwidth, signal power in dBFS, frame length, the first 80 frame
+bytes as hex, and up to 2048 bytes of the original JSON report. The logged byte
+counts show when a preview is truncated. A strong signal can still fail frame
+validation; the error distinguishes identity mismatches, invalid lengths and
+checksum failures.
+
+The `radiosondedecoder` logger also emits DEBUG messages with complete rejected
+frames and reports, reports without a preceding raw frame, unrecognized raw
+output, subprocess commands and decoder stderr. The default logging template
+already enables DEBUG through the root logger. If your logging configuration
+filters it out, add `radiosondedecoder: {level: DEBUG}` under `loggers` in
+`backend/data/configs/log_config.yaml` (or your custom logging configuration),
+ensure its handler permits DEBUG, and restart the backend.
+
 ## Historical captures
 
 Flat packet files, the earlier serial-only layout and timestamp-only run folders

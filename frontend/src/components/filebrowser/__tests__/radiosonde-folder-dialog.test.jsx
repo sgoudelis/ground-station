@@ -54,6 +54,7 @@ test('opens packets using full nested URLs and downloads the complete sonde fold
 test('requests bounded packet pages and resets to the first page when filtering by run', async () => {
     const { socket } = mount();
     await screen.findByText('packet.bin');
+    expect(screen.getByRole('combobox', { name: 'Flight' })).toHaveTextContent('All flights');
     await waitFor(() => expect(screen.getByRole('button', { name: 'Go to page 2' })).toBeEnabled());
     fireEvent.click(screen.getByRole('button', { name: 'Go to page 2' }));
     await screen.findByText('last.bin');
@@ -71,6 +72,12 @@ test('requests bounded packet pages and resets to the first page when filtering 
     act(() => refresh());
     await waitFor(() => expect(socket.emit.mock.calls.length).toBeGreaterThan(before));
     expect(socket.emit.mock.lastCall[1].data.run).toBe(runName);
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Flight' }));
+    fireEvent.click(await screen.findByRole('option', { name: 'All flights' }));
+    await waitFor(() => expect(socket.emit.mock.lastCall[1].data).toEqual({
+        id: folder.id, page: 1, pageSize: 50,
+    }));
+    expect(screen.getByRole('combobox', { name: 'Flight' })).toHaveTextContent('All flights');
 });
 
 test('shows a useful error when a folder disappears', async () => {
