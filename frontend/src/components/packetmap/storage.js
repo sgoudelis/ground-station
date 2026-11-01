@@ -10,7 +10,7 @@ export const defaultMapSettings = {
     enableMapZooming: false,
     showTracks: true,
     showLegend: true,
-    tileLayerId: 'satellite',
+    tileLayerId: 'esridarkcanvas',
 };
 
 export function readMapSettings() {
