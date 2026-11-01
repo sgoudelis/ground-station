@@ -84,6 +84,7 @@ function FileTableRow({ item, sortBy, selectionMode, isSelected, onToggleSelecti
         if (item.type === 'recording') {
             return 'IQ Recording';
         } else if (item.type === 'decoded_folder') {
+            if (item.folder_kind === 'radiosonde') return 'Radiosonde Folder';
             return item.folder_kind === 'observation' ? 'Observation Folder' : 'SatDump Folder';
         } else if (item.type === 'decoded') {
             if (item.decoder_type === 'SSTV') {
@@ -235,6 +236,13 @@ function FileTableRow({ item, sortBy, selectionMode, isSelected, onToggleSelecti
 
         // Decoded folder chips
         if (item.type === 'decoded_folder') {
+            if (item.folder_kind === 'radiosonde') {
+                chips.push(
+                    <Chip key="sonde-model" label={item.model} size="small" variant="outlined" color="info" />,
+                    <Chip key="packet-count" label={`${item.packet_count || 0} packets`} size="small" variant="outlined" />,
+                    <Chip key="run-count" label={`${item.run_count || 0} flights`} size="small" variant="outlined" />,
+                );
+            }
             if (Number(item.image_count) > 0) {
                 chips.push(
                     <Chip

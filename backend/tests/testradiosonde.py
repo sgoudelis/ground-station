@@ -116,8 +116,9 @@ def test_decoder_config_and_registry_do_not_infer_satellite_framing():
         assert forced.to_dict()["radiosonde_type"] == family
 
 
-def test_common_files_events_and_reparse_preserve_calibrated_report(tmp_path):
-    folder = tmp_path / "data/decoded"
+@pytest.mark.parametrize("relative", ["decoded", "observations/sonde.gsobs/decoded"])
+def test_common_files_events_and_reparse_preserve_calibrated_report(tmp_path, relative):
+    folder = tmp_path / "data" / relative
     decoder = _decoder(folder)
     decoder.sdr_sample_rate, decoder.sdr_center_freq = 2_400_000, 403_000_000
     decoder._handle_stdout(FRAME.hex().encode() + b" [OK]")
@@ -127,8 +128,10 @@ def test_common_files_events_and_reparse_preserve_calibrated_report(tmp_path):
     assert event["decoder_type"] == "radiosonde"
     assert event["vfo"] == 1
     output = event["output"]
-    assert (folder / output["filename"]).read_bytes() == FRAME
-    saved = json.loads((folder / output["metadata_filename"]).read_text())
+    packet = Path(output["filepath"])
+    assert packet.parent.parent == folder / "radiosonde_RS41_TEST0042"
+    assert packet.read_bytes() == FRAME
+    saved = json.loads(Path(output["metadata_filepath"]).read_text())
     assert saved["parse_context"]["decoder_report"] == REPORT
     assert saved["signal"]["sample_rate_hz"] == 48000
     assert saved["telemetry"] == output["telemetry"]
@@ -139,7 +142,7 @@ def test_common_files_events_and_reparse_preserve_calibrated_report(tmp_path):
         saved["telemetry"]["payload"]["records"][0]["groups"][0]["field_info"]["temp"]["unit"]
         == "°C"
     )
-    url = f"/decoded/{output['filename']}"
+    url = "/" + packet.relative_to(tmp_path / "data").as_posix()
     assert view_packet(tmp_path, url)["telemetry"] == saved["telemetry"]
     assert reparse_packet(tmp_path, url)["telemetry"] == saved["telemetry"]
 
@@ -307,7 +310,7 @@ def test_real_rs_process_decodes_resampled_iq_and_stops_cleanly(
             }[family]
         )
         assert report["alt"] == pytest.approx(1000, abs=1)
-        recorded = (tmp_path / outputs[0]["output"]["filename"]).read_bytes()
+        recorded = Path(outputs[0]["output"]["filepath"]).read_bytes()
         if family != "dfm":
             expected = bytes.fromhex(
                 (Path(__file__).parent / f"fixtures/radiosonde/{family}.hex").read_text()
@@ -424,7 +427,7 @@ def test_other_families_save_live_and_reparse_the_same_report(tmp_path, family, 
     ]
     assert outputs
     output = outputs[-1]
-    url = f"/decoded/{output['filename']}"
+    url = f"/decoded/{Path(output['filepath']).relative_to(tmp_path / 'data/decoded').as_posix()}"
     assert reparse_packet(tmp_path, url)["telemetry"] == output["telemetry"]
     values = output["telemetry"]["telemetry"]["values"]
     assert values["type"] == family.upper()

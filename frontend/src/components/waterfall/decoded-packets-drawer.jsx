@@ -18,6 +18,8 @@
  */
 
 import React, { startTransition, useMemo, useRef, useState, useEffect, useCallback } from 'react';
+import { resolveDecodedAssetUrl } from '../../utils/decoded-assets.js';
+export { resolveDecodedAssetUrl } from '../../utils/decoded-assets.js';
 import { Box, Typography, Chip, Tooltip, Link, CircularProgress, useTheme, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Button, Alert } from '@mui/material';
 import { DataGrid, gridClasses } from '@mui/x-data-grid';
 import { useSelector, useDispatch, useStore } from 'react-redux';
@@ -146,38 +148,6 @@ const ParametersCell = React.memo(function ParametersCell({ value, isLora }) {
     );
     return isLora ? <Tooltip title={value || '-'}>{content}</Tooltip> : content;
 });
-
-const encodeAssetPath = (path) => path
-    .split('/')
-    .filter(Boolean)
-    .map(segment => encodeURIComponent(segment))
-    .join('/');
-
-export const resolveDecodedAssetUrl = (filepath, fallbackFilename) => {
-    const normalizedPath = typeof filepath === 'string'
-        ? `/${filepath.replace(/\\/g, '/').replace(/^\/+/, '')}`
-        : '';
-
-    // Scheduled decoders write inside their observation bundle, which is
-    // exposed by a different static route than manually decoded files.
-    const observationMarker = '/data/observations/';
-    const observationIndex = normalizedPath.lastIndexOf(observationMarker);
-    if (observationIndex !== -1) {
-        const relativePath = normalizedPath.slice(observationIndex + observationMarker.length);
-        return `/observations/${encodeAssetPath(relativePath)}`;
-    }
-
-    const decodedMarker = '/data/decoded/';
-    const decodedIndex = normalizedPath.lastIndexOf(decodedMarker);
-    if (decodedIndex !== -1) {
-        const relativePath = normalizedPath.slice(decodedIndex + decodedMarker.length);
-        return `/decoded/${encodeAssetPath(relativePath)}`;
-    }
-
-    return fallbackFilename
-        ? `/decoded/${encodeAssetPath(fallbackFilename)}`
-        : null;
-};
 
 // Decoder output is stored newest-first. Keep that ordering when selecting the
 // bounded live window so new packets are never displaced by older history.
@@ -484,7 +454,13 @@ const DecodedPacketsDrawer = React.memo(function DecodedPacketsDrawer({ embedded
         if (!packetToDelete || !socket) return;
 
         try {
-            await dispatch(deleteDecoded({ socket, filename: packetToDelete.filename })).unwrap();
+            await dispatch(deleteDecoded({
+                socket,
+                filename: packetToDelete.filename,
+                // A basename is ambiguous once packets live in sonde/run folders.
+                url: packetToDelete.filename?.endsWith('.bin')
+                    ? resolveDecodedAssetUrl(packetToDelete.filepath, packetToDelete.filename) : undefined,
+            })).unwrap();
             // Success toast will be shown by socket event listener
             setDeleteDialogOpen(false);
             setPacketToDelete(null);
@@ -932,7 +908,7 @@ const DecodedPacketsDrawer = React.memo(function DecodedPacketsDrawer({ embedded
                 const deletedFilename = state.filename;
 
                 if (deletedFilename) {
-                    dispatch(deleteOutputByFilename({ filename: deletedFilename }));
+                    dispatch(deleteOutputByFilename({ filename: deletedFilename, url: state.url }));
                 }
             }
         };

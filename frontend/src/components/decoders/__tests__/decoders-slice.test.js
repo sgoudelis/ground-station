@@ -1,5 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import reducer, { clearGnssOutputsForDecoder, decoderOutputReceived, decoderProgressUpdated, decoderStatusChanged, isStaleDecoderStatus } from '../decoders-slice.jsx';
+import reducer, { clearGnssOutputsForDecoder, decoderOutputReceived, decoderProgressUpdated, decoderStatusChanged, deleteOutputByFilename, isStaleDecoderStatus } from '../decoders-slice.jsx';
+
+it('deletes only the specified nested packet when basenames match', () => {
+    const initial = reducer(undefined, { type: '@@INIT' });
+    const entry = (serial) => ({
+        id: serial, output: { filename: 'packet.bin', filepath: `data/decoded/radiosonde_RS41_${serial}/run/packet.bin` },
+    });
+    const state = { ...initial, outputs: [entry('FIRST'), entry('SECOND')], ui: { ...initial.ui, selectedOutput: 'FIRST' } };
+    const result = reducer(state, deleteOutputByFilename({
+        filename: 'packet.bin', url: '/decoded/radiosonde_RS41_FIRST/run/packet.bin',
+    }));
+    expect(result.outputs.map(output => output.id)).toEqual(['SECOND']);
+    expect(result.ui.selectedOutput).toBeNull();
+});
 
 describe('decoders slice status lifecycle', () => {
     it('keeps starting status as active decoder state', () => {

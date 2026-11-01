@@ -41,6 +41,7 @@ from common.thumbnails import (
     get_image_thumbnail_url,
 )
 from library.inventory import get_inventory, publish_ready_artifacts
+from telemetry.reparse import resolve_packet_path
 
 # Existing producers still use ``file_browser_state`` to announce storage
 # lifecycle changes.  Keep that compatibility event, but update the single
@@ -420,6 +421,7 @@ def delete_decoded_file(decoded_dir: Path, decoded_filename: str, logger) -> boo
         return False
 
     decoded_file.unlink()
+    decoded_file.with_suffix(".json").unlink(missing_ok=True)
     logger.info(f"Deleted decoded file: {decoded_filename}")
     return True
 
@@ -969,6 +971,12 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
                             "telemetry": telemetry_data,
                         }
                     )
+
+                # Preserve grouped sondes for clients of the legacy listing too.
+                for folder in sorted(decoded_dir.glob("radiosonde_*")):
+                    item = get_inventory().get(f"decoded_folder:{folder.name}")
+                    if item:
+                        processed_items.append(item)
 
                 # Keep each automated observation compact in the browser even when
                 # it produced recordings, packets, audio, and transcripts together.
@@ -1528,6 +1536,29 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
 
         elif cmd == "delete-decoded":
             logger.info(f"Deleting decoded file/folder: {data}")
+            packet_url = data.get("url")
+            if packet_url is not None:
+                # Packet URLs carry the owning folder (or observation bundle).
+                # Never flatten them to a basename when deciding what to remove.
+                if not isinstance(packet_url, str):
+                    raise ValueError("Invalid decoded packet URL")
+                packet = resolve_packet_path(backend_dir, packet_url)
+                if not packet.is_file():
+                    await emit_file_browser_error(sio, "Decoded packet not found", cmd, logger)
+                    return
+                packet.unlink()
+                packet.with_suffix(".json").unlink(missing_ok=True)
+                await emit_file_browser_state(
+                    sio,
+                    {
+                        "action": "delete-decoded",
+                        "filename": packet.name,
+                        "url": packet_url,
+                        "message": f"Deleted decoded packet: {packet.name}",
+                    },
+                    logger,
+                )
+                return
             decoded_filename = data.get("filename")
             decoded_foldername = data.get("foldername")
             is_folder = data.get("is_folder", False)

@@ -233,7 +233,9 @@ class BaseDecoder:
             # metadata. Even a programming error must leave the original bytes.
             decode_timestamp = time.time()
             filename = self._generate_filename(decode_timestamp)
-            filepath = os.path.join(self.output_dir, filename)
+            output_dir = self._get_packet_output_dir(decode_timestamp)
+            os.makedirs(output_dir, exist_ok=True)
+            filepath = os.path.join(output_dir, filename)
             with open(filepath, "wb") as f:
                 f.write(payload)
 
@@ -274,7 +276,7 @@ class BaseDecoder:
 
             # Save metadata JSON
             metadata_filename = filename.replace(".bin", ".json")
-            metadata_filepath = os.path.join(self.output_dir, metadata_filename)
+            metadata_filepath = os.path.join(output_dir, metadata_filename)
             with open(metadata_filepath, "w") as f:
                 json.dump(metadata, f, indent=2, allow_nan=False)
             logger.info(f"Saved metadata: {metadata_filepath}")
@@ -298,6 +300,10 @@ class BaseDecoder:
             logger.exception(e)
             with self.stats_lock:
                 self.stats["errors"] += 1
+
+    def _get_packet_output_dir(self, timestamp: float) -> str:
+        """Allow decoders to group packets without changing their configured root."""
+        return self.output_dir
 
     def _get_parse_context(self) -> ParseContext:
         """Allow external codecs to preserve state needed to interpret a frame."""

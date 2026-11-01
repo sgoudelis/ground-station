@@ -34,6 +34,8 @@ SEARCH_FIELDS = (
     "satellite_name",
     "satellite_norad_id",
     "decoder_type",
+    "model",
+    "serial",
     "decoder_mode",
     "protocol",
     "pipeline",

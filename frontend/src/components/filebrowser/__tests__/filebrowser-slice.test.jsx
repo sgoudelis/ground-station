@@ -21,6 +21,7 @@ import { configureStore } from '@reduxjs/toolkit';
 import { expect, test, vi } from 'vitest';
 import reducer, {
     deleteLibraryItems,
+    deleteDecoded,
     checkForNewFiles,
     fetchFiles,
     fetchPurgePreview,
@@ -41,6 +42,22 @@ import reducer, {
 function createStore() {
     return configureStore({ reducer: { filebrowser: reducer } });
 }
+
+test('deleting a nested packet keeps unrelated flat captures with the same basename', async () => {
+    const initial = reducer(undefined, { type: '@@INIT' });
+    const store = configureStore({
+        reducer: { filebrowser: reducer },
+        preloadedState: { filebrowser: { ...initial, total: 1, files: [
+            { type: 'decoded', filename: 'packet.bin', url: '/decoded/packet.bin' },
+        ] } },
+    });
+    const socket = { emit: vi.fn() };
+    const url = '/decoded/radiosonde_RS41_TEST0042/run/packet.bin';
+    await store.dispatch(deleteDecoded({ socket, filename: 'packet.bin', url })).unwrap();
+    expect(socket.emit.mock.calls[0][1]).toMatchObject({ cmd: 'filebrowser.delete-decoded', data: { url } });
+    expect(store.getState().filebrowser.files).toHaveLength(1);
+    expect(store.getState().filebrowser.total).toBe(1);
+});
 
 test('rehydrates the new observation filter from the former decoded choice', () => {
     const current = reducer(undefined, { type: '@@INIT' });

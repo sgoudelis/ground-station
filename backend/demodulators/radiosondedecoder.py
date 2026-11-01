@@ -19,6 +19,7 @@ from scipy import signal
 
 from common.iqsamples import require_complex64
 from common.resampler import StreamResampler
+from common.sondestorage import SondeStorage
 from demodulators.basedecoderprocess import BaseDecoderProcess
 from telemetry.context import ParseContext
 from telemetry.parser import TelemetryParser
@@ -108,6 +109,7 @@ class RadiosondeDecoder(BaseDecoderProcess):
         self.stream_samples = 0
         self.last_report_sample = 0
         self.last_packet_at = time.monotonic()
+        self.sonde_storage = SondeStorage(output_dir, session_id, vfo)
         os.makedirs(self.output_dir, exist_ok=True)
 
     def _get_decoder_type_for_init(self):
@@ -134,6 +136,14 @@ class RadiosondeDecoder(BaseDecoderProcess):
 
     def _get_payload_protocol(self):
         return "radiosonde"
+
+    def _get_packet_output_dir(self, timestamp):
+        # Resolve each validated report independently: a receiver can switch
+        # serials without restarting, including inside an observation bundle.
+        report = self.decoder_report
+        if report is None:
+            raise ValueError("A validated radiosonde report is required before saving")
+        return str(self.sonde_storage.packet_directory(report["type"], report["id"], timestamp))
 
     def _get_parse_context(self):
         # RS has already interpreted calibration accumulated over earlier frames.

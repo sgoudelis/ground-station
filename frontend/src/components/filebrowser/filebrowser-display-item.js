@@ -2,6 +2,16 @@ export function getFileBrowserDateField(sortBy) {
     return ['modified', 'completed_at'].includes(sortBy) ? sortBy : 'captured_at';
 }
 
+export function getDecodedFolderDescription(item) {
+    if (item.folder_kind === 'radiosonde') {
+        return `${item.packet_count || 0} packets · ${item.run_count || 0} flights`;
+    }
+    if (item.folder_kind === 'observation') {
+        return `${item.artifact_count || 0} files - ${item.observation_in_progress ? 'Observation in progress' : 'Automated observation'}`;
+    }
+    return `${item.image_count || 0} images - ${item.pipeline || 'SatDump output'}`;
+}
+
 export function getFileBrowserDate(item, sortBy) {
     const field = getFileBrowserDateField(sortBy);
     // Older payloads may not include capture metadata yet. Their content mtime

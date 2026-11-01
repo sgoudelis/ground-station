@@ -28,31 +28,48 @@ from .context import ParseContext
 from .service import parse_packet
 
 
-def _load_packet(backend_dir: Path, url: str) -> tuple[Path, dict[str, Any]]:
-    """Resolve a decoded artifact and load its metadata for either operation."""
+def resolve_packet_path(backend_dir: Path, url: str) -> Path:
+    """Resolve flat or grouped packets within their decoded storage root."""
     address = urlsplit(url)
     if address.scheme or address.netloc:
         raise ValueError("Expected a local decoded packet URL")
     parts = unquote(address.path).split("/")
     # Only standalone decoded packets and decoded observation artifacts qualify.
-    if len(parts) == 3 and parts[:2] == ["", "decoded"]:
-        mount = "decoded"
+    if len(parts) >= 3 and parts[:2] == ["", "decoded"]:
+        root = backend_dir / "data" / "decoded"
+        relative = parts[2:]
     elif (
-        len(parts) == 5
+        len(parts) >= 5
         and parts[:2] == ["", "observations"]
         and parts[2].endswith(".gsobs")
         and parts[3] == "decoded"
     ):
-        mount = "observations"
+        root = backend_dir / "data" / "observations" / parts[2] / "decoded"
+        relative = parts[4:]
     else:
         raise ValueError("Expected a decoded packet URL")
-    root = (backend_dir / "data" / mount).resolve()
-    packet = root.joinpath(*parts[2:]).resolve()
+    if any(part in ("", ".", "..") or "\\" in part for part in parts[2:]):
+        raise ValueError("Invalid decoded packet path")
+    # Constrain the observation root too, in case a bundle is a symlink.
+    storage = (
+        backend_dir / "data" / ("decoded" if parts[1] == "decoded" else "observations")
+    ).resolve()
+    root = root.resolve()
+    if not root.is_relative_to(storage):
+        raise ValueError("Invalid decoded packet path")
+    packet = root.joinpath(*relative).resolve()
     if not packet.is_relative_to(root) or packet.suffix != ".bin":
         raise ValueError("Invalid decoded packet path")
     metadata_path = packet.with_suffix(".json")
     if metadata_path.is_symlink():
         raise ValueError("Packet metadata must not be a symbolic link")
+    return packet
+
+
+def _load_packet(backend_dir: Path, url: str) -> tuple[Path, dict[str, Any]]:
+    """Load a decoded artifact's metadata for viewing or reparsing."""
+    packet = resolve_packet_path(backend_dir, url)
+    metadata_path = packet.with_suffix(".json")
     metadata = json.loads(metadata_path.read_text())
     if not isinstance(metadata, dict):
         raise ValueError("Packet metadata must be an object")

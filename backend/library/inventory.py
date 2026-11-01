@@ -35,13 +35,14 @@ from common.artifactdates import artifact_dates, parse_artifact_time, transcript
 from common.events import public_events
 from library.positions import packet_positions
 from library.search import match_search, normalize_search, search_text
+from library.sondefiles import sonde_identity
 
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp"}
 DECODED_PATTERNS = ("*.png", "*.jpg", "*.jpeg", "*.txt", "*.bin")
 
 # Maps an inventory item to the category the purge dialog groups it under.
 # ``decoded_folder`` items with the observation marker are automated
-# observation bundles; every other decoded folder is a SatDump product.
+# observation bundles; other decoded folders are SatDump or radiosonde products.
 PURGE_CATEGORIES = (
     "observation",
     "decoded_folder",
@@ -410,7 +411,9 @@ class LibraryInventory:
             item = self._items.get(item_id)
             return self._public(item) if item else None
 
-    def detail(self, item_id: str) -> Optional[Dict[str, Any]]:
+    def detail(
+        self, item_id: str, page: int = 1, page_size: int = 50, run: Optional[str] = None
+    ) -> Optional[Dict[str, Any]]:
         """Build heavyweight detail only after a user opens an item."""
         if not self._ready:
             self.rebuild()
@@ -420,6 +423,23 @@ class LibraryInventory:
         if not internal:
             return None
         path = Path(str(internal["_path"]))
+        if internal.get("folder_kind") == "radiosonde":
+            # The index holds compact packet rows; only send the requested page.
+            packets = internal.get("_packets", [])
+            if run is not None:
+                packets = [packet for packet in packets if packet["run"] == run]
+            page_size = max(1, min(int(page_size), 100))
+            pages = max(1, (len(packets) + page_size - 1) // page_size)
+            page = max(1, min(int(page), pages))
+            start = (page - 1) * page_size
+            return {
+                **self._public(internal),
+                "packets": packets[start : start + page_size],
+                "page": page,
+                "page_size": page_size,
+                "total": len(packets),
+                "run": run,
+            }
         if internal.get("folder_kind") == "observation":
             return self._observation_detail(self._public(internal), path)
         if internal.get("type") == "decoded_folder":
@@ -857,7 +877,12 @@ class LibraryInventory:
         if not root.is_dir():
             return
         for folder in root.iterdir():
-            if not folder.is_dir() or ".satdump_" not in folder.name:
+            if folder.is_symlink() or not folder.is_dir():
+                continue
+            if folder.name.startswith("radiosonde_"):
+                self._scan_radiosonde_folder(items, folder)
+                continue
+            if ".satdump_" not in folder.name:
                 continue
             stat = folder.stat()
             # The card needs an image count before the detail view is opened.
@@ -989,6 +1014,109 @@ class LibraryInventory:
                     },
                     path,
                 )
+
+    def _scan_radiosonde_folder(self, items: Dict[str, Dict[str, Any]], folder: Path) -> None:
+        """Group packets for browsing, retaining every position in the map index."""
+        packets = []
+        positions = []
+        identity = None
+        total_size = file_count = 0
+        latest_mtime = None
+        resolved_folder = folder.resolve()
+        runs: Dict[str, Dict[str, Any]] = {}
+        for path in sorted(folder.rglob("*")):
+            if path.is_symlink() or not path.is_file():
+                continue
+            # rglob may descend into linked directories; never index their files.
+            if not path.resolve().is_relative_to(resolved_folder):
+                continue
+            stat = path.stat()
+            total_size += stat.st_size
+            file_count += 1
+            latest_mtime = max(latest_mtime or stat.st_mtime, stat.st_mtime)
+            if path.suffix != ".bin":
+                continue
+            metadata_path = path.with_suffix(".json")
+            metadata = {} if metadata_path.is_symlink() else _read_json(metadata_path)
+            identity = identity or sonde_identity(metadata)
+            dates = artifact_dates("decoded", path, metadata, mtime=stat.st_mtime)
+            member = path.relative_to(folder).as_posix()
+            run = member.split("/")[0] if "/" in member else "legacy"
+            run_summary = runs.setdefault(
+                run,
+                {
+                    "name": run,
+                    "packet_count": 0,
+                    "started_at": dates["captured_at"],
+                    "last_packet_at": dates["captured_at"],
+                },
+            )
+            run_summary["packet_count"] += 1
+            run_summary["started_at"] = min(run_summary["started_at"], dates["captured_at"])
+            run_summary["last_packet_at"] = max(run_summary["last_packet_at"], dates["captured_at"])
+            relative = f"{folder.name}/{member}"
+            url = f"/decoded/{quote(relative)}"
+            positions.extend(
+                packet_positions(metadata, f"decoded:{relative}", dates["captured_at"])
+            )
+            packets.append(
+                {
+                    "type": "decoded",
+                    "filename": path.name,
+                    "name": path.stem,
+                    "path": relative,
+                    "url": url,
+                    "size": stat.st_size,
+                    "run": run,
+                    "file_type": ".bin",
+                    "decoder_type": "RADIOSONDE",
+                    "frame": _object(
+                        _object(metadata.get("parse_context")).get("decoder_report")
+                    ).get("frame"),
+                    **dates,
+                    "download_url": url,
+                }
+            )
+        # Empty folders can briefly exist between mkdir and the first packet.
+        if not packets:
+            return
+        packets.sort(key=lambda packet: (packet["captured_at"], packet["filename"]), reverse=True)
+        assert latest_mtime is not None
+        first, last = packets[-1], packets[0]
+        model, serial = identity or ("Radiosonde", folder.name.removeprefix("radiosonde_"))
+        self._add(
+            items,
+            {
+                "id": f"decoded_folder:{folder.name}",
+                "type": "decoded_folder",
+                "folder_kind": "radiosonde",
+                "foldername": folder.name,
+                "name": f"{model} {serial}",
+                "display_name": f"{model} {serial}",
+                "model": model,
+                "serial": serial,
+                "decoder_type": "RADIOSONDE",
+                "packet_count": len(packets),
+                "size": total_size,
+                "run_count": len(runs),
+                "file_count": file_count,
+                "purge_bytes": total_size,
+                "created": _iso(folder.stat().st_ctime),
+                "modified": _iso(latest_mtime),
+                "latest_activity": _iso(latest_mtime),
+                "captured_at": first["captured_at"],
+                "captured_at_source": first["captured_at_source"],
+                "completed_at": None,
+                "last_packet_at": last["captured_at"],
+                "url": f"/decoded/{quote(folder.name)}",
+                "download_url": f"/api/decoded/{quote(folder.name)}/download",
+                "runs": sorted(runs.values(), key=lambda run: run["started_at"], reverse=True),
+                "_packets": packets,
+                "_positions": positions,
+                "_member_names": [packet["path"].split("/", 1)[1] for packet in packets],
+            },
+            folder,
+        )
 
     def _scan_audio(self, items: Dict[str, Dict[str, Any]]) -> None:
         root = self.roots.audio

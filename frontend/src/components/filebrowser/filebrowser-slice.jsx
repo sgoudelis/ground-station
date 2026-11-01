@@ -76,9 +76,12 @@ export const checkForNewFiles = createAsyncThunk(
 
 export const fetchFileDetails = createAsyncThunk(
     'filebrowser/fetchFileDetails',
-    async ({ socket, id }, { rejectWithValue }) => {
+    async ({ socket, id, page, pageSize, run }, { rejectWithValue }) => {
         try {
-            return await callLibrary(socket, 'filebrowser.item', { id });
+            return await callLibrary(socket, 'filebrowser.item', {
+                id, ...(page !== undefined && { page }),
+                ...(pageSize !== undefined && { pageSize }), ...(run && { run }),
+            });
         } catch (error) {
             return rejectWithValue(error.message || 'Failed to fetch file details');
         }
@@ -150,7 +153,7 @@ export const deleteSnapshot = createAsyncThunk(
 // Note: This now uses pub/sub model - response comes via 'file_browser_state' event
 export const deleteDecoded = createAsyncThunk(
     'filebrowser/deleteDecoded',
-    async ({ socket, filename, foldername, is_folder }, { rejectWithValue }) => {
+    async ({ socket, filename, foldername, is_folder, url }, { rejectWithValue }) => {
         try {
             // Emit request without callback - response will come via 'file_browser_state' event
             socket.emit("api.call", {
@@ -158,12 +161,13 @@ export const deleteDecoded = createAsyncThunk(
   data: {
     filename,
     foldername,
-    is_folder
+    is_folder,
+    ...(url && { url })
   }
 });
 
             // Return the identifier for optimistic updates if needed
-            return { filename, foldername, is_folder, pending: true };
+            return { filename, foldername, is_folder, url, pending: true };
         } catch (error) {
             return rejectWithValue(error.message || 'Failed to delete decoded file/folder');
         }
@@ -625,14 +629,17 @@ const fileBrowserSlice = createSlice({
 
         // Delete decoded - optimistic update
         builder.addCase(deleteDecoded.fulfilled, (state, action) => {
+            const before = state.files.length;
             // Remove from files list (handle both files and folders)
             if (action.payload.is_folder) {
                 state.files = state.files.filter(f => !(f.type === 'decoded_folder' && f.foldername === action.payload.foldername));
             } else {
-                state.files = state.files.filter(f => !(f.type === 'decoded' && f.filename === action.payload.filename));
+                state.files = state.files.filter(f => !(f.type === 'decoded' && (
+                    action.payload.url ? f.url === action.payload.url : f.filename === action.payload.filename
+                )));
             }
             // Update total count
-            state.total = Math.max(0, state.total - 1);
+            state.total = Math.max(0, state.total - (before - state.files.length));
         });
 
         builder.addCase(deleteObservationBundle.fulfilled, (state, action) => {

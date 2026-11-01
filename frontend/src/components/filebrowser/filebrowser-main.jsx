@@ -113,12 +113,13 @@ import FileTableView from './file-table-view.jsx';
 import MeteorM2xLrptFolderDialog from './meteor-m2x-lrpt-folder-dialog.jsx';
 import MeteorHrptFolderDialog from './meteor-hrpt-folder-dialog.jsx';
 import ObservationFolderDialog from './observation-folder-dialog.jsx';
+import RadiosondeFolderDialog from './radiosonde-folder-dialog.jsx';
 import ProcessingDialog from './processing-dialog.jsx';
 import PurgeDialog from './purge-dialog.jsx';
 import ImageViewerDialog from '../common/image-viewer-dialog.jsx';
 import ResponsiveActionButton from '../common/responsive-action-button.jsx';
 import DecodedFolderThumbnail from './decoded-folder-thumbnail.jsx';
-import { buildFileBrowserDisplayItem, getFileBrowserDate, isFileBrowserDateApproximate } from './filebrowser-display-item.js';
+import { buildFileBrowserDisplayItem, getDecodedFolderDescription, getFileBrowserDate, isFileBrowserDateApproximate } from './filebrowser-display-item.js';
 import FileTypeFilter from './file-type-filter.jsx';
 import FileSearchInput from './file-search-input.jsx';
 import FileSearchMatch from './file-search-match.jsx';
@@ -358,6 +359,7 @@ export default function FileBrowserMain() {
     const [meteorHrptFolder, setMeteorHrptFolder] = useState(null);
     const [observationFolderDialogOpen, setObservationFolderDialogOpen] = useState(false);
     const [observationFolder, setObservationFolder] = useState(null);
+    const [radiosondeFolder, setRadiosondeFolder] = useState(null);
     const [returnToObservationFolder, setReturnToObservationFolder] = useState(false);
     const [processingDialogOpen, setProcessingDialogOpen] = useState(false);
     const [processingRecording, setProcessingRecording] = useState(null);
@@ -542,6 +544,10 @@ export default function FileBrowserMain() {
     };
 
     const handleShowDetails = async (item) => {
+        if (item.folder_kind === 'radiosonde') {
+            setRadiosondeFolder(item);
+            return;
+        }
         let detail = item;
         if (socket && item.id) {
             try {
@@ -599,6 +605,7 @@ export default function FileBrowserMain() {
                     setObservationFolderDialogOpen(false);
                     setObservationFolder(null);
                 }
+                if (itemToDelete.folder_kind === 'radiosonde') setRadiosondeFolder(null);
             } catch (error) {
                 // Error will be shown by socket error event listener, but show local toast too
                 toast.error(t('toast.delete_failed', 'Failed to delete: {{error}}', { error }));
@@ -1569,9 +1576,7 @@ export default function FileBrowserMain() {
                                                     )}
                                                     <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                                                         {item.type === 'decoded_folder'
-                                                            ? item.folder_kind === 'observation'
-                                                                ? `${item.artifact_count || 0} files - ${item.observation_in_progress ? 'Observation in progress' : 'Automated observation'}`
-                                                                : `${item.image_count} images - ${item.pipeline || 'SatDump output'}`
+                                                            ? getDecodedFolderDescription(item)
                                                             : item.type === 'decoded'
                                                             ? (item.decoder_type ? `${item.decoder_type} file` : 'Decoded file')
                                                             : item.type === 'audio'
@@ -1733,9 +1738,7 @@ export default function FileBrowserMain() {
                                             )
                                         ) : item.type === 'decoded_folder' ? (
                                             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-                                                {item.folder_kind === 'observation'
-                                                    ? `${item.artifact_count || 0} files - ${item.observation_in_progress ? 'Observation in progress' : 'Automated observation'}`
-                                                    : `${item.image_count} images - ${item.pipeline || 'SatDump output'}`}
+                                                {getDecodedFolderDescription(item)}
                                             </Typography>
                                         ) : item.type === 'decoded' ? (
                                             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
@@ -1811,6 +1814,9 @@ export default function FileBrowserMain() {
                                                     sx={{ height: '20px', fontSize: '0.65rem', '& .MuiChip-label': { px: 0.75 }, '& .MuiChip-icon': { fontSize: '0.85rem' } }}
                                                 />
                                             )}
+                                            {item.folder_kind === 'radiosonde' && <Chip
+                                                label={item.model} size="small" color="info" variant="outlined"
+                                            />}
                                             {item.folder_kind === 'observation' && (
                                                 <>
                                                     {item.observation_in_progress && (
@@ -2308,6 +2314,8 @@ export default function FileBrowserMain() {
                         : itemToDelete?.type === 'decoded_folder'
                         ? itemToDelete?.folder_kind === 'observation'
                             ? 'Delete Observation Folder'
+                            : itemToDelete?.folder_kind === 'radiosonde'
+                            ? 'Delete Radiosonde Captures'
                             : t('delete_dialog.title_decoded_folder', 'Delete Decoded Folder')
                         : itemToDelete?.type === 'decoded'
                         ? t('delete_dialog.title_decoded', 'Delete Decoded File')
@@ -2608,6 +2616,15 @@ export default function FileBrowserMain() {
                 onGenerateWaterfall={handleOpenWaterfallDialog}
                 onDelete={handleDeleteObservation}
             />
+
+            {radiosondeFolder && <RadiosondeFolderDialog
+                key={radiosondeFolder.id}
+                folder={radiosondeFolder}
+                socket={socket}
+                onClose={() => setRadiosondeFolder(null)}
+                onOpenPacket={handleViewTelemetry}
+                onDelete={handleDelete}
+            />}
 
             {/* Processing Dialog */}
             <ProcessingDialog

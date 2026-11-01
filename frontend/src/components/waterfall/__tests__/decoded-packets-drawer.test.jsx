@@ -87,6 +87,10 @@ describe('mapOutputsToRows', () => {
 });
 
 describe('resolveDecodedAssetUrl', () => {
+    it('preserves serial and UTC reception run directories', () => {
+        expect(resolveDecodedAssetUrl('data/decoded/radiosonde_RS41_TEST0042/20261101T103000.000000Z.gssonde/packet.bin', 'packet.bin'))
+            .toBe('/decoded/radiosonde_RS41_TEST0042/20261101T103000.000000Z.gssonde/packet.bin');
+    });
     it('routes scheduled decoder artifacts through their observation bundle', () => {
         const filepath = '/opt/ground-station/backend/data/observations/ISS Pass.gsobs/decoded/aprs packet.json';
 

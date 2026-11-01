@@ -75,7 +75,15 @@ async def get_library_item(
     item_id = (data or {}).get("id")
     if not isinstance(item_id, str) or not item_id:
         return {"success": False, "error": "id is required"}
-    item = await asyncio.to_thread(get_inventory().detail, item_id)
+    try:
+        page = int((data or {}).get("page", 1))
+        page_size = int((data or {}).get("pageSize", 50))
+    except (TypeError, ValueError):
+        return {"success": False, "error": "page and pageSize must be integers"}
+    run = (data or {}).get("run")
+    if run is not None and not isinstance(run, str):
+        return {"success": False, "error": "run must be a string"}
+    item = await asyncio.to_thread(get_inventory().detail, item_id, page, page_size, run)
     if item is None:
         return {"success": False, "error": "Library item not found"}
     return {"success": True, "data": item}

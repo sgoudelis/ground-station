@@ -19,6 +19,7 @@
  */
 
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { resolveDecodedAssetUrl } from '../../utils/decoded-assets.js';
 
 // Async thunk to fetch satellite info from backend
 export const fetchDetectedSatellite = createAsyncThunk(
@@ -295,16 +296,19 @@ export const decodersSlice = createSlice({
 
         // Delete output by filename (for file deletion sync)
         deleteOutputByFilename: (state, action) => {
-            const { filename } = action.payload;
+            const { filename, url } = action.payload;
+            const matches = (entry) => url
+                ? resolveDecodedAssetUrl(entry.output?.filepath, entry.output?.filename) === url
+                : entry.output?.filename === filename;
 
             // Find the output with matching filename before deletion
             const outputToDelete = state.outputs.find(
-                output => output.output?.filename === filename
+                matches
             );
 
             // Remove from outputs array
             state.outputs = state.outputs.filter(
-                output => output.output?.filename !== filename
+                output => !matches(output)
             );
 
             // Deselect if currently selected output was deleted

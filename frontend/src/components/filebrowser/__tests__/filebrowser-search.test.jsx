@@ -51,15 +51,16 @@ const parent = {
     matched_files: ['decoded/beacon.bin'],
 };
 
-function renderBrowser() {
+function renderBrowser(item = parent) {
     socket.emit.mockReset().mockImplementation((_event, { cmd, data }, callback) => {
         if (cmd === 'filebrowser.reconcile') callback({ success: true, data: {} });
         if (cmd === 'filebrowser.query') {
             callback({
                 success: true,
-                data: { items: data.search === 'beacon' ? [parent] : [], total: data.search === 'beacon' ? 1 : 0 },
+                data: { items: data.search === 'beacon' ? [item] : [], total: data.search === 'beacon' ? 1 : 0 },
             });
         }
+        if (cmd === 'filebrowser.item') callback({ success: true, data: { ...item, page: 1, total: 0, packets: [], runs: [] } });
     });
     const store = configureStore({ reducer: { filebrowser: filebrowserReducer } });
     render(<Provider store={store}><ThemeProvider theme={createTheme()}><FileBrowserMain /></ThemeProvider></Provider>);
@@ -91,6 +92,20 @@ test('shows a search-specific empty state and clears the applied query', async (
     await waitFor(() => expect(store.getState().filebrowser.search).toBe(''));
     expect(input).toHaveValue('');
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
+});
+
+test('routes a sonde folder to its packet browser and describes it in both views', async () => {
+    const store = renderBrowser({
+        ...parent, id: 'decoded_folder:radiosonde_RS41_TEST0042', folder_kind: 'radiosonde',
+        name: 'RS41 TEST0042', model: 'RS41', serial: 'TEST0042', packet_count: 51, run_count: 2,
+    });
+    fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'beacon' } });
+    expect(await screen.findByText('Radiosonde Folder')).toBeInTheDocument();
+    act(() => store.dispatch(setViewMode('card')));
+    expect(screen.getAllByText('51 packets · 2 flights').length).toBeGreaterThan(0);
+    act(() => store.dispatch(setViewMode('table')));
+    fireEvent.click(screen.getByText('RS41 TEST0042'));
+    expect(await screen.findByRole('table', { name: 'Radiosonde packets' })).toBeInTheDocument();
 });
 
 test('day groups and row times use the selected capture, modified or completion date', async () => {

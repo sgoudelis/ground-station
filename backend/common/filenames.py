@@ -10,6 +10,11 @@ _UNSAFE_FILENAME_CHARS = re.compile(r"[^A-Za-z0-9._-]+")
 _MULTI_UNDERSCORES = re.compile(r"_+")
 
 
+def radiosonde_folder_name(model: str, serial: str) -> str:
+    """Keep sonde identities separate from other products and other models."""
+    return f"radiosonde_{sanitize_filename_component(model)}_{sanitize_filename_component(serial)}"
+
+
 def sanitize_filename_component(
     value: Any,
     *,

@@ -55,7 +55,11 @@ def saved_packet(root, relative="decoded/fleet packet.bin"):
     "relative",
     [
         "decoded/fleet packet.bin",
+        "decoded/radiosonde_RS41_TEST0042/20261101T103000Z/fleet packet.bin",
+        "decoded/radiosonde_RS41_TEST0042/20261101T103000Z.gssonde/fleet packet.bin",
         "observations/Tianqi.gsobs/decoded/fleet packet.bin",
+        "observations/Tianqi.gsobs/decoded/radiosonde_RS41_TEST0042/20261101T103000Z/fleet packet.bin",
+        "observations/Tianqi.gsobs/decoded/radiosonde_RS41_TEST0042/20261101T103000Z.gssonde/fleet packet.bin",
     ],
 )
 def test_reparse_updates_only_telemetry_and_preserves_binary_and_permissions(tmp_path, relative):
@@ -82,6 +86,8 @@ def test_reparse_updates_only_telemetry_and_preserves_binary_and_permissions(tmp
         "https://example.com/decoded/packet.bin",
         "/decoded/../packet.bin",
         "/decoded/%2e%2e%2fpacket.bin",
+        "/decoded/sonde/run/%2e%2e/packet.bin",
+        "/observations/pass.gsobs/decoded/../recordings/packet.bin",
         "/observations/../decoded/packet.bin",
         "/recordings/packet.bin",
         "/decoded/packet.json",
