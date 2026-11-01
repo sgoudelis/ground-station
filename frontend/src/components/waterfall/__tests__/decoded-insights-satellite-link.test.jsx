@@ -21,7 +21,7 @@ import gnssReducer, {
     updateGnssFixLifecycleFromOutput,
 } from '../gnss-slice.jsx';
 
-const socket = vi.hoisted(() => ({ emit: vi.fn() }));
+const socket = vi.hoisted(() => ({ emit: vi.fn(), on: vi.fn(), off: vi.fn() }));
 
 vi.mock('../../common/socket.jsx', () => ({ useSocket: () => ({ socket }) }));
 vi.mock('../../satellites/satellite-info-page.jsx', () => ({

@@ -40,6 +40,8 @@ import { deleteDecoded } from '../filebrowser/filebrowser-slice';
 import { deleteOutputByFilename } from '../decoders/decoders-slice';
 import { useSocket } from '../common/socket.jsx';
 import { humanizeBytes } from '../common/common.jsx';
+import { decodedTableSx } from '../common/decoded-table-styles.js';
+import DecodedPacketsFooter from './decoded-packets-footer.jsx';
 import { toast } from 'react-toastify';
 import { useUserTimeSettings } from '../../hooks/useUserTimeSettings.jsx';
 import { formatTime } from '../../utils/date-time.js';
@@ -82,7 +84,6 @@ const TimeFormatter = React.memo(function TimeFormatter({ value, nowMs, timezone
 // decoded packet to Redux. Half-second batches keep the live packet view
 // responsive while avoiding five complete table updates per second.
 const LIVE_DRAWER_REFRESH_MS = 500;
-const LIVE_DRAWER_ROW_LIMIT = 50;
 const DEFAULT_DRAWER_ROW_LIMIT = 100;
 const EMPTY_VFO_COLORS = Object.freeze([]);
 
@@ -219,8 +220,7 @@ export const mapOutputsToRows = (outputs, rowLimit = DEFAULT_DRAWER_ROW_LIMIT) =
                 metadataFilepath: output.output.metadata_filepath,
                 output: output.output,
             };
-        })
-        .reverse();
+        });
 };
 
 const DecodedPacketsDrawer = React.memo(function DecodedPacketsDrawer({ embedded = false }) {
@@ -265,7 +265,8 @@ const DecodedPacketsDrawer = React.memo(function DecodedPacketsDrawer({ embedded
 
     const effectiveDrawerOpen = embedded ? true : packetsDrawerOpen;
     const liveMode = isStreaming && effectiveDrawerOpen;
-    const rowLimit = liveMode ? LIVE_DRAWER_ROW_LIMIT : DEFAULT_DRAWER_ROW_LIMIT;
+    // Pagination exposes the full retained history in both live and stopped views.
+    const rowLimit = DEFAULT_DRAWER_ROW_LIMIT;
     const rowLimitRef = useRef(rowLimit);
     const liveModeRef = useRef(liveMode);
     const latestRowsRef = useRef(mapOutputsToRows(store.getState().decoders.outputs, rowLimit));
@@ -990,11 +991,13 @@ const DecodedPacketsDrawer = React.memo(function DecodedPacketsDrawer({ embedded
                             columns={displayedColumns}
                             density="compact"
                             disableRowSelectionOnClick
-                            hideFooter
+                            pageSizeOptions={[25, 50, 100]}
+                            slots={{footer: DecodedPacketsFooter}}
                             disableColumnFilter={liveMode}
                             disableColumnSelector={liveMode}
                             disableColumnMenu={liveMode}
                             initialState={{
+                                pagination: {paginationModel: {pageSize: 25}},
                                 sorting: {
                                     sortModel: [{ field: 'timestamp', sort: 'desc' }],
                                 },
@@ -1003,26 +1006,11 @@ const DecodedPacketsDrawer = React.memo(function DecodedPacketsDrawer({ embedded
                                 noRowsLabel: 'No decoded packets yet',
                             }}
                             sx={{
+                                ...decodedTableSx,
                                 height: '100%',
-                                border: 0,
-                                backgroundColor: theme.palette.background.paper,
-                                [`& .${gridClasses.cell}:focus, & .${gridClasses.cell}:focus-within`]: {
-                                    outline: 'none',
-                                },
                                 [`& .${gridClasses.cell}[data-field="parameters"]`]: {
                                     display: 'flex',
                                     alignItems: 'center',
-                                },
-                                [`& .${gridClasses.columnHeader}`]: {
-                                    backgroundColor: theme.palette.background.default,
-                                    '&:focus, &:focus-within': {
-                                        outline: 'none',
-                                    },
-                                },
-                                '& .MuiDataGrid-overlay': {
-                                    fontSize: '0.875rem',
-                                    fontStyle: 'italic',
-                                    color: 'text.secondary',
                                 },
                             }}
                         />

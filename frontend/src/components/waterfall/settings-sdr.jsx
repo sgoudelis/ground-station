@@ -31,6 +31,13 @@ import AutorenewIcon from '@mui/icons-material/Autorenew';
 import SettingsInputAntennaIcon from '@mui/icons-material/SettingsInputAntenna';
 import { useTranslation } from 'react-i18next';
 
+const SdrFormControl = ({hint, children, ...props}) => (
+    // Wrap the control so help remains available when its dropdown is disabled.
+    <Tooltip title={hint} describeChild arrow enterDelay={1000} enterNextDelay={1000}>
+        <FormControl {...props}>{children}</FormControl>
+    </Tooltip>
+);
+
 // Factory (rather than a module-level constant) so the labels are translated with the
 // translator of the rendering component and follow runtime language changes.
 const getSdrTypeGroups = (t) => [
@@ -112,6 +119,7 @@ const SdrAccordion = ({
                           onPlaybackRecordingChange,
 }) => {
     const { t } = useTranslation('waterfall');
+    const controlId = React.useId();
     const getSdrOptionIcon = React.useCallback((type) => {
         const normalizedType = String(type || '').trim().toLowerCase();
         if (normalizedType.startsWith('rtlsdr')) return UsbIcon;
@@ -439,13 +447,15 @@ const SdrAccordion = ({
                 <LoadingOverlay loading={gettingSDRParameters}>
                     <Box sx={{mb: 2}}>
 
-                        <FormControl disabled={isStreaming} error={sdrRequiredError} margin="normal"
+                        <SdrFormControl hint={t('sdr.sdr_hint')} disabled={isStreaming} error={sdrRequiredError} margin="normal"
                                      sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth
                                      variant="outlined"
                                      size="small">
-                            <InputLabel htmlFor="sdr-select">{t('sdr.sdr_label')}</InputLabel>
+                            <InputLabel id={`${controlId}-sdr-label`} htmlFor="sdr-select">{t('sdr.sdr_label')}</InputLabel>
                             <Select
                                 id="sdr-select"
+                                labelId={`${controlId}-sdr-label`}
+                                aria-describedby={sdrRequiredError ? `${controlId}-sdr-help` : undefined}
                                 value={sdrs.length > 0 ? String(selectedSDRId ?? "none") : "none"}
                                 onChange={onSDRChange}
                                 size="small"
@@ -460,21 +470,25 @@ const SdrAccordion = ({
                                 {sdrMenuItems}
                             </Select>
                             {sdrRequiredError && (
-                                <FormHelperText>
+                                <FormHelperText id={`${controlId}-sdr-help`}>
                                     {t('sdr.sdr_required', { defaultValue: 'Select an SDR before starting stream' })}
                                 </FormHelperText>
                             )}
-                        </FormControl>
+                        </SdrFormControl>
                         {isSigmfPlaybackSelected && (
-                            <FormControl
+                            <SdrFormControl
+                                hint={t('sdr.playback_recording_hint')}
                                 disabled={gettingSDRParameters || isStreaming}
                                 sx={{minWidth: 200, marginTop: 0, marginBottom: 1}}
                                 fullWidth
                                 variant="outlined"
                                 size="small"
                             >
-                                <InputLabel>{t('sdr.playback_recording', { defaultValue: 'IQ Recording' })}</InputLabel>
+                                <InputLabel id={`${controlId}-recording-label`}>{t('sdr.playback_recording', { defaultValue: 'IQ Recording' })}</InputLabel>
                                 <Select
+                                    labelId={`${controlId}-recording-label`}
+                                    aria-describedby={!playbackRecordingsLoading && playbackRecordingOptions.length === 0
+                                        ? `${controlId}-recording-help` : undefined}
                                     size="small"
                                     value={selectedPlaybackRecordingName || 'none'}
                                     label={t('sdr.playback_recording', { defaultValue: 'IQ Recording' })}
@@ -512,20 +526,23 @@ const SdrAccordion = ({
                                     ))}
                                 </Select>
                                 {!playbackRecordingsLoading && playbackRecordingOptions.length === 0 && (
-                                    <FormHelperText>
+                                    <FormHelperText id={`${controlId}-recording-help`}>
                                         {t('sdr.no_playback_recordings', { defaultValue: 'No IQ recordings found' })}
                                     </FormHelperText>
                                 )}
-                            </FormControl>
+                            </SdrFormControl>
                         )}
 
-                        <FormControl disabled={gettingSDRParameters || (selectedSDRId === 'sigmf-playback' && isStreaming)}
+                        <SdrFormControl hint={t(selectedSdrRecord?.type === 'airspyhf' ? 'sdr.attenuation_hint' : 'sdr.gain_hint')}
+                                     disabled={gettingSDRParameters || (selectedSDRId === 'sigmf-playback' && isStreaming)}
                                      error={gainRequiredError}
                                      sx={{minWidth: 200, marginTop: 0, marginBottom: 1}}
                                      fullWidth={true}
                                      variant="outlined" size="small">
-                            <InputLabel>{t('sdr.gain_db')}</InputLabel>
+                            <InputLabel id={`${controlId}-gain-label`}>{t('sdr.gain_db')}</InputLabel>
                             <Select
+                                labelId={`${controlId}-gain-label`}
+                                aria-describedby={gainRequiredError ? `${controlId}-gain-help` : undefined}
                                 disabled={gettingSDRParameters || (selectedSDRId === 'sigmf-playback' && isStreaming)}
                                 size={'small'}
                                 label={t('sdr.gain_db')}
@@ -541,11 +558,11 @@ const SdrAccordion = ({
                                 ))}
                             </Select>
                             {gainRequiredError && (
-                                <FormHelperText>
+                                <FormHelperText id={`${controlId}-gain-help`}>
                                     {t('sdr.gain_required', { defaultValue: 'Select gain before starting stream' })}
                                 </FormHelperText>
                             )}
-                        </FormControl>
+                        </SdrFormControl>
                         {filteredGainRangeEntries.length > 0 && (
                             <Box sx={{mb: 1, display: 'grid', gap: 1}}>
                                 {filteredGainRangeEntries.map(([name, range]) => {
@@ -564,9 +581,18 @@ const SdrAccordion = ({
                                         : isIfReduction
                                             ? t('settings_sdr.if_gain_reduction', {defaultValue: 'IF gain reduction (IFGR)'})
                                             : `Gain ${name}`;
-                                    const labelId = `sdr-gain-${name}-label`;
+                                    const labelId = `${controlId}-gain-${name}-label`;
+                                    // Reduction and attenuation controls work in the opposite direction to gain.
+                                    const helperText = isIfReduction
+                                        ? t('settings_sdr.gain_reduction_hint', {defaultValue: 'Lower values increase gain.'})
+                                        : isLnaState
+                                            ? t('sdr.rf_gain_reduction_hint')
+                                            : name.toLowerCase() === 'hf_att'
+                                                ? t('sdr.attenuation_hint')
+                                                : t('sdr.gain_element_hint', {name});
                                     return (
-                                        <FormControl
+                                        <SdrFormControl
+                                            hint={helperText}
                                             key={`gain-${name}`}
                                             disabled={gettingSDRParameters}
                                             fullWidth
@@ -599,23 +625,21 @@ const SdrAccordion = ({
                                                     </MenuItem>
                                                 ))}
                                             </Select>
-                                            {isIfReduction && (
-                                                <FormHelperText>
-                                                    {t('settings_sdr.gain_reduction_hint', {defaultValue: 'Lower values increase gain.'})}
-                                                </FormHelperText>
-                                            )}
-                                        </FormControl>
+                                        </SdrFormControl>
                                     );
                                 })}
                             </Box>
                         )}
-                        <FormControl disabled={gettingSDRParameters || isRecording || (selectedSDRId === 'sigmf-playback' && isStreaming)}
+                        <SdrFormControl hint={t('sdr.sample_rate_hint')}
+                                     disabled={gettingSDRParameters || isRecording || (selectedSDRId === 'sigmf-playback' && isStreaming)}
                                      error={sampleRateRequiredError}
                                      sx={{minWidth: 200, marginTop: 0, marginBottom: 1}}
                                      fullWidth={true}
                                      variant="outlined" size="small">
-                            <InputLabel>{t('sdr.sample_rate')}</InputLabel>
+                            <InputLabel id={`${controlId}-sample-rate-label`}>{t('sdr.sample_rate')}</InputLabel>
                             <Select
+                                labelId={`${controlId}-sample-rate-label`}
+                                aria-describedby={sampleRateRequiredError ? `${controlId}-sample-rate-help` : undefined}
                                 disabled={gettingSDRParameters || isRecording || (selectedSDRId === 'sigmf-playback' && isStreaming)}
                                 size="small"
                                 value={sampleRateValues.includes(localSampleRate) ? localSampleRate : "none"}
@@ -640,18 +664,21 @@ const SdrAccordion = ({
                                 })}
                             </Select>
                             {sampleRateRequiredError && (
-                                <FormHelperText>
+                                <FormHelperText id={`${controlId}-sample-rate-help`}>
                                     {t('sdr.sample_rate_required', { defaultValue: 'Select sample rate before starting stream' })}
                                 </FormHelperText>
                             )}
-                        </FormControl>
-                        <FormControl disabled={gettingSDRParameters || isRecording || (selectedSDRId === 'sigmf-playback' && isStreaming)}
+                        </SdrFormControl>
+                        <SdrFormControl hint={t('sdr.antenna_hint')}
+                                     disabled={gettingSDRParameters || isRecording || (selectedSDRId === 'sigmf-playback' && isStreaming)}
                                      error={antennaRequiredError}
                                      sx={{minWidth: 200, marginTop: 0, marginBottom: 1}}
                                      fullWidth={true}
                                      variant="outlined" size="small">
-                            <InputLabel>{t('sdr.antenna')}</InputLabel>
+                            <InputLabel id={`${controlId}-antenna-label`}>{t('sdr.antenna')}</InputLabel>
                             <Select
+                                labelId={`${controlId}-antenna-label`}
+                                aria-describedby={antennaRequiredError ? `${controlId}-antenna-help` : undefined}
                                 disabled={gettingSDRParameters || isRecording || (selectedSDRId === 'sigmf-playback' && isStreaming)}
                                 size="small"
                                 value={antennasList.rx.includes(selectedAntenna) ? selectedAntenna : "none"}
@@ -678,13 +705,14 @@ const SdrAccordion = ({
                                 ))}
                             </Select>
                             {antennaRequiredError && (
-                                <FormHelperText>
+                                <FormHelperText id={`${controlId}-antenna-help`}>
                                     {t('sdr.antenna_required', { defaultValue: 'Select antenna before starting stream' })}
                                 </FormHelperText>
                             )}
-                        </FormControl>
+                        </SdrFormControl>
                         {clockSourceOptions.length > 0 && (
-                            <FormControl
+                            <SdrFormControl
+                                hint={t('sdr.clock_source_hint')}
                                 disabled={
                                     gettingSDRParameters ||
                                     isRecording ||
@@ -695,8 +723,9 @@ const SdrAccordion = ({
                                 variant="outlined"
                                 size="small"
                             >
-                                <InputLabel>{t('settings_sdr.clock_source', { defaultValue: 'Clock Source' })}</InputLabel>
+                                <InputLabel id={`${controlId}-clock-label`}>{t('settings_sdr.clock_source', { defaultValue: 'Clock Source' })}</InputLabel>
                                 <Select
+                                    labelId={`${controlId}-clock-label`}
                                     size="small"
                                     label={t('settings_sdr.clock_source', { defaultValue: 'Clock Source' })}
                                     value={
@@ -715,10 +744,11 @@ const SdrAccordion = ({
                                         </MenuItem>
                                     ))}
                                 </Select>
-                            </FormControl>
+                            </SdrFormControl>
                         )}
                         {timeSourceOptions.length > 0 && (
-                            <FormControl
+                            <SdrFormControl
+                                hint={t('sdr.time_source_hint')}
                                 disabled={
                                     gettingSDRParameters ||
                                     isRecording ||
@@ -729,8 +759,9 @@ const SdrAccordion = ({
                                 variant="outlined"
                                 size="small"
                             >
-                                <InputLabel>{t('settings_sdr.time_source', { defaultValue: 'Time Source' })}</InputLabel>
+                                <InputLabel id={`${controlId}-time-label`}>{t('settings_sdr.time_source', { defaultValue: 'Time Source' })}</InputLabel>
                                 <Select
+                                    labelId={`${controlId}-time-label`}
                                     size="small"
                                     label={t('settings_sdr.time_source', { defaultValue: 'Time Source' })}
                                     value={
@@ -749,7 +780,7 @@ const SdrAccordion = ({
                                         </MenuItem>
                                     ))}
                                 </Select>
-                            </FormControl>
+                            </SdrFormControl>
                         )}
                     </Box>
 

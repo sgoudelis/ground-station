@@ -20,8 +20,17 @@ describe('mapOutputsToRows', () => {
 
         expect(rows).toHaveLength(50);
         expect(rows.map((row) => row.timestamp / 1000)).toEqual(
-            Array.from({ length: 50 }, (_, index) => index + 51),
+            Array.from({ length: 50 }, (_, index) => 100 - index),
         );
+    });
+
+    it('keeps the full retained history and newest arrivals first when timestamps match', () => {
+        const newestFirstOutputs = Array.from({length: 100}, (_, index) => ({
+            ...packet(100 - index),
+            timestamp: 100,
+        }));
+        expect(mapOutputsToRows(newestFirstOutputs).map((row) => row.id))
+            .toEqual(newestFirstOutputs.map((output) => output.id));
     });
 
     it('shows the available LoRa PHY settings beside SF and bandwidth', () => {

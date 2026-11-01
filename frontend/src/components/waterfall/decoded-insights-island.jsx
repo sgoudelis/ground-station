@@ -34,6 +34,7 @@ import {
 } from '../common/common.jsx';
 import DecodedPacketsDrawer from './decoded-packets-drawer.jsx';
 import AircraftPanel from '../decoders/aircraft-panel.jsx';
+import useAircraft from '../decoders/use-aircraft.js';
 import GnssFixQualityTimeline from './gnss-fix-quality-timeline.jsx';
 import { DevRenderProfiler } from './render-profiler.jsx';
 import { useUserTimeSettings } from '../../hooks/useUserTimeSettings.jsx';
@@ -103,6 +104,7 @@ const DecodedInsightsIsland = React.memo(function DecodedInsightsIsland() {
     const { t: satellitesT } = useTranslation('satellites');
     const dispatch = useDispatch();
     const { socket } = useSocket();
+    const { aircraft } = useAircraft(socket);
     const theme = useTheme();
     const { timezone, locale } = useUserTimeSettings();
     const [selectedSatelliteId, setSelectedSatelliteId] = useState(null);
@@ -215,50 +217,6 @@ const DecodedInsightsIsland = React.memo(function DecodedInsightsIsland() {
                 && String(item?.decoder_type || '').toLowerCase() !== 'gnss'
         ).length;
     }, [outputs]);
-
-    const packetStatusStats = useMemo(() => {
-        const packetOutputs = outputs.filter(
-            (item) => item?.type === 'decoder-output'
-                && String(item?.decoder_type || '').toLowerCase() !== 'gnss'
-        );
-
-        const decoderTypes = new Set();
-        let latestPacketMs = null;
-        let telemetryCount = 0;
-        let fileOutputCount = 0;
-        let recentPacketCount = 0;
-        const recentWindowStartMs = relativeNowMs - 60_000;
-
-        for (const item of packetOutputs) {
-            const decoderType = String(item?.decoder_type || '').trim().toUpperCase();
-            if (decoderType) {
-                decoderTypes.add(decoderType);
-            }
-
-            if (['decoded', 'partial'].includes(item?.output?.telemetry?.payload_status)) {
-                telemetryCount += 1;
-            }
-            if (item?.output?.filename) {
-                fileOutputCount += 1;
-            }
-
-            const tsMs = Number(item?.timestamp) * 1000;
-            if (Number.isFinite(tsMs)) {
-                latestPacketMs = latestPacketMs === null ? tsMs : Math.max(latestPacketMs, tsMs);
-                if (tsMs >= recentWindowStartMs) {
-                    recentPacketCount += 1;
-                }
-            }
-        }
-
-        return {
-            decoderTypeCount: decoderTypes.size,
-            telemetryCount,
-            fileOutputCount,
-            recentPacketCount,
-            latestPacketMs,
-        };
-    }, [outputs, relativeNowMs]);
 
     const receiverFix = useMemo(() => {
         const fix = gnssReceiverSnapshot || {};
@@ -636,6 +594,7 @@ const DecodedInsightsIsland = React.memo(function DecodedInsightsIsland() {
                         py: 0.25,
                     }}
                 />
+                <AntTab value="adsb" label={`ADSB (${aircraft.length})`} sx={{minHeight: 30, height: 30, fontSize: '0.68rem !important'}} />
                 <AntTab
                     value="gnss"
                     label={`GNSS (${satelliteRows.length})`}
@@ -650,7 +609,6 @@ const DecodedInsightsIsland = React.memo(function DecodedInsightsIsland() {
                         py: 0.25,
                     }}
                 />
-                <AntTab value="adsb" label="ADS-B" sx={{minHeight: 30, height: 30, fontSize: '0.68rem !important'}} />
             </AntTabs>
 
             <Box sx={{ flex: 1, minHeight: 0, backgroundColor: theme.palette.background.paper }}>
@@ -662,61 +620,6 @@ const DecodedInsightsIsland = React.memo(function DecodedInsightsIsland() {
                                 <DecodedPacketsDrawer embedded />
                             </DevRenderProfiler>
                         </Box>
-                        <WaterfallStatusBarPaper
-                            elevation={0}
-                            sx={{
-                                height: 30,
-                                minHeight: 30,
-                                borderTop: `1px solid ${theme.palette.border.main}`,
-                                borderBottom: 'none',
-                                px: 1,
-                                overflow: 'hidden',
-                            }}
-                        >
-                            <Box
-                                sx={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 0.5,
-                                    fontSize: '0.72rem',
-                                    fontFamily: 'monospace',
-                                    color: 'text.secondary',
-                                    width: '100%',
-                                    minWidth: 0,
-                                    overflowX: 'hidden',
-                                    overflowY: 'hidden',
-                                    whiteSpace: 'nowrap',
-                                }}
-                            >
-                                <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.primary', fontSize: '0.68rem' }}>
-                                    {t('decoded_insights_island.pkts', { defaultValue: 'PKTS' })}
-                                </Typography>
-                                <Box sx={{ opacity: 0.55 }}>•</Box>
-                                <Box sx={{ display: 'flex', gap: 0.45, flex: '1 1 auto', minWidth: 0, overflow: 'hidden' }}>
-                                    <Box component="span">dec: <Box component="span" sx={{ fontWeight: 700 }}>{packetOutputCount}</Box></Box>
-                                    <Box component="span" sx={{ opacity: 0.55 }}>•</Box>
-                                    <Box component="span">types: <Box component="span" sx={{ fontWeight: 700 }}>{packetStatusStats.decoderTypeCount}</Box></Box>
-                                    <Box component="span" sx={{ opacity: 0.55 }}>•</Box>
-                                    <Box component="span">tlm: <Box component="span" sx={{ fontWeight: 700 }}>{packetStatusStats.telemetryCount}</Box></Box>
-                                    <Box component="span" sx={{ opacity: 0.55 }}>•</Box>
-                                    <Box component="span">files: <Box component="span" sx={{ fontWeight: 700 }}>{packetStatusStats.fileOutputCount}</Box></Box>
-                                    <Box component="span" sx={{ opacity: 0.55 }}>•</Box>
-                                    <Box component="span">1m: <Box component="span" sx={{ fontWeight: 700 }}>{packetStatusStats.recentPacketCount}</Box></Box>
-                                </Box>
-                                <Typography
-                                    variant="caption"
-                                    sx={{
-                                        color: 'text.secondary',
-                                        whiteSpace: 'nowrap',
-                                        marginLeft: 'auto',
-                                        flex: '0 0 auto',
-                                        fontSize: '0.65rem',
-                                    }}
-                                >
-                                    {`last: ${packetStatusStats.latestPacketMs ? formatTimestamp(packetStatusStats.latestPacketMs) : '-'}`}
-                                </Typography>
-                            </Box>
-                        </WaterfallStatusBarPaper>
                     </Box>
                 )}
 
