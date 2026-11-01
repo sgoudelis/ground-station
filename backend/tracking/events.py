@@ -33,7 +33,12 @@ def _get_worker_pool():
     global _worker_pool
     if _worker_pool is None:
         logger.info("Creating persistent worker pool for satellite pass calculations")
-        _worker_pool = multiprocessing.Pool(processes=1, initializer=_named_worker_init)
+        # This pool starts after HTTP clients connect. Forking would keep their
+        # sockets open in the worker after Uvicorn closes them, leaving nginx
+        # reusing connections that no web-server process can read.
+        _worker_pool = multiprocessing.get_context("spawn").Pool(
+            processes=1, initializer=_named_worker_init
+        )
     return _worker_pool
 
 
