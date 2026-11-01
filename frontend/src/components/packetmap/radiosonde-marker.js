@@ -1,11 +1,26 @@
 /** Copyright (c) 2026 Efstratios Goudelis — GPL-3.0-or-later */
 
-import {divIcon} from 'leaflet';
-import balloon from './icons/balloon.svg?raw';
-import parachute from './icons/parachute.svg?raw';
+import {DivIcon} from 'leaflet';
+import balloon from './icons/balloon.png';
+import parachute from './icons/parachute.png';
 import './radiosonde-marker.css';
 
 const minimumClimbRate = 0.3;
+const markerSize = 80;
+const minimumLift = 4;
+const liftRange = 18;
+
+class RadiosondeIcon extends DivIcon {
+    // Use Leaflet's shadow lifecycle to keep the ground shadow in its own pane
+    // while moving, zooming, replacing icons, and removing markers.
+    createShadow(oldShadow) {
+        const shadow = oldShadow?.tagName === 'DIV' ? oldShadow : document.createElement('div');
+        shadow.innerHTML = this.options.shadowHtml;
+        shadow.setAttribute('aria-hidden', 'true');
+        this._setIconStyles(shadow, 'shadow');
+        return shadow;
+    }
+}
 
 export function getFlightPhase(points, verticalSpeed) {
     if (Number.isFinite(verticalSpeed) && Math.abs(verticalSpeed) > minimumClimbRate) {
@@ -33,24 +48,29 @@ export function getFlightPhase(points, verticalSpeed) {
 
 export function markerLift(altitude) {
     const fraction = Number.isFinite(altitude) ? Math.min(1, Math.max(0, altitude) / 35000) : 0;
-    return 8 + 36 * Math.sqrt(fraction);
+    return minimumLift + liftRange * Math.sqrt(fraction);
 }
 
 export function createRadiosondeIcon({phase, altitude, color}) {
     const lift = markerLift(altitude);
-    const height = (lift - 8) / 36;
-    const svg = phase === 'descending' ? parachute : balloon;
-    return divIcon({
+    // Keep shadow changes normalized when adjusting the lift's pixel range.
+    const height = (lift - minimumLift) / liftRange;
+    const image = phase === 'descending' ? parachute : balloon;
+    return new RadiosondeIcon({
         className: 'packet-radiosonde-marker',
         // The anchor is the shadow's center, so paths always end underneath
         // the floating symbol without changing the received map coordinates.
-        iconSize: [40, 40],
-        iconAnchor: [20, 20],
-        popupAnchor: [0, -lift - 40],
-        tooltipAnchor: [0, -lift - 20],
-        html: `<div class="packet-radiosonde-content" data-flight-phase="${phase}" style="color:${color};--sonde-lift:${lift}px;--sonde-shadow-opacity:${0.3 + height * 0.22};--sonde-shadow-blur:${1.6 + height * 0.8}px;--sonde-shadow-scale:${1 - height * 0.08}">
-            <span class="packet-radiosonde-shadow" aria-hidden="true"></span>
-            <span class="packet-radiosonde-symbol" aria-hidden="true">${svg}</span>
+        iconSize: [markerSize, markerSize],
+        iconAnchor: [markerSize / 2, markerSize / 2],
+        shadowSize: [markerSize, markerSize],
+        shadowAnchor: [markerSize / 2, markerSize / 2],
+        popupAnchor: [0, -lift - markerSize],
+        tooltipAnchor: [0, -lift - markerSize / 2],
+        html: `<div class="packet-radiosonde-content" data-flight-phase="${phase}" style="color:${color};--sonde-lift:${lift}px;">
+            <span class="packet-radiosonde-symbol" aria-hidden="true"><img src="${image}" width="${markerSize}" height="${markerSize}" alt="" draggable="false" /></span>
+        </div>`,
+        shadowHtml: `<div class="packet-radiosonde-content" style="--sonde-shadow-opacity:${0.55 + height * 0.2};--sonde-shadow-blur:${0.4 + height * 0.2}px;--sonde-shadow-scale:${1 - height * 0.08}">
+            <span class="packet-radiosonde-shadow"></span>
         </div>`,
     });
 }

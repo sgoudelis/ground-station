@@ -39,10 +39,14 @@ vi.mock('react-leaflet', () => ({
             data-zoom-control={String(zoomControl)} data-keyboard={String(keyboard)}>{children}</div>;
     },
     CircleMarker: ({center, children, eventHandlers}) => <div data-testid="position" onClick={eventHandlers?.click} data-center={JSON.stringify(center)}>{children}</div>,
-    Marker: ({position, children, icon, eventHandlers}) => <div onClick={eventHandlers?.click} data-testid={icon?.options?.className === 'packet-radiosonde-marker' ? 'sonde-marker' : 'home'}
+    Circle: ({center, radius, interactive, pathOptions}) => <div data-testid="visibility-circle"
+        data-center={JSON.stringify(center)} data-radius={radius} data-interactive={String(interactive)}
+        data-color={pathOptions.color} data-dash={pathOptions.dashArray} data-fill={String(pathOptions.fill)} />,
+    Pane: ({children, style}) => <div data-testid="visibility-pane" style={style}>{children}</div>,
+    Marker: ({position, children, icon, eventHandlers, title}) => <div title={title} onClick={eventHandlers?.click} data-testid={icon?.options?.className === 'packet-radiosonde-marker' ? 'sonde-marker' : 'home'}
         data-center={JSON.stringify(position)} data-icon-html={icon?.options?.html}>{children}</div>,
-    Polyline: ({positions}) => <div data-testid="track" data-positions={JSON.stringify(positions)} />,
-    Popup: ({children}) => <div>{children}</div>, Tooltip: ({children}) => <span>{children}</span>,
+    Polyline: ({positions, pathOptions}) => <div data-testid="track" data-positions={JSON.stringify(positions)} data-opacity={pathOptions?.opacity} />,
+    Popup: ({children}) => <div>{children}</div>, Tooltip: ({children}) => <span data-testid="map-tooltip">{children}</span>,
     TileLayer: ({url, zIndex}) => <div data-testid="tile-layer" data-url={url} data-z-index={zIndex} />,
 }));
 vi.mock('../../common/tile-layers.jsx', () => ({getTileLayerById: () => ({url: 'tiles', attribution: 'OSM'})}));
@@ -150,6 +154,33 @@ describe('Packet map viewport', () => {
         render(<MapViewport ready bounds={[[40, 23]]} fitRequest={0} />);
         expect(map.fitBounds).toHaveBeenCalledOnce();
     });
+
+    it('uses the current visibility circle on explicit fits and resize without following playback', () => {
+        let resize;
+        vi.spyOn(globalThis, 'ResizeObserver').mockImplementation(function (callback) {
+            resize = callback;
+            this.observe = vi.fn();
+            this.disconnect = vi.fn();
+        });
+        const bounds = [[40, 23]];
+        const initialCircle = [[39, 22], [41, 24]];
+        const {rerender} = render(<MapViewport ready bounds={bounds} visibilityBounds={initialCircle} fitRequest={0} />);
+        expect(map.fitBounds).toHaveBeenLastCalledWith([...bounds, ...initialCircle], expect.objectContaining({
+            paddingTopLeft: [42, 42], paddingBottomRight: [42, 42],
+        }));
+        map.fitBounds.mockClear();
+        const updatedCircle = [[38, 21], [42, 25]];
+        rerender(<MapViewport ready bounds={bounds} visibilityBounds={updatedCircle} fitRequest={0} />);
+        expect(map.fitBounds).not.toHaveBeenCalled();
+        rerender(<MapViewport ready bounds={bounds} visibilityBounds={updatedCircle} fitRequest={1} />);
+        expect(map.fitBounds).toHaveBeenLastCalledWith([...bounds, ...updatedCircle], expect.any(Object));
+        act(() => resize());
+        expect(map.fitBounds).toHaveBeenLastCalledWith([...bounds, ...updatedCircle], expect.any(Object));
+        act(() => listeners.get('movestart')());
+        map.fitBounds.mockClear();
+        act(() => resize());
+        expect(map.fitBounds).not.toHaveBeenCalled();
+    });
 });
 
 it('renders smooth transmitter paths with only start and end markers and packet details', () => {
@@ -165,6 +196,8 @@ it('renders smooth transmitter paths with only start and end markers and packet 
         <PacketMap positions={points} loading={false} fitRequest={0} />
     </ThemeProvider></Provider>;
     const {unmount} = render(element);
+    expect(screen.getByTestId('map').closest('.packet-map')).not.toBeNull();
+    expect(screen.getByTestId('track')).toHaveAttribute('data-opacity', '1');
     expect(screen.getByTestId('home')).toHaveAttribute('data-center', '[40.6,22.9]');
     expect(screen.getAllByTestId('position')).toHaveLength(2);
     expect(screen.getAllByTestId('position').map((marker) => JSON.parse(marker.dataset.center)))
@@ -308,12 +341,17 @@ it('scrubs sonde symbols and historical flight phases while keeping the full pat
     ];
     const transmitters = [{id: 'radiosonde:S', details: {telemetry: {vel_v: -10}}}];
     const element = (time) => <Provider store={store}><ThemeProvider theme={createTheme()}>
-        <PacketMap positions={points} transmitters={transmitters} playbackTime={Date.parse(time)} loading={false} fitRequest={0} />
+        <PacketMap positions={points} transmitters={transmitters} playbackTime={Date.parse(time)} loading={false} fitRequest={0}
+            selectedTransmitterId="radiosonde:S" />
     </ThemeProvider></Provider>;
     const {rerender} = render(element('2026-11-01T00:00:30Z'));
     const track = screen.getByTestId('track').dataset.positions;
     const ascendingPosition = screen.getByTestId('sonde-marker').dataset.center;
+    const initialRadius = Number(screen.getAllByTestId('visibility-circle')[0].dataset.radius);
+    expect(screen.getAllByTestId('visibility-circle').map((circle) => circle.dataset.center)).toEqual([ascendingPosition, ascendingPosition]);
     expect(screen.getByTestId('sonde-marker').dataset.iconHtml).toContain('data-flight-phase="ascending"');
+    expect(screen.getByTestId('sonde-marker')).not.toHaveAttribute('title');
+    expect(within(screen.getByTestId('sonde-marker')).queryByTestId('map-tooltip')).not.toBeInTheDocument();
     expect(screen.getByTestId('sonde-marker')).toHaveTextContent('Interpolated position');
     expect(screen.getAllByTestId('position')).toHaveLength(2);
     map.fitBounds.mockClear();
@@ -324,11 +362,18 @@ it('scrubs sonde symbols and historical flight phases while keeping the full pat
     expect(screen.getByTestId('track')).toHaveAttribute('data-positions', track);
     expect(map.fitBounds).not.toHaveBeenCalled();
     expect(map.setView).not.toHaveBeenCalled();
+    rerender(element('2026-11-01T00:01:45Z'));
+    expect(Number(screen.getAllByTestId('visibility-circle')[0].dataset.radius)).toBeLessThan(initialRadius);
+    expect(screen.getAllByTestId('visibility-circle').map((circle) => circle.dataset.center))
+        .toEqual(Array(2).fill(screen.getByTestId('sonde-marker').dataset.center));
+    expect(map.fitBounds).not.toHaveBeenCalled();
     rerender(element('2026-10-31T23:59:59Z'));
     expect(screen.queryByTestId('sonde-marker')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('visibility-circle')).not.toBeInTheDocument();
     expect(screen.getByTestId('track')).toHaveAttribute('data-positions', track);
     rerender(element('2026-11-01T00:03:00Z'));
     expect(screen.getByTestId('sonde-marker')).toHaveAttribute('data-center', '[40,25]');
+    expect(screen.queryByTestId('visibility-circle')).not.toBeInTheDocument();
 });
 
 it('remembers hidden and enabled transmitter columns when fields disappear and the table remounts', () => {
@@ -382,7 +427,9 @@ it('selects table rows and fits their whole paths, then restores all bounds with
     render(<Provider store={store}><ThemeProvider theme={createTheme()}><Harness /></ThemeProvider></Provider>);
     expect(map.fitBounds).not.toHaveBeenCalled();
     const aprsRow = screen.getByRole('row', {name: /A APRS/});
+    expect(screen.queryByTestId('visibility-circle')).not.toBeInTheDocument();
     fireEvent.click(within(aprsRow).getByRole('button', {name: 'A'}));
+    expect(screen.queryByTestId('visibility-circle')).not.toBeInTheDocument();
     expect(aprsRow).toHaveAttribute('aria-selected', 'true');
     expect(map.fitBounds).toHaveBeenLastCalledWith([[40, 23], [41, 24]], expect.any(Object));
     expect(screen.getByTestId('track')).toHaveAttribute('data-positions', '[[40,23],[41,24]]');
@@ -393,11 +440,32 @@ it('selects table rows and fits their whole paths, then restores all bounds with
     fireEvent.click(within(sondeRow).getByText('SONDE'));
     expect(sondeRow).toHaveAttribute('aria-selected', 'true');
     expect(aprsRow).toHaveAttribute('aria-selected', 'false');
-    expect(map.fitBounds).toHaveBeenLastCalledWith([[42, 25]], expect.any(Object));
+    const [sondeBounds, sondeFitOptions] = map.fitBounds.mock.lastCall;
+    expect(sondeBounds[0]).toEqual([42, 25]);
+    expect(sondeBounds).toHaveLength(3);
+    // At 10 km altitude the green circle is about 104 km, or 0.94° of latitude.
+    expect(sondeBounds[1][0]).toBeCloseTo(41.0615, 3);
+    expect(sondeBounds[2][0]).toBeCloseTo(42.9385, 3);
+    expect(sondeFitOptions.paddingTopLeft).toEqual([42, 104]);
+    expect(sondeFitOptions.paddingBottomRight).toEqual([42, 42]);
+    const circles = screen.getAllByTestId('visibility-circle');
+    expect(circles).toHaveLength(2);
+    expect(circles.map((circle) => circle.dataset.color)).toEqual(['#2196f3', '#4caf50']);
+    for (const circle of circles) {
+        expect(circle).toHaveAttribute('data-center', '[42,25]');
+        expect(circle).toHaveAttribute('data-dash', '8 6');
+        expect(circle).toHaveAttribute('data-fill', 'false');
+        expect(circle).toHaveAttribute('data-interactive', 'false');
+    }
+    expect(Number(circles[0].dataset.radius)).toBeGreaterThan(Number(circles[1].dataset.radius));
+    expect(screen.getByRole('list', {name: 'Radio visibility'})).toHaveTextContent('Radio horizon (0°) · 357 km');
+    expect(screen.getByRole('list', {name: 'Radio visibility'})).toHaveTextContent('5° elevation · 104 km');
 
     fireEvent.click(screen.getByRole('button', {name: 'Fit all'}));
+    expect(screen.queryByTestId('visibility-circle')).not.toBeInTheDocument();
     expect(sondeRow).toHaveAttribute('aria-selected', 'false');
     expect(map.fitBounds).toHaveBeenLastCalledWith([[40, 23], [41, 24], [42, 25], [0, 0]], expect.any(Object));
     fireEvent.click(screen.getByTestId('sonde-marker'));
     expect(sondeRow).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getAllByTestId('visibility-circle')).toHaveLength(2);
 });

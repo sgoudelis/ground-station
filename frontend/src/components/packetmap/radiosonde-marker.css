@@ -1,3 +1,9 @@
+.packet-map .leaflet-shadow-pane {
+    /* Ground shadows sit below paths (400); floating icons remain above (600). */
+    z-index: 350;
+    pointer-events: none;
+}
+
 .packet-radiosonde-marker {
     background: transparent;
     border: 0;
@@ -14,8 +20,8 @@
     position: absolute;
     left: 50%;
     top: 50%;
-    width: 28px;
-    height: 8px;
+    width: 32px;
+    height: 10px;
     border-radius: 50%;
     background: #182327;
     opacity: var(--sonde-shadow-opacity);
@@ -28,13 +34,14 @@
     position: absolute;
     left: 0;
     bottom: calc(50% + var(--sonde-lift));
-    width: 40px;
-    height: 40px;
-    filter: drop-shadow(0 1px 1px rgb(255 255 255 / 70%)) drop-shadow(0 0 2px rgb(0 0 0 / 45%));
+    width: 100%;
+    height: 100%;
+    filter: drop-shadow(0 1px 1px rgb(0 0 0 / 30%)) drop-shadow(0 0 2px rgb(0 0 0 / 15%));
 }
 
-.packet-radiosonde-symbol svg {
+.packet-radiosonde-symbol img {
     display: block;
     width: 100%;
     height: 100%;
+    object-fit: contain;
 }

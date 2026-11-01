@@ -3,7 +3,7 @@
 import React, {useEffect, useMemo, useRef, useState} from 'react';
 import {Alert, Box, Paper, Typography} from '@mui/material';
 import {alpha} from '@mui/material/styles';
-import {CircleMarker, MapContainer, Marker, Polyline, Popup, TileLayer, Tooltip, useMap} from 'react-leaflet';
+import {Circle, CircleMarker, MapContainer, Marker, Pane, Polyline, Popup, TileLayer, Tooltip, useMap} from 'react-leaflet';
 import {useSelector} from 'react-redux';
 import {useTranslation} from 'react-i18next';
 import 'leaflet/dist/leaflet.css';
@@ -22,6 +22,7 @@ import PacketMapToolbar from './map-toolbar.jsx';
 import PacketMapSettingsDialog from './map-settings-dialog.jsx';
 import {createRadiosondeIcon} from './radiosonde-marker.js';
 import {buildPlaybackTrack, trackPositionAt} from './playback.js';
+import {getCircleBounds, getHorizonRadii} from './horizon.js';
 
 export const POSITION_COLORS = Object.fromEntries(Object.entries(TRANSMITTER_TYPES).map(([kind, value]) => [kind, value.color]));
 
@@ -32,14 +33,21 @@ const hybridReferenceLayers = ['World_Transportation', 'World_Boundaries_and_Pla
     zIndex: index + 1,
 }));
 
-export function MapViewport({bounds, ready, fitRequest, paddingTop = 42}) {
+export function MapViewport({bounds, visibilityBounds = [], ready, fitRequest, paddingTop = 42}) {
     const map = useMap();
     const [savedView] = useState(readMapView);
     const hasUserView = useRef(Boolean(savedView));
     const programmatic = useRef(false);
     const lastFitRequest = useRef(fitRequest);
+    const fitBounds = useRef(bounds);
     const fitOptions = useMemo(() => ({paddingTopLeft: [42, paddingTop], paddingBottomRight: [42, 42],
         maxZoom: 13, animate: false}), [paddingTop]);
+
+    useEffect(() => {
+        // Use the current circle on selection, explicit fits, and resize without
+        // moving the camera just because playback changes its radius or position.
+        fitBounds.current = visibilityBounds.length ? [...bounds, ...visibilityBounds] : bounds;
+    }, [bounds, visibilityBounds]);
 
     useEffect(() => {
         // Guard map-generated events during restoration and automatic fitting.
@@ -73,7 +81,7 @@ export function MapViewport({bounds, ready, fitRequest, paddingTop = 42}) {
             programmatic.current = true;
             map.invalidateSize({pan: false});
             if (ready && !hasUserView.current && bounds.length) {
-                map.fitBounds(bounds, fitOptions);
+                map.fitBounds(fitBounds.current, fitOptions);
             } else {
                 // Leaflet otherwise shifts the center when the grid window
                 // shrinks. Preserve the user's view without saving resize events.
@@ -97,7 +105,7 @@ export function MapViewport({bounds, ready, fitRequest, paddingTop = 42}) {
         if (!ready || hasUserView.current || !bounds.length) return;
         programmatic.current = true;
         map.invalidateSize({pan: false});
-        map.fitBounds(bounds, fitOptions);
+        map.fitBounds(fitBounds.current, fitOptions);
         programmatic.current = false;
     }, [map, bounds, ready, fitRequest, fitOptions]);
     return null;
@@ -158,6 +166,18 @@ export default function PacketMap({positions, transmitters, hasPositions = posit
             phase: current.phase, altitude: point.altitude, color: typeColor(point.kind),
         }) : null} : null];
     })), [tracks, playbackTime, transmitterDetails]);
+    // Follow the selected sonde's displayed position, including historical
+    // interpolation. Unknown altitude must not produce a misleading footprint.
+    const selectedPoint = playback.get(selectedTransmitterId)?.point;
+    const horizonRadii = selectedPoint?.kind === 'radiosonde' ? getHorizonRadii(selectedPoint.altitude) : null;
+    const visibilityBounds = horizonRadii
+        ? getCircleBounds([selectedPoint.latitude, selectedPoint.longitude], horizonRadii.fiveDegrees) : [];
+    const visibilityCircles = horizonRadii ? [
+        {id: 'horizon', radius: horizonRadii.horizon, color: '#2196f3',
+            label: t('packet_map.radio_horizon', {defaultValue: 'Radio horizon (0°)'})},
+        {id: 'five-degrees', radius: horizonRadii.fiveDegrees, color: '#4caf50',
+            label: t('packet_map.five_degree_horizon', {defaultValue: '5° elevation'})},
+    ] : [];
     const bounds = useMemo(() => {
         // Include the interpolated curve so fitting never clips a rounded bend.
         const fittedTracks = selectedTransmitterId === null ? tracks
@@ -166,11 +186,13 @@ export default function PacketMap({positions, transmitters, hasPositions = posit
         if (selectedTransmitterId === null && hasReceiver) coordinates.push([receiverLatitude, receiverLongitude]);
         return coordinates;
     }, [tracks, selectedTransmitterId, hasReceiver, receiverLatitude, receiverLongitude]);
-    // Keep the 40px symbol and its maximum 44px lift inside fitted views.
+    // Keep the 80px symbol and its maximum 22px lift inside fitted views.
     const paddingTop = tracks.some((track) => track.points[0].kind === 'radiosonde') ? 104 : 42;
     const homeLabel = t('packet_map.home', {defaultValue: 'Home station'});
 
-    return <Box ref={islandRef} sx={(theme) => ({height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column',
+    // MapContainer freezes its initial className; keep pane styling on a live
+    // wrapper so layer-order changes also apply to maps that are already open.
+    return <Box className="packet-map" ref={islandRef} sx={(theme) => ({height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column',
         '&:fullscreen': {width: '100vw', height: '100vh', bgcolor: 'background.paper'},
         '&:-webkit-full-screen': {width: '100vw', height: '100vh', bgcolor: 'background.paper'},
         // Leaflet renders overlays in map panes; theme their surfaces and arrows together.
@@ -228,11 +250,17 @@ export default function PacketMap({positions, transmitters, hasPositions = posit
                 style={{height: '100%', width: '100%'}}>
                 <MapInteractions enableMapDragging={settings.enableMapDragging} enableMapZooming={settings.enableMapZooming} />
                 <MapViewport bounds={bounds} ready={!loading} fitRequest={`${fitRequest}:${selectedTransmitterId}:${localFit}`}
-                    paddingTop={paddingTop} />
+                    visibilityBounds={visibilityBounds} paddingTop={paddingTop} />
                 <TileLayer key={baseLayerId} url={layer.url} attribution={layer.attribution} zIndex={0} />
                 {/* Transparent references share the tile pane, below transmitter paths and markers. */}
                 {tileLayerId === 'hybrid' && hybridReferenceLayers.map(({id, ...reference}) =>
                     <TileLayer key={id} {...reference} />)}
+                {/* Keep visibility rings below ground shadows (350) and paths (400). */}
+                <Pane name="packet-visibility" style={{zIndex: 300, pointerEvents: 'none'}}>
+                    {visibilityCircles.map(({id, radius, color}) => <Circle key={id}
+                        center={[selectedPoint.latitude, selectedPoint.longitude]} radius={radius} interactive={false}
+                        pathOptions={{color, fill: false, weight: 2, opacity: 0.85, dashArray: '8 6'}} />)}
+                </Pane>
                 {hasReceiver && <Marker position={[receiverLatitude, receiverLongitude]} icon={homeIcon}>
                     <Tooltip>{homeLabel}</Tooltip><Popup>{homeLabel}</Popup>
                 </Marker>}
@@ -243,7 +271,7 @@ export default function PacketMap({positions, transmitters, hasPositions = posit
                     const current = playback.get(id);
                     return <React.Fragment key={id}>
                         {settings.showTracks && path.length > 1 && <Polyline positions={path} smoothFactor={0.5}
-                            pathOptions={{color, weight: 2, opacity: 0.65, lineCap: 'round', lineJoin: 'round'}} />}
+                            pathOptions={{color, weight: 2, opacity: 1, lineCap: 'round', lineJoin: 'round'}} />}
                         {endpoints.filter((point) => point !== current?.point).map((point) => <CircleMarker key={point.id}
                             center={[point.latitude, point.longitude]} radius={4}
                             eventHandlers={{click: () => onSelectTransmitter?.(id)}}
@@ -251,8 +279,8 @@ export default function PacketMap({positions, transmitters, hasPositions = posit
                             <PositionPopup point={point} />
                         </CircleMarker>)}
                         {current && (current.icon ? <Marker key="cursor" position={[current.point.latitude, current.point.longitude]}
-                            icon={current.icon} title={current.point.name} eventHandlers={{click: () => onSelectTransmitter?.(id)}}>
-                            <PositionPopup point={current.point} /><Tooltip direction="top">{current.point.name}</Tooltip>
+                            icon={current.icon} eventHandlers={{click: () => onSelectTransmitter?.(id)}}>
+                            <PositionPopup point={current.point} />
                         </Marker> : <CircleMarker key="cursor" center={[current.point.latitude, current.point.longitude]} radius={7}
                             eventHandlers={{click: () => onSelectTransmitter?.(id)}}
                             pathOptions={{color, fillColor: color, fillOpacity: 0.85, weight: 2}}>
@@ -271,6 +299,18 @@ export default function PacketMap({positions, transmitters, hasPositions = posit
                         sx={{display: 'flex', alignItems: 'center', gap: 0.75}}>
                         <Box component="span" sx={{width: 8, height: 8, borderRadius: '50%', bgcolor: color}} />
                         <Typography variant="caption">{label}</Typography>
+                    </Box>)}
+                </Paper>}
+                {settings.showLegend && visibilityCircles.length > 0 && <Paper component="ul"
+                    aria-label={t('packet_map.radio_visibility', {defaultValue: 'Radio visibility'})}
+                    elevation={2} sx={{m: 0, px: 1.25, py: 0.75, display: 'flex', flexWrap: 'wrap', gap: 1.5,
+                        maxWidth: '100%', listStyle: 'none', bgcolor: (theme) => alpha(theme.palette.background.paper, 0.9)}}>
+                    {visibilityCircles.map(({id, radius, color, label}) => <Box component="li" key={id}
+                        sx={{display: 'flex', alignItems: 'center', gap: 0.75}}>
+                        <Box component="span" sx={{width: 20, borderTop: `2px dashed ${color}`}} />
+                        <Typography variant="caption">{label} · {t('packet_map.visibility_radius', {
+                            defaultValue: '{{radius}} km', radius: Math.round(radius / 1000).toLocaleString(),
+                        })}</Typography>
                     </Box>)}
                 </Paper>}
                 {!loading && !positions.length && <Alert severity="info" sx={{alignSelf: 'stretch'}}>

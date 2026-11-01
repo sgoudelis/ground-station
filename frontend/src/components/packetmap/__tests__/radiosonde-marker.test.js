@@ -37,10 +37,12 @@ describe('Radiosonde shadow anchoring', () => {
     it('anchors both flight symbols at the shadow and opens popups above the raised icon', () => {
         const ascending = createRadiosondeIcon({phase: 'ascending', altitude: 0, color: '#ff9800'});
         const descending = createRadiosondeIcon({phase: 'descending', altitude: 35000, color: '#ff9800'});
-        expect(ascending.options.iconAnchor).toEqual([20, 20]);
+        expect(ascending.options.iconAnchor).toEqual([40, 40]);
         expect(descending.options.iconAnchor).toEqual(ascending.options.iconAnchor);
         expect(descending.options.popupAnchor[1]).toBeLessThan(ascending.options.popupAnchor[1]);
         expect(descending.options.html).not.toBe(ascending.options.html);
-        expect(descending.createIcon().querySelector('.packet-radiosonde-shadow')).not.toBeNull();
+        expect(descending.options.shadowAnchor).toEqual(descending.options.iconAnchor);
+        expect(descending.createIcon().querySelector('.packet-radiosonde-shadow')).toBeNull();
+        expect(descending.createShadow().querySelector('.packet-radiosonde-shadow')).not.toBeNull();
     });
 });
