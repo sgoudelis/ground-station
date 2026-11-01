@@ -46,6 +46,7 @@ const pages = {
     earthView: lazyPage(() => import("./components/earthview/main-layout.jsx")),
     tracking: lazyPage(() => import("./components/target/main-layout.jsx")),
     waterfall: lazyPage(() => import("./components/waterfall/main-layout.jsx")),
+    packetMap: lazyPage(() => import("./components/packetmap/main-layout.jsx")),
     files: lazyPage(() => import("./components/filebrowser/filebrowser-main.jsx")),
     scheduler: lazyPage(() => import("./components/scheduler/main-layout.jsx")),
     solarSystem: lazyPage(() => import("./components/celestial/main-layout.jsx")),
@@ -95,6 +96,10 @@ const router = createBrowserRouter([
                     {
                         path: "waterfall",
                         lazy: pages.waterfall,
+                    },
+                    {
+                        path: "map",
+                        lazy: pages.packetMap,
                     },
                     {
                         path: "files",

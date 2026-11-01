@@ -18,6 +18,7 @@
  */
 
 import PublicIcon from '@mui/icons-material/Public';
+import MapIcon from '@mui/icons-material/Map';
 import EngineeringIcon from '@mui/icons-material/Engineering';
 import {Satellite03Icon, Saturn01Icon} from "hugeicons-react";
 import MemoryIcon from '@mui/icons-material/Memory';
@@ -367,6 +368,11 @@ export const getNavigation = ({ isAdmin = false } = {}) => {
             segment: 'waterfall',
             title: i18n.t('waterfall_view', { ns: 'navigation' }),
             icon: <WaterfallIconWithStatus />,
+        },
+        {
+            segment: 'map',
+            title: i18n.t('packet_map.title', {ns: 'navigation', defaultValue: 'Packet map'}),
+            icon: <MapIcon />,
         },
         {
             segment: 'files',

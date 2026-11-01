@@ -159,6 +159,49 @@ this behavior. Frame decoding errors are shown in the Telemetry tab.
 `tests/fixtures/lasarsat.json` contains legacy DOS, SOL and UHF packets plus an
 invalid AX.25 frame captured on 2026-01-31 to cover this behavior.
 
+### Packet map
+
+The **Packet map** page (`/map`) plots saved APRS and radiosonde positions from
+standalone captures and observation bundles with the home station, grouping
+reception history into separate transmitter tracks.
+Its date inputs use the user's configured timezone; the range slider, **24h**,
+**7d** and **All dates** controls select the reception interval. The map initially
+fits the selected positions and home station. Manual pan and zoom are saved in
+the browser and preserved across date changes and page visits; **Fit all** clears
+that saved view. Use **Edit layout** to move or resize the three windows.
+
+The map uses Earth view's icon toolbar and interaction behavior. Panning and
+gesture zoom are off initially so scrolling over the map can scroll the page.
+Enable panning for mouse/touch dragging, and gesture zoom for wheel, pinch,
+double-click and box zoom. These toggles and track visibility are saved in the
+browser. Arrow controls remain available while panning is disabled; toolbar
+buttons provide quarter-step zoom, home/center navigation, fitting all
+transmitters, and fullscreen. Controls scroll horizontally in narrow windows.
+
+The **Transmitters** DataGrid below the map lists every transmitter in the
+selected interval, including first/last reception, packet counts, latest
+coordinates, signal data and protocol-specific measurements. Click a transmitter
+name for all available details; additional columns are available from the grid's
+column selector. The **Transmitter types** window to the map's right controls
+which types appear on the map. These visibility preferences persist in the
+browser; hidden types remain in the table. Small screens stack the windows.
+
+The authenticated Socket.IO `api.call` command `filebrowser.positions` accepts
+`{start, end}` as timezone-aware ISO dates or epoch seconds, with inclusive
+endpoints. It returns compact `positions`, `transmitters`, `total`,
+`available_range` and `revision` fields from the file-browser inventory.
+`transmitters` contains one row per transmitter, with interval reception counts
+and the latest packet's measurements and signal context; details are not repeated
+on every track point. Each position includes its
+file ID, transmitter ID, name, kind, reception time, latitude, longitude and
+optional altitude in meters. Capture dates follow the file browser's metadata
+and filesystem fallback rules, rather than the transmitter's clock. Invalid
+coordinates and encrypted radiosonde placeholder positions are omitted.
+
+Saved telemetry is normalized for historical compatibility without rewriting
+files. Library change notifications refresh the selected interval; **Refresh**
+also reconciles files copied into storage outside the application.
+
 ### Refreshing saved captures
 
 Open a binary packet in either the File Browser or the live decoded-packet

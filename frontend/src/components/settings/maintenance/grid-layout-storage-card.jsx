@@ -39,12 +39,18 @@ import {gridLayoutStoreName as earthViewGridLayoutName} from "../../earthview/ma
 import {gridLayoutStoreName as targetGridLayoutName} from "../../target/main-layout.jsx";
 import {gridLayoutStoreName as waterfallGridLayoutName} from "../../waterfall/main-layout.jsx";
 import {gridLayoutStoreName as celestialGridLayoutName} from "../../celestial/main-layout.jsx";
+import {gridLayoutStoreName as packetMapGridLayoutName} from "../../packetmap/storage.js";
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import {toast} from '../../../utils/toast-with-timestamp.jsx';
 
 // Factory (instead of a module-level constant) so labels/descriptions can use
 // the component's `t`; the module scope has no translator in scope.
 const createPageLayouts = (t) => [
+    {
+        key: packetMapGridLayoutName,
+        label: 'Packet map',
+        description: t('grid_layout_storage_card.packet_map', {defaultValue: 'Resets the widget layout on the packet map page'}),
+    },
     {
         key: earthViewGridLayoutName,
         label: t('grid_layout_storage_card.earth_view', { defaultValue: 'Earth view' }),

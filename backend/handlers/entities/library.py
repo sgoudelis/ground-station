@@ -81,6 +81,20 @@ async def get_library_item(
     return {"success": True, "data": item}
 
 
+async def query_positions(
+    _sio: Any, data: Optional[Dict], _logger: Any, _sid: str
+) -> Dict[str, Any]:
+    """Read dated geographic packets without returning full telemetry sidecars."""
+    request = data if isinstance(data, dict) else {}
+    try:
+        result = await asyncio.to_thread(
+            get_inventory().query_positions, request.get("start"), request.get("end")
+        )
+    except ValueError as exc:
+        return {"success": False, "error": str(exc)}
+    return {"success": True, "data": result}
+
+
 async def reconcile_library(
     sio: Any, _data: Optional[Dict], _logger: Any, _sid: str
 ) -> Dict[str, Any]:
@@ -209,6 +223,7 @@ def register_handlers(registry: Any) -> None:
     registry.register_batch(
         {
             "filebrowser.query": (query_library, "api_call"),
+            "filebrowser.positions": (query_positions, "api_call"),
             "filebrowser.item": (get_library_item, "api_call"),
             "filebrowser.reconcile": (reconcile_library, "api_call"),
             "filebrowser.delete": (delete_library_items, "api_call"),

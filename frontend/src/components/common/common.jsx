@@ -398,6 +398,7 @@ export const MapArrowControls = function ({mapObject, verticalOffset = 0}) {
             width: 115,
         }}>
             <Fab size={"small"} variant="contained" color="primary" style={{margin: 0}}
+                 aria-label={i18n.t('earthview:map_controls.pan_up', {defaultValue: 'Pan up'})}
                  onClick={() => mapObject.panBy([0, -100])}>
                 <ArrowUpwardIcon/>
             </Fab>
@@ -410,14 +411,15 @@ export const MapArrowControls = function ({mapObject, verticalOffset = 0}) {
                 width: '100%',
                 height: 15,
             }}>
-                <Fab size={"small"} color="primary" onClick={() => mapObject.panBy([-100, 0])} style={{margin: 0, position: 'absolute', left: 0}}>
+                <Fab size={"small"} color="primary" aria-label={i18n.t('earthview:map_controls.pan_left', {defaultValue: 'Pan left'})} onClick={() => mapObject.panBy([-100, 0])} style={{margin: 0, position: 'absolute', left: 0}}>
                     <ArrowBackIcon/>
                 </Fab>
-                <Fab size={"small"} color="primary" variant="contained" onClick={() => mapObject.panBy([100, 0])} style={{margin: 0, position: 'absolute', right: 0}}>
+                <Fab size={"small"} color="primary" variant="contained" aria-label={i18n.t('earthview:map_controls.pan_right', {defaultValue: 'Pan right'})} onClick={() => mapObject.panBy([100, 0])} style={{margin: 0, position: 'absolute', right: 0}}>
                     <ArrowForwardIcon/>
                 </Fab>
             </Box>
             <Fab size={"small"} color="primary" variant="contained" style={{margin: 0}}
+                 aria-label={i18n.t('earthview:map_controls.pan_down', {defaultValue: 'Pan down'})}
                  onClick={() => mapObject.panBy([0, 100])}>
                 <ArrowDownwardIcon/>
             </Fab>

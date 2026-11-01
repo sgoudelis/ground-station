@@ -33,6 +33,7 @@ from urllib.parse import quote
 
 from common.artifactdates import artifact_dates, parse_artifact_time, transcription_end
 from common.events import public_events
+from library.positions import packet_positions
 from library.search import match_search, normalize_search, search_text
 
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp"}
@@ -342,6 +343,56 @@ class LibraryInventory:
             "revision": revision,
             "has_more": start + page_size < total,
             "diskUsage": self._disk_usage(),
+        }
+
+    def query_positions(self, start: Any, end: Any) -> Dict[str, Any]:
+        """Return geographic packets in an inclusive UTC reception interval."""
+        start_time, end_time = parse_artifact_time(start), parse_artifact_time(end)
+        if start_time is None or end_time is None:
+            raise ValueError("start and end must be timezone-aware ISO dates or epoch seconds")
+        if start_time > end_time:
+            raise ValueError("start must be before or equal to end")
+        if not self._ready:
+            self.rebuild()
+        with self._lock:
+            points = [
+                dict(point) for item in self._items.values() for point in item.get("_positions", [])
+            ]
+            revision = self._revision
+        points.sort(key=lambda point: (point["captured_at"], point["id"]))
+        available = (
+            {"start": points[0]["captured_at"], "end": points[-1]["captured_at"]}
+            if points
+            else None
+        )
+        # Capture dates have a canonical UTC representation from artifact_dates.
+        start_iso = start_time.isoformat(timespec="microseconds")
+        end_iso = end_time.isoformat(timespec="microseconds")
+        selected = [point for point in points if start_iso <= point["captured_at"] <= end_iso]
+        transmitters: Dict[str, Dict[str, Any]] = {}
+        positions = []
+        for point in selected:
+            public = self._public(point)
+            positions.append(public)
+            identity = point["transmitter_id"]
+            previous = transmitters.get(identity)
+            # Points are ordered by reception time, so each row describes the
+            # latest packet in this interval, with first reception and counts.
+            transmitters[identity] = {
+                **public,
+                "id": identity,
+                "first_seen": previous["first_seen"] if previous else point["captured_at"],
+                "last_seen": point["captured_at"],
+                "packet_count": previous["packet_count"] + 1 if previous else 1,
+                "details": point.get("_details", {}),
+                "field_info": point.get("_field_info", {}),
+            }
+        return {
+            "positions": positions,
+            "transmitters": list(transmitters.values()),
+            "total": len(selected),
+            "available_range": available,
+            "revision": revision,
         }
 
     def get(self, item_id: str) -> Optional[Dict[str, Any]]:
@@ -890,6 +941,7 @@ class LibraryInventory:
                 transmitter = _object(metadata.get("transmitter"))
                 ax25 = _object(metadata.get("ax25"))
                 decoder_config = _object(metadata.get("decoder_config"))
+                dates = artifact_dates("decoded", path, metadata, mtime=stat.st_mtime)
                 self._add(
                     items,
                     {
@@ -901,7 +953,10 @@ class LibraryInventory:
                         "size": stat.st_size,
                         "created": _iso(stat.st_ctime),
                         "modified": _iso(stat.st_mtime),
-                        **artifact_dates("decoded", path, metadata, mtime=stat.st_mtime),
+                        **dates,
+                        "_positions": packet_positions(
+                            metadata, f"decoded:{path.name}", dates["captured_at"]
+                        ),
                         "latest_activity": _iso(
                             max(stat.st_mtime, metadata_stat.st_mtime if metadata_stat else 0)
                         ),
@@ -1023,6 +1078,7 @@ class LibraryInventory:
             artifact_count = 0
             total_size = 0
             member_names = []
+            positions = []
             # ``total_size`` only covers dialog-visible artifacts, while a purge
             # also frees manifests, metadata, and thumbnails. Track both.
             disk_size = 0
@@ -1048,6 +1104,19 @@ class LibraryInventory:
                     continue
                 artifact_count += 1
                 total_size += file_stat.st_size
+                relative = path.relative_to(folder)
+                if relative.parts[0] == "decoded" and path.suffix.lower() == ".bin":
+                    # Bundle dates describe the observation, not each packet.
+                    # Cache compact positions using each packet's reception time.
+                    metadata = _read_json(path.with_suffix(".json"))
+                    dates = artifact_dates("decoded", path, metadata, mtime=file_stat.st_mtime)
+                    positions.extend(
+                        packet_positions(
+                            metadata,
+                            f"observation:{folder.name}/{relative.as_posix()}",
+                            dates["captured_at"],
+                        )
+                    )
                 if not path.name.endswith("_waterfall_thumb.png"):
                     member_names.append(path.relative_to(folder).as_posix())
             if latest_mtime is None:
@@ -1085,6 +1154,7 @@ class LibraryInventory:
                     "observation_in_progress": bool(manifest.get("in_progress", False)),
                     "artifact_count": artifact_count,
                     "_member_names": member_names,
+                    "_positions": positions,
                 },
                 folder,
             )
