@@ -1208,7 +1208,7 @@ export default function FileBrowserMain() {
                             {t('no_files.title', 'No files found')}
                         </Typography>
                         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                            {!filters.showRecordings && !filters.showSnapshots && !filters.showDecoded && !filters.showObservations && !filters.showAudio && !filters.showTranscriptions
+                            {!Object.values(filters).some(Boolean)
                                 ? t('no_files.message_filter', 'Enable at least one filter to see files')
                                 : search
                                     ? t('search.no_results', { query: search, defaultValue: 'No files match “{{query}}”.' })

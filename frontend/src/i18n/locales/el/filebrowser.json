@@ -20,6 +20,8 @@
     "snapshots": "Στιγμιοτυπα",
     "decoded": "Αποκωδικοποιημενο",
     "observations": "Παρατηρήσεις",
+    "weather_balloons": "Μετεωρολογικά μπαλόνια",
+    "aircraft": "Αεροσκάφη",
     "audio": "Ηχος"
   },
   "sort_order": {

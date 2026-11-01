@@ -1,4 +1,8 @@
 {
+  "filters": {
+    "weather_balloons": "Palloni meteorologici",
+    "aircraft": "Aeromobili"
+  },
   "dates": {
     "unavailable": "Data non disponibile",
     "approximate": "Data di acquisizione stimata dalla modifica del file"

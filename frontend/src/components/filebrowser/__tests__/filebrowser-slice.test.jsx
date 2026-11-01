@@ -83,16 +83,27 @@ test('deleting a nested packet keeps unrelated flat captures with the same basen
     expect(store.getState().filebrowser.total).toBe(1);
 });
 
-test('rehydrates the new observation filter from the former decoded choice', () => {
+test.each([true, false])('rehydrates separate decoded filters from the former choice %s', (showDecoded) => {
     const current = reducer(undefined, { type: '@@INIT' });
     const restored = reconcileFileBrowserPersistedState({
-        filters: { showDecoded: false, showAudio: true },
+        filters: { showDecoded, showAudio: true },
     }, current);
 
-    expect(restored.filters).toMatchObject({ showDecoded: false, showObservations: false });
+    expect(restored.filters).toMatchObject({
+        showDecoded, showObservations: showDecoded, showRadiosondes: showDecoded, showAircraft: showDecoded,
+    });
     const changed = reducer(restored, toggleFilter('showObservations'));
-    expect(changed.filters).toMatchObject({ showDecoded: false, showObservations: true });
+    expect(changed.filters).toMatchObject({ showDecoded, showObservations: !showDecoded });
     expect(changed.page).toBe(1);
+});
+
+test('restores explicit weather balloon and aircraft choices independently of decoded', () => {
+    const current = reducer(undefined, { type: '@@INIT' });
+    expect(current.filters).toMatchObject({ showRadiosondes: true, showAircraft: true });
+    const restored = reconcileFileBrowserPersistedState({
+        filters: { showDecoded: true, showRadiosondes: false, showAircraft: false },
+    }, current);
+    expect(restored.filters).toMatchObject({ showDecoded: true, showRadiosondes: false, showAircraft: false });
 });
 
 test('uses capture chronology by default and migrates the former created sort', () => {

@@ -8,6 +8,8 @@ const FILE_TYPES = [
     { key: 'showSnapshots', label: 'filters.snapshots', fallback: 'Snapshots' },
     { key: 'showDecoded', label: 'filters.decoded', fallback: 'Decoded' },
     { key: 'showObservations', label: 'filters.observations', fallback: 'Observations' },
+    { key: 'showRadiosondes', label: 'filters.weather_balloons', fallback: 'Weather balloons' },
+    { key: 'showAircraft', label: 'filters.aircraft', fallback: 'Aircraft' },
     { key: 'showAudio', label: 'filters.audio', fallback: 'Audio' },
     { key: 'showTranscriptions', label: 'filters.transcriptions', fallback: 'Transcriptions' },
 ];

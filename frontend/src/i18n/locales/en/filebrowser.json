@@ -107,6 +107,8 @@
     "snapshots": "Snapshots",
     "decoded": "Decoded",
     "observations": "Observations",
+    "weather_balloons": "Weather balloons",
+    "aircraft": "Aircraft",
     "audio": "Audio"
   },
   "sort_order": {

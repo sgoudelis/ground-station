@@ -812,17 +812,19 @@ class LibraryInventory:
                 return False
         if not filters:
             return True
+        if item.get("type") in {"decoded", "decoded_folder"}:
+            # Legacy flat packets use decoder_type; grouped captures use folder_kind.
+            kind = item.get("folder_kind") or str(item.get("decoder_type") or "").lower()
+            filter_key = {
+                "observation": "showObservations",
+                "radiosonde": "showRadiosondes",
+                "adsb": "showAircraft",
+            }.get(kind, "showDecoded")
+            # Older clients and saved filters controlled all these types via Decoded.
+            return filters.get(filter_key, filters.get("showDecoded", True))
         enabled = {
             "recording": filters.get("showRecordings", True),
             "snapshot": filters.get("showSnapshots", True),
-            "decoded": filters.get("showDecoded", True),
-            # Older clients only sent showDecoded, which also covered
-            # observation bundles before they had their own filter.
-            "decoded_folder": (
-                filters.get("showObservations", filters.get("showDecoded", True))
-                if item.get("folder_kind") == "observation"
-                else filters.get("showDecoded", True)
-            ),
             "audio": filters.get("showAudio", True),
             "transcription": filters.get("showTranscriptions", True),
         }

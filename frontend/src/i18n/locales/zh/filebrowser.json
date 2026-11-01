@@ -27,6 +27,8 @@
     "snapshots": "快照",
     "decoded": "已解码",
     "observations": "观测",
+    "weather_balloons": "气象气球",
+    "aircraft": "航空器",
     "audio": "音频"
   },
   "sort_order": {

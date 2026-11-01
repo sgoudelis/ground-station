@@ -20,6 +20,8 @@
     "snapshots": "Snapshots",
     "decoded": "Dekodiert",
     "observations": "Beobachtungen",
+    "weather_balloons": "Wetterballons",
+    "aircraft": "Luftfahrzeuge",
     "audio": "Audio"
   },
   "sort_order": {

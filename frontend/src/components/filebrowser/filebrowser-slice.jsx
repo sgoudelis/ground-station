@@ -351,6 +351,8 @@ const initialState = {
         showSnapshots: true,
         showDecoded: true,
         showObservations: true,
+        showRadiosondes: true,
+        showAircraft: true,
         showAudio: true,
         showTranscriptions: true,
     },
@@ -391,11 +393,17 @@ export function reconcileFileBrowserPersistedState(inboundState, currentState) {
         filters: {
             ...currentState.filters,
             ...savedFilters,
-            // Before Observations had its own switch, the Decoded switch
-            // controlled both. Preserve that choice on first rehydration.
+            // These categories previously shared the Decoded switch. Preserve
+            // that choice when restoring filters saved before their addition.
             showObservations: savedFilters.showObservations
                 ?? savedFilters.showDecoded
                 ?? currentState.filters.showObservations,
+            showRadiosondes: savedFilters.showRadiosondes
+                ?? savedFilters.showDecoded
+                ?? currentState.filters.showRadiosondes,
+            showAircraft: savedFilters.showAircraft
+                ?? savedFilters.showDecoded
+                ?? currentState.filters.showAircraft,
         },
     };
 }
