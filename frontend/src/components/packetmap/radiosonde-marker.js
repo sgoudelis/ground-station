@@ -51,11 +51,15 @@ export function markerLift(altitude) {
     return minimumLift + liftRange * Math.sqrt(fraction);
 }
 
-export function createRadiosondeIcon({phase, altitude, color}) {
+export function createRadiosondeIcon({phase, altitude, name}) {
     const lift = markerLift(altitude);
     // Keep shadow changes normalized when adjusting the lift's pixel range.
     const height = (lift - minimumLift) / liftRange;
     const image = phase === 'descending' ? parachute : balloon;
+    // Treat received names as text before inserting them into Leaflet's HTML.
+    const label = document.createElement('span');
+    label.className = 'packet-radiosonde-label';
+    label.textContent = name ?? '';
     return new RadiosondeIcon({
         className: 'packet-radiosonde-marker',
         // The anchor is the shadow's center, so paths always end underneath
@@ -65,8 +69,8 @@ export function createRadiosondeIcon({phase, altitude, color}) {
         shadowSize: [markerSize, markerSize],
         shadowAnchor: [markerSize / 2, markerSize / 2],
         popupAnchor: [0, -lift - markerSize],
-        tooltipAnchor: [0, -lift - markerSize / 2],
-        html: `<div class="packet-radiosonde-content" data-flight-phase="${phase}" style="color:${color};--sonde-lift:${lift}px;">
+        html: `<div class="packet-radiosonde-content" data-flight-phase="${phase}" style="--sonde-lift:${lift}px;">
+            ${label.outerHTML}
             <span class="packet-radiosonde-symbol" aria-hidden="true"><img src="${image}" width="${markerSize}" height="${markerSize}" alt="" draggable="false" /></span>
         </div>`,
         shadowHtml: `<div class="packet-radiosonde-content" style="--sonde-shadow-opacity:${0.55 + height * 0.2};--sonde-shadow-blur:${0.4 + height * 0.2}px;--sonde-shadow-scale:${1 - height * 0.08}">

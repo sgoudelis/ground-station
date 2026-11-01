@@ -39,14 +39,22 @@ vi.mock('react-leaflet', () => ({
             data-zoom-control={String(zoomControl)} data-keyboard={String(keyboard)}>{children}</div>;
     },
     CircleMarker: ({center, children, eventHandlers}) => <div data-testid="position" onClick={eventHandlers?.click} data-center={JSON.stringify(center)}>{children}</div>,
-    Circle: ({center, radius, interactive, pathOptions}) => <div data-testid="visibility-circle"
-        data-center={JSON.stringify(center)} data-radius={radius} data-interactive={String(interactive)}
-        data-color={pathOptions.color} data-dash={pathOptions.dashArray} data-fill={String(pathOptions.fill)} />,
+    Circle: ({center, radius, interactive, pathOptions, ref}) => {
+        const pathRef = React.useRef(null);
+        React.useImperativeHandle(ref, () => ({getElement: () => pathRef.current}));
+        return <div data-testid="visibility-circle"
+            data-center={JSON.stringify(center)} data-radius={radius} data-interactive={String(interactive)}
+            data-color={pathOptions.color} data-dash={pathOptions.dashArray} data-fill={String(pathOptions.fill)}>
+            <svg><path ref={pathRef} /></svg>
+        </div>;
+    },
     Pane: ({children, style}) => <div data-testid="visibility-pane" style={style}>{children}</div>,
     Marker: ({position, children, icon, eventHandlers, title}) => <div title={title} onClick={eventHandlers?.click} data-testid={icon?.options?.className === 'packet-radiosonde-marker' ? 'sonde-marker' : 'home'}
         data-center={JSON.stringify(position)} data-icon-html={icon?.options?.html}>{children}</div>,
     Polyline: ({positions, pathOptions}) => <div data-testid="track" data-positions={JSON.stringify(positions)} data-opacity={pathOptions?.opacity} />,
-    Popup: ({children}) => <div>{children}</div>, Tooltip: ({children}) => <span data-testid="map-tooltip">{children}</span>,
+    Popup: ({children}) => <div>{children}</div>,
+    Tooltip: ({children, position, permanent, className}) => <span data-testid="map-tooltip" className={className}
+        data-position={JSON.stringify(position)} data-permanent={String(Boolean(permanent))}>{children}</span>,
     TileLayer: ({url, zIndex}) => <div data-testid="tile-layer" data-url={url} data-z-index={zIndex} />,
 }));
 vi.mock('../../common/tile-layers.jsx', () => ({getTileLayerById: () => ({url: 'tiles', attribution: 'OSM'})}));
@@ -208,7 +216,7 @@ it('renders smooth transmitter paths with only start and end markers and packet 
     expect(path[0]).toEqual([40, 23]);
     expect(path.at(-1)).toEqual([41, 24]);
     expect(path).toContainEqual([40.4, 23.6]);
-    expect(screen.getByText('File: sonde.bin')).toBeInTheDocument();
+    expect(screen.getByText('File: second.bin')).toBeInTheDocument();
     expect(screen.getByText('2 transmitters')).toBeInTheDocument();
     const legend = screen.getByRole('list', {name: 'Transmitter types'});
     expect(legend).toHaveTextContent('APRS');
@@ -352,7 +360,8 @@ it('scrubs sonde symbols and historical flight phases while keeping the full pat
     expect(screen.getByTestId('sonde-marker').dataset.iconHtml).toContain('data-flight-phase="ascending"');
     expect(screen.getByTestId('sonde-marker')).not.toHaveAttribute('title');
     expect(within(screen.getByTestId('sonde-marker')).queryByTestId('map-tooltip')).not.toBeInTheDocument();
-    expect(screen.getByTestId('sonde-marker')).toHaveTextContent('Interpolated position');
+    expect(screen.getByTestId('sonde-marker')).toBeEmptyDOMElement();
+    expect(screen.getByTestId('sonde-marker').dataset.iconHtml).toContain('<span class="packet-radiosonde-label">S</span>');
     expect(screen.getAllByTestId('position')).toHaveLength(2);
     map.fitBounds.mockClear();
     map.setView.mockClear();
@@ -446,8 +455,8 @@ it('selects table rows and fits their whole paths, then restores all bounds with
     // At 10 km altitude the green circle is about 104 km, or 0.94° of latitude.
     expect(sondeBounds[1][0]).toBeCloseTo(41.0615, 3);
     expect(sondeBounds[2][0]).toBeCloseTo(42.9385, 3);
-    expect(sondeFitOptions.paddingTopLeft).toEqual([42, 104]);
-    expect(sondeFitOptions.paddingBottomRight).toEqual([42, 42]);
+    expect(sondeFitOptions.paddingTopLeft).toEqual([24, 24]);
+    expect(sondeFitOptions.paddingBottomRight).toEqual([24, 24]);
     const circles = screen.getAllByTestId('visibility-circle');
     expect(circles).toHaveLength(2);
     expect(circles.map((circle) => circle.dataset.color)).toEqual(['#2196f3', '#4caf50']);
@@ -458,6 +467,11 @@ it('selects table rows and fits their whole paths, then restores all bounds with
         expect(circle).toHaveAttribute('data-interactive', 'false');
     }
     expect(Number(circles[0].dataset.radius)).toBeGreaterThan(Number(circles[1].dataset.radius));
+    const greenLabel = circles[1].querySelector('textPath');
+    expect(greenLabel).toHaveTextContent('104 km · 5° elevation');
+    expect(greenLabel).toHaveAttribute('startOffset', '25%');
+    expect(greenLabel).toHaveAttribute('href', `#${circles[1].querySelector('path').id}`);
+    expect(circles[0].querySelector('textPath')).toHaveTextContent('357 km · Radio horizon (0°)');
     expect(screen.getByRole('list', {name: 'Radio visibility'})).toHaveTextContent('Radio horizon (0°) · 357 km');
     expect(screen.getByRole('list', {name: 'Radio visibility'})).toHaveTextContent('5° elevation · 104 km');
 
