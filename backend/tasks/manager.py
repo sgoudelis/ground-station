@@ -76,6 +76,11 @@ from tlesync.persist import is_terminal_orbital_sync_state, save_orbital_sync_st
 from tlesync.state import sync_state_manager
 from tracker.runner import get_all_tracker_managers
 
+WORKER_EXIT_TIMEOUT_SECONDS = 5.0
+WORKER_TERMINATE_TIMEOUT_SECONDS = 2.0
+WORKER_KILL_TIMEOUT_SECONDS = 1.0
+PROCESS_POLL_INTERVAL_SECONDS = 0.05
+
 
 class TaskStatus(Enum):
     """Task execution states."""
@@ -114,6 +119,11 @@ class TaskInfo:
     error_lines: List[str] = field(default_factory=list)
     queue: Optional[mp.Queue] = None
     tracker_notified: bool = False
+    # A result can arrive before interpreter/thread cleanup finishes in the child.
+    reported_status: Optional[TaskStatus] = None
+    result_received_at: Optional[float] = None
+    stop_requested: bool = False
+    termination_lock: asyncio.Lock = field(default_factory=asyncio.Lock, repr=False)
 
 
 def _is_soapysdr_task(task_name: str, func_name: str) -> bool:
@@ -181,6 +191,7 @@ class BackgroundTaskManager:
         self.sio = socketio
         self.tasks: Dict[str, TaskInfo] = {}
         self._monitor_tasks: Dict[str, asyncio.Task] = {}
+        self._shutting_down = False
         logger.info("BackgroundTaskManager (multiprocessing) initialized")
 
     async def _persist_orbital_sync_state(self, state: Dict[str, Any]) -> None:
@@ -221,6 +232,9 @@ class BackgroundTaskManager:
             RuntimeError: If task fails to start
             ValueError: If a singleton task is already running
         """
+        if self._shutting_down:
+            raise RuntimeError("Background task manager is shutting down")
+
         if task_id is None:
             task_id = str(uuid.uuid4())
 
@@ -309,6 +323,11 @@ class BackgroundTaskManager:
                     },
                 )
 
+            # Socket.IO notifications above can yield to shutdown. That path
+            # already owns the registered process and must not gain a late monitor.
+            if self._shutting_down:
+                return task_id
+
             # Start monitoring in background
             monitor_task = asyncio.create_task(self._monitor_task(task_id))
             self._monitor_tasks[task_id] = monitor_task
@@ -347,6 +366,35 @@ class BackgroundTaskManager:
             # Monitor queue for messages
             process_exited_at: Optional[float] = None
             while True:
+                # Explicit stops own finalization while the monitor continues to
+                # exist. This prevents a killed worker also emitting completion.
+                if task_info.stop_requested:
+                    await asyncio.sleep(PROCESS_POLL_INTERVAL_SECONDS)
+                    continue
+
+                # Check before reading messages so output cannot starve the
+                # deadline. asyncio timeouts cannot stop native executor threads.
+                if (
+                    task_info.result_received_at is not None
+                    and time.monotonic() - task_info.result_received_at
+                    >= WORKER_EXIT_TIMEOUT_SECONDS
+                    and process.is_alive()
+                ):
+                    error = "Task returned, but worker failed to exit before its cleanup deadline"
+                    logger.error("Background task '%s': %s", task_info.name, error)
+                    if not await self._terminate_process(
+                        task_info, timeout=WORKER_TERMINATE_TIMEOUT_SECONDS
+                    ):
+                        raise RuntimeError(f"Could not stop worker for task '{task_info.name}'")
+                    if task_info.stop_requested:
+                        return
+                    await self._handle_message(
+                        task_id, {"type": TaskMessage.FAILED, "error": error}
+                    )
+                    # The result already followed the task's output in the FIFO.
+                    # Do not read a queue that SIGKILL may have interrupted.
+                    break
+
                 try:
                     message = queue.get_nowait()
                     await self._handle_message(task_id, message)
@@ -365,27 +413,30 @@ class BackgroundTaskManager:
                 # Give multiprocessing queue feeder threads a short grace period
                 # to flush trailing messages after process exit.
                 if process_exited_at is None:
-                    process_exited_at = time.time()
+                    process_exited_at = time.monotonic()
                     await asyncio.sleep(0.05)
                     continue
-                if time.time() - process_exited_at < 0.5:
+                if time.monotonic() - process_exited_at < 0.5:
                     await asyncio.sleep(0.05)
                     continue
 
                 break
 
             # Wait for process to complete
-            process.join(timeout=1)
+            process.join(timeout=0)
             return_code = process.exitcode if process.exitcode is not None else -1
+
+            if task_info.stop_requested or task_info.status == TaskStatus.STOPPED:
+                return
 
             # Update task info
             task_info.end_time = time.time()
             task_info.return_code = return_code
 
-            # Check if we received a completion/failure message
+            # Finalize only after exit, combining the reported outcome with the
+            # actual exit code. A result alone does not establish success.
             if task_info.status == TaskStatus.RUNNING:
-                # No explicit completion message, check exit code
-                if return_code == 0:
+                if return_code == 0 and task_info.reported_status != TaskStatus.FAILED:
                     task_info.status = TaskStatus.COMPLETED
                     logger.info(f"Background task '{task_info.name}' completed successfully")
                 else:
@@ -463,6 +514,7 @@ class BackgroundTaskManager:
             if (
                 task_info.name.startswith("SatDump:")
                 and task_info.status == TaskStatus.FAILED
+                and not self._shutting_down
                 and task_info.kwargs.get("delete_input_after")
                 and task_info.kwargs.get("retain_input_on_failure", True)
                 and task_info.args
@@ -560,12 +612,15 @@ class BackgroundTaskManager:
             )
 
         elif msg_type == TaskMessage.COMPLETE:
-            # Task completed successfully
-            task_info.status = TaskStatus.COMPLETED
+            # Keep owning the live process even after its function has returned.
+            task_info.reported_status = TaskStatus.COMPLETED
+            if task_info.result_received_at is None:
+                task_info.result_received_at = time.monotonic()
 
         elif msg_type == TaskMessage.FAILED:
-            # Task failed
-            task_info.status = TaskStatus.FAILED
+            task_info.reported_status = TaskStatus.FAILED
+            if task_info.result_received_at is None:
+                task_info.result_received_at = time.monotonic()
             error = message.get("error", "Unknown error")
             task_info.error_lines.append(f"FAILED: {error}")
             await self.sio.emit(
@@ -723,6 +778,42 @@ class BackgroundTaskManager:
                 except Exception as e:
                     logger.debug(f"Failed to notify tracker manager after orbital sync: {e}")
 
+    @staticmethod
+    async def _wait_for_process_exit(process: mp.Process, timeout: float) -> bool:
+        """Poll without blocking the event loop or leaving an executor join behind."""
+        deadline = time.monotonic() + timeout
+        while process.is_alive():
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                return False
+            await asyncio.sleep(min(PROCESS_POLL_INTERVAL_SECONDS, remaining))
+        process.join(timeout=0)
+        return True
+
+    async def _terminate_process(self, task_info: TaskInfo, timeout: float) -> bool:
+        """Stop and reap a worker regardless of its recorded task/result status."""
+        # A deadline and an administrator stop can overlap. Only one caller may
+        # signal a worker at a time; later callers just reap the exited process.
+        async with task_info.termination_lock:
+            process = task_info.process
+            if process is None:
+                return True
+            if not process.is_alive():
+                process.join(timeout=0)
+                return True
+
+            process.terminate()
+            if await self._wait_for_process_exit(process, timeout):
+                return True
+
+            logger.warning("Task '%s' did not terminate, sending SIGKILL", task_info.name)
+            process.kill()
+            if await self._wait_for_process_exit(process, WORKER_KILL_TIMEOUT_SECONDS):
+                return True
+
+            logger.error("Worker for task '%s' is still alive after SIGKILL", task_info.name)
+            return False
+
     async def stop_task(self, task_id: str, timeout: float = 5.0) -> bool:
         """
         Stop a running background task.
@@ -741,33 +832,28 @@ class BackgroundTaskManager:
             logger.warning(f"Cannot stop task {task_id}: not found")
             return False
 
-        if task_info.status != TaskStatus.RUNNING:
-            logger.warning(f"Cannot stop task {task_id}: status is {task_info.status.value}")
-            return False
-
         process = task_info.process
         if not process:
             logger.warning(f"Cannot stop task {task_id}: no process")
             return False
 
+        if not process.is_alive():
+            process.join(timeout=0)
+            return False
+
         logger.info(f"Stopping background task '{task_info.name}' (PID: {process.pid})")
 
+        task_info.stop_requested = True
         try:
-            # Terminate the process (SIGTERM)
-            process.terminate()
-            logger.debug(f"Sent SIGTERM to task '{task_info.name}'")
+            if not await self._terminate_process(task_info, timeout):
+                return False
 
-            # Wait for graceful termination
-            process.join(timeout=timeout)
-
-            if process.is_alive():
-                # Force kill if still running
-                logger.warning(
-                    f"Task '{task_info.name}' did not terminate gracefully, sending SIGKILL"
-                )
-                process.kill()
-                process.join(timeout=1)
-                logger.info(f"Task '{task_info.name}' killed")
+            # The queue must stay available until the worker has exited. Await
+            # monitor cancellation so it cannot race later state/queue cleanup.
+            monitor_task = self._monitor_tasks.get(task_id)
+            if monitor_task and not monitor_task.done():
+                monitor_task.cancel()
+                await asyncio.gather(monitor_task, return_exceptions=True)
 
             # Update task info
             task_info.status = TaskStatus.STOPPED
@@ -796,11 +882,6 @@ class BackgroundTaskManager:
                 payload_state["next_scheduled_sync_at"] = get_orbital_sync_next_run_time()
                 await self.sio.emit("sat-sync-events", payload_state)
 
-            # Cancel monitoring task
-            monitor_task = self._monitor_tasks.get(task_id)
-            if monitor_task and not monitor_task.done():
-                monitor_task.cancel()
-
             # Emit stopped event
             await self.sio.emit(
                 "background_task:stopped",
@@ -816,6 +897,8 @@ class BackgroundTaskManager:
         except Exception as e:
             logger.error(f"Error stopping task '{task_info.name}': {e}")
             return False
+        finally:
+            task_info.stop_requested = False
 
     def get_task(self, task_id: str) -> Optional[Dict]:
         """
@@ -885,6 +968,10 @@ class BackgroundTaskManager:
         tasks_to_remove = []
 
         for task_id, task_info in self.tasks.items():
+            # Failed monitoring or a reported result must never drop ownership
+            # of a worker that Python would still join during interpreter exit.
+            if task_info.process and task_info.process.is_alive():
+                continue
             if task_info.status != TaskStatus.RUNNING and task_info.end_time:
                 age = current_time - task_info.end_time
                 if age > max_age_seconds:
@@ -905,25 +992,45 @@ class BackgroundTaskManager:
         Shutdown the task manager and stop all running tasks.
         """
         logger.info("Shutting down BackgroundTaskManager...")
+        self._shutting_down = True
 
-        # Stop all running tasks
-        running_tasks = [
-            task_id for task_id, info in self.tasks.items() if info.status == TaskStatus.RUNNING
+        # Task metadata is not proof of process exit. Signal live workers in
+        # parallel so shutdown time does not grow by one timeout per worker.
+        live_tasks = [
+            task_id
+            for task_id, info in self.tasks.items()
+            if info.process and info.process.is_alive()
         ]
 
-        if running_tasks:
-            logger.info(f"Stopping {len(running_tasks)} running tasks...")
-            for task_id in running_tasks:
-                await self.stop_task(task_id, timeout=2.0)
+        if live_tasks:
+            logger.info("Stopping %s live background worker(s)...", len(live_tasks))
+            await asyncio.gather(
+                *(
+                    self.stop_task(task_id, timeout=WORKER_TERMINATE_TIMEOUT_SECONDS)
+                    for task_id in live_tasks
+                ),
+                return_exceptions=True,
+            )
 
-        # Cancel all monitor tasks
-        for monitor_task in self._monitor_tasks.values():
+        # Monitor finalizers remove themselves from the mapping, so iterate over
+        # a snapshot and await them before closing queues a second time.
+        monitors = list(self._monitor_tasks.values())
+        for monitor_task in monitors:
             if not monitor_task.done():
                 monitor_task.cancel()
+        await asyncio.gather(*monitors, return_exceptions=True)
 
-        # Close all queues
+        survivors = []
         for task_info in self.tasks.values():
+            if task_info.process:
+                if task_info.process.is_alive():
+                    survivors.append(task_info.task_id)
+                    continue
+                task_info.process.join(timeout=0)
             if task_info.queue:
                 task_info.queue.close()
+
+        if survivors:
+            raise RuntimeError(f"Background workers did not exit during shutdown: {survivors}")
 
         logger.info("BackgroundTaskManager shutdown complete")
