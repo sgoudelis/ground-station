@@ -101,6 +101,7 @@ import {
     clearSelection,
     toggleSelectionMode,
     markFileBrowserVisited,
+    setFileBrowserVisible,
     setViewMode,
 } from './filebrowser-slice.jsx';
 import { toast } from 'react-toastify';
@@ -377,8 +378,12 @@ export default function FileBrowserMain() {
     // Opening the page acknowledges earlier files. Leaving acknowledges any
     // additions received while the user was viewing the live library.
     useEffect(() => {
+        dispatch(setFileBrowserVisible(true));
         dispatch(markFileBrowserVisited());
-        return () => dispatch(markFileBrowserVisited());
+        return () => {
+            dispatch(setFileBrowserVisible(false));
+            dispatch(markFileBrowserVisited());
+        };
     }, [dispatch]);
 
     // Relative card labels and active recording durations depend on the clock,

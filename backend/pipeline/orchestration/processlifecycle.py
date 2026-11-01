@@ -27,7 +27,7 @@ from common.events import public_events
 from common.sdrconfig import SDRConfig
 from db import AsyncSessionLocal
 from fft.processor import fft_processor_process
-from handlers.entities.filebrowser import emit_file_browser_state
+from handlers.entities.filebrowser import emit_file_browser_state, refresh_file_browser_library
 from hardware.parameters import probe_sdr_parameters, sdr_parameter_lock
 from monitoring.timing import TimestampedQueue, get_enabled_event
 from pipeline.orchestration.gnssfix import derive_gnss_fix_status_from_output, gnss_fix_stream_key
@@ -147,6 +147,32 @@ class ProcessLifecycleManager:
         # can move the owning observation out of RUNNING immediately.
         self._sdr_failure_handler: Optional[Callable[[str, set[str], str], Awaitable[None]]] = None
         self.sdr_ready_timeout_seconds = 10.0
+        # One catalogue refresh worker serves every SDR/VFO. Keep filesystem
+        # scans out of the queue readers that also forward live FFT frames.
+        self._decoded_library_dirty = False
+        self._decoded_library_task: Optional[asyncio.Task] = None
+        self.decoded_library_refresh_seconds = 2.0
+
+    def _schedule_decoded_library_refresh(self) -> None:
+        self._decoded_library_dirty = True
+        if self._decoded_library_task is None:
+            self._decoded_library_task = asyncio.create_task(self._refresh_decoded_library())
+
+    async def _refresh_decoded_library(self) -> None:
+        try:
+            while self._decoded_library_dirty:
+                # A fixed window coalesces packets without postponing updates
+                # indefinitely during continuous reception. Never overlap scans.
+                await asyncio.sleep(self.decoded_library_refresh_seconds)
+                self._decoded_library_dirty = False
+                try:
+                    await refresh_file_browser_library(self.sio)
+                except Exception:
+                    self.logger.exception("Failed to refresh the decoded file library")
+                # Packets arriving during a scan request another pass, including
+                # the final packet even if its SDR has since stopped.
+        finally:
+            self._decoded_library_task = None
 
     def set_sdr_failure_handler(
         self, handler: Optional[Callable[[str, set[str], str], Awaitable[None]]]
@@ -1492,6 +1518,7 @@ class ProcessLifecycleManager:
                                 if data_type == "decoder-output" and "output" in data:
                                     output = data["output"]
                                     if "filepath" in output:
+                                        self._schedule_decoded_library_refresh()
                                         await emit_file_browser_state(
                                             self.sio,
                                             {
@@ -1501,6 +1528,7 @@ class ProcessLifecycleManager:
                                                 "filename": output.get("filename"),
                                             },
                                             self.logger,
+                                            reconcile=False,
                                         )
                             else:
                                 self.logger.warning(

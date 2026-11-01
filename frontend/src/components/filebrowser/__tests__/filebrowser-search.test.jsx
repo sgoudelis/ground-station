@@ -18,7 +18,7 @@
  */
 
 import React from 'react';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { configureStore } from '@reduxjs/toolkit';
 import { Provider } from 'react-redux';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
@@ -79,6 +79,13 @@ test('searches the backend, shows matches in both views, and keeps the query on 
     await waitFor(() => expect(socket.emit.mock.lastCall[1]).toMatchObject({ cmd: 'filebrowser.query', data: { search: 'beacon', page: 1 } }));
     act(() => store.dispatch(setViewMode('card')));
     expect(screen.getByText('Matched inside: decoded/beacon.bin')).toBeInTheDocument();
+});
+
+test('only registers the file browser as visible while its page is mounted', () => {
+    const store = renderBrowser();
+    expect(store.getState().filebrowser.isVisible).toBe(true);
+    cleanup();
+    expect(store.getState().filebrowser.isVisible).toBe(false);
 });
 
 test('shows a search-specific empty state and clears the applied query', async () => {

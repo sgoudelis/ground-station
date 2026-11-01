@@ -118,6 +118,7 @@ import {
 } from '../components/celestial/celestial-slice.jsx';
 
 const CELESTIAL_LIVE_UPDATE_BATCH_MS = 200;
+const LIBRARY_REFRESH_WINDOW_MS = 500;
 
 /**
  * Custom hook to handle all socket event listeners
@@ -313,6 +314,7 @@ export const useSocketEventHandlers = (socket, enabled = true) => {
         socket.on('disconnect', () => {
             ++bootstrapGenerationRef.current;
             pendingSyncRef.current = null;
+            cancelLibraryRefresh();
             dispatch(markTrackerCommandsUnknown());
             // Update connection state
             dispatch(setConnecting(true));
@@ -380,18 +382,51 @@ export const useSocketEventHandlers = (socket, enabled = true) => {
             store.dispatch(setTrackerInstances(data));
         });
 
+        let libraryRefreshTimer = null;
+        let libraryRefreshInFlight = false;
+        let libraryRefreshPending = false;
+        let libraryRefreshDisposed = false;
+        let libraryRefreshRequest = null;
         const refreshLibraryPage = () => {
-            const browser = store.getState().filebrowser;
-            store.dispatch(fetchFiles({
-                socket,
-                filters: browser.filters,
-                search: browser.search,
-                sortBy: browser.sortBy,
-                sortOrder: browser.sortOrder,
-                page: browser.page,
-                pageSize: browser.pageSize,
-            }));
-            store.dispatch(checkForNewFiles({ socket }));
+            if (libraryRefreshDisposed) return;
+            if (libraryRefreshInFlight) {
+                libraryRefreshPending = true;
+                return;
+            }
+            if (libraryRefreshTimer !== null) return;
+            // Use a fixed window so continuous changes still produce updates.
+            // Read visibility and query state when flushing, after navigation.
+            libraryRefreshTimer = window.setTimeout(async () => {
+                libraryRefreshTimer = null;
+                if (!socket.connected) return;
+                libraryRefreshInFlight = true;
+                try {
+                    const browser = store.getState().filebrowser;
+                    if (browser.isVisible) {
+                        libraryRefreshRequest = store.dispatch(fetchFiles({
+                            socket,
+                            filters: browser.filters,
+                            search: browser.search,
+                            sortBy: browser.sortBy,
+                            sortOrder: browser.sortOrder,
+                            page: browser.page,
+                            pageSize: browser.pageSize,
+                        }));
+                    } else if (!browser.hasNewFiles) {
+                        // The sidebar only needs a badge. Once lit, avoid more
+                        // queries until a visit acknowledges the new files.
+                        libraryRefreshRequest = store.dispatch(checkForNewFiles({ socket }));
+                    }
+                    if (libraryRefreshRequest) await libraryRefreshRequest;
+                } finally {
+                    libraryRefreshRequest = null;
+                    libraryRefreshInFlight = false;
+                    if (libraryRefreshPending) {
+                        libraryRefreshPending = false;
+                        refreshLibraryPage();
+                    }
+                }
+            }, LIBRARY_REFRESH_WINDOW_MS);
         };
 
         // Legacy producer events still announce that storage changed.  Listing
@@ -437,6 +472,13 @@ export const useSocketEventHandlers = (socket, enabled = true) => {
         // A library mutation is compact and includes stable IDs; refetching
         // just the current server-side page also handles sort-position moves.
         socket.on("library.changed", refreshLibraryPage);
+        // A lost acknowledgement must not hold the coalescer across reconnects.
+        const cancelLibraryRefresh = () => {
+            window.clearTimeout(libraryRefreshTimer);
+            libraryRefreshTimer = null;
+            libraryRefreshPending = false;
+            libraryRefreshRequest?.abort();
+        };
 
         // Date-based purge sweeps stream coarse-grained progress and a single
         // terminal event; the purge dialog renders them from the store.
@@ -1122,6 +1164,8 @@ export const useSocketEventHandlers = (socket, enabled = true) => {
             socket.off("tracker-instances");
             socket.off("file_browser_state", handleFileBrowserState);
             socket.off("library.changed", refreshLibraryPage);
+            libraryRefreshDisposed = true;
+            cancelLibraryRefresh();
             socket.off("library_purge_progress", handlePurgeProgress);
             socket.off("library_purge_done", handlePurgeDone);
             socket.off("file_browser_error");

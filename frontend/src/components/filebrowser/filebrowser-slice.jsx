@@ -333,6 +333,8 @@ const initialState = {
     filesLoading: false,
     filesError: null,
     filesRequestId: null,
+    // Runtime-only: hidden pages do not need live listing requests.
+    isVisible: false,
     playbackRecordings: [],
     playbackRecordingsLoading: false,
     playbackRecordingsError: null,
@@ -478,6 +480,9 @@ const fileBrowserSlice = createSlice({
         markFileBrowserVisited: (state) => {
             state.lastVisitedTimestamp = new Date().toISOString();
             state.hasNewFiles = false;
+        },
+        setFileBrowserVisible: (state, action) => {
+            state.isVisible = Boolean(action.payload);
         },
         // Keep this action available for direct notification updates.
         setHasNewFiles: (state, action) => {
@@ -710,6 +715,7 @@ export const {
     clearSelection,
     toggleSelectionMode,
     markFileBrowserVisited,
+    setFileBrowserVisible,
     setHasNewFiles,
     setViewMode,
     setPlaybackRecordings,

@@ -289,7 +289,20 @@ def parse_transcription_metadata(transcription_file_path: str) -> Dict[str, Any]
         return {"error": f"Failed to parse metadata: {str(e)}"}
 
 
-async def emit_file_browser_state(sio, state_data, logger, room=None):
+async def refresh_file_browser_library(sio):
+    """Reconcile storage and notify clients after the new catalogue is ready."""
+    inventory = get_inventory()
+    revision = await asyncio.to_thread(inventory.rebuild)
+    publish_ready_artifacts(inventory)
+    # Clients request their current page through the acknowledged query command.
+    await sio.emit(
+        "library.changed",
+        {"revision": revision, "changes": [{"operation": "reconciled", "id": "*"}]},
+        room=authsvc.AUTHENTICATED_SOCKET_ROOM,
+    )
+
+
+async def emit_file_browser_state(sio, state_data, logger, room=None, *, reconcile=True):
     """
     Emit file browser state.
 
@@ -298,20 +311,12 @@ async def emit_file_browser_state(sio, state_data, logger, room=None):
         state_data: State data to emit
         logger: Logger instance
         room: Optional Socket.IO room/session id target
+        reconcile: False when the caller schedules a separate catalogue refresh.
     """
     try:
         action = state_data.get("action")
-        if action in _LIBRARY_MUTATION_ACTIONS:
-            inventory = get_inventory()
-            revision = await asyncio.to_thread(inventory.rebuild)
-            publish_ready_artifacts(inventory)
-            # This event carries only a revision.  Clients request their
-            # current page through the acknowledged query command.
-            await sio.emit(
-                "library.changed",
-                {"revision": revision, "changes": [{"operation": "reconciled", "id": "*"}]},
-                room=authsvc.AUTHENTICATED_SOCKET_ROOM,
-            )
+        if reconcile and action in _LIBRARY_MUTATION_ACTIONS:
+            await refresh_file_browser_library(sio)
         await sio.emit("file_browser_state", state_data, room=room)
         logger.debug(f"Emitted file_browser_state: {action or 'unknown'}")
     except Exception as e:

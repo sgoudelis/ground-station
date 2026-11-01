@@ -49,6 +49,14 @@ filters it out, add `radiosondedecoder: {level: DEBUG}` under `loggers` in
 `backend/data/configs/log_config.yaml` (or your custom logging configuration),
 ensure its handler permits DEBUG, and restart the backend.
 
+Decoded packets are saved and sent to the live UI immediately. Library indexing
+runs separately from FFT forwarding, with a two-second batching window and one
+scan at a time across SDRs and VFOs. Packets arriving during a scan trigger a
+follow-up, including the final packet when reception stops. File Browser and
+packet-map updates therefore follow the completed index refresh. The frontend
+coalesces library notifications and only requests a listing while File Browser
+is open; other pages check the new-files badge until it is lit.
+
 ## Historical captures
 
 Flat packet files, the earlier serial-only layout and timestamp-only run folders

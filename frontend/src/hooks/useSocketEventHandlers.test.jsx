@@ -26,7 +26,7 @@ import { setInitialDataLoading } from '../components/dashboard/dashboard-slice.j
 import { initializeAppData } from '../services/data-sync.js';
 import { toast } from '../utils/toast-with-timestamp.jsx';
 import { setErrorDialogOpen, setErrorMessage } from '../components/waterfall/waterfall-slice.jsx';
-import { setSearch } from '../components/filebrowser/filebrowser-slice.jsx';
+import { setFileBrowserVisible, setHasNewFiles, setSearch } from '../components/filebrowser/filebrowser-slice.jsx';
 import { useSocketEventHandlers } from './useSocketEventHandlers.jsx';
 
 vi.mock('../services/data-sync.js', () => ({
@@ -34,10 +34,15 @@ vi.mock('../services/data-sync.js', () => ({
 }));
 
 afterEach(() => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
+    store.dispatch(setFileBrowserVisible(false));
+    store.dispatch(setHasNewFiles(false));
+    store.dispatch(setSearch(''));
 });
 
-test('library change notifications preserve search while the new-files badge stays unfiltered', async () => {
+test('library changes coalesce and preserve the visible browser query', async () => {
+    vi.useFakeTimers();
     const listeners = new Map();
     const requests = [];
     const socket = {
@@ -49,16 +54,109 @@ test('library change notifications preserve search while the new-files badge sta
             callback({ success: true, data: { items: [], total: 0 } });
         }),
     };
+    store.dispatch(setFileBrowserVisible(true));
     store.dispatch(setSearch('ISS APRS'));
     const wrapper = ({ children }) => <Provider store={store}>{children}</Provider>;
     const { unmount } = renderHook(() => useSocketEventHandlers(socket), { wrapper });
     socket.connected = true;
-    await act(async () => listeners.get('library.changed')({ revision: 2 }));
-    expect(requests).toHaveLength(2);
+    act(() => {
+        for (let revision = 1; revision <= 20; revision++) {
+            listeners.get('library.changed')({ revision });
+        }
+    });
+    expect(requests).toHaveLength(0);
+    await act(async () => vi.advanceTimersByTimeAsync(500));
+    expect(requests).toHaveLength(1);
     expect(requests[0]).toMatchObject({ cmd: 'filebrowser.query', data: { search: 'ISS APRS' } });
-    expect(requests[1].data).not.toHaveProperty('search');
     unmount();
-    store.dispatch(setSearch(''));
+});
+
+test('hidden file browser only checks its badge and stops querying once it is lit', async () => {
+    vi.useFakeTimers();
+    const listeners = new Map();
+    const socket = {
+        connected: false,
+        on: vi.fn((event, handler) => listeners.set(event, handler)),
+        off: vi.fn((event) => listeners.delete(event)),
+        emit: vi.fn((_event, _request, callback) => callback({
+            success: true, data: { items: [{ created: '2099-01-01T00:00:00Z' }] },
+        })),
+    };
+    store.dispatch(setFileBrowserVisible(false));
+    store.dispatch(setHasNewFiles(false));
+    store.dispatch(setSearch('hidden search'));
+    const wrapper = ({ children }) => <Provider store={store}>{children}</Provider>;
+    const { unmount } = renderHook(() => useSocketEventHandlers(socket), { wrapper });
+    socket.connected = true;
+    act(() => listeners.get('library.changed')());
+    await act(async () => vi.advanceTimersByTimeAsync(500));
+    expect(socket.emit).toHaveBeenCalledTimes(1);
+    expect(socket.emit.mock.calls[0][1]).toEqual({
+        cmd: 'filebrowser.query', data: { sortBy: 'created', sortOrder: 'desc', page: 1, pageSize: 1 },
+    });
+    expect(store.getState().filebrowser.hasNewFiles).toBe(true);
+    act(() => listeners.get('library.changed')());
+    await act(async () => vi.advanceTimersByTimeAsync(500));
+    expect(socket.emit).toHaveBeenCalledTimes(1);
+    unmount();
+});
+
+test('library refresh waits for in-flight queries and disposes queued work on unmount', async () => {
+    vi.useFakeTimers();
+    const listeners = new Map();
+    const replies = [];
+    const socket = {
+        connected: false,
+        on: vi.fn((event, handler) => listeners.set(event, handler)),
+        off: vi.fn((event) => listeners.delete(event)),
+        emit: vi.fn((_event, _request, callback) => replies.push(callback)),
+    };
+    store.dispatch(setFileBrowserVisible(true));
+    const wrapper = ({ children }) => <Provider store={store}>{children}</Provider>;
+    const { unmount } = renderHook(() => useSocketEventHandlers(socket), { wrapper });
+    socket.connected = true;
+    act(() => listeners.get('library.changed')());
+    await act(async () => vi.advanceTimersByTimeAsync(500));
+    expect(socket.emit).toHaveBeenCalledTimes(1);
+    act(() => {
+        for (let i = 0; i < 20; i++) listeners.get('library.changed')();
+    });
+    await act(async () => vi.advanceTimersByTimeAsync(1000));
+    expect(socket.emit).toHaveBeenCalledTimes(1);
+    await act(async () => replies[0]({ success: true, data: { items: [], total: 0 } }));
+    await act(async () => vi.advanceTimersByTimeAsync(500));
+    expect(socket.emit).toHaveBeenCalledTimes(2);
+    act(() => listeners.get('library.changed')());
+    unmount();
+    await act(async () => vi.advanceTimersByTimeAsync(1000));
+    expect(socket.emit).toHaveBeenCalledTimes(2);
+});
+
+test('disconnect aborts a lost library query so later updates can refresh again', async () => {
+    vi.useFakeTimers();
+    const listeners = new Map();
+    const socket = {
+        connected: false,
+        on: vi.fn((event, handler) => listeners.set(event, handler)),
+        off: vi.fn((event) => listeners.delete(event)),
+        emit: vi.fn(),
+    };
+    store.dispatch(setFileBrowserVisible(true));
+    const wrapper = ({ children }) => <Provider store={store}>{children}</Provider>;
+    const { unmount } = renderHook(() => useSocketEventHandlers(socket), { wrapper });
+    socket.connected = true;
+    act(() => listeners.get('library.changed')());
+    await act(async () => vi.advanceTimersByTimeAsync(500));
+    expect(socket.emit).toHaveBeenCalledTimes(1);
+    await act(async () => {
+        socket.connected = false;
+        listeners.get('disconnect')();
+    });
+    socket.connected = true;
+    act(() => listeners.get('library.changed')());
+    await act(async () => vi.advanceTimersByTimeAsync(500));
+    expect(socket.emit).toHaveBeenCalledTimes(2);
+    unmount();
 });
 
 test('configuration errors open one detailed dialog without a duplicate toast', () => {

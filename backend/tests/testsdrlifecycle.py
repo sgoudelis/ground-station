@@ -48,6 +48,93 @@ class _StoppedProcess:
         return False
 
 
+@pytest.mark.asyncio
+async def test_decoded_library_refresh_coalesces_bursts_and_keeps_final_packets(monkeypatch):
+    manager = _new_manager()
+    manager.decoded_library_refresh_seconds = 0
+    started, release = asyncio.Event(), asyncio.Event()
+    calls = []
+
+    async def refresh(_sio):
+        calls.append(len(calls) + 1)
+        if len(calls) == 1:
+            started.set()
+            await release.wait()
+
+    monkeypatch.setattr(processlifecycle, "refresh_file_browser_library", refresh)
+    for _ in range(100):
+        manager._schedule_decoded_library_refresh()
+    task = manager._decoded_library_task
+    try:
+        await asyncio.wait_for(started.wait(), timeout=1)
+        # A packet arriving during a scan must be included in a subsequent scan.
+        for _ in range(100):
+            manager._schedule_decoded_library_refresh()
+        assert manager._decoded_library_task is task
+        assert calls == [1]
+    finally:
+        release.set()
+        await asyncio.wait_for(task, timeout=1)
+    assert calls == [1, 2]
+    assert manager._decoded_library_task is None
+
+    # An idle worker can be restarted for a later decoding session.
+    manager._schedule_decoded_library_refresh()
+    await asyncio.wait_for(manager._decoded_library_task, timeout=1)
+    assert calls == [1, 2, 3]
+
+
+@pytest.mark.asyncio
+async def test_fft_queue_does_not_wait_for_a_decoded_library_scan(monkeypatch):
+    started, release = asyncio.Event(), asyncio.Event()
+
+    async def refresh(_sio):
+        started.set()
+        await release.wait()
+
+    monkeypatch.setattr(processlifecycle, "refresh_file_browser_library", refresh)
+    messages = queue.Queue()
+    messages.put(
+        {
+            "type": "decoder-output",
+            "decoder_type": "radiosonde",
+            "session_id": "viewer",
+            "output": {"filepath": "sonde/packet.bin"},
+        }
+    )
+    messages.put({"type": "fft_data", "data": b"fft"})
+    messages.put({"type": "terminated"})
+    process_info = {
+        "process": _StoppedProcess(),
+        "fft_process": None,
+        "data_queue": messages,
+        "stop_event": asyncio.Event(),
+        "clients": {"viewer"},
+        "iq_broadcaster": _Broadcaster(),
+    }
+    manager = _new_manager({"sdr-1": process_info})
+    manager.decoded_library_refresh_seconds = 0
+    emitted = []
+
+    async def emit(event, payload, **_kwargs):
+        emitted.append((event, payload))
+        if event == "file_browser_state":
+            # Let the scan begin and block before the queue reads its FFT frame.
+            await asyncio.wait_for(started.wait(), timeout=1)
+
+    manager.sio.emit = emit
+    try:
+        await asyncio.wait_for(manager._monitor_data_queue("sdr-1", 42), timeout=1)
+        assert ("sdr-fft-data", {"data": b"fft"}) in emitted
+        assert not release.is_set()
+        assert any(event == "decoder-data" for event, _payload in emitted)
+    finally:
+        # Even a stopped SDR must finish publishing its last saved packet.
+        release.set()
+        if manager._decoded_library_task is not None:
+            await asyncio.wait_for(manager._decoded_library_task, timeout=1)
+
+
 def _new_manager(processes=None):
     basic_manager = _Manager()
     return ProcessLifecycleManager(
