@@ -19,7 +19,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Box, Chip, CircularProgress, IconButton, Link, Tooltip, Typography, useTheme } from '@mui/material';
-import { DataGrid, gridClasses } from '@mui/x-data-grid';
+import { DataGrid } from '@mui/x-data-grid';
 import DeleteSweepIcon from '@mui/icons-material/DeleteSweep';
 import { alpha } from '@mui/material/styles';
 import { shallowEqual, useDispatch, useSelector } from 'react-redux';
@@ -33,6 +33,7 @@ import {
     WaterfallStatusBarPaper,
 } from '../common/common.jsx';
 import DecodedPacketsDrawer from './decoded-packets-drawer.jsx';
+import { decodedTableSx, decodedTabsSx } from '../common/decoded-table-styles.js';
 import AircraftPanel from '../decoders/aircraft-panel.jsx';
 import useAircraft from '../decoders/use-aircraft.js';
 import GnssFixQualityTimeline from './gnss-fix-quality-timeline.jsx';
@@ -567,47 +568,16 @@ const DecodedInsightsIsland = React.memo(function DecodedInsightsIsland() {
                 value={activeTab}
                 onChange={(_, value) => dispatch(setDecodedInsightsActiveTab(value))}
                 variant="standard"
-                sx={{
-                    px: 1,
-                    minHeight: 30,
-                    '& .MuiTabs-flexContainer': {
-                        justifyContent: 'flex-start',
-                        alignItems: 'center',
-                        gap: 0.5,
-                    },
-                    '& .MuiTabs-indicator': {
-                        height: 2,
-                    },
-                }}
+                sx={decodedTabsSx}
             >
                 <AntTab
                     value="packets"
                     label={`PACKETS (${packetOutputCount})`}
-                    sx={{
-                        '&.MuiTab-root': {
-                            fontSize: '0.68rem !important',
-                        },
-                        minHeight: 30,
-                        height: 30,
-                        minWidth: 0,
-                        px: 1.25,
-                        py: 0.25,
-                    }}
                 />
-                <AntTab value="adsb" label={`ADSB (${aircraft.length})`} sx={{minHeight: 30, height: 30, fontSize: '0.68rem !important'}} />
+                <AntTab value="adsb" label={`ADSB (${aircraft.length})`} />
                 <AntTab
                     value="gnss"
                     label={`GNSS (${satelliteRows.length})`}
-                    sx={{
-                        '&.MuiTab-root': {
-                            fontSize: '0.68rem !important',
-                        },
-                        minHeight: 30,
-                        height: 30,
-                        minWidth: 0,
-                        px: 1.25,
-                        py: 0.25,
-                    }}
                 />
             </AntTabs>
 
@@ -654,7 +624,7 @@ const DecodedInsightsIsland = React.memo(function DecodedInsightsIsland() {
                                     )}
                                     localeText={{ noRowsLabel: 'Waiting for validated GNSS navigation data' }}
                                     sx={{
-                                        border: 0,
+                                        ...decodedTableSx,
                                         '& .MuiDataGrid-row': {
                                             borderLeft: '3px solid transparent',
                                         },
@@ -666,15 +636,6 @@ const DecodedInsightsIsland = React.memo(function DecodedInsightsIsland() {
                                             },
                                             '&:hover': {
                                                 backgroundColor: alpha(theme.palette.primary.main, 0.26),
-                                            },
-                                        },
-                                        [`& .${gridClasses.cell}:focus, & .${gridClasses.cell}:focus-within`]: {
-                                            outline: 'none',
-                                        },
-                                        [`& .${gridClasses.columnHeader}`]: {
-                                            backgroundColor: theme.palette.background.default,
-                                            '&:focus, &:focus-within': {
-                                                outline: 'none',
                                             },
                                         },
                                     }}
