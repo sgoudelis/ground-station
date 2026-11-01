@@ -121,7 +121,8 @@ def run_migrations():
     This function should be called on application startup to ensure
     the database schema is up to date.
     """
-    # Set the ALEMBIC_CONTEXT environment variable
+    # Preserve the caller's context so later workers keep the same CLI behavior.
+    previous_context = os.environ.get("ALEMBIC_CONTEXT")
     os.environ["ALEMBIC_CONTEXT"] = "1"
 
     try:
@@ -142,13 +143,15 @@ def run_migrations():
         print(f"Error running migrations: {e}", file=sys.stderr)
         raise
     finally:
-        # Clean up environment variable
-        if "ALEMBIC_CONTEXT" in os.environ:
-            del os.environ["ALEMBIC_CONTEXT"]
+        if previous_context is None:
+            os.environ.pop("ALEMBIC_CONTEXT", None)
+        else:
+            os.environ["ALEMBIC_CONTEXT"] = previous_context
 
 
 def get_current_revision() -> str:
     """Get the current database revision."""
+    previous_context = os.environ.get("ALEMBIC_CONTEXT")
     os.environ["ALEMBIC_CONTEXT"] = "1"
 
     try:
@@ -159,8 +162,10 @@ def get_current_revision() -> str:
         # For now, return a placeholder
         return "current"
     finally:
-        if "ALEMBIC_CONTEXT" in os.environ:
-            del os.environ["ALEMBIC_CONTEXT"]
+        if previous_context is None:
+            os.environ.pop("ALEMBIC_CONTEXT", None)
+        else:
+            os.environ["ALEMBIC_CONTEXT"] = previous_context
 
 
 def create_migration(message: str, autogenerate: bool = True):
@@ -170,6 +175,7 @@ def create_migration(message: str, autogenerate: bool = True):
         message: Description of the migration
         autogenerate: Whether to auto-generate migration from model changes
     """
+    previous_context = os.environ.get("ALEMBIC_CONTEXT")
     os.environ["ALEMBIC_CONTEXT"] = "1"
 
     try:
@@ -182,5 +188,7 @@ def create_migration(message: str, autogenerate: bool = True):
 
         return True
     finally:
-        if "ALEMBIC_CONTEXT" in os.environ:
-            del os.environ["ALEMBIC_CONTEXT"]
+        if previous_context is None:
+            os.environ.pop("ALEMBIC_CONTEXT", None)
+        else:
+            os.environ["ALEMBIC_CONTEXT"] = previous_context

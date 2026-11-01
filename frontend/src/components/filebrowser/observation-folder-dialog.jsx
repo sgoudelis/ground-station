@@ -20,7 +20,17 @@ import {
     Tooltip,
     Typography,
 } from '@mui/material';
-import {compactDialogTitleSx, mobileFullScreenPaperSx} from '../common/dialog-layout.js';
+import {
+    fileDialogActionsSx,
+    fileDialogContentSx,
+    fileDialogDetailLabelSx,
+    fileDialogDetailSx,
+    fileDialogDetailsGridSx,
+    fileDialogPaperSx,
+    fileDialogSectionHeaderSx,
+    fileDialogSectionSx,
+    fileDialogTitleSx,
+} from './file-dialog-styles.js';
 import CloseIcon from '@mui/icons-material/Close';
 import AudioFileIcon from '@mui/icons-material/AudioFile';
 import DescriptionIcon from '@mui/icons-material/Description';
@@ -224,22 +234,9 @@ export default function ObservationFolderDialog({
             onClose={onClose}
             maxWidth="lg"
             fullWidth
-            PaperProps={{
-                sx: {
-                    bgcolor: 'background.paper',
-                    border: (theme) => `1px solid ${theme.palette.divider}`,
-                    borderRadius: 2,
-                    height: '90vh',
-                    maxHeight: '90vh',
-                    ...mobileFullScreenPaperSx,
-                }
-            }}
+            PaperProps={{ sx: fileDialogPaperSx }}
         >
-            <DialogTitle sx={{
-                ...compactDialogTitleSx,
-                bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'grey.900' : 'grey.100'),
-                borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
-            }}>
+            <DialogTitle sx={fileDialogTitleSx}>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, minWidth: 0 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: '1 1 auto', minWidth: 0 }}>
                         <SatelliteAltIcon color="primary" />
@@ -273,36 +270,17 @@ export default function ObservationFolderDialog({
                     </Box>
                 </Box>
             </DialogTitle>
-            <DialogContent sx={{
-                bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'rgba(0, 0, 0, 0.36)' : 'grey.100'),
-                overflow: 'auto',
-                flex: 1,
-                px: 3,
-                pt: '24px !important',
-                pb: 3,
-            }}>
+            <DialogContent sx={fileDialogContentSx}>
                 {(metadata.observation_name || observationStatus || observationDetails.length > 0 || scheduledObservation) && (
                     <Paper
                         variant="outlined"
                         data-testid="observation-details-summary"
-                        sx={{
-                            mb: 3,
-                            overflow: 'hidden',
-                            borderRadius: 2,
-                            bgcolor: 'background.paper',
-                        }}
+                        sx={fileDialogSectionSx}
                     >
                         <Box
                             sx={{
-                                px: 2.25,
-                                py: 1.5,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                gap: 2,
+                                ...fileDialogSectionHeaderSx,
                                 borderBottom: observationDetails.length ? '1px solid' : 0,
-                                borderColor: 'divider',
-                                bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'grey.900' : 'grey.50'),
                             }}
                         >
                             <Box sx={{ minWidth: 0 }}>
@@ -325,8 +303,7 @@ export default function ObservationFolderDialog({
                         {observationDetails.length > 0 && (
                             <Box
                                 sx={{
-                                    display: 'grid',
-                                    gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', md: 'repeat(3, minmax(0, 1fr))' },
+                                    ...fileDialogDetailsGridSx,
                                     rowGap: 0,
                                     columnGap: 0,
                                 }}
@@ -335,9 +312,7 @@ export default function ObservationFolderDialog({
                                     <Box
                                         key={detail.label}
                                         sx={(theme) => ({
-                                            px: 2.25,
-                                            py: 1.25,
-                                            minWidth: 0,
+                                            ...fileDialogDetailSx,
                                             borderBottom: {
                                                 xs: `1px solid ${theme.palette.border?.main || theme.palette.divider}`,
                                                 md: 0,
@@ -345,7 +320,7 @@ export default function ObservationFolderDialog({
                                             '&:last-child': { borderBottom: 0 },
                                         })}
                                     >
-                                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                                        <Typography variant="caption" color="text.secondary" sx={fileDialogDetailLabelSx}>
                                             {detail.label}
                                         </Typography>
                                         <Tooltip title={String(detail.value)} placement="top-start">
@@ -374,14 +349,11 @@ export default function ObservationFolderDialog({
                                 </Box>
                                 {scheduledDetails.length > 0 && (
                                     <Box
-                                        sx={{
-                                            display: 'grid',
-                                            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', md: 'repeat(3, minmax(0, 1fr))' },
-                                        }}
+                                        sx={fileDialogDetailsGridSx}
                                     >
                                         {scheduledDetails.map((detail) => (
-                                            <Box key={detail.label} sx={{ px: 2.25, py: 1.25, minWidth: 0 }}>
-                                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                                            <Box key={detail.label} sx={fileDialogDetailSx}>
+                                                <Typography variant="caption" color="text.secondary" sx={fileDialogDetailLabelSx}>
                                                     {detail.label}
                                                 </Typography>
                                                 <Tooltip title={String(detail.value)} placement="top-start">
@@ -535,13 +507,7 @@ export default function ObservationFolderDialog({
                 ))}
                 {!hasArtifacts && <Typography color="text.secondary">{t('observation_folder_dialog.no_files_were_produced_by_this_observation', { defaultValue: 'No files were produced by this observation.' })}</Typography>}
             </DialogContent>
-            <DialogActions disableSpacing sx={{
-                bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'grey.900' : 'grey.100'),
-                borderTop: (theme) => `1px solid ${theme.palette.divider}`,
-                px: 3,
-                py: 2.5,
-                gap: 1,
-            }}>
+            <DialogActions disableSpacing sx={fileDialogActionsSx}>
                 <Button onClick={onDelete} color="error" variant="outlined" startIcon={<DeleteIcon />} disabled={!onDelete}>
                     {t('observation_folder_dialog.delete', { defaultValue: 'Delete' })}
                 </Button>

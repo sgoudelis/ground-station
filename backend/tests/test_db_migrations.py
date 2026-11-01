@@ -60,6 +60,43 @@ def test_run_migrations_creates_backup_only_when_pending(monkeypatch, tmp_path):
     assert calls["upgrade"] == 2
 
 
+@pytest.mark.parametrize(
+    "operation", ["run_migrations", "get_current_revision", "create_migration"]
+)
+@pytest.mark.parametrize("previous_context", [None, "", "1", "caller-context"])
+@pytest.mark.parametrize("fail", [False, True])
+def test_migration_helpers_restore_caller_context(
+    monkeypatch, tmp_path, operation, previous_context, fail
+):
+    if previous_context is None:
+        monkeypatch.delenv("ALEMBIC_CONTEXT", raising=False)
+    else:
+        monkeypatch.setenv("ALEMBIC_CONTEXT", previous_context)
+
+    def configure():
+        assert os.environ["ALEMBIC_CONTEXT"] == "1"
+        if fail:
+            raise RuntimeError("migration configuration failed")
+        return object()
+
+    monkeypatch.setattr(migrations, "get_alembic_config", configure)
+    monkeypatch.setattr(migrations, "_resolve_db_path", lambda: tmp_path / "gs.db")
+    monkeypatch.setattr(migrations, "_has_pending_migrations", lambda *_args: False)
+    monkeypatch.setattr(migrations.command, "upgrade", lambda *_args: None)
+    monkeypatch.setattr(migrations.command, "revision", lambda *_args, **_kwargs: None)
+
+    helper = getattr(migrations, operation)
+    args = ("test revision",) if operation == "create_migration" else ()
+    if fail:
+        with pytest.raises(RuntimeError, match="migration configuration failed"):
+            helper(*args)
+    else:
+        helper(*args)
+
+    # An absent or empty setting must stay distinct from an enabled caller context.
+    assert os.environ.get("ALEMBIC_CONTEXT") == previous_context
+
+
 def test_orbit_timestamp_migration_backfills_existing_rows(monkeypatch, tmp_path):
     db_path = tmp_path / "legacy-orbit-times.db"
     monkeypatch.setenv("GS_DB", str(db_path))

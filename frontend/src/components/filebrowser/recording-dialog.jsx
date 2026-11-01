@@ -29,9 +29,18 @@ import {
     DialogActions,
     IconButton,
     Stack,
+    Paper,
     Tooltip,
 } from '@mui/material';
-import {compactDialogTitleSx, mobileFullScreenPaperSx} from '../common/dialog-layout.js';
+import FileDialogDetails from './file-dialog-details.jsx';
+import {
+    fileDialogActionsSx,
+    fileDialogContentSx,
+    fileDialogPaperSx,
+    fileDialogSectionHeaderSx,
+    fileDialogSectionSx,
+    fileDialogTitleSx,
+} from './file-dialog-styles.js';
 import GraphicEqIcon from '@mui/icons-material/GraphicEq';
 import CloseIcon from '@mui/icons-material/Close';
 import DownloadIcon from '@mui/icons-material/Download';
@@ -150,22 +159,6 @@ export default function RecordingDialog({ open, onClose, recording, socket }) {
         return date.toLocaleString('en-US', { timeZone: timezone });
     };
 
-    const sectionSx = {
-        p: 2,
-        mb: 2,
-        border: '1px solid',
-        borderColor: 'divider',
-        borderRadius: 1.5,
-        bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'grey.900' : 'grey.50'),
-    };
-
-    const rowSx = {
-        display: 'grid',
-        gridTemplateColumns: { xs: '1fr', sm: '160px 1fr' },
-        gap: { xs: 0.5, sm: 2 },
-        py: 0.5,
-    };
-
     const associatedFiles = useMemo(() => buildAssociatedFiles(recording), [recording]);
 
     const formatFrequency = (frequencyHz) => {
@@ -189,371 +182,204 @@ export default function RecordingDialog({ open, onClose, recording, socket }) {
             onClose={onClose}
             maxWidth="lg"
             fullWidth
-            PaperProps={{
-                sx: {
-                    bgcolor: 'background.paper',
-                    border: (theme) => `1px solid ${theme.palette.divider}`,
-                    borderRadius: 2,
-                    ...mobileFullScreenPaperSx,
-                },
-            }}
+            PaperProps={{ sx: fileDialogPaperSx }}
         >
-            <DialogTitle
-                sx={{
-                    ...compactDialogTitleSx,
-                    bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'grey.900' : 'grey.100'),
-                    borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
-                }}
-            >
+            <DialogTitle sx={fileDialogTitleSx}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1, minWidth: 0 }}>
-                    <Typography variant="h6" noWrap sx={{ flex: '1 1 auto', minWidth: 0 }}>
-                        {t('recording_dialog.recording_details', { defaultValue: 'Recording Details' })}
-                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: '1 1 auto', minWidth: 0 }}>
+                        <GraphicEqIcon color="primary" />
+                        <Typography variant="h6" noWrap sx={{ minWidth: 0 }}>
+                            {t('recording_dialog.recording_details', { defaultValue: 'Recording Details' })}
+                        </Typography>
+                    </Box>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
-                        {recording?.snapshot?.width && recording?.snapshot?.height && (
-                            <Chip
-                                label={`${recording.snapshot.width}×${recording.snapshot.height}`}
-                                size="small"
-                                sx={{ mr: 1, height: '20px', fontSize: '0.65rem', '& .MuiChip-label': { px: 0.75 } }}
-                            />
-                        )}
-                        <Chip label={formatBytes(recording?.data_size || 0)} size="small" sx={{ height: '20px', fontSize: '0.65rem', '& .MuiChip-label': { px: 0.75 } }} />
+                        <Box sx={{ display: 'flex', gap: 0.5, overflow: 'hidden', maxWidth: { xs: '35vw', sm: 'none' } }}>
+                            {recording?.snapshot?.width && recording?.snapshot?.height && (
+                                <Chip
+                                    label={`${recording.snapshot.width}×${recording.snapshot.height}`}
+                                    size="small"
+                                    variant="outlined"
+                                />
+                            )}
+                            <Chip label={formatBytes(recording?.data_size || 0)} size="small" variant="outlined" />
+                        </Box>
                         <IconButton onClick={onClose} size="small" aria-label={t('common:close', { defaultValue: 'Close' })}>
                             <CloseIcon fontSize="small" />
                         </IconButton>
                     </Box>
                 </Box>
             </DialogTitle>
-            <DialogContent
-                sx={{
-                    bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'rgba(0, 0, 0, 0.36)' : 'grey.100'),
-                    px: 3,
-                    py: 3,
-                }}
-            >
-                {recording && (
-                    <Box sx={{ mt: 3 }}>
-                        {recording.snapshot && (
-                            <WaterfallViewer
-                                src={recording.snapshot.url}
-                                alt={recording.name}
-                                centerFrequency={recording?.metadata?.center_frequency}
-                                sampleRate={recording?.metadata?.sample_rate}
-                                transmitters={transmitters}
-                                startTime={recording?.metadata?.start_time || recording?.captured_at}
-                                endTime={
-                                    recording?.metadata?.finalized_time ||
-                                    recording?.completed_at ||
-                                    recording?.modified ||
-                                    recording?.created
-                                }
-                                formatDate={formatDate}
-                                formatFrequency={formatFrequency}
-                                containerSx={{
-                                    mb: 2,
-                                    height: { xs: 280, sm: 360, md: 440 },
-                                    '&:hover': {
-                                        boxShadow: '0 0 0 2px rgba(66, 135, 245, 0.25)',
-                                        borderStyle: 'dashed',
-                                    },
-                                }}
+            <DialogContent sx={fileDialogContentSx}>
+                {recording.snapshot && (
+                    <WaterfallViewer
+                        src={recording.snapshot.url}
+                        alt={recording.name}
+                        centerFrequency={recording?.metadata?.center_frequency}
+                        sampleRate={recording?.metadata?.sample_rate}
+                        transmitters={transmitters}
+                        startTime={recording?.metadata?.start_time || recording?.captured_at}
+                        endTime={
+                            recording?.metadata?.finalized_time ||
+                            recording?.completed_at ||
+                            recording?.modified ||
+                            recording?.created
+                        }
+                        formatDate={formatDate}
+                        formatFrequency={formatFrequency}
+                        containerSx={{
+                            mb: 2,
+                            height: { xs: 280, sm: 360, md: 440 },
+                            '&:hover': {
+                                boxShadow: '0 0 0 2px rgba(66, 135, 245, 0.25)',
+                                borderStyle: 'dashed',
+                            },
+                        }}
+                    />
+                )}
+
+                <FileDialogDetails
+                    title={t('recording_dialog.recording', { defaultValue: 'Recording' })}
+                    details={[{ label: t('recording_dialog.name', { defaultValue: 'Name' }), value: recording.name, mono: true, multiline: true }]}
+                />
+
+                <Paper variant="outlined" sx={fileDialogSectionSx}>
+                    <Box sx={fileDialogSectionHeaderSx}>
+                        <Box>
+                            <Typography variant="subtitle2" fontWeight={700}>{t('recording_dialog.recording_files', { defaultValue: 'Recording files' })}</Typography>
+                            <Typography variant="caption" color="text.secondary">{t('recording_dialog.source_data_and_generated_visual_products', { defaultValue: 'Source data and generated visual products' })}</Typography>
+                        </Box>
+                        <Chip label={`${associatedFiles.length} files`} size="small" variant="outlined" />
+                    </Box>
+                    <Box sx={{ p: 1 }}>
+                        {associatedFiles.map((file) => {
+                            const isImage = file.key === 'snapshot' || file.key === 'thumbnail';
+                            const fileIcon = file.key === 'data'
+                                ? <GraphicEqIcon />
+                                : file.key === 'metadata'
+                                    ? <DescriptionIcon />
+                                    : <ImageIcon />;
+                            const accentColor = file.key === 'data'
+                                ? 'primary.main'
+                                : file.key === 'metadata'
+                                    ? 'info.main'
+                                    : 'success.main';
+
+                            return (
+                                <Box
+                                    key={file.key}
+                                    sx={{
+                                        display: 'grid',
+                                        gridTemplateColumns: { xs: '52px minmax(0, 1fr) auto', sm: '64px minmax(0, 1fr) auto' },
+                                        alignItems: 'center',
+                                        gap: { xs: 1.25, sm: 1.5 },
+                                        p: 1.25,
+                                        borderRadius: 1.5,
+                                        '&:hover': { bgcolor: 'action.hover' },
+                                    }}
+                                >
+                                    <Box
+                                        sx={{
+                                            width: { xs: 52, sm: 64 },
+                                            height: { xs: 42, sm: 48 },
+                                            borderRadius: 1.25,
+                                            bgcolor: isImage ? 'grey.900' : 'action.selected',
+                                            color: accentColor,
+                                            border: '1px solid',
+                                            borderColor: isImage ? 'divider' : 'transparent',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            overflow: 'hidden',
+                                        }}
+                                    >
+                                        {file.previewUrl ? (
+                                            <Box component="img" src={file.previewUrl} alt={`${file.type} preview`} sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                                        ) : fileIcon}
+                                    </Box>
+                                    <Box sx={{ minWidth: 0 }}>
+                                        <Typography variant="caption" sx={{ color: accentColor, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                                            {file.type}
+                                        </Typography>
+                                        <Tooltip title={file.filename} placement="top-start">
+                                            <Typography variant="body2" noWrap sx={{ fontFamily: 'monospace', fontWeight: 600 }}>
+                                                {file.filename}
+                                            </Typography>
+                                        </Tooltip>
+                                        <Typography variant="caption" color="text.secondary" component="div">
+                                            {formatBytes(file.size)}{file.dimensions ? ` · ${file.dimensions}` : ''}
+                                        </Typography>
+                                    </Box>
+                                    <Tooltip title={`Download ${file.type}`}>
+                                        <span>
+                                            <IconButton
+                                                aria-label={`Download ${file.type}`}
+                                                size="small"
+                                                color="primary"
+                                                disabled={!file.url}
+                                                onClick={() => window.open(file.url, '_blank', 'noopener,noreferrer')}
+                                            >
+                                                <DownloadIcon fontSize="small" />
+                                            </IconButton>
+                                        </span>
+                                    </Tooltip>
+                                </Box>
+                            );
+                        })}
+                    </Box>
+                </Paper>
+
+                {recording.metadata && (
+                    <>
+                        {(recording.metadata.target_satellite_name || recording.metadata.target_satellite_norad_id) && (
+                            <FileDialogDetails
+                                title={t('recording_dialog.target_satellite', { defaultValue: 'Target Satellite' })}
+                                details={[
+                                    { label: t('recording_dialog.name', { defaultValue: 'Name' }), value: recording.metadata.target_satellite_name },
+                                    { label: t('recording_dialog.norad_id', { defaultValue: 'NORAD ID' }), value: recording.metadata.target_satellite_norad_id, mono: true },
+                                ].filter((detail) => detail.value)}
                             />
                         )}
+                        <FileDialogDetails
+                            title={t('recording_dialog.metadata', { defaultValue: 'Metadata' })}
+                            details={[
+                                { label: t('recording_dialog.data_type', { defaultValue: 'Data Type' }), value: recording.metadata.datatype, mono: true },
+                                { label: t('recording_dialog.sample_rate', { defaultValue: 'Sample Rate' }), value: recording.metadata.sample_rate && `${recording.metadata.sample_rate} Hz`, mono: true },
+                                { label: t('recording_dialog.start_time', { defaultValue: 'Start Time' }), value: recording.metadata.start_time && formatDate(recording.metadata.start_time) },
+                                { label: t('recording_dialog.end_time', { defaultValue: 'End Time' }), value: recording.metadata.finalized_time && formatDate(recording.metadata.finalized_time) },
+                                { label: t('recording_dialog.sigmf_version', { defaultValue: 'SigMF Version' }), value: recording.metadata.version, mono: true },
+                                { label: t('recording_dialog.recorder', { defaultValue: 'Recorder' }), value: recording.metadata.recorder },
+                                { label: t('recording_dialog.description', { defaultValue: 'Description' }), value: recording.metadata.description, multiline: true },
+                            ].filter((detail) => detail.value)}
+                        />
 
-                        <Typography variant="subtitle2" gutterBottom>
-                            {t('recording_dialog.recording', { defaultValue: 'Recording' })}
-                        </Typography>
-                        <Box sx={{ ...sectionSx, mb: 1.5 }}>
-                            <Box sx={rowSx}>
-                                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                                    {t('recording_dialog.name', { defaultValue: 'Name' })}
-                                </Typography>
-                                <Typography variant="body2" sx={{ fontFamily: 'monospace', wordBreak: 'break-word' }}>
-                                    {recording.name}
-                                </Typography>
-                            </Box>
-                        </Box>
-
-                        <Box
-                            sx={{
-                                mb: 2,
-                                border: '1px solid',
-                                borderColor: 'divider',
-                                borderRadius: 2,
-                                overflow: 'hidden',
-                                bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'grey.900' : 'common.white'),
-                            }}
-                        >
-                            <Box
-                                sx={{
-                                    px: 2,
-                                    py: 1.5,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'space-between',
-                                    gap: 2,
-                                    borderBottom: '1px solid',
-                                    borderColor: 'divider',
-                                    bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'grey.800' : 'grey.50'),
-                                }}
-                            >
-                                <Box>
-                                    <Typography variant="subtitle2" fontWeight={700}>{t('recording_dialog.recording_files', { defaultValue: 'Recording files' })}</Typography>
-                                    <Typography variant="caption" color="text.secondary">{t('recording_dialog.source_data_and_generated_visual_products', { defaultValue: 'Source data and generated visual products' })}</Typography>
-                                </Box>
-                                <Chip label={`${associatedFiles.length} files`} size="small" variant="outlined" />
-                            </Box>
-                            <Box sx={{ p: 1 }}>
-                                {associatedFiles.map((file) => {
-                                    const isImage = file.key === 'snapshot' || file.key === 'thumbnail';
-                                    const fileIcon = file.key === 'data'
-                                        ? <GraphicEqIcon />
-                                        : file.key === 'metadata'
-                                            ? <DescriptionIcon />
-                                            : <ImageIcon />;
-                                    const accentColor = file.key === 'data'
-                                        ? 'primary.main'
-                                        : file.key === 'metadata'
-                                            ? 'info.main'
-                                            : 'success.main';
-
-                                    return (
-                                        <Box
-                                            key={file.key}
-                                            sx={{
-                                                display: 'grid',
-                                                gridTemplateColumns: { xs: '52px minmax(0, 1fr) auto', sm: '64px minmax(0, 1fr) auto' },
-                                                alignItems: 'center',
-                                                gap: { xs: 1.25, sm: 1.5 },
-                                                p: 1.25,
-                                                borderRadius: 1.5,
-                                                '&:hover': { bgcolor: 'action.hover' },
-                                            }}
-                                        >
-                                            <Box
-                                                sx={{
-                                                    width: { xs: 52, sm: 64 },
-                                                    height: { xs: 42, sm: 48 },
-                                                    borderRadius: 1.25,
-                                                    bgcolor: isImage ? 'grey.900' : 'action.selected',
-                                                    color: accentColor,
-                                                    border: '1px solid',
-                                                    borderColor: isImage ? 'divider' : 'transparent',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    overflow: 'hidden',
-                                                }}
-                                            >
-                                                {file.previewUrl ? (
-                                                    <Box component="img" src={file.previewUrl} alt={`${file.type} preview`} sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                                                ) : fileIcon}
-                                            </Box>
-                                            <Box sx={{ minWidth: 0 }}>
-                                                <Typography variant="caption" sx={{ color: accentColor, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
-                                                    {file.type}
-                                                </Typography>
-                                                <Tooltip title={file.filename} placement="top-start">
-                                                    <Typography variant="body2" noWrap sx={{ fontFamily: 'monospace', fontWeight: 600 }}>
-                                                        {file.filename}
-                                                    </Typography>
-                                                </Tooltip>
-                                                <Typography variant="caption" color="text.secondary" component="div">
-                                                    {formatBytes(file.size)}{file.dimensions ? ` · ${file.dimensions}` : ''}
-                                                </Typography>
-                                            </Box>
-                                            <Tooltip title={`Download ${file.type}`}>
-                                                <span>
-                                                    <IconButton
-                                                        aria-label={`Download ${file.type}`}
-                                                        size="small"
-                                                        color="primary"
-                                                        disabled={!file.url}
-                                                        onClick={() => window.open(file.url, '_blank', 'noopener,noreferrer')}
-                                                    >
-                                                        <DownloadIcon fontSize="small" />
-                                                    </IconButton>
-                                                </span>
-                                            </Tooltip>
-                                        </Box>
-                                    );
-                                })}
-                            </Box>
-                        </Box>
-
-                        {recording.metadata && (
+                        {recording.metadata.captures?.length > 0 && (
                             <>
-                                {(recording.metadata.target_satellite_name || recording.metadata.target_satellite_norad_id) && (
-                                    <>
-                                        <Typography variant="subtitle2" gutterBottom>
-                                            {t('recording_dialog.target_satellite', { defaultValue: 'Target Satellite' })}
-                                        </Typography>
-                                        <Box sx={sectionSx}>
-                                            {recording.metadata.target_satellite_name && (
-                                                <Box sx={rowSx}>
-                                                    <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                                                        {t('recording_dialog.name', { defaultValue: 'Name' })}
-                                                    </Typography>
-                                                    <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
-                                                        {recording.metadata.target_satellite_name}
-                                                    </Typography>
-                                                </Box>
-                                            )}
-                                            {recording.metadata.target_satellite_norad_id && (
-                                                <Box sx={rowSx}>
-                                                    <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                                                        {t('recording_dialog.norad_id', { defaultValue: 'NORAD ID' })}
-                                                    </Typography>
-                                                    <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
-                                                        {recording.metadata.target_satellite_norad_id}
-                                                    </Typography>
-                                                </Box>
-                                            )}
-                                        </Box>
-                                    </>
-                                )}
-
                                 <Typography variant="subtitle2" gutterBottom>
-                                    {t('recording_dialog.metadata', { defaultValue: 'Metadata' })}
+                                    {t('recording_dialog.capture_segments', { defaultValue: 'Capture Segments (' })}{recording.metadata.captures.length})
                                 </Typography>
-                                <Box sx={sectionSx}>
-                                    {recording.metadata.datatype && (
-                                        <Box sx={rowSx}>
-                                            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                                                {t('recording_dialog.data_type', { defaultValue: 'Data Type' })}
-                                            </Typography>
-                                            <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
-                                                {recording.metadata.datatype}
-                                            </Typography>
-                                        </Box>
-                                    )}
-                                    {recording.metadata.sample_rate && (
-                                        <Box sx={rowSx}>
-                                            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                                                {t('recording_dialog.sample_rate', { defaultValue: 'Sample Rate' })}
-                                            </Typography>
-                                            <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
-                                                {recording.metadata.sample_rate} Hz
-                                            </Typography>
-                                        </Box>
-                                    )}
-                                    {recording.metadata.start_time && (
-                                        <Box sx={rowSx}>
-                                            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                                                {t('recording_dialog.start_time', { defaultValue: 'Start Time' })}
-                                            </Typography>
-                                            <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
-                                                {formatDate(recording.metadata.start_time)}
-                                            </Typography>
-                                        </Box>
-                                    )}
-                                    {recording.metadata.finalized_time && (
-                                        <Box sx={rowSx}>
-                                            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                                                {t('recording_dialog.end_time', { defaultValue: 'End Time' })}
-                                            </Typography>
-                                            <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
-                                                {formatDate(recording.metadata.finalized_time)}
-                                            </Typography>
-                                        </Box>
-                                    )}
-                                    {recording.metadata.version && (
-                                        <Box sx={rowSx}>
-                                            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                                                {t('recording_dialog.sigmf_version', { defaultValue: 'SigMF Version' })}
-                                            </Typography>
-                                            <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
-                                                {recording.metadata.version}
-                                            </Typography>
-                                        </Box>
-                                    )}
-                                    {recording.metadata.recorder && (
-                                        <Box sx={rowSx}>
-                                            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                                                {t('recording_dialog.recorder', { defaultValue: 'Recorder' })}
-                                            </Typography>
-                                            <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
-                                                {recording.metadata.recorder}
-                                            </Typography>
-                                        </Box>
-                                    )}
-                                    {recording.metadata.description && (
-                                        <Box sx={rowSx}>
-                                            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                                                {t('recording_dialog.description', { defaultValue: 'Description' })}
-                                            </Typography>
-                                            <Typography variant="body2" sx={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
-                                                {recording.metadata.description}
-                                            </Typography>
-                                        </Box>
-                                    )}
-                                </Box>
-
-                                {recording.metadata.captures?.length > 0 && (
-                                    <>
-                                        <Typography variant="subtitle2" gutterBottom>
-                                            {t('recording_dialog.capture_segments', { defaultValue: 'Capture Segments (' })}{recording.metadata.captures.length})
-                                        </Typography>
-                                        <Stack spacing={1} sx={{ mb: 2 }}>
-                                            {recording.metadata.captures.map((capture, index) => (
-                                                <Box
-                                                    key={index}
-                                                    sx={{
-                                                        p: 2,
-                                                        border: '1px solid',
-                                                        borderColor: 'divider',
-                                                        borderRadius: 1.5,
-                                                        bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'grey.900' : 'common.white'),
-                                                        boxShadow: '0 1px 2px rgba(0, 0, 0, 0.08)',
-                                                    }}
-                                                >
-                                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                                                        <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                                                            {t('recording_dialog.segment', { defaultValue: 'Segment' })} {index + 1}
-                                                        </Typography>
-                                                        <Chip
-                                                            label={`${Object.keys(capture).length} fields`}
-                                                            size="small"
-                                                            sx={{ height: '20px', fontSize: '0.65rem', '& .MuiChip-label': { px: 0.75 } }}
-                                                        />
-                                                    </Box>
-                                                    <Box sx={{ fontFamily: 'monospace', fontSize: '0.8125rem' }}>
-                                                        {Object.entries(capture).map(([key, value]) => (
-                                                            <Box key={key} sx={rowSx}>
-                                                                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                                                                    {key}
-                                                                </Typography>
-                                                                <Typography variant="body2" sx={{ fontFamily: 'monospace', wordBreak: 'break-word' }}>
-                                                                    {typeof value === 'object' ? JSON.stringify(value) : String(value)}
-                                                                </Typography>
-                                                            </Box>
-                                                        ))}
-                                                    </Box>
-                                                </Box>
-                                            ))}
-                                        </Stack>
-                                    </>
-                                )}
+                                <Stack spacing={1} sx={{ mb: 2 }}>
+                                    {recording.metadata.captures.map((capture, index) => (
+                                        <FileDialogDetails
+                                            key={index}
+                                            title={`${t('recording_dialog.segment', { defaultValue: 'Segment' })} ${index + 1}`}
+                                            action={<Chip label={`${Object.keys(capture).length} fields`} size="small" variant="outlined" />}
+                                            details={Object.entries(capture).map(([key, value]) => ({
+                                                label: key,
+                                                value: typeof value === 'object' ? JSON.stringify(value) : String(value),
+                                                mono: true,
+                                                multiline: true,
+                                            }))}
+                                        />
+                                    ))}
+                                </Stack>
                             </>
                         )}
-                    </Box>
+                    </>
                 )}
             </DialogContent>
             <DialogActions
                 disableSpacing
-                sx={{
-                    bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'grey.900' : 'grey.100'),
-                    borderTop: (theme) => `1px solid ${theme.palette.divider}`,
-                    px: 3,
-                    py: 2.5,
-                    gap: 1,
-                    flexDirection: { xs: 'column', sm: 'row' },
-                    alignItems: { xs: 'stretch', sm: 'center' },
-                    justifyContent: { xs: 'stretch', sm: 'flex-end' },
-                    '& .MuiButton-root': {
-                        width: { xs: '100%', sm: 'auto' },
-                    },
-                }}
+                sx={fileDialogActionsSx}
             >
                 <Button
                     onClick={() => window.open(recording?.download_urls.data, '_blank')}
@@ -581,13 +407,6 @@ export default function RecordingDialog({ open, onClose, recording, socket }) {
                 <Button
                     onClick={onClose}
                     variant="outlined"
-                    sx={{
-                        borderColor: (theme) => (theme.palette.mode === 'dark' ? 'grey.700' : 'grey.400'),
-                        '&:hover': {
-                            borderColor: (theme) => (theme.palette.mode === 'dark' ? 'grey.600' : 'grey.500'),
-                            bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'grey.800' : 'grey.200'),
-                        },
-                    }}
                 >
                     {t('recording_dialog.close', { defaultValue: 'Close' })}
                 </Button>
