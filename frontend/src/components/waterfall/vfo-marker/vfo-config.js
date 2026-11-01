@@ -244,6 +244,15 @@ export const DECODERS = {
         bandwidthLabel: (bw) => `BW${bw / 1000}kHz`,
         lockedBandwidth: true, // bandwidth is determined by LoRa parameters, not user-adjustable
     },
+    adsb: {
+        internalName: 'adsb', displayName: 'ADS-B',
+        get description() { return t('vfo_config.adsb', {defaultValue: '1090 MHz aircraft decoder (readsb)'}); },
+        hasStatusDisplay: true, hasProgressDisplay: false, hasTextOutput: false, hasModeDisplay: false,
+        defaultBandwidth: 2000000, minBandwidth: 2000000, maxBandwidth: 2000000,
+        bandwidthType: 'double-sided', showBothEdges: true,
+        allowLeftEdgeDrag: false, allowRightEdgeDrag: false,
+        bandwidthLabel: () => '2 MHz', lockedBandwidth: true,
+    },
     radiosonde: {
         internalName: 'radiosonde',
         displayName: 'Radiosonde',

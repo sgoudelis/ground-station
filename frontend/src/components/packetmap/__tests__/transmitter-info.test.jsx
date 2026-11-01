@@ -35,6 +35,21 @@ function wrapper({children}) {
 }
 
 describe('Transmitter information', () => {
+    it('derives aircraft registration country from saved ICAO addresses without stored enrichment', () => {
+        const aircraft = {...transmitter, id: 'adsb:4d2406', kind: 'adsb', source: '4D2406', name: 'EWG46A', details: {}};
+        const {rerender} = render(<TransmitterInfo transmitter={aircraft} />, {wrapper});
+        expect(screen.getByRole('img', {name: 'ICAO registration country: Malta'})).toHaveTextContent('🇲🇹');
+        const reception = within(screen.getByRole('region', {name: 'Reception'}));
+        expect(reception.getByText('ICAO registration country')).toBeInTheDocument();
+        expect(reception.getByText('Malta')).toBeInTheDocument();
+        rerender(<TransmitterInfo transmitter={{...aircraft, source: 'FFFFFF'}} />);
+        expect(screen.queryByRole('img')).not.toBeInTheDocument();
+        expect(screen.queryByText('ICAO registration country')).not.toBeInTheDocument();
+        // A hex-like source from another protocol must never acquire an aircraft flag.
+        rerender(<TransmitterInfo transmitter={{...transmitter, source: '4D2406'}} />);
+        expect(screen.queryByRole('img')).not.toBeInTheDocument();
+    });
+
     it('shows every decoded field, metadata, labels and units without losing zero or false values', () => {
         render(<TransmitterInfo transmitter={transmitter} selectedTransmitterId={transmitter.id} />, {wrapper});
         const info = screen.getByRole('region', {name: 'Transmitter info'});

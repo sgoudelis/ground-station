@@ -285,6 +285,7 @@ const SdrAccordion = ({
         return normalized;
     }, [selectedSdrRecord]);
     const selectedCapabilities = sdrCapabilities?.[selectedSDRId] || null;
+    const isSdrplay = String(selectedSdrRecord?.driver || '').toLowerCase() === 'sdrplay';
     const biasTSupported = hasBiasT || selectedCapabilities?.bias_t?.supported;
     const isNoneSourceOption = (source) =>
         typeof source === 'string' && source.trim().toLowerCase() === 'none';
@@ -361,16 +362,19 @@ const SdrAccordion = ({
             : gainRangeEntries;
 
     const buildGainOptions = (min, max, step) => {
-        if (step == null || step <= 0) {
+        if (!Number.isFinite(min) || !Number.isFinite(max) || max < min) {
             return [];
         }
+        // Soapy drivers can omit the increment (step=0). Keep those controls
+        // available with one-unit choices, including SDRplay's IFGR and RFGR.
+        const increment = Number.isFinite(step) && step > 0 ? step : 1;
         const options = [];
         let current = min;
         let guard = 0;
         const maxOptions = 200;
         while (current <= max && guard < maxOptions) {
             options.push(Number(current.toFixed(6)));
-            current += step;
+            current += increment;
             guard += 1;
         }
         return options;
@@ -553,6 +557,14 @@ const SdrAccordion = ({
                                     if (options.length === 0) {
                                         return null;
                                     }
+                                    const isLnaState = isSdrplay && name === 'RFGR';
+                                    const isIfReduction = isSdrplay && name === 'IFGR';
+                                    const label = isLnaState
+                                        ? t('settings_sdr.lna_attenuation_state', {defaultValue: 'LNA attenuation state (RFGR)'})
+                                        : isIfReduction
+                                            ? t('settings_sdr.if_gain_reduction', {defaultValue: 'IF gain reduction (IFGR)'})
+                                            : `Gain ${name}`;
+                                    const labelId = `sdr-gain-${name}-label`;
                                     return (
                                         <FormControl
                                             key={`gain-${name}`}
@@ -561,10 +573,11 @@ const SdrAccordion = ({
                                             variant="outlined"
                                             size="small"
                                         >
-                                            <InputLabel>{`Gain ${name}`}</InputLabel>
+                                            <InputLabel id={labelId}>{label}</InputLabel>
                                             <Select
                                                 size="small"
-                                                label={`Gain ${name}`}
+                                                labelId={labelId}
+                                                label={label}
                                                 value={
                                                     sdrSettings?.gains?.[name] ??
                                                     "none"
@@ -582,10 +595,15 @@ const SdrAccordion = ({
                                                 </MenuItem>
                                                 {options.map((option) => (
                                                     <MenuItem key={`${name}-${option}`} value={option}>
-                                                        {option} dB
+                                                        {isLnaState ? option : `${option} dB`}
                                                     </MenuItem>
                                                 ))}
                                             </Select>
+                                            {isIfReduction && (
+                                                <FormHelperText>
+                                                    {t('settings_sdr.gain_reduction_hint', {defaultValue: 'Lower values increase gain.'})}
+                                                </FormHelperText>
+                                            )}
                                         </FormControl>
                                     );
                                 })}

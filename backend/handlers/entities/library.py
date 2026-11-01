@@ -27,6 +27,7 @@ import asyncio
 import time
 from typing import Any, Dict, List, Optional
 
+from common import adsblive
 from common import auth as authsvc
 from library.inventory import _parse_cutoff, get_inventory, publish_ready_artifacts
 from library.search import normalize_search
@@ -101,6 +102,32 @@ async def query_positions(
     except ValueError as exc:
         return {"success": False, "error": str(exc)}
     return {"success": True, "data": result}
+
+
+async def subscribe_adsb(sio, data, _logger, sid):
+    enabled = (data or {}).get("enabled", True)
+    if type(enabled) is not bool:
+        return {"success": False, "error": "enabled must be a boolean"}
+    if enabled:
+        await sio.enter_room(sid, adsblive.ROOM)
+    else:
+        await sio.leave_room(sid, adsblive.ROOM)
+    return {"success": True, "data": {"aircraft": adsblive.snapshot() if enabled else []}}
+
+
+async def adsb_history(_sio, data, _logger, _sid):
+    try:
+        request = data or {}
+        result = await asyncio.to_thread(
+            get_inventory().adsb_history,
+            request.get("id"),
+            request.get("cursor"),
+            request.get("run"),
+            request.get("limit", 50),
+        )
+        return {"success": True, "data": result}
+    except (ValueError, TypeError) as exc:
+        return {"success": False, "error": str(exc)}
 
 
 async def reconcile_library(
@@ -232,6 +259,8 @@ def register_handlers(registry: Any) -> None:
         {
             "filebrowser.query": (query_library, "api_call"),
             "filebrowser.positions": (query_positions, "api_call"),
+            "adsb.subscribe": (subscribe_adsb, "api_call"),
+            "adsb.history": (adsb_history, "api_call"),
             "filebrowser.item": (get_library_item, "api_call"),
             "filebrowser.reconcile": (reconcile_library, "api_call"),
             "filebrowser.delete": (delete_library_items, "api_call"),

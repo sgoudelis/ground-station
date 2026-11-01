@@ -86,7 +86,10 @@ export default function usePacketPositions(socket, range) {
         // Limit refreshes during save bursts without postponing them forever
         // when a decoder continuously produces packets.
         let timer;
-        const changed = () => {
+        const changed = (event) => {
+            // ADS-B uses its subscribed live stream; avoid re-fetching the
+            // complete selected history whenever an aircraft log grows.
+            if (event?.changes?.length && event.changes.every((change) => change.item?.folder_kind === 'adsb')) return;
             if (timer !== undefined) return;
             timer = window.setTimeout(() => {
                 timer = undefined;

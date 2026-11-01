@@ -18,6 +18,8 @@ import {columns, LAYOUT_SCHEMA_VERSION, loadLayouts} from './layouts.js';
 import {transmitterRows} from './transmitters.js';
 import TransmitterTable from './transmitter-table.jsx';
 import TransmitterInfo from './transmitter-info.jsx';
+import useAircraft from '../decoders/use-aircraft.js';
+import {mergeAircraftHistory} from './aircraft.js';
 import {setPacketMapRange} from './packet-map-slice.jsx';
 
 export {gridLayoutStoreName} from './storage.js';
@@ -35,7 +37,10 @@ export default function PacketMapLayout() {
         // Start at the latest fix whenever a new filesystem window is applied.
         setPlaybackTime(nextRange.end === null ? null : Date.parse(nextRange.end));
     };
-    const {positions, transmitters, available_range, loading, error, refresh} = usePacketPositions(socket, range);
+    const {positions: savedPositions, transmitters: savedTransmitters, available_range, loading, error, refresh} = usePacketPositions(socket, range);
+    const liveAircraft = useAircraft(socket, range.end === null);
+    const {positions, transmitters} = useMemo(() => mergeAircraftHistory(savedPositions, savedTransmitters, liveAircraft, range),
+        [savedPositions, savedTransmitters, liveAircraft, range]);
     const isLive = range.end === null;
     const [liveNow, setLiveNow] = useState(Date.now);
     useEffect(() => {

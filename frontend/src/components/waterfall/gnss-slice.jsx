@@ -238,7 +238,7 @@ export const gnssSlice = createSlice({
     initialState,
     reducers: {
         setDecodedInsightsActiveTab: (state, action) => {
-            state.decodedInsightsActiveTab = action.payload === 'gnss' ? 'gnss' : 'packets';
+            state.decodedInsightsActiveTab = ['gnss', 'adsb'].includes(action.payload) ? action.payload : 'packets';
         },
         setGnssSatellitesSortModel: (state, action) => {
             state.gnssSatellitesSortModel = action.payload;

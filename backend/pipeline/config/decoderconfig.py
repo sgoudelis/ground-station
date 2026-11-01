@@ -77,6 +77,9 @@ class DecoderConfig:
     radiosonde_type: str = "auto"
     radiosonde_save_interval: int = 5  # Seconds; zero retains every validated packet.
 
+    adsb_save_interval: int = 5
+    adsb_capture_messages: bool = False
+
     # GNSS-SDR specific parameters
     gnss_sample_rate: Optional[int] = None  # Input sample rate expected by GNSS-SDR
     gnss_total_channels: Optional[int] = None  # Total acquisition/tracking channels
@@ -123,6 +126,8 @@ class DecoderConfig:
             and self.radiosonde_type == other.radiosonde_type
             and self.radiosonde_sample_rate == other.radiosonde_sample_rate
             and self.radiosonde_save_interval == other.radiosonde_save_interval
+            and self.adsb_save_interval == other.adsb_save_interval
+            and self.adsb_capture_messages == other.adsb_capture_messages
             and self.sf == other.sf
             and self.bw == other.bw
             and self.cr == other.cr
@@ -168,6 +173,8 @@ class DecoderConfig:
                 self.radiosonde_type,
                 self.radiosonde_sample_rate,
                 self.radiosonde_save_interval,
+                self.adsb_save_interval,
+                self.adsb_capture_messages,
                 self.sf,
                 self.bw,
                 self.cr,
@@ -207,6 +214,8 @@ class DecoderConfig:
             "radiosonde_type": self.radiosonde_type,
             "radiosonde_sample_rate": self.radiosonde_sample_rate,
             "radiosonde_save_interval": self.radiosonde_save_interval,
+            "adsb_save_interval": self.adsb_save_interval,
+            "adsb_capture_messages": self.adsb_capture_messages,
             "sf": self.sf,
             "bw": self.bw,
             "cr": self.cr,

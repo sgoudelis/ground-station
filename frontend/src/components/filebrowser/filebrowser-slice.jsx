@@ -333,6 +333,7 @@ const initialState = {
     filesLoading: false,
     filesError: null,
     filesRequestId: null,
+    filesRevision: 0,
     // Runtime-only: hidden pages do not need live listing requests.
     isVisible: false,
     playbackRecordings: [],
@@ -403,6 +404,18 @@ const fileBrowserSlice = createSlice({
     name: 'filebrowser',
     initialState,
     reducers: {
+        resetLibraryRevision: (state) => {
+            // Revisions are process-local and start over after a server restart.
+            state.filesRevision = 0;
+            state.filesRequestId = null;
+            state.filesLoading = false;
+        },
+        libraryItemsChanged: (state, action) => {
+            if (action.payload.revision < state.filesRevision) return;
+            const changed = new Map(action.payload.items.map((item) => [item.id, item]));
+            state.files = state.files.map((item) => changed.has(item.id) ? {...item, ...changed.get(item.id)} : item);
+            state.filesRevision = action.payload.revision;
+        },
         setSearch: (state, action) => {
             const search = action.payload.trim().replace(/\s+/g, ' ');
             if (state.search === search) return;
@@ -540,6 +553,8 @@ const fileBrowserSlice = createSlice({
                 || state.search !== (action.meta.arg.search || '')) return;
             state.filesRequestId = null;
             state.filesLoading = false;
+            if ((action.payload.revision ?? 0) < state.filesRevision) return;
+            state.filesRevision = action.payload.revision ?? 0;
             state.files = action.payload.items || [];
             state.total = action.payload.total || 0;
             state.page = action.payload.page || state.page;
@@ -701,6 +716,8 @@ const fileBrowserSlice = createSlice({
 });
 
 export const {
+    resetLibraryRevision,
+    libraryItemsChanged,
     setSearch,
     setSortBy,
     toggleSortOrder,

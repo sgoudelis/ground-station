@@ -92,6 +92,21 @@ class DecoderConfigService:
         transmitter = transmitter or {}
         overrides = overrides or {}
 
+        if decoder_type == "adsb":
+            interval = overrides.get("adsb_save_interval", 5)
+            capture = overrides.get("adsb_capture_messages", False)
+            if type(interval) is not int or not 0 <= interval <= 3600:
+                raise ValueError("ADS-B save interval must be an integer from 0 to 3600 seconds")
+            if type(capture) is not bool:
+                raise ValueError("ADS-B message capture must be a boolean")
+            return DecoderConfig(
+                baudrate=0,
+                framing="adsb",
+                config_source="manual",
+                adsb_save_interval=interval,
+                adsb_capture_messages=capture,
+            )
+
         if decoder_type == "radiosonde":
             # Sonde framing and symbol rate are fixed by the selected protocol;
             # satellite metadata must not turn this into an AX.25 receiver.

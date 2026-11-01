@@ -30,6 +30,7 @@ from fft.processor import fft_processor_process
 from handlers.entities.filebrowser import emit_file_browser_state, refresh_file_browser_library
 from hardware.parameters import probe_sdr_parameters, sdr_parameter_lock
 from monitoring.timing import TimestampedQueue, get_enabled_event
+from pipeline.orchestration.adsb import AdsbPublisher
 from pipeline.orchestration.gnssfix import derive_gnss_fix_status_from_output, gnss_fix_stream_key
 from pipeline.orchestration.gnsssatelliteresolver import GnssSatelliteResolver
 from pipeline.streaming.iqbroadcaster import IQBroadcaster
@@ -152,6 +153,7 @@ class ProcessLifecycleManager:
         self._decoded_library_dirty = False
         self._decoded_library_task: Optional[asyncio.Task] = None
         self.decoded_library_refresh_seconds = 2.0
+        self.adsb_publisher = AdsbPublisher(self.sio)
 
     def _schedule_decoded_library_refresh(self) -> None:
         self._decoded_library_dirty = True
@@ -1455,6 +1457,14 @@ class ProcessLifecycleManager:
                                 self.logger.error(
                                     f"Decoder restart request missing session_id or vfo: {data}"
                                 )
+
+                        elif data_type == "adsb-update":
+                            await self.adsb_publisher.publish(data.get("aircraft", []))
+
+                        elif data_type == "adsb-library":
+                            # File IO stays outside this queue reader, which also
+                            # forwards the waterfall's FFT frames.
+                            self.adsb_publisher.schedule(data.get("folders", []))
 
                         elif data_type in [
                             "decoder-status",

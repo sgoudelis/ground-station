@@ -7,6 +7,67 @@ root README:
 
 https://github.com/sgoudelis/ground-station#readme
 
+## ADS-B decoding
+
+Select **ADS-B** on a manual VFO tuned to **1090 MHz**. The SDR must capture at
+least **2.4 MS/s**, with the entire 2 MHz VFO channel inside its bandwidth.
+Ground Station translates the VFO to baseband, resamples to 2.4 MS/s, converts
+to little-endian signed 16-bit interleaved IQ, and pipes it into
+[readsb](https://github.com/wiedehopf/readsb). Retuning or an IQ discontinuity
+restarts the child and its accumulated aircraft state. No second SDR is opened.
+Scheduled ADS-B observations are intentionally unavailable.
+
+Docker builds readsb at `READSB_COMMIT`. For a native installation, install
+the C build toolchain, zlib and zstd development packages, then build the same revision:
+
+```bash
+git clone https://github.com/wiedehopf/readsb.git
+cd readsb
+git checkout 321931802d89f1695a38f6dfb0a64ba5c1211be4
+make -j4 DISABLE_INTERACTIVE=yes
+```
+
+Install the binary on the backend's PATH or into `backend/venv/bin/`, retaining
+its LICENSE with the installation. A missing executable appears as a decoder error.
+
+Open the **ADS-B** tab in the waterfall's decoded-data panel for live aircraft,
+or the Packet Map for positions. These views share a subscription: aircraft
+changes are batched once per second, never inserted into the generic packet
+history, and unsubscribed when the views close. Live trails retain at most 120
+fixes per aircraft, with a 1,000-aircraft live limit and 60-second expiry;
+the map bounds ADS-B geometry to 5,000 points. Initial
+historical ADS-B map responses are also sampled to at most 5,000 points.
+
+Aircraft history defaults to one state every five seconds per ICAO address,
+with squawk/emergency changes and final pending states retained. Zero saves
+every new readsb snapshot, rather than every individual radio message.
+State files retain normalized SI fields, position timestamps, reception
+provenance and the original readsb report. Repeated/stale positions do not
+become new historical fixes. ICAO-addressed targets are supported; non-ICAO
+addresses are omitted instead of being mixed with real ICAO identities.
+Optional raw capture verifies DF17/18 CRC parity independently. These are readsb's
+emitted frames, which may include its bit corrections, rather than untouched RF bits.
+
+Captures follow the radiosonde identity/run convention:
+
+```text
+data/decoded/adsb_406b90/20261101T120000.000000Z.gsadsb/
+  run.json
+  track_<receiver-id>.jsonl
+  messages_<receiver-id>.jsonl  # optional raw DF17/18 capture
+```
+
+Runs cover a fixed 12-hour window from the first record, shared across VFOs and
+sessions. Reception reports arriving up to ten seconds before the first record's
+timestamp join that run when no earlier window fits. Separate receiver files avoid
+competing appenders. The worker flushes
+buffered records every second and announces changed aircraft folders every five
+seconds. The library reads only appended complete track records, keeping offsets
+for paginated/cursor-based inspection. Raw logs are never parsed for library updates.
+Existing browser rows update in place where sorting/filtering permits; otherwise
+only the visible page is refreshed. Startup, manual and periodic reconciliation
+can discover externally copied captures without reparsing unchanged log contents.
+
 ## Radiosonde decoding
 
 Select **Radiosonde** on a VFO tuned to the sonde. Start with a 20 kHz channel

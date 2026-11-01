@@ -125,6 +125,8 @@ async def update_vfo_parameters(
         "radiosonde_type",
         "radiosonde_sample_rate",
         "radiosonde_save_interval",
+        "adsb_save_interval",
+        "adsb_capture_messages",
         # Live VFO controls use the same PHY fields as the LoRa config resolver.
         # Keep the legacy forced-LDRO alias for saved client configurations.
         *LORA_DEFAULTS,

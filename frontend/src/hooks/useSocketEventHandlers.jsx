@@ -68,7 +68,7 @@ import {
     updateGnssFixLifecycleFromStatus,
     updateGnssFixLifecycleFromOutput,
 } from '../components/waterfall/gnss-slice.jsx';
-import { checkForNewFiles, fetchFiles, setPlaybackRecordings, purgeProgressUpdated, purgeFinished } from '../components/filebrowser/filebrowser-slice.jsx';
+import { checkForNewFiles, fetchFiles, setPlaybackRecordings, purgeProgressUpdated, purgeFinished, libraryItemsChanged, setHasNewFiles, resetLibraryRevision } from '../components/filebrowser/filebrowser-slice.jsx';
 import {
     setConnected,
     setConnecting,
@@ -206,6 +206,7 @@ export const useSocketEventHandlers = (socket, enabled = true) => {
             pendingSyncRef.current = null;
 
             console.log('Socket connected with ID:', socket.id, socket);
+            dispatch(resetLibraryRevision());
 
             // Update connection state
             dispatch(setConnecting(false));
@@ -315,6 +316,7 @@ export const useSocketEventHandlers = (socket, enabled = true) => {
             ++bootstrapGenerationRef.current;
             pendingSyncRef.current = null;
             cancelLibraryRefresh();
+            dispatch(resetLibraryRevision());
             dispatch(markTrackerCommandsUnknown());
             // Update connection state
             dispatch(setConnecting(true));
@@ -471,7 +473,26 @@ export const useSocketEventHandlers = (socket, enabled = true) => {
 
         // A library mutation is compact and includes stable IDs; refetching
         // just the current server-side page also handles sort-position moves.
-        socket.on("library.changed", refreshLibraryPage);
+        const handleLibraryChanged = (event) => {
+            const changes = event?.changes || [];
+            const onlyAircraft = changes.length > 0 && changes.every((change) => change.item?.folder_kind === 'adsb');
+            if (!onlyAircraft) {
+                refreshLibraryPage();
+                return;
+            }
+            const browser = store.getState().filebrowser;
+            if (!browser.isVisible) {
+                if (changes.some((change) => change.operation === 'created')) store.dispatch(setHasNewFiles(true));
+                return;
+            }
+            // Size/modified sorting and text filters may change page membership.
+            // Stable address/date ordering lets existing rows update in place.
+            const stableOrder = ['name', 'captured_at', 'completed_at', 'sample_rate'].includes(browser.sortBy);
+            if (stableOrder && !browser.search && !browser.filesLoading && changes.every((change) => change.operation === 'updated')) {
+                store.dispatch(libraryItemsChanged({items: changes.map((change) => change.item), revision: event.revision}));
+            } else refreshLibraryPage();
+        };
+        socket.on("library.changed", handleLibraryChanged);
         // A lost acknowledgement must not hold the coalescer across reconnects.
         const cancelLibraryRefresh = () => {
             window.clearTimeout(libraryRefreshTimer);
@@ -1163,7 +1184,7 @@ export const useSocketEventHandlers = (socket, enabled = true) => {
             window.clearInterval(commandTimer);
             socket.off("tracker-instances");
             socket.off("file_browser_state", handleFileBrowserState);
-            socket.off("library.changed", refreshLibraryPage);
+            socket.off("library.changed", handleLibraryChanged);
             libraryRefreshDisposed = true;
             cancelLibraryRefresh();
             socket.off("library_purge_progress", handlePurgeProgress);

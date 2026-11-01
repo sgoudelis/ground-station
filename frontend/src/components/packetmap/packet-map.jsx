@@ -20,6 +20,7 @@ import MapInteractions from './map-interactions.jsx';
 import PacketMapToolbar from './map-toolbar.jsx';
 import PacketMapSettingsDialog from './map-settings-dialog.jsx';
 import {createRadiosondeIcon} from './radiosonde-marker.js';
+import {createAircraftIcon} from './aircraft-marker.js';
 import {createAprsIcon, getAprsSymbol} from './aprs-marker.js';
 import {buildPlaybackTrack, trackPositionAt} from './playback.js';
 import {getCircleBounds, getHorizonRadii} from './horizon.js';
@@ -172,6 +173,8 @@ export default function PacketMap({positions, transmitters, hasPositions = posit
         }) : point?.kind === 'aprs' ? createAprsIcon({
             position: aprsPosition(point, details), report: details?.telemetry,
             phase: current.phase, altitude: point.altitude, name: point.name, stale: current.stale,
+        }) : point?.kind === 'adsb' ? createAircraftIcon({
+            track: point.track_deg, name: point.name || point.source, icao: point.source, stale: current.stale,
         }) : null;
         return [track.id, current ? {...current, icon} : null];
     })), [tracks, playbackTime, transmitterDetails]);
@@ -277,12 +280,13 @@ export default function PacketMap({positions, transmitters, hasPositions = posit
                         ? '#9e9e9e' : color;
                     return <React.Fragment key={id}>
                         {settings.showTracks && path.length > 1 && <Polyline positions={path} smoothFactor={0.5}
-                            pathOptions={{color, weight: 2, opacity: 1, lineCap: 'round', lineJoin: 'round'}} />}
+                            pathOptions={{color, weight: 2, opacity: latest.kind === 'adsb' ? 0.3 : 1, lineCap: 'round', lineJoin: 'round'}} />}
                         {endpoints.filter((point) => point !== current?.point).map((point) => <CircleMarker key={point.id}
                             center={[point.latitude, point.longitude]} radius={3.42}
                             eventHandlers={{click: () => onSelectTransmitter?.(id)}}
                             pathOptions={{color, fillColor: color, fillOpacity: 0.25, weight: 2}} />)}
                         {current && (current.icon ? <Marker key="cursor" position={[current.point.latitude, current.point.longitude]}
+                            title={current.point.kind === 'adsb' ? current.point.name || current.point.source || id : undefined}
                             icon={current.icon} eventHandlers={{click: () => onSelectTransmitter?.(id)}}
                         /> : <CircleMarker key="cursor" center={[current.point.latitude, current.point.longitude]} radius={5.985}
                             eventHandlers={{click: () => onSelectTransmitter?.(id)}}
@@ -316,7 +320,7 @@ export default function PacketMap({positions, transmitters, hasPositions = posit
                 </Paper>}
                 {!loading && !positions.length && <Alert severity="info" sx={{alignSelf: 'stretch'}}>
                     {hasPositions ? t('packet_map.all_hidden', {defaultValue: 'All transmitter types are hidden.'})
-                        : t('packet_map.empty', {defaultValue: 'No APRS or radiosonde positions in this date range.'})}
+                        : t('packet_map.empty', {defaultValue: 'No decoded transmitter positions in this date range.'})}
                 </Alert>}
             </Box>
         </Box>

@@ -18,6 +18,8 @@ import logging
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Type
 
+from demodulators.adsbdecoder import AdsbDecoder
+
 logger = logging.getLogger("decoder-registry")
 unavailable_decoder_reasons: Dict[str, str] = {}
 
@@ -155,6 +157,18 @@ class DecoderRegistry:
 
         # Define capabilities for each decoder (only when class imports succeeded)
         self._decoders = {}
+
+        self._decoders["adsb"] = DecoderCapabilities(
+            name="adsb",
+            decoder_class=AdsbDecoder,
+            needs_raw_iq=True,
+            required_demodulator=None,
+            demodulator_mode=None,
+            default_bandwidth=2000000,
+            supports_transmitter_config=False,
+            restart_on_params=["adsb_save_interval", "adsb_capture_messages"],
+            description="Manual 1090 MHz ADS-B receiver through readsb",
+        )
 
         if RadiosondeDecoder is not None:
             self._decoders["radiosonde"] = DecoderCapabilities(

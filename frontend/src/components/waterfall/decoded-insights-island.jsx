@@ -33,6 +33,7 @@ import {
     WaterfallStatusBarPaper,
 } from '../common/common.jsx';
 import DecodedPacketsDrawer from './decoded-packets-drawer.jsx';
+import AircraftPanel from '../decoders/aircraft-panel.jsx';
 import GnssFixQualityTimeline from './gnss-fix-quality-timeline.jsx';
 import { DevRenderProfiler } from './render-profiler.jsx';
 import { useUserTimeSettings } from '../../hooks/useUserTimeSettings.jsx';
@@ -136,7 +137,7 @@ const DecodedInsightsIsland = React.memo(function DecodedInsightsIsland() {
         }),
         shallowEqual
     );
-    const activeTab = decodedInsightsActiveTab === 'gnss' ? 'gnss' : 'packets';
+    const activeTab = ['gnss', 'adsb'].includes(decodedInsightsActiveTab) ? decodedInsightsActiveTab : 'packets';
     const gnssSortModel = gnssSatellitesSortModel;
 
     const handleClearAll = useCallback(() => {
@@ -649,9 +650,11 @@ const DecodedInsightsIsland = React.memo(function DecodedInsightsIsland() {
                         py: 0.25,
                     }}
                 />
+                <AntTab value="adsb" label="ADS-B" sx={{minHeight: 30, height: 30, fontSize: '0.68rem !important'}} />
             </AntTabs>
 
             <Box sx={{ flex: 1, minHeight: 0, backgroundColor: theme.palette.background.paper }}>
+                {activeTab === 'adsb' && <AircraftPanel />}
                 {activeTab === 'packets' && (
                     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                         <Box sx={{ flex: 1, minHeight: 0 }}>

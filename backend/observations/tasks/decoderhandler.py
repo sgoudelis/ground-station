@@ -192,6 +192,8 @@ class DecoderHandler:
             # Get decoder configuration
             transmitter_id = task_config.get("transmitter_id", "none")
             decoder_type = task_config.get("decoder_type", "none")
+            if decoder_type == "adsb":
+                raise ValueError("ADS-B is available only through a manual VFO")
             decoder_param_overrides = map_scheduler_decoder_parameters(
                 decoder_type, task_config.get("parameters")
             )

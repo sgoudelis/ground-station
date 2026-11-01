@@ -115,6 +115,7 @@ import MeteorM2xLrptFolderDialog from './meteor-m2x-lrpt-folder-dialog.jsx';
 import MeteorHrptFolderDialog from './meteor-hrpt-folder-dialog.jsx';
 import ObservationFolderDialog from './observation-folder-dialog.jsx';
 import RadiosondeFolderDialog from './radiosonde-folder-dialog.jsx';
+import AircraftFolderDialog from './aircraft-folder-dialog.jsx';
 import ProcessingDialog from './processing-dialog.jsx';
 import PurgeDialog from './purge-dialog.jsx';
 import ImageViewerDialog from '../common/image-viewer-dialog.jsx';
@@ -361,6 +362,7 @@ export default function FileBrowserMain() {
     const [observationFolderDialogOpen, setObservationFolderDialogOpen] = useState(false);
     const [observationFolder, setObservationFolder] = useState(null);
     const [radiosondeFolder, setRadiosondeFolder] = useState(null);
+    const [aircraftFolder, setAircraftFolder] = useState(null);
     const [returnToObservationFolder, setReturnToObservationFolder] = useState(false);
     const [processingDialogOpen, setProcessingDialogOpen] = useState(false);
     const [processingRecording, setProcessingRecording] = useState(null);
@@ -549,6 +551,10 @@ export default function FileBrowserMain() {
     };
 
     const handleShowDetails = async (item) => {
+        if (item.folder_kind === 'adsb') {
+            setAircraftFolder(item);
+            return;
+        }
         if (item.folder_kind === 'radiosonde') {
             setRadiosondeFolder(item);
             return;
@@ -611,6 +617,7 @@ export default function FileBrowserMain() {
                     setObservationFolder(null);
                 }
                 if (itemToDelete.folder_kind === 'radiosonde') setRadiosondeFolder(null);
+                if (itemToDelete.folder_kind === 'adsb') setAircraftFolder(null);
             } catch (error) {
                 // Error will be shown by socket error event listener, but show local toast too
                 toast.error(t('toast.delete_failed', 'Failed to delete: {{error}}', { error }));
@@ -2622,6 +2629,8 @@ export default function FileBrowserMain() {
                 onDelete={handleDeleteObservation}
             />
 
+            {aircraftFolder && <AircraftFolderDialog folder={aircraftFolder} socket={socket}
+                onClose={() => setAircraftFolder(null)} onDelete={handleDelete} />}
             {radiosondeFolder && <RadiosondeFolderDialog
                 key={radiosondeFolder.id}
                 folder={radiosondeFolder}

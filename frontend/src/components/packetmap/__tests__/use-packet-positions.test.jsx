@@ -123,4 +123,22 @@ describe('Packet position loading', () => {
         expect(result.current.error).toBe('Choose a valid date range.');
         expect(requests).toHaveLength(1);
     });
+
+    it('does not reload history for aircraft appends but refreshes after deletion', async () => {
+        vi.useFakeTimers();
+        const {socket, requests, handlers} = socketMock();
+        const {unmount} = renderHook(() => usePacketPositions(socket, first));
+        await act(async () => requests[0].reply(null, {success: true, data: {positions: []}}));
+        act(() => {
+            handlers.get('library.changed')({changes: [{operation: 'updated', id: 'decoded_folder:adsb_406b90', item: {folder_kind: 'adsb'}}]});
+            vi.advanceTimersByTime(1000);
+        });
+        expect(requests).toHaveLength(1);
+        act(() => {
+            handlers.get('library.changed')({changes: [{operation: 'deleted', id: 'decoded_folder:adsb_406b90'}]});
+            vi.advanceTimersByTime(1000);
+        });
+        expect(requests).toHaveLength(2);
+        unmount();
+    });
 });

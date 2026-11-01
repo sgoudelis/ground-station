@@ -317,6 +317,7 @@ export const DataDecoderSelector = ({
                 else if (newValue === 'morse') updates.bandwidth = 2500;
                 else if (newValue === 'aprs') updates.bandwidth = 12500;
                 else if (newValue === 'radiosonde') updates.bandwidth = 20000;
+                else if (newValue === 'adsb') updates.bandwidth = 2000000;
                 else if (['gmsk', 'gfsk', 'bpsk'].includes(newValue)) {
                     const lockedTransmitterTrackerId = vfo?.lockedTransmitterTrackerId;
                     const lockedTransmitter = vfo?.lockedTransmitterId
@@ -371,6 +372,7 @@ export const DataDecoderSelector = ({
                     { value: 'bpsk', label: t('vfo.decoders_modes.bpsk', 'BPSK') },
                     { value: 'aprs', label: t('vfo.decoders_modes.aprs', 'APRS') },
                     { value: 'radiosonde', label: t('vfo.decoders_modes.radiosonde', 'Radiosonde') },
+                    { value: 'adsb', label: 'ADS-B' },
                     { value: 'gnss', label: t('vfo.decoders_modes.gnss', 'GNSS') }
                 ].map(({ value, label }) => {
                     const supported = isDecoderSupported(value);

@@ -12,6 +12,7 @@ import {useUserTimeSettings} from '../../hooks/useUserTimeSettings.jsx';
 import {formatDateTime} from '../../utils/date-time.js';
 import {detailLabel, flattenDetails, typeColor, typeLabel} from './transmitters.js';
 import {setTransmitterTableColumnVisibility} from './packet-map-slice.jsx';
+import AircraftFlag from '../common/aircraft-flag.jsx';
 
 const visibleDetails = new Set([
     'signal.frequency_hz', 'telemetry.vel_h', 'telemetry.vel_v', 'telemetry.heading',
@@ -44,7 +45,8 @@ export default function TransmitterTable({rows, loading, hiddenTypes, gridEditab
                 // Use the shared selection instead of opening a second detail surface.
                 event.stopPropagation();
                 onSelectTransmitter?.(row.id);
-            }} sx={{textTransform: 'none', minWidth: 0, px: 0, maxWidth: '100%'}}>
+            }} sx={{textTransform: 'none', minWidth: 0, px: 0, maxWidth: '100%', gap: 0.75}}>
+                {row.kind === 'adsb' && <AircraftFlag icao={row.source} />}
                 <Typography variant="body2" noWrap>{row.name}</Typography>
             </Button>},
         {field: 'kind', headerName: t('packet_map.type', {defaultValue: 'Type'}), width: 95,

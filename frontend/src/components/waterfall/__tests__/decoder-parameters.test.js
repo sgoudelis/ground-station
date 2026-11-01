@@ -8,6 +8,14 @@ import {
     mapParametersToBackend,
 } from '../decoder-parameters.js';
 
+it('offers validated manual ADS-B parameters with explicit raw capture opt-in', () => {
+    expect(DECODER_SUPPORT.adsb).toBe(true);
+    expect(getDecoderDefaultParameters('adsb')).toEqual({adsb_save_interval: 5, adsb_capture_messages: false});
+    expect(mapParametersToBackend('adsb', {adsb_save_interval: 0, adsb_capture_messages: true}))
+        .toEqual({adsb_save_interval: 0, adsb_capture_messages: true});
+    expect(getDecoderParameters('adsb').adsb_save_interval.label).toBe('Aircraft history interval (seconds)');
+});
+
 describe('Radiosonde decoder parameters', () => {
     it('offers Auto and all sonde families and maps settings to the backend', () => {
         expect(DECODER_SUPPORT.radiosonde).toBe(true);

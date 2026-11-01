@@ -85,6 +85,9 @@ class ProcessManager:
         """
         self.sio = sio
         self.lifecycle_manager.sio = sio
+        # The publisher is created before startup attaches Socket.IO. Keep its
+        # server reference in sync for both live aircraft and library updates.
+        self.lifecycle_manager.adsb_publisher.sio = sio
         self.recorder_manager.sio = sio
         self.audio_recorder_manager.sio = sio
 

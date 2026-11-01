@@ -33,6 +33,7 @@ from urllib.parse import quote
 
 from common.artifactdates import artifact_dates, parse_artifact_time, transcription_end
 from common.events import public_events
+from library.adsb import AdsbFiles
 from library.positions import packet_positions
 from library.search import match_search, normalize_search, search_text
 from library.sondefiles import sonde_identity
@@ -229,6 +230,8 @@ class LibraryInventory:
         self._revision = 0
         self._ready = False
         self._lock = threading.RLock()
+        self._reconcile_lock = threading.RLock()
+        self._adsb = AdsbFiles()
 
     @property
     def revision(self) -> int:
@@ -236,6 +239,12 @@ class LibraryInventory:
             return self._revision
 
     def rebuild(self) -> int:
+        # Serialize tail ingestion with reconciliation so a concurrent full
+        # rebuild cannot overwrite an ADS-B append that has just been indexed.
+        with self._reconcile_lock:
+            return self._rebuild()
+
+    def _rebuild(self) -> int:
         """Reconcile the process-local catalogue with the filesystem."""
         items: Dict[str, Dict[str, Any]] = {}
         self._scan_recordings(items)
@@ -244,6 +253,9 @@ class LibraryInventory:
         self._scan_audio(items)
         self._scan_transcriptions(items)
         self._scan_observations(items)
+        for folder in list(self._adsb.folders):
+            if f"decoded_folder:{Path(folder).name}" not in items:
+                del self._adsb.folders[folder]
         with self._lock:
             if self._ready:
                 for item_id, item in items.items():
@@ -257,6 +269,70 @@ class LibraryInventory:
                 self._revision += 1
             self._ready = True
             return self._revision
+
+    def update_adsb(self, folders):
+        """Refresh only announced aircraft; never rescan the complete library."""
+        changes = []
+        with self._reconcile_lock:
+            for name in set(folders):
+                if not isinstance(name, str) or not name.startswith("adsb_"):
+                    continue
+                path = self.roots.decoded / name
+                if path.name != name or path.is_symlink() or not path.is_dir():
+                    continue
+                try:
+                    item = self._adsb.scan(path)
+                except (OSError, ValueError):
+                    continue
+                if item:
+                    indexed: Dict[str, Dict[str, Any]] = {}
+                    self._add(indexed, item, path)
+                    with self._lock:
+                        previous = self._items.get(item["id"])
+                        self._items.update(indexed)
+                        self._revision += 1
+                    changes.append(
+                        {
+                            "operation": "updated" if previous else "created",
+                            "id": item["id"],
+                            "item": self._public(item),
+                        }
+                    )
+        return {"revision": self.revision, "changes": changes}
+
+    def adsb_history(self, item_id, cursor=None, run=None, limit=50):
+        limit = max(1, min(int(limit), 100))
+        if not self._ready:
+            self.rebuild()
+        with self._lock:
+            item = self._items.get(item_id)
+            if not item or item.get("folder_kind") != "adsb":
+                raise ValueError("Aircraft capture not found")
+            rows = item["_adsb_rows"]
+            if run is not None:
+                rows = [row for row in rows if row["run"] == run]
+            reset = False
+            if isinstance(cursor, dict):
+                if cursor.get("generation") != item["_adsb_generation"]:
+                    cursor, reset = None, True
+                else:
+                    cursor = cursor.get("offset")
+            start = max(0, len(rows) - limit) if cursor is None else max(0, int(cursor))
+            if start > len(rows):
+                start = max(0, len(rows) - limit)
+                reset = True
+            end = min(len(rows), start + limit)
+            selected = rows[start:end]
+            records = self._adsb.records(Path(item["_path"]), selected)
+            return {
+                "records": records,
+                "cursor": {"offset": end, "generation": item["_adsb_generation"]},
+                "reset": reset,
+                "start": start,
+                "total": len(rows),
+                "has_more": end < len(rows),
+                "summary": self._public(item),
+            }
 
     def take_ready(self) -> list[Dict[str, str]]:
         """Drain items that became complete since the initial inventory build."""
@@ -378,6 +454,14 @@ class LibraryInventory:
             if start_iso <= point["captured_at"]
             and (end_iso is None or point["captured_at"] <= end_iso)
         ]
+        # Aircraft logs grow much faster than sonde captures. Bound the initial
+        # historical map response; subsequent live fixes use the ADS-B stream.
+        aircraft_points = [point for point in selected if point.get("kind") == "adsb"]
+        if len(aircraft_points) > 5000:
+            stride = (len(aircraft_points) - 1) / 4999
+            sampled = [aircraft_points[round(index * stride)] for index in range(5000)]
+            selected = [point for point in selected if point.get("kind") != "adsb"] + sampled
+            selected.sort(key=lambda point: (point["captured_at"], point["id"]))
         transmitters: Dict[str, Dict[str, Any]] = {}
         positions = []
         for point in selected:
@@ -439,6 +523,12 @@ class LibraryInventory:
                 "page_size": page_size,
                 "total": len(packets),
                 "run": run,
+            }
+        if internal.get("folder_kind") == "adsb":
+            return {
+                **self._public(internal),
+                "latest": internal["_latest"],
+                **self.adsb_history(item_id, run=run, limit=page_size),
             }
         if internal.get("folder_kind") == "observation":
             return self._observation_detail(self._public(internal), path)
@@ -881,6 +971,14 @@ class LibraryInventory:
                 continue
             if folder.name.startswith("radiosonde_"):
                 self._scan_radiosonde_folder(items, folder)
+                continue
+            if folder.name.startswith("adsb_"):
+                try:
+                    item = self._adsb.scan(folder)
+                    if item:
+                        self._add(items, item, folder)
+                except (OSError, ValueError):
+                    continue
                 continue
             if ".satdump_" not in folder.name:
                 continue

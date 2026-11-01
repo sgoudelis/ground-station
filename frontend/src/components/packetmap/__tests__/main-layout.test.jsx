@@ -11,6 +11,7 @@ import {gridLayoutStoreName, hiddenTypesStoreName} from '../storage.js';
 import {defaultLayouts, LAYOUT_SCHEMA_VERSION} from '../layouts.js';
 import usePacketPositions from '../use-packet-positions.js';
 import packetMapReducer from '../packet-map-slice.jsx';
+import useAircraft from '../../decoders/use-aircraft.js';
 
 await i18n.use(initReactI18next).init({lng: 'en', resources: {}});
 const {gridRender, mapRender, tableRender, fixture} = vi.hoisted(() => ({
@@ -21,6 +22,10 @@ vi.mock('react-grid-layout', () => ({
     useContainerWidth: () => ({width: 1400, mounted: true, containerRef: {current: null}}),
 }));
 vi.mock('../../common/socket.jsx', () => ({useSocket: () => ({socket: fixture.socket})}));
+vi.mock('../../decoders/use-aircraft.js', () => {
+    const empty = {aircraft: [], positions: []};
+    return {default: vi.fn(() => empty)};
+});
 vi.mock('../../common/common.jsx', () => ({
     StyledIslandParentNoScrollbar: ({children}) => <div>{children}</div>,
     TitleBar: ({children}) => <div>{children}</div>, islandTitleBarCompactSx: {},
@@ -45,6 +50,7 @@ function createStore(range) {
 beforeEach(() => {
     localStorage.clear();
     vi.clearAllMocks();
+    useAircraft.mockReturnValue({aircraft: [], positions: []});
     fixture.socket = null;
     usePacketPositions.mockImplementation(() => ({...fixture, loading: false}));
     fixture.positions = [
@@ -52,6 +58,62 @@ beforeEach(() => {
         {id: '2', transmitter_id: 'radiosonde:S', kind: 'radiosonde', name: 'S', captured_at: '2026-11-01T01:00:00Z'},
     ];
     fixture.transmitters = fixture.positions.map((point) => ({...point, id: point.transmitter_id, packet_count: 1}));
+});
+
+it('shows live aircraft beside saved radiosondes and updates positions without reloading history', async () => {
+    const {default: realUseAircraft} = await vi.importActual('../../decoders/use-aircraft.js');
+    const {default: realUsePacketPositions} = await vi.importActual('../use-packet-positions.js');
+    useAircraft.mockImplementation(realUseAircraft);
+    usePacketPositions.mockImplementation(realUsePacketPositions);
+    vi.useFakeTimers();
+    try {
+        vi.setSystemTime(new Date('2026-11-01T12:00:00Z'));
+        const received = Date.now() / 1000;
+        const record = {icao: '4d2406', callsign: 'EWG46A', timestamp: received,
+            position_timestamp: received, latitude: 40.84, longitude: 23.12,
+            altitude_baro_m: 11064, track_deg: 326.06};
+        const handlers = new Map();
+        const socket = {connected: true,
+            on: vi.fn((event, handler) => {
+                if (!handlers.has(event)) handlers.set(event, new Set());
+                handlers.get(event).add(handler);
+            }),
+            off: vi.fn((event, handler) => handlers.get(event)?.delete(handler)),
+            timeout: () => socket,
+            emit: vi.fn((_event, request, reply) => {
+                if (request.cmd === 'adsb.subscribe') {
+                    reply?.({success: true, data: {aircraft: [record]}});
+                } else if (request.cmd === 'filebrowser.positions') {
+                    reply(null, {success: true, data: {positions: fixture.positions, transmitters: fixture.transmitters}});
+                }
+            }),
+        };
+        fixture.socket = socket;
+        const store = createStore();
+        const {unmount} = render(<Provider store={store}><ThemeProvider theme={createTheme()}><PacketMapLayout /></ThemeProvider></Provider>);
+        await act(async () => {});
+        act(() => vi.advanceTimersByTime(1000));
+        expect(mapRender.mock.lastCall[0].positions).toEqual(expect.arrayContaining([
+            expect.objectContaining({transmitter_id: 'radiosonde:S'}),
+            expect.objectContaining({transmitter_id: 'adsb:4d2406', name: 'EWG46A', latitude: 40.84}),
+        ]));
+        act(() => mapRender.mock.lastCall[0].onSelectTransmitter('adsb:4d2406'));
+        expect(screen.getByRole('region', {name: 'Transmitter info'})).toHaveTextContent('EWG46A');
+
+        const next = {...record, timestamp: received + 1, position_timestamp: received + 1, latitude: 40.85};
+        act(() => {
+            handlers.get('adsb.aircraft').forEach((receive) => receive({aircraft: [next]}));
+            vi.advanceTimersByTime(1000);
+        });
+        expect(tableRender.mock.lastCall[0].rows).toEqual(expect.arrayContaining([
+            expect.objectContaining({id: 'adsb:4d2406', latitude: 40.85}),
+            expect.objectContaining({id: 'radiosonde:S'}),
+        ]));
+        expect(socket.emit.mock.calls.filter(([, request]) => request.cmd === 'filebrowser.positions')).toHaveLength(1);
+        unmount();
+    } finally {
+        vi.useRealTimers();
+    }
 });
 
 it('starts in LIVE with the last day of packets when no selection has been saved', () => {

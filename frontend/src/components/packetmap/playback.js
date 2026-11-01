@@ -73,6 +73,9 @@ export function trackPositionAt(track, time, latestVerticalSpeed) {
     const phase = measuredPhase === 'unknown'
         ? getFlightPhase([...points.slice(0, index + 1), ...(point === previous ? [] : [point])]) : measuredPhase;
     // Interpolation changes captured_at for display, but cannot refresh a node.
-    const stale = cursor - times[index] > staleAfter;
+    // Aircraft update much faster than sondes. Match their live cache's
+    // one-minute timeout without removing the recorded path from playback.
+    const timeout = previous.kind === 'adsb' ? 60000 : staleAfter;
+    const stale = cursor - times[index] > timeout;
     return {point, phase, stale};
 }

@@ -3,6 +3,7 @@ export function getFileBrowserDateField(sortBy) {
 }
 
 export function getDecodedFolderDescription(item) {
+    if (item.folder_kind === 'adsb') return `${item.packet_count || 0} states · ${item.run_count || 0} runs${item.callsign ? ` · ${item.callsign}` : ''}`;
     if (item.folder_kind === 'radiosonde') {
         return `${item.packet_count || 0} packets · ${item.run_count || 0} flights`;
     }

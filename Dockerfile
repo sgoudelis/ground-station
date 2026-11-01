@@ -409,6 +409,17 @@ RUN git clone --depth=1 --branch=maint-3.10 --recursive https://github.com/gnura
 RUN cp -r /usr/local/lib/python3.12/site-packages/gnuradio* /app/venv/lib/python3.12/site-packages/ || true
 RUN cp -r /usr/local/lib/python3.12/site-packages/pmt* /app/venv/lib/python3.12/site-packages/ || true
 
+# The app owns the SDR; readsb only consumes stdin IQ, so hardware drivers and
+# interactive terminal support are unnecessary for this build.
+WORKDIR /src
+ARG READSB_COMMIT=321931802d89f1695a38f6dfb0a64ba5c1211be4
+RUN git clone https://github.com/wiedehopf/readsb.git && \
+    cd readsb && git checkout ${READSB_COMMIT} && \
+    make -j$(nproc) DISABLE_INTERACTIVE=yes && \
+    install -m 755 readsb /usr/local/bin/ && \
+    install -D -m 644 LICENSE /usr/local/share/licenses/readsb/LICENSE && \
+    readsb --version
+
 # Build the detector and all three radiosonde codecs used by the IQ worker.
 # Keep its GPL license with the binary and pin decoding behavior for reproducibility.
 WORKDIR /src

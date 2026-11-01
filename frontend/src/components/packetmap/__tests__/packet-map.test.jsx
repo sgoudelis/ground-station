@@ -52,7 +52,8 @@ vi.mock('react-leaflet', () => ({
     Pane: ({children, style}) => <div data-testid="visibility-pane" style={style}>{children}</div>,
     Marker: ({position, children, icon, eventHandlers, title}) => <div title={title} onClick={eventHandlers?.click}
         data-testid={icon?.options?.className?.includes('packet-radiosonde-marker') ? 'sonde-marker'
-            : icon?.options?.className?.includes('packet-aprs-marker') ? 'aprs-marker' : 'home'}
+            : icon?.options?.className?.includes('packet-aprs-marker') ? 'aprs-marker'
+                : icon?.options?.className?.includes('packet-aircraft-marker') ? 'aircraft-marker' : 'home'}
         data-center={JSON.stringify(position)} data-icon-class={icon?.options?.className}
         data-icon-html={icon?.options?.html}>{children}</div>,
     Polyline: ({positions, pathOptions}) => <div data-testid="track" data-positions={JSON.stringify(positions)} data-opacity={pathOptions?.opacity} />,
@@ -84,6 +85,32 @@ beforeEach(() => {
 });
 
 afterEach(() => vi.restoreAllMocks());
+
+it('shows a named aircraft pointing along its track, selects it and marks an old fix stale', () => {
+    const store = configureStore({reducer: () => ({location: {location: null}})});
+    const received = Date.parse('2026-11-01T18:15:00Z');
+    const point = {id: 'plane-fix', transmitter_id: 'adsb:4d2406', kind: 'adsb', name: 'EWG46A', source: '4D2406',
+        latitude: 40.84, longitude: 23.12, altitude: 11064, track_deg: 326.06,
+        captured_at: new Date(received).toISOString()};
+    const positions = [point];
+    const onSelectTransmitter = vi.fn();
+    const element = (time) => <Provider store={store}><ThemeProvider theme={createTheme()}>
+        <PacketMap positions={positions} playbackTime={time} loading={false} fitRequest={0}
+            onSelectTransmitter={onSelectTransmitter} />
+    </ThemeProvider></Provider>;
+    const {rerender} = render(element(received + 1000));
+    const plane = screen.getByTestId('aircraft-marker');
+    expect(plane.dataset.center).toBe('[40.84,23.12]');
+    expect(plane.dataset.iconHtml).toContain('EWG46A');
+    expect(plane.dataset.iconHtml).toContain('🇲🇹');
+    expect(plane.dataset.iconHtml).toContain('rotate(326.06deg)');
+    fireEvent.click(plane);
+    expect(onSelectTransmitter).toHaveBeenCalledWith('adsb:4d2406');
+    map.fitBounds.mockClear();
+    rerender(element(received + 61000));
+    expect(screen.getByTestId('aircraft-marker').dataset.iconClass).toContain('packet-marker-stale');
+    expect(map.fitBounds).not.toHaveBeenCalled();
+});
 
 it.each([
     ['radiosonde', null, 'sonde-marker'],

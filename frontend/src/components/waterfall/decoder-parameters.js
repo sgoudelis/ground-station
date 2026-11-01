@@ -587,6 +587,7 @@ export const getRadiosondeParameters = (t = englishFallback) => ({
 
 /** Decoder availability in the VFO controls. */
 export const DECODER_SUPPORT = {
+    adsb: true,
     sstv: true,
     geoscanimage: true,
     fsk: true,
@@ -630,6 +631,16 @@ export const getSatdumpPipelines = (t = englishFallback) => ({
  * Combined parameter definitions for all decoders
  */
 export const getDecoderParameterDefinitions = (t = englishFallback) => ({
+    adsb_save_interval: {
+        label: t('adsb.save_interval', {defaultValue: 'Aircraft history interval (seconds)'}),
+        description: t('adsb.save_interval_help', {defaultValue: 'Save each aircraft at this interval. Zero saves every new state snapshot. Live UI updates remain limited to once per second.'}),
+        type: 'number', default: 5, min: 0, max: 3600, step: 1,
+    },
+    adsb_capture_messages: {
+        label: t('adsb.capture_messages', {defaultValue: 'Save raw ADS-B messages'}),
+        description: t('adsb.capture_messages_help', {defaultValue: 'Also save CRC-valid DF17/18 messages with ICAO addresses for later inspection. This increases disk usage.'}),
+        type: 'switch', default: false,
+    },
     ...getLoraParameters(t),
     ...getFskParameters(t),
     ...getGmskParameters(t),
@@ -784,6 +795,12 @@ export function mapParametersToBackend(decoder, parameters) {
         };
     }
 
+    if (decoder === 'adsb') {
+        return {
+            adsb_save_interval: parameters.adsb_save_interval ?? 5,
+            adsb_capture_messages: parameters.adsb_capture_messages ?? false,
+        };
+    }
     if (decoder === 'radiosonde') {
         return {
             radiosonde_type: parameters.radiosonde_type ?? 'auto',

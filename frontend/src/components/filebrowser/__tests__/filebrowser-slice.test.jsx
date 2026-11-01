@@ -37,11 +37,35 @@ import reducer, {
     toggleFilter,
     reconcileFileBrowserPersistedState,
     markFileBrowserVisited,
+    libraryItemsChanged,
+    resetLibraryRevision,
 } from '../filebrowser-slice.jsx';
 
 function createStore() {
     return configureStore({ reducer: { filebrowser: reducer } });
 }
+
+test('incremental aircraft rows preserve other rows and reject stale page acknowledgements', async () => {
+    const store = createStore();
+    const initialSocket = {connected: true, emit: (_event, _payload, reply) => reply({success: true,
+        data: {revision: 10, items: [{id: 'aircraft', packet_count: 1}, {id: 'audio'}], total: 2}})};
+    await store.dispatch(fetchFiles({socket: initialSocket, page: 1}));
+    const unrelated = store.getState().filebrowser.files[1];
+    let reply;
+    const socket = {connected: true, emit: (_event, _payload, callback) => {reply = callback;}};
+    const request = store.dispatch(fetchFiles({socket, page: 1}));
+    store.dispatch(libraryItemsChanged({revision: 12, items: [{id: 'aircraft', packet_count: 3}]}));
+    reply({success: true, data: {revision: 11, items: [{id: 'aircraft', packet_count: 2}], total: 1}});
+    await request;
+    expect(store.getState().filebrowser.files[0].packet_count).toBe(3);
+    expect(store.getState().filebrowser.files[1]).toBe(unrelated);
+    expect(store.getState().filebrowser.total).toBe(2);
+    // A restarted backend has a fresh revision sequence.
+    store.dispatch(resetLibraryRevision());
+    await store.dispatch(fetchFiles({socket: {...initialSocket, emit: (_event, _payload, callback) => callback({
+        success: true, data: {revision: 1, items: [{id: 'new-server'}], total: 1}})}, page: 1}));
+    expect(store.getState().filebrowser.files[0].id).toBe('new-server');
+});
 
 test('deleting a nested packet keeps unrelated flat captures with the same basename', async () => {
     const initial = reducer(undefined, { type: '@@INIT' });

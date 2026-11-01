@@ -14,6 +14,8 @@ import {getClassNamesBasedOnGridEditing, islandTitleBarCompactSx, TitleBar} from
 import {useUserTimeSettings} from '../../hooks/useUserTimeSettings.jsx';
 import {formatDateTime} from '../../utils/date-time.js';
 import {detailLabel, flattenDetails, typeColor, typeLabel} from './transmitters.js';
+import AircraftFlag from '../common/aircraft-flag.jsx';
+import {aircraftCountry} from '../../utils/aircraft-country.js';
 
 function InfoSection({title, icon: Icon, fields}) {
     const titleId = useId();
@@ -41,6 +43,8 @@ export default function TransmitterInfo({transmitter, selectedTransmitterId = nu
     const timeSettings = useUserTimeSettings();
     const titleId = useId();
     const label = (key, fallback) => t(`packet_map.${key}`, {defaultValue: fallback});
+    // Source is the ICAO address for both saved and live aircraft records.
+    const country = transmitter?.kind === 'adsb' ? aircraftCountry(transmitter.source) : null;
     const formatTime = (value) => formatDateTime(value, timeSettings);
     const formatNumber = (value, digits) => Number.isFinite(value)
         ? value.toLocaleString(timeSettings.locale, {maximumFractionDigits: digits}) : value;
@@ -85,6 +89,7 @@ export default function TransmitterInfo({transmitter, selectedTransmitterId = nu
                 bgcolor: (theme) => alpha(typeColor(transmitter.kind), theme.palette.mode === 'dark' ? 0.1 : 0.06)}}>
                 <Box sx={{display: 'flex', alignItems: 'center', gap: 1, mb: 0.5}}>
                     <Box sx={{width: 8, height: 8, borderRadius: '50%', bgcolor: typeColor(transmitter.kind), flexShrink: 0}} />
+                    {country && <AircraftFlag icao={transmitter.source} />}
                     <Typography variant="subtitle2" sx={{fontWeight: 700, overflowWrap: 'anywhere', minWidth: 0, flex: 1}}>
                         {transmitter.name}
                     </Typography>
@@ -103,6 +108,7 @@ export default function TransmitterInfo({transmitter, selectedTransmitterId = nu
                 ]} />
                 <InfoSection title={label('info.reception', 'Reception')} icon={HistoryIcon} fields={[
                     {label: label('source', 'Source'), value: transmitter.source},
+                    ...(country ? [{label: label('info.registration_country', 'ICAO registration country'), value: country.name}] : []),
                     {label: label('packets', 'Packets'), value: formatNumber(transmitter.packet_count, 0)},
                     {label: label('first_seen', 'First seen'), value: formatTime(transmitter.first_seen), wide: true},
                     {label: label('last_seen', 'Last seen'), value: formatTime(transmitter.last_seen), wide: true},
