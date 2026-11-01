@@ -182,6 +182,7 @@ const DecoderParamsDialog = ({
             } else if (decoder === 'radiosonde') {
                 parameters.radiosonde_type = config.radiosonde_type ?? 'auto';
                 parameters.radiosonde_sample_rate = config.radiosonde_sample_rate ?? 48000;
+                parameters.radiosonde_save_interval = config.radiosonde_save_interval ?? 5;
             } else if (decoder === 'aprs') {
                 if (config.baudrate) parameters.aprs_baudrate = config.baudrate;
                 if (config.deviation !== null && config.deviation !== undefined) parameters.aprs_deviation = config.deviation;

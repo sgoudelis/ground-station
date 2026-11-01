@@ -36,7 +36,7 @@
     bottom: calc(50% + var(--sonde-lift));
     width: 100%;
     height: 100%;
-    filter: drop-shadow(0 1px 1px rgb(0 0 0 / 30%)) drop-shadow(0 0 2px rgb(0 0 0 / 15%));
+    filter: drop-shadow(0 0 2px rgb(0 0 0 / 56%)) drop-shadow(0 2px 4px rgb(0 0 0 / 45.5%));
 }
 
 .packet-radiosonde-symbol img {

@@ -49,7 +49,16 @@ filters it out, add `radiosondedecoder: {level: DEBUG}` under `loggers` in
 `backend/data/configs/log_config.yaml` (or your custom logging configuration),
 ensure its handler permits DEBUG, and restart the backend.
 
-Decoded packets are saved and sent to the live UI immediately. Library indexing
+Each decoder has a **Packet save interval (seconds)** parameter, available in the
+waterfall decoder parameters dialog and scheduled decoder settings. It defaults
+to **5 seconds per sonde**; **0** saves every validated packet. Decoding and
+calibration continue at full rate. The first fix and ascent/descent changes are
+saved immediately, and the latest pending fix is saved when the interval expires
+or before a retune, decoder switch, or graceful stop. These exceptions can save
+packets closer together than the selected interval. Delayed packets retain their
+original reception timestamp, signal measurements, and calibrated report.
+
+Saved packets are sent to the live UI immediately. Library indexing
 runs separately from FFT forwarding, with a two-second batching window and one
 scan at a time across SDRs and VFOs. Packets arriving during a scan trigger a
 follow-up, including the final packet when reception stops. File Browser and

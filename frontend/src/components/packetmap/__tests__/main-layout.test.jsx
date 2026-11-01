@@ -66,7 +66,7 @@ it('starts in LIVE with the last day of packets when no selection has been saved
     expect(Number.isFinite(mapRender.mock.lastCall[0].playbackTime)).toBe(true);
 });
 
-it.each(['LIVE', '24h', '7d', 'All dates'])('stores %s in Redux and restores it when revisiting the map', (preset) => {
+it.each(['LIVE', '24h', '7d', 'All'])('stores %s in Redux and restores it when revisiting the map', (preset) => {
     usePacketPositions.mockImplementation(() => ({...fixture, available_range: historyRange, loading: false}));
     const store = createStore(historyRange);
     const element = <Provider store={store}><ThemeProvider theme={createTheme()}><PacketMapLayout /></ThemeProvider></Provider>;
@@ -135,7 +135,7 @@ it('queries applied dates once, scrubs locally, and resets playback for a new qu
     expect(slider).toHaveAttribute('max', String(Date.parse('2026-10-02T00:00:00Z')));
 });
 
-it.each([['24h', 24], ['7d', 168], ['All dates', null]])('%s clears transmitter selection and requests a fit for the new results', async (button, hours) => {
+it.each([['24h', 24], ['7d', 168], ['All', null]])('%s clears transmitter selection and requests a fit for the new results', async (button, hours) => {
     const {default: realUsePacketPositions} = await vi.importActual('../use-packet-positions.js');
     usePacketPositions.mockImplementation(realUsePacketPositions);
     const requests = [];
@@ -168,7 +168,7 @@ it.each([['24h', 24], ['7d', 168], ['All dates', null]])('%s clears transmitter 
     await act(async () => requests[2].reply(null, reply));
 });
 
-it.each(['24h', '7d', 'All dates'])('follows new radiosondes in LIVE and returns to history with %s', async (preset) => {
+it.each(['24h', '7d', 'All'])('follows new radiosondes in LIVE and returns to history with %s', async (preset) => {
     const {default: realUsePacketPositions} = await vi.importActual('../use-packet-positions.js');
     usePacketPositions.mockImplementation(realUsePacketPositions);
     vi.useFakeTimers();

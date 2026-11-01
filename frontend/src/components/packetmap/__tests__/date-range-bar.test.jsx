@@ -42,7 +42,7 @@ describe('Packet map dates', () => {
         fireEvent.change(slider, {target: {value: cursor}});
         expect(onPlaybackTimeChange).toHaveBeenLastCalledWith(cursor);
         expect(onChange).not.toHaveBeenCalled();
-        fireEvent.click(screen.getByRole('button', {name: 'All dates'}));
+        fireEvent.click(screen.getByRole('button', {name: 'All'}));
         expect(onChange).toHaveBeenLastCalledWith(available);
         rerender(<DateRangeBar {...props} range={available} playbackTime={Date.parse(available.end)} />);
         expect(slider).toHaveAttribute('min', String(Date.parse(available.start)));

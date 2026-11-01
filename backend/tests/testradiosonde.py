@@ -7,6 +7,7 @@ import queue
 import shutil
 import subprocess
 import time
+from binascii import crc_hqx
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -45,12 +46,14 @@ REPORT = {
 }
 
 
-def _decoder(tmp_path, family="rs41"):
+def _decoder(tmp_path, family="rs41", **overrides):
     decoder = RadiosondeDecoder(
         queue.Queue(),
         queue.Queue(),
         "test-session",
-        DecoderConfigService().get_config("radiosonde", overrides={"radiosonde_type": family}),
+        DecoderConfigService().get_config(
+            "radiosonde", overrides={"radiosonde_type": family, **overrides}
+        ),
         output_dir=str(tmp_path),
         vfo=1,
     )
@@ -97,8 +100,14 @@ def test_decoder_config_and_registry_do_not_infer_satellite_framing():
     changed = service.get_config("radiosonde", overrides={"radiosonde_sample_rate": 96000})
     assert (config.baudrate, config.framing, config.radiosonde_sample_rate) == (0, "auto", 48000)
     assert config.radiosonde_type == "auto"
+    assert config.radiosonde_save_interval == 5
     assert config != changed
     assert config.to_dict()["radiosonde_sample_rate"] == 48000
+    assert config.to_dict()["radiosonde_save_interval"] == 5
+    sampled = service.get_config("radiosonde", overrides={"radiosonde_save_interval": 10})
+    assert sampled != config
+    assert len({sampled, config}) == 2
+    assert sampled.to_dict()["radiosonde_save_interval"] == 10
     with pytest.raises(ValueError, match="sample rate"):
         service.get_config("radiosonde", overrides={"radiosonde_sample_rate": "bad"})
     capabilities = DecoderRegistry().get_capabilities("radiosonde")
@@ -107,6 +116,7 @@ def test_decoder_config_and_registry_do_not_infer_satellite_framing():
     assert capabilities.required_demodulator is None
     assert "radiosonde_sample_rate" in capabilities.restart_on_params
     assert "radiosonde_type" in capabilities.restart_on_params
+    assert "radiosonde_save_interval" in capabilities.restart_on_params
     with pytest.raises(ValueError, match="Radiosonde type"):
         service.get_config("radiosonde", overrides={"radiosonde_type": "unknown"})
     for family, baudrate in [("rs41", 4800), ("dfm", 2500), ("m10m20", 9600)]:
@@ -114,6 +124,139 @@ def test_decoder_config_and_registry_do_not_infer_satellite_framing():
         assert (forced.radiosonde_type, forced.baudrate) == (family, baudrate)
         assert forced != config
         assert forced.to_dict()["radiosonde_type"] == family
+
+
+@pytest.mark.parametrize("interval", [-1, 3601, 1.5, True, "5", None, float("inf")])
+def test_invalid_save_intervals_are_rejected(interval):
+    with pytest.raises(ValueError, match="save interval"):
+        DecoderConfigService().get_config(
+            "radiosonde", overrides={"radiosonde_save_interval": interval}
+        )
+
+
+@pytest.fixture
+def sondeclock(monkeypatch):
+    clock = [1000.0]
+    monkeypatch.setattr(
+        "demodulators.radiosondedecoder.time",
+        SimpleNamespace(monotonic=lambda: clock[0], time=lambda: 1_790_000_000 + clock[0]),
+    )
+    return clock
+
+
+def _receive(decoder, number, serial="TEST0042", **values):
+    # Change the fixture's status identity and CRC together so these packets go
+    # through real validation, saving, metadata generation, and live UI output.
+    payload = bytearray(FRAME)
+    payload[0x3B:0x3D] = number.to_bytes(2, "little")
+    payload[0x3D:0x45] = serial.encode("ascii")
+    end = 0x39 + payload[0x3A] + 4
+    payload[end - 2 : end] = crc_hqx(payload[0x3B : end - 2], 0xFFFF).to_bytes(2, "little")
+    report = {**REPORT, "frame": number, "id": serial, **values}
+    decoder._handle_stdout(payload.hex().encode())
+    decoder._handle_stdout(json.dumps(report).encode())
+
+
+def _saved_reports(root):
+    return sorted(
+        [json.loads(path.read_text()) for path in root.rglob("radiosonde_*.json")],
+        key=lambda metadata: metadata["packet"]["timestamp"],
+    )
+
+
+def test_default_interval_samples_saves_without_delaying_receiver_liveness(tmp_path, sondeclock):
+    decoder = _decoder(tmp_path)
+    for index in range(6):
+        sondeclock[0] = 1000 + index
+        decoder.stream_samples = index * decoder.sample_rate
+        _receive(decoder, 42 + index)
+        assert decoder.last_packet_at == sondeclock[0]
+        assert decoder.last_report_sample == decoder.stream_samples
+    assert [m["parse_context"]["decoder_report"]["frame"] for m in _saved_reports(tmp_path)] == [
+        42,
+        47,
+    ]
+    assert decoder.decoder_report["frame"] == 47
+    assert decoder.packet_count == 2
+    assert not decoder.pending_packets
+
+
+def test_pending_final_fix_keeps_original_timestamp_signal_and_report(tmp_path, sondeclock):
+    decoder = _decoder(tmp_path / "data" / "decoded")
+    _receive(decoder, 42)
+    sondeclock[0] = 1001
+    decoder.current_power_dbfs = -70
+    _receive(decoder, 43, temp=-10)
+    sondeclock[0] = 1002
+    decoder.current_power_dbfs = -71
+    _receive(decoder, 44, temp=-9)
+    assert decoder.packet_count == 1
+    assert len(decoder.pending_packets) == 1
+    sondeclock[0] = 1005
+    decoder.current_power_dbfs = -90
+    decoder._service_receiver()
+    saved = _saved_reports(tmp_path)
+    assert len(saved) == 2
+    assert saved[-1]["packet"]["timestamp"] == 1_790_001_002
+    assert saved[-1]["signal"]["signal_power_dbfs"] == -71
+    assert saved[-1]["parse_context"]["decoder_report"]["frame"] == 44
+    assert saved[-1]["telemetry"]["telemetry"]["values"]["temp"] == -9
+    assert saved[-1]["decoder_config"]["radiosonde_save_interval"] == 5
+    url = "/" + Path(saved[-1]["file"]["binary_path"]).relative_to(tmp_path / "data").as_posix()
+    assert reparse_packet(tmp_path, url)["telemetry"] == saved[-1]["telemetry"]
+    decoder._service_receiver()
+    assert decoder.packet_count == 2
+
+
+def test_zero_interval_retains_every_valid_packet(tmp_path, sondeclock):
+    decoder = _decoder(tmp_path, radiosonde_save_interval=0)
+    for number in range(42, 45):
+        sondeclock[0] += 0.1
+        _receive(decoder, number)
+    assert decoder.packet_count == 3
+    assert not decoder.pending_packets
+
+
+def test_save_interval_is_independent_per_sonde_and_preserves_flight_changes(tmp_path, sondeclock):
+    decoder = _decoder(tmp_path, radiosonde_save_interval=10)
+    _receive(decoder, 42, vel_v=5)
+    sondeclock[0] += 1
+    _receive(decoder, 43, vel_v=4)
+    assert decoder.packet_count == 1
+    _receive(decoder, 42, serial="TEST0043", vel_v=5)
+    assert decoder.packet_count == 2
+    sondeclock[0] += 1
+    _receive(decoder, 44, vel_v=-5)
+    assert decoder.packet_count == 3
+    assert not decoder.pending_packets
+    assert _saved_reports(tmp_path)[-1]["parse_context"]["decoder_report"]["vel_v"] == -5
+
+
+@pytest.mark.parametrize("boundary", ["reset", "switch", "stop"])
+def test_pending_fix_is_saved_before_receiver_lifecycle_changes(
+    tmp_path, sondeclock, monkeypatch, boundary
+):
+    decoder = _decoder(tmp_path)
+    _receive(decoder, 42)
+    sondeclock[0] += 1
+    _receive(decoder, 43)
+    if boundary == "reset":
+        decoder._reset_receiver()
+        decoder.cached_vfo_state = {"center_freq": 405000000, "bandwidth": 20000, "active": True}
+    elif boundary == "switch":
+        monkeypatch.setattr(decoder, "_start_rs", lambda: None)
+        decoder._select_receiver("m10m20")
+    else:
+        monkeypatch.setattr(shutil, "which", lambda _name: "/installed")
+        monkeypatch.setattr(
+            decoder, "_service_receiver", lambda: setattr(decoder.running, "value", 0)
+        )
+        decoder.run()
+    saved = _saved_reports(tmp_path)
+    assert len(saved) == 2
+    assert saved[-1]["vfo"]["center_freq_hz"] == 403000000
+    assert saved[-1]["parse_context"]["decoder_report"]["frame"] == 43
+    assert not decoder.pending_packets
 
 
 @pytest.mark.parametrize("relative", ["decoded", "observations/sonde.gsobs/decoded"])
@@ -532,9 +675,16 @@ async def test_live_vfo_settings_start_and_restart_with_selected_family_and_rate
     assert (starts[-1].radiosonde_type, starts[-1].radiosonde_sample_rate) == ("m10m20", 48000)
     await apply(radiosonde_type="m10m20", radiosonde_sample_rate=48000)
     assert len(starts) == 2
+    await apply(radiosonde_type="m10m20", radiosonde_sample_rate=48000, radiosonde_save_interval=10)
+    assert len(starts) == 3
+    assert starts[-1].radiosonde_save_interval == 10
+    assert starts[-1].radiosonde_type == "m10m20"
+    await apply(radiosonde_type="m10m20", radiosonde_sample_rate=48000, radiosonde_save_interval=10)
+    assert len(starts) == 3
     await apply(parametersEnabled=False)
     assert starts[-1].radiosonde_type == "auto"
     assert starts[-1].radiosonde_sample_rate == 48000
+    assert starts[-1].radiosonde_save_interval == 5
 
 
 @pytest.mark.parametrize("family", ["m10", "m20"])

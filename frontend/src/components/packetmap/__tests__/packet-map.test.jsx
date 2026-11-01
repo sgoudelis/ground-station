@@ -49,10 +49,12 @@ vi.mock('react-leaflet', () => ({
         </div>;
     },
     Pane: ({children, style}) => <div data-testid="visibility-pane" style={style}>{children}</div>,
-    Marker: ({position, children, icon, eventHandlers, title}) => <div title={title} onClick={eventHandlers?.click} data-testid={icon?.options?.className === 'packet-radiosonde-marker' ? 'sonde-marker' : 'home'}
+    Marker: ({position, children, icon, eventHandlers, title}) => <div title={title} onClick={eventHandlers?.click}
+        data-testid={icon?.options?.className === 'packet-radiosonde-marker' ? 'sonde-marker'
+            : icon?.options?.className === 'packet-aprs-marker' ? 'aprs-marker' : 'home'}
         data-center={JSON.stringify(position)} data-icon-html={icon?.options?.html}>{children}</div>,
     Polyline: ({positions, pathOptions}) => <div data-testid="track" data-positions={JSON.stringify(positions)} data-opacity={pathOptions?.opacity} />,
-    Popup: ({children}) => <div>{children}</div>,
+    Popup: ({children}) => <div data-testid="map-popup">{children}</div>,
     Tooltip: ({children, position, permanent, className}) => <span data-testid="map-tooltip" className={className}
         data-position={JSON.stringify(position)} data-permanent={String(Boolean(permanent))}>{children}</span>,
     TileLayer: ({url, zIndex}) => <div data-testid="tile-layer" data-url={url} data-z-index={zIndex} />,
@@ -191,7 +193,7 @@ describe('Packet map viewport', () => {
     });
 });
 
-it('renders smooth transmitter paths with only start and end markers and packet details', () => {
+it('renders smooth transmitter paths with only start and end markers and no popups', () => {
     const state = {location: {location: {lat: '40.6', lon: '22.9'}}};
     const store = configureStore({reducer: () => state});
     const points = [
@@ -216,7 +218,7 @@ it('renders smooth transmitter paths with only start and end markers and packet 
     expect(path[0]).toEqual([40, 23]);
     expect(path.at(-1)).toEqual([41, 24]);
     expect(path).toContainEqual([40.4, 23.6]);
-    expect(screen.getByText('File: second.bin')).toBeInTheDocument();
+    expect(screen.queryByTestId('map-popup')).not.toBeInTheDocument();
     expect(screen.getByText('2 transmitters')).toBeInTheDocument();
     const legend = screen.getByRole('list', {name: 'Transmitter types'});
     expect(legend).toHaveTextContent('APRS');
@@ -383,6 +385,93 @@ it('scrubs sonde symbols and historical flight phases while keeping the full pat
     rerender(element('2026-11-01T00:03:00Z'));
     expect(screen.getByTestId('sonde-marker')).toHaveAttribute('data-center', '[40,25]');
     expect(screen.queryByTestId('visibility-circle')).not.toBeInTheDocument();
+});
+
+it('uses each APRS fix symbol during playback and selects transmitters without popups', () => {
+    const store = configureStore({reducer: () => ({location: {location: null}})});
+    const onSelectTransmitter = vi.fn();
+    const points = ['>', '[', null].map((symbol_code, index) => ({
+        id: String(index), file_id: `decoded:${index}.bin`, transmitter_id: 'aprs:A', kind: 'aprs', name: 'A',
+        latitude: 40 + index, longitude: 23 + index, altitude: null,
+        captured_at: `2026-11-01T00:0${index}:00Z`, symbol_table: symbol_code ? '/' : null, symbol_code,
+    }));
+    // Latest transmitter details must not override an older fix or a missing symbol.
+    const transmitters = [{id: 'aprs:A', details: {telemetry: {position: {symbol_table: '/', symbol_code: '-'}}}}];
+    const element = (time) => <Provider store={store}><ThemeProvider theme={createTheme()}>
+        <PacketMap positions={points} transmitters={transmitters} playbackTime={Date.parse(time)}
+            onSelectTransmitter={onSelectTransmitter} loading={false} fitRequest={0} />
+    </ThemeProvider></Provider>;
+    const {rerender} = render(element('2026-11-01T00:00:30Z'));
+    const marker = screen.getByTestId('aprs-marker');
+    expect(marker.dataset.iconHtml).toContain('aria-label="Car"');
+    expect(marker.dataset.iconHtml).toContain('/aprs/mobile.png');
+    expect(marker).toBeEmptyDOMElement();
+    fireEvent.click(marker);
+    expect(onSelectTransmitter).toHaveBeenCalledWith('aprs:A');
+    expect(screen.queryByTestId('map-popup')).not.toBeInTheDocument();
+    const track = screen.getByTestId('track').dataset.positions;
+    map.fitBounds.mockClear();
+    rerender(element('2026-11-01T00:01:00Z'));
+    expect(screen.getByTestId('aprs-marker').dataset.iconHtml).toContain('aria-label="Person"');
+    expect(screen.getByTestId('aprs-marker').dataset.iconHtml).toContain('/aprs/portable.png');
+    expect(screen.getByTestId('aprs-marker')).toHaveAttribute('data-center', '[41,24]');
+    expect(screen.getByTestId('track').dataset.positions).toBe(track);
+    expect(map.fitBounds).not.toHaveBeenCalled();
+    rerender(element('2026-11-01T00:02:00Z'));
+    expect(screen.queryByTestId('aprs-marker')).not.toBeInTheDocument();
+    expect(screen.getAllByTestId('position').some((marker) => marker.dataset.center === '[42,25]')).toBe(true);
+});
+
+it('uses APRS symbols from transmitter details on older servers', () => {
+    const store = configureStore({reducer: () => ({location: {location: null}})});
+    const point = {id: '1', file_id: 'decoded:1.bin', transmitter_id: 'aprs:A', kind: 'aprs', name: 'A',
+        latitude: 40, longitude: 23, altitude: null, captured_at: '2026-11-01T00:00:00Z'};
+    const transmitters = [{id: 'aprs:A', details: {telemetry: {position: {symbol_table: '/', symbol_code: '-'}}}}];
+    render(<Provider store={store}><ThemeProvider theme={createTheme()}>
+        <PacketMap positions={[point]} transmitters={transmitters} loading={false} fitRequest={0} />
+    </ThemeProvider></Provider>);
+    expect(screen.getByTestId('aprs-marker').dataset.iconHtml).toContain('aria-label="House"');
+});
+
+it('uses the object pin for APRS objects without a recognized symbol and keeps selection popup-free', () => {
+    const store = configureStore({reducer: () => ({location: {location: null}})});
+    const onSelectTransmitter = vi.fn();
+    const point = {id: '1', transmitter_id: 'aprs:EVENT', kind: 'aprs', name: 'EVENT',
+        latitude: 40, longitude: 23, altitude: null, captured_at: '2026-11-01T00:00:00Z',
+        symbol_table: '/', symbol_code: 'z'};
+    const transmitters = [{id: point.transmitter_id, details: {telemetry: {object: {name: 'EVENT'}}}}];
+    render(<Provider store={store}><ThemeProvider theme={createTheme()}>
+        <PacketMap positions={[point]} transmitters={transmitters} loading={false} fitRequest={0}
+            onSelectTransmitter={onSelectTransmitter} />
+    </ThemeProvider></Provider>);
+    const marker = screen.getByTestId('aprs-marker');
+    expect(marker.dataset.iconHtml).toContain('/aprs/object.png');
+    fireEvent.click(marker);
+    expect(onSelectTransmitter).toHaveBeenCalledWith(point.transmitter_id);
+    expect(screen.queryByTestId('map-popup')).not.toBeInTheDocument();
+    expect(map.fitBounds).toHaveBeenLastCalledWith([[40, 23]], expect.objectContaining({paddingTopLeft: [42, 72]}));
+});
+
+it('reuses the weather balloon and parachute for APRS balloons with room above the fitted track', () => {
+    const store = configureStore({reducer: () => ({location: {location: null}})});
+    const points = [100, 10000, 100].map((altitude, index) => ({
+        id: String(index), file_id: `decoded:${index}.bin`, transmitter_id: 'aprs:B', kind: 'aprs', name: 'B',
+        latitude: 40 + index, longitude: 23, altitude,
+        captured_at: `2026-11-01T00:0${index}:00Z`, symbol_table: '/', symbol_code: 'O',
+    }));
+    const element = (time) => <Provider store={store}><ThemeProvider theme={createTheme()}>
+        <PacketMap positions={points} playbackTime={Date.parse(time)} loading={false} fitRequest={0}
+            selectedTransmitterId="aprs:B" />
+    </ThemeProvider></Provider>;
+    const {rerender} = render(element('2026-11-01T00:00:30Z'));
+    expect(screen.getByTestId('sonde-marker').dataset.iconHtml).toContain('data-flight-phase="ascending"');
+    expect(screen.getByTestId('sonde-marker').dataset.iconHtml).toContain('balloon.png');
+    expect(screen.getByTestId('sonde-marker')).toBeEmptyDOMElement();
+    expect(map.fitBounds).toHaveBeenLastCalledWith(expect.any(Array), expect.objectContaining({paddingTopLeft: [42, 124]}));
+    expect(screen.queryByTestId('visibility-circle')).not.toBeInTheDocument();
+    rerender(element('2026-11-01T00:01:30Z'));
+    expect(screen.getByTestId('sonde-marker').dataset.iconHtml).toContain('data-flight-phase="descending"');
+    expect(screen.getByTestId('sonde-marker').dataset.iconHtml).toContain('parachute.png');
 });
 
 it('remembers hidden and enabled transmitter columns when fields disappear and the table remounts', () => {

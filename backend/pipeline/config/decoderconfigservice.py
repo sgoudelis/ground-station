@@ -101,12 +101,18 @@ class DecoderConfigService:
             family = overrides.get("radiosonde_type", "auto")
             if not isinstance(family, str) or family not in ("auto", "rs41", "dfm", "m10m20"):
                 raise ValueError("Radiosonde type must be auto, rs41, dfm or m10m20")
+            save_interval = overrides.get("radiosonde_save_interval", 5)
+            if type(save_interval) is not int or not 0 <= save_interval <= 3600:
+                raise ValueError(
+                    "Radiosonde save interval must be an integer from 0 to 3600 seconds"
+                )
             return DecoderConfig(
                 baudrate={"auto": 0, "rs41": 4800, "dfm": 2500, "m10m20": 9600}[family],
                 framing=family,
                 radiosonde_type=family,
                 config_source="manual" if overrides else "radiosonde_defaults",
                 radiosonde_sample_rate=rate,
+                radiosonde_save_interval=save_interval,
                 satellite=satellite or None,
                 transmitter=transmitter or None,
             )

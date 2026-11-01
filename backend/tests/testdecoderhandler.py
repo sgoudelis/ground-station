@@ -10,10 +10,12 @@ from observations.tasks.decoderhandler import (
 
 def test_maps_radiosonde_scheduler_parameters_to_decoder_overrides():
     assert map_scheduler_decoder_parameters(
-        "radiosonde", {"radiosonde_type": "dfm", "radiosonde_sample_rate": 96000}
+        "radiosonde",
+        {"radiosonde_type": "dfm", "radiosonde_sample_rate": 96000, "radiosonde_save_interval": 0},
     ) == {
         "radiosonde_sample_rate": 96000,
         "radiosonde_type": "dfm",
+        "radiosonde_save_interval": 0,
     }
 
 
@@ -147,7 +149,11 @@ async def test_scheduled_radiosonde_uses_channel_default_and_bundle_directory(
         sdr_config={"center_freq": 403_000_000},
         task_config={
             "decoder_type": "radiosonde",
-            "parameters": {"radiosonde_type": "auto", "radiosonde_sample_rate": 96000},
+            "parameters": {
+                "radiosonde_type": "auto",
+                "radiosonde_sample_rate": 96000,
+                "radiosonde_save_interval": 10,
+            },
         },
         vfo_number=2,
         bundle_dir=tmp_path,
@@ -157,6 +163,7 @@ async def test_scheduled_radiosonde_uses_channel_default_and_bundle_directory(
     assert started["decoder_param_overrides"] == {
         "radiosonde_type": "auto",
         "radiosonde_sample_rate": 96000,
+        "radiosonde_save_interval": 10,
     }
     assert started["output_dir"] == str(tmp_path / "decoded")
 

@@ -58,6 +58,7 @@ _BACKEND_OVERRIDE_KEYS = {
     "sstv_mode",
     "radiosonde_sample_rate",
     "radiosonde_type",
+    "radiosonde_save_interval",
 }
 
 
@@ -110,6 +111,7 @@ def map_scheduler_decoder_parameters(decoder_type: str, parameters: Any) -> Dict
         frontend_to_backend = {
             "radiosonde_sample_rate": "radiosonde_sample_rate",
             "radiosonde_type": "radiosonde_type",
+            "radiosonde_save_interval": "radiosonde_save_interval",
         }
     elif decoder_type == "sstv":
         frontend_to_backend = {"sstv_mode": "sstv_mode"}

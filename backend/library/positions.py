@@ -112,24 +112,31 @@ def packet_positions(metadata: dict[str, Any], item_id: str, captured_at: str) -
                 or not (-90 <= latitude <= 90 and -180 <= longitude <= 180)
             ):
                 continue
-            points.append(
-                {
-                    "id": f"{item_id}:{index}",
-                    "file_id": item_id,
-                    "transmitter_id": f"{kind}:{identity}",
-                    "kind": kind,
-                    "name": str(name),
-                    "source": str(source) if source else None,
-                    "captured_at": captured_at,
-                    "latitude": latitude,
-                    "longitude": longitude,
-                    "altitude": _number(altitude),
-                    # Keep details in the index, but send them only once per
-                    # transmitter rather than repeating them along its track.
-                    "_details": details,
-                    "_field_info": field_info,
-                }
-            )
+            point = {
+                "id": f"{item_id}:{index}",
+                "file_id": item_id,
+                "transmitter_id": f"{kind}:{identity}",
+                "kind": kind,
+                "name": str(name),
+                "source": str(source) if source else None,
+                "captured_at": captured_at,
+                "latitude": latitude,
+                "longitude": longitude,
+                "altitude": _number(altitude),
+                # Keep details in the index, but send them only once per
+                # transmitter rather than repeating them along its track.
+                "_details": details,
+                "_field_info": field_info,
+            }
+            if kind == "aprs":
+                # Keep the symbol with each fix so historical playback cannot
+                # inherit a different station type from the latest packet.
+                position = details["telemetry"]["position"]
+                point.update(
+                    symbol_table=position.get("symbol_table"),
+                    symbol_code=position.get("symbol_code"),
+                )
+            points.append(point)
         return points
     except (ValueError, TypeError, AttributeError, KeyError):
         # One corrupt sidecar must not prevent other captures from appearing.

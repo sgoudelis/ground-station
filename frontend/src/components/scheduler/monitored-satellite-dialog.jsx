@@ -2260,6 +2260,7 @@ export default function MonitoredSatelliteDialog({ onExited }) {
                                                                         } else if (decoderType === 'radiosonde') {
                                                                             newParams.radiosonde_type = config.radiosonde_type ?? 'auto';
                                                                             newParams.radiosonde_sample_rate = config.radiosonde_sample_rate ?? 48000;
+                                                                            newParams.radiosonde_save_interval = config.radiosonde_save_interval ?? 5;
                                                                         } else if (decoderType === 'aprs') {
                                                                             if (config.baudrate) newParams.aprs_baudrate = config.baudrate;
                                                                             if (config.deviation !== null && config.deviation !== undefined) {

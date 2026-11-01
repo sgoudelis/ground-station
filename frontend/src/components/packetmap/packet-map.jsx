@@ -4,7 +4,7 @@ import React, {useEffect, useMemo, useRef, useState} from 'react';
 import {Alert, Box, Paper, Typography} from '@mui/material';
 import {alpha} from '@mui/material/styles';
 import {svg} from 'leaflet';
-import {CircleMarker, MapContainer, Marker, Pane, Polyline, Popup, TileLayer, Tooltip, useMap} from 'react-leaflet';
+import {CircleMarker, MapContainer, Marker, Pane, Polyline, TileLayer, useMap} from 'react-leaflet';
 import {useSelector} from 'react-redux';
 import {useTranslation} from 'react-i18next';
 import 'leaflet/dist/leaflet.css';
@@ -12,16 +12,15 @@ import {homeIcon} from '../common/dataurl-icons.jsx';
 import {getTileLayerById} from '../common/tile-layers.jsx';
 import {getClassNamesBasedOnGridEditing, islandTitleBarCompactSx, MapStatusBar, TitleBar} from '../common/common.jsx';
 import {isValidMapPosition, toLocationNumber} from '../filebrowser/position-utils.js';
-import {useUserTimeSettings} from '../../hooks/useUserTimeSettings.jsx';
-import {formatDateTime} from '../../utils/date-time.js';
 import useMapIslandFullscreen from '../earthview/use-map-island-fullscreen.js';
 import MapTitleControls from '../earthview/map-title-controls.jsx';
 import {mapSettingsStoreName, mapViewStoreName, readMapSettings, readMapView, writeStored} from './storage.js';
-import {TRANSMITTER_TYPES, typeColor, typeLabel} from './transmitters.js';
+import {TRANSMITTER_TYPES, typeColor} from './transmitters.js';
 import MapInteractions from './map-interactions.jsx';
 import PacketMapToolbar from './map-toolbar.jsx';
 import PacketMapSettingsDialog from './map-settings-dialog.jsx';
 import {createRadiosondeIcon} from './radiosonde-marker.js';
+import {createAprsIcon, getAprsSymbol} from './aprs-marker.js';
 import {buildPlaybackTrack, trackPositionAt} from './playback.js';
 import {getCircleBounds, getHorizonRadii} from './horizon.js';
 import VisibilityCircle from './visibility-circle.jsx';
@@ -34,6 +33,13 @@ const hybridReferenceLayers = ['World_Transportation', 'World_Boundaries_and_Pla
     attribution: 'Esri, HERE, Garmin, &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, and the GIS user community',
     zIndex: index + 1,
 }));
+
+function aprsPosition(point, details) {
+    // Current servers include each fix's symbol for playback. Older servers
+    // expose only the latest symbol in the transmitter's details.
+    return point.symbol_table !== undefined || point.symbol_code !== undefined
+        ? point : details?.telemetry?.position;
+}
 
 export function MapViewport({bounds, visibilityBounds = [], ready, fitRequest, padding = 42, paddingTop = padding}) {
     const map = useMap();
@@ -113,20 +119,6 @@ export function MapViewport({bounds, visibilityBounds = [], ready, fitRequest, p
     return null;
 }
 
-function PositionPopup({point}) {
-    const {t} = useTranslation('navigation');
-    const timeSettings = useUserTimeSettings();
-    return <Popup>
-        <strong>{point.name}</strong><br />
-        {typeLabel(point.kind)}{point.source && point.source !== point.name ? ` · ${point.source}` : ''}<br />
-        {point.latitude.toFixed(6)}, {point.longitude.toFixed(6)}<br />
-        {point.altitude !== null && <>{point.altitude.toLocaleString()} m<br /></>}
-        {formatDateTime(point.captured_at, timeSettings)}<br />
-        {point.interpolated && <>{t('packet_map.interpolated_position', {defaultValue: 'Interpolated position'})}<br /></>}
-        <span>{t('packet_map.file', {defaultValue: 'File'})}: {point.file_id.replace(/^decoded:/, '')}</span>
-    </Popup>;
-}
-
 export default function PacketMap({positions, transmitters, hasPositions = positions.length > 0, loading, gridEditable, fitRequest,
     selectedTransmitterId = null, onSelectTransmitter, hiddenTypes = [], onHiddenTypesChange, onFitAll, playbackTime}) {
     const {t} = useTranslation('navigation');
@@ -164,11 +156,16 @@ export default function PacketMap({positions, transmitters, hasPositions = posit
     // Geometry and fitting stay fixed while the cursor moves. Only the symbols
     // and their historical altitude/flight phase are updated during scrubbing.
     const playback = useMemo(() => new Map(tracks.map((track) => {
-        const current = trackPositionAt(track, playbackTime, transmitterDetails.get(track.id)?.telemetry?.vel_v);
+        const details = transmitterDetails.get(track.id);
+        const current = trackPositionAt(track, playbackTime, details?.telemetry?.vel_v);
         const point = current?.point;
-        return [track.id, current ? {...current, icon: point.kind === 'radiosonde' ? createRadiosondeIcon({
+        const icon = point?.kind === 'radiosonde' ? createRadiosondeIcon({
             phase: current.phase, altitude: point.altitude, name: point.name,
-        }) : null} : null];
+        }) : point?.kind === 'aprs' ? createAprsIcon({
+            position: aprsPosition(point, details), report: details?.telemetry,
+            phase: current.phase, altitude: point.altitude, name: point.name,
+        }) : null;
+        return [track.id, current ? {...current, icon} : null];
     })), [tracks, playbackTime, transmitterDetails]);
     // Follow the selected sonde's displayed position, including historical
     // interpolation. Unknown altitude must not produce a misleading footprint.
@@ -196,47 +193,23 @@ export default function PacketMap({positions, transmitters, hasPositions = posit
         if (selectedTransmitterId === null && hasReceiver) coordinates.push([receiverLatitude, receiverLongitude]);
         return coordinates;
     }, [tracks, selectedTransmitterId, hasReceiver, receiverLatitude, receiverLongitude]);
-    const fittedSondes = tracks.filter((track) => track.points[0].kind === 'radiosonde'
+    const fittedBalloons = tracks.filter((track) => (track.points[0].kind === 'radiosonde'
+        || getAprsSymbol(aprsPosition(track.points.at(-1), transmitterDetails.get(track.id)))?.balloon)
         && (selectedTransmitterId === null || track.id === selectedTransmitterId));
     // The selected sonde's green circle supplies space around its symbol.
+    // APRS balloons have no circle, so reserve room for their raised icon.
     // Keep this tied to selection so playback alone cannot change the viewport.
-    const padding = selectedTransmitterId !== null && fittedSondes.length ? 24 : 42;
-    const paddingTop = padding === 24 ? padding : fittedSondes.length ? 124 : padding;
-    const homeLabel = t('packet_map.home', {defaultValue: 'Home station'});
+    const padding = selectedTransmitterId !== null && fittedBalloons.some((track) => track.points[0].kind === 'radiosonde') ? 24 : 42;
+    const hasAprsPins = tracks.some((track) => track.points[0].kind === 'aprs'
+        && (selectedTransmitterId === null || track.id === selectedTransmitterId));
+    // Pins extend upward from their coordinates; leave space for the callsign above them.
+    const paddingTop = padding === 24 ? padding : fittedBalloons.length ? 124 : hasAprsPins ? 72 : padding;
 
     // MapContainer freezes its initial className; keep pane styling on a live
     // wrapper so layer-order changes also apply to maps that are already open.
     return <Box className="packet-map" ref={islandRef} sx={(theme) => ({height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column',
         '&:fullscreen': {width: '100vw', height: '100vh', bgcolor: 'background.paper'},
         '&:-webkit-full-screen': {width: '100vw', height: '100vh', bgcolor: 'background.paper'},
-        // Leaflet renders overlays in map panes; theme their surfaces and arrows together.
-        '& .leaflet-tooltip, & .leaflet-popup-content-wrapper': {
-            ...theme.typography.body2,
-            fontSize: theme.typography.pxToRem(12),
-            backgroundColor: theme.palette.background.paper,
-            color: theme.palette.text.primary,
-            border: `1px solid ${theme.palette.divider}`,
-            borderRadius: `${theme.shape.borderRadius}px`,
-            boxShadow: theme.shadows[3],
-        },
-        '& .leaflet-tooltip': {
-            fontSize: theme.typography.pxToRem(11),
-            fontWeight: theme.typography.fontWeightMedium,
-            padding: theme.spacing(0.5, 1),
-            opacity: '1 !important',
-        },
-        '& .leaflet-tooltip-top::before': {
-            borderTopColor: `${theme.palette.background.paper} !important`,
-        },
-        '& .leaflet-tooltip-bottom::before': {
-            borderBottomColor: `${theme.palette.background.paper} !important`,
-        },
-        '& .leaflet-tooltip-left::before': {
-            borderLeftColor: `${theme.palette.background.paper} !important`,
-        },
-        '& .leaflet-tooltip-right::before': {
-            borderRightColor: `${theme.palette.background.paper} !important`,
-        },
         '& .packet-visibility-label': {
             fill: theme.palette.text.secondary,
             stroke: alpha(theme.palette.background.paper, 0.85),
@@ -247,11 +220,6 @@ export default function PacketMap({positions, transmitters, hasPositions = posit
             fontWeight: theme.typography.fontWeightMedium,
             pointerEvents: 'none',
             userSelect: 'none',
-        },
-        '& .leaflet-popup-tip': {backgroundColor: theme.palette.background.paper},
-        '& .leaflet-popup-close-button': {
-            color: theme.palette.text.secondary,
-            '&:hover, &:focus-visible': {color: theme.palette.text.primary},
         },
     })}>
         <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ['window-title-bar'])}
@@ -271,7 +239,7 @@ export default function PacketMap({positions, transmitters, hasPositions = posit
                 zoom={initialView?.zoom ?? (hasReceiver ? 9 : 2)} preferCanvas zoomControl={false} keyboard={false}
                 dragging={settings.enableMapDragging} scrollWheelZoom={settings.enableMapZooming}
                 doubleClickZoom={settings.enableMapZooming} touchZoom={settings.enableMapZooming} boxZoom={settings.enableMapZooming}
-                zoomSnap={0.25} zoomDelta={0.25} bounceAtZoomLimits={false} closePopupOnClick={false}
+                zoomSnap={0.25} zoomDelta={0.25} bounceAtZoomLimits={false}
                 style={{height: '100%', width: '100%'}}>
                 <MapInteractions enableMapDragging={settings.enableMapDragging} enableMapZooming={settings.enableMapZooming} />
                 <MapViewport bounds={bounds} ready={!loading} fitRequest={`${fitRequest}:${selectedTransmitterId}:${localFit}`}
@@ -287,9 +255,8 @@ export default function PacketMap({positions, transmitters, hasPositions = posit
                         renderer={visibilityRenderer} label={pathLabel}
                         pathOptions={{color, fill: false, weight: 2, opacity: 0.85, dashArray: '8 6'}} />)}
                 </Pane>
-                {hasReceiver && <Marker position={[receiverLatitude, receiverLongitude]} icon={homeIcon}>
-                    <Tooltip>{homeLabel}</Tooltip><Popup>{homeLabel}</Popup>
-                </Marker>}
+                {hasReceiver && <Marker position={[receiverLatitude, receiverLongitude]} icon={homeIcon} />}
+                {/* Point clicks select the transmitter; details stay in the info panel. */}
                 {tracks.map(({id, points, path}) => {
                     const latest = points[points.length - 1];
                     const endpoints = points.length > 1 ? [points[0], latest] : [latest];
@@ -301,16 +268,12 @@ export default function PacketMap({positions, transmitters, hasPositions = posit
                         {endpoints.filter((point) => point !== current?.point).map((point) => <CircleMarker key={point.id}
                             center={[point.latitude, point.longitude]} radius={4}
                             eventHandlers={{click: () => onSelectTransmitter?.(id)}}
-                            pathOptions={{color, fillColor: color, fillOpacity: 0.25, weight: 2}}>
-                            <PositionPopup point={point} />
-                        </CircleMarker>)}
+                            pathOptions={{color, fillColor: color, fillOpacity: 0.25, weight: 2}} />)}
                         {current && (current.icon ? <Marker key="cursor" position={[current.point.latitude, current.point.longitude]}
                             icon={current.icon} eventHandlers={{click: () => onSelectTransmitter?.(id)}}
                         /> : <CircleMarker key="cursor" center={[current.point.latitude, current.point.longitude]} radius={7}
                             eventHandlers={{click: () => onSelectTransmitter?.(id)}}
-                            pathOptions={{color, fillColor: color, fillOpacity: 0.85, weight: 2}}>
-                            <PositionPopup point={current.point} /><Tooltip direction="top">{current.point.name}</Tooltip>
-                        </CircleMarker>)}
+                            pathOptions={{color, fillColor: color, fillOpacity: 0.85, weight: 2}} />)}
                     </React.Fragment>;
                 })}
             </MapContainer>

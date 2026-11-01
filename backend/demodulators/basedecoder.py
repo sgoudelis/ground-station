@@ -199,7 +199,11 @@ class BaseDecoder:
         return stats
 
     def _on_packet_decoded(
-        self, payload: bytes, callsigns: Optional[Dict[str, str]] = None
+        self,
+        payload: bytes,
+        callsigns: Optional[Dict[str, str]] = None,
+        *,
+        timestamp: Optional[float] = None,
     ) -> None:
         """
         Shared packet processing logic for all decoders.
@@ -214,6 +218,7 @@ class BaseDecoder:
         Args:
             payload: Raw packet bytes
             callsigns: Optional dict with 'from' and 'to' callsigns
+            timestamp: Original reception time when a decoder delays saving.
         """
         try:
             # Validate packet (subclass-specific logic)
@@ -231,7 +236,7 @@ class BaseDecoder:
 
             # Preserve reception independently of parsing, identity lookup or UI
             # metadata. Even a programming error must leave the original bytes.
-            decode_timestamp = time.time()
+            decode_timestamp = time.time() if timestamp is None else timestamp
             filename = self._generate_filename(decode_timestamp)
             output_dir = self._get_packet_output_dir(decode_timestamp)
             os.makedirs(output_dir, exist_ok=True)

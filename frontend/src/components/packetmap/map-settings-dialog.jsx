@@ -42,8 +42,9 @@ export default function PacketMapSettingsDialog({settings, hiddenTypes = [], tra
                             <MenuItem value="satellite">Satellite</MenuItem>
                             <MenuItem value="hybrid">Satellite + streets</MenuItem>
                             <MenuItem value="topo">Topographic</MenuItem>
-                            <MenuItem value="cartodark">Dark (CARTO)</MenuItem>
+                            <MenuItem value="cartodark">Dark (CARTO, API key required)</MenuItem>
                             <MenuItem value="esridarkcanvas">Dark (Esri)</MenuItem>
+                            <MenuItem value="stadiadark">Dark streets (Stadia, API key required)</MenuItem>
                         </Select>
                     </FormControl>
                 </Paper>

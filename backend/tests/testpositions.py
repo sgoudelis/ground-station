@@ -114,6 +114,24 @@ def test_transmitter_rows_include_latest_measurements_without_repeating_details_
     assert restricted["transmitters"][0]["details"]["telemetry"]["temp"] == -12
 
 
+def test_aprs_positions_preserve_each_packets_symbol_for_playback(tmp_path):
+    first = aprs()
+    first["telemetry"]["payload"]["aprs"]["position"].update(symbol_table="/", symbol_code=">")
+    last = aprs(lat=49.1)
+    last["telemetry"]["payload"]["aprs"]["position"].update(symbol_table="/", symbol_code="-")
+    save(tmp_path, "first", first, "2026-11-01T01:00:00Z")
+    save(tmp_path, "last", last, "2026-11-01T02:00:00Z")
+    save(tmp_path, "generic", aprs(name="Unknown"), "2026-11-01T03:00:00Z")
+
+    result = LibraryInventory(tmp_path).query_positions("2026-11-01T00:00:00Z")
+    assert [(point["symbol_table"], point["symbol_code"]) for point in result["positions"]] == [
+        ("/", ">"),
+        ("/", "-"),
+        (None, None),
+    ]
+    assert result["transmitters"][0]["details"]["telemetry"]["position"]["symbol_code"] == "-"
+
+
 def test_invalid_and_encrypted_positions_are_omitted_and_legacy_aprs_is_adapted(tmp_path):
     save(tmp_path, "encrypted", sonde(encrypted=True))
     save(tmp_path, "badlatitude", aprs(lat=91))

@@ -165,7 +165,11 @@ class DecoderRegistry:
                 demodulator_mode=None,
                 default_bandwidth=20000,
                 supports_transmitter_config=False,
-                restart_on_params=["radiosonde_type", "radiosonde_sample_rate"],
+                restart_on_params=[
+                    "radiosonde_type",
+                    "radiosonde_sample_rate",
+                    "radiosonde_save_interval",
+                ],
                 description="Automatic RS41, DFM and M10/M20 telemetry from VFO-centered IQ (RS)",
             )
 

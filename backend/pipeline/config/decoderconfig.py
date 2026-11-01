@@ -75,6 +75,7 @@ class DecoderConfig:
     # Radiosonde family selection and input rate after VFO channelization
     radiosonde_sample_rate: int = 48000
     radiosonde_type: str = "auto"
+    radiosonde_save_interval: int = 5  # Seconds; zero retains every validated packet.
 
     # GNSS-SDR specific parameters
     gnss_sample_rate: Optional[int] = None  # Input sample rate expected by GNSS-SDR
@@ -121,6 +122,7 @@ class DecoderConfig:
             and self.sstv_mode == other.sstv_mode
             and self.radiosonde_type == other.radiosonde_type
             and self.radiosonde_sample_rate == other.radiosonde_sample_rate
+            and self.radiosonde_save_interval == other.radiosonde_save_interval
             and self.sf == other.sf
             and self.bw == other.bw
             and self.cr == other.cr
@@ -165,6 +167,7 @@ class DecoderConfig:
                 self.sstv_mode,
                 self.radiosonde_type,
                 self.radiosonde_sample_rate,
+                self.radiosonde_save_interval,
                 self.sf,
                 self.bw,
                 self.cr,
@@ -203,6 +206,7 @@ class DecoderConfig:
             "sstv_mode": self.sstv_mode,
             "radiosonde_type": self.radiosonde_type,
             "radiosonde_sample_rate": self.radiosonde_sample_rate,
+            "radiosonde_save_interval": self.radiosonde_save_interval,
             "sf": self.sf,
             "bw": self.bw,
             "cr": self.cr,

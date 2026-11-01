@@ -10,6 +10,7 @@ import shutil
 import subprocess
 import time
 from collections import deque
+from dataclasses import dataclass
 from types import SimpleNamespace
 from typing import Any
 
@@ -26,6 +27,16 @@ from telemetry.parser import TelemetryParser
 from telemetry.radiosonde import RadiosondeParser
 
 logger = logging.getLogger("radiosondedecoder")
+
+
+@dataclass
+class SondePacket:
+    """A validated fix waiting for its save interval, with reception metadata."""
+
+    frame: bytes
+    report: dict[str, Any]
+    timestamp: float
+    signal: dict[str, Any]
 
 
 class SondeChannel:
@@ -84,6 +95,11 @@ class RadiosondeDecoder(BaseDecoderProcess):
         self.sample_rate: int = config.radiosonde_sample_rate
         if self.sample_rate not in (48_000, 96_000):
             raise ValueError("Radiosonde sample rate must be 48000 or 96000")
+        self.save_interval = config.radiosonde_save_interval
+        self.saved_at: dict[tuple[str, str], float] = {}
+        self.pending_packets: dict[tuple[str, str], SondePacket] = {}
+        self.flight_phases: dict[tuple[str, str], int] = {}
+        self.saving_signal: dict[str, Any] | None = None
         self.satellite = config.satellite or {}
         self.transmitter = config.transmitter or {}
         self.sdr_sample_rate = None
@@ -157,7 +173,17 @@ class RadiosondeDecoder(BaseDecoderProcess):
             **super()._get_decoder_config_metadata(),
             "radiosonde_type": self.family,
             "radiosonde_sample_rate": self.sample_rate,
+            "radiosonde_save_interval": self.save_interval,
         }
+
+    def _get_signal_metadata(self, vfo_state):
+        # Delayed saves must keep the signal measured at reception, rather than
+        # whichever IQ chunk happened to trigger the timer or decoder shutdown.
+        return (
+            self.saving_signal
+            if self.saving_signal is not None
+            else super()._get_signal_metadata(vfo_state)
+        )
 
     def _get_demodulator_params_metadata(self):
         return {
@@ -346,8 +372,56 @@ class RadiosondeDecoder(BaseDecoderProcess):
         self.decoder_report = report
         self.framing = report["type"].lower()
         self.baudrate = {"RS41": 4800, "DFM": 2500, "M10": 9616, "M20": 9600}[report["type"]]
-        self._on_packet_decoded(frame)
+        self._queue_packet(frame, report, self.last_packet_at)
         self._send_status("decoding", sonde_id=report["id"], frame=report["frame"])
+
+    def _queue_packet(self, frame, report, now):
+        identity = (report["type"], report["id"])
+        packet = SondePacket(
+            frame, report, time.time(), self._get_signal_metadata(self._get_vfo_state())
+        )
+        previous_phase = self.flight_phases.get(identity)
+        vertical_speed = report.get("vel_v")
+        phase = (
+            (1 if vertical_speed > 0 else -1)
+            if isinstance(vertical_speed, (int, float)) and abs(vertical_speed) > 0.3
+            else previous_phase
+        )
+        if phase is not None:
+            self.flight_phases[identity] = phase
+        changed_phase = previous_phase is not None and phase != previous_phase
+        # Liveness and upstream calibration already advanced for every report.
+        # Only artifact creation is sampled, independently for each sonde.
+        if (
+            identity not in self.saved_at
+            or now - self.saved_at[identity] >= self.save_interval
+            or changed_phase
+        ):
+            self.pending_packets.pop(identity, None)
+            self._save_packet(packet)
+            self.saved_at[identity] = now
+        else:
+            # Retain only the latest unsaved fix; never build a packet backlog.
+            self.pending_packets[identity] = packet
+
+    def _save_packet(self, packet):
+        previous = self.decoder_report, self.framing, self.baudrate, self.saving_signal
+        self.decoder_report = packet.report
+        self.framing = packet.report["type"].lower()
+        self.baudrate = {"RS41": 4800, "DFM": 2500, "M10": 9616, "M20": 9600}[packet.report["type"]]
+        self.saving_signal = packet.signal
+        try:
+            self._on_packet_decoded(packet.frame, timestamp=packet.timestamp)
+        finally:
+            self.decoder_report, self.framing, self.baudrate, self.saving_signal = previous
+
+    def _flush_pending_packets(self, force=False):
+        now = time.monotonic()
+        for identity, packet in list(self.pending_packets.items()):
+            if force or now - self.saved_at[identity] >= self.save_interval:
+                self._save_packet(packet)
+                self.saved_at[identity] = now
+                del self.pending_packets[identity]
 
     def _read_output(self, timeout=0):
         selector = self.selector
@@ -434,6 +508,8 @@ class RadiosondeDecoder(BaseDecoderProcess):
 
     def _reset_receiver(self):
         # Retunes and missing IQ invalidate DSP state, detection and calibration.
+        # Flush while the old VFO metadata still describes the pending fixes.
+        self._flush_pending_packets(force=True)
         self._stop_rs()
         self.channel = None
         self.channel_key = None
@@ -442,6 +518,8 @@ class RadiosondeDecoder(BaseDecoderProcess):
         self.baudrate = self.config.baudrate
         self.decoder_report = None
         self.last_frame_key = None
+        self.saved_at.clear()
+        self.flight_phases.clear()
         self.detected_type = None
         self.detection_score = None
         self.confirmed = False
@@ -465,6 +543,7 @@ class RadiosondeDecoder(BaseDecoderProcess):
     def _select_receiver(self, family):
         # Switch only between writes, never from a stdout callback: that would
         # splice IQ into the wrong process or close pipes while they are in use.
+        self._flush_pending_packets(force=True)
         self._stop_rs()
         self.active_type = family
         self.decoder_report = None
@@ -487,8 +566,10 @@ class RadiosondeDecoder(BaseDecoderProcess):
 
     def _service_receiver(self):
         if self.rs_process is None:
+            self._flush_pending_packets()
             return
         self._read_output()
+        self._flush_pending_packets()
         if self.active_type is None and self.detected_type:
             self._select_receiver(self.detected_type)
             return
@@ -618,6 +699,7 @@ class RadiosondeDecoder(BaseDecoderProcess):
             logger.exception("Radiosonde decoder failed")
             self._send_status("error", error=str(exc))
         finally:
+            self._flush_pending_packets(force=True)
             self._stop_rs()
             self.running.value = 0
             if self.status != "error":

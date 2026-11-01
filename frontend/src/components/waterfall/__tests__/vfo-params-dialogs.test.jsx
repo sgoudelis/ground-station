@@ -46,6 +46,37 @@ const renderDecoderDialog = (vfo, onVFOPropertyChange = vi.fn(), onClose = vi.fn
 );
 
 describe('Waterfall VFO parameter dialogs', () => {
+    it('defaults radiosonde packet saving to five seconds and applies a custom interval', () => {
+        const onVFOPropertyChange = vi.fn();
+        renderDecoderDialog({ decoder: 'radiosonde', parametersEnabled: true, parameters: {} }, onVFOPropertyChange);
+        const input = screen.getByRole('spinbutton', { name: 'Packet save interval (seconds)' });
+        expect(input).toHaveValue(5);
+        fireEvent.change(input, { target: { value: '10' } });
+        expect(onVFOPropertyChange).not.toHaveBeenCalled();
+        fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
+        expect(onVFOPropertyChange).toHaveBeenCalledExactlyOnceWith(1, {
+            parameters: { radiosonde_save_interval: 10 },
+        });
+    });
+
+    it('validates save intervals and accepts zero for full-rate recording', () => {
+        const onVFOPropertyChange = vi.fn();
+        renderDecoderDialog({ decoder: 'radiosonde', parametersEnabled: true, parameters: {} }, onVFOPropertyChange);
+        const input = screen.getByRole('spinbutton', { name: 'Packet save interval (seconds)' });
+        const apply = screen.getByRole('button', { name: 'Apply' });
+        for (const value of ['', '-1', '1.5', '3601']) {
+            fireEvent.change(input, { target: { value } });
+            expect(input).toHaveAttribute('aria-invalid', 'true');
+            expect(apply).toBeDisabled();
+        }
+        fireEvent.change(input, { target: { value: '0' } });
+        expect(apply).toBeEnabled();
+        fireEvent.click(apply);
+        expect(onVFOPropertyChange).toHaveBeenCalledExactlyOnceWith(1, {
+            parameters: { radiosonde_save_interval: 0 },
+        });
+    });
+
     it('applies a radiosonde processing rate through the existing parameter dialog', () => {
         const onVFOPropertyChange = vi.fn();
         renderDecoderDialog({

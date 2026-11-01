@@ -573,6 +573,15 @@ export const getRadiosondeParameters = (t = englishFallback) => ({
             { value: 48000, label: '48 kS/s' },
             { value: 96000, label: '96 kS/s' }
         ]
+    },
+    radiosonde_save_interval: {
+        label: t('decoder_parameters.radiosonde_save_interval', { defaultValue: 'Packet save interval (seconds)' }),
+        description: t('decoder_parameters.radiosonde_save_interval_help', { defaultValue: 'Save one packet per sonde at this interval. Use 0 to save every packet. Decoding continues at full rate; first and final fixes and ascent/descent changes are retained.' }),
+        type: 'number',
+        default: 5,
+        min: 0,
+        max: 3600,
+        step: 1
     }
 });
 
@@ -778,7 +787,8 @@ export function mapParametersToBackend(decoder, parameters) {
     if (decoder === 'radiosonde') {
         return {
             radiosonde_type: parameters.radiosonde_type ?? 'auto',
-            radiosonde_sample_rate: parameters.radiosonde_sample_rate ?? 48000
+            radiosonde_sample_rate: parameters.radiosonde_sample_rate ?? 48000,
+            radiosonde_save_interval: parameters.radiosonde_save_interval ?? 5
         };
     }
 

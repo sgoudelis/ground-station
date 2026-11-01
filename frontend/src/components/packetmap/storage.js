@@ -20,7 +20,7 @@ export function readMapSettings() {
         enableMapZooming: saved?.enableMapZooming === true,
         showTracks: saved?.showTracks !== false,
         showLegend: saved?.showLegend !== false,
-        tileLayerId: ['osm', 'satellite', 'hybrid', 'topo', 'cartodark', 'esridarkcanvas'].includes(saved?.tileLayerId)
+        tileLayerId: ['osm', 'satellite', 'hybrid', 'topo', 'cartodark', 'esridarkcanvas', 'stadiadark'].includes(saved?.tileLayerId)
             ? saved.tileLayerId : defaultMapSettings.tileLayerId,
     };
 }

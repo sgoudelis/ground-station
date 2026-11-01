@@ -8,6 +8,7 @@ import {AdapterMoment} from '@mui/x-date-pickers/AdapterMoment';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import CheckIcon from '@mui/icons-material/Check';
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import TodayIcon from '@mui/icons-material/Today';
 import DateRangeIcon from '@mui/icons-material/DateRange';
 import AllInclusiveIcon from '@mui/icons-material/AllInclusive';
@@ -21,7 +22,7 @@ import {datePickerLocalization} from './date-picker-localization.js';
 
 const compactActionsQuery = '@container packet-map-toolbar (max-width: 600px)';
 const actionButtonSx = {
-    minWidth: 0, px: 1, height: 32,
+    minWidth: 0, px: 1, height: 40,
     [compactActionsQuery]: {width: 40, height: 40},
 };
 const periodButtonSx = {
@@ -30,9 +31,13 @@ const periodButtonSx = {
     '& .MuiButton-startIcon': {display: 'none'},
     [compactActionsQuery]: {...actionButtonSx[compactActionsQuery], '& .MuiButton-startIcon': {display: 'inline-flex'}},
 };
+const outlinedIconButtonSx = {
+    // Match the date inputs with a full-height square button in every layout.
+    width: 40, height: 40, border: '1px solid currentColor', borderRadius: 1, bgcolor: 'background.paper',
+};
 
 const datePickerSx = {
-    width: 220,
+    width: 230,
     // Respond to toolbar space, including the width taken by the navigation drawer.
     '@container packet-map-toolbar (max-width: 900px)': {
         width: 40,
@@ -47,6 +52,7 @@ export default function DateRangeBar({range, availableRange, positions, onChange
     playbackTime, onPlaybackTimeChange, onRefresh, loading}) {
     const {t} = useTranslation('navigation');
     const applyLabel = t('packet_map.apply', {defaultValue: 'Apply'});
+    const refreshLabel = t('packet_map.refresh', {defaultValue: 'Refresh'});
     const fromLabel = t('packet_map.from', {defaultValue: 'From'});
     const toLabel = t('packet_map.to', {defaultValue: 'To'});
     const isLive = range.end === null;
@@ -110,8 +116,8 @@ export default function DateRangeBar({range, availableRange, positions, onChange
             <Tooltip title={applyLabel}>
                 <Box component="span" sx={{display: 'inline-flex'}}>
                     <IconButton type="submit" size="small" color="primary" disabled={!valid}
-                        aria-label={applyLabel} sx={{width: 32, height: 32}}>
-                        <CheckIcon fontSize="small" />
+                        aria-label={applyLabel} sx={outlinedIconButtonSx}>
+                        <CheckIcon />
                     </IconButton>
                 </Box>
             </Tooltip>
@@ -126,6 +132,9 @@ export default function DateRangeBar({range, availableRange, positions, onChange
                         maximum - minimum <= 86400000 ? {hour: '2-digit', minute: '2-digit',
                             ...(maximum - minimum < 3600000 ? {second: '2-digit'} : {})} : {day: 'numeric', month: 'short'},
                     })}
+                    formatTickTime={maximum - minimum > 86400000
+                        ? (date) => formatDateTime(date, {timezone, locale, options: {hour: '2-digit', minute: '2-digit'}})
+                        : undefined}
                     onChange={(_event, value) => {if (!isLive) onPlaybackTimeChange?.(value);}} />
             </Box>
             {/* Keep presets at the right edge even while the timeline is hidden. */}
@@ -134,20 +143,29 @@ export default function DateRangeBar({range, availableRange, positions, onChange
             <ResponsiveActionButton label={t('packet_map.live', {defaultValue: 'LIVE'})}
                 tooltip={t('packet_map.live_description', {defaultValue: 'Follow new packets from the selected start date'})}
                 compactQuery={compactActionsQuery} sx={actionButtonSx}
-                size="small" variant={isLive ? 'contained' : 'outlined'} color={isLive ? 'success' : 'primary'}
+                size="medium" variant={isLive ? 'contained' : 'outlined'} color={isLive ? 'success' : 'primary'}
                 aria-pressed={isLive} onClick={() => onPresetChange({start: range.start, end: null})}
                 startIcon={<FiberManualRecordIcon sx={{fontSize: '10px !important',
                     [compactActionsQuery]: {fontSize: '20px !important'}}} />} />
+            <ResponsiveActionButton label="12h" compactQuery={compactActionsQuery} sx={periodButtonSx}
+                size="medium" startIcon={<AccessTimeIcon />} onClick={() => recent(12)} />
             <ResponsiveActionButton label="24h" compactQuery={compactActionsQuery} sx={periodButtonSx}
-                size="small" startIcon={<TodayIcon />} onClick={() => recent(24)} />
+                size="medium" startIcon={<TodayIcon />} onClick={() => recent(24)} />
             <ResponsiveActionButton label="7d" compactQuery={compactActionsQuery} sx={periodButtonSx}
-                size="small" startIcon={<DateRangeIcon />} onClick={() => recent(168)} />
-            <ResponsiveActionButton label={t('packet_map.all_dates', {defaultValue: 'All dates'})}
-                compactQuery={compactActionsQuery} sx={periodButtonSx} size="small" startIcon={<AllInclusiveIcon />}
+                size="medium" startIcon={<DateRangeIcon />} onClick={() => recent(168)} />
+            <ResponsiveActionButton label={t('packet_map.all', {defaultValue: 'All'})}
+                tooltip={t('packet_map.all_dates', {defaultValue: 'All dates'})}
+                compactQuery={compactActionsQuery} sx={periodButtonSx} size="medium" startIcon={<AllInclusiveIcon />}
                 disabled={!availableRange} onClick={() => onPresetChange({...availableRange})} />
-            <ResponsiveActionButton label={t('packet_map.refresh', {defaultValue: 'Refresh'})}
-                compactQuery={compactActionsQuery} sx={actionButtonSx} size="small" startIcon={<RefreshIcon />}
-                disabled={loading} onClick={onRefresh} />
+            <Tooltip title={refreshLabel}>
+                <Box component="span" sx={{display: 'inline-flex'}}>
+                    <IconButton type="button" size="small" color="primary" aria-label={refreshLabel}
+                        disabled={loading} onClick={onRefresh}
+                        sx={outlinedIconButtonSx}>
+                        <RefreshIcon />
+                    </IconButton>
+                </Box>
+            </Tooltip>
             </Stack>
         </Stack>
         </Box>
