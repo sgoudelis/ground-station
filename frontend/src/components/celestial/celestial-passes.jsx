@@ -2,20 +2,8 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
     Box,
     Button,
-    Checkbox,
     Chip,
-    Dialog,
-    DialogActions,
-    DialogContent,
-    DialogTitle,
-    Divider,
-    FormControl,
-    FormControlLabel,
-    FormGroup,
     IconButton,
-    InputLabel,
-    MenuItem,
-    Select,
     Tooltip,
     Typography,
     useMediaQuery,
@@ -36,14 +24,12 @@ import KeyOutlinedIcon from '@mui/icons-material/KeyOutlined';
 import MyLocationOutlinedIcon from '@mui/icons-material/MyLocationOutlined';
 import RadioButtonCheckedIcon from '@mui/icons-material/RadioButtonChecked';
 import RefreshIcon from '@mui/icons-material/Refresh';
-import SettingsIcon from '@mui/icons-material/Settings';
 import SummarizeOutlinedIcon from '@mui/icons-material/SummarizeOutlined';
 import TimelineOutlinedIcon from '@mui/icons-material/TimelineOutlined';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import {
     refreshMonitoredCelestialNow,
-    resetCelestialPassesTableSettings,
     setCelestialPassesTableColumnVisibility,
     setCelestialPassesTablePageSize,
     setCelestialPassesTableSortModel,
@@ -58,6 +44,7 @@ import { toRowSelectionModel, toSelectedIds } from '../../utils/datagrid-selecti
 import ProgressFormatter from '../earthview/progressbar-widget.jsx';
 import TargetNumberIcon from '../common/target-number-icon.jsx';
 import GridPaginationActions from '../common/grid-pagination-actions.jsx';
+import GridTableToolbar from '../common/grid-table-toolbar.jsx';
 import CelestialContextMenu from '../target/celestialcontextmenu.jsx';
 import { useSocket } from '../common/socket.jsx';
 import { useTargetRotatorSelectionDialog } from '../target/use-target-rotator-selection-dialog.jsx';
@@ -149,44 +136,6 @@ const StyledDataGrid = styled(DataGrid)(({ theme }) => ({
         paddingBottom: 0,
     },
 }));
-const DIALOG_PAPER_SX = {
-    bgcolor: 'background.paper',
-    border: (theme) => `1px solid ${theme.palette.divider}`,
-    borderRadius: 2,
-};
-const DIALOG_TITLE_SX = {
-    bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'grey.900' : 'grey.100'),
-    borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
-    fontSize: '1.125rem',
-    fontWeight: 'bold',
-    py: 2.2,
-};
-const DIALOG_CONTENT_SX = {
-    px: 2,
-    pt: 2,
-    pb: 1.5,
-};
-const DIALOG_ACTIONS_SX = {
-    px: 2,
-    py: 1.5,
-    bgcolor: 'background.paper',
-    borderTop: (theme) => `1px solid ${theme.palette.divider}`,
-};
-const FOOTER_ACTION_ROW_SX = {
-    width: '100%',
-    display: 'flex',
-    alignItems: 'center',
-    gap: 1,
-    overflowX: 'auto',
-    msOverflowStyle: 'none',
-    scrollbarWidth: 'none',
-    '&::-webkit-scrollbar': { display: 'none' },
-    '& > *': {
-        flexShrink: 0,
-        whiteSpace: 'nowrap',
-    },
-};
-
 export const getCelestialPassStatus = (row, now) => {
     const startMs = Number(row?.eventStartMs);
     const endMs = Number(row?.eventEndMs);
@@ -389,115 +338,6 @@ const PassStatusCell = ({ status, targetNumber = null, t }) => {
     );
 };
 
-const PassesTableSettingsDialog = ({ open, onClose }) => {
-    const dispatch = useDispatch();
-    const { t } = useTranslation('celestial');
-    const columnVisibility = useSelector((state) => state.celestial?.passesTableColumnVisibility || {});
-    const pageSize = useSelector((state) => state.celestial?.passesTablePageSize || 10);
-    const handleResetValues = useCallback(() => {
-        dispatch(resetCelestialPassesTableSettings());
-    }, [dispatch]);
-
-    const columns = [
-        { name: 'status', label: t('passes.columns.status'), category: 'basic', alwaysVisible: true },
-        { name: 'name', label: t('passes.columns.name'), category: 'basic', alwaysVisible: true },
-        { name: 'targetType', label: t('passes.columns.type'), category: 'basic' },
-        { name: 'peakElevationDeg', label: t('passes.columns.peak_elevation'), category: 'metrics' },
-        { name: 'currentElevationDeg', label: t('passes.columns.current_elevation', { defaultValue: 'Current Elevation' }), category: 'metrics' },
-        { name: 'progress', label: t('passes.columns.progress'), category: 'basic' },
-        { name: 'duration', label: t('passes.columns.duration'), category: 'basic' },
-        { name: 'eventStart', label: t('passes.columns.start'), category: 'time' },
-        { name: 'eventEnd', label: t('passes.columns.end'), category: 'time' },
-        { name: 'startAzimuthDeg', label: t('passes.columns.start_azimuth'), category: 'metrics' },
-        { name: 'endAzimuthDeg', label: t('passes.columns.end_azimuth'), category: 'metrics' },
-        { name: 'peakAzimuthDeg', label: t('passes.columns.peak_azimuth'), category: 'metrics' },
-        { name: 'cacheStatus', label: t('passes.columns.cache'), category: 'source' },
-        { name: 'stale', label: t('passes.columns.stale'), category: 'source' },
-        { name: 'source', label: t('passes.columns.source'), category: 'source' },
-    ];
-
-    const categories = {
-        basic: t('passes.settings.categories.basic'),
-        time: t('passes.settings.categories.time'),
-        metrics: t('passes.settings.categories.metrics'),
-        source: t('passes.settings.categories.source'),
-    };
-
-    const columnsByCategory = {
-        basic: columns.filter((column) => column.category === 'basic'),
-        time: columns.filter((column) => column.category === 'time'),
-        metrics: columns.filter((column) => column.category === 'metrics'),
-        source: columns.filter((column) => column.category === 'source'),
-    };
-
-    return (
-        <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth PaperProps={{ sx: DIALOG_PAPER_SX }}>
-            <DialogTitle sx={DIALOG_TITLE_SX}>{t('passes.settings.title')}</DialogTitle>
-            <DialogContent sx={DIALOG_CONTENT_SX}>
-                <Box sx={{ mb: 2 }}>
-                    <FormControl fullWidth size="small" sx={{ mt: 1 }}>
-                        <InputLabel id="celestial-passes-rows-label">{t('passes.settings.rows_per_page')}</InputLabel>
-                        <Select
-                            labelId="celestial-passes-rows-label"
-                            label={t('passes.settings.rows_per_page')}
-                            value={pageSize}
-                            onChange={(event) => dispatch(setCelestialPassesTablePageSize(event.target.value))}
-                        >
-                            {[5, 10, 15, 20, 25].map((option) => (
-                                <MenuItem key={option} value={option}>
-                                    {option}
-                                </MenuItem>
-                            ))}
-                        </Select>
-                    </FormControl>
-                    <Divider sx={{ mt: 2 }} />
-                </Box>
-                {Object.entries(columnsByCategory).map(([category, items]) => (
-                    <Box key={category} sx={{ mb: 2 }}>
-                        <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
-                            {categories[category]}
-                        </Typography>
-                        <FormGroup>
-                            {items.map((column) => (
-                                <FormControlLabel
-                                    key={column.name}
-                                    control={(
-                                        <Checkbox
-                                            checked={column.alwaysVisible || columnVisibility[column.name] !== false}
-                                            disabled={column.alwaysVisible}
-                                            onChange={() =>
-                                                dispatch(
-                                                    setCelestialPassesTableColumnVisibility({
-                                                        ...columnVisibility,
-                                                        [column.name]: columnVisibility[column.name] === false,
-                                                    }),
-                                                )
-                                            }
-                                        />
-                                    )}
-                                    label={column.label}
-                                />
-                            ))}
-                        </FormGroup>
-                        <Divider sx={{ mt: 1 }} />
-                    </Box>
-                ))}
-            </DialogContent>
-            <DialogActions sx={DIALOG_ACTIONS_SX}>
-                <Box sx={FOOTER_ACTION_ROW_SX}>
-                    <Button onClick={handleResetValues} variant="outlined">
-                        {t('passes.settings.reset_values')}
-                    </Button>
-                    <Box sx={{ flex: 1, minWidth: 8 }} />
-                    <Button onClick={onClose} variant="contained">
-                        {t('passes.settings.close')}
-                    </Button>
-                </Box>
-            </DialogActions>
-        </Dialog>
-    );
-};
-
 const CelestialPasses = ({
     passes = [],
     tracks = [],
@@ -523,7 +363,7 @@ const CelestialPasses = ({
     const trackerInstances = useSelector((state) => state.trackerInstances?.instances || []);
     const { trackingState, trackerViews } = useSelector((state) => state.targetSatTrack || {});
     const [quickFilterPreset, setQuickFilterPreset] = useState('all');
-    const [settingsOpen, setSettingsOpen] = useState(false);
+    const [toolbarContainer, setToolbarContainer] = useState(null);
     const [nowMs, setNowMs] = useState(() => Date.now());
     // Pass boundaries and this timestamp are produced by the same backend
     // snapshot, so relative Start/End labels cannot straddle a client timer tick.
@@ -759,7 +599,7 @@ const CelestialPasses = ({
         },
         { field: 'targetType', headerName: tCelestial('passes.columns.type'), minWidth: 90, flex: 0.8 },
         {
-            field: 'peakElevationDeg',
+            field: 'peakElevationDeg', type: 'number',
             headerName: tCelestial('passes.columns.peak_elevation'),
             width: 90,
             minWidth: 90,
@@ -773,7 +613,7 @@ const CelestialPasses = ({
             },
         },
         {
-            field: 'currentElevationDeg',
+            field: 'currentElevationDeg', type: 'number',
             headerName: tCelestial('passes.columns.current_elevation', { defaultValue: 'Current Elevation' }),
             width: 120,
             minWidth: 120,
@@ -797,6 +637,7 @@ const CelestialPasses = ({
         },
         {
             field: 'progress',
+            filterable: false,
             headerName: tCelestial('passes.columns.progress'),
             minWidth: 150,
             sortable: false,
@@ -870,9 +711,9 @@ const CelestialPasses = ({
                 </Box>
             ),
         },
-        { field: 'startAzimuthDeg', headerName: tCelestial('passes.columns.start_azimuth'), width: 90, minWidth: 90, valueFormatter: (value) => formatAngle(value) },
-        { field: 'endAzimuthDeg', headerName: tCelestial('passes.columns.end_azimuth'), width: 90, minWidth: 90, valueFormatter: (value) => formatAngle(value) },
-        { field: 'peakAzimuthDeg', headerName: tCelestial('passes.columns.peak_azimuth'), minWidth: 120, valueFormatter: (value) => formatAngle(value) },
+        { field: 'startAzimuthDeg', type: 'number', headerName: tCelestial('passes.columns.start_azimuth'), width: 90, minWidth: 90, valueFormatter: (value) => formatAngle(value) },
+        { field: 'endAzimuthDeg', type: 'number', headerName: tCelestial('passes.columns.end_azimuth'), width: 90, minWidth: 90, valueFormatter: (value) => formatAngle(value) },
+        { field: 'peakAzimuthDeg', type: 'number', headerName: tCelestial('passes.columns.peak_azimuth'), minWidth: 120, valueFormatter: (value) => formatAngle(value) },
         { field: 'cacheStatus', headerName: tCelestial('passes.columns.cache'), width: 90, minWidth: 90 },
         { field: 'stale', headerName: tCelestial('passes.columns.stale'), width: 80, minWidth: 80 },
         { field: 'source', headerName: tCelestial('passes.columns.source'), width: 110, minWidth: 110 },
@@ -1337,13 +1178,7 @@ const CelestialPasses = ({
                                 </Button>
                             </span>
                         </Tooltip>
-                        <Tooltip title={tCelestial('passes.table_settings')}>
-                            <span>
-                                <IconButton size="small" onClick={() => setSettingsOpen(true)} sx={titleIconButtonSx}>
-                                    <SettingsIcon fontSize="small" />
-                                </IconButton>
-                            </span>
-                        </Tooltip>
+                        <Box ref={setToolbarContainer} />
                         <Tooltip title={tCelestial('passes.refresh')}>
                             <span>
                                 <IconButton
@@ -1361,10 +1196,13 @@ const CelestialPasses = ({
             </TitleBar>
             <Box sx={{ flex: 1, minHeight: 0 }}>
                 <StyledDataGrid
+                    showToolbar
+                    slots={{ toolbar: GridTableToolbar }}
                     rows={filteredRows}
                     columns={columns}
                     loading={loading}
                     slotProps={{
+                        toolbar: { container: toolbarContainer },
                         row: {
                             onContextMenu: handleRowContextMenu,
                         },
@@ -1460,7 +1298,6 @@ const CelestialPasses = ({
                 onClose={() => setVectorTarget(null)}
                 onRefresh={vectorTarget?.id ? refreshVectorTarget : null}
             />
-            <PassesTableSettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} />
             </Box>
         </>
     );

@@ -1,17 +1,17 @@
 /** Copyright (c) 2026 Efstratios Goudelis — GPL-3.0-or-later */
 
 import React, {useMemo, useState} from 'react';
-import {createPortal} from 'react-dom';
-import {Box, Button, IconButton, Tooltip, Typography} from '@mui/material';
-import ViewColumnIcon from '@mui/icons-material/ViewColumn';
-import FilterListIcon from '@mui/icons-material/FilterList';
-import {ColumnsPanelTrigger, DataGrid, FilterPanelTrigger} from '@mui/x-data-grid';
+import {Box, Button, Typography} from '@mui/material';
+import {DataGrid} from '@mui/x-data-grid';
+import GridTableToolbar from '../common/grid-table-toolbar.jsx';
 import {useTranslation} from 'react-i18next';
+import {useDispatch, useSelector} from 'react-redux';
 import {getClassNamesBasedOnGridEditing, islandTitleBarCompactSx, TitleBar} from '../common/common.jsx';
 import GridPaginationActions from '../common/grid-pagination-actions.jsx';
 import {useUserTimeSettings} from '../../hooks/useUserTimeSettings.jsx';
 import {formatDateTime} from '../../utils/date-time.js';
 import {detailLabel, flattenDetails, typeColor, typeLabel} from './transmitters.js';
+import {setTransmitterTableColumnVisibility} from './packet-map-slice.jsx';
 
 const visibleDetails = new Set([
     'signal.frequency_hz', 'telemetry.vel_h', 'telemetry.vel_v', 'telemetry.heading',
@@ -24,31 +24,12 @@ const excludedDetails = new Set([
     'telemetry.temp', 'telemetry.humidity', 'telemetry.batt', 'telemetry.comment',
 ]);
 
-function TransmitterTableToolbar({container}) {
-    const {t} = useTranslation('navigation');
-    if (!container) return null;
-    // Keep the native panel context and anchors while placing controls in the title bar.
-    return createPortal(<Box sx={{display: 'flex', alignItems: 'center', gap: 0.5}}
-        onMouseDown={(event) => event.stopPropagation()} onTouchStart={(event) => event.stopPropagation()}>
-        <Tooltip title={t('packet_map.columns', {defaultValue: 'Columns'})}>
-            <ColumnsPanelTrigger render={<IconButton size="small" sx={{p: '2px'}}
-                aria-label={t('packet_map.columns', {defaultValue: 'Columns'})} />}>
-                <ViewColumnIcon fontSize="small" />
-            </ColumnsPanelTrigger>
-        </Tooltip>
-        <Tooltip title={t('packet_map.filters', {defaultValue: 'Filters'})}>
-            <FilterPanelTrigger render={<IconButton size="small" sx={{p: '2px'}}
-                aria-label={t('packet_map.filters', {defaultValue: 'Filters'})} />}>
-                <FilterListIcon fontSize="small" />
-            </FilterPanelTrigger>
-        </Tooltip>
-    </Box>, container);
-}
-
 export default function TransmitterTable({rows, loading, hiddenTypes, gridEditable, selectedTransmitterId = null, onSelectTransmitter}) {
     const {t} = useTranslation('navigation');
     const timeSettings = useUserTimeSettings();
-    const [columnVisibility, setColumnVisibility] = useState({});
+    const dispatch = useDispatch();
+    // Retain saved choices even when their decoded fields are absent from the results.
+    const columnVisibility = useSelector((state) => state.packetMap.transmitterTableColumnVisibility);
     const [toolbarContainer, setToolbarContainer] = useState(null);
     const rowSelectionModel = useMemo(() => ({type: 'include',
         ids: new Set(selectedTransmitterId === null ? [] : [selectedTransmitterId]),
@@ -108,10 +89,11 @@ export default function TransmitterTable({rows, loading, hiddenTypes, gridEditab
                 disableMultipleRowSelection keepNonExistentRowsSelected pageSizeOptions={[10, 25, 50, 100]}
                 rowSelectionModel={rowSelectionModel}
                 onRowSelectionModelChange={(selection) => onSelectTransmitter?.(selection.ids.values().next().value ?? null)}
-                initialState={{pagination: {paginationModel: {pageSize: 25}}, sorting: {sortModel: [{field: 'last_seen', sort: 'desc'}]}}}
-                columnVisibilityModel={{...visibility, ...columnVisibility}} onColumnVisibilityModelChange={setColumnVisibility}
+                initialState={{pagination: {paginationModel: {pageSize: 25}}, sorting: {sortModel: [{field: 'first_seen', sort: 'desc'}]}}}
+                columnVisibilityModel={{...visibility, ...columnVisibility}}
+                onColumnVisibilityModelChange={(model) => dispatch(setTransmitterTableColumnVisibility(model))}
                 getRowClassName={({row}) => hiddenTypes.includes(row.kind) ? 'transmitter-hidden' : ''}
-                slots={{toolbar: TransmitterTableToolbar}}
+                slots={{toolbar: GridTableToolbar}}
                 slotProps={{toolbar: {container: toolbarContainer}, basePagination: {ActionsComponent: GridPaginationActions},
                     loadingOverlay: {variant: 'linear-progress', noRowsVariant: 'linear-progress'}}}
                 sx={{border: 0, borderRadius: 0, '& .MuiDataGrid-row': {cursor: 'pointer'}, '& .transmitter-hidden': {opacity: 0.55},

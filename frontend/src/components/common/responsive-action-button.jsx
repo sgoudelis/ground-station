@@ -7,7 +7,7 @@
 import React from 'react';
 import { Button, Tooltip } from '@mui/material';
 
-export default function ResponsiveActionButton({ label, compactQuery, sx = [], ...props }) {
+export default function ResponsiveActionButton({ label, tooltip = label, compactQuery, sx = [], ...props }) {
     const button = (
         <Button
             {...props}
@@ -33,7 +33,7 @@ export default function ResponsiveActionButton({ label, compactQuery, sx = [], .
     );
 
     return (
-        <Tooltip title={label}>
+        <Tooltip title={tooltip}>
             {/* Keep the wrapper stable when busy; disabled buttons need it for tooltips. */}
             <span style={{ display: 'inline-flex', flexShrink: 0 }}>{button}</span>
         </Tooltip>

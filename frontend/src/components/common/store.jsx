@@ -41,6 +41,7 @@ import sdrsReducer from '../hardware/sdr-slice.jsx';
 import versionReducer from "../dashboard/version-slice.jsx";
 import updateCheckReducer from "../dashboard/update-slice.jsx";
 import fileBrowserReducer, { reconcileFileBrowserPersistedState } from '../filebrowser/filebrowser-slice.jsx';
+import packetMapReducer from '../packetmap/packet-map-slice.jsx';
 import decodersReducer from '../decoders/decoders-slice.jsx';
 import libraryVersionsReducer from '../settings/library-versions-slice.jsx';
 import performanceReducer from '../performance/performance-slice.jsx';
@@ -371,6 +372,12 @@ const celestialDisplayPersistConfig = {
     whitelist: ['solarSystem', 'planetarium'],
 };
 
+const packetMapPersistConfig = {
+    key: 'packetMap',
+    storage,
+    whitelist: ['range', 'transmitterTableColumnVisibility'],
+};
+
 const authPersistConfig = {
     key: 'auth',
     storage,
@@ -424,6 +431,7 @@ const persistedTasksReducer = persistReducer(tasksPersistConfig, tasksReducer);
 const persistedCelestialReducer = persistReducer(celestialPersistConfig, celestialReducer);
 const persistedCelestialMonitoredReducer = persistReducer(celestialMonitoredPersistConfig, celestialMonitoredReducer);
 const persistedCelestialDisplayReducer = persistReducer(celestialDisplayPersistConfig, celestialDisplayReducer);
+const persistedPacketMapReducer = persistReducer(packetMapPersistConfig, packetMapReducer);
 const persistedAuthReducer = persistReducer(authPersistConfig, authReducer);
 
 
@@ -448,6 +456,7 @@ export const store = configureStore({
         version: persistedVersionInfoReducer,
         updateCheck: persistedUpdateCheckReducer,
         filebrowser: persistedFileBrowserReducer,
+        packetMap: persistedPacketMapReducer,
         decoders: persistedDecodersReducer,
         libraryVersions: persistedLibraryVersionsReducer,
         performance: persistedPerformanceReducer,

@@ -382,8 +382,6 @@ const earthViewSlice = createSlice({
         passesRangeEnd: null,
         passesCachedGroupId: null, // Track which group the cached passes belong to
         openMapSettingsDialog: false,
-        openPassesTableSettingsDialog: false,
-        openSatellitesTableSettingsDialog: false,
         nextPassesHours: 4.0,
         satellitesTableColumnVisibility: { ...EARTHVIEW_SATELLITES_DEFAULT_COLUMN_VISIBILITY },
         satellitesTableDefaultsVersion: EARTHVIEW_SATELLITES_TABLE_DEFAULTS_VERSION,
@@ -519,12 +517,6 @@ const earthViewSlice = createSlice({
         },
         setOpenMapSettingsDialog(state, action) {
             state.openMapSettingsDialog = action.payload;
-        },
-        setOpenPassesTableSettingsDialog(state, action) {
-            state.openPassesTableSettingsDialog = action.payload;
-        },
-        setOpenSatellitesTableSettingsDialog(state, action) {
-            state.openSatellitesTableSettingsDialog = action.payload;
         },
         setNextPassesHours(state, action) {
             state.nextPassesHours = action.payload;
@@ -739,8 +731,6 @@ export const {
     setPasses,
     setPassesLoading,
     setOpenMapSettingsDialog,
-    setOpenPassesTableSettingsDialog,
-    setOpenSatellitesTableSettingsDialog,
     setNextPassesHours,
     setShowGrid,
     setSelectedSatelliteId,

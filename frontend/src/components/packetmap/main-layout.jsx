@@ -2,7 +2,7 @@
 
 import React, {useCallback, useMemo, useState} from 'react';
 import {Alert, Box, LinearProgress} from '@mui/material';
-import {useSelector} from 'react-redux';
+import {useDispatch, useSelector} from 'react-redux';
 import {Responsive, useContainerWidth} from 'react-grid-layout';
 import {absoluteStrategy} from 'react-grid-layout/core';
 import 'react-grid-layout/css/styles.css';
@@ -18,21 +18,20 @@ import {columns, LAYOUT_SCHEMA_VERSION, loadLayouts} from './layouts.js';
 import {transmitterRows} from './transmitters.js';
 import TransmitterTable from './transmitter-table.jsx';
 import TransmitterInfo from './transmitter-info.jsx';
+import {setPacketMapRange} from './packet-map-slice.jsx';
 
 export {gridLayoutStoreName} from './storage.js';
 
 export default function PacketMapLayout() {
     const {socket} = useSocket();
+    const dispatch = useDispatch();
     const gridEditable = useSelector((state) => Boolean(state.dashboard?.isEditing));
     const {width, containerRef, mounted} = useContainerWidth({measureBeforeMount: true});
     const [layouts, setLayouts] = useState(loadLayouts);
-    const [range, setRange] = useState(() => {
-        const now = Date.now();
-        return {start: new Date(now - 86400000).toISOString(), end: new Date(now).toISOString()};
-    });
-    const [playbackTime, setPlaybackTime] = useState(() => Date.parse(range.end));
+    const range = useSelector((state) => state.packetMap.range);
+    const [playbackTime, setPlaybackTime] = useState(() => range.end === null ? null : Date.parse(range.end));
     const applyRange = (nextRange) => {
-        setRange(nextRange);
+        dispatch(setPacketMapRange(nextRange));
         // Start at the latest fix whenever a new filesystem window is applied.
         setPlaybackTime(nextRange.end === null ? null : Date.parse(nextRange.end));
     };
@@ -90,12 +89,14 @@ export default function PacketMapLayout() {
         writeStored(gridLayoutStoreName, {version: LAYOUT_SCHEMA_VERSION, layouts: all});
     }, []);
 
-    return <PageTabsLayout sx={{bgcolor: 'transparent'}} tabs={<DateRangeBar
-        range={range} availableRange={available_range} positions={positions} onChange={applyRange}
-        onPresetChange={applyPresetRange}
-        playbackTime={currentPlaybackTime} onPlaybackTimeChange={setPlaybackTime}
-        onRefresh={reconcile} loading={loading || reconciling} />}>
-        <Box sx={{height: 3}}>{(loading || reconciling) && <LinearProgress sx={{height: 3}} />}</Box>
+    return <PageTabsLayout sx={{bgcolor: 'transparent'}} tabs={<Box sx={{position: 'relative'}}>
+        <DateRangeBar range={range} availableRange={available_range} positions={positions} onChange={applyRange}
+            onPresetChange={applyPresetRange}
+            playbackTime={currentPlaybackTime} onPlaybackTimeChange={setPlaybackTime}
+            onRefresh={reconcile} loading={loading || reconciling} />
+        {/* Overlay progress so loading never adds space above the grid. */}
+        {(loading || reconciling) && <LinearProgress sx={{position: 'absolute', bottom: 0, left: 0, right: 0, height: 3}} />}
+    </Box>}>
         {(error || refreshError) && <Alert severity="error" sx={{mx: 1}}>{error || refreshError}</Alert>}
         <div ref={containerRef}>
             {mounted && <Responsive width={width} positionStrategy={absoluteStrategy} className="layout"

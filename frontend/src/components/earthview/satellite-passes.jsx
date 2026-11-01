@@ -52,7 +52,6 @@ import {
     setPassesTableSortModel,
     updatePassesWithElevationCurves,
     setPassesTableColumnVisibility,
-    setOpenPassesTableSettingsDialog,
 } from './earthview-slice.jsx';
 import {Typography, Box, IconButton, Tooltip, Button, useMediaQuery, useTheme} from '@mui/material';
 import {alpha, darken, lighten, styled} from '@mui/material/styles';
@@ -63,8 +62,7 @@ import { useTranslation } from 'react-i18next';
 import { enUS, elGR } from '@mui/x-data-grid/locales';
 import ElevationDisplay from "../common/elevation-display.jsx";
 import RefreshIcon from '@mui/icons-material/Refresh';
-import SettingsIcon from '@mui/icons-material/Settings';
-import PassesTableSettingsDialog from './passes-table-settings-dialog.jsx';
+import GridTableToolbar from '../common/grid-table-toolbar.jsx';
 import { useUserTimeSettings } from '../../hooks/useUserTimeSettings.jsx';
 import TargetNumberIcon from '../common/target-number-icon.jsx';
 import GridPaginationActions from '../common/grid-pagination-actions.jsx';
@@ -501,6 +499,7 @@ const PassProgressCell = React.memo(function PassProgressCell({row, nowMs}) {
 
 const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({
     passes,
+    toolbarContainer,
     passesLoading,
     quickFilterPreset,
     trackedSatelliteNoradIds,
@@ -627,7 +626,7 @@ const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({
             }
         },
         {
-            field: 'peak_altitude',
+            field: 'peak_altitude', type: 'number',
             minWidth: 80,
             headerName: t('passes_table.peak_elevation'),
             align: 'center',
@@ -647,7 +646,8 @@ const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({
             }
         },
         {
-            field: 'elevation',
+            field: 'elevation', type: 'number',
+            valueGetter: (_value, row) => selectedSatellitePositionsRef.current()?.[row.norad_id]?.el ?? null,
             minWidth: 90,
             headerName: t('passes_table.current_elevation'),
             align: 'center',
@@ -673,7 +673,8 @@ const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({
             }
         },
         {
-            field: 'azimuth',
+            field: 'azimuth', type: 'number',
+            valueGetter: (_value, row) => selectedSatellitePositionsRef.current()?.[row.norad_id]?.az ?? null,
             minWidth: 90,
             headerName: t('passes_table.current_azimuth'),
             align: 'center',
@@ -689,6 +690,7 @@ const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({
         },
         {
             field: 'progress',
+            filterable: false,
             minWidth: 100,
             headerName: t('passes_table.progress'),
             align: 'center',
@@ -698,6 +700,8 @@ const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({
         },
         {
             field: 'duration',
+            valueGetter: (_value, row) => Math.max(0, (new Date(row.event_end) - new Date(row.event_start)) / 1000),
+            type: 'number',
             minWidth: 100,
             headerName: t('passes_table.duration'),
             align: 'center',
@@ -743,7 +747,7 @@ const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({
             }
         },
         {
-            field: 'distance_at_start',
+            field: 'distance_at_start', type: 'number',
             minWidth: 100,
             headerName: t('passes_table.distance_aos'),
             align: 'center',
@@ -754,7 +758,7 @@ const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({
             }
         },
         {
-            field: 'distance_at_end',
+            field: 'distance_at_end', type: 'number',
             minWidth: 100,
             headerName: t('passes_table.distance_los'),
             align: 'center',
@@ -765,7 +769,7 @@ const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({
             }
         },
         {
-            field: 'distance_at_peak',
+            field: 'distance_at_peak', type: 'number',
             minWidth: 100,
             headerName: t('passes_table.distance_peak'),
             align: 'center',
@@ -777,6 +781,7 @@ const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({
         },
         {
             field: 'is_geostationary',
+            type: 'boolean',
             minWidth: 70,
             headerName: t('passes_table.geo_stat'),
             align: 'center',
@@ -789,6 +794,7 @@ const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({
         },
         {
             field: 'is_geosynchronous',
+            type: 'boolean',
             minWidth: 70,
             headerName: t('passes_table.geo_sync'),
             align: 'center',
@@ -800,32 +806,6 @@ const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({
             hide: true,
         },
     ], [t, selectedSatellitePositionsRef, trackedSatelliteNoradIds, targetNumberByNorad, scheduledObservations]);
-
-    const effectiveColumnVisibility = useMemo(() => {
-        const base = {
-            status: true,
-            azimuth: false,
-            ...columnVisibility,
-        };
-        if (!isCompactView) {
-            return base;
-        }
-        return {
-            ...base,
-            alternative_names: false,
-            elevation: false,
-            azimuth: false,
-            pass_tags: false,
-            duration: false,
-            transmitters: false,
-            event_end: false,
-            distance_at_start: false,
-            distance_at_end: false,
-            distance_at_peak: false,
-            is_geostationary: false,
-            is_geosynchronous: false,
-        };
-    }, [columnVisibility, isCompactView]);
 
     const getPassesRowStyles = useCallback((param) => {
         if (param.row) {
@@ -879,11 +859,14 @@ const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({
 
     return (
         <StyledDataGrid
+            showToolbar
+            slots={{ toolbar: GridTableToolbar }}
             apiRef={apiRef}
             pageSizeOptions={[5, 10, 15, 20]}
             fullWidth={true}
             loading={passesLoading}
             slotProps={{
+                toolbar: { container: toolbarContainer },
                 basePagination: {
                     ActionsComponent: GridPaginationActions,
                 },
@@ -925,7 +908,7 @@ const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({
             onPaginationModelChange={handlePaginationModelChange}
             sortModel={sortModel}
             onSortModelChange={onSortModelChange}
-            columnVisibilityModel={effectiveColumnVisibility}
+            columnVisibilityModel={columnVisibility}
             onColumnVisibilityModelChange={onColumnVisibilityChange}
             columns={columns}
             pinnedColumns={isCompactView ? { left: ['name'], right: [] } : { left: ['name', 'status'], right: ['progress'] }}
@@ -934,6 +917,7 @@ const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({
 }, (prevProps, nextProps) => {
     // Custom comparison function - return true if props haven't changed in ways that matter
     return (
+        prevProps.toolbarContainer === nextProps.toolbarContainer &&
         prevProps.passes === nextProps.passes &&
         prevProps.quickFilterPreset === nextProps.quickFilterPreset &&
         prevProps.trackedSatelliteNoradIds === nextProps.trackedSatelliteNoradIds &&
@@ -956,6 +940,7 @@ const NextPassesGroupIsland = React.memo(function NextPassesGroupIsland() {
     const isCompactHeader = useMediaQuery(theme.breakpoints.down('lg'));
     const isTightHeader = useMediaQuery(theme.breakpoints.down('md'));
     const containerRef = useRef(null);
+    const [toolbarContainer, setToolbarContainer] = useState(null);
     const hasFetchedRef = useRef(false);
     const lastFetchParamsRef = useRef(null);
     const lastSatelliteFetchGroupRef = useRef(null);
@@ -975,7 +960,6 @@ const NextPassesGroupIsland = React.memo(function NextPassesGroupIsland() {
         passesTablePageSize,
         passesTableSortModel,
         passesTableColumnVisibility,
-        openPassesTableSettingsDialog,
         selectedSatellites
     } = useSelector(state => state.earthViewTrack);
     const trackerInstances = useSelector((state) => state.trackerInstances?.instances || []);
@@ -1296,14 +1280,6 @@ const NextPassesGroupIsland = React.memo(function NextPassesGroupIsland() {
 
     const handleColumnVisibilityChange = (newModel) => {
         dispatch(setPassesTableColumnVisibility(newModel));
-    };
-
-    const handleOpenSettings = () => {
-        dispatch(setOpenPassesTableSettingsDialog(true));
-    };
-
-    const handleCloseSettings = () => {
-        dispatch(setOpenPassesTableSettingsDialog(false));
     };
 
     const applyDefaultSort = useCallback(() => {
@@ -1791,17 +1767,7 @@ const NextPassesGroupIsland = React.memo(function NextPassesGroupIsland() {
                                 </Button>
                             </span>
                         </Tooltip>
-                        <Tooltip title={t('passes_table_settings.title')}>
-                            <span>
-                                <IconButton
-                                    size="small"
-                                    onClick={handleOpenSettings}
-                                    sx={titleIconButtonSx}
-                                >
-                                    <SettingsIcon fontSize="small" />
-                                </IconButton>
-                            </span>
-                        </Tooltip>
+                        <Box ref={setToolbarContainer} />
                         <Tooltip title={t('satellite_passes.refresh_passes_force_recalculate', { defaultValue: 'Refresh passes (force recalculate)' })}>
                             <span>
                                 <IconButton
@@ -1826,6 +1792,7 @@ const NextPassesGroupIsland = React.memo(function NextPassesGroupIsland() {
                     minHeight,
                 }}>
                     <MemoizedStyledDataGrid
+                        toolbarContainer={toolbarContainer}
                         passes={passes}
                         passesLoading={Boolean(selectedSatGroupId) && (passesLoading || loadingSatellites)}
                         quickFilterPreset={quickFilterPreset}
@@ -1857,10 +1824,6 @@ const NextPassesGroupIsland = React.memo(function NextPassesGroupIsland() {
                 title={passContextMenu?.row?.name || `NORAD ${passContextMenu?.row?.norad_id ?? '-'}`}
                 noradId={passContextMenu?.row?.norad_id}
                 items={passContextMenuItems}
-            />
-            <PassesTableSettingsDialog
-                open={openPassesTableSettingsDialog}
-                onClose={handleCloseSettings}
             />
             {rotatorSelectionDialog}
             <SatelliteEditDialog

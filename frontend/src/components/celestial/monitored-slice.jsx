@@ -205,7 +205,6 @@ const monitoredSlice = createSlice({
         loading: false,
         saveLoading: false,
         error: null,
-        openGridSettingsDialog: false,
         tableDefaultsVersion: 5,
         tableColumnVisibility: { ...MONITORED_TABLE_DEFAULT_COLUMN_VISIBILITY },
         tablePageSize: MONITORED_TABLE_DEFAULT_PAGE_SIZE,
@@ -245,9 +244,6 @@ const monitoredSlice = createSlice({
         setSelectedMonitoredIds: (state, action) => {
             const next = Array.isArray(action.payload) ? action.payload : [];
             state.selectedIds = next.length ? [next[0]] : [];
-        },
-        setOpenGridSettingsDialog: (state, action) => {
-            state.openGridSettingsDialog = action.payload;
         },
         setMonitoredTableColumnVisibility: (state, action) => {
             state.tableColumnVisibility = action.payload;
@@ -331,7 +327,6 @@ export const {
     setMonitoredFormField,
     setMonitoredFormError,
     setSelectedMonitoredIds,
-    setOpenGridSettingsDialog,
     setMonitoredTableColumnVisibility,
     setMonitoredTablePageSize,
     setMonitoredTableSortModel,

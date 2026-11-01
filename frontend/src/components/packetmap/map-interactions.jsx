@@ -6,7 +6,7 @@ import {MapArrowControls} from '../common/common.jsx';
 
 export default function MapInteractions({enableMapDragging, enableMapZooming}) {
     const map = useMap();
-    const [arrowOffset, setArrowOffset] = useState(25);
+    const [arrowOffset, setArrowOffset] = useState(2);
     useEffect(() => {
         // Leaflet only reads MapContainer options on creation. Toggle the live
         // handlers so changing gestures preserves the current center and zoom.
@@ -19,8 +19,8 @@ export default function MapInteractions({enableMapDragging, enableMapZooming}) {
     useEffect(() => {
         const attribution = map.attributionControl?.getContainer();
         if (!attribution) return;
-        // Tile credits wrap on phones. Keep every pan button above them.
-        const updateOffset = () => setArrowOffset(Math.max(25, attribution.getBoundingClientRect().height + 8));
+        // Keep buttons above wrapped credits; the shared controls already add 10px at the bottom.
+        const updateOffset = () => setArrowOffset(Math.max(2, attribution.getBoundingClientRect().height - 10));
         updateOffset();
         const observer = new ResizeObserver(updateOffset);
         observer.observe(attribution);

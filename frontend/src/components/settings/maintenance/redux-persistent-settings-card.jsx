@@ -62,6 +62,7 @@ const ReduxPersistentSettingsCard = () => {
             'persist:sdr',
             'persist:version',
             'persist:filebrowser',
+            'persist:packetMap',
             'persist:celestial',
             'persist:celestialMonitored',
             'persist:celestialDisplay',

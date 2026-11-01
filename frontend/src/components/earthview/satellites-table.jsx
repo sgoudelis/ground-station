@@ -44,11 +44,9 @@ import {
     setSelectedSatGroupId,
     fetchSatellitesByGroupId,
     fetchSatelliteGroups,
-    setOpenSatellitesTableSettingsDialog,
 } from './earthview-slice.jsx';
 import { useTranslation } from 'react-i18next';
 import { enUS, elGR } from '@mui/x-data-grid/locales';
-import SettingsIcon from '@mui/icons-material/Settings';
 import DoneAllIcon from '@mui/icons-material/DoneAll';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
@@ -56,8 +54,7 @@ import SettingsInputAntennaIcon from '@mui/icons-material/SettingsInputAntenna';
 import BlockIcon from '@mui/icons-material/Block';
 import {useSocket} from "../common/socket.jsx";
 import { toast } from '../../utils/toast-with-timestamp.jsx';
-import SatellitesTableSettingsDialog from './satellites-table-settings-dialog.jsx';
-import IconButton from '@mui/material/IconButton';
+import GridTableToolbar from '../common/grid-table-toolbar.jsx';
 import TargetNumberIcon from '../common/target-number-icon.jsx';
 import GridPaginationActions from '../common/grid-pagination-actions.jsx';
 import PassTransmitterLinksCell from '../common/pass-transmitter-links-cell.jsx';
@@ -138,6 +135,7 @@ const StyledDataGrid = styled(DataGrid)(({ theme }) => ({
 
 const MemoizedStyledDataGrid = React.memo(({
                                                apiRef,
+                                               toolbarContainer,
                                                satellites,
                                                quickFilterPreset,
                                                onRowClick,
@@ -265,7 +263,7 @@ const MemoizedStyledDataGrid = React.memo(({
             valueGetter: (_value, row) => formatAlternativeSatelliteNames(row.alternative_name, row.name_other) || '-',
         },
         {
-            field: 'norad_id',
+            field: 'norad_id', type: 'number',
             minWidth: 70,
             headerName: t('satellites_table.norad'),
             align: 'center',
@@ -273,7 +271,7 @@ const MemoizedStyledDataGrid = React.memo(({
             flex: 1
         },
         {
-            field: 'elevation',
+            field: 'elevation', type: 'number',
             minWidth: 70,
             headerName: t('satellites_table.elevation'),
             align: 'center',
@@ -296,7 +294,7 @@ const MemoizedStyledDataGrid = React.memo(({
             }
         },
         {
-            field: 'azimuth',
+            field: 'azimuth', type: 'number',
             minWidth: 70,
             headerName: t('satellites_table.azimuth'),
             align: 'center',
@@ -372,6 +370,8 @@ const MemoizedStyledDataGrid = React.memo(({
         },
         {
             field: 'transmitters',
+            type: 'number',
+            valueGetter: (_value, row) => row.transmitters?.length ?? 0,
             minWidth: 90,
             headerName: t('satellites_table.transmitters'),
             align: 'center',
@@ -393,6 +393,7 @@ const MemoizedStyledDataGrid = React.memo(({
         },
         {
             field: 'transmitter_links',
+            filterable: false,
             minWidth: 170,
             align: 'center',
             headerAlign: 'center',
@@ -471,24 +472,6 @@ const MemoizedStyledDataGrid = React.memo(({
         }
     ], [formatDate, trackedIdsSet, t, targetNumberByNorad]);
 
-    const effectiveColumnVisibility = React.useMemo(() => {
-        const base = {
-            visibility: true,
-            active_tx_count: false,
-            azimuth: false,
-            ...columnVisibility,
-        };
-        if (!isCompactView) return base;
-        return {
-            ...base,
-            alternative_names: false,
-            countries: false,
-            decayed: false,
-            updated: false,
-            launched: false,
-        };
-    }, [columnVisibility, isCompactView]);
-
     // Memoize the row class name function to prevent unnecessary rerenders
     const getSatelliteRowStyles = useCallback((params) => {
         if (!params.row) return "pointer-cursor";
@@ -542,8 +525,11 @@ const MemoizedStyledDataGrid = React.memo(({
 
     return (
         <StyledDataGrid
+            showToolbar
+            slots={{ toolbar: GridTableToolbar }}
             loading={loadingSatellites}
             slotProps={{
+                toolbar: { container: toolbarContainer },
                 basePagination: {
                     ActionsComponent: GridPaginationActions,
                 },
@@ -563,7 +549,7 @@ const MemoizedStyledDataGrid = React.memo(({
             onRowDoubleClick={onRowDoubleClick}
             getRowId={getRowId}
             localeText={dataGridLocale.components.MuiDataGrid.defaultProps.localeText}
-            columnVisibilityModel={effectiveColumnVisibility}
+            columnVisibilityModel={columnVisibility}
             onColumnVisibilityModelChange={onColumnVisibilityChange}
             sx={{
                 border: 0,
@@ -598,6 +584,7 @@ const SatelliteDetailsTable = React.memo(function SatelliteDetailsTable() {
     const isCompactHeader = useMediaQuery(theme.breakpoints.down('lg'));
     const isTightHeader = useMediaQuery(theme.breakpoints.down('md'));
     const containerRef = useRef(null);
+    const [toolbarContainer, setToolbarContainer] = useState(null);
     const [containerHeight, setContainerHeight] = useState(0);
     const apiRef = useGridApiRef();
     const store = useStore();
@@ -620,7 +607,6 @@ const SatelliteDetailsTable = React.memo(function SatelliteDetailsTable() {
     const columnVisibility = useSelector(state => state.earthViewTrack.satellitesTableColumnVisibility);
     const satellitesTablePageSize = useSelector(state => state.earthViewTrack.satellitesTablePageSize);
     const satellitesTableSortModel = useSelector(state => state.earthViewTrack.satellitesTableSortModel);
-    const openSatellitesTableSettingsDialog = useSelector(state => state.earthViewTrack.openSatellitesTableSettingsDialog);
     const { requestRotatorForTarget, dialog: rotatorSelectionDialog } = useTargetRotatorSelectionDialog();
     const trackedSatelliteNoradIds = React.useMemo(() => {
         return trackerInstances
@@ -758,14 +744,6 @@ const SatelliteDetailsTable = React.memo(function SatelliteDetailsTable() {
 
     const handleSortModelChange = useCallback((newSortModel) => {
         dispatch(setSatellitesTableSortModel(newSortModel));
-    }, [dispatch]);
-
-    const handleOpenSettings = useCallback(() => {
-        dispatch(setOpenSatellitesTableSettingsDialog(true));
-    }, [dispatch]);
-
-    const handleCloseSettings = useCallback(() => {
-        dispatch(setOpenSatellitesTableSettingsDialog(false));
     }, [dispatch]);
 
     const applyDefaultSort = useCallback(() => {
@@ -1124,10 +1102,7 @@ const SatelliteDetailsTable = React.memo(function SatelliteDetailsTable() {
         minWidth: isTightHeader ? 30 : 'auto',
         whiteSpace: 'nowrap',
     }), [isCompactHeader, isTightHeader]);
-    const titleIconButtonSx = React.useMemo(
-        () => ({ padding: isTightHeader ? '1px' : '2px' }),
-        [isTightHeader]
-    );
+
     const satelliteContextMenuItems = React.useMemo(() => ([
         { key: 'set-target', label: t('satellites_table.context_menu.set_as_target'), opensDialog: true, onClick: () => handleSatelliteMenuAction('set-target') },
         { key: 'edit-properties', label: t('satellites_table.context_menu.edit_properties'), opensDialog: true, onClick: () => handleSatelliteMenuAction('edit-properties') },
@@ -1226,17 +1201,7 @@ const SatelliteDetailsTable = React.memo(function SatelliteDetailsTable() {
                                 </Button>
                             </span>
                         </Tooltip>
-                        <Tooltip title={t('satellites_table_settings.title')}>
-                            <span>
-                                <IconButton
-                                    size="small"
-                                    onClick={handleOpenSettings}
-                                    sx={titleIconButtonSx}
-                                >
-                                    <SettingsIcon fontSize="small" />
-                                </IconButton>
-                            </span>
-                        </Tooltip>
+                        <Box ref={setToolbarContainer} />
                     </Box>
                 </Box>
             </TitleBar>
@@ -1263,6 +1228,7 @@ const SatelliteDetailsTable = React.memo(function SatelliteDetailsTable() {
                         </Box>
                     ) : (
                         <MemoizedStyledDataGrid
+                            toolbarContainer={toolbarContainer}
                             apiRef={apiRef}
                             satellites={selectedSatellites}
                             quickFilterPreset={quickFilterPreset}
@@ -1296,10 +1262,6 @@ const SatelliteDetailsTable = React.memo(function SatelliteDetailsTable() {
                 title={satelliteContextMenu?.row?.name || `NORAD ${satelliteContextMenu?.row?.norad_id ?? '-'}`}
                 noradId={satelliteContextMenu?.row?.norad_id}
                 items={satelliteContextMenuItems}
-            />
-            <SatellitesTableSettingsDialog
-                open={openSatellitesTableSettingsDialog}
-                onClose={handleCloseSettings}
             />
             <SatelliteEditDialog
                 open={satelliteEditDialogOpen}

@@ -10,6 +10,7 @@ import PacketMapLayout from '../main-layout.jsx';
 import {gridLayoutStoreName, hiddenTypesStoreName} from '../storage.js';
 import {defaultLayouts, LAYOUT_SCHEMA_VERSION} from '../layouts.js';
 import usePacketPositions from '../use-packet-positions.js';
+import packetMapReducer from '../packet-map-slice.jsx';
 
 await i18n.use(initReactI18next).init({lng: 'en', resources: {}});
 const {gridRender, mapRender, tableRender, fixture} = vi.hoisted(() => ({
@@ -29,6 +30,18 @@ vi.mock('../use-packet-positions.js', async (importOriginal) => ({...await impor
 vi.mock('../packet-map.jsx', () => ({default: (props) => {mapRender(props); return null;}}));
 vi.mock('../transmitter-table.jsx', () => ({default: (props) => {tableRender(props); return null;}}));
 
+const historyRange = {start: '2026-10-31T12:00:00Z', end: '2026-11-01T12:00:00Z'};
+function createStore(range) {
+    return configureStore({
+        reducer: {
+            dashboard: () => ({isEditing: false}),
+            preferences: () => ({preferences: []}),
+            packetMap: packetMapReducer,
+        },
+        preloadedState: range ? {packetMap: {range}} : undefined,
+    });
+}
+
 beforeEach(() => {
     localStorage.clear();
     vi.clearAllMocks();
@@ -41,11 +54,42 @@ beforeEach(() => {
     fixture.transmitters = fixture.positions.map((point) => ({...point, id: point.transmitter_id, packet_count: 1}));
 });
 
+it('starts in LIVE with the last day of packets when no selection has been saved', () => {
+    const store = createStore();
+    render(<Provider store={store}><ThemeProvider theme={createTheme()}><PacketMapLayout /></ThemeProvider></Provider>);
+    const range = usePacketPositions.mock.lastCall[1];
+    expect(range.end).toBeNull();
+    expect(Date.parse(range.start)).toBeGreaterThanOrEqual(Date.now() - 86401000);
+    expect(Date.parse(range.start)).toBeLessThanOrEqual(Date.now() - 86400000);
+    expect(screen.getByRole('button', {name: 'LIVE', exact: true})).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByLabelText('To')).toBeDisabled();
+    expect(Number.isFinite(mapRender.mock.lastCall[0].playbackTime)).toBe(true);
+});
+
+it.each(['LIVE', '24h', '7d', 'All dates'])('stores %s in Redux and restores it when revisiting the map', (preset) => {
+    usePacketPositions.mockImplementation(() => ({...fixture, available_range: historyRange, loading: false}));
+    const store = createStore(historyRange);
+    const element = <Provider store={store}><ThemeProvider theme={createTheme()}><PacketMapLayout /></ThemeProvider></Provider>;
+    const {unmount} = render(element);
+    fireEvent.click(screen.getByRole('button', {name: preset, exact: true}));
+    const selectedRange = usePacketPositions.mock.lastCall[1];
+    expect(store.getState().packetMap.range).toEqual(selectedRange);
+    const from = screen.getByLabelText('From').value;
+    const to = screen.getByLabelText('To').value;
+    unmount();
+    render(element);
+    expect(usePacketPositions.mock.lastCall[1]).toEqual(selectedRange);
+    expect(screen.getByLabelText('From')).toHaveValue(from);
+    expect(screen.getByLabelText('To')).toHaveValue(to);
+    expect(screen.getByRole('button', {name: 'LIVE', exact: true})).toHaveAttribute('aria-pressed', String(preset === 'LIVE'));
+    expect(screen.getByLabelText('To').disabled).toBe(preset === 'LIVE');
+});
+
 it('loads new defaults for the previous schema and saves grid edits with the current version', () => {
     const oldLayouts = defaultLayouts();
     oldLayouts.lg[1] = {...oldLayouts.lg[1], i: 'transmitter-types', h: 12};
     localStorage.setItem(gridLayoutStoreName, JSON.stringify({version: 2, layouts: oldLayouts}));
-    const store = configureStore({reducer: () => ({dashboard: {isEditing: false}, preferences: {preferences: []}})});
+    const store = createStore();
     render(<Provider store={store}><ThemeProvider theme={createTheme()}><PacketMapLayout /></ThemeProvider></Provider>);
     expect(gridRender.mock.lastCall[0].layouts).toEqual(defaultLayouts());
     const updated = defaultLayouts();
@@ -62,7 +106,7 @@ it('queries applied dates once, scrubs locally, and resets playback for a new qu
     const socket = {connected: true, on: vi.fn(), off: vi.fn(), timeout: () => socket,
         emit: vi.fn((_event, request, reply) => requests.push({request, reply}))};
     fixture.socket = socket;
-    const store = configureStore({reducer: () => ({dashboard: {isEditing: false}, preferences: {preferences: []}})});
+    const store = createStore(historyRange);
     render(<Provider store={store}><ThemeProvider theme={createTheme()}><PacketMapLayout /></ThemeProvider></Provider>);
     expect(requests).toHaveLength(1);
     const initialRange = requests[0].request.data;
@@ -99,7 +143,7 @@ it.each([['24h', 24], ['7d', 168], ['All dates', null]])('%s clears transmitter 
         emit: vi.fn((_event, request, reply) => requests.push({request, reply}))};
     fixture.socket = socket;
     const availableRange = {start: '2026-10-01T00:00:00Z', end: '2026-11-01T12:00:00Z'};
-    const store = configureStore({reducer: () => ({dashboard: {isEditing: false}, preferences: {preferences: []}})});
+    const store = createStore();
     render(<Provider store={store}><ThemeProvider theme={createTheme()}><PacketMapLayout /></ThemeProvider></Provider>);
     const reply = {success: true, data: {positions: fixture.positions, transmitters: fixture.transmitters, available_range: availableRange}};
     await act(async () => requests[0].reply(null, reply));
@@ -135,7 +179,7 @@ it.each(['24h', '7d', 'All dates'])('follows new radiosondes in LIVE and returns
         const socket = {connected: true, on: vi.fn((event, handler) => handlers.set(event, handler)), off: vi.fn(), timeout: () => socket,
             emit: vi.fn((_event, request, reply) => requests.push({request, reply}))};
         fixture.socket = socket;
-        const store = configureStore({reducer: () => ({dashboard: {isEditing: false}, preferences: {preferences: []}})});
+        const store = createStore(historyRange);
         render(<Provider store={store}><ThemeProvider theme={createTheme()}><PacketMapLayout /></ThemeProvider></Provider>);
         const initialRange = requests[0].request.data;
         const snapshot = {positions: fixture.positions, transmitters: fixture.transmitters, available_range: initialRange};
@@ -182,7 +226,7 @@ it('hides entire types on the map, retains every table row and remembers visibil
     fixture.positions = fixture.positions.map((point, index) => ({...point,
         captured_at: new Date(Date.now() - (index + 1) * 3600000).toISOString(),
     }));
-    const store = configureStore({reducer: () => ({dashboard: {isEditing: false}, preferences: {preferences: []}})});
+    const store = createStore();
     const element = <Provider store={store}><ThemeProvider theme={createTheme()}><PacketMapLayout /></ThemeProvider></Provider>;
     const {container, unmount} = render(element);
     const activity = () => [...container.querySelectorAll('.packet-timeline-activity line')]
@@ -208,7 +252,7 @@ it('hides entire types on the map, retains every table row and remembers visibil
 
 it('reveals a selected transmitter type and shares selection between the table and map', () => {
     localStorage.setItem(hiddenTypesStoreName, JSON.stringify(['aprs']));
-    const store = configureStore({reducer: () => ({dashboard: {isEditing: false}, preferences: {preferences: []}})});
+    const store = createStore();
     render(<Provider store={store}><ThemeProvider theme={createTheme()}><PacketMapLayout /></ThemeProvider></Provider>);
     act(() => tableRender.mock.lastCall[0].onSelectTransmitter('aprs:A'));
     expect(mapRender.mock.lastCall[0].selectedTransmitterId).toBe('aprs:A');

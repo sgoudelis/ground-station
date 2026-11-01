@@ -12,39 +12,28 @@ import VisibilityOffOutlinedIcon from '@mui/icons-material/VisibilityOffOutlined
 import {
     Box,
     Button,
-    Checkbox,
     Dialog,
     DialogActions,
     DialogContent,
     DialogTitle,
-    Divider,
-    FormControl,
-    FormControlLabel,
-    FormGroup,
-    InputLabel,
-    MenuItem,
-    Select,
     Typography,
 } from '@mui/material';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import {
-    MONITORED_TABLE_DEFAULT_COLUMN_VISIBILITY,
-    MONITORED_TABLE_DEFAULT_PAGE_SIZE,
-    MONITORED_TABLE_DEFAULT_SORT_MODEL,
     deleteMonitoredCelestial,
     fetchMonitoredCelestial,
     setSelectedMonitoredIds,
     setMonitoredTableColumnVisibility,
     setMonitoredTablePageSize,
     setMonitoredTableSortModel,
-    setOpenGridSettingsDialog,
     updateMonitoredCelestial,
 } from './monitored-slice.jsx';
 import { refreshMonitoredCelestialNow } from './celestial-slice.jsx';
 import { toRowSelectionModel, toSelectedIds } from '../../utils/datagrid-selection.js';
 import { useUserTimeSettings } from '../../hooks/useUserTimeSettings.jsx';
 import TargetNumberIcon from '../common/target-number-icon.jsx';
+import GridTableToolbar from '../common/grid-table-toolbar.jsx';
 import {
     buildTargetKeyFromCelestialRow,
     replaceCelestialTargetKey,
@@ -91,21 +80,6 @@ const DIALOG_ACTIONS_SX = {
     px: 2,
     py: 1.5,
 };
-const FOOTER_ACTION_ROW_SX = {
-    width: '100%',
-    display: 'flex',
-    alignItems: 'center',
-    gap: 1,
-    overflowX: 'auto',
-    msOverflowStyle: 'none',
-    scrollbarWidth: 'none',
-    '&::-webkit-scrollbar': { display: 'none' },
-    '& > *': {
-        flexShrink: 0,
-        whiteSpace: 'nowrap',
-    },
-};
-
 const StyledDataGrid = styled(DataGrid)(({ theme }) => ({
     '& .MuiDataGrid-row': {
         borderLeft: '3px solid transparent',
@@ -240,122 +214,9 @@ const buildTrackingTargetKey = (trackingState = {}) => {
         : '';
 };
 
-const SettingsDialog = ({ open, onClose }) => {
-    const dispatch = useDispatch();
-    const { t } = useTranslation('celestial');
-    const columnVisibility = useSelector((state) => state.celestialMonitored.tableColumnVisibility);
-    const tablePageSize = useSelector((state) => state.celestialMonitored.tablePageSize);
-    const handleResetValues = useCallback(() => {
-        dispatch(setMonitoredTableColumnVisibility({ ...MONITORED_TABLE_DEFAULT_COLUMN_VISIBILITY }));
-        dispatch(setMonitoredTablePageSize(MONITORED_TABLE_DEFAULT_PAGE_SIZE));
-        dispatch(setMonitoredTableSortModel([...MONITORED_TABLE_DEFAULT_SORT_MODEL]));
-    }, [dispatch]);
-
-    const columns = [
-        { name: 'displayName', label: t('monitored.columns.name'), category: 'identity', alwaysVisible: true },
-        { name: 'targetType', label: t('monitored.columns.type'), category: 'identity' },
-        { name: 'command', label: t('monitored.columns.target_id'), category: 'identity' },
-        { name: 'source', label: t('monitored.columns.source'), category: 'identity' },
-        { name: 'sourceMode', label: t('monitored.columns.source_mode'), category: 'identity' },
-        { name: 'elevationDeg', label: t('monitored.columns.elevation'), category: 'state' },
-        { name: 'azimuthDeg', label: t('monitored.columns.azimuth'), category: 'state' },
-        { name: 'distanceFromSunAu', label: t('monitored.columns.distance_from_sun_au'), category: 'metrics' },
-        { name: 'speedKmS', label: t('monitored.columns.speed_km_s'), category: 'metrics' },
-        { name: 'lightTimeMinutes', label: t('monitored.columns.light_time_min'), category: 'metrics' },
-        { name: 'lastRefreshAt', label: t('monitored.columns.last_refresh'), category: 'state' },
-        { name: 'lastRefreshAge', label: t('monitored.columns.refresh_age'), category: 'state' },
-        { name: 'projectionSpan', label: t('monitored.columns.projection_span'), category: 'projection' },
-        { name: 'cacheStatus', label: t('monitored.columns.cache'), category: 'projection' },
-        { name: 'stale', label: t('monitored.columns.stale'), category: 'projection' },
-        { name: 'sampleCount', label: t('monitored.columns.samples'), category: 'projection' },
-        { name: 'lastError', label: t('monitored.columns.last_error'), category: 'state' },
-    ];
-
-    const categories = {
-        identity: t('monitored.settings.categories.identity'),
-        state: t('monitored.settings.categories.state'),
-        metrics: t('monitored.settings.categories.metrics'),
-        projection: t('monitored.settings.categories.projection'),
-    };
-
-    const columnsByCategory = {
-        identity: columns.filter((col) => col.category === 'identity'),
-        state: columns.filter((col) => col.category === 'state'),
-        metrics: columns.filter((col) => col.category === 'metrics'),
-        projection: columns.filter((col) => col.category === 'projection'),
-    };
-
-    return (
-        <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth PaperProps={{ sx: DIALOG_PAPER_SX }}>
-            <DialogTitle sx={DIALOG_TITLE_SX}>{t('monitored.settings.title')}</DialogTitle>
-            <DialogContent sx={DIALOG_CONTENT_SX}>
-                <Box sx={{ mb: 2 }}>
-                    <FormControl fullWidth size="small" sx={{ mt: 2 }}>
-                        <InputLabel id="celestial-table-rows-label">{t('monitored.settings.rows_per_page')}</InputLabel>
-                        <Select
-                            labelId="celestial-table-rows-label"
-                            value={tablePageSize}
-                            label={t('monitored.settings.rows_per_page')}
-                            onChange={(event) => dispatch(setMonitoredTablePageSize(event.target.value))}
-                        >
-                            {[5, 10, 15, 20, 25].map((option) => (
-                                <MenuItem key={option} value={option}>
-                                    {option}
-                                </MenuItem>
-                            ))}
-                        </Select>
-                    </FormControl>
-                    <Divider sx={{ mt: 2 }} />
-                </Box>
-
-                {Object.entries(columnsByCategory).map(([category, cols]) => (
-                    <Box key={category} sx={{ mb: 2 }}>
-                        <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>
-                            {categories[category]}
-                        </Typography>
-                        <FormGroup>
-                            {cols.map((column) => (
-                                <FormControlLabel
-                                    key={column.name}
-                                    control={
-                                        <Checkbox
-                                            checked={column.alwaysVisible || columnVisibility[column.name] !== false}
-                                            onChange={() =>
-                                                dispatch(
-                                                    setMonitoredTableColumnVisibility({
-                                                        ...columnVisibility,
-                                                        [column.name]: !columnVisibility[column.name],
-                                                    }),
-                                                )
-                                            }
-                                            disabled={column.alwaysVisible}
-                                        />
-                                    }
-                                    label={column.label}
-                                />
-                            ))}
-                        </FormGroup>
-                        <Divider sx={{ mt: 1 }} />
-                    </Box>
-                ))}
-            </DialogContent>
-            <DialogActions sx={DIALOG_ACTIONS_SX}>
-                <Box sx={FOOTER_ACTION_ROW_SX}>
-                    <Button onClick={handleResetValues} variant="outlined">
-                        {t('monitored.settings.reset_values')}
-                    </Button>
-                    <Box sx={{ flex: 1, minWidth: 8 }} />
-                    <Button onClick={onClose} variant="contained">
-                        {t('monitored.settings.close')}
-                    </Button>
-                </Box>
-            </DialogActions>
-        </Dialog>
-    );
-};
-
 const MonitoredCelestialGridIsland = ({
     rows = [],
+    toolbarContainer = null,
     loading = false,
     onRowDoubleClick = null,
     onTargetSelected = null,
@@ -376,7 +237,6 @@ const MonitoredCelestialGridIsland = ({
         tableColumnVisibility,
         tablePageSize,
         tableSortModel,
-        openGridSettingsDialog,
     } = useSelector((state) => state.celestialMonitored);
     const [nowMs, setNowMs] = useState(() => Date.now());
     const [page, setPage] = useState(0);
@@ -668,39 +528,43 @@ const MonitoredCelestialGridIsland = ({
             },
             {
                 field: 'azimuthDeg',
+                type: 'number',
                 width: 90,
                 minWidth: 90,
                 headerName: tCelestial('monitored.columns.azimuth'),
                 align: 'center',
                 headerAlign: 'center',
-                valueGetter: (value) => formatAngle(value, 2),
+                valueFormatter: (value) => formatAngle(value, 2),
             },
             {
                 field: 'distanceFromSunAu',
+                type: 'number',
                 headerName: tCelestial('monitored.columns.distance_from_sun_au'),
                 width: 100,
                 minWidth: 100,
-                valueGetter: (value) => {
+                valueFormatter: (value) => {
                     const formatted = formatNumericUpTo(value, 3);
                     return formatted === '-' ? formatted : `${formatted} ${tCelestial('units.au')}`;
                 },
             },
             {
                 field: 'speedKmS',
+                type: 'number',
                 headerName: tCelestial('monitored.columns.speed_km_s'),
                 width: 100,
                 minWidth: 100,
-                valueGetter: (value) => {
+                valueFormatter: (value) => {
                     const formatted = formatNumeric(value, 3);
                     return formatted === '-' ? formatted : `${formatted} ${tCelestial('units.km_per_s')}`;
                 },
             },
             {
                 field: 'lightTimeMinutes',
+                type: 'number',
                 headerName: tCelestial('monitored.columns.light_time_min'),
                 width: 90,
                 minWidth: 90,
-                valueGetter: (value) => formatNumeric(value, 2),
+                valueFormatter: (value) => formatNumeric(value, 2),
             },
             { field: 'lastRefreshAge', headerName: tCelestial('monitored.columns.refresh_age'), width: 70, minWidth: 70 },
             {
@@ -1009,6 +873,8 @@ const MonitoredCelestialGridIsland = ({
             <Box sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
             <Box sx={{ width: '100%', flex: 1, minHeight: 0 }}>
                 <StyledDataGrid
+                    showToolbar
+                    slots={{ toolbar: GridTableToolbar }}
                     rows={enrichedRows}
                     columns={columns}
                     getRowId={(row) => row.id}
@@ -1035,6 +901,7 @@ const MonitoredCelestialGridIsland = ({
                         }
                     }}
                     slotProps={{
+                        toolbar: { container: toolbarContainer },
                         row: {
                             onContextMenu: handleRowContextMenu,
                         },
@@ -1108,10 +975,6 @@ const MonitoredCelestialGridIsland = ({
                 satelliteData={transmittersDialogData}
                 variant="paper"
                 widthOffsetPx={20}
-            />
-            <SettingsDialog
-                open={openGridSettingsDialog}
-                onClose={() => dispatch(setOpenGridSettingsDialog(false))}
             />
             <CelestialEditDialog
                 target={propertiesTarget}

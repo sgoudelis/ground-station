@@ -31,7 +31,6 @@ import {
     setCelestialMapSettings,
 } from './celestial-slice.jsx';
 import { fetchMonitoredCelestial } from './monitored-slice.jsx';
-import { setOpenGridSettingsDialog } from './monitored-slice.jsx';
 import CelestialToolbar from './celestial-toolbar.jsx';
 import CelestialStatusBar from './celestial-statusbar.jsx';
 import SolarSystemCanvas from './solarsystem-canvas.jsx';
@@ -321,6 +320,7 @@ const CelestialMainLayout = () => {
     const [solarSystemFullscreen, setSolarSystemFullscreen] = useState(false);
     const [showRefreshOverlay, setShowRefreshOverlay] = useState(false);
     const [deferredIslandCount, setDeferredIslandCount] = useState(0);
+    const [monitoredToolbarContainer, setMonitoredToolbarContainer] = useState(null);
     const [solarCanvasStatusInfo, setSolarCanvasStatusInfo] = useState({
         gestureHintText: '',
         scaleLabel: '',
@@ -1114,21 +1114,12 @@ const CelestialMainLayout = () => {
                     <Box component="span">
                         {tCelestial('main_layout.monitored_title')}
                     </Box>
-                    <Tooltip title={tCelestial('toolbar.table_settings')}>
-                        <span>
-                            <IconButton
-                                size="small"
-                                onClick={() => dispatch(setOpenGridSettingsDialog(true))}
-                                sx={{ p: 0.25 }}
-                            >
-                                <SettingsIcon fontSize="small" />
-                            </IconButton>
-                        </span>
-                    </Tooltip>
+                    <Box ref={setMonitoredToolbarContainer} />
                 </TitleBar>
                 <Box sx={{ p: 0, flex: 1, minHeight: 0 }}>
                     {deferredIslandCount >= 1 ? (
                         <MonitoredCelestialGridIsland
+                            toolbarContainer={monitoredToolbarContainer}
                             rows={monitoredState.monitored || []}
                             loading={Boolean(monitoredState.loading)}
                             targetNumberByTargetKey={targetNumberByTargetKey}

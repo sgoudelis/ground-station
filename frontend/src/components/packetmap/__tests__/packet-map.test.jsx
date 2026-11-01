@@ -8,6 +8,7 @@ import i18n from 'i18next';
 import {initReactI18next} from 'react-i18next';
 import PacketMap, {MapViewport} from '../packet-map.jsx';
 import TransmitterTable from '../transmitter-table.jsx';
+import packetMapReducer from '../packet-map-slice.jsx';
 import {mapSettingsStoreName, mapViewStoreName} from '../storage.js';
 
 await i18n.use(initReactI18next).init({lng: 'en', resources: {
@@ -330,9 +331,37 @@ it('scrubs sonde symbols and historical flight phases while keeping the full pat
     expect(screen.getByTestId('sonde-marker')).toHaveAttribute('data-center', '[40,25]');
 });
 
+it('remembers hidden and enabled transmitter columns when fields disappear and the table remounts', () => {
+    const store = configureStore({reducer: {packetMap: packetMapReducer}});
+    const rows = [{id: 'aprs:A', name: 'A', kind: 'aprs', source: 'SV1A', packet_count: 1,
+        details: {frame: {sequence: 42}, signal: {frequency_hz: 144800000}},
+    }];
+    const element = (data) => <Provider store={store}><ThemeProvider theme={createTheme()}>
+        <TransmitterTable rows={data} loading={false} hiddenTypes={[]} />
+    </ThemeProvider></Provider>;
+    const {rerender, unmount} = render(element(rows));
+    fireEvent.click(screen.getByRole('button', {name: 'Columns', exact: true}));
+    fireEvent.click(screen.getByRole('checkbox', {name: 'Source', exact: true}));
+    fireEvent.click(screen.getByRole('checkbox', {name: 'Frame · Sequence', exact: true}));
+    expect(store.getState().packetMap.transmitterTableColumnVisibility).toMatchObject({
+        source: false, 'info:frame.sequence': true, 'info:signal.frequency_hz': true,
+    });
+    rerender(element([]));
+    expect(store.getState().packetMap.transmitterTableColumnVisibility['info:frame.sequence']).toBe(true);
+    unmount();
+    render(element(rows));
+    fireEvent.click(screen.getByRole('button', {name: 'Columns', exact: true}));
+    expect(screen.getByRole('checkbox', {name: 'Source', exact: true})).not.toBeChecked();
+    expect(screen.getByRole('checkbox', {name: 'Frame · Sequence', exact: true})).toBeChecked();
+    expect(screen.getByRole('checkbox', {name: 'Signal · Frequency hz', exact: true})).toBeChecked();
+    // Mounting both native column panels can exceed the default five-second DOM test budget.
+}, 10000);
+
 it('selects table rows and fits their whole paths, then restores all bounds with Fit all', () => {
     localStorage.setItem(mapViewStoreName, JSON.stringify({center: [10, 10], zoom: 4}));
-    const store = configureStore({reducer: () => ({location: {location: {lat: 0, lon: 0}}})});
+    const store = configureStore({reducer: {
+        location: () => ({location: {lat: 0, lon: 0}}), packetMap: packetMapReducer,
+    }});
     const points = [
         {id: '1', file_id: 'decoded:first.bin', transmitter_id: 'aprs:A', kind: 'aprs', name: 'A', source: 'SV1A', latitude: 40, longitude: 23, altitude: null, captured_at: '2026-11-01T00:00:00Z'},
         {id: '2', file_id: 'decoded:second.bin', transmitter_id: 'aprs:A', kind: 'aprs', name: 'A', source: 'SV1A', latitude: 41, longitude: 24, altitude: 100, captured_at: '2026-11-01T01:00:00Z'},
