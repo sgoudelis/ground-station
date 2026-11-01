@@ -38,7 +38,8 @@ vi.mock('react-leaflet', () => ({
         return <div data-testid="map" data-snap={zoomSnap} data-delta={zoomDelta}
             data-zoom-control={String(zoomControl)} data-keyboard={String(keyboard)}>{children}</div>;
     },
-    CircleMarker: ({center, children, eventHandlers}) => <div data-testid="position" onClick={eventHandlers?.click} data-center={JSON.stringify(center)}>{children}</div>,
+    CircleMarker: ({center, children, eventHandlers, pathOptions}) => <div data-testid="position" onClick={eventHandlers?.click}
+        data-center={JSON.stringify(center)} data-color={pathOptions?.color}>{children}</div>,
     Circle: ({center, radius, interactive, pathOptions, ref}) => {
         const pathRef = React.useRef(null);
         React.useImperativeHandle(ref, () => ({getElement: () => pathRef.current}));
@@ -50,9 +51,10 @@ vi.mock('react-leaflet', () => ({
     },
     Pane: ({children, style}) => <div data-testid="visibility-pane" style={style}>{children}</div>,
     Marker: ({position, children, icon, eventHandlers, title}) => <div title={title} onClick={eventHandlers?.click}
-        data-testid={icon?.options?.className === 'packet-radiosonde-marker' ? 'sonde-marker'
-            : icon?.options?.className === 'packet-aprs-marker' ? 'aprs-marker' : 'home'}
-        data-center={JSON.stringify(position)} data-icon-html={icon?.options?.html}>{children}</div>,
+        data-testid={icon?.options?.className?.includes('packet-radiosonde-marker') ? 'sonde-marker'
+            : icon?.options?.className?.includes('packet-aprs-marker') ? 'aprs-marker' : 'home'}
+        data-center={JSON.stringify(position)} data-icon-class={icon?.options?.className}
+        data-icon-html={icon?.options?.html}>{children}</div>,
     Polyline: ({positions, pathOptions}) => <div data-testid="track" data-positions={JSON.stringify(positions)} data-opacity={pathOptions?.opacity} />,
     Popup: ({children}) => <div data-testid="map-popup">{children}</div>,
     Tooltip: ({children, position, permanent, className}) => <span data-testid="map-tooltip" className={className}
@@ -82,6 +84,39 @@ beforeEach(() => {
 });
 
 afterEach(() => vi.restoreAllMocks());
+
+it.each([
+    ['radiosonde', null, 'sonde-marker'],
+    ['aprs', '>', 'aprs-marker'],
+    ['aprs', 'O', 'sonde-marker'],
+    ['aprs', null, 'position'],
+])('greys an inactive %s node (%s), restores fresh fixes, and stays selectable', (kind, symbol, testId) => {
+    const store = configureStore({reducer: () => ({location: {location: null}})});
+    const capturedAt = Date.parse('2020-01-01T00:00:00Z');
+    const points = [{id: 'fix', transmitter_id: 'node', kind, name: 'NODE', latitude: 40, longitude: 23,
+        altitude: 10000, captured_at: new Date(capturedAt).toISOString(), symbol_table: symbol ? '/' : null, symbol_code: symbol}];
+    const onSelectTransmitter = vi.fn();
+    const element = (time, positions = points) => <Provider store={store}><ThemeProvider theme={createTheme()}>
+        <PacketMap positions={positions} playbackTime={time} loading={false} fitRequest={0}
+            onSelectTransmitter={onSelectTransmitter} />
+    </ThemeProvider></Provider>;
+    const isGrey = () => testId === 'position'
+        ? screen.getByTestId(testId).dataset.color === '#9e9e9e'
+        : screen.getByTestId(testId).dataset.iconClass.includes('packet-marker-stale');
+    const {rerender} = render(element(capturedAt + 3600000));
+    expect(isGrey()).toBe(false);
+    map.fitBounds.mockClear();
+    rerender(element(capturedAt + 3600001));
+    expect(isGrey()).toBe(true);
+    expect(map.fitBounds).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByTestId(testId));
+    expect(onSelectTransmitter).toHaveBeenCalledWith('node');
+    // Scrubbing back uses historical age rather than today's wall clock.
+    rerender(element(capturedAt + 1800000));
+    expect(isGrey()).toBe(false);
+    rerender(element(capturedAt + 3600001, [{...points[0], captured_at: new Date(capturedAt + 3600001).toISOString()}]));
+    expect(isGrey()).toBe(false);
+});
 
 describe('Packet map viewport', () => {
     it('waits for results, fits all, and preserves manual navigation through new results and remounts', () => {
@@ -541,9 +576,9 @@ it('selects table rows and fits their whole paths, then restores all bounds with
     const [sondeBounds, sondeFitOptions] = map.fitBounds.mock.lastCall;
     expect(sondeBounds[0]).toEqual([42, 25]);
     expect(sondeBounds).toHaveLength(3);
-    // At 10 km altitude the green circle is about 104 km, or 0.94° of latitude.
-    expect(sondeBounds[1][0]).toBeCloseTo(41.0615, 3);
-    expect(sondeBounds[2][0]).toBeCloseTo(42.9385, 3);
+    // Fit to half the green circle's 104 km radius for a closer selected view.
+    expect(sondeBounds[1][0]).toBeCloseTo(41.5308, 3);
+    expect(sondeBounds[2][0]).toBeCloseTo(42.4692, 3);
     expect(sondeFitOptions.paddingTopLeft).toEqual([24, 24]);
     expect(sondeFitOptions.paddingBottomRight).toEqual([24, 24]);
     const circles = screen.getAllByTestId('visibility-circle');

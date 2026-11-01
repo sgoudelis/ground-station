@@ -37,7 +37,7 @@ describe('Radiosonde shadow anchoring', () => {
     it('anchors both flight symbols at the shadow and opens popups above the raised icon', () => {
         const ascending = createRadiosondeIcon({phase: 'ascending', altitude: 0, name: 'S'});
         const descending = createRadiosondeIcon({phase: 'descending', altitude: 35000, name: 'S'});
-        expect(ascending.options.iconAnchor).toEqual([40, 40]);
+        expect(ascending.options.iconAnchor).toEqual([32.4, 32.4]);
         expect(descending.options.iconAnchor).toEqual(ascending.options.iconAnchor);
         expect(descending.options.popupAnchor[1]).toBeLessThan(ascending.options.popupAnchor[1]);
         expect(descending.options.html).not.toBe(ascending.options.html);

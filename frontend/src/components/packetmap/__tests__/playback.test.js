@@ -11,6 +11,25 @@ const fix = (seconds, latitude, longitude, altitude = null) => ({
 const at = (track, seconds, speed) => trackPositionAt(track, epoch + seconds * 1000, speed);
 
 describe('Transmitter playback', () => {
+    it('marks a node stale only after an hour since the last received fix', () => {
+        const track = buildPlaybackTrack([fix(0, 40, 20)]);
+        expect(at(track, 3599).stale).toBe(false);
+        expect(at(track, 3600).stale).toBe(false);
+        expect(at(track, 3600.001).stale).toBe(true);
+        expect(at(track, 1800).stale).toBe(false);
+    });
+
+    it('does not let interpolation or a future fix refresh an inactive node', () => {
+        const track = buildPlaybackTrack([fix(0, 40, 20), fix(7200, 41, 21)]);
+        const current = at(track, 3601);
+        expect(current.point.interpolated).toBe(true);
+        expect(Date.parse(current.point.captured_at)).toBe(epoch + 3601000);
+        expect(current.stale).toBe(true);
+        expect(at(track, 7200).stale).toBe(false);
+        expect(at(track, 10800).stale).toBe(false);
+        expect(at(track, 10801).stale).toBe(true);
+    });
+
     it('moves on the displayed smooth path, preserves recorded fixes and interpolates altitude', () => {
         const points = [fix(0, 40, 20, 100), fix(10, 41, 21, 200), fix(30, 40, 22, 0)];
         const track = buildPlaybackTrack(points);

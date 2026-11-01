@@ -6,7 +6,7 @@ import parachute from './icons/parachute.png';
 import './radiosonde-marker.css';
 
 const minimumClimbRate = 0.3;
-const markerSize = 80;
+const markerSize = 64.8;
 const minimumLift = 4;
 const liftRange = 18;
 
@@ -51,7 +51,7 @@ export function markerLift(altitude) {
     return minimumLift + liftRange * Math.sqrt(fraction);
 }
 
-export function createRadiosondeIcon({phase, altitude, name}) {
+export function createRadiosondeIcon({phase, altitude, name, stale = false}) {
     const lift = markerLift(altitude);
     // Keep shadow changes normalized when adjusting the lift's pixel range.
     const height = (lift - minimumLift) / liftRange;
@@ -61,7 +61,7 @@ export function createRadiosondeIcon({phase, altitude, name}) {
     label.className = 'packet-radiosonde-label';
     label.textContent = name ?? '';
     return new RadiosondeIcon({
-        className: 'packet-radiosonde-marker',
+        className: `packet-radiosonde-marker${stale ? ' packet-marker-stale' : ''}`,
         // The anchor is the shadow's center, so paths always end underneath
         // the floating symbol without changing the received map coordinates.
         iconSize: [markerSize, markerSize],

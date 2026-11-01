@@ -90,7 +90,7 @@ export function getAprsSymbol(position) {
     return {label, image, overlay, balloon: label === 'Balloon'};
 }
 
-export function createAprsIcon({position, report, phase, altitude, name}) {
+export function createAprsIcon({position, report, phase, altitude, name, stale = false}) {
     let symbol = getAprsSymbol(position);
     // A packet's category can identify a pin when its symbol is unknown.
     // Recognized per-fix symbols still take precedence during playback.
@@ -101,7 +101,7 @@ export function createAprsIcon({position, report, phase, altitude, name}) {
     }
     // Unclassified positions retain the map's generic APRS circle.
     if (!symbol) return null;
-    if (symbol.balloon) return createRadiosondeIcon({phase, altitude, name});
+    if (symbol.balloon) return createRadiosondeIcon({phase, altitude, name, stale});
 
     // Received station names are untrusted text, never HTML.
     const label = document.createElement('span');
@@ -112,10 +112,10 @@ export function createAprsIcon({position, report, phase, altitude, name}) {
     image.alt = '';
     image.draggable = false;
     return new DivIcon({
-        className: 'packet-aprs-marker',
+        className: `packet-aprs-marker${stale ? ' packet-marker-stale' : ''}`,
         // Anchor the tip of each pin to the received position, rather than its center.
-        iconSize: [40, 45],
-        iconAnchor: [20, 45],
+        iconSize: [34.2, 38.475],
+        iconAnchor: [17.1, 38.475],
         html: `${label.outerHTML}<span class="packet-aprs-symbol" role="img" aria-label="${symbol.label}">${image.outerHTML}</span>`
             + (symbol.overlay ? `<span class="packet-aprs-overlay">${symbol.overlay}</span>` : ''),
     });

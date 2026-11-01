@@ -1,6 +1,6 @@
 /** Copyright (c) 2026 Efstratios Goudelis — GPL-3.0-or-later */
 
-import React, {useCallback, useMemo, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {Alert, Box, LinearProgress} from '@mui/material';
 import {useDispatch, useSelector} from 'react-redux';
 import {Responsive, useContainerWidth} from 'react-grid-layout';
@@ -37,10 +37,18 @@ export default function PacketMapLayout() {
     };
     const {positions, transmitters, available_range, loading, error, refresh} = usePacketPositions(socket, range);
     const isLive = range.end === null;
+    const [liveNow, setLiveNow] = useState(Date.now);
+    useEffect(() => {
+        if (!isLive) return;
+        // Age silent transmitters even when no library updates arrive.
+        setLiveNow(Date.now());
+        const timer = window.setInterval(() => setLiveNow(Date.now()), 30000);
+        return () => window.clearInterval(timer);
+    }, [isLive]);
     const liveTime = useMemo(() => positions.reduce((latest, point) => {
         const capturedAt = Date.parse(point.captured_at);
         return capturedAt > latest ? capturedAt : latest;
-    }, Math.max(Date.now(), Date.parse(range.start))), [positions, range.start]);
+    }, Math.max(liveNow, Date.now(), Date.parse(range.start))), [positions, range.start, liveNow]);
     // Live playback follows every transmitter's newest fix, including new IDs.
     const currentPlaybackTime = isLive ? liveTime : playbackTime;
     const rows = useMemo(() => transmitterRows(positions, transmitters), [positions, transmitters]);

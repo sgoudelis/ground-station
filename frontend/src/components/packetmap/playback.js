@@ -3,6 +3,8 @@
 import {smoothTrackSegments} from './track-path.js';
 import {getFlightPhase} from './radiosonde-marker.js';
 
+const staleAfter = 60 * 60 * 1000;
+
 // Use the same projection as Leaflet's paths so an interpolated marker stays
 // on the drawn segment, including at high latitudes.
 const mercatorY = (latitude) => Math.log(Math.tan(Math.PI / 4 + Math.max(-85.051129, Math.min(85.051129, latitude)) * Math.PI / 360));
@@ -70,5 +72,7 @@ export function trackPositionAt(track, time, latestVerticalSpeed) {
     const measuredPhase = getFlightPhase([], verticalSpeed);
     const phase = measuredPhase === 'unknown'
         ? getFlightPhase([...points.slice(0, index + 1), ...(point === previous ? [] : [point])]) : measuredPhase;
-    return {point, phase};
+    // Interpolation changes captured_at for display, but cannot refresh a node.
+    const stale = cursor - times[index] > staleAfter;
+    return {point, phase, stale};
 }

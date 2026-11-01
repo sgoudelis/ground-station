@@ -3,7 +3,7 @@
 import React, {useEffect, useMemo, useRef, useState} from 'react';
 import {Alert, Box, Paper, Typography} from '@mui/material';
 import {alpha} from '@mui/material/styles';
-import {svg} from 'leaflet';
+import {Icon, svg} from 'leaflet';
 import {CircleMarker, MapContainer, Marker, Pane, Polyline, TileLayer, useMap} from 'react-leaflet';
 import {useSelector} from 'react-redux';
 import {useTranslation} from 'react-i18next';
@@ -26,6 +26,14 @@ import {getCircleBounds, getHorizonRadii} from './horizon.js';
 import VisibilityCircle from './visibility-circle.jsx';
 
 export const POSITION_COLORS = Object.fromEntries(Object.entries(TRANSMITTER_TYPES).map(([kind, value]) => [kind, value.color]));
+
+// Keep the smaller receiver icon local to this page; other maps share homeIcon.
+const receiverIcon = new Icon({
+    ...homeIcon.options,
+    iconSize: [17.1, 17.1],
+    iconAnchor: [8.55, 8.55],
+    popupAnchor: [8.55, 8.55],
+});
 
 const hybridReferenceLayers = ['World_Transportation', 'World_Boundaries_and_Places'].map((service, index) => ({
     id: service,
@@ -157,13 +165,13 @@ export default function PacketMap({positions, transmitters, hasPositions = posit
     // and their historical altitude/flight phase are updated during scrubbing.
     const playback = useMemo(() => new Map(tracks.map((track) => {
         const details = transmitterDetails.get(track.id);
-        const current = trackPositionAt(track, playbackTime, details?.telemetry?.vel_v);
+        const current = trackPositionAt(track, Number.isFinite(playbackTime) ? playbackTime : Date.now(), details?.telemetry?.vel_v);
         const point = current?.point;
         const icon = point?.kind === 'radiosonde' ? createRadiosondeIcon({
-            phase: current.phase, altitude: point.altitude, name: point.name,
+            phase: current.phase, altitude: point.altitude, name: point.name, stale: current.stale,
         }) : point?.kind === 'aprs' ? createAprsIcon({
             position: aprsPosition(point, details), report: details?.telemetry,
-            phase: current.phase, altitude: point.altitude, name: point.name,
+            phase: current.phase, altitude: point.altitude, name: point.name, stale: current.stale,
         }) : null;
         return [track.id, current ? {...current, icon} : null];
     })), [tracks, playbackTime, transmitterDetails]);
@@ -171,8 +179,9 @@ export default function PacketMap({positions, transmitters, hasPositions = posit
     // interpolation. Unknown altitude must not produce a misleading footprint.
     const selectedPoint = playback.get(selectedTransmitterId)?.point;
     const horizonRadii = selectedPoint?.kind === 'radiosonde' ? getHorizonRadii(selectedPoint.altitude) : null;
+    // Fit inside the green footprint for a closer view without changing either ring.
     const visibilityBounds = horizonRadii
-        ? getCircleBounds([selectedPoint.latitude, selectedPoint.longitude], horizonRadii.fiveDegrees) : [];
+        ? getCircleBounds([selectedPoint.latitude, selectedPoint.longitude], horizonRadii.fiveDegrees / 2) : [];
     const visibilityCircles = horizonRadii ? [
         {id: 'horizon', radius: horizonRadii.horizon, color: '#2196f3',
             label: t('packet_map.radio_horizon', {defaultValue: 'Radio horizon (0°)'})},
@@ -196,7 +205,7 @@ export default function PacketMap({positions, transmitters, hasPositions = posit
     const fittedBalloons = tracks.filter((track) => (track.points[0].kind === 'radiosonde'
         || getAprsSymbol(aprsPosition(track.points.at(-1), transmitterDetails.get(track.id)))?.balloon)
         && (selectedTransmitterId === null || track.id === selectedTransmitterId));
-    // The selected sonde's green circle supplies space around its symbol.
+    // The selected sonde's inner footprint supplies space around its symbol.
     // APRS balloons have no circle, so reserve room for their raised icon.
     // Keep this tied to selection so playback alone cannot change the viewport.
     const padding = selectedTransmitterId !== null && fittedBalloons.some((track) => track.points[0].kind === 'radiosonde') ? 24 : 42;
@@ -210,6 +219,8 @@ export default function PacketMap({positions, transmitters, hasPositions = posit
     return <Box className="packet-map" ref={islandRef} sx={(theme) => ({height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column',
         '&:fullscreen': {width: '100vw', height: '100vh', bgcolor: 'background.paper'},
         '&:-webkit-full-screen': {width: '100vw', height: '100vh', bgcolor: 'background.paper'},
+        // Desaturate the whole marker so labels and APRS overlays age with the icon.
+        '& .packet-marker-stale': {filter: 'grayscale(1)', opacity: 0.65},
         '& .packet-visibility-label': {
             fill: theme.palette.text.secondary,
             stroke: alpha(theme.palette.background.paper, 0.85),
@@ -255,25 +266,27 @@ export default function PacketMap({positions, transmitters, hasPositions = posit
                         renderer={visibilityRenderer} label={pathLabel}
                         pathOptions={{color, fill: false, weight: 2, opacity: 0.85, dashArray: '8 6'}} />)}
                 </Pane>
-                {hasReceiver && <Marker position={[receiverLatitude, receiverLongitude]} icon={homeIcon} />}
+                {hasReceiver && <Marker position={[receiverLatitude, receiverLongitude]} icon={receiverIcon} />}
                 {/* Point clicks select the transmitter; details stay in the info panel. */}
                 {tracks.map(({id, points, path}) => {
                     const latest = points[points.length - 1];
                     const endpoints = points.length > 1 ? [points[0], latest] : [latest];
                     const color = typeColor(latest.kind);
                     const current = playback.get(id);
+                    const cursorColor = current?.stale && (current.point.kind === 'radiosonde' || current.point.kind === 'aprs')
+                        ? '#9e9e9e' : color;
                     return <React.Fragment key={id}>
                         {settings.showTracks && path.length > 1 && <Polyline positions={path} smoothFactor={0.5}
                             pathOptions={{color, weight: 2, opacity: 1, lineCap: 'round', lineJoin: 'round'}} />}
                         {endpoints.filter((point) => point !== current?.point).map((point) => <CircleMarker key={point.id}
-                            center={[point.latitude, point.longitude]} radius={4}
+                            center={[point.latitude, point.longitude]} radius={3.42}
                             eventHandlers={{click: () => onSelectTransmitter?.(id)}}
                             pathOptions={{color, fillColor: color, fillOpacity: 0.25, weight: 2}} />)}
                         {current && (current.icon ? <Marker key="cursor" position={[current.point.latitude, current.point.longitude]}
                             icon={current.icon} eventHandlers={{click: () => onSelectTransmitter?.(id)}}
-                        /> : <CircleMarker key="cursor" center={[current.point.latitude, current.point.longitude]} radius={7}
+                        /> : <CircleMarker key="cursor" center={[current.point.latitude, current.point.longitude]} radius={5.985}
                             eventHandlers={{click: () => onSelectTransmitter?.(id)}}
-                            pathOptions={{color, fillColor: color, fillOpacity: 0.85, weight: 2}} />)}
+                            pathOptions={{color: cursorColor, fillColor: cursorColor, fillOpacity: 0.85, weight: 2}} />)}
                     </React.Fragment>;
                 })}
             </MapContainer>

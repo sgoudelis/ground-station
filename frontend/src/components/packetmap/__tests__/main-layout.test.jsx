@@ -66,6 +66,30 @@ it('starts in LIVE with the last day of packets when no selection has been saved
     expect(Number.isFinite(mapRender.mock.lastCall[0].playbackTime)).toBe(true);
 });
 
+it('advances the live clock without incoming packets and stops the timer in history', () => {
+    vi.useFakeTimers();
+    try {
+        vi.setSystemTime(new Date('2026-11-01T12:00:00Z'));
+        const store = createStore();
+        const {unmount} = render(<Provider store={store}><ThemeProvider theme={createTheme()}><PacketMapLayout /></ThemeProvider></Provider>);
+        const initialTime = mapRender.mock.lastCall[0].playbackTime;
+        act(() => vi.advanceTimersByTime(30000));
+        expect(mapRender.mock.lastCall[0].playbackTime).toBe(initialTime + 30000);
+        expect(mapRender.mock.lastCall[0].positions).toEqual(fixture.positions);
+        // A paused historical cursor must not age along with the wall clock.
+        fireEvent.click(screen.getByRole('button', {name: '24h', exact: true}));
+        const historicalTime = mapRender.mock.lastCall[0].playbackTime;
+        expect(Number.isFinite(historicalTime)).toBe(true);
+        const renderCount = mapRender.mock.calls.length;
+        act(() => vi.advanceTimersByTime(60000));
+        expect(mapRender.mock.lastCall[0].playbackTime).toBe(historicalTime);
+        expect(mapRender).toHaveBeenCalledTimes(renderCount);
+        unmount();
+    } finally {
+        vi.useRealTimers();
+    }
+});
+
 it.each(['LIVE', '24h', '7d', 'All'])('stores %s in Redux and restores it when revisiting the map', (preset) => {
     usePacketPositions.mockImplementation(() => ({...fixture, available_range: historyRange, loading: false}));
     const store = createStore(historyRange);
