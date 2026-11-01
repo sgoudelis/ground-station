@@ -26,7 +26,7 @@ export default function DateRangeSelector({value, min, max, positions = EMPTY_PO
 
     // Copy the celestial selector's framed band, ticks, and handles, using
     // one playback cursor across the applied packet query window.
-    return <Box role="group" aria-label={label} sx={{position: 'relative', width: '100%', height: 48,
+    return <Box role="group" aria-label={label} sx={{position: 'relative', width: '100%', height: 40, boxSizing: 'border-box',
         border: '1px solid', borderColor: 'divider', borderRadius: 1,
         bgcolor: (theme) => alpha(theme.palette.background.default, 0.42)}}>
         {/* Keep the track and thumb aligned slightly below the panel's center. */}

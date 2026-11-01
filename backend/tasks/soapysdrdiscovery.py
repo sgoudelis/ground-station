@@ -34,11 +34,28 @@ class GracefulKiller:
 
     def __init__(self):
         self.kill_now = False
+        self.active_task: Optional[asyncio.Task] = None
         signal.signal(signal.SIGTERM, self.exit_gracefully)
         signal.signal(signal.SIGINT, self.exit_gracefully)
 
     def exit_gracefully(self, *args):
+        if self.kill_now:
+            return  # Let the first cancellation finish reaping native probes.
         self.kill_now = True
+        if self.active_task is not None:
+            self.active_task.get_loop().call_soon_threadsafe(self.active_task.cancel)
+
+    def run(self, loop, coroutine):
+        """Keep the active operation cancellable while the worker owns its probes."""
+        # Keep a non-optional reference while the signal handler uses the shared slot.
+        task: asyncio.Task = loop.create_task(coroutine)
+        self.active_task = task
+        if self.kill_now:
+            task.cancel()
+        try:
+            return loop.run_until_complete(task)
+        finally:
+            self.active_task = None
 
 
 def soapysdr_discovery_task(
@@ -104,7 +121,7 @@ def soapysdr_discovery_task(
                     }
                 )
 
-            loop.run_until_complete(discover_soapy_servers())
+            killer.run(loop, discover_soapy_servers())
 
             if killer.kill_now:
                 if _progress_queue:
@@ -259,7 +276,7 @@ def soapysdr_discovery_task(
                     )
 
                 # Refresh SDR list
-                loop.run_until_complete(refresh_connected_sdrs())
+                killer.run(loop, refresh_connected_sdrs())
 
                 # Report refresh results
                 active_servers = get_active_servers_with_sdrs()
@@ -329,6 +346,8 @@ def soapysdr_discovery_task(
         finally:
             loop.close()
 
+    except asyncio.CancelledError:
+        return {"status": "interrupted", "servers": {}}
     except Exception as e:
         error_msg = f"Error during SoapySDR discovery: {str(e)}"
         logger.error(error_msg)
@@ -354,6 +373,8 @@ def soapysdr_quick_refresh_task(_progress_queue: Optional[Queue] = None):
     if HAS_SETPROCTITLE:
         setproctitle.setproctitle("Ground Station - SoapySDR-Refresh")
     multiprocessing.current_process().name = "Ground Station - SoapySDR-Refresh"
+
+    killer = GracefulKiller()
 
     try:
         if _progress_queue:
@@ -383,7 +404,7 @@ def soapysdr_quick_refresh_task(_progress_queue: Optional[Queue] = None):
         asyncio.set_event_loop(loop)
 
         try:
-            loop.run_until_complete(refresh_connected_sdrs())
+            killer.run(loop, refresh_connected_sdrs())
 
             active_servers = get_active_servers_with_sdrs()
             active_count = len(active_servers)
@@ -430,6 +451,8 @@ def soapysdr_quick_refresh_task(_progress_queue: Optional[Queue] = None):
         finally:
             loop.close()
 
+    except asyncio.CancelledError:
+        return {"status": "interrupted", "servers": {}}
     except Exception as e:
         error_msg = f"Error during SDR refresh: {str(e)}"
         logger.error(error_msg)

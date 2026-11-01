@@ -18,6 +18,7 @@ import asyncio
 import json
 import logging
 import socket
+import sys
 import threading
 import time
 from typing import Any, Dict, List, Set, Union
@@ -235,6 +236,44 @@ def _probe_remote_device_antennas_via_remoteprobe(
     return {"rx": rx_ports, "tx": tx_ports}
 
 
+async def _run_soapy_probe(function_name: str, *args: Any, timeout: float) -> Any:
+    """Run native Soapy calls in a process that can be reaped on timeout or cancellation."""
+    # Drivers can print during initialization or interpreter shutdown. Reserve a
+    # duplicate of stdout for the JSON result and route driver output to stderr.
+    process = await asyncio.create_subprocess_exec(
+        sys.executable,
+        "-c",
+        "import json, os, sys\n"
+        "with os.fdopen(os.dup(sys.stdout.fileno()), 'w') as output:\n"
+        "    os.dup2(sys.stderr.fileno(), sys.stdout.fileno())\n"
+        "    from hardware import soapysdrbrowser as browser\n"
+        "    result = getattr(browser, sys.argv[1])(*json.loads(sys.argv[2]))\n"
+        "    json.dump(result, output, cls=browser.SoapySDREncoder)\n",
+        function_name,
+        json.dumps(args),
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    communication = asyncio.create_task(process.communicate())
+    try:
+        # A thread timeout leaves native calls running and can prevent the whole
+        # discovery worker from exiting. Keep communication alive during cleanup
+        # so killing a blocked probe also drains its pipes and reaps the child.
+        stdout, stderr = await asyncio.wait_for(asyncio.shield(communication), timeout)
+    finally:
+        if process.returncode is None:
+            try:
+                process.kill()
+            except ProcessLookupError:
+                pass  # The probe exited between the return-code check and kill.
+        await communication
+
+    if process.returncode != 0:
+        detail = stderr.decode(errors="replace").strip()
+        raise RuntimeError(f"SoapySDR probe exited with code {process.returncode}: {detail}")
+    return json.loads(stdout)
+
+
 async def enrich_remote_sdrs_with_antennas(
     ip: str, port: int, devices: List[Dict[str, Any]], timeout: float = 8.0
 ) -> List[Dict[str, Any]]:
@@ -247,8 +286,6 @@ async def enrich_remote_sdrs_with_antennas(
     if not devices:
         return []
 
-    loop = asyncio.get_event_loop()
-
     # Keep per-device probes serialized for stability with busy SoapyRemote endpoints.
     semaphore = asyncio.Semaphore(1)
 
@@ -259,14 +296,11 @@ async def enrich_remote_sdrs_with_antennas(
         if HAS_SOAPYSDR:
             try:
                 async with semaphore:
-                    antennas = await asyncio.wait_for(
-                        loop.run_in_executor(
-                            None,
-                            _probe_remote_device_antennas_via_remoteprobe,
-                            ip,
-                            int(port),
-                            device_dict,
-                        ),
+                    antennas = await _run_soapy_probe(
+                        "_probe_remote_device_antennas_via_remoteprobe",
+                        ip,
+                        int(port),
+                        device_dict,
                         timeout=timeout,
                     )
             except asyncio.TimeoutError:
@@ -309,11 +343,8 @@ async def query_sdrs_with_python_module(ip, port, timeout=5):
         return [], "unavailable"
 
     try:
-        # This needs to run in a thread pool to avoid blocking the event loop
-        # Wrap with a timeout to prevent hanging on problematic servers
-        loop = asyncio.get_event_loop()
-        raw_results = await asyncio.wait_for(
-            loop.run_in_executor(None, _query_with_soapysdr_module, ip, port), timeout=timeout
+        raw_results = await _run_soapy_probe(
+            "_query_with_soapysdr_module", ip, port, timeout=timeout
         )
         logger.info(
             "Remote enumerate returned %d device(s) for %s:%s before antenna enrichment",
@@ -360,7 +391,7 @@ async def query_sdrs_with_python_module(ip, port, timeout=5):
 
 
 def _query_with_soapysdr_module(ip, port):
-    """Execute the SoapySDR module query in a separate thread."""
+    """Enumerate devices and detach their data from native objects in the probe process."""
     if not HAS_SOAPYSDR:
         raise RuntimeError("SoapySDR Python bindings are not installed")
 
@@ -371,7 +402,7 @@ def _query_with_soapysdr_module(ip, port):
         # Enumerate devices
         results = SoapySDR.Device.enumerate(args)
 
-        return results
+        return [soapysdr_to_dict(device) for device in results]
     except Exception as e:
         logger.error(f"SoapySDR module error: {str(e)}")
         # Re-raise to be handled by the caller
@@ -593,6 +624,10 @@ async def discover_soapy_servers():
 
     except asyncio.CancelledError:
         logger.info("Discovery cancelled...")
+        # Cancel handlers before draining them so SIGTERM can reap a blocked
+        # probe before the task manager has to kill the discovery worker.
+        for task in list(_service_event_tasks):
+            task.cancel()
     finally:
         _discovery_shutting_down.set()
         logger.info("Closing Zeroconf browser...")
