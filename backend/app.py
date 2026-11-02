@@ -11,6 +11,7 @@ import uvicorn  # noqa: E402
 from common.arguments import arguments  # noqa: E402
 from common.logger import get_logger_config, logger  # noqa: E402
 from handlers.socket import register_socketio_handlers  # noqa: E402
+from server.forkguard import protect_server_sockets  # noqa: E402
 from server.shmmonitor import start_cleanup_thread  # noqa: E402
 from server.shutdown import cleanup_everything  # noqa: E402
 from server.startup import (  # noqa: E402
@@ -85,10 +86,13 @@ def main() -> None:
 
     logger.info(f"Starting Ground Station server with parameters {arguments}")
     try:
-        uvicorn.run(
+        config = uvicorn.Config(
             socket_app,
             host=arguments.host,
             port=arguments.port,
+            # Fork cleanup must close asyncio's owning socket objects, not raw
+            # descriptors that an optional event loop may expose instead.
+            loop="asyncio",
             # Keep Uvicorn WebSocket frame size aligned with Socket.IO/Engine.IO
             # payload limits configured in server.startup, otherwise large setup
             # restore uploads can be disconnected before the backend handler runs.
@@ -102,6 +106,9 @@ def main() -> None:
             timeout_graceful_shutdown=10,
             log_config=get_logger_config(arguments),
         )
+        server = uvicorn.Server(config)
+        protect_server_sockets(server)
+        server.run()
     except KeyboardInterrupt:
         logger.info("KeyboardInterrupt in main")
         cleanup_everything()

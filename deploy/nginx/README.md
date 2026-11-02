@@ -31,3 +31,12 @@ Why these headers matter:
 - Ground Station sets `Secure` auth cookies based on request scheme.
 - Socket.IO requires websocket upgrade forwarding.
 - Authenticated static data routes (`/recordings`, `/decoded`, `/audio`, `/transcriptions`) rely on session cookies reaching the backend.
+
+The container proxy deliberately opens a fresh backend connection for each ordinary
+HTTP request. Keep its non-upgrade `Connection` value set to `close`, and do not add
+an upstream `keepalive` pool. Forked workers previously retained idle backend sockets
+after Uvicorn released them, so reusing one could leave a page's JavaScript request
+waiting indefinitely. Backend fork cleanup now closes the workers' copies of server
+sockets; avoiding connection reuse also protects installations during the transition.
+WebSocket upgrades, SSE, and downloads keep their connection for the duration of the
+request. Browser-facing HTTP keepalive and HTTP/2 continue to work normally.
