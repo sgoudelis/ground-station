@@ -35,6 +35,22 @@ function wrapper({children}) {
 }
 
 describe('Transmitter information', () => {
+    it('explains reported emergencies, colors the header icon and removes cleared alerts', () => {
+        const aircraft = {...transmitter, kind: 'adsb', details: {telemetry: {squawk: '7700', emergency: 'general'}}};
+        const {container, rerender} = render(<TransmitterInfo transmitter={aircraft} />, {wrapper});
+        expect(screen.getByRole('alert')).toHaveTextContent('Reported emergency / priority · 7700');
+        expect(screen.getByRole('alert')).toHaveTextContent('General emergency');
+        expect(container.querySelector('[data-aircraft-shape] path[fill]')).toHaveAttribute('fill', '#ef5350');
+        rerender(<TransmitterInfo transmitter={{...aircraft, details: {telemetry: {emergency: 'minfuel'}}}} />);
+        expect(screen.getByRole('alert')).toHaveTextContent('Minimum fuel');
+        expect(screen.getByRole('alert')).toHaveClass('MuiAlert-colorWarning');
+        expect(container.querySelector('[data-aircraft-shape] path[fill]')).toHaveAttribute('fill', '#ffb300');
+        rerender(<TransmitterInfo transmitter={{...aircraft, details: {telemetry: {squawk: '7000', emergency: 'none'}}}} />);
+        expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+        rerender(<TransmitterInfo transmitter={{...transmitter, details: aircraft.details}} />);
+        expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    });
+
     it('shows aircraft specifications and inferred operator details for saved map records', () => {
         const aircraft = {...transmitter, kind: 'adsb', source: '40621D', details: {telemetry: {aircraft: {
             registration: 'G-TEST', type_code: 'C172', aircraft_class: 'L', engine_type: 'P', engine_count: 1,

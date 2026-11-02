@@ -182,6 +182,10 @@ export default function PacketMap({positions, transmitters, hasPositions = posit
         const details = transmitterDetails.get(track.id);
         const current = trackPositionAt(track, Number.isFinite(playbackTime) ? playbackTime : Date.now(), details?.telemetry?.vel_v);
         const point = current?.point;
+        // New captures carry explicit status clears. For older map responses,
+        // latest telemetry belongs only to the endpoint, never an earlier fix.
+        const aircraftReport = point && (Object.hasOwn(point, 'squawk') || Object.hasOwn(point, 'emergency'))
+            ? point : point?._details?.telemetry ?? (point === track.points.at(-1) ? details?.telemetry : null);
         const icon = point?.kind === 'radiosonde' ? createRadiosondeIcon({
             phase: current.phase, altitude: point.altitude, name: point.name, stale: current.stale,
         }) : point?.kind === 'aprs' ? createAprsIcon({
@@ -191,6 +195,7 @@ export default function PacketMap({positions, transmitters, hasPositions = posit
             track: point.track_deg, name: point.name || point.source, icao: point.source, stale: current.stale,
             // Per-fix metadata follows playback; older captures use the row's lookup.
             aircraft: point.aircraft ?? point._details?.telemetry?.aircraft ?? details?.telemetry?.aircraft,
+            squawk: aircraftReport?.squawk, emergency: aircraftReport?.emergency,
         }) : null;
         return [track.id, current ? {...current, icon} : null];
     })), [tracks, playbackTime, transmitterDetails]);
@@ -286,10 +291,6 @@ export default function PacketMap({positions, transmitters, hasPositions = posit
                     return <React.Fragment key={id}>
                         {settings.showTracks && id === selectedTransmitterId && path.length > 1 && <Polyline positions={path} smoothFactor={0.5}
                             pathOptions={{color, weight: 2, opacity: latest.kind === 'adsb' ? 0.3 : 1, lineCap: 'round', lineJoin: 'round'}} />}
-                        {latest !== current?.point && <CircleMarker key="end"
-                            center={[latest.latitude, latest.longitude]} radius={3.42}
-                            eventHandlers={{click: () => onSelectTransmitter?.(id)}}
-                            pathOptions={{color, fillColor: color, fillOpacity: 0.25, weight: 2}} />}
                         {current && (current.icon ? <Marker key="cursor" position={[current.point.latitude, current.point.longitude]}
                             title={current.point.kind === 'adsb' ? current.point.name || current.point.source || id : undefined}
                             icon={current.icon} eventHandlers={{click: () => onSelectTransmitter?.(id)}}

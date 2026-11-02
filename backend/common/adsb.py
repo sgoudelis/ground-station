@@ -81,6 +81,9 @@ def aircraft_position(record, item_id):
             else record.get("altitude_baro_m")
         ),
         "track_deg": record.get("track_deg"),
+        # Keep each fix's reported status, including explicit clears, for playback.
+        "squawk": record.get("squawk"),
+        "emergency": record.get("emergency"),
         # Public map fixes need icon metadata during playback. Keep the full
         # database attribution/operator details in telemetry rather than repeat
         # them at every coordinate in the bounded history response.

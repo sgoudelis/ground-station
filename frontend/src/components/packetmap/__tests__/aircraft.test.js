@@ -110,18 +110,53 @@ it('anchors a matching aircraft shadow and updates it when Leaflet replaces the 
     expect(shadow.querySelector('path[fill]')).toHaveAttribute('fill', '#9e9e9e');
 });
 
+it.each([
+    ['7500', '#ef5350', 'Unlawful interference'],
+    ['7600', '#ffb300', 'Radio communication failure'],
+    ['7700', '#ef5350', 'General emergency'],
+])('colors the aircraft for squawk %s and retains its shape and ground shadow', (squawk, color, meaning) => {
+    const icon = createAircraftIcon({name: 'TEST', track: 90, squawk, aircraft: {type_code: 'A320'}});
+    const marker = icon.createIcon();
+    expect(marker.querySelector('path[fill]')).toHaveAttribute('fill', color);
+    expect(marker.querySelector('svg')).toHaveAttribute('data-aircraft-shape', 'a320');
+    expect(marker.querySelector('.packet-aircraft-label')).toHaveTextContent(`TEST · ${squawk}`);
+    expect(marker.querySelector('.packet-aircraft-label').title).toBe(`Reported status: ${meaning}`);
+    expect(icon.createShadow().querySelector('svg').outerHTML).toBe(marker.querySelector('svg').outerHTML);
+    // Status changes reuse the existing marker structure; no extra halo element.
+    expect(marker.querySelector('.packet-aircraft-content').children).toHaveLength(2);
+});
+
+it('restores normal colors when cleared and keeps stale reports gray', () => {
+    const initial = createAircraftIcon({emergency: 'minfuel'}).createIcon();
+    expect(initial.querySelector('path[fill]')).toHaveAttribute('fill', '#ffb300');
+    expect(initial.querySelector('.packet-aircraft-label')).toHaveTextContent('Alert');
+    const cleared = createAircraftIcon({squawk: '7000', emergency: 'none'}).createIcon(initial);
+    expect(cleared.querySelector('path[fill]')).toHaveAttribute('fill', '#66bb6a');
+    expect(cleared.querySelector('.packet-aircraft-label')).not.toHaveTextContent('Alert');
+    const stale = createAircraftIcon({squawk: '7700', stale: true}).createIcon(cleared);
+    expect(stale.querySelector('path[fill]')).toHaveAttribute('fill', '#9e9e9e');
+    expect(stale.querySelector('.packet-aircraft-label').title).toBe('Last reported status: General emergency');
+});
+
 it('merges new aircraft fixes without duplicating saved coordinates or changing other protocols', () => {
     const stamp = Date.parse('2026-11-01T12:00:00Z');
     const point = {id: 'saved', kind: 'adsb', transmitter_id: 'adsb:406b90', captured_at: new Date(stamp).toISOString()};
     const sonde = {id: 'sonde', kind: 'radiosonde'};
     const record = {icao: '406b90', timestamp: stamp / 1000, position_timestamp: stamp / 1000,
-        latitude: 40, longitude: 23, altitude_baro_m: 1000, callsign: 'TEST', aircraft: {type_code: 'A320'}};
+        latitude: 40, longitude: 23, altitude_baro_m: 1000, callsign: 'TEST', aircraft: {type_code: 'A320'},
+        squawk: '7700', emergency: 'general'};
     const merged = mergeAircraftHistory([point, sonde], [], {aircraft: [record], positions: [record]},
         {start: '2026-11-01T00:00:00Z', end: null});
     expect(merged.positions).toHaveLength(2);
     expect(merged.positions[0]).toBe(sonde);
     expect(merged.transmitters[0]).toMatchObject({id: 'adsb:406b90', name: 'TEST', altitude: 1000});
     expect(merged.positions[1].aircraft).toEqual({type_code: 'A320'});
+    expect(merged.positions[1]).toMatchObject({squawk: '7700', emergency: 'general'});
+    const clear = {...record, squawk: null, emergency: 'none', position_timestamp: stamp / 1000 + 5};
+    const updated = mergeAircraftHistory(merged.positions, merged.transmitters, {aircraft: [clear], positions: [clear]},
+        {start: '2026-11-01T00:00:00Z', end: null});
+    expect(updated.positions.at(-1)).toMatchObject({squawk: null, emergency: 'none'});
+    expect(updated.transmitters[0].details.telemetry).toMatchObject({squawk: null, emergency: 'none'});
 });
 
 it('historical playback never receives live positions', () => {

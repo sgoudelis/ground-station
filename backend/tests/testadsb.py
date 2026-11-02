@@ -130,6 +130,7 @@ def test_incremental_index_reads_only_new_complete_records(tmp_path):
 def test_map_history_exposes_airframe_metadata_at_each_fix(tmp_path):
     storage = AdsbStorage(tmp_path / "data/decoded", "rx01")
     first = report()
+    first.update(squawk="7700", emergency="general")
     first["aircraft"] = {
         "type_code": "A320",
         "type_description": "L2J",
@@ -158,6 +159,11 @@ def test_map_history_exposes_airframe_metadata_at_each_fix(tmp_path):
     assert "operator_name" not in metadata
     assert "_details" not in history["positions"][0]
     assert history["transmitters"][0]["details"]["telemetry"]["aircraft"]["type_code"] == "B738"
+    # Public playback fixes preserve emergency reports and subsequent clears.
+    assert history["positions"][0]["squawk"] == "7700"
+    assert history["positions"][0]["emergency"] == "general"
+    assert history["positions"][1]["squawk"] is None
+    assert history["positions"][1]["emergency"] is None
 
 
 @pytest.mark.asyncio

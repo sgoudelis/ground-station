@@ -511,6 +511,19 @@
   },
   "aircraft": {
     "details": "Aircraft details",
+    "emergency": {
+      "reported": "Reported emergency / priority",
+      "tooltip": "Reported status: {{status}}",
+      "alert": "Alert",
+      "states": {
+        "unlawful": "Unlawful interference",
+        "downed": "Downed aircraft",
+        "general": "General emergency",
+        "lifeguard": "Medical / lifesaving priority",
+        "nordo": "Radio communication failure",
+        "minfuel": "Minimum fuel"
+      }
+    },
     "military": "Military",
     "interesting": "Interesting",
     "unclassified": "Unclassified",

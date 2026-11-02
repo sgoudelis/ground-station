@@ -17,6 +17,8 @@ export function mergeAircraftHistory(positions, transmitters, live, range) {
             latitude: record.latitude, longitude: record.longitude,
             altitude: record.altitude_geom_m ?? record.altitude_baro_m,
             track_deg: record.track_deg,
+            squawk: record.squawk ?? null,
+            emergency: record.emergency ?? null,
             aircraft: record.aircraft,
         };
         points.set(`${transmitterId}:${stamp}`, point);

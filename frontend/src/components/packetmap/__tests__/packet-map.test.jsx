@@ -139,6 +139,38 @@ it('uses each saved or live fix silhouette during playback and falls back for ol
     expect(screen.getByTestId('aircraft-marker').dataset.iconHtml).toContain('data-aircraft-shape="f35"');
 });
 
+it('replays reported emergencies and clears without borrowing the latest aircraft status', () => {
+    const store = configureStore({reducer: () => ({location: {location: null}})});
+    const received = Date.parse('2026-11-01T18:15:00Z');
+    const base = {transmitter_id: 'adsb:4d2406', kind: 'adsb', name: 'TEST', source: '4D2406',
+        latitude: 40.84, longitude: 23.12, altitude: 11064};
+    const positions = [
+        {squawk: null, emergency: null}, {squawk: '7700', emergency: 'general'},
+        {squawk: '7600', emergency: 'nordo'}, {squawk: null, emergency: 'none'},
+    ].map((status, index) => ({...base, ...status, id: String(index),
+        captured_at: new Date(received + index * 10000).toISOString()}));
+    const transmitters = [{id: base.transmitter_id, details: {telemetry: {squawk: '7700', emergency: 'general'}}}];
+    const element = (time, fixes = positions) => <Provider store={store}><ThemeProvider theme={createTheme()}>
+        <PacketMap positions={fixes} transmitters={transmitters} playbackTime={received + time} loading={false} />
+    </ThemeProvider></Provider>;
+    const html = () => screen.getByTestId('aircraft-marker').dataset.iconHtml;
+    const {rerender} = render(element(5000));
+    expect(html()).toContain('fill="#66bb6a"');
+    rerender(element(15000));
+    expect(html()).toContain('fill="#ef5350"');
+    expect(html()).toContain('7700');
+    rerender(element(25000));
+    expect(html()).toContain('fill="#ffb300"');
+    rerender(element(31000));
+    expect(html()).toContain('fill="#66bb6a"');
+    expect(html()).not.toContain('7700');
+    const older = positions.slice(0, 2).map(({squawk, emergency, ...point}) => point);
+    rerender(element(5000, older));
+    expect(html()).toContain('fill="#66bb6a"');
+    rerender(element(11000, older));
+    expect(html()).toContain('fill="#ef5350"');
+});
+
 it.each([
     ['radiosonde', null, 'sonde-marker'],
     ['aprs', '>', 'aprs-marker'],
@@ -500,7 +532,7 @@ it('scrubs sonde symbols and historical flight phases while following the marker
     expect(within(screen.getByTestId('sonde-marker')).queryByTestId('map-tooltip')).not.toBeInTheDocument();
     expect(screen.getByTestId('sonde-marker')).toBeEmptyDOMElement();
     expect(screen.getByTestId('sonde-marker').dataset.iconHtml).toContain('<span class="packet-radiosonde-label">S</span>');
-    expect(screen.getAllByTestId('position')).toHaveLength(1);
+    expect(screen.queryByTestId('position')).not.toBeInTheDocument();
     map.fitBounds.mockClear();
     map.setView.mockClear();
     rerender(element('2026-11-01T00:01:30Z'));
@@ -516,6 +548,7 @@ it('scrubs sonde symbols and historical flight phases while following the marker
     expect(map.fitBounds).not.toHaveBeenCalled();
     rerender(element('2026-10-31T23:59:59Z'));
     expect(screen.queryByTestId('sonde-marker')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('position')).not.toBeInTheDocument();
     expect(screen.queryByTestId('visibility-circle')).not.toBeInTheDocument();
     expect(screen.getByTestId('track')).toHaveAttribute('data-positions', track);
     rerender(element('2026-11-01T00:03:00Z'));
@@ -636,6 +669,38 @@ it('remembers hidden and enabled transmitter columns when fields disappear and t
     expect(screen.getByRole('checkbox', {name: 'Signal · Frequency hz', exact: true})).toBeChecked();
     // Mounting both native column panels can exceed the default five-second DOM test budget.
 }, 10000);
+
+it('highlights emergency squawks and decoded priorities, and clears badges with current telemetry', () => {
+    const store = configureStore({reducer: {packetMap: packetMapReducer}});
+    const rows = [
+        {id: 'unlawful', squawk: '7500'}, {id: 'radio', squawk: '7600'},
+        {id: 'general', squawk: '7700'}, {id: 'ordinary', squawk: '0042'},
+        {id: 'priority', emergency: 'minfuel'}, {id: 'sonde', kind: 'radiosonde', squawk: '7700'},
+    ].map((row) => ({kind: 'adsb', ...row, name: row.id, packet_count: 1}));
+    const element = (data) => <Provider store={store}><ThemeProvider theme={createTheme()}>
+        <TransmitterTable rows={data} loading={false} hiddenTypes={[]} />
+    </ThemeProvider></Provider>;
+    const {container, rerender} = render(element(rows));
+    const row = (id) => container.querySelector(`[data-id="${id}"]`);
+    const squawk = (id) => row(id).querySelector('[data-field="squawk"]');
+    for (const id of ['unlawful', 'general']) {
+        expect(row(id)).toHaveClass('transmitter-emergency-error');
+        expect(squawk(id).querySelector('.MuiChip-colorError')).not.toBeNull();
+    }
+    for (const id of ['radio', 'priority']) {
+        expect(row(id)).toHaveClass('transmitter-emergency-warning');
+        expect(squawk(id).querySelector('.MuiChip-colorWarning')).not.toBeNull();
+    }
+    expect(squawk('priority')).toHaveTextContent('Alert');
+    expect(squawk('ordinary')).toHaveTextContent('0042');
+    expect(squawk('ordinary').querySelector('.MuiChip-root')).toBeNull();
+    expect(squawk('sonde')).toBeEmptyDOMElement();
+    expect(row('sonde').className).not.toContain('transmitter-emergency');
+    rerender(element(rows.map((entry) => ({...entry, details: {telemetry: {squawk: null, emergency: 'none'}}}))));
+    expect(squawk('general')).toBeEmptyDOMElement();
+    expect(row('general').className).not.toContain('transmitter-emergency');
+    expect(container.querySelector('.MuiChip-root')).toBeNull();
+});
 
 it('selects table rows and centers their markers, then restores all bounds with Fit all', () => {
     localStorage.setItem(mapViewStoreName, JSON.stringify({center: [10, 10], zoom: 4}));

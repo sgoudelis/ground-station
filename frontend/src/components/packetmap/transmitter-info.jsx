@@ -1,7 +1,7 @@
 /** Copyright (c) 2026 Efstratios Goudelis — GPL-3.0-or-later */
 
 import React, {useId, useMemo} from 'react';
-import {Box, Chip, CircularProgress, IconButton, Tooltip, Typography} from '@mui/material';
+import {Alert, Box, Chip, CircularProgress, IconButton, Tooltip, Typography} from '@mui/material';
 import {alpha} from '@mui/material/styles';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import ExploreIcon from '@mui/icons-material/Explore';
@@ -18,6 +18,7 @@ import AircraftFlag from '../common/aircraft-flag.jsx';
 import AircraftDetails from '../common/aircraft-details.jsx';
 import {aircraftCountry} from '../../utils/aircraft-country.js';
 import {renderAircraftSymbol, selectAircraftShape} from './aircraft-symbol.js';
+import {aircraftEmergency, aircraftEmergencyLabel} from '../../utils/aircraft-emergency.js';
 
 function InfoSection({title, icon: Icon, fields}) {
     const titleId = useId();
@@ -42,17 +43,19 @@ function InfoSection({title, icon: Icon, fields}) {
 
 export default function TransmitterInfo({transmitter, selectedTransmitterId = null, loading, gridEditable, onClearSelection}) {
     const {t} = useTranslation('navigation');
+    const {t: aircraftT} = useTranslation('common');
     const timeSettings = useUserTimeSettings();
     const titleId = useId();
     const label = (key, fallback) => t(`packet_map.${key}`, {defaultValue: fallback});
     // Source is the ICAO address for both saved and live aircraft records.
     const country = transmitter?.kind === 'adsb' ? aircraftCountry(transmitter.source) : null;
     const aircraft = transmitter?.aircraft ?? transmitter?.details?.telemetry?.aircraft;
+    const emergency = aircraftEmergency(transmitter);
     // Share the map's model selection and artwork, displayed upright without
     // its map-only heading, label or ground shadow.
     const aircraftSymbol = useMemo(() => transmitter?.kind === 'adsb'
-        ? renderAircraftSymbol(selectAircraftShape(aircraft), {angle: 0, color: typeColor('adsb')}) : null,
-    [transmitter?.kind, aircraft]);
+        ? renderAircraftSymbol(selectAircraftShape(aircraft), {angle: 0, color: emergency?.color ?? typeColor('adsb')}) : null,
+    [transmitter?.kind, aircraft, emergency?.color]);
     const formatTime = (value) => formatDateTime(value, timeSettings);
     const formatNumber = (value, digits) => Number.isFinite(value)
         ? value.toLocaleString(timeSettings.locale, {maximumFractionDigits: digits}) : value;
@@ -118,6 +121,13 @@ export default function TransmitterInfo({transmitter, selectedTransmitterId = nu
                 </Box>
             </Box>
             <Box sx={{flex: 1, minHeight: 0, overflowY: 'auto', p: 1.5}}>
+                {emergency && <Alert severity={emergency.severity} sx={{mb: 1.5}}>
+                    <Typography variant="body2" sx={{fontWeight: 700}}>
+                        {aircraftT('aircraft.emergency.reported', 'Reported emergency / priority')}
+                        {emergency.squawk && ` · ${emergency.squawk}`}
+                    </Typography>
+                    {aircraftEmergencyLabel(emergency, aircraftT)}
+                </Alert>}
                 {transmitter.kind === 'adsb' && <AircraftDetails aircraft={transmitter.details?.telemetry?.aircraft} />}
                 <InfoSection title={label('info.position', 'Latest position')} icon={ExploreIcon} fields={[
                     {label: label('latitude', 'Latitude'), value: formatNumber(transmitter.latitude, 6)},

@@ -1,7 +1,8 @@
 /** Copyright (c) 2026 Efstratios Goudelis — GPL-3.0-or-later */
 
 import React, {useMemo, useState} from 'react';
-import {Box, Button, Typography} from '@mui/material';
+import {Box, Button, Chip, Tooltip, Typography} from '@mui/material';
+import {alpha} from '@mui/material/styles';
 import {DataGrid} from '@mui/x-data-grid';
 import GridTableToolbar from '../common/grid-table-toolbar.jsx';
 import {useTranslation} from 'react-i18next';
@@ -13,6 +14,8 @@ import {formatDateTime} from '../../utils/date-time.js';
 import {detailLabel, flattenDetails, typeColor, typeLabel} from './transmitters.js';
 import {setTransmitterTableColumnVisibility} from './packet-map-slice.jsx';
 import AircraftFlag from '../common/aircraft-flag.jsx';
+import {aircraftLabel, aircraftValue} from '../../utils/aircraft-metadata.js';
+import {aircraftEmergency, aircraftEmergencyLabel} from '../../utils/aircraft-emergency.js';
 
 const visibleDetails = new Set([
     'signal.frequency_hz', 'telemetry.vel_h', 'telemetry.vel_v', 'telemetry.heading',
@@ -23,10 +26,19 @@ const excludedDetails = new Set([
     'telemetry.id', 'telemetry.lat', 'telemetry.lon', 'telemetry.alt',
     'telemetry.position.latitude', 'telemetry.position.longitude', 'telemetry.position.altitude_meters',
     'telemetry.temp', 'telemetry.humidity', 'telemetry.batt', 'telemetry.comment',
+    'telemetry.aircraft.registration', 'telemetry.aircraft.type_code', 'telemetry.aircraft.classification',
+    'telemetry.squawk',
 ]);
+const compactDetails = {
+    'telemetry.callsign': {label: 'Callsign', key: 'callsign', width: 75},
+    'telemetry.heading': {label: 'Heading', key: 'heading', width: 85, unit: '°', digits: 1},
+    'telemetry.vel_h': {label: 'H. speed', key: 'horizontal_speed', width: 90, unit: 'm/s', digits: 2},
+    'telemetry.vel_v': {label: 'V. speed', key: 'vertical_speed', width: 90, unit: 'm/s', digits: 2},
+};
 
 export default function TransmitterTable({rows, loading, hiddenTypes, gridEditable, selectedTransmitterId = null, onSelectTransmitter}) {
     const {t} = useTranslation('navigation');
+    const {t: aircraftT} = useTranslation('common');
     const timeSettings = useUserTimeSettings();
     const dispatch = useDispatch();
     // Retain saved choices even when their decoded fields are absent from the results.
@@ -35,11 +47,16 @@ export default function TransmitterTable({rows, loading, hiddenTypes, gridEditab
     const rowSelectionModel = useMemo(() => ({type: 'include',
         ids: new Set(selectedTransmitterId === null ? [] : [selectedTransmitterId]),
     }), [selectedTransmitterId]);
-    const data = useMemo(() => rows.map((row) => ({...row, fields: flattenDetails(row.details)})), [rows]);
+    const data = useMemo(() => rows.map((row) => ({...row, fields: flattenDetails(row.details),
+        // Saved fixes carry compact icon metadata; full transmitter details add
+        // registration and database flags. Aircraft-only columns stay blank for other protocols.
+        aircraft: row.kind === 'adsb' ? {...row.aircraft, ...row.details?.telemetry?.aircraft} : null,
+        emergencyStatus: aircraftEmergency(row),
+    })), [rows]);
     const fields = useMemo(() => [...new Set(data.flatMap((row) => Object.keys(row.fields)))].sort(), [data]);
     const format = (value) => formatDateTime(value, timeSettings);
     const columns = useMemo(() => [
-        {field: 'name', headerName: t('packet_map.column_headers.name', {defaultValue: 'Name'}), width: 150,
+        {field: 'name', headerName: t('packet_map.column_headers.name', {defaultValue: 'Name'}), width: 120,
             description: t('packet_map.name', {defaultValue: 'Transmitter'}),
             renderCell: ({row}) => <Button size="small" onClick={(event) => {
                 // Use the shared selection instead of opening a second detail surface.
@@ -49,32 +66,60 @@ export default function TransmitterTable({rows, loading, hiddenTypes, gridEditab
                 {row.kind === 'adsb' && <AircraftFlag icao={row.source} />}
                 <Typography variant="body2" noWrap>{row.name}</Typography>
             </Button>},
-        {field: 'kind', headerName: t('packet_map.type', {defaultValue: 'Type'}), width: 95,
+        {field: 'kind', headerName: t('packet_map.type', {defaultValue: 'Type'}), width: 82,
             valueFormatter: typeLabel,
             renderCell: ({value}) => <Typography variant="caption" sx={{color: typeColor(value)}}>{typeLabel(value)}</Typography>},
-        {field: 'source', headerName: t('packet_map.source', {defaultValue: 'Source'}), width: 110},
-        {field: 'packet_count', headerName: t('packet_map.column_headers.packets', {defaultValue: 'Pkts'}), type: 'number', width: 72,
+        {field: 'source', headerName: t('packet_map.source', {defaultValue: 'Source'}), width: 90},
+        ...['registration', 'type_code', 'classification'].map((key) => ({
+            // Stable columns remain available without depending on which aircraft
+            // happen to appear in the current range. Reuse the info panel's labels.
+            field: `aircraft:${key}`, headerName: aircraftLabel(key, aircraftT),
+            width: key === 'classification' ? 145 : 100,
+            valueGetter: (_value, row) => !row.aircraft ? ''
+                : key === 'classification' ? aircraftValue(row.aircraft, key, aircraftT) : row.aircraft[key] ?? '',
+        })),
+        {field: 'squawk', headerName: t('packet_map.column_headers.squawk', {defaultValue: 'Squawk'}), width: 75,
+            // Treat transponder codes as text so leading zeroes are retained.
+            type: 'string', valueGetter: (value, row) => row.kind === 'adsb'
+                ? (Object.hasOwn(row.details?.telemetry ?? {}, 'squawk') ? row.details.telemetry.squawk : value) ?? '' : '',
+            renderCell: ({value, row}) => row.emergencyStatus ? <Tooltip title={aircraftT('aircraft.emergency.tooltip', {
+                defaultValue: 'Reported status: {{status}}', status: aircraftEmergencyLabel(row.emergencyStatus, aircraftT),
+            })}>
+                <Chip size="small" color={row.emergencyStatus.severity}
+                    label={value || aircraftT('aircraft.emergency.alert', 'Alert')}
+                    sx={{height: 20, fontSize: '0.7rem', fontWeight: 700, borderRadius: 1, '& .MuiChip-label': {px: 0.75}}} />
+            </Tooltip> : value},
+        {field: 'packet_count', headerName: t('packet_map.column_headers.packets', {defaultValue: 'Pkts'}), type: 'number', width: 60,
             description: t('packet_map.packets', {defaultValue: 'Packets'})},
         ...['first_seen', 'last_seen'].map((field) => ({field,
             headerName: t(`packet_map.column_headers.${field}`, {defaultValue: field === 'first_seen' ? 'First' : 'Last'}),
             description: t(`packet_map.${field}`, {defaultValue: field === 'first_seen' ? 'First seen' : 'Last seen'}),
             type: 'dateTime', width: 170, valueGetter: (value) => value ? new Date(value) : null, valueFormatter: format})),
-        ...['latitude', 'longitude', 'altitude'].map((field) => ({field, type: 'number', width: field === 'altitude' ? 90 : 105,
+        ...['latitude', 'longitude', 'altitude'].map((field) => ({field, type: 'number', width: 90,
             headerName: t(`packet_map.column_headers.${field}`, {defaultValue: {latitude: 'Lat', longitude: 'Lon', altitude: 'Alt (m)'}[field]}),
             description: t(`packet_map.${field}`, {defaultValue: {latitude: 'Latitude', longitude: 'Longitude', altitude: 'Altitude (m)'}[field]}),
-            valueFormatter: (value) => value == null ? '' : value.toLocaleString(timeSettings.locale, {
+            valueFormatter: (value) => value == null ? '' : `${value.toLocaleString(timeSettings.locale, {
                 minimumFractionDigits: field === 'altitude' ? 0 : 6, maximumFractionDigits: field === 'altitude' ? 2 : 6,
-            })})),
+            })}${field === 'altitude' ? ' m' : '°'}`})),
         ...fields.filter((path) => !excludedDetails.has(path)).map((path) => {
             const example = data.find((row) => row.fields[path] != null);
             const value = example.fields[path];
             const label = detailLabel(path, example.field_info);
-            return {field: `info:${path}`, headerName: label, description: label,
-                width: typeof value === 'number' ? 120 : typeof value === 'boolean' ? 80 : 150,
+            const compact = compactDetails[path];
+            return {field: `info:${path}`,
+                headerName: compact ? t(`packet_map.column_headers.${compact.key}`, {defaultValue: compact.label}) : label,
+                description: label,
+                width: compact?.width ?? (typeof value === 'number' ? 120 : typeof value === 'boolean' ? 80 : 150),
                 type: typeof value === 'number' ? 'number' : typeof value === 'boolean' ? 'boolean' : 'string',
-                valueGetter: (_value, row) => row.fields[path] ?? null};
+                valueGetter: (_value, row) => row.fields[path] ?? null,
+                // Format only the display so sorting and filtering still use
+                // numeric telemetry, including zero and negative climb rates.
+                ...(compact?.unit && {valueFormatter: (value) => Number.isFinite(value)
+                    ? `${value.toLocaleString(timeSettings.locale, {maximumFractionDigits: compact.digits})}${compact.unit === '°' ? '' : ' '}${compact.unit}`
+                    : value ?? ''}),
+            };
         }),
-    ], [data, fields, t, timeSettings.timezone, timeSettings.locale, onSelectTransmitter]);
+    ], [data, fields, t, aircraftT, timeSettings.timezone, timeSettings.locale, onSelectTransmitter]);
     const visibility = Object.fromEntries(fields.map((path) => [`info:${path}`, visibleDetails.has(path)]));
 
     return <Box sx={{height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column'}}>
@@ -94,14 +139,22 @@ export default function TransmitterTable({rows, loading, hiddenTypes, gridEditab
                 initialState={{pagination: {paginationModel: {pageSize: 25}}, sorting: {sortModel: [{field: 'first_seen', sort: 'desc'}]}}}
                 columnVisibilityModel={{...visibility, ...columnVisibility}}
                 onColumnVisibilityModelChange={(model) => dispatch(setTransmitterTableColumnVisibility(model))}
-                getRowClassName={({row}) => hiddenTypes.includes(row.kind) ? 'transmitter-hidden' : ''}
+                getRowClassName={({row}) => [hiddenTypes.includes(row.kind) ? 'transmitter-hidden' : '',
+                    row.emergencyStatus ? `transmitter-emergency-${row.emergencyStatus.severity}` : ''].filter(Boolean).join(' ')}
                 slots={{toolbar: GridTableToolbar}}
                 slotProps={{toolbar: {container: toolbarContainer}, basePagination: {ActionsComponent: GridPaginationActions},
                     loadingOverlay: {variant: 'linear-progress', noRowsVariant: 'linear-progress'}}}
-                sx={{border: 0, borderRadius: 0, '& .MuiDataGrid-row': {cursor: 'pointer'}, '& .transmitter-hidden': {opacity: 0.55},
+                sx={(theme) => ({border: 0, borderRadius: 0, '& .MuiDataGrid-row': {cursor: 'pointer'}, '& .transmitter-hidden': {opacity: 0.55},
+                    // Keep selection and hover visible within the emergency tint.
+                    ...Object.fromEntries(['error', 'warning'].map((severity) => [`& .transmitter-emergency-${severity}`, {
+                        bgcolor: alpha(theme.palette[severity].main, 0.1),
+                        '&:hover': {bgcolor: alpha(theme.palette[severity].main, 0.16)},
+                        '&.Mui-selected': {bgcolor: alpha(theme.palette[severity].main, 0.2)},
+                        '&.Mui-selected:hover': {bgcolor: alpha(theme.palette[severity].main, 0.26)},
+                    }])),
                     '& .MuiDataGrid-columnHeader, & .MuiDataGrid-cell': {px: 0.75},
                     '& .MuiDataGrid-columnHeaderTitle': {fontSize: '0.75rem', fontWeight: 600, lineHeight: 1.2, letterSpacing: 0},
-                    '& .MuiDataGrid-cell:focus, & .MuiDataGrid-cell:focus-within': {outline: 'none'}}} />
+                    '& .MuiDataGrid-cell:focus, & .MuiDataGrid-cell:focus-within': {outline: 'none'}})} />
         </Box>
     </Box>;
 }
