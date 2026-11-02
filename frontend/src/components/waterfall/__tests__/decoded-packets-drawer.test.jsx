@@ -12,6 +12,54 @@ const packet = (timestamp) => ({
 });
 
 describe('mapOutputsToRows', () => {
+    const meshtastic = (values = {}, status = 'decoded') => ({
+        ...packet(1), decoder_type: 'lora', output: {
+            satellite: {norad_id: 12345, name: 'Locked satellite'},
+            telemetry: {parser_id: 'meshtastic', payload_status: status,
+                headers: {meshtastic: {source: '!bd5029dc', destination: 'Broadcast'}},
+                telemetry: {source: '!bd5029dc', values},
+            },
+        },
+    });
+
+    it.each([
+        [{long_name: ' Sv2tca-1 ', short_name: '29dc'}, 'Sv2tca-1'],
+        [{long_name: ' ', short_name: '29dc'}, '29dc'],
+        [{message: 'Hello mesh'}, '!bd5029dc'],
+        [{long_name: '', short_name: ''}, '!bd5029dc'],
+    ])('uses the Meshtastic sender name or node address for From: %j', (values, sender) => {
+        expect(mapOutputsToRows([meshtastic(values)])[0]).toMatchObject({
+            from: sender, to: 'Broadcast', fromIsSatelliteHint: false, fromSatelliteNoradId: null,
+        });
+    });
+
+    it.each(['unsupported', 'malformed'])('keeps the Meshtastic header address for %s payloads', (status) => {
+        expect(mapOutputsToRows([meshtastic({long_name: 'Unusable name'}, status)])[0]).toMatchObject({
+            from: '!bd5029dc', fromIsSatelliteHint: false,
+        });
+    });
+
+    it('can read a Meshtastic sender from normalized records without legacy telemetry', () => {
+        const output = meshtastic();
+        delete output.output.telemetry.telemetry;
+        delete output.output.telemetry.headers;
+        output.output.telemetry.payload = {records: [{source: '!bd5029dc', destination: 'Broadcast',
+            groups: [{values: {long_name: 'SV2TCA'}}],
+        }]};
+        expect(mapOutputsToRows([output])[0]).toMatchObject({from: 'SV2TCA', to: 'Broadcast'});
+        output.output.telemetry.payload.records[0].groups = [];
+        expect(mapOutputsToRows([output])[0].from).toBe('!bd5029dc');
+    });
+
+    it('retains a decoded callsign and does not infer a Meshtastic name from satellite payloads', () => {
+        const output = meshtastic({long_name: 'Mesh name'});
+        output.output.callsigns = {from: 'SV2TEST', to: 'GROUND'};
+        expect(mapOutputsToRows([output])[0]).toMatchObject({from: 'SV2TEST', to: 'GROUND'});
+        delete output.output.callsigns;
+        output.output.telemetry.parser_id = 'tianqi';
+        expect(mapOutputsToRows([output])[0]).toMatchObject({from: '(Locked satellite)', fromIsSatelliteHint: true});
+    });
+
     it('keeps the newest live packets when history exceeds the visible limit', () => {
         // The decoder store is newest-first, matching decoderOutputReceived.
         const newestFirstOutputs = Array.from({ length: 100 }, (_, index) => packet(100 - index));

@@ -28,6 +28,7 @@ from .aprsparser import APRSParser
 from .ax25parser import AX25Parser
 from .ccsdsparser import CCSDSParser
 from .cspparser import CSPParser
+from .meshtastic import MeshtasticParser
 from .parsers.geoscan import GeoscanParser
 from .parsers.registry import register_builtin_payload_parsers
 from .radiosonde import RadiosondeParser
@@ -42,6 +43,7 @@ class TelemetryParser:
         self.aprs_parser = APRSParser()
         self.csp_parser = CSPParser()
         self.ccsds_parser = CCSDSParser()
+        self.meshtastic_parser = MeshtasticParser()
         self.payload_parsers: dict[tuple[Any, ...], Any] = {}
         self.lora_parsers: dict[str, Any] = {}
         register_builtin_payload_parsers(self)
@@ -134,6 +136,14 @@ class TelemetryParser:
                 if sat_key.startswith(prefix):
                     payload_parser = self.lora_parsers[prefix]
                     break
+            if payload_parser is None:
+                # Recognize public channel payloads conservatively; the radio
+                # sync word also identifies encrypted Meshtastic envelopes.
+                mesh = self.meshtastic_parser.parse(
+                    packet, expected=options.get("lora_sync_word") == 0x2B
+                )
+                if mesh is not None:
+                    return mesh
         elif protocol == "radiosonde":
             payload_parser = RadiosondeParser()
             parse_kwargs = {"report": options.get("decoder_report")}

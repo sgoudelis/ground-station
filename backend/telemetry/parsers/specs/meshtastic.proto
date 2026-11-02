@@ -1,0 +1,181 @@
+// Copyright (c) Meshtastic contributors; GPL-3.0-only.
+// Wire-compatible subset of https://github.com/meshtastic/protobufs/tree/master/meshtastic
+// Retain upstream field numbers/types. Unknown fields remain in the recorded packet.
+syntax = "proto3";
+package groundstation.meshtastic;
+
+message Position {
+  optional sfixed32 latitude_i = 1;
+  optional sfixed32 longitude_i = 2;
+  optional int32 altitude = 3;
+  fixed32 time = 4;
+  enum LocSource {
+    LOC_UNSET = 0;
+    LOC_MANUAL = 1;
+    LOC_INTERNAL = 2;
+    LOC_EXTERNAL = 3;
+  }
+  LocSource location_source = 5;
+  enum AltSource {
+    ALT_UNSET = 0;
+    ALT_MANUAL = 1;
+    ALT_INTERNAL = 2;
+    ALT_EXTERNAL = 3;
+    ALT_BAROMETRIC = 4;
+  }
+  AltSource altitude_source = 6;
+  fixed32 timestamp = 7;
+  int32 timestamp_millis_adjust = 8;
+  optional sint32 altitude_hae = 9;
+  optional sint32 altitude_geoidal_separation = 10;
+  uint32 PDOP = 11;
+  uint32 HDOP = 12;
+  uint32 VDOP = 13;
+  uint32 gps_accuracy = 14;
+  optional uint32 ground_speed = 15;
+  optional uint32 ground_track = 16;
+  uint32 fix_quality = 17;
+  uint32 fix_type = 18;
+  uint32 sats_in_view = 19;
+  uint32 sensor_id = 20;
+  uint32 next_update = 21;
+  uint32 seq_number = 22;
+  uint32 precision_bits = 23;
+}
+
+message User {
+  string id = 1;
+  string long_name = 2;
+  string short_name = 3;
+  bytes macaddr = 4 [deprecated = true];
+  uint32 hw_model = 5;
+  bool is_licensed = 6;
+  uint32 role = 7;
+  bytes public_key = 8;
+  optional bool is_unmessagable = 9;
+}
+
+message Data {
+  uint32 portnum = 1;
+  bytes payload = 2;
+  bool want_response = 3;
+  fixed32 dest = 4;
+  fixed32 source = 5;
+  fixed32 request_id = 6;
+  fixed32 reply_id = 7;
+  fixed32 emoji = 8;
+  optional uint32 bitfield = 9;
+  bytes xeddsa_signature = 10;
+}
+
+message DeviceMetrics {
+  optional uint32 battery_level = 1;
+  optional float voltage = 2;
+  optional float channel_utilization = 3;
+  optional float air_util_tx = 4;
+  optional uint32 uptime_seconds = 5;
+}
+
+message EnvironmentMetrics {
+  optional float temperature = 1;
+  optional float relative_humidity = 2;
+  optional float barometric_pressure = 3;
+  optional float gas_resistance = 4;
+  optional float voltage = 5;
+  optional float current = 6;
+  optional uint32 iaq = 7;
+  optional float distance = 8;
+  optional float lux = 9;
+  optional float white_lux = 10;
+  optional float ir_lux = 11;
+  optional float uv_lux = 12;
+  optional uint32 wind_direction = 13;
+  optional float wind_speed = 14;
+  optional float weight = 15;
+  optional float wind_gust = 16;
+  optional float wind_lull = 17;
+  optional float radiation = 18;
+  optional float rainfall_1h = 19;
+  optional float rainfall_24h = 20;
+  optional uint32 soil_moisture = 21;
+  optional float soil_temperature = 22;
+  repeated float one_wire_temperature = 23 [deprecated = true];
+  optional float adc_voltage_ch0 = 24;
+  optional float adc_voltage_ch1 = 25;
+  optional float adc_voltage_ch2 = 26;
+  optional float adc_voltage_ch3 = 27;
+  optional float adc_voltage_ch4 = 28;
+  optional float adc_voltage_ch5 = 29;
+  optional float adc_voltage_ch6 = 30;
+  optional float adc_voltage_ch7 = 31;
+  optional float one_wire_temperature_ch0 = 32;
+  optional float one_wire_temperature_ch1 = 33;
+  optional float one_wire_temperature_ch2 = 34;
+  optional float one_wire_temperature_ch3 = 35;
+  optional float one_wire_temperature_ch4 = 36;
+  optional float one_wire_temperature_ch5 = 37;
+  optional float one_wire_temperature_ch6 = 38;
+  optional float one_wire_temperature_ch7 = 39;
+  optional uint32 lightning_strike_count_1h = 40;
+  optional float lightning_distance_km = 41;
+  reserved 42 to 56;
+  reserved "soil_ph", "ph", "electrical_conductivity", "salinity", "nitrogen", "phosphorus", "potassium", "dissolved_oxygen", "orp", "chemical_oxygen_demand", "turbidity", "nitrate", "ammonium", "biochemical_oxygen_demand", "solar_irradiance";
+}
+
+message PowerMetrics {
+  optional float ch1_voltage = 1;
+  optional float ch1_current = 2;
+  optional float ch2_voltage = 3;
+  optional float ch2_current = 4;
+  optional float ch3_voltage = 5;
+  optional float ch3_current = 6;
+  optional float ch4_voltage = 7 [deprecated = true];
+  optional float ch4_current = 8 [deprecated = true];
+  optional float ch5_voltage = 9 [deprecated = true];
+  optional float ch5_current = 10 [deprecated = true];
+  optional float ch6_voltage = 11 [deprecated = true];
+  optional float ch6_current = 12 [deprecated = true];
+  optional float ch7_voltage = 13 [deprecated = true];
+  optional float ch7_current = 14 [deprecated = true];
+  optional float ch8_voltage = 15 [deprecated = true];
+  optional float ch8_current = 16 [deprecated = true];
+}
+
+message AirQualityMetrics {
+  optional uint32 pm10_standard = 1;
+  optional uint32 pm25_standard = 2;
+  optional uint32 pm100_standard = 3;
+  optional uint32 pm10_environmental = 4;
+  optional uint32 pm25_environmental = 5;
+  optional uint32 pm100_environmental = 6;
+  optional uint32 particles_03um = 7;
+  optional uint32 particles_05um = 8;
+  optional uint32 particles_10um = 9;
+  optional uint32 particles_25um = 10;
+  optional uint32 particles_50um = 11;
+  optional uint32 particles_100um = 12;
+  optional uint32 co2 = 13;
+  optional float co2_temperature = 14;
+  optional float co2_humidity = 15;
+  optional float form_formaldehyde = 16;
+  optional float form_humidity = 17;
+  optional float form_temperature = 18;
+  optional uint32 pm40_standard = 19;
+  optional uint32 particles_40um = 20;
+  optional float pm_temperature = 21;
+  optional float pm_humidity = 22;
+  optional float pm_voc_idx = 23;
+  optional float pm_nox_idx = 24;
+  optional float particles_tps = 25;
+  optional uint32 pm_status_flags = 26;
+}
+
+message Telemetry {
+  fixed32 time = 1;
+  oneof variant {
+    DeviceMetrics device_metrics = 2;
+    EnvironmentMetrics environment_metrics = 3;
+    AirQualityMetrics air_quality_metrics = 4;
+    PowerMetrics power_metrics = 5;
+  }
+}

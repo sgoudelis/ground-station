@@ -68,6 +68,60 @@ beforeEach(() => {
     recentFixtures();
 });
 
+it('loads Meshtastic positions into the map page and refreshes new captures in LIVE', async () => {
+    const {default: realUsePacketPositions} = await vi.importActual('../use-packet-positions.js');
+    usePacketPositions.mockImplementation(realUsePacketPositions);
+    vi.useFakeTimers();
+    try {
+        vi.setSystemTime(new Date('2026-11-02T21:35:00Z'));
+        const point = {id: 'mesh-fix', transmitter_id: 'meshtastic:!2008e299', kind: 'meshtastic',
+            name: '!2008e299', source: '!2008e299', latitude: 40.6585344, longitude: 22.9376,
+            altitude: 32, captured_at: '2026-11-02T21:33:32Z'};
+        fixture.positions = [point];
+        fixture.transmitters = [{...point, id: point.transmitter_id, packet_count: 1,
+            details: {telemetry: {sats_in_view: 12}},
+            field_info: {sats_in_view: {label: 'Satellites in view'}},
+        }];
+        const handlers = new Map();
+        fixture.socket = {connected: true,
+            on: vi.fn((event, handler) => handlers.set(event, handler)),
+            off: vi.fn(), timeout: () => fixture.socket,
+            emit: vi.fn((_event, request, reply) => {
+                if (request.cmd === 'filebrowser.positions') reply(null, {success: true,
+                    data: {positions: fixture.positions, transmitters: fixture.transmitters},
+                });
+            }),
+        };
+        const {unmount} = render(<Provider store={createStore()}><ThemeProvider theme={createTheme()}>
+            <PacketMapLayout />
+        </ThemeProvider></Provider>);
+        await act(async () => {});
+        expect(mapRender.mock.lastCall[0].positions).toEqual([point]);
+        expect(tableRender.mock.lastCall[0].rows[0]).toMatchObject({id: point.transmitter_id, kind: 'meshtastic'});
+        act(() => mapRender.mock.lastCall[0].onSelectTransmitter(point.transmitter_id));
+        const details = screen.getByRole('region', {name: 'Transmitter info'});
+        expect(details).toHaveTextContent('!2008e299');
+        expect(details).toHaveTextContent('Satellites in view');
+
+        const next = {...point, id: 'new-fix', latitude: 40.66, captured_at: '2026-11-02T21:35:01Z'};
+        fixture.positions = [point, next];
+        fixture.transmitters = [{...fixture.transmitters[0], latitude: next.latitude, packet_count: 2}];
+        await act(async () => {
+            handlers.get('library.changed')({changes: [{operation: 'added', id: 'decoded:new.bin', item: {type: 'decoded'}}]});
+            vi.advanceTimersByTime(750);
+        });
+        expect(mapRender.mock.lastCall[0].positions).toEqual([point, next]);
+        expect(tableRender.mock.lastCall[0].rows[0].packet_count).toBe(2);
+        act(() => mapRender.mock.lastCall[0].onHiddenTypesChange(['meshtastic']));
+        expect(mapRender.mock.lastCall[0].positions).toEqual([]);
+        act(() => mapRender.mock.lastCall[0].onHiddenTypesChange([]));
+        expect(mapRender.mock.lastCall[0].positions).toEqual([point, next]);
+        unmount();
+    } finally {
+        vi.useRealTimers();
+    }
+});
+
 it('shows live aircraft beside saved radiosondes and updates positions without reloading history', async () => {
     const {default: realUseAircraft} = await vi.importActual('../../decoders/use-aircraft.js');
     const {default: realUsePacketPositions} = await vi.importActual('../use-packet-positions.js');

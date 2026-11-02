@@ -60,6 +60,46 @@ def packet_positions(metadata: dict[str, Any], item_id: str, captured_at: str) -
                     {},
                 )
             )
+        elif telemetry.get("parser_id") == "meshtastic":
+            mesh = telemetry.get("telemetry") or {}
+            records = payload.get("records") or []
+            mesh_values: dict[str, Any] = {}
+            mesh_field_info: dict[str, Any] = {}
+            for record in records:
+                for group in record.get("groups", []):
+                    mesh_values.update(group.get("values") or {})
+                    mesh_field_info.update(group.get("field_info") or {})
+            # Read normalized records too, so map indexing does not depend on
+            # retaining the duplicate legacy telemetry fields.
+            mesh_values.update(mesh.get("values") or {})
+            mesh_field_info.update(mesh.get("field_info") or {})
+            position = mesh.get("position") or {
+                "latitude": mesh_values.get("latitude"),
+                "longitude": mesh_values.get("longitude"),
+                "altitude_meters": mesh_values.get("altitude"),
+            }
+            frame = (telemetry.get("headers") or {}).get("meshtastic") or {}
+            source = frame.get("source") or mesh.get("source")
+            if not source and records:
+                source = records[0].get("source")
+            if telemetry.get("payload_status") == "decoded" and source:
+                readings.append(
+                    (
+                        "meshtastic",
+                        source,
+                        source,
+                        source,
+                        position.get("latitude"),
+                        position.get("longitude"),
+                        position.get("altitude_meters"),
+                        {
+                            **context,
+                            "telemetry": mesh_values,
+                            "frame": frame,
+                        },
+                        mesh_field_info,
+                    )
+                )
         elif (
             telemetry.get("parser_id") == "radiosonde_rs"
             or (metadata.get("decoder") or {}).get("type") == "radiosonde"

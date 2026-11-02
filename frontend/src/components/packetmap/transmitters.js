@@ -4,6 +4,7 @@ export const TRANSMITTER_TYPES = {
     adsb: {label: 'ADS-B', color: '#66bb6a'},
     aprs: {label: 'APRS', color: '#29b6f6'},
     radiosonde: {label: 'Radiosonde', color: '#ff9800'},
+    meshtastic: {label: 'Meshtastic', color: '#ab47bc'},
 };
 
 export const typeLabel = (kind) => TRANSMITTER_TYPES[kind]?.label || kind;

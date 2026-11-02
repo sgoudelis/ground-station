@@ -147,6 +147,7 @@ export default function TelemetryViewerDialog({ open, onClose, file, metadata, s
     const ax25 = displayedMetadata.ax25 || {};
     const isAprs = telemetry.schema_version === 1 && telemetry.payload?.kind === 'aprs';
     const isRadiosonde = telemetry.schema_version === 1 && telemetry.parser_id === 'radiosonde_rs';
+    const isMeshtastic = telemetry.schema_version === 1 && telemetry.parser_id === 'meshtastic';
     const inspectionPacket = {...packet, hex: byteSource === 'payload'
         ? telemetry.raw?.payload_hex || '' : packet.hex || telemetry.raw?.packet_hex || ''};
 
@@ -203,7 +204,7 @@ export default function TelemetryViewerDialog({ open, onClose, file, metadata, s
                     sx={{ px: 2 }}
                 >
                     <Tab label={t('telemetry_viewer_dialog.overview', { defaultValue: 'Overview' })} id="telemetry-tab-0" aria-controls="telemetry-tabpanel-0" />
-                    <Tab label={isAprs ? 'APRS' : 'Telemetry'} id="telemetry-tab-1" aria-controls="telemetry-tabpanel-1" />
+                    <Tab label={isAprs ? 'APRS' : isMeshtastic ? 'Meshtastic' : 'Telemetry'} id="telemetry-tab-1" aria-controls="telemetry-tabpanel-1" />
                     <Tab label={t('telemetry_viewer_dialog.hex_ascii', { defaultValue: 'Hex + ASCII' })} id="telemetry-tab-2" aria-controls="telemetry-tabpanel-2" />
                     <Tab label={t('telemetry_viewer_dialog.as_float32', { defaultValue: 'As Float32' })} id="telemetry-tab-3" aria-controls="telemetry-tabpanel-3" />
                     <Tab label={t('telemetry_viewer_dialog.as_integers', { defaultValue: 'As Integers' })} id="telemetry-tab-4" aria-controls="telemetry-tabpanel-4" />

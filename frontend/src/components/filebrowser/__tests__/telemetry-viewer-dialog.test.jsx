@@ -31,6 +31,20 @@ const connection = () => {
 const respond = (socket, index, data) => act(() => socket.emit.mock.calls[index][2](null, {success: true, data}));
 
 describe('Packet dialog routing and byte selection', () => {
+    it('opens Meshtastic telemetry and preserves the explanation for encrypted packets', () => {
+        const metadata = {telemetry: {schema_version: 1, parser_id: 'meshtastic',
+            payload_status: 'unsupported', payload: {kind: 'telemetry', records: [{id: '0',
+                warning: 'Encrypted payload; the public default channel key could not decode it.',
+                groups: [{id: 'mesh', title: 'Mesh', values: {source: '!8b19c28c'},
+                    field_info: {source: {label: 'Source'}}}],
+            }]}}};
+        render(<TelemetryViewerDialog open onClose={() => {}} file={file} metadata={metadata} />);
+        fireEvent.click(screen.getByRole('tab', {name: 'Meshtastic'}));
+        expect(screen.getByRole('alert')).toHaveTextContent('Encrypted payload');
+        expect(screen.getByText('!8b19c28c')).toBeInTheDocument();
+        expect(screen.queryByText(/^Position of/)).not.toBeInTheDocument();
+    });
+
     it('routes APRS by the parsed content, regardless of decoder type', () => {
         render(<TelemetryViewerDialog open onClose={() => {}} file={file}
             metadata={{...fixtures.legacy.aprs, decoder: {type: 'fsk'}}} />);

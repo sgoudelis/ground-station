@@ -168,17 +168,31 @@ export const mapOutputsToRows = (outputs, rowLimit = DEFAULT_DRAWER_ROW_LIMIT) =
             const noradId = output.output.callsigns?.identified_norad_id || output.output.satellite?.norad_id;
             const satelliteName = output.output.callsigns?.identified_satellite || output.output.satellite?.name || '-';
 
-            const decodedFrom = output.output.callsigns?.from;
+            const telemetry = output.output.telemetry;
+            const mesh = telemetry?.parser_id === 'meshtastic' ? telemetry : null;
+            // Node info carries a human-readable name. Other applications,
+            // including encrypted packets, still identify the sender by node ID.
+            const meshValues = Object.assign({}, ...(mesh?.payload?.records || [])
+                .flatMap(record => (record.groups || []).map(group => group.values)),
+                mesh?.telemetry?.values);
+            const meshName = mesh?.payload_status === 'decoded'
+                ? [meshValues.long_name, meshValues.short_name].find(value => typeof value === 'string' && value.trim())?.trim()
+                : null;
+            const meshSource = mesh?.headers?.meshtastic?.source || mesh?.telemetry?.source
+                || mesh?.payload?.records?.[0]?.source;
+            const decodedFrom = output.output.callsigns?.from || meshName || meshSource;
             // Radiosondes identify the sender by serial in the normalized telemetry.
             const sondeSerial = output.decoder_type === 'radiosonde'
                 ? output.output.telemetry?.payload?.records?.[0]?.groups?.find(group => group.values?.id)?.values.id
                 : null;
-            // A LoRa payload has no callsign. Show the satellite associated with
-            // the locked transmitter as a hint, rather than a decoded identity.
+            // Satellite LoRa payloads may lack a sender. Retain the locked
+            // satellite hint only when no identity was decoded from the packet.
             const lockedSatelliteName = output.output.satellite?.name?.trim();
             const fromCallsign = isImage ? '-'
                 : (decodedFrom || sondeSerial || (isLora && lockedSatelliteName ? `(${lockedSatelliteName})` : '-'));
-            const toCallsign = isImage ? '-' : (output.output.callsigns?.to || '-');
+            const toCallsign = isImage ? '-' : (output.output.callsigns?.to
+                || mesh?.headers?.meshtastic?.destination || mesh?.telemetry?.destination
+                || mesh?.payload?.records?.[0]?.destination || '-');
             const fromIsSatelliteHint = Boolean(isLora && !decodedFrom && lockedSatelliteName);
             const fromSatelliteNoradId = fromIsSatelliteHint
                 ? output.output.satellite?.norad_id

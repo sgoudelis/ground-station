@@ -19,6 +19,7 @@ class ParseContext:
     # External codecs may accumulate calibration across many radio frames.
     # Keep their report so a single saved frame can be interpreted independently.
     decoder_report: dict[str, Any] | None = None
+    lora_sync_word: int | None = None
 
     def __post_init__(self):
         if not isinstance(self.protocol, str) or self.protocol not in PROTOCOLS:
@@ -41,11 +42,19 @@ class ParseContext:
             self.protocol != "radiosonde" or not isinstance(self.decoder_report, dict)
         ):
             raise ValueError("Invalid external decoder report")
+        if self.lora_sync_word is not None and (
+            self.protocol != "lora"
+            or type(self.lora_sync_word) is not int
+            or not 0 <= self.lora_sync_word <= 255
+        ):
+            raise ValueError("Invalid LoRa network sync word")
 
     def to_dict(self) -> dict[str, Any]:
         result = asdict(self)
         if self.decoder_report is None:
             result.pop("decoder_report")
+        if self.lora_sync_word is None:
+            result.pop("lora_sync_word")
         return result
 
     def packet_bytes(self, original: bytes) -> bytes:
@@ -57,15 +66,22 @@ class ParseContext:
 
     @classmethod
     def from_metadata(cls, metadata: dict[str, Any]) -> "ParseContext":
+        config = metadata.get("decoder_config") or {}
+        sync = config.get("sync_word") if isinstance(config, dict) else None
+        sync_byte = sync[0] if isinstance(sync, list) and len(sync) == 1 else None
         if "parse_context" in metadata:
             saved = metadata["parse_context"]
             if not isinstance(saved, dict):
                 raise ValueError("Invalid saved parsing context")
+            # Captures made before Meshtastic support retain their radio
+            # profile even when the saved application context lacks this hint.
+            saved = dict(saved)
+            if saved.get("protocol") == "lora" and "lora_sync_word" not in saved:
+                saved["lora_sync_word"] = sync_byte
             try:
                 return cls(**saved)
             except TypeError as exc:
                 raise ValueError("Invalid saved parsing context") from exc
-        config = metadata.get("decoder_config") or {}
         previous = metadata.get("telemetry") or {}
         decoder = metadata.get("decoder") or {}
         satellite = metadata.get("satellite") or {}
@@ -98,4 +114,5 @@ class ParseContext:
             or geoscan.get("frame_size"),
             csp_version=version,
             hdlc_flags=candidate == "ax25" and (framing in AX25_FRAMINGS or framing is None),
+            lora_sync_word=sync_byte if candidate == "lora" else None,
         )

@@ -75,6 +75,7 @@ dependencies = [
     "passlib>=1.7.4",
     "Pillow>=13.0.0",
     "propcache>=0.3.1",
+    "protobuf>=6.33.6,<8",
     "pycparser>=2.22",
     "pydantic>=2.12.5",
     "pydantic_core>=2.41.5",
@@ -199,7 +200,13 @@ exclude = [
     "^tests/",
 ]
 explicit_package_bases = true
-mypy_path = "."
+# Keep module names consistent when pre-commit runs from the repository root.
+mypy_path = "$MYPY_CONFIG_FILE_DIR"
+
+[[tool.mypy.overrides]]
+module = "telemetry.parsers.gen.meshtastic"
+# Protoc builds message classes dynamically from the serialized descriptor.
+follow_imports = "skip"
 
 [[tool.mypy.overrides]]
 module = [

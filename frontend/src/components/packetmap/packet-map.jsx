@@ -4,7 +4,7 @@ import React, {useEffect, useMemo, useRef, useState} from 'react';
 import {Alert, Box, Typography} from '@mui/material';
 import {alpha} from '@mui/material/styles';
 import {Icon, svg} from 'leaflet';
-import {CircleMarker, MapContainer, Marker, Pane, Polyline, TileLayer, useMap} from 'react-leaflet';
+import {CircleMarker, MapContainer, Marker, Pane, Polyline, TileLayer, Tooltip, useMap} from 'react-leaflet';
 import {useSelector} from 'react-redux';
 import {useTranslation} from 'react-i18next';
 import 'leaflet/dist/leaflet.css';
@@ -347,7 +347,9 @@ export default function PacketMap({positions, transmitters, hasPositions = posit
                             icon={current.icon} eventHandlers={{click: () => onSelectTransmitter?.(id)}}
                         /> : <CircleMarker key="cursor" center={[current.point.latitude, current.point.longitude]} radius={5.985}
                             eventHandlers={{click: () => onSelectTransmitter?.(id)}}
-                            pathOptions={{color: cursorColor, fillColor: cursorColor, fillOpacity: 0.85, weight: 2}} />)}
+                            pathOptions={{color: cursorColor, fillColor: cursorColor, fillOpacity: 0.85, weight: 2}}>
+                            <Tooltip>{current.point.name || current.point.source}</Tooltip>
+                        </CircleMarker>)}
                     </React.Fragment>;
                 })}
             </MapContainer>

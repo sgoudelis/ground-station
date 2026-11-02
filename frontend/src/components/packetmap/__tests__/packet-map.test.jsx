@@ -95,6 +95,24 @@ beforeEach(() => {
 
 afterEach(() => vi.restoreAllMocks());
 
+it('plots Meshtastic location packets with a node label and selects their transmitter', () => {
+    const store = configureStore({reducer: () => ({location: {location: null}})});
+    const point = {id: 'mesh-fix', transmitter_id: 'meshtastic:!2008e299', kind: 'meshtastic',
+        name: '!2008e299', source: '!2008e299', latitude: 40.6585344, longitude: 22.9376,
+        altitude: 32, captured_at: '2026-11-02T21:33:32Z'};
+    const onSelectTransmitter = vi.fn();
+    render(<Provider store={store}><ThemeProvider theme={createTheme()}>
+        <PacketMap positions={[point]} playbackTime={Date.parse(point.captured_at) + 1000}
+            loading={false} onSelectTransmitter={onSelectTransmitter} />
+    </ThemeProvider></Provider>);
+    const marker = screen.getByTestId('position');
+    expect(marker).toHaveAttribute('data-center', '[40.6585344,22.9376]');
+    expect(marker).toHaveAttribute('data-color', '#ab47bc');
+    expect(within(marker).getByTestId('map-tooltip')).toHaveTextContent('!2008e299');
+    fireEvent.click(marker);
+    expect(onSelectTransmitter).toHaveBeenCalledWith('meshtastic:!2008e299');
+});
+
 it('shows a named aircraft pointing along its track, selects it and marks an old fix stale', () => {
     const store = configureStore({reducer: () => ({location: {location: null}})});
     const received = Date.parse('2026-11-01T18:15:00Z');

@@ -7,6 +7,7 @@ import {configureStore} from '@reduxjs/toolkit';
 import {createTheme, ThemeProvider} from '@mui/material/styles';
 import RadiosondeTab from '../telemetry-radiosonde-tab.jsx';
 import APRSTab from '../telemetry-aprs-tab.jsx';
+import TelemetryValuesTab from '../telemetry-values-tab.jsx';
 
 const {map} = vi.hoisted(() => ({map: {invalidateSize: vi.fn(), fitBounds: vi.fn()}}));
 beforeEach(() => vi.clearAllMocks());
@@ -50,6 +51,25 @@ function metadata(readings = {}) {
 }
 
 describe('Packet position maps', () => {
+    it('shows a Meshtastic node position with its telemetry and receiver', () => {
+        renderView(<TelemetryValuesTab telemetry={{schema_version: 1, parser_id: 'meshtastic',
+            payload_status: 'decoded', telemetry: {source: '!2008e299', position: {
+                latitude: 40.6585344, longitude: 22.9376, altitude_meters: 32,
+            }}, payload: {kind: 'telemetry', records: [{id: '0', title: 'Meshtastic Position',
+                groups: [{id: 'position', title: 'Position', values: {sats_in_view: 12},
+                    field_info: {sats_in_view: {label: 'Satellites in view'}}}],
+            }]}}} />);
+        expect(screen.getByTestId('sonde')).toHaveTextContent('!2008e299');
+        expect(screen.getByTestId('sonde')).toHaveAttribute('data-position', '[40.6585344,22.9376]');
+        expect(screen.getByRole('switch', {name: 'Enable Meshtastic map zoom gestures'})).toBeInTheDocument();
+        expect(screen.getByText('Satellites in view')).toBeInTheDocument();
+        expect(screen.getByText('12')).toBeInTheDocument();
+        expect(screen.getByRole('link', {name: 'Open map'})).toHaveAttribute('href',
+            'https://www.openstreetmap.org/?mlat=40.6585344&mlon=22.9376#map=15/40.6585344/22.9376');
+        expect(screen.getByTestId('receiver')).toHaveAttribute('data-position', '[40.6,22.9]');
+        expect(screen.getByTestId('path')).toHaveAttribute('data-positions', '[[40.6,22.9],[40.6585344,22.9376]]');
+    });
+
     it('fits the radiosonde and receiver, retaining measurements and an external map link', async () => {
         renderView(<RadiosondeTab metadata={metadata()} />);
         expect(screen.getByText('Radiosonde Position')).toBeInTheDocument();
