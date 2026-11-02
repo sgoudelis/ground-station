@@ -128,13 +128,13 @@ describe('Transmitter information', () => {
     it('shows every decoded field, metadata, labels and units without losing zero or false values', () => {
         render(<TransmitterInfo transmitter={transmitter} selectedTransmitterId={transmitter.id} />, {wrapper});
         const info = screen.getByRole('region', {name: 'Transmitter info'});
-        expect(screen.queryByRole('region', {name: 'Flight instruments'})).not.toBeInTheDocument();
+        expect(screen.getByRole('region', {name: 'Flight instruments'})).toBeInTheDocument();
         expect(info).toHaveTextContent('TEST');
         expect(info).toHaveTextContent('radiosonde:RS41:TEST');
         expect(info).toHaveTextContent('Radiosonde');
         const position = within(screen.getByRole('region', {name: 'Latest position'}));
         expect(position.getByText('40.123456')).toBeInTheDocument();
-        expect(position.getByText('0')).toBeInTheDocument();
+        expect(screen.getByRole('region', {name: 'Altitude'})).toHaveTextContent('0m');
         const reception = screen.getByRole('region', {name: 'Reception'});
         expect(reception).toHaveTextContent('Receiver A');
         expect(reception).toHaveTextContent('42');
@@ -151,6 +151,65 @@ describe('Transmitter information', () => {
         expect(additional).toHaveTextContent('Custom · Calibration');
         expect(additional).toHaveTextContent('complete');
         expect(additional).toHaveTextContent('["A","B"]');
+    });
+
+    it('gives radiosondes metric flight gauges and visible environmental telemetry without duplicate flight fields', () => {
+        const sonde = {...transmitter, altitude: 24560, details: {telemetry: {
+            alt: 24560, vel_h: 12.5, vel_v: 5.2, heading: 80, temp: -48, humidity: 22,
+        }}};
+        const playbackTime = Date.parse(sonde.captured_at);
+        const {container, rerender} = render(<TransmitterInfo transmitter={sonde} isLive playbackTime={playbackTime} />, {wrapper});
+        const gauges = within(screen.getByRole('region', {name: 'Flight instruments'}));
+        expect(gauges.getByRole('region', {name: 'Horizontal speed'})).toHaveTextContent('12.5m/s');
+        expect(gauges.getByRole('region', {name: 'Altitude'})).toHaveTextContent('24,560m');
+        expect(gauges.getByRole('region', {name: 'Altitude'})).toHaveTextContent('Reported altitude');
+        expect(gauges.getByRole('region', {name: 'Heading'})).toHaveTextContent('080°');
+        expect(gauges.getByRole('region', {name: 'Vertical speed'})).toHaveTextContent('+5.2m/s');
+        expect(gauges.getByText('Climbing')).toBeInTheDocument();
+        expect(gauges.queryByText('Squawk')).not.toBeInTheDocument();
+        expect(screen.queryByRole('region', {name: 'Aircraft details'})).not.toBeInTheDocument();
+        expect(container.querySelector('img[alt=""]')).toHaveAttribute('src', expect.stringContaining('balloon.png'));
+        const telemetry = screen.getByRole('region', {name: 'Telemetry'});
+        expect(telemetry).toHaveTextContent('-48');
+        expect(telemetry).toHaveTextContent('22');
+        expect(telemetry).not.toHaveTextContent('Vel H');
+        expect(telemetry).not.toHaveTextContent('24560');
+        expect(telemetry.closest('details')).toBeNull();
+        expect(screen.getByRole('region', {name: 'Latest position'})).not.toHaveTextContent('Altitude');
+        fireEvent.click(gauges.getByRole('button', {name: 'Use aviation units'}));
+        expect(gauges.getByRole('region', {name: 'Horizontal speed'})).toHaveTextContent('24kt');
+        expect(gauges.getByRole('region', {name: 'Vertical speed'})).toHaveTextContent('+1,024ft/min');
+        expect(within(gauges.getByRole('region', {name: 'Vertical speed'})).getByText('+0.5k')).toBeInTheDocument();
+        rerender(<TransmitterInfo transmitter={{...sonde, details: {telemetry: {vel_v: -8}}}} isLive playbackTime={playbackTime} />);
+        expect(screen.getByRole('region', {name: 'Flight instruments'})).toHaveTextContent('Descending');
+        expect(container.querySelector('img[alt=""]')).toHaveAttribute('src', expect.stringContaining('parachute.png'));
+    });
+
+    it('preserves radiosonde zero readings, shows missing gauges honestly and honors a saved unit preference', () => {
+        localStorage.setItem(aircraftUnitsStoreName, JSON.stringify('aviation'));
+        const sonde = {...transmitter, details: {telemetry: {vel_h: 0, vel_v: 0, heading: 0}}};
+        const {rerender, container} = render(<TransmitterInfo transmitter={sonde} />, {wrapper});
+        expect(screen.getByRole('region', {name: 'Horizontal speed'})).toHaveTextContent('0kt');
+        expect(screen.getByRole('region', {name: 'Vertical speed'})).toHaveTextContent('0ft/min');
+        expect(screen.getByRole('region', {name: 'Heading'})).toHaveTextContent('000°');
+        expect(screen.getByRole('region', {name: 'Altitude'})).toHaveTextContent('0ft');
+        expect(screen.getByRole('region', {name: 'Flight instruments'})).toHaveTextContent('Level flight');
+        rerender(<TransmitterInfo transmitter={{...sonde, altitude: null, details: {}}} />);
+        for (const name of ['Horizontal speed', 'Altitude', 'Heading', 'Vertical speed']) {
+            expect(screen.getByRole('region', {name})).toHaveTextContent('—');
+        }
+        expect(container.querySelector('.flight-compass-pointer')).toBeNull();
+        expect(container.innerHTML).not.toMatch(/NaN|Infinity/);
+    });
+
+    it('initializes the appropriate units when switching between aircraft and radiosondes, and leaves APRS unchanged', () => {
+        const {rerender} = render(<TransmitterInfo transmitter={{...transmitter, kind: 'adsb'}} />, {wrapper});
+        expect(screen.getByRole('button', {name: 'Use metric units'})).toBeInTheDocument();
+        rerender(<TransmitterInfo transmitter={transmitter} />);
+        expect(screen.getByRole('button', {name: 'Use aviation units'})).toBeInTheDocument();
+        rerender(<TransmitterInfo transmitter={{...transmitter, kind: 'aprs'}} />);
+        expect(screen.queryByRole('region', {name: 'Flight instruments'})).not.toBeInTheDocument();
+        expect(screen.getByRole('region', {name: 'Latest position'})).toHaveTextContent('Altitude (m)');
     });
 
     it('updates the selected data and clears it while another window is loading or empty', () => {

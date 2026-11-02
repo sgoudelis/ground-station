@@ -32,9 +32,9 @@ describe('APRS station symbols', () => {
         expect(getAprsSymbol(position('d', '>'))).toMatchObject({label: 'Vehicle', overlay: '3'});
     });
 
-    it('reuses the weather balloon marker, including the descent phase', () => {
+    it.each([false, true])('reuses the weather balloon marker, including descent and selection: %s', (selected) => {
         for (const phase of ['ascending', 'descending', 'unknown']) {
-            const options = {name: 'BALLOON', altitude: 12000, phase};
+            const options = {name: 'BALLOON', altitude: 12000, phase, selected};
             expect(createAprsIcon({...options, position: position('/', 'O')}).options)
                 .toEqual(createRadiosondeIcon(options).options);
         }

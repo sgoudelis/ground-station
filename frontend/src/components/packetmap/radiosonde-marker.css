@@ -36,7 +36,6 @@
     bottom: calc(50% + var(--sonde-lift));
     width: 100%;
     height: 100%;
-    filter: drop-shadow(0 0 2px rgb(0 0 0 / 56%)) drop-shadow(0 2px 4px rgb(0 0 0 / 45.5%));
 }
 
 .packet-radiosonde-symbol img {
@@ -44,6 +43,34 @@
     width: 100%;
     height: 100%;
     object-fit: contain;
+    filter: drop-shadow(0 0 2px rgb(0 0 0 / 56%)) drop-shadow(0 2px 4px rgb(0 0 0 / 45.5%));
+}
+
+.packet-radiosonde-crosshair {
+    position: absolute;
+    /* Follow the raised symbol rather than its ground anchor, at either size. */
+    left: -12px;
+    bottom: calc(50% + var(--sonde-lift) - 12px);
+    width: calc(100% + 24px);
+    height: calc(100% + 24px);
+    filter: drop-shadow(0 0 1px #000);
+    pointer-events: none;
+}
+
+.packet-radiosonde-selected .packet-radiosonde-label {
+    /* Leave a gap above the reticle's upper tick. */
+    bottom: calc(150% + var(--sonde-lift) + 16px);
+}
+
+.packet-marker-stale .packet-radiosonde-symbol,
+.packet-marker-stale .packet-radiosonde-label {
+    /* Fade received data without dimming the selection frame. */
+    filter: grayscale(1);
+    opacity: 0.65;
+}
+
+.packet-marker-stale .packet-radiosonde-shadow {
+    opacity: calc(var(--sonde-shadow-opacity) * 0.65);
 }
 
 .packet-radiosonde-label {

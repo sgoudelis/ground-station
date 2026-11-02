@@ -1,7 +1,7 @@
 /** Copyright (c) 2026 Efstratios Goudelis — GPL-3.0-or-later */
 
-.aircraft-flight-panel {
-    container: aircraft-flight / inline-size;
+.flight-panel {
+    container: flight-instruments / inline-size;
     color: var(--flight-text);
     margin-bottom: 18px;
 }
@@ -38,7 +38,7 @@
 
 /* Grid islands can be narrower than the viewport. Keep values readable when
    there is no longer room for useful instrument scales. */
-@container aircraft-flight (max-width: 280px) {
+@container flight-instruments (max-width: 280px) {
     .flight-face svg { display: none; }
     .flight-face { margin: 10px 0; }
     .flight-digital, .flight-altitude .flight-digital, .flight-track .flight-digital { position: static; border: 0; padding: 0; background: none; }
@@ -46,7 +46,7 @@
     .flight-instrument-label { font-size: 8px; }
     .flight-instrument { padding: 9px 7px; }
 }
-@container aircraft-flight (max-width: 190px) {
+@container flight-instruments (max-width: 190px) {
     .flight-grid { grid-template-columns: 1fr; }
     .flight-status-row { flex-wrap: wrap; }
 }

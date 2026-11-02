@@ -37,12 +37,39 @@ describe('Radiosonde shadow anchoring', () => {
     it('anchors both flight symbols at the shadow and opens popups above the raised icon', () => {
         const ascending = createRadiosondeIcon({phase: 'ascending', altitude: 0, name: 'S'});
         const descending = createRadiosondeIcon({phase: 'descending', altitude: 35000, name: 'S'});
-        expect(ascending.options.iconAnchor).toEqual([32.4, 32.4]);
-        expect(descending.options.iconAnchor).toEqual(ascending.options.iconAnchor);
+        expect(ascending.options.iconSize).toEqual([58.32, 58.32]);
+        expect(ascending.options.iconSize[0]).toBeCloseTo(64.8 * 0.9);
+        expect(ascending.options.iconAnchor).toEqual([29.16, 29.16]);
+        expect(descending.options.iconSize).toEqual([64.8, 64.8]);
+        expect(descending.options.iconAnchor).toEqual([32.4, 32.4]);
+        expect(ascending.options.shadowAnchor).toEqual(ascending.options.iconAnchor);
         expect(descending.options.popupAnchor[1]).toBeLessThan(ascending.options.popupAnchor[1]);
         expect(descending.options.html).not.toBe(ascending.options.html);
         expect(descending.options.shadowAnchor).toEqual(descending.options.iconAnchor);
         expect(descending.createIcon().querySelector('.packet-radiosonde-shadow')).toBeNull();
         expect(descending.createShadow().querySelector('.packet-radiosonde-shadow')).not.toBeNull();
+    });
+
+    it('keeps selection around the flight symbol through descent, staleness and deselection without marking its shadow', () => {
+        const options = {phase: 'ascending', altitude: 12000, name: 'BALLOON'};
+        const initial = createRadiosondeIcon(options).createIcon();
+        expect(initial.querySelector('.packet-radiosonde-crosshair')).toBeNull();
+        const ascending = createRadiosondeIcon({...options, selected: true});
+        const marker = ascending.createIcon(initial);
+        expect(marker).toBe(initial);
+        expect(marker.querySelector('.packet-radiosonde-crosshair')).toHaveAttribute('viewBox', '0 0 82.32 82.32');
+        expect(marker.querySelector('.packet-radiosonde-selected')).not.toBeNull();
+        // The frame must not inherit the image's stale filters or ground-shadow styling.
+        expect(marker.querySelector('.packet-radiosonde-symbol svg')).toBeNull();
+        expect(ascending.createShadow().querySelector('.packet-radiosonde-crosshair')).toBeNull();
+        const descending = createRadiosondeIcon({...options, phase: 'descending', selected: true, stale: true});
+        descending.createIcon(marker);
+        expect(marker).toHaveClass('packet-marker-stale');
+        expect(marker.querySelectorAll('.packet-radiosonde-crosshair')).toHaveLength(1);
+        expect(marker.querySelector('.packet-radiosonde-crosshair')).toHaveAttribute('viewBox', '0 0 88.8 88.8');
+        expect(marker.querySelector('img').src).toContain('parachute.png');
+        createRadiosondeIcon(options).createIcon(marker);
+        expect(marker.querySelector('.packet-radiosonde-crosshair')).toBeNull();
+        expect(marker.querySelector('.packet-radiosonde-selected')).toBeNull();
     });
 });

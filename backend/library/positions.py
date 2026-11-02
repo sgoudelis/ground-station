@@ -136,6 +136,15 @@ def packet_positions(metadata: dict[str, Any], item_id: str, captured_at: str) -
                     symbol_table=position.get("symbol_table"),
                     symbol_code=position.get("symbol_code"),
                 )
+            elif kind == "radiosonde":
+                # Flight gauges need each fix's readings during playback, not
+                # the latest packet's speeds and heading from transmitter details.
+                report = details["telemetry"]
+                point.update(
+                    groundspeed_mps=_number(report.get("vel_h")),
+                    vertical_rate_mps=_number(report.get("vel_v")),
+                    track_deg=_number(report.get("heading")),
+                )
             points.append(point)
         return points
     except (ValueError, TypeError, AttributeError, KeyError):

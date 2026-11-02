@@ -109,6 +109,15 @@ def test_transmitter_rows_include_latest_measurements_without_repeating_details_
     assert row["details"]["signal"]["signal_power_dbfs"] == -70
     assert row["field_info"]["temp"]["unit"] == "°C"
     assert all("details" not in point and "_details" not in point for point in result["positions"])
+    # Preserve the readings on each fix so playback gauges cannot borrow
+    # the latest packet's speed or heading for an earlier position.
+    fixes = [point for point in result["positions"] if point["kind"] == "radiosonde"]
+    assert fixes[0]["groundspeed_mps"] is None
+    assert fixes[0]["vertical_rate_mps"] is None
+    assert fixes[0]["track_deg"] is None
+    assert fixes[1]["groundspeed_mps"] == 12
+    assert fixes[1]["vertical_rate_mps"] == 5
+    assert fixes[1]["track_deg"] == 80
     restricted = inventory.query_positions("2026-11-01T00:00:00Z", "2026-11-01T01:00:00Z")
     assert restricted["transmitters"][0]["packet_count"] == 1
     assert restricted["transmitters"][0]["details"]["telemetry"]["temp"] == -12

@@ -153,6 +153,29 @@ it('scrubs the aircraft instruments, position and reported emergency together wi
     expect(screen.getByRole('region', {name: 'Flight instruments'})).not.toHaveTextContent('Stale');
 });
 
+it('scrubs radiosonde gauges and altitude with the selected map position', () => {
+    const first = {id: 'first', transmitter_id: 'radiosonde:RS41:TEST', kind: 'radiosonde', name: 'TEST',
+        latitude: 40, longitude: 23, altitude: 20000, groundspeed_mps: 12, vertical_rate_mps: 5,
+        track_deg: 80, captured_at: '2026-11-01T11:58:00Z'};
+    const last = {...first, id: 'last', altitude: 20600, latitude: 41, groundspeed_mps: 25,
+        vertical_rate_mps: -8, track_deg: 100, captured_at: '2026-11-01T12:00:00Z'};
+    fixture.positions = [first, last];
+    fixture.transmitters = [{...last, id: last.transmitter_id,
+        details: {telemetry: {alt: 20600, vel_h: 25, vel_v: -8, heading: 100, temp: -48}}}];
+    render(<Provider store={createStore(historyRange)}><ThemeProvider theme={createTheme()}><PacketMapLayout /></ThemeProvider></Provider>);
+    act(() => tableRender.mock.lastCall[0].onSelectTransmitter(first.transmitter_id));
+    expect(screen.getByRole('region', {name: 'Horizontal speed'})).toHaveTextContent('25.0m/s');
+    const cursor = Date.parse('2026-11-01T11:58:30Z');
+    fireEvent.change(screen.getByRole('slider', {name: 'Playback time'}), {target: {value: cursor}});
+    expect(mapRender.mock.lastCall[0].playbackTime).toBe(cursor);
+    expect(screen.getByRole('region', {name: 'Horizontal speed'})).toHaveTextContent('12.0m/s');
+    expect(screen.getByRole('region', {name: 'Vertical speed'})).toHaveTextContent('+5.0m/s');
+    expect(screen.getByRole('region', {name: 'Altitude'})).toHaveTextContent('20,150m');
+    expect(screen.getByRole('region', {name: 'Heading'})).toHaveTextContent('080°');
+    expect(screen.getByRole('region', {name: 'Playback position'})).toHaveTextContent(/40\.\d+/);
+    expect(screen.getByRole('region', {name: 'Latest telemetry'})).toHaveTextContent('-48');
+});
+
 it('advances the live clock without incoming packets and stops the timer in history', () => {
     vi.useFakeTimers();
     try {

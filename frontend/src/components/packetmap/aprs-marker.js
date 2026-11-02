@@ -90,7 +90,7 @@ export function getAprsSymbol(position) {
     return {label, image, overlay, balloon: label === 'Balloon'};
 }
 
-export function createAprsIcon({position, report, phase, altitude, name, stale = false}) {
+export function createAprsIcon({position, report, phase, altitude, name, stale = false, selected = false}) {
     let symbol = getAprsSymbol(position);
     // A packet's category can identify a pin when its symbol is unknown.
     // Recognized per-fix symbols still take precedence during playback.
@@ -101,7 +101,7 @@ export function createAprsIcon({position, report, phase, altitude, name, stale =
     }
     // Unclassified positions retain the map's generic APRS circle.
     if (!symbol) return null;
-    if (symbol.balloon) return createRadiosondeIcon({phase, altitude, name, stale});
+    if (symbol.balloon) return createRadiosondeIcon({phase, altitude, name, stale, selected});
 
     // Received station names are untrusted text, never HTML.
     const label = document.createElement('span');

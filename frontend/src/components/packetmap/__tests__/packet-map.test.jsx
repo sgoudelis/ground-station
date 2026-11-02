@@ -425,6 +425,7 @@ it('renders the selected transmitter path without a start marker, legends or pop
     expect(screen.getAllByTestId('position').map((marker) => JSON.parse(marker.dataset.center)))
         .toEqual([[41, 24]]);
     expect(screen.getByTestId('sonde-marker')).toHaveAttribute('data-center', '[42,25]');
+    expect(screen.getByTestId('sonde-marker').dataset.iconHtml).not.toContain('packet-radiosonde-crosshair');
     const path = JSON.parse(screen.getByTestId('track').dataset.positions);
     expect(path.length).toBeGreaterThan(3);
     expect(path[0]).toEqual([40, 23]);
@@ -568,6 +569,7 @@ it('scrubs sonde symbols and historical flight phases while following the marker
     const initialRadius = Number(screen.getAllByTestId('visibility-circle')[0].dataset.radius);
     expect(screen.getAllByTestId('visibility-circle').map((circle) => circle.dataset.center)).toEqual([ascendingPosition, ascendingPosition]);
     expect(screen.getByTestId('sonde-marker').dataset.iconHtml).toContain('data-flight-phase="ascending"');
+    expect(screen.getByTestId('sonde-marker').dataset.iconHtml).toContain('packet-radiosonde-crosshair');
     expect(screen.getByTestId('sonde-marker')).not.toHaveAttribute('title');
     expect(within(screen.getByTestId('sonde-marker')).queryByTestId('map-tooltip')).not.toBeInTheDocument();
     expect(screen.getByTestId('sonde-marker')).toBeEmptyDOMElement();
@@ -577,6 +579,7 @@ it('scrubs sonde symbols and historical flight phases while following the marker
     map.setView.mockClear();
     rerender(element('2026-11-01T00:01:30Z'));
     expect(screen.getByTestId('sonde-marker').dataset.iconHtml).toContain('data-flight-phase="descending"');
+    expect(screen.getByTestId('sonde-marker').dataset.iconHtml).toContain('packet-radiosonde-crosshair');
     expect(screen.getByTestId('sonde-marker').dataset.center).not.toBe(ascendingPosition);
     expect(screen.getByTestId('track')).toHaveAttribute('data-positions', track);
     expect(map.fitBounds).not.toHaveBeenCalled();
@@ -675,6 +678,7 @@ it('reuses the weather balloon and parachute for APRS balloons and follows their
     const {rerender} = render(element('2026-11-01T00:00:30Z'));
     expect(screen.getByTestId('sonde-marker').dataset.iconHtml).toContain('data-flight-phase="ascending"');
     expect(screen.getByTestId('sonde-marker').dataset.iconHtml).toContain('balloon.png');
+    expect(screen.getByTestId('sonde-marker').dataset.iconHtml).toContain('packet-radiosonde-crosshair');
     expect(screen.getByTestId('sonde-marker')).toBeEmptyDOMElement();
     expect(map.fitBounds).not.toHaveBeenCalled();
     expect(map.setView).toHaveBeenLastCalledWith(JSON.parse(screen.getByTestId('sonde-marker').dataset.center), 8, {animate: false});
@@ -682,6 +686,7 @@ it('reuses the weather balloon and parachute for APRS balloons and follows their
     rerender(element('2026-11-01T00:01:30Z'));
     expect(screen.getByTestId('sonde-marker').dataset.iconHtml).toContain('data-flight-phase="descending"');
     expect(screen.getByTestId('sonde-marker').dataset.iconHtml).toContain('parachute.png');
+    expect(screen.getByTestId('sonde-marker').dataset.iconHtml).toContain('packet-radiosonde-crosshair');
 });
 
 it('remembers hidden and enabled transmitter columns when fields disappear and the table remounts', () => {

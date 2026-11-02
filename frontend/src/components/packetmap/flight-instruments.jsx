@@ -27,7 +27,7 @@ function ArcGauge({fraction, labels}) {
             const point = polar(160 + index * 220 / (labels.length - 1), 66);
             return <text key={index} x={point.x} y={point.y + 3} textAnchor="middle" className="flight-mark">{label}</text>;
         })}
-        {/* The scale is a reference, not an aircraft-specific operating limit. */}
+        {/* The scale is a reference, not a vehicle-specific operating limit. */}
         {fraction !== null && <g className="flight-pointer">
             <Tick angle={160 + Math.max(0, Math.min(1, fraction)) * 220} inner={43} outer={56} />
         </g>}
@@ -86,18 +86,23 @@ function Instrument({label, value, unit, note, variant = '', children}) {
 export default function FlightInstruments({flight, locale, formatTime}) {
     const {t} = useTranslation('navigation');
     const label = (key, fallback, options = {}) => t(`packet_map.flight.${key}`, {defaultValue: fallback, ...options});
-    const [units, setUnits] = useState(() => readStored(aircraftUnitsStoreName) === 'metric' ? 'metric' : 'aviation');
+    const radiosonde = flight.kind === 'radiosonde';
+    const [units, setUnits] = useState(() => {
+        const saved = readStored(aircraftUnitsStoreName);
+        return saved === 'metric' || saved === 'aviation' ? saved : radiosonde ? 'metric' : 'aviation';
+    });
     const metric = units === 'metric';
     const format = (value, digits = 0) => Number.isFinite(value)
         ? value.toLocaleString(locale, {minimumFractionDigits: digits, maximumFractionDigits: digits}) : '—';
     const speed = flight.groundSpeed === null ? null : flight.groundSpeed * (metric ? 1 : 1 / 0.5144444444);
     const altitude = flight.altitude === null ? null : flight.altitude * (metric ? 1 : 1 / 0.3048);
     const vertical = flight.verticalSpeed === null ? null : flight.verticalSpeed * (metric ? 1 : 1 / 0.00508);
-    // Expand reference scales for fast aircraft and large rates without clipping the readout.
-    const speedStep = metric ? 50 : 100;
-    const speedMax = Math.max(metric ? 300 : 600, Math.ceil((speed ?? 0) / (speedStep * 6)) * speedStep * 6);
-    const verticalStep = metric ? 5 : 1000;
-    const verticalMax = Math.max(metric ? 15 : 3000, Math.ceil(Math.abs(vertical ?? 0) / (verticalStep * 3)) * verticalStep * 3);
+    // Balloon speeds need a smaller reference scale. Expand either scale for
+    // strong winds or fast descents without clipping the readout.
+    const speedStep = radiosonde ? (metric ? 5 : 10) : (metric ? 50 : 100);
+    const speedMax = Math.max(speedStep * 6, Math.ceil((speed ?? 0) / (speedStep * 6)) * speedStep * 6);
+    const verticalStep = radiosonde ? (metric ? 2 : 500) : (metric ? 5 : 1000);
+    const verticalMax = Math.max(verticalStep * 3, Math.ceil(Math.abs(vertical ?? 0) / (verticalStep * 3)) * verticalStep * 3);
     const phase = flight.onGround ? label('ground', 'On ground') : flight.phase === 'climb' ? label('climbing', 'Climbing')
         : flight.phase === 'descent' ? label('descending', 'Descending') : flight.phase === 'level' ? label('level', 'Level flight')
             : label('unknown', 'Flight state unavailable');
@@ -113,7 +118,8 @@ export default function FlightInstruments({flight, locale, formatTime}) {
     const altitudeNote = flight.onGround ? label('ground_reported', 'Ground status · reported') : flight.altitude === null
         ? label('no_altitude', 'No altitude reported') : flight.altitudeSource === 'barometric'
             ? label('pressure_reported', 'Pressure altitude · reported') : flight.altitudeSource === 'geometric'
-                ? label('geometric_reported', 'Geometric altitude · reported') : label('source_unknown', 'Altitude source unspecified');
+                ? label('geometric_reported', 'Geometric altitude · reported') : flight.altitudeSource === 'reported'
+                    ? label('altitude_reported', 'Reported altitude') : label('source_unknown', 'Altitude source unspecified');
     const toggleUnits = () => {
         const next = metric ? 'aviation' : 'metric';
         setUnits(next);
@@ -121,7 +127,7 @@ export default function FlightInstruments({flight, locale, formatTime}) {
     };
 
     return <Box component="section" aria-label={label('instruments', 'Flight instruments')}
-        className={`aircraft-flight-panel${flight.stale ? ' flight-stale' : ''}`}
+        className={`flight-panel${flight.stale ? ' flight-stale' : ''}`}
         sx={(theme) => ({
             '--flight-text': theme.palette.text.primary,
             '--flight-muted': theme.palette.text.secondary,
@@ -149,8 +155,11 @@ export default function FlightInstruments({flight, locale, formatTime}) {
             {flight.historical && <span>{label('recorded', 'Recorded')} · </span>}{ageLabel}
         </div>
         <div className="flight-grid">
-            <Instrument label={label('ground_speed', 'Ground speed')} value={format(speed, metric ? 1 : 0)} unit={metric ? 'm/s' : 'kt'}
-                note={flight.groundSpeed === null ? label('no_speed', 'No ground speed reported') : label('ground_speed_note', 'GS · over the ground')}>
+            <Instrument label={radiosonde ? label('horizontal_speed', 'Horizontal speed') : label('ground_speed', 'Ground speed')}
+                value={format(speed, metric ? 1 : 0)} unit={metric ? 'm/s' : 'kt'}
+                note={flight.groundSpeed === null ? radiosonde ? label('no_horizontal_speed', 'No horizontal speed reported')
+                    : label('no_speed', 'No ground speed reported') : radiosonde ? label('horizontal_speed_note', 'Horizontal · reported')
+                    : label('ground_speed_note', 'GS · over the ground')}>
                 <ArcGauge fraction={speed === null ? null : speed / speedMax}
                     labels={Array.from({length: 7}, (_, index) => format(index * speedMax / 6))} />
             </Instrument>
@@ -158,9 +167,10 @@ export default function FlightInstruments({flight, locale, formatTime}) {
                 note={altitudeNote} variant="flight-altitude">
                 <AltitudeTape altitude={flight.onGround ? null : altitude} metric={metric} format={format} />
             </Instrument>
-            <Instrument label={label('ground_track', 'Ground track')}
+            <Instrument label={radiosonde ? label('heading', 'Heading') : label('ground_track', 'Ground track')}
                 value={flight.track === null ? '—' : `${format(Math.round(flight.track) % 360).padStart(3, '0')}°`}
-                note={direction ? `${label('true', 'TRUE')} · ${direction}` : label('no_track', 'No track reported')} variant="flight-track">
+                note={direction ? radiosonde ? `${label('reported', 'Reported')} · ${direction}` : `${label('true', 'TRUE')} · ${direction}`
+                    : radiosonde ? label('no_heading', 'No heading reported') : label('no_track', 'No track reported')} variant="flight-track">
                 <TrackCompass track={flight.track} />
             </Instrument>
             <Instrument label={label('vertical_speed', 'Vertical speed')}
@@ -171,16 +181,19 @@ export default function FlightInstruments({flight, locale, formatTime}) {
                 <ArcGauge fraction={vertical === null ? null : (vertical + verticalMax) / (2 * verticalMax)}
                     labels={Array.from({length: 7}, (_, index) => {
                         const value = (index - 3) * verticalMax / 3;
-                        return `${value > 0 ? '+' : ''}${format(metric ? value : value / 1000)}${metric || value === 0 ? '' : 'k'}`;
+                        // Balloon scales include 500 ft/min ticks; retain the
+                        // decimal so adjacent half-thousand ticks stay distinct.
+                        const digits = !metric && value % 1000 !== 0 ? 1 : 0;
+                        return `${value > 0 ? '+' : ''}${format(metric ? value : value / 1000, digits)}${metric || value === 0 ? '' : 'k'}`;
                     })} />
             </Instrument>
         </div>
-        <dl className="flight-secondary">
+        {!radiosonde && <dl className="flight-secondary">
             <div><dt>{label('squawk', 'Squawk')}</dt><dd>{flight.squawk ?? '—'}</dd></div>
             {flight.geometric !== null && (flight.onGround || flight.altitudeSource === 'barometric') && <div>
                 <dt>{label('geometric_altitude', 'Geometric altitude')}</dt>
                 <dd>{format(flight.geometric * (metric ? 1 : 1 / 0.3048))} {metric ? 'm' : 'ft'}</dd>
             </div>}
-        </dl>
+        </dl>}
     </Box>;
 }

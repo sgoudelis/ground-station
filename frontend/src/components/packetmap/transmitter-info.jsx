@@ -21,7 +21,10 @@ import {renderAircraftSymbol, selectAircraftShape} from './aircraft-symbol.js';
 import {aircraftEmergency, aircraftEmergencyLabel} from '../../utils/aircraft-emergency.js';
 import FlightInstruments from './flight-instruments.jsx';
 import {aircraftFlightAt, FLIGHT_TELEMETRY_FIELDS} from './aircraft-flight.js';
+import {radiosondeFlightAt, SONDE_FLIGHT_TELEMETRY_FIELDS} from './radiosonde-flight.js';
 import {buildPlaybackTrack} from './playback.js';
+import balloon from './icons/balloon.png';
+import parachute from './icons/parachute.png';
 
 function InfoSection({title, icon: Icon, fields}) {
     const titleId = useId();
@@ -54,13 +57,14 @@ export default function TransmitterInfo({transmitter, selectedTransmitterId = nu
     // Source is the ICAO address for both saved and live aircraft records.
     const country = transmitter?.kind === 'adsb' ? aircraftCountry(transmitter.source) : null;
     const aircraft = transmitter?.aircraft ?? transmitter?.details?.telemetry?.aircraft;
-    const selectedTrack = useMemo(() => transmitter?.kind === 'adsb' && positions
+    const selectedTrack = useMemo(() => ['adsb', 'radiosonde'].includes(transmitter?.kind) && positions
         ? buildPlaybackTrack(positions.filter((point) => point.transmitter_id === transmitter.id)) : null,
     [positions, transmitter?.kind, transmitter?.id]);
     const flight = useMemo(() => transmitter?.kind === 'adsb'
-        ? aircraftFlightAt(transmitter, selectedTrack, playbackTime, isLive) : null,
+        ? aircraftFlightAt(transmitter, selectedTrack, playbackTime, isLive) : transmitter?.kind === 'radiosonde'
+            ? radiosondeFlightAt(transmitter, selectedTrack, playbackTime, isLive) : null,
     [transmitter, selectedTrack, playbackTime, isLive]);
-    const emergency = aircraftEmergency(flight ? flight.report : transmitter);
+    const emergency = transmitter?.kind === 'adsb' ? aircraftEmergency(flight.report) : null;
     const displayedPosition = flight?.historical ? flight.position : transmitter;
     // Share the map's model selection and artwork, displayed upright without
     // its map-only heading, label or ground shadow.
@@ -78,6 +82,8 @@ export default function TransmitterInfo({transmitter, selectedTransmitterId = nu
             // The cockpit owns these fields; retain all other decoded data below.
             if (transmitter?.kind === 'adsb' && path.startsWith('telemetry.')
                 && FLIGHT_TELEMETRY_FIELDS.has(path.slice('telemetry.'.length))) continue;
+            if (transmitter?.kind === 'radiosonde' && path.startsWith('telemetry.')
+                && SONDE_FLIGHT_TELEMETRY_FIELDS.has(path.slice('telemetry.'.length))) continue;
             const [group, ...parts] = path.split('.');
             if (!grouped.has(group)) grouped.set(group, []);
             grouped.get(group).push({
@@ -88,6 +94,8 @@ export default function TransmitterInfo({transmitter, selectedTransmitterId = nu
         }
         return [...grouped];
     }, [transmitter]);
+    const sondeTelemetry = transmitter?.kind === 'radiosonde' ? groups.find(([group]) => group === 'telemetry')?.[1] : null;
+    const remainingGroups = sondeTelemetry ? groups.filter(([group]) => group !== 'telemetry') : groups;
     const groupNames = {
         telemetry: label('info.telemetry', 'Telemetry'),
         signal: label('info.signal', 'Signal'),
@@ -118,19 +126,24 @@ export default function TransmitterInfo({transmitter, selectedTransmitterId = nu
                 {aircraftSymbol && <Box aria-hidden="true"
                     sx={{width: 44, height: 44, flexShrink: 0, '& > svg': {display: 'block', width: '100%', height: '100%'}}}
                     dangerouslySetInnerHTML={{__html: aircraftSymbol}} />}
+                {transmitter.kind === 'radiosonde' && <Box component="img" alt="" aria-hidden="true"
+                    src={flight.symbolPhase === 'descending' ? parachute : balloon}
+                    sx={{width: 44, height: 44, objectFit: 'contain', flexShrink: 0}} />}
                 <Box sx={{minWidth: 0, flex: 1}}>
-                    <Box sx={{display: 'flex', alignItems: 'center', gap: 1, mb: 0.5}}>
-                        {!aircraftSymbol && <Box sx={{width: 8, height: 8, borderRadius: '50%', bgcolor: typeColor(transmitter.kind), flexShrink: 0}} />}
+                    <Box sx={{display: 'flex', alignItems: 'center', gap: 1, mb: 0.5,
+                        flexWrap: transmitter.kind === 'radiosonde' ? 'wrap' : undefined}}>
+                        {!flight && <Box sx={{width: 8, height: 8, borderRadius: '50%', bgcolor: typeColor(transmitter.kind), flexShrink: 0}} />}
                         {country && <AircraftFlag icao={transmitter.source} />}
-                        <Typography variant={aircraftSymbol ? 'subtitle1' : 'subtitle2'}
-                            sx={{fontWeight: 700, lineHeight: 1.15, overflowWrap: 'anywhere', minWidth: 0, flex: 1}}>
+                        <Typography variant={flight ? 'subtitle1' : 'subtitle2'}
+                            sx={{fontWeight: 700, lineHeight: 1.15, overflowWrap: 'anywhere', minWidth: 0,
+                                flex: transmitter.kind === 'radiosonde' ? '1 1 80px' : 1}}>
                             {transmitter.name}
                         </Typography>
                         <Chip size="small" variant="outlined" label={typeLabel(transmitter.kind)}
                             sx={{height: 20, fontSize: '0.65rem', color: typeColor(transmitter.kind), borderColor: typeColor(transmitter.kind)}} />
                     </Box>
                     <Typography variant="caption" sx={{display: 'block', color: 'text.secondary', overflowWrap: 'anywhere'}}>
-                        {flight ? [transmitter.source, aircraft?.registration, aircraft?.type_code].filter(Boolean).join(' · ')
+                        {aircraftSymbol ? [transmitter.source, aircraft?.registration, aircraft?.type_code].filter(Boolean).join(' · ')
                             : `${label('info.identifier', 'ID')}: ${transmitter.id}`}
                     </Typography>
                 </Box>
@@ -143,8 +156,10 @@ export default function TransmitterInfo({transmitter, selectedTransmitterId = nu
                     </Typography>
                     {aircraftEmergencyLabel(emergency, aircraftT)}
                 </Alert>}
-                {flight && <FlightInstruments flight={flight} locale={timeSettings.locale} formatTime={formatTime} />}
-                {flight && <AircraftDetails aircraft={aircraft} />}
+                {flight && <FlightInstruments key={transmitter.kind} flight={flight} locale={timeSettings.locale} formatTime={formatTime} />}
+                {transmitter.kind === 'adsb' && <AircraftDetails aircraft={aircraft} />}
+                {sondeTelemetry && <InfoSection title={flight.historical ? label('flight.latest_telemetry', 'Latest telemetry')
+                    : groupNames.telemetry} icon={SensorsIcon} fields={sondeTelemetry} />}
                 <InfoSection title={flight?.historical ? label('flight.playback_position', 'Playback position')
                     : label('info.position', 'Latest position')} icon={ExploreIcon} fields={[
                     {label: label('latitude', 'Latitude'), value: formatNumber(displayedPosition?.latitude, 6)},
@@ -161,7 +176,7 @@ export default function TransmitterInfo({transmitter, selectedTransmitterId = nu
                     {label: label('latest_file', 'Latest file'), value: transmitter.file_id, wide: true},
                 ]} />
                 {/* Include every decoded field and capture context, including unknown parser fields. */}
-                {flight ? <Box component="details" sx={{borderTop: 1, borderColor: 'divider', pt: 1}}>
+                {transmitter.kind === 'adsb' ? <Box component="details" sx={{borderTop: 1, borderColor: 'divider', pt: 1}}>
                     <Typography component="summary" sx={{fontSize: '0.7rem', color: 'text.secondary', cursor: 'pointer', mb: 1.5,
                         '&:focus-visible': {outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 3}}}>
                         {flight.historical ? label('flight.latest_details', 'Latest reception details')
@@ -170,7 +185,7 @@ export default function TransmitterInfo({transmitter, selectedTransmitterId = nu
                     {groups.map(([group, fields]) => <InfoSection key={group}
                         title={groupNames[group] || detailLabel(group)} icon={group === 'telemetry' ? SensorsIcon : SettingsInputAntennaIcon}
                         fields={fields} />)}
-                </Box> : groups.map(([group, fields]) => <InfoSection key={group}
+                </Box> : remainingGroups.map(([group, fields]) => <InfoSection key={group}
                     title={groupNames[group] || detailLabel(group)} icon={group === 'telemetry' ? SensorsIcon : SettingsInputAntennaIcon}
                     fields={fields} />)}
             </Box>
