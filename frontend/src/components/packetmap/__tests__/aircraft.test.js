@@ -20,6 +20,25 @@ it('adds country flags to aircraft labels using ICAO addresses rather than calls
     expect(marker.querySelector('.packet-aircraft-label').textContent).toBe('4d2406');
 });
 
+it('anchors a matching aircraft shadow and updates it when Leaflet replaces the icon', () => {
+    const icon = createAircraftIcon({track: 90, name: 'TEST'});
+    const marker = icon.createIcon();
+    const shadow = icon.createShadow();
+    expect(icon.options.shadowAnchor).toEqual(icon.options.iconAnchor);
+    expect(icon.options.shadowSize).toEqual(icon.options.iconSize);
+    expect(shadow).toHaveAttribute('aria-hidden', 'true');
+    expect(shadow.querySelector('.packet-aircraft-label')).toBeNull();
+    expect(marker.querySelector('.packet-aircraft-shadow')).toBeNull();
+    expect(shadow.querySelector('svg').outerHTML).toBe(marker.querySelector('svg').outerHTML);
+
+    const next = createAircraftIcon({track: 245, stale: true});
+    expect(next.createShadow(shadow)).toBe(shadow);
+    expect(shadow.querySelectorAll('svg')).toHaveLength(1);
+    expect(shadow.querySelector('svg').style.transform).toBe('rotate(245deg)');
+    expect(shadow.querySelector('svg').outerHTML).toBe(next.createIcon().querySelector('svg').outerHTML);
+    expect(shadow).toHaveClass('packet-marker-stale');
+});
+
 it('merges new aircraft fixes without duplicating saved coordinates or changing other protocols', () => {
     const stamp = Date.parse('2026-11-01T12:00:00Z');
     const point = {id: 'saved', kind: 'adsb', transmitter_id: 'adsb:406b90', captured_at: new Date(stamp).toISOString()};
