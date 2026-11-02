@@ -267,7 +267,7 @@ RUN wget -q -O /tmp/sdrplay-api-v3.15.tar.gz \
     ldconfig
 
 # Compile SoapySDRPlay3 against the API-v3.15 ABI installed above.
-ARG SOAPY_SDRPLAY3_COMMIT=6cc31316b730503cee3e30906ff1975175a16400
+ARG SOAPY_SDRPLAY3_COMMIT=48bd8b41072534018de1d74deb3dea5874d9e0e0
 WORKDIR /src
 RUN git clone https://github.com/pothosware/SoapySDRPlay3.git && \
     cd SoapySDRPlay3 && \
