@@ -4,6 +4,7 @@ export const gridLayoutStoreName = 'packet-map-layouts';
 export const mapViewStoreName = 'packet-map-view';
 export const hiddenTypesStoreName = 'packet-map-hidden-types';
 export const mapSettingsStoreName = 'packet-map-settings';
+export const aircraftUnitsStoreName = 'packet-map-aircraft-units';
 
 export const defaultMapSettings = {
     enableMapDragging: false,

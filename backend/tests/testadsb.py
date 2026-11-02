@@ -130,7 +130,13 @@ def test_incremental_index_reads_only_new_complete_records(tmp_path):
 def test_map_history_exposes_airframe_metadata_at_each_fix(tmp_path):
     storage = AdsbStorage(tmp_path / "data/decoded", "rx01")
     first = report()
-    first.update(squawk="7700", emergency="general")
+    first.update(
+        squawk="7700",
+        emergency="general",
+        altitude_geom_m=3100,
+        vertical_rate_mps=6.35,
+        on_ground=False,
+    )
     first["aircraft"] = {
         "type_code": "A320",
         "type_description": "L2J",
@@ -164,6 +170,14 @@ def test_map_history_exposes_airframe_metadata_at_each_fix(tmp_path):
     assert history["positions"][0]["emergency"] == "general"
     assert history["positions"][1]["squawk"] is None
     assert history["positions"][1]["emergency"] is None
+    # Instrument values survive the public response without borrowing the last fix.
+    assert history["positions"][0]["groundspeed_mps"] == first["groundspeed_mps"]
+    assert history["positions"][0]["altitude_baro_m"] == 3048
+    assert history["positions"][0]["altitude_geom_m"] == 3100
+    assert history["positions"][0]["vertical_rate_mps"] == 6.35
+    assert history["positions"][0]["on_ground"] is False
+    assert history["positions"][1]["altitude_geom_m"] is None
+    assert history["positions"][1]["vertical_rate_mps"] is None
 
 
 @pytest.mark.asyncio

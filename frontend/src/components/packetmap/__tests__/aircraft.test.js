@@ -144,7 +144,7 @@ it('merges new aircraft fixes without duplicating saved coordinates or changing 
     const sonde = {id: 'sonde', kind: 'radiosonde'};
     const record = {icao: '406b90', timestamp: stamp / 1000, position_timestamp: stamp / 1000,
         latitude: 40, longitude: 23, altitude_baro_m: 1000, callsign: 'TEST', aircraft: {type_code: 'A320'},
-        squawk: '7700', emergency: 'general'};
+        squawk: '7700', emergency: 'general', groundspeed_mps: 100, vertical_rate_mps: 5, on_ground: false};
     const merged = mergeAircraftHistory([point, sonde], [], {aircraft: [record], positions: [record]},
         {start: '2026-11-01T00:00:00Z', end: null});
     expect(merged.positions).toHaveLength(2);
@@ -152,6 +152,8 @@ it('merges new aircraft fixes without duplicating saved coordinates or changing 
     expect(merged.transmitters[0]).toMatchObject({id: 'adsb:406b90', name: 'TEST', altitude: 1000});
     expect(merged.positions[1].aircraft).toEqual({type_code: 'A320'});
     expect(merged.positions[1]).toMatchObject({squawk: '7700', emergency: 'general'});
+    expect(merged.positions[1]).toMatchObject({groundspeed_mps: 100, vertical_rate_mps: 5,
+        altitude_baro_m: 1000, altitude_geom_m: null, on_ground: false});
     const clear = {...record, squawk: null, emergency: 'none', position_timestamp: stamp / 1000 + 5};
     const updated = mergeAircraftHistory(merged.positions, merged.transmitters, {aircraft: [clear], positions: [clear]},
         {start: '2026-11-01T00:00:00Z', end: null});

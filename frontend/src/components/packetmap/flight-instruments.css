@@ -1,0 +1,52 @@
+/** Copyright (c) 2026 Efstratios Goudelis — GPL-3.0-or-later */
+
+.aircraft-flight-panel {
+    container: aircraft-flight / inline-size;
+    color: var(--flight-text);
+    margin-bottom: 18px;
+}
+.flight-status-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.flight-state { display: flex; align-items: center; gap: 6px; font-size: 10px; font-weight: 650; letter-spacing: .07em; text-transform: uppercase; color: var(--flight-status); }
+.flight-state-dot { width: 5px; height: 5px; flex-shrink: 0; border-radius: 50%; background: currentColor; }
+.flight-age { font-size: 10px; color: var(--flight-muted); margin: 1px 0 12px; }
+.flight-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.flight-instrument { min-width: 0; padding: 10px 9px 9px; border: 1px solid var(--flight-line); border-radius: 7px; background: var(--flight-surface); }
+.flight-instrument-label { margin: 0; color: var(--flight-muted); font-size: 9px; font-weight: 650; line-height: 1.4; letter-spacing: .1em; text-transform: uppercase; }
+.flight-face { position: relative; width: 100%; margin: 5px auto 0; max-width: 190px; }
+.flight-face svg { display: block; width: 100%; height: auto; overflow: visible; }
+.flight-digital { position: absolute; top: 48%; left: 0; right: 0; text-align: center; pointer-events: none; }
+.flight-value { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: clamp(21px, 8.5cqi, 34px); line-height: 1.15; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -.045em; }
+.flight-unit { display: block; font-size: 9px; color: var(--flight-muted); line-height: 1.5; letter-spacing: .08em; text-transform: uppercase; }
+.flight-annotation { min-height: 14px; margin-top: 4px; color: var(--flight-muted); font-size: 9px; line-height: 1.4; text-align: center; overflow-wrap: anywhere; }
+.flight-tick { stroke: var(--flight-line); stroke-width: 1; }
+.flight-axis { stroke: var(--flight-muted); stroke-width: 1; }
+.flight-arc { fill: none; stroke: var(--flight-line); stroke-width: 4; }
+.flight-mark { fill: var(--flight-muted); font: 8px ui-monospace, monospace; }
+.flight-pointer line { stroke: var(--flight-accent); stroke-width: 2; stroke-linecap: round; }
+.flight-accent-fill { fill: var(--flight-accent); }
+.flight-compass-pointer line { stroke: var(--flight-accent); stroke-width: 2; stroke-linecap: round; }
+.flight-compass-pointer circle { fill: var(--flight-accent); }
+.flight-tape { fill: var(--flight-surface); stroke: var(--flight-line); }
+.flight-altitude .flight-digital { top: 37%; right: 25px; padding: 3px 1px; border: 1px solid var(--flight-accent); border-radius: 3px; background: var(--flight-surface); }
+.flight-altitude .flight-value { font-size: clamp(19px, 7.2cqi, 30px); }
+.flight-track .flight-digital { top: auto; bottom: 0; left: 27%; right: 27%; background: var(--flight-surface); border: 1px solid var(--flight-line); border-radius: 3px; }
+.flight-track .flight-value { font-size: 17px; }
+.flight-secondary { margin: 12px 0 0; padding: 10px 0; display: flex; flex-wrap: wrap; gap: 10px 24px; border-top: 1px solid var(--flight-line); border-bottom: 1px solid var(--flight-line); }
+.flight-secondary dt { color: var(--flight-muted); font-size: 9px; letter-spacing: .07em; text-transform: uppercase; }
+.flight-secondary dd { margin: 3px 0 0; font: 13px/1.5 ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+.flight-stale .flight-grid { opacity: .72; }
+
+/* Grid islands can be narrower than the viewport. Keep values readable when
+   there is no longer room for useful instrument scales. */
+@container aircraft-flight (max-width: 280px) {
+    .flight-face svg { display: none; }
+    .flight-face { margin: 10px 0; }
+    .flight-digital, .flight-altitude .flight-digital, .flight-track .flight-digital { position: static; border: 0; padding: 0; background: none; }
+    .flight-value, .flight-altitude .flight-value, .flight-track .flight-value { font-size: clamp(18px, 8cqi, 23px); }
+    .flight-instrument-label { font-size: 8px; }
+    .flight-instrument { padding: 9px 7px; }
+}
+@container aircraft-flight (max-width: 190px) {
+    .flight-grid { grid-template-columns: 1fr; }
+    .flight-status-row { flex-wrap: wrap; }
+}

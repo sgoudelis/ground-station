@@ -81,6 +81,12 @@ def aircraft_position(record, item_id):
             else record.get("altitude_baro_m")
         ),
         "track_deg": record.get("track_deg"),
+        # Keep flight instruments tied to this fix during map playback.
+        "altitude_baro_m": record.get("altitude_baro_m"),
+        "altitude_geom_m": record.get("altitude_geom_m"),
+        "groundspeed_mps": record.get("groundspeed_mps"),
+        "vertical_rate_mps": record.get("vertical_rate_mps"),
+        "on_ground": record.get("on_ground"),
         # Keep each fix's reported status, including explicit clears, for playback.
         "squawk": record.get("squawk"),
         "emergency": record.get("emergency"),

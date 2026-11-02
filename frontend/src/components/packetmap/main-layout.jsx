@@ -125,6 +125,7 @@ export default function PacketMapLayout() {
                 </StyledIslandParentNoScrollbar>
                 <StyledIslandParentNoScrollbar key="transmitter-info">
                     <TransmitterInfo transmitter={selectedTransmitter} selectedTransmitterId={selectedTransmitterId}
+                        positions={positions} playbackTime={currentPlaybackTime} isLive={isLive}
                         loading={loading} gridEditable={gridEditable} onClearSelection={() => setSelectedTransmitterId(null)} />
                 </StyledIslandParentNoScrollbar>
                 <StyledIslandParentNoScrollbar key="transmitters">

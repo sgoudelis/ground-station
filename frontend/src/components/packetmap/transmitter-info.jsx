@@ -19,6 +19,9 @@ import AircraftDetails from '../common/aircraft-details.jsx';
 import {aircraftCountry} from '../../utils/aircraft-country.js';
 import {renderAircraftSymbol, selectAircraftShape} from './aircraft-symbol.js';
 import {aircraftEmergency, aircraftEmergencyLabel} from '../../utils/aircraft-emergency.js';
+import FlightInstruments from './flight-instruments.jsx';
+import {aircraftFlightAt, FLIGHT_TELEMETRY_FIELDS} from './aircraft-flight.js';
+import {buildPlaybackTrack} from './playback.js';
 
 function InfoSection({title, icon: Icon, fields}) {
     const titleId = useId();
@@ -41,7 +44,8 @@ function InfoSection({title, icon: Icon, fields}) {
     </Box>;
 }
 
-export default function TransmitterInfo({transmitter, selectedTransmitterId = null, loading, gridEditable, onClearSelection}) {
+export default function TransmitterInfo({transmitter, selectedTransmitterId = null, loading, gridEditable, onClearSelection,
+    positions, playbackTime, isLive = false}) {
     const {t} = useTranslation('navigation');
     const {t: aircraftT} = useTranslation('common');
     const timeSettings = useUserTimeSettings();
@@ -50,7 +54,14 @@ export default function TransmitterInfo({transmitter, selectedTransmitterId = nu
     // Source is the ICAO address for both saved and live aircraft records.
     const country = transmitter?.kind === 'adsb' ? aircraftCountry(transmitter.source) : null;
     const aircraft = transmitter?.aircraft ?? transmitter?.details?.telemetry?.aircraft;
-    const emergency = aircraftEmergency(transmitter);
+    const selectedTrack = useMemo(() => transmitter?.kind === 'adsb' && positions
+        ? buildPlaybackTrack(positions.filter((point) => point.transmitter_id === transmitter.id)) : null,
+    [positions, transmitter?.kind, transmitter?.id]);
+    const flight = useMemo(() => transmitter?.kind === 'adsb'
+        ? aircraftFlightAt(transmitter, selectedTrack, playbackTime, isLive) : null,
+    [transmitter, selectedTrack, playbackTime, isLive]);
+    const emergency = aircraftEmergency(flight ? flight.report : transmitter);
+    const displayedPosition = flight?.historical ? flight.position : transmitter;
     // Share the map's model selection and artwork, displayed upright without
     // its map-only heading, label or ground shadow.
     const aircraftSymbol = useMemo(() => transmitter?.kind === 'adsb'
@@ -64,6 +75,9 @@ export default function TransmitterInfo({transmitter, selectedTransmitterId = nu
         for (const [path, value] of Object.entries(flattenDetails(transmitter?.details))) {
             // Aircraft metadata has its own translated section and attribution.
             if (transmitter?.kind === 'adsb' && path.startsWith('telemetry.aircraft.')) continue;
+            // The cockpit owns these fields; retain all other decoded data below.
+            if (transmitter?.kind === 'adsb' && path.startsWith('telemetry.')
+                && FLIGHT_TELEMETRY_FIELDS.has(path.slice('telemetry.'.length))) continue;
             const [group, ...parts] = path.split('.');
             if (!grouped.has(group)) grouped.set(group, []);
             grouped.get(group).push({
@@ -116,7 +130,8 @@ export default function TransmitterInfo({transmitter, selectedTransmitterId = nu
                             sx={{height: 20, fontSize: '0.65rem', color: typeColor(transmitter.kind), borderColor: typeColor(transmitter.kind)}} />
                     </Box>
                     <Typography variant="caption" sx={{display: 'block', color: 'text.secondary', overflowWrap: 'anywhere'}}>
-                        {label('info.identifier', 'ID')}: {transmitter.id}
+                        {flight ? [transmitter.source, aircraft?.registration, aircraft?.type_code].filter(Boolean).join(' · ')
+                            : `${label('info.identifier', 'ID')}: ${transmitter.id}`}
                     </Typography>
                 </Box>
             </Box>
@@ -128,11 +143,13 @@ export default function TransmitterInfo({transmitter, selectedTransmitterId = nu
                     </Typography>
                     {aircraftEmergencyLabel(emergency, aircraftT)}
                 </Alert>}
-                {transmitter.kind === 'adsb' && <AircraftDetails aircraft={transmitter.details?.telemetry?.aircraft} />}
-                <InfoSection title={label('info.position', 'Latest position')} icon={ExploreIcon} fields={[
-                    {label: label('latitude', 'Latitude'), value: formatNumber(transmitter.latitude, 6)},
-                    {label: label('longitude', 'Longitude'), value: formatNumber(transmitter.longitude, 6)},
-                    {label: label('altitude', 'Altitude (m)'), value: formatNumber(transmitter.altitude, 2)},
+                {flight && <FlightInstruments flight={flight} locale={timeSettings.locale} formatTime={formatTime} />}
+                {flight && <AircraftDetails aircraft={aircraft} />}
+                <InfoSection title={flight?.historical ? label('flight.playback_position', 'Playback position')
+                    : label('info.position', 'Latest position')} icon={ExploreIcon} fields={[
+                    {label: label('latitude', 'Latitude'), value: formatNumber(displayedPosition?.latitude, 6)},
+                    {label: label('longitude', 'Longitude'), value: formatNumber(displayedPosition?.longitude, 6)},
+                    ...(!flight ? [{label: label('altitude', 'Altitude (m)'), value: formatNumber(transmitter.altitude, 2)}] : []),
                 ]} />
                 <InfoSection title={label('info.reception', 'Reception')} icon={HistoryIcon} fields={[
                     {label: label('source', 'Source'), value: transmitter.source},
@@ -144,7 +161,16 @@ export default function TransmitterInfo({transmitter, selectedTransmitterId = nu
                     {label: label('latest_file', 'Latest file'), value: transmitter.file_id, wide: true},
                 ]} />
                 {/* Include every decoded field and capture context, including unknown parser fields. */}
-                {groups.map(([group, fields]) => <InfoSection key={group}
+                {flight ? <Box component="details" sx={{borderTop: 1, borderColor: 'divider', pt: 1}}>
+                    <Typography component="summary" sx={{fontSize: '0.7rem', color: 'text.secondary', cursor: 'pointer', mb: 1.5,
+                        '&:focus-visible': {outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 3}}}>
+                        {flight.historical ? label('flight.latest_details', 'Latest reception details')
+                            : label('flight.additional_details', 'Additional telemetry & receiver data')}
+                    </Typography>
+                    {groups.map(([group, fields]) => <InfoSection key={group}
+                        title={groupNames[group] || detailLabel(group)} icon={group === 'telemetry' ? SensorsIcon : SettingsInputAntennaIcon}
+                        fields={fields} />)}
+                </Box> : groups.map(([group, fields]) => <InfoSection key={group}
                     title={groupNames[group] || detailLabel(group)} icon={group === 'telemetry' ? SensorsIcon : SettingsInputAntennaIcon}
                     fields={fields} />)}
             </Box>

@@ -3,10 +3,11 @@ import {configureStore} from '@reduxjs/toolkit';
 import {Provider} from 'react-redux';
 import {createTheme, ThemeProvider} from '@mui/material/styles';
 import {fireEvent, render, screen, within} from '@testing-library/react';
-import {describe, expect, it, vi} from 'vitest';
+import {beforeEach, describe, expect, it, vi} from 'vitest';
 import i18n from 'i18next';
 import {initReactI18next} from 'react-i18next';
 import TransmitterInfo from '../transmitter-info.jsx';
+import {aircraftUnitsStoreName} from '../storage.js';
 
 await i18n.use(initReactI18next).init({lng: 'en', resources: {}});
 vi.mock('../../common/common.jsx', () => ({
@@ -35,6 +36,47 @@ function wrapper({children}) {
 }
 
 describe('Transmitter information', () => {
+    beforeEach(() => localStorage.clear());
+
+    it('shows four cockpit instruments with aviation conversions and remembers the metric choice', () => {
+        const aircraft = {...transmitter, kind: 'adsb', source: '4D2406', details: {telemetry: {
+            altitude_baro_m: 10972.8, altitude_geom_m: 11064, groundspeed_mps: 102.88888888,
+            vertical_rate_mps: 6.35, track_deg: 326, squawk: '0042', on_ground: false,
+        }}};
+        const {unmount} = render(<TransmitterInfo transmitter={aircraft} />, {wrapper});
+        const instruments = () => within(screen.getByRole('region', {name: 'Flight instruments'}));
+        expect(instruments().getByRole('region', {name: 'Ground speed'})).toHaveTextContent('200kt');
+        expect(instruments().getByRole('region', {name: 'Baro altitude'})).toHaveTextContent('36,000ft');
+        expect(instruments().getByRole('region', {name: 'Ground track'})).toHaveTextContent('326°');
+        expect(instruments().getByRole('region', {name: 'Vertical speed'})).toHaveTextContent('+1,250ft/min');
+        expect(instruments().getByText('0042')).toBeInTheDocument();
+        expect(screen.getByRole('region', {name: 'Latest position'})).not.toHaveTextContent('Altitude (m)');
+        fireEvent.click(screen.getByRole('button', {name: 'Use metric units'}));
+        expect(instruments().getByRole('region', {name: 'Ground speed'})).toHaveTextContent('102.9m/s');
+        expect(instruments().getByRole('region', {name: 'Baro altitude'})).toHaveTextContent('10,973m');
+        expect(instruments().getByRole('region', {name: 'Vertical speed'})).toHaveTextContent('+6.4m/s');
+        expect(JSON.parse(localStorage.getItem(aircraftUnitsStoreName))).toBe('metric');
+        unmount();
+        render(<TransmitterInfo transmitter={aircraft} />, {wrapper});
+        expect(instruments().getByRole('region', {name: 'Ground speed'})).toHaveTextContent('102.9m/s');
+    });
+
+    it('preserves zero readings, shows reported ground status and leaves missing instruments empty', () => {
+        const aircraft = {...transmitter, kind: 'adsb', details: {telemetry: {groundspeed_mps: 0,
+            vertical_rate_mps: 0, altitude_geom_m: 0, track_deg: 0, on_ground: true}}};
+        const {rerender, container} = render(<TransmitterInfo transmitter={aircraft} />, {wrapper});
+        expect(screen.getByRole('region', {name: 'Ground speed'})).toHaveTextContent('0kt');
+        expect(screen.getByRole('region', {name: 'Altitude'})).toHaveTextContent('GND');
+        expect(screen.getByRole('region', {name: 'Ground track'})).toHaveTextContent('000°');
+        expect(within(screen.getByRole('region', {name: 'Flight instruments'})).getByText('Geometric altitude')).toBeInTheDocument();
+        rerender(<TransmitterInfo transmitter={{...aircraft, altitude: null, details: {}}} />);
+        expect(screen.getByRole('region', {name: 'Ground speed'})).toHaveTextContent('—');
+        expect(screen.getByRole('region', {name: 'Vertical speed'})).toHaveTextContent('—');
+        expect(screen.getByRole('region', {name: 'Ground track'})).toHaveTextContent('—');
+        expect(container.querySelector('.flight-compass-pointer')).toBeNull();
+        expect(container.innerHTML).not.toMatch(/NaN|Infinity/);
+    });
+
     it('explains reported emergencies, colors the header icon and removes cleared alerts', () => {
         const aircraft = {...transmitter, kind: 'adsb', details: {telemetry: {squawk: '7700', emergency: 'general'}}};
         const {container, rerender} = render(<TransmitterInfo transmitter={aircraft} />, {wrapper});
@@ -86,6 +128,7 @@ describe('Transmitter information', () => {
     it('shows every decoded field, metadata, labels and units without losing zero or false values', () => {
         render(<TransmitterInfo transmitter={transmitter} selectedTransmitterId={transmitter.id} />, {wrapper});
         const info = screen.getByRole('region', {name: 'Transmitter info'});
+        expect(screen.queryByRole('region', {name: 'Flight instruments'})).not.toBeInTheDocument();
         expect(info).toHaveTextContent('TEST');
         expect(info).toHaveTextContent('radiosonde:RS41:TEST');
         expect(info).toHaveTextContent('Radiosonde');

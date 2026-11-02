@@ -1,5 +1,5 @@
 import React from 'react';
-import {act, fireEvent, render, screen, waitFor} from '@testing-library/react';
+import {act, fireEvent, render, screen, waitFor, within} from '@testing-library/react';
 import {Provider} from 'react-redux';
 import {configureStore} from '@reduxjs/toolkit';
 import {createTheme, ThemeProvider} from '@mui/material/styles';
@@ -126,6 +126,31 @@ it('starts in LIVE with the last day of packets when no selection has been saved
     expect(screen.getByRole('button', {name: 'LIVE', exact: true})).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByLabelText('To')).toBeDisabled();
     expect(Number.isFinite(mapRender.mock.lastCall[0].playbackTime)).toBe(true);
+});
+
+it('scrubs the aircraft instruments, position and reported emergency together with the map', () => {
+    const first = {id: 'first', transmitter_id: 'adsb:4d2406', kind: 'adsb', name: 'EWG46A',
+        source: '4D2406', latitude: 40, longitude: 23, altitude: 10000, altitude_baro_m: 10000,
+        groundspeed_mps: 100, vertical_rate_mps: 5, track_deg: 326, squawk: '7000', emergency: 'none',
+        captured_at: '2026-11-01T11:58:00Z'};
+    const last = {...first, id: 'last', captured_at: '2026-11-01T12:00:00Z', latitude: 41,
+        groundspeed_mps: 200, vertical_rate_mps: -5, squawk: '7700', emergency: 'general'};
+    fixture.positions = [first, last];
+    fixture.transmitters = [{...last, id: last.transmitter_id, details: {telemetry: {...last}}}];
+    render(<Provider store={createStore(historyRange)}><ThemeProvider theme={createTheme()}><PacketMapLayout /></ThemeProvider></Provider>);
+    act(() => tableRender.mock.lastCall[0].onSelectTransmitter(first.transmitter_id));
+    expect(screen.getByRole('alert')).toHaveTextContent('General emergency');
+    expect(screen.getByRole('region', {name: 'Ground speed'})).toHaveTextContent('389kt');
+    const cursor = Date.parse('2026-11-01T11:58:30Z');
+    fireEvent.change(screen.getByRole('slider', {name: 'Playback time'}), {target: {value: cursor}});
+    expect(mapRender.mock.lastCall[0].playbackTime).toBe(cursor);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getByRole('region', {name: 'Ground speed'})).toHaveTextContent('194kt');
+    expect(screen.getByRole('region', {name: 'Vertical speed'})).toHaveTextContent('+984ft/min');
+    expect(within(screen.getByRole('region', {name: 'Flight instruments'})).getByText('7000')).toBeInTheDocument();
+    expect(screen.getByRole('region', {name: 'Playback position'})).toHaveTextContent(/40\.\d+/);
+    // Wall-clock age does not make a fresh historical sample look stale.
+    expect(screen.getByRole('region', {name: 'Flight instruments'})).not.toHaveTextContent('Stale');
 });
 
 it('advances the live clock without incoming packets and stops the timer in history', () => {
