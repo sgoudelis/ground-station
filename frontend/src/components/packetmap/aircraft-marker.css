@@ -11,7 +11,8 @@
     height: 100%;
 }
 
-.packet-aircraft-symbol {
+.packet-aircraft-symbol,
+.packet-aircraft-crosshair {
     position: absolute;
     inset: 0;
     transform: translateY(calc(-1 * var(--aircraft-lift)));
@@ -23,8 +24,26 @@
     filter: drop-shadow(0 1px 2px rgb(0 0 0 / 65%));
 }
 
-.packet-marker-stale .packet-aircraft-symbol {
+.packet-aircraft-crosshair {
+    position: absolute;
+    /* Center on the raised 28px plane, independently of its heading and shadow. */
+    inset: -12px;
+    width: 52px;
+    height: 52px;
+    filter: drop-shadow(0 0 1px #000);
+    pointer-events: none;
+}
+
+.packet-aircraft-selected .packet-aircraft-label {
+    /* Leave room above the square and its upper tick. */
+    bottom: calc(100% + var(--aircraft-lift) + 16px);
+}
+
+.packet-marker-stale .packet-aircraft-symbol,
+.packet-marker-stale .packet-aircraft-label {
+    /* Fade received data while keeping the selection crosshair in full color. */
     filter: grayscale(1);
+    opacity: 0.65;
 }
 
 .packet-aircraft-shadow {
@@ -39,6 +58,10 @@
 .packet-aircraft-shadow > svg {
     display: block;
     transform-origin: center;
+}
+
+.packet-marker-stale .packet-aircraft-shadow {
+    opacity: calc(0.45 * 0.65);
 }
 
 .packet-aircraft-label {

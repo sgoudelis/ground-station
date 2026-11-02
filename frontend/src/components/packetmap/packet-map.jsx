@@ -193,12 +193,13 @@ export default function PacketMap({positions, transmitters, hasPositions = posit
             phase: current.phase, altitude: point.altitude, name: point.name, stale: current.stale,
         }) : point?.kind === 'adsb' ? createAircraftIcon({
             track: point.track_deg, name: point.name || point.source, icao: point.source, stale: current.stale,
+            selected: track.id === selectedTransmitterId,
             // Per-fix metadata follows playback; older captures use the row's lookup.
             aircraft: point.aircraft ?? point._details?.telemetry?.aircraft ?? details?.telemetry?.aircraft,
             squawk: aircraftReport?.squawk, emergency: aircraftReport?.emergency,
         }) : null;
         return [track.id, current ? {...current, icon} : null];
-    })), [tracks, playbackTime, transmitterDetails]);
+    })), [tracks, playbackTime, transmitterDetails, selectedTransmitterId]);
     // Follow the selected sonde's displayed position, including historical
     // interpolation. Unknown altitude must not produce a misleading footprint.
     const selectedPoint = playback.get(selectedTransmitterId)?.point;
@@ -232,8 +233,10 @@ export default function PacketMap({positions, transmitters, hasPositions = posit
     return <Box className="packet-map" ref={islandRef} sx={(theme) => ({height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column',
         '&:fullscreen': {width: '100vw', height: '100vh', bgcolor: 'background.paper'},
         '&:-webkit-full-screen': {width: '100vw', height: '100vh', bgcolor: 'background.paper'},
-        // Desaturate the whole marker so labels and APRS overlays age with the icon.
-        '& .packet-marker-stale': {filter: 'grayscale(1)', opacity: 0.65},
+        // Aircraft fade their data separately so their selection crosshair stays red.
+        '& .packet-marker-stale:not(.packet-aircraft-marker)': {filter: 'grayscale(1)', opacity: 0.65},
+        // Match the tracked-satellite crosshair in Earth View for every theme.
+        '& .packet-aircraft-crosshair': {color: theme.palette.error.main},
         '& .packet-visibility-label': {
             fill: theme.palette.text.secondary,
             stroke: alpha(theme.palette.background.paper, 0.85),

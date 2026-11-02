@@ -12,7 +12,7 @@
   "scheduler": "Scheduler",
   "waterfall_view": "Waterfall view",
   "packet_map": {
-    "title": "Packet map",
+    "title": "Map",
     "from": "From",
     "to": "To",
     "apply": "Apply",

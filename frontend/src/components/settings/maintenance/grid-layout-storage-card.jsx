@@ -48,8 +48,8 @@ import {toast} from '../../../utils/toast-with-timestamp.jsx';
 const createPageLayouts = (t) => [
     {
         key: packetMapGridLayoutName,
-        label: 'Packet map',
-        description: t('grid_layout_storage_card.packet_map', {defaultValue: 'Resets the widget layout on the packet map page'}),
+        label: t('packet_map.title', {ns: 'navigation', defaultValue: 'Map'}),
+        description: t('grid_layout_storage_card.packet_map', {defaultValue: 'Resets the widget layout on the Map page'}),
     },
     {
         key: earthViewGridLayoutName,

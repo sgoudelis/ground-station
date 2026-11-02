@@ -371,7 +371,7 @@ export const getNavigation = ({ isAdmin = false } = {}) => {
         },
         {
             segment: 'map',
-            title: i18n.t('packet_map.title', {ns: 'navigation', defaultValue: 'Packet map'}),
+            title: i18n.t('packet_map.title', {ns: 'navigation', defaultValue: 'Map'}),
             icon: <MapIcon />,
         },
         {
