@@ -11,6 +11,11 @@ const squawkStates = {'7500': 'unlawful', '7600': 'nordo', '7700': 'general'};
 const enumStates = ['none', 'general', 'lifeguard', 'minfuel', 'nordo', 'unlawful', 'downed'];
 const colors = {error: '#ef5350', warning: '#ffb300'};
 
+// Silent aircraft use gray even when their last report carried an emergency.
+export function aircraftColor(status, stale = false) {
+    return stale ? '#9e9e9e' : status?.color ?? '#66bb6a';
+}
+
 export function aircraftEmergency(report) {
     if (!report || (report.kind && report.kind !== 'adsb')) return null;
     // Current telemetry can explicitly clear an earlier report with null/none.

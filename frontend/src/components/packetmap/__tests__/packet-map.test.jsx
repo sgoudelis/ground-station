@@ -701,8 +701,9 @@ it('remembers hidden and enabled transmitter columns when fields disappear and t
     // Label queries avoid repeatedly calculating accessible names across the full grid.
     fireEvent.click(screen.getByLabelText('Columns', {selector: 'button'}));
     expect(screen.getByRole('button', {name: 'Reset', exact: true})).toBeDisabled();
-    fireEvent.click(screen.getByLabelText('Source'));
+    fireEvent.click(screen.getByLabelText('ICAO'));
     fireEvent.click(screen.getByLabelText('Frame · Sequence'));
+    fireEvent.click(screen.getByLabelText('Signal · Frequency hz'));
     expect(store.getState().packetMap.transmitterTableColumnVisibility).toMatchObject({
         source: false, 'info:frame.sequence': true, 'info:signal.frequency_hz': true,
     });
@@ -711,7 +712,7 @@ it('remembers hidden and enabled transmitter columns when fields disappear and t
     unmount();
     render(element(rows));
     fireEvent.click(screen.getByLabelText('Columns', {selector: 'button'}));
-    expect(screen.getByLabelText('Source')).not.toBeChecked();
+    expect(screen.getByLabelText('ICAO')).not.toBeChecked();
     expect(screen.getByLabelText('Frame · Sequence')).toBeChecked();
     expect(screen.getByLabelText('Signal · Frequency hz')).toBeChecked();
     // Mounting both native column panels can exceed the default five-second DOM test budget.
@@ -743,43 +744,53 @@ it.each(['live updates', 'remounts'])('resets saved column choices to defaults a
     const panel = within(reset.parentElement.parentElement);
     expect(reset).toBeEnabled();
     fireEvent.click(reset);
-    expect(panel.getByLabelText('Source')).toBeChecked();
+    expect(panel.getByLabelText('ICAO')).toBeChecked();
     expect(panel.getByLabelText('Frame · Sequence')).not.toBeChecked();
-    expect(panel.getByLabelText('Signal · Frequency hz')).toBeChecked();
+    expect(panel.getByLabelText('Signal · Frequency hz')).not.toBeChecked();
     expect(reset).toBeDisabled();
     expect(store.getState().packetMap.transmitterTableColumnVisibility).toEqual({});
 }, 10000);
 
 it('highlights emergency squawks and decoded priorities, and clears badges with current telemetry', () => {
     const store = configureStore({reducer: {packetMap: packetMapReducer}});
+    const received = Date.parse('2026-11-02T12:00:00Z');
     const rows = [
         {id: 'unlawful', squawk: '7500'}, {id: 'radio', squawk: '7600'},
         {id: 'general', squawk: '7700'}, {id: 'ordinary', squawk: '0042'},
         {id: 'priority', emergency: 'minfuel'}, {id: 'sonde', kind: 'radiosonde', squawk: '7700'},
-    ].map((row) => ({kind: 'adsb', ...row, name: row.id, packet_count: 1}));
-    const element = (data) => <Provider store={store}><ThemeProvider theme={createTheme()}>
-        <TransmitterTable rows={data} loading={false} hiddenTypes={[]} />
+    ].map((row) => ({kind: 'adsb', ...row, name: row.id, packet_count: 1, captured_at: new Date(received).toISOString()}));
+    const element = (data, time = received) => <Provider store={store}><ThemeProvider theme={createTheme()}>
+        <TransmitterTable rows={data} loading={false} hiddenTypes={[]} playbackTime={time} />
     </ThemeProvider></Provider>;
     const {container, rerender} = render(element(rows));
     const row = (id) => container.querySelector(`[data-id="${id}"]`);
     const squawk = (id) => row(id).querySelector('[data-field="squawk"]');
+    const icon = (id) => row(id).querySelector('[data-field="name"] path[fill]');
     for (const id of ['unlawful', 'general']) {
         expect(row(id)).toHaveClass('transmitter-emergency-error');
         expect(squawk(id).querySelector('.MuiChip-colorError')).not.toBeNull();
+        expect(icon(id)).toHaveAttribute('fill', '#ef5350');
     }
     for (const id of ['radio', 'priority']) {
         expect(row(id)).toHaveClass('transmitter-emergency-warning');
         expect(squawk(id).querySelector('.MuiChip-colorWarning')).not.toBeNull();
+        expect(icon(id)).toHaveAttribute('fill', '#ffb300');
     }
     expect(squawk('priority')).toHaveTextContent('Alert');
     expect(squawk('ordinary')).toHaveTextContent('0042');
     expect(squawk('ordinary').querySelector('.MuiChip-root')).toBeNull();
+    expect(icon('ordinary')).toHaveAttribute('fill', '#66bb6a');
     expect(squawk('sonde')).toBeEmptyDOMElement();
     expect(row('sonde').className).not.toContain('transmitter-emergency');
+    // Gray takes precedence over the last reported emergency, as it does on the map.
+    rerender(element(rows, received + 61000));
+    expect(icon('general')).toHaveAttribute('fill', '#9e9e9e');
+    expect(icon('ordinary')).toHaveAttribute('fill', '#9e9e9e');
     rerender(element(rows.map((entry) => ({...entry, details: {telemetry: {squawk: null, emergency: 'none'}}}))));
     expect(squawk('general')).toBeEmptyDOMElement();
     expect(row('general').className).not.toContain('transmitter-emergency');
     expect(container.querySelector('.MuiChip-root')).toBeNull();
+    expect(icon('general')).toHaveAttribute('fill', '#66bb6a');
 });
 
 it('selects table rows and centers their markers, then restores all bounds with Fit all', () => {

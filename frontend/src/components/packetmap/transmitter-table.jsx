@@ -16,13 +16,12 @@ import {detailLabel, flattenDetails, typeColor, typeLabel} from './transmitters.
 import {setTransmitterTableColumnVisibility} from './packet-map-slice.jsx';
 import AircraftFlag from '../common/aircraft-flag.jsx';
 import {aircraftLabel, aircraftValue} from '../../utils/aircraft-metadata.js';
-import {aircraftEmergency, aircraftEmergencyLabel} from '../../utils/aircraft-emergency.js';
+import {aircraftColor, aircraftEmergency, aircraftEmergencyLabel} from '../../utils/aircraft-emergency.js';
 import {getReceiverDistances} from '../filebrowser/position-utils.js';
+import {renderAircraftSymbol, selectAircraftShape} from './aircraft-symbol.js';
 
 const visibleDetails = new Set([
-    'signal.frequency_hz', 'telemetry.vel_h', 'telemetry.vel_v', 'telemetry.heading',
-    'telemetry.pressure',
-    'telemetry.position.speed_knots', 'telemetry.position.course_degrees',
+    'telemetry.position.speed_knots',
 ]);
 const excludedDetails = new Set([
     'telemetry.id', 'telemetry.lat', 'telemetry.lon', 'telemetry.alt',
@@ -38,7 +37,19 @@ const compactDetails = {
     'telemetry.vel_v': {label: 'V. speed', key: 'vertical_speed', width: 90, unit: 'm/s', digits: 2},
 };
 
-export default function TransmitterTable({rows, loading, hiddenTypes, gridEditable, selectedTransmitterId = null, onSelectTransmitter}) {
+function AircraftTableSymbol({aircraft, color}) {
+    // Share the map's silhouette, with a fixed northwest bearing for table rows.
+    const symbol = useMemo(() => renderAircraftSymbol(selectAircraftShape(aircraft), {
+        angle: 315, color,
+    }), [aircraft, color]);
+    return <Box component="span" aria-hidden="true"
+        sx={{width: 22, height: 22, flexShrink: 0, display: 'block',
+            '& > svg': {display: 'block', width: '100%', height: '100%'}}}
+        dangerouslySetInnerHTML={{__html: symbol}} />;
+}
+
+export default function TransmitterTable({rows, loading, hiddenTypes, gridEditable, selectedTransmitterId = null, onSelectTransmitter,
+    playbackTime}) {
     const {t} = useTranslation('navigation');
     const {t: aircraftT} = useTranslation('common');
     const timeSettings = useUserTimeSettings();
@@ -59,22 +70,31 @@ export default function TransmitterTable({rows, loading, hiddenTypes, gridEditab
         emergencyStatus: aircraftEmergency(row),
     })), [rows, receiver]);
     const fields = useMemo(() => [...new Set(data.flatMap((row) => Object.keys(row.fields)))].sort(), [data]);
+    // Use the map's clock so silent aircraft age in LIVE and history stays paused.
+    const cursor = Number.isFinite(playbackTime) ? playbackTime : Date.now();
     const format = (value) => formatDateTime(value, timeSettings);
     const columns = useMemo(() => [
-        {field: 'name', headerName: t('packet_map.column_headers.name', {defaultValue: 'Name'}), width: 120,
+        {field: 'name', headerName: t('packet_map.column_headers.callsign', {defaultValue: 'Callsign'}), width: 120,
             description: t('packet_map.name', {defaultValue: 'Transmitter'}),
             renderCell: ({row}) => <Button size="small" onClick={(event) => {
                 // Use the shared selection instead of opening a second detail surface.
                 event.stopPropagation();
                 onSelectTransmitter?.(row.id);
-            }} sx={{textTransform: 'none', minWidth: 0, px: 0, maxWidth: '100%', gap: 0.75}}>
-                {row.kind === 'adsb' && <AircraftFlag icao={row.source} />}
-                <Typography variant="body2" noWrap>{row.name}</Typography>
+            }} sx={(theme) => ({textTransform: 'none', minWidth: 0, px: 0, maxWidth: '100%', gap: 0.75,
+                color: theme.palette.mode === 'dark' ? '#fff' : theme.palette.text.primary})}>
+                {row.kind === 'adsb' && <AircraftTableSymbol aircraft={row.aircraft}
+                    color={aircraftColor(row.emergencyStatus, cursor - Date.parse(row.captured_at) > 60000)} />}
+                <Typography variant="body2" noWrap sx={{minWidth: 0}}>{row.name}</Typography>
             </Button>},
         {field: 'kind', headerName: t('packet_map.type', {defaultValue: 'Type'}), width: 82,
             valueFormatter: typeLabel,
             renderCell: ({value}) => <Typography variant="caption" sx={{color: typeColor(value)}}>{typeLabel(value)}</Typography>},
-        {field: 'source', headerName: t('packet_map.source', {defaultValue: 'Source'}), width: 90},
+        // Keep the field key so saved visibility, sorting and filters survive the rename.
+        {field: 'source', headerName: t('packet_map.column_headers.icao', {defaultValue: 'ICAO'}), width: 100,
+            renderCell: ({row, value}) => <Box sx={{display: 'flex', alignItems: 'center', gap: 0.75, height: '100%', minWidth: 0}}>
+                {row.kind === 'adsb' && <AircraftFlag icao={value} />}
+                <Typography variant="body2" noWrap sx={{minWidth: 0}}>{value}</Typography>
+            </Box>},
         {field: 'distance', headerName: t('packet_map.column_headers.distance', {defaultValue: 'Distance (km)'}),
             description: t('packet_map.distance', {defaultValue: 'Ground distance from the home station to the latest position'}),
             type: 'number', width: 90,
@@ -130,7 +150,7 @@ export default function TransmitterTable({rows, loading, hiddenTypes, gridEditab
                     : value ?? ''}),
             };
         }),
-    ], [data, fields, t, aircraftT, timeSettings.timezone, timeSettings.locale, onSelectTransmitter]);
+    ], [data, fields, t, aircraftT, timeSettings.timezone, timeSettings.locale, onSelectTransmitter, cursor]);
     const visibility = Object.fromEntries(fields.map((path) => [`info:${path}`, visibleDetails.has(path)]));
     // Compare saved overrides with application defaults, including decoded
     // fields absent from this range, so Reset also clears those saved choices.

@@ -185,6 +185,7 @@ it('advances the live clock without incoming packets and stops the timer in hist
         const initialTime = mapRender.mock.lastCall[0].playbackTime;
         act(() => vi.advanceTimersByTime(30000));
         expect(mapRender.mock.lastCall[0].playbackTime).toBe(initialTime + 30000);
+        expect(tableRender.mock.lastCall[0].playbackTime).toBe(initialTime + 30000);
         expect(mapRender.mock.lastCall[0].positions).toEqual(fixture.positions);
         // A paused historical cursor must not age along with the wall clock.
         fireEvent.click(screen.getByRole('button', {name: '24h', exact: true}));
@@ -193,6 +194,7 @@ it('advances the live clock without incoming packets and stops the timer in hist
         const renderCount = mapRender.mock.calls.length;
         act(() => vi.advanceTimersByTime(60000));
         expect(mapRender.mock.lastCall[0].playbackTime).toBe(historicalTime);
+        expect(tableRender.mock.lastCall[0].playbackTime).toBe(historicalTime);
         expect(mapRender).toHaveBeenCalledTimes(renderCount);
         unmount();
     } finally {

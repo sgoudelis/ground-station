@@ -2,7 +2,7 @@ import {DivIcon} from 'leaflet';
 import './aircraft-marker.css';
 import {aircraftCountry} from '../../utils/aircraft-country.js';
 import {renderAircraftSymbol, selectAircraftShape} from './aircraft-symbol.js';
-import {aircraftEmergency, aircraftEmergencyLabel} from '../../utils/aircraft-emergency.js';
+import {aircraftColor, aircraftEmergency, aircraftEmergencyLabel} from '../../utils/aircraft-emergency.js';
 
 // Raise the reticle with the plane, outside the silhouette's rotation and stale filters.
 const selectionCrosshair = `<svg class="packet-aircraft-crosshair" viewBox="0 0 52 52" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1">
@@ -24,7 +24,7 @@ class AircraftIcon extends DivIcon {
 export function createAircraftIcon({track = 0, name = '', icao, aircraft, squawk, emergency, stale = false, selected = false} = {}) {
     const angle = Number.isFinite(track) ? track : 0;
     const status = aircraftEmergency({squawk, emergency});
-    const color = stale ? '#9e9e9e' : status?.color ?? '#66bb6a';
+    const color = aircraftColor(status, stale);
     // Callsigns come from received messages. Escape them before using Leaflet's
     // HTML icon, and keep the label outside the rotating aircraft symbol.
     const label = document.createElement('span');

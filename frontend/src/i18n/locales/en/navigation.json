@@ -48,6 +48,8 @@
     "latest_file": "Latest file",
     "column_headers": {
       "name": "Name",
+      "callsign": "Callsign",
+      "icao": "ICAO",
       "packets": "Pkts",
       "first_seen": "First",
       "last_seen": "Last",

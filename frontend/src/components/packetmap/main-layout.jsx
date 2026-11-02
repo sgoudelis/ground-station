@@ -130,7 +130,8 @@ export default function PacketMapLayout() {
                 </StyledIslandParentNoScrollbar>
                 <StyledIslandParentNoScrollbar key="transmitters">
                     <TransmitterTable rows={rows} loading={loading} hiddenTypes={hiddenTypes} gridEditable={gridEditable}
-                        selectedTransmitterId={selectedTransmitterId} onSelectTransmitter={selectTransmitter} />
+                        selectedTransmitterId={selectedTransmitterId} onSelectTransmitter={selectTransmitter}
+                        playbackTime={currentPlaybackTime} />
                 </StyledIslandParentNoScrollbar>
             </Responsive>}
         </div>
