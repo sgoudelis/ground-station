@@ -20,7 +20,9 @@ import MapInteractions from './map-interactions.jsx';
 import PacketMapToolbar from './map-toolbar.jsx';
 import PacketMapSettingsDialog from './map-settings-dialog.jsx';
 import {createRadiosondeIcon} from './radiosonde-marker.js';
-import {createAircraftIcon} from './aircraft-marker.js';
+import AircraftMapMarker from './aircraft-map-marker.jsx';
+import {selectAircraftShape} from './aircraft-symbol.js';
+import useStableEvent from '../../hooks/useStableEvent.js';
 import {createAprsIcon, getAprsSymbol} from './aprs-marker.js';
 import {buildPlaybackTrack, trackPositionAt} from './playback.js';
 import {getHorizonRadii} from './horizon.js';
@@ -167,6 +169,7 @@ export default function PacketMap({positions, transmitters, hasPositions = posit
     preserveViewRequest = 0,
     selectedTransmitterId = null, onSelectTransmitter, hiddenTypes = [], onHiddenTypesChange, onFitAll, playbackTime}) {
     const {t} = useTranslation('navigation');
+    const selectTransmitter = useStableEvent((id) => onSelectTransmitter?.(id));
     const receiver = useSelector((state) => state.location?.location);
     const preferences = useSelector((state) => state.preferences?.preferences);
     const [localFit, setLocalFit] = useState(0);
@@ -214,14 +217,12 @@ export default function PacketMap({positions, transmitters, hasPositions = posit
             position: aprsPosition(point, details), report: details?.telemetry,
             phase: current.phase, altitude: point.altitude, name: point.name, stale: current.stale,
             selected: track.id === selectedTransmitterId,
-        }) : point?.kind === 'adsb' ? createAircraftIcon({
-            track: point.track_deg, name: point.name || point.source, icao: point.source, stale: current.stale,
-            selected: track.id === selectedTransmitterId,
-            // Per-fix metadata follows playback; older captures use the row's lookup.
-            aircraft: point.aircraft ?? point._details?.telemetry?.aircraft ?? details?.telemetry?.aircraft,
-            squawk: aircraftReport?.squawk, emergency: aircraftReport?.emergency,
         }) : null;
-        return [track.id, current ? {...current, icon} : null];
+        // Per-fix metadata follows playback; older captures use the row's lookup.
+        const aircraftShape = point?.kind === 'adsb' ? selectAircraftShape(
+            point.aircraft ?? point._details?.telemetry?.aircraft ?? details?.telemetry?.aircraft
+        ) : null;
+        return [track.id, current ? {...current, icon, aircraftShape, aircraftReport} : null];
     })), [tracks, playbackTime, transmitterDetails, selectedTransmitterId]);
     // Follow the selected sonde's displayed position, including historical
     // interpolation. Unknown altitude must not produce a misleading footprint.
@@ -317,8 +318,13 @@ export default function PacketMap({positions, transmitters, hasPositions = posit
                     return <React.Fragment key={id}>
                         {settings.showTracks && id === selectedTransmitterId && path.length > 1 && <Polyline positions={path} smoothFactor={0.5}
                             pathOptions={{color, weight: 2, opacity: latest.kind === 'adsb' ? 0.3 : 1, lineCap: 'round', lineJoin: 'round'}} />}
-                        {current && (current.icon ? <Marker key="cursor" position={[current.point.latitude, current.point.longitude]}
-                            title={current.point.kind === 'adsb' ? current.point.name || current.point.source || id : undefined}
+                        {current && (current.aircraftShape ? <AircraftMapMarker key="cursor" id={id}
+                            latitude={current.point.latitude} longitude={current.point.longitude}
+                            track={current.point.track_deg} name={current.point.name || current.point.source}
+                            icao={current.point.source} shapeName={current.aircraftShape.name} shapeScale={current.aircraftShape.scale}
+                            squawk={current.aircraftReport?.squawk} emergency={current.aircraftReport?.emergency}
+                            stale={current.stale} selected={id === selectedTransmitterId} onSelectTransmitter={selectTransmitter}
+                        /> : current.icon ? <Marker key="cursor" position={[current.point.latitude, current.point.longitude]}
                             icon={current.icon} eventHandlers={{click: () => onSelectTransmitter?.(id)}}
                         /> : <CircleMarker key="cursor" center={[current.point.latitude, current.point.longitude]} radius={5.985}
                             eventHandlers={{click: () => onSelectTransmitter?.(id)}}

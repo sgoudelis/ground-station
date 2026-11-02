@@ -15,7 +15,7 @@ await i18n.use(initReactI18next).init({lng: 'en', resources: {
     en: {earthview: {map_settings: {title: 'Map Settings'}}},
 }, interpolation: {escapeValue: false}});
 
-const {map, listeners} = vi.hoisted(() => {
+const {map, listeners, markerRenders} = vi.hoisted(() => {
     const listeners = new Map();
     const map = {
         on: vi.fn((events, fn) => events.split(' ').forEach((event) => listeners.set(event, fn))),
@@ -28,7 +28,7 @@ const {map, listeners} = vi.hoisted(() => {
         getContainer: vi.fn(() => document.createElement('div')),
         getCenter: vi.fn(() => ({lat: 40.2, lng: 24.3})), getZoom: vi.fn(() => 8),
     };
-    return {map, listeners};
+    return {map, listeners, markerRenders: vi.fn()};
 });
 
 vi.mock('react-leaflet', () => ({
@@ -50,12 +50,15 @@ vi.mock('react-leaflet', () => ({
         </div>;
     },
     Pane: ({children, style}) => <div data-testid="visibility-pane" style={style}>{children}</div>,
-    Marker: ({position, children, icon, eventHandlers, title}) => <div title={title} onClick={eventHandlers?.click}
+    Marker: ({position, children, icon, eventHandlers, title}) => {
+        markerRenders({position, icon, title});
+        return <div title={title} onClick={eventHandlers?.click}
         data-testid={icon?.options?.className?.includes('packet-radiosonde-marker') ? 'sonde-marker'
             : icon?.options?.className?.includes('packet-aprs-marker') ? 'aprs-marker'
                 : icon?.options?.className?.includes('packet-aircraft-marker') ? 'aircraft-marker' : 'home'}
         data-center={JSON.stringify(position)} data-icon-class={icon?.options?.className}
-        data-icon-html={icon?.options?.html}>{children}</div>,
+        data-icon-html={icon?.options?.html}>{children}</div>;
+    },
     Polyline: ({positions, pathOptions}) => <div data-testid="track" data-positions={JSON.stringify(positions)} data-opacity={pathOptions?.opacity} />,
     Popup: ({children}) => <div data-testid="map-popup">{children}</div>,
     Tooltip: ({children, position, permanent, className}) => <span data-testid="map-tooltip" className={className}
@@ -118,6 +121,44 @@ it('shows a named aircraft pointing along its track, selects it and marks an old
     rerender(element(received + 61000));
     expect(screen.getByTestId('aircraft-marker').dataset.iconClass).toContain('packet-marker-stale');
     expect(map.fitBounds).not.toHaveBeenCalled();
+});
+
+it('updates only the selected aircraft and reuses icons for position-only telemetry updates', () => {
+    const store = configureStore({reducer: () => ({location: {location: null}})});
+    const theme = createTheme();
+    const received = Date.parse('2026-11-02T12:00:00Z');
+    const points = ['A', 'B', 'C'].map((name, index) => ({id: name, transmitter_id: name, name,
+        kind: 'adsb', latitude: 40 + index, longitude: 23, track_deg: 90, aircraft: {type_code: 'A320'},
+        captured_at: new Date(received).toISOString(),
+    }));
+    const element = (selected, positions = points, onSelectTransmitter = vi.fn()) => <Provider store={store}>
+        <ThemeProvider theme={theme}><PacketMap positions={positions} playbackTime={received + 1000}
+            selectedTransmitterId={selected} onSelectTransmitter={onSelectTransmitter} /></ThemeProvider>
+    </Provider>;
+    const {rerender} = render(element('A'));
+    markerRenders.mockClear();
+    rerender(element('B'));
+    expect(markerRenders.mock.calls.map(([props]) => props.title)).toEqual(['A', 'B']);
+    const icon = markerRenders.mock.lastCall[0].icon;
+
+    const moved = points.map((point) => point.name === 'B' ? {...point, latitude: 44, altitude: 5000,
+        aircraft: {...point.aircraft},
+    } : point);
+    markerRenders.mockClear();
+    const select = vi.fn();
+    rerender(element('B', moved, select));
+    expect(markerRenders).toHaveBeenCalledOnce();
+    expect(markerRenders.mock.lastCall[0]).toMatchObject({title: 'B', position: [44, 23]});
+    expect(markerRenders.mock.lastCall[0].icon).toBe(icon);
+
+    // A cached click handler must still use the latest parent callback.
+    const latestSelect = vi.fn();
+    markerRenders.mockClear();
+    rerender(element('B', moved, latestSelect));
+    expect(markerRenders).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByTitle('B'));
+    expect(latestSelect).toHaveBeenCalledWith('B');
+    expect(select).not.toHaveBeenCalled();
 });
 
 it('uses each saved or live fix silhouette during playback and falls back for older map results', () => {

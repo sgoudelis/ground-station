@@ -1,4 +1,5 @@
-import {expect, it} from 'vitest';
+import {expect, it, vi} from 'vitest';
+import {map as createMap, marker as createMarker} from 'leaflet';
 import {mergeAircraftHistory} from '../aircraft.js';
 import {createAircraftIcon} from '../aircraft-marker.js';
 import {renderAircraftSymbol, selectAircraftShape} from '../aircraft-symbol.js';
@@ -108,6 +109,62 @@ it('anchors a matching aircraft shadow and updates it when Leaflet replaces the 
     expect(shadow.querySelector('svg').outerHTML).toBe(next.createIcon().querySelector('svg').outerHTML);
     expect(shadow).toHaveClass('packet-marker-stale');
     expect(shadow.querySelector('path[fill]')).toHaveAttribute('fill', '#9e9e9e');
+});
+
+it('moves and turns a real Leaflet marker without replacing its aircraft, label or shadow nodes', () => {
+    const container = document.createElement('div');
+    document.body.append(container);
+    const map = createMap(container).setView([40, 23], 7);
+    const options = {name: 'TEST', track: 90, aircraft: {type_code: 'A320'}};
+    const marker = createMarker([40, 23], {icon: createAircraftIcon(options)}).addTo(map);
+    const icon = marker.getElement();
+    const label = icon.querySelector('.packet-aircraft-label');
+    const plane = icon.querySelector('.packet-aircraft-symbol > svg');
+    const shadow = map.getPane('shadowPane').firstElementChild;
+    const shadowPlane = shadow.querySelector('svg');
+    const observer = new MutationObserver(() => {});
+    observer.observe(icon, {childList: true, subtree: true});
+    observer.observe(shadow, {childList: true, subtree: true});
+    try {
+        marker.setLatLng([41, 24]).setIcon(createAircraftIcon({...options, track: 245}));
+        expect(marker.getLatLng()).toMatchObject({lat: 41, lng: 24});
+        expect(marker.getElement()).toBe(icon);
+        expect(icon.querySelector('.packet-aircraft-label')).toBe(label);
+        expect(icon.querySelector('.packet-aircraft-symbol > svg')).toBe(plane);
+        expect(map.getPane('shadowPane').firstElementChild).toBe(shadow);
+        expect(shadow.querySelector('svg')).toBe(shadowPlane);
+        expect(plane.style.transform).toBe('rotate(245deg)');
+        expect(shadowPlane.style.transform).toBe('rotate(245deg)');
+        expect(observer.takeRecords()).toHaveLength(0);
+
+        // Selection changes only add/remove the reticle, preserving the symbol.
+        marker.setIcon(createAircraftIcon({...options, selected: true}));
+        expect(icon.querySelector('.packet-aircraft-crosshair')).not.toBeNull();
+        expect(icon.querySelector('.packet-aircraft-symbol > svg')).toBe(plane);
+        marker.setIcon(createAircraftIcon(options));
+        expect(icon.querySelector('.packet-aircraft-crosshair')).toBeNull();
+        expect(icon.querySelector('.packet-aircraft-symbol > svg')).toBe(plane);
+        const click = vi.fn();
+        marker.on('click', click).fire('click');
+        expect(click).toHaveBeenCalledOnce();
+    } finally {
+        observer.disconnect();
+        map.remove();
+        container.remove();
+    }
+});
+
+it.each([{category: 'B2'}, {category: 'B7'}, {type_code: 'A320'}])('preserves fixed artwork rotation during reused heading updates: %j', (aircraft) => {
+    const first = createAircraftIcon({aircraft, track: 90});
+    const icon = first.createIcon();
+    const shadow = first.createShadow();
+    const symbol = icon.querySelector('svg');
+    const next = createAircraftIcon({aircraft, track: 245});
+    next.createIcon(icon);
+    next.createShadow(shadow);
+    expect(icon.querySelector('svg')).toBe(symbol);
+    expect(symbol.style.transform).toBe(aircraft.type_code ? 'rotate(245deg)' : 'rotate(0deg)');
+    expect(shadow.querySelector('svg').outerHTML).toBe(symbol.outerHTML);
 });
 
 it.each([

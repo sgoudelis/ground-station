@@ -71,6 +71,11 @@ function svgElement(tag, attributes) {
     return element;
 }
 
+export function aircraftSymbolRotation({name}, angle) {
+    const shape = lookup(collection.shapes, name) || lookup(supplementalShapes, name);
+    return `rotate(${shape?.noRotate ? 0 : angle}deg)`;
+}
+
 /** Render only locally bundled artwork. Received metadata never becomes SVG markup. */
 export function renderAircraftSymbol({name, scale}, {angle, color}) {
     const shape = lookup(collection.shapes, name) || lookup(supplementalShapes, name) || collection.shapes.unknown;
@@ -111,7 +116,7 @@ export function renderAircraftSymbol({name, scale}, {angle, color}) {
     const height = shape.h * factor;
     const symbol = svgElement('svg', {width: 28, height: 28, viewBox: '0 0 28 28',
         'aria-hidden': 'true', 'data-aircraft-shape': name});
-    symbol.style.transform = `rotate(${shape.noRotate ? 0 : angle}deg)`;
+    symbol.style.transform = aircraftSymbolRotation({name}, angle);
     symbol.style.overflow = 'visible';
     for (const [key, value] of Object.entries({width, height, x: (28 - width) / 2, y: (28 - height) / 2})) {
         artwork.setAttribute(key, value);

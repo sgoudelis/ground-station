@@ -1,6 +1,6 @@
 /** Copyright (c) 2026 Efstratios Goudelis — GPL-3.0-or-later */
 
-import React, {useMemo, useState} from 'react';
+import React, {createContext, useCallback, useContext, useMemo, useState} from 'react';
 import {Box, Button, Chip, Tooltip, Typography} from '@mui/material';
 import {alpha} from '@mui/material/styles';
 import {DataGrid} from '@mui/x-data-grid';
@@ -19,6 +19,23 @@ import {aircraftLabel, aircraftValue} from '../../utils/aircraft-metadata.js';
 import {aircraftColor, aircraftEmergency, aircraftEmergencyLabel} from '../../utils/aircraft-emergency.js';
 import {getReceiverDistances} from '../filebrowser/position-utils.js';
 import {renderAircraftSymbol, selectAircraftShape} from './aircraft-symbol.js';
+import useStableEvent from '../../hooks/useStableEvent.js';
+
+const PlaybackTimeContext = createContext(0);
+const pageSizeOptions = [10, 25, 50, 100];
+const initialState = {pagination: {paginationModel: {pageSize: 25}}, sorting: {sortModel: [{field: 'first_seen', sort: 'desc'}]}};
+const slots = {toolbar: GridTableToolbar, columnsManagement: TransmitterColumnsManagement};
+const tableSx = (theme) => ({border: 0, borderRadius: 0, '& .MuiDataGrid-row': {cursor: 'pointer'}, '& .transmitter-hidden': {opacity: 0.55},
+    // Keep selection and hover visible within the emergency tint.
+    ...Object.fromEntries(['error', 'warning'].map((severity) => [`& .transmitter-emergency-${severity}`, {
+        bgcolor: alpha(theme.palette[severity].main, 0.1),
+        '&:hover': {bgcolor: alpha(theme.palette[severity].main, 0.16)},
+        '&.Mui-selected': {bgcolor: alpha(theme.palette[severity].main, 0.2)},
+        '&.Mui-selected:hover': {bgcolor: alpha(theme.palette[severity].main, 0.26)},
+    }])),
+    '& .MuiDataGrid-columnHeader, & .MuiDataGrid-cell': {px: 0.75},
+    '& .MuiDataGrid-columnHeaderTitle': {fontSize: '0.75rem', fontWeight: 600, lineHeight: 1.2, letterSpacing: 0},
+    '& .MuiDataGrid-cell:focus, & .MuiDataGrid-cell:focus-within': {outline: 'none'}});
 
 const visibleDetails = new Set([
     'telemetry.position.speed_knots',
@@ -37,11 +54,16 @@ const compactDetails = {
     'telemetry.vel_v': {label: 'V. speed', key: 'vertical_speed', width: 90, unit: 'm/s', digits: 2},
 };
 
-function AircraftTableSymbol({aircraft, color}) {
+function AircraftTableSymbol({aircraft, status, capturedAt}) {
+    // Only aircraft icons subscribe to the playback clock. The grid's columns,
+    // sorting and layout can stay intact while silent aircraft become stale.
+    const cursor = useContext(PlaybackTimeContext);
+    const color = aircraftColor(status, cursor - Date.parse(capturedAt) > 60000);
+    const {name, scale} = selectAircraftShape(aircraft);
     // Share the map's silhouette, with a fixed northwest bearing for table rows.
-    const symbol = useMemo(() => renderAircraftSymbol(selectAircraftShape(aircraft), {
+    const symbol = useMemo(() => renderAircraftSymbol({name, scale}, {
         angle: 315, color,
-    }), [aircraft, color]);
+    }), [name, scale, color]);
     return <Box component="span" aria-hidden="true"
         sx={{width: 22, height: 22, flexShrink: 0, display: 'block',
             '& > svg': {display: 'block', width: '100%', height: '100%'}}}
@@ -54,6 +76,7 @@ export default function TransmitterTable({rows, loading, hiddenTypes, gridEditab
     const {t: aircraftT} = useTranslation('common');
     const timeSettings = useUserTimeSettings();
     const dispatch = useDispatch();
+    const selectTransmitter = useStableEvent((id) => onSelectTransmitter?.(id));
     const receiver = useSelector((state) => state.location?.location);
     // Retain saved choices even when their decoded fields are absent from the results.
     const columnVisibility = useSelector((state) => state.packetMap.transmitterTableColumnVisibility);
@@ -69,21 +92,35 @@ export default function TransmitterTable({rows, loading, hiddenTypes, gridEditab
         aircraft: row.kind === 'adsb' ? {...row.aircraft, ...row.details?.telemetry?.aircraft} : null,
         emergencyStatus: aircraftEmergency(row),
     })), [rows, receiver]);
-    const fields = useMemo(() => [...new Set(data.flatMap((row) => Object.keys(row.fields)))].sort(), [data]);
+    // Telemetry values change much more often than their column schema. Use a
+    // semantic key so new row objects do not reset column widths or ordering.
+    const schemaKey = useMemo(() => {
+        const examples = new Map();
+        for (const row of data) {
+            for (const [path, value] of Object.entries(row.fields)) {
+                if (!examples.has(path)) examples.set(path, {path, type: typeof value, label: detailLabel(path, row.field_info)});
+            }
+        }
+        return JSON.stringify([...examples.values()].sort((a, b) => a.path.localeCompare(b.path)));
+    }, [data]);
+    const schema = useMemo(() => JSON.parse(schemaKey), [schemaKey]);
+    const fields = useMemo(() => schema.map(({path}) => path), [schema]);
     // Use the map's clock so silent aircraft age in LIVE and history stays paused.
     const cursor = Number.isFinite(playbackTime) ? playbackTime : Date.now();
-    const format = (value) => formatDateTime(value, timeSettings);
+    const format = useCallback((value) => formatDateTime(value, {
+        timezone: timeSettings.timezone, locale: timeSettings.locale,
+    }), [timeSettings.timezone, timeSettings.locale]);
     const columns = useMemo(() => [
         {field: 'name', headerName: t('packet_map.column_headers.callsign', {defaultValue: 'Callsign'}), width: 120,
             description: t('packet_map.name', {defaultValue: 'Transmitter'}),
             renderCell: ({row}) => <Button size="small" onClick={(event) => {
                 // Use the shared selection instead of opening a second detail surface.
                 event.stopPropagation();
-                onSelectTransmitter?.(row.id);
+                selectTransmitter(row.id);
             }} sx={(theme) => ({textTransform: 'none', minWidth: 0, px: 0, maxWidth: '100%', gap: 0.75,
                 color: theme.palette.mode === 'dark' ? '#fff' : theme.palette.text.primary})}>
                 {row.kind === 'adsb' && <AircraftTableSymbol aircraft={row.aircraft}
-                    color={aircraftColor(row.emergencyStatus, cursor - Date.parse(row.captured_at) > 60000)} />}
+                    status={row.emergencyStatus} capturedAt={row.captured_at} />}
                 <Typography variant="body2" noWrap sx={{minWidth: 0}}>{row.name}</Typography>
             </Button>},
         {field: 'kind', headerName: t('packet_map.type', {defaultValue: 'Type'}), width: 82,
@@ -132,16 +169,13 @@ export default function TransmitterTable({rows, loading, hiddenTypes, gridEditab
             valueFormatter: (value) => value == null ? '' : `${value.toLocaleString(timeSettings.locale, {
                 minimumFractionDigits: field === 'altitude' ? 0 : 6, maximumFractionDigits: field === 'altitude' ? 2 : 6,
             })}${field === 'altitude' ? ' m' : '°'}`})),
-        ...fields.filter((path) => !excludedDetails.has(path)).map((path) => {
-            const example = data.find((row) => row.fields[path] != null);
-            const value = example.fields[path];
-            const label = detailLabel(path, example.field_info);
+        ...schema.filter(({path}) => !excludedDetails.has(path)).map(({path, type, label}) => {
             const compact = compactDetails[path];
             return {field: `info:${path}`,
                 headerName: compact ? t(`packet_map.column_headers.${compact.key}`, {defaultValue: compact.label}) : label,
                 description: label,
-                width: compact?.width ?? (typeof value === 'number' ? 120 : typeof value === 'boolean' ? 80 : 150),
-                type: typeof value === 'number' ? 'number' : typeof value === 'boolean' ? 'boolean' : 'string',
+                width: compact?.width ?? (type === 'number' ? 120 : type === 'boolean' ? 80 : 150),
+                type: type === 'number' ? 'number' : type === 'boolean' ? 'boolean' : 'string',
                 valueGetter: (_value, row) => row.fields[path] ?? null,
                 // Format only the display so sorting and filtering still use
                 // numeric telemetry, including zero and negative climb rates.
@@ -150,12 +184,24 @@ export default function TransmitterTable({rows, loading, hiddenTypes, gridEditab
                     : value ?? ''}),
             };
         }),
-    ], [data, fields, t, aircraftT, timeSettings.timezone, timeSettings.locale, onSelectTransmitter, cursor]);
-    const visibility = Object.fromEntries(fields.map((path) => [`info:${path}`, visibleDetails.has(path)]));
+    ], [schema, t, aircraftT, timeSettings.locale, selectTransmitter, format]);
+    const visibility = useMemo(() => ({...Object.fromEntries(fields.map((path) => [`info:${path}`, visibleDetails.has(path)])),
+        ...columnVisibility,
+    }), [fields, columnVisibility]);
     // Compare saved overrides with application defaults, including decoded
     // fields absent from this range, so Reset also clears those saved choices.
     const visibilityChanged = Object.entries(columnVisibility).some(([field, visible]) =>
         (visible !== false) !== (!field.startsWith('info:') || visibleDetails.has(field.slice(5))));
+    const resetColumns = useCallback(() => dispatch(setTransmitterTableColumnVisibility({})), [dispatch]);
+    const changeVisibility = useCallback((model) => dispatch(setTransmitterTableColumnVisibility(model)), [dispatch]);
+    const changeSelection = useCallback((selection) => selectTransmitter(selection.ids.values().next().value ?? null), [selectTransmitter]);
+    const getRowClassName = useCallback(({row}) => [hiddenTypes.includes(row.kind) ? 'transmitter-hidden' : '',
+        row.emergencyStatus ? `transmitter-emergency-${row.emergencyStatus.severity}` : ''].filter(Boolean).join(' '), [hiddenTypes]);
+    const slotProps = useMemo(() => ({toolbar: {container: toolbarContainer},
+        columnsManagement: {resetDisabled: !visibilityChanged, onReset: resetColumns},
+        basePagination: {ActionsComponent: GridPaginationActions},
+        loadingOverlay: {variant: 'linear-progress', noRowsVariant: 'linear-progress'},
+    }), [toolbarContainer, visibilityChanged, resetColumns]);
 
     return <Box sx={{height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column'}}>
         <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ['window-title-bar'])}
@@ -167,32 +213,14 @@ export default function TransmitterTable({rows, loading, hiddenTypes, gridEditab
         </TitleBar>
         <Box sx={{flex: 1, minHeight: 0, minWidth: 0}}>
             {/* Compact density scales the base header height to 32px. */}
-            <DataGrid rows={data} columns={columns} loading={loading} density="compact" columnHeaderHeight={46} showToolbar
-                disableMultipleRowSelection keepNonExistentRowsSelected pageSizeOptions={[10, 25, 50, 100]}
-                rowSelectionModel={rowSelectionModel}
-                onRowSelectionModelChange={(selection) => onSelectTransmitter?.(selection.ids.values().next().value ?? null)}
-                initialState={{pagination: {paginationModel: {pageSize: 25}}, sorting: {sortModel: [{field: 'first_seen', sort: 'desc'}]}}}
-                columnVisibilityModel={{...visibility, ...columnVisibility}}
-                onColumnVisibilityModelChange={(model) => dispatch(setTransmitterTableColumnVisibility(model))}
-                getRowClassName={({row}) => [hiddenTypes.includes(row.kind) ? 'transmitter-hidden' : '',
-                    row.emergencyStatus ? `transmitter-emergency-${row.emergencyStatus.severity}` : ''].filter(Boolean).join(' ')}
-                slots={{toolbar: GridTableToolbar, columnsManagement: TransmitterColumnsManagement}}
-                slotProps={{toolbar: {container: toolbarContainer},
-                    columnsManagement: {resetDisabled: !visibilityChanged,
-                        onReset: () => dispatch(setTransmitterTableColumnVisibility({}))},
-                    basePagination: {ActionsComponent: GridPaginationActions},
-                    loadingOverlay: {variant: 'linear-progress', noRowsVariant: 'linear-progress'}}}
-                sx={(theme) => ({border: 0, borderRadius: 0, '& .MuiDataGrid-row': {cursor: 'pointer'}, '& .transmitter-hidden': {opacity: 0.55},
-                    // Keep selection and hover visible within the emergency tint.
-                    ...Object.fromEntries(['error', 'warning'].map((severity) => [`& .transmitter-emergency-${severity}`, {
-                        bgcolor: alpha(theme.palette[severity].main, 0.1),
-                        '&:hover': {bgcolor: alpha(theme.palette[severity].main, 0.16)},
-                        '&.Mui-selected': {bgcolor: alpha(theme.palette[severity].main, 0.2)},
-                        '&.Mui-selected:hover': {bgcolor: alpha(theme.palette[severity].main, 0.26)},
-                    }])),
-                    '& .MuiDataGrid-columnHeader, & .MuiDataGrid-cell': {px: 0.75},
-                    '& .MuiDataGrid-columnHeaderTitle': {fontSize: '0.75rem', fontWeight: 600, lineHeight: 1.2, letterSpacing: 0},
-                    '& .MuiDataGrid-cell:focus, & .MuiDataGrid-cell:focus-within': {outline: 'none'}})} />
+            <PlaybackTimeContext.Provider value={cursor}>
+                <DataGrid rows={data} columns={columns} loading={loading} density="compact" columnHeaderHeight={46} showToolbar
+                    disableMultipleRowSelection keepNonExistentRowsSelected pageSizeOptions={pageSizeOptions}
+                    rowSelectionModel={rowSelectionModel}
+                    onRowSelectionModelChange={changeSelection} initialState={initialState}
+                    columnVisibilityModel={visibility} onColumnVisibilityModelChange={changeVisibility}
+                    getRowClassName={getRowClassName} slots={slots} slotProps={slotProps} sx={tableSx} />
+            </PlaybackTimeContext.Provider>
         </Box>
     </Box>;
 }
