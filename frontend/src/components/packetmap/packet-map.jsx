@@ -1,7 +1,7 @@
 /** Copyright (c) 2026 Efstratios Goudelis — GPL-3.0-or-later */
 
 import React, {useEffect, useMemo, useRef, useState} from 'react';
-import {Alert, Box, Paper, Typography} from '@mui/material';
+import {Alert, Box, Typography} from '@mui/material';
 import {alpha} from '@mui/material/styles';
 import {Icon, svg} from 'leaflet';
 import {CircleMarker, MapContainer, Marker, Pane, Polyline, TileLayer, useMap} from 'react-leaflet';
@@ -277,7 +277,6 @@ export default function PacketMap({positions, transmitters, hasPositions = posit
                 {/* Point clicks select the transmitter; details stay in the info panel. */}
                 {tracks.map(({id, points, path}) => {
                     const latest = points[points.length - 1];
-                    const endpoints = points.length > 1 ? [points[0], latest] : [latest];
                     const color = typeColor(latest.kind);
                     const current = playback.get(id);
                     const cursorColor = current?.stale && (current.point.kind === 'radiosonde' || current.point.kind === 'aprs')
@@ -285,10 +284,10 @@ export default function PacketMap({positions, transmitters, hasPositions = posit
                     return <React.Fragment key={id}>
                         {settings.showTracks && id === selectedTransmitterId && path.length > 1 && <Polyline positions={path} smoothFactor={0.5}
                             pathOptions={{color, weight: 2, opacity: latest.kind === 'adsb' ? 0.3 : 1, lineCap: 'round', lineJoin: 'round'}} />}
-                        {endpoints.filter((point) => point !== current?.point).map((point) => <CircleMarker key={point.id}
-                            center={[point.latitude, point.longitude]} radius={3.42}
+                        {latest !== current?.point && <CircleMarker key="end"
+                            center={[latest.latitude, latest.longitude]} radius={3.42}
                             eventHandlers={{click: () => onSelectTransmitter?.(id)}}
-                            pathOptions={{color, fillColor: color, fillOpacity: 0.25, weight: 2}} />)}
+                            pathOptions={{color, fillColor: color, fillOpacity: 0.25, weight: 2}} />}
                         {current && (current.icon ? <Marker key="cursor" position={[current.point.latitude, current.point.longitude]}
                             title={current.point.kind === 'adsb' ? current.point.name || current.point.source || id : undefined}
                             icon={current.icon} eventHandlers={{click: () => onSelectTransmitter?.(id)}}
@@ -301,27 +300,6 @@ export default function PacketMap({positions, transmitters, hasPositions = posit
             {/* Keep overlays clear of the pan buttons and let map gestures pass through. */}
             <Box sx={{position: 'absolute', top: 12, left: 12, right: 12, zIndex: 500, display: 'flex',
                 flexDirection: 'column', alignItems: 'flex-end', gap: 1, pointerEvents: 'none'}}>
-                {settings.showLegend && <Paper component="ul" aria-label={t('packet_map.types', {defaultValue: 'Transmitter types'})}
-                    elevation={2} sx={{m: 0, px: 1.25, py: 0.75, display: 'flex', flexWrap: 'wrap', gap: 1.5,
-                        maxWidth: '100%', listStyle: 'none', bgcolor: (theme) => alpha(theme.palette.background.paper, 0.9)}}>
-                    {Object.entries(TRANSMITTER_TYPES).map(([kind, {label, color}]) => <Box component="li" key={kind}
-                        sx={{display: 'flex', alignItems: 'center', gap: 0.75}}>
-                        <Box component="span" sx={{width: 8, height: 8, borderRadius: '50%', bgcolor: color}} />
-                        <Typography variant="caption">{label}</Typography>
-                    </Box>)}
-                </Paper>}
-                {settings.showLegend && visibilityCircles.length > 0 && <Paper component="ul"
-                    aria-label={t('packet_map.radio_visibility', {defaultValue: 'Radio visibility'})}
-                    elevation={2} sx={{m: 0, px: 1.25, py: 0.75, display: 'flex', flexWrap: 'wrap', gap: 1.5,
-                        maxWidth: '100%', listStyle: 'none', bgcolor: (theme) => alpha(theme.palette.background.paper, 0.9)}}>
-                    {visibilityCircles.map(({id, radius, color, label}) => <Box component="li" key={id}
-                        sx={{display: 'flex', alignItems: 'center', gap: 0.75}}>
-                        <Box component="span" sx={{width: 20, borderTop: `2px dashed ${color}`}} />
-                        <Typography variant="caption">{label} · {t('packet_map.visibility_radius', {
-                            defaultValue: '{{radius}} km', radius: Math.round(radius / 1000).toLocaleString(),
-                        })}</Typography>
-                    </Box>)}
-                </Paper>}
                 {!loading && !positions.length && <Alert severity="info" sx={{alignSelf: 'stretch'}}>
                     {hasPositions ? t('packet_map.all_hidden', {defaultValue: 'All transmitter types are hidden.'})
                         : t('packet_map.empty', {defaultValue: 'No decoded transmitter positions in this date range.'})}

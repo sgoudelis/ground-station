@@ -67,7 +67,6 @@ export default function PacketMapSettingsDialog({settings, hiddenTypes = [], tra
                         {toggle('enableMapDragging', t('map_controls.enable_panning', {defaultValue: 'Enable map panning'}))}
                         {toggle('enableMapZooming', t('map_controls.enable_gesture_zoom', {defaultValue: 'Enable gesture zoom'}))}
                         {toggle('showTracks', navigationT('packet_map.show_tracks', {defaultValue: 'Show transmitter tracks'}))}
-                        {toggle('showLegend', navigationT('packet_map.show_legend', {defaultValue: 'Show transmitter legend'}))}
                     </Stack>
                 </Paper>
             </Stack>

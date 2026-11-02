@@ -310,7 +310,7 @@ describe('Packet map viewport', () => {
     });
 });
 
-it('renders the selected transmitter path with only start and end markers and no popups', () => {
+it('renders the selected transmitter path without a start marker, legends or popups', () => {
     const state = {location: {location: {lat: '40.6', lon: '22.9'}}};
     const store = configureStore({reducer: () => state});
     const points = [
@@ -326,9 +326,9 @@ it('renders the selected transmitter path with only start and end markers and no
     expect(screen.getByTestId('map').closest('.packet-map')).not.toBeNull();
     expect(screen.getByTestId('track')).toHaveAttribute('data-opacity', '1');
     expect(screen.getByTestId('home')).toHaveAttribute('data-center', '[40.6,22.9]');
-    expect(screen.getAllByTestId('position')).toHaveLength(2);
+    expect(screen.getAllByTestId('position')).toHaveLength(1);
     expect(screen.getAllByTestId('position').map((marker) => JSON.parse(marker.dataset.center)))
-        .toEqual([[40, 23], [41, 24]]);
+        .toEqual([[41, 24]]);
     expect(screen.getByTestId('sonde-marker')).toHaveAttribute('data-center', '[42,25]');
     const path = JSON.parse(screen.getByTestId('track').dataset.positions);
     expect(path.length).toBeGreaterThan(3);
@@ -337,30 +337,25 @@ it('renders the selected transmitter path with only start and end markers and no
     expect(path).toContainEqual([40.4, 23.6]);
     expect(screen.queryByTestId('map-popup')).not.toBeInTheDocument();
     expect(screen.getByText('2 transmitters')).toBeInTheDocument();
-    const legend = screen.getByRole('list', {name: 'Transmitter types'});
-    expect(legend).toHaveTextContent('APRS');
-    expect(legend).toHaveTextContent('Radiosonde');
-    expect(screen.getByTestId('map-title')).not.toContainElement(legend);
+    expect(screen.queryByRole('list', {name: 'Transmitter types'})).not.toBeInTheDocument();
     expect(map.fitBounds).not.toHaveBeenCalled();
     expect(map.setView).toHaveBeenLastCalledWith([41, 24], 8, {animate: false});
     fireEvent.click(screen.getByRole('button', {name: 'Show transmitter tracks'}));
     expect(screen.queryByTestId('track')).not.toBeInTheDocument();
-    expect(screen.getAllByTestId('position')).toHaveLength(2);
+    expect(screen.getAllByTestId('position')).toHaveLength(1);
 
     fireEvent.click(screen.getByRole('button', {name: 'Map Settings'}));
     const dialog = within(screen.getByRole('dialog', {name: 'Map Settings'}));
     fireEvent.click(dialog.getByRole('switch', {name: 'Show transmitter tracks'}));
-    fireEvent.click(dialog.getByRole('switch', {name: 'Show transmitter legend'}));
+    expect(dialog.queryByRole('switch', {name: 'Show transmitter legend'})).not.toBeInTheDocument();
     fireEvent.mouseDown(dialog.getByRole('combobox', {name: 'Map layer'}));
     fireEvent.click(screen.getByRole('option', {name: 'Satellite + streets'}));
     // Options stay local to the dialog until Apply, preserving quick controls.
     expect(screen.queryByTestId('track')).not.toBeInTheDocument();
-    expect(legend).toBeInTheDocument();
     expect(screen.getAllByTestId('tile-layer')).toHaveLength(1);
     fireEvent.click(dialog.getByRole('button', {name: 'Apply'}));
     expect(screen.getByTestId('track')).toBeInTheDocument();
-    expect(legend).not.toBeInTheDocument();
-    expect(JSON.parse(localStorage.getItem(mapSettingsStoreName))).toMatchObject({showTracks: true, showLegend: false, tileLayerId: 'hybrid'});
+    expect(JSON.parse(localStorage.getItem(mapSettingsStoreName))).toMatchObject({showTracks: true, tileLayerId: 'hybrid'});
     expect(screen.getAllByTestId('tile-layer').map((tile) => [tile.dataset.url, tile.dataset.zIndex])).toEqual([
         ['tiles', '0'],
         ['https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}', '1'],
@@ -482,7 +477,7 @@ it('scrubs sonde symbols and historical flight phases while following the marker
     expect(within(screen.getByTestId('sonde-marker')).queryByTestId('map-tooltip')).not.toBeInTheDocument();
     expect(screen.getByTestId('sonde-marker')).toBeEmptyDOMElement();
     expect(screen.getByTestId('sonde-marker').dataset.iconHtml).toContain('<span class="packet-radiosonde-label">S</span>');
-    expect(screen.getAllByTestId('position')).toHaveLength(2);
+    expect(screen.getAllByTestId('position')).toHaveLength(1);
     map.fitBounds.mockClear();
     map.setView.mockClear();
     rerender(element('2026-11-01T00:01:30Z'));
@@ -652,7 +647,7 @@ it('selects table rows and centers their markers, then restores all bounds with 
     expect(map.fitBounds).not.toHaveBeenCalled();
     expect(map.setView).toHaveBeenLastCalledWith([41, 24], 8, {animate: false});
     expect(screen.getByTestId('track')).toHaveAttribute('data-positions', '[[40,23],[41,24]]');
-    expect(screen.getAllByTestId('position')).toHaveLength(2);
+    expect(screen.getAllByTestId('position')).toHaveLength(1);
 
     act(() => { listeners.get('movestart')(); listeners.get('moveend')(); });
     const sondeRow = screen.getByRole('row', {name: /S Radiosonde/});
@@ -677,8 +672,7 @@ it('selects table rows and centers their markers, then restores all bounds with 
     expect(greenLabel).toHaveAttribute('startOffset', '25%');
     expect(greenLabel).toHaveAttribute('href', `#${circles[1].querySelector('path').id}`);
     expect(circles[0].querySelector('textPath')).toHaveTextContent('357 km · Radio horizon (0°)');
-    expect(screen.getByRole('list', {name: 'Radio visibility'})).toHaveTextContent('Radio horizon (0°) · 357 km');
-    expect(screen.getByRole('list', {name: 'Radio visibility'})).toHaveTextContent('5° elevation · 104 km');
+    expect(screen.queryByRole('list', {name: 'Radio visibility'})).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', {name: 'Fit all'}));
     expect(screen.queryByTestId('track')).not.toBeInTheDocument();

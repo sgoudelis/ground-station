@@ -9,7 +9,6 @@ export const defaultMapSettings = {
     enableMapDragging: false,
     enableMapZooming: false,
     showTracks: true,
-    showLegend: true,
     tileLayerId: 'esridarkcanvas',
 };
 
@@ -19,7 +18,6 @@ export function readMapSettings() {
         enableMapDragging: saved?.enableMapDragging === true,
         enableMapZooming: saved?.enableMapZooming === true,
         showTracks: saved?.showTracks !== false,
-        showLegend: saved?.showLegend !== false,
         tileLayerId: ['osm', 'satellite', 'hybrid', 'topo', 'cartodark', 'esridarkcanvas', 'stadiadark'].includes(saved?.tileLayerId)
             ? saved.tileLayerId : defaultMapSettings.tileLayerId,
     };
