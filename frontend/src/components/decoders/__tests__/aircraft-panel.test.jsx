@@ -54,7 +54,8 @@ it('displays enriched aircraft and opens translated metadata', () => {
     expect(dialog.getByText('United Kingdom')).toBeInTheDocument();
     expect(dialog.getByText('EASY')).toBeInTheDocument();
     expect(screen.queryByRole('link', {name: 'Mictronics Aircraft Database'})).not.toBeInTheDocument();
-    expect(dialog.getByText(/Unclassified does not establish civilian/)).toBeInTheDocument();
+    expect(dialog.queryByText(/Military markings come from/)).not.toBeInTheDocument();
+    expect(dialog.queryByText(/Operator details are inferred/)).not.toBeInTheDocument();
 });
 
 it('shows non-military classifications and updates flags in the same column', () => {

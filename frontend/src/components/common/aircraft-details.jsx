@@ -21,9 +21,5 @@ export default function AircraftDetails({aircraft}) {
                 </Typography>
             </Box>)}
         </Box>
-        <Typography variant="caption" color="text.secondary" component="p" sx={{mb: 0}}>
-            {t('aircraft.classification_note', 'Military markings come from database flags or ICAO address ranges. Other labels describe the broadcast category or database aircraft class; Interesting is a database flag. Unclassified does not establish civilian or recreational use.')}
-            {' '}{t('aircraft.operator_note', 'Operator details are inferred from the broadcast callsign prefix and do not establish aircraft ownership.')}
-        </Typography>
     </Box>;
 }
