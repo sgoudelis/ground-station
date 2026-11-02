@@ -23,7 +23,7 @@ from gnuradio import filter, gr, lora_sdr  # noqa: E402
 
 from common.iqsamples import require_complex64  # noqa: E402
 from demodulators.basedecoderprocess import BaseDecoderProcess  # noqa: E402
-from demodulators.loraconfig import normalize_lora  # noqa: E402
+from demodulators.loraconfig import lora_sync_symbols, normalize_lora  # noqa: E402
 from telemetry.parser import TelemetryParser  # noqa: E402
 
 logger = logging.getLogger("loradecoder")
@@ -133,7 +133,7 @@ class LoRaFlowgraph(gr.top_block):
             bw,
             sf,
             params["implicit_header"],
-            params["sync_word"],
+            lora_sync_symbols(params["sync_word"], sf),
             4,
             params["preamble_len"],
         )

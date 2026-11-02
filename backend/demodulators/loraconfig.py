@@ -17,6 +17,16 @@ LORA_DEFAULTS: dict[str, Any] = {
 }
 
 
+def lora_sync_symbols(sync_word: list[int], sf: int) -> list[int]:
+    """Expand a Semtech network byte into the native receiver's FFT bins."""
+    if len(sync_word) != 1:
+        return list(sync_word)
+    # Hardware encodes each nibble as a signed four-bit offset. The native
+    # library's unsigned byte expansion rejects e.g. Meshtastic 0x2B at SF > 7.
+    nibbles = (sync_word[0] >> 4, sync_word[0] & 0x0F)
+    return [(((nibble + 8) % 16 - 8) * 8) % (1 << sf) for nibble in nibbles]
+
+
 def normalize_lora(values: dict[str, Any]) -> dict[str, Any]:
     """Validate before passing settings to native blocks; retain legacy aliases."""
     params: dict[str, Any] = {key: values.get(key) for key in LORA_DEFAULTS}

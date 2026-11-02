@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from demodulators.loraconfig import normalize_lora
+from demodulators.loraconfig import lora_sync_symbols, normalize_lora
 from pipeline.config.decoderconfigservice import DecoderConfigService
 from telemetry.parser import TelemetryParser
 
@@ -48,6 +48,20 @@ def test_config_metadata_overrides_and_legacy_tinygs_values():
 
 
 @pytest.mark.unit
+@pytest.mark.parametrize("sf", range(7, 13))
+def test_sync_bytes_use_signed_hardware_offsets(sf):
+    assert lora_sync_symbols([0x2B], sf) == [16, ((1 << sf) - 40) % (1 << sf)]
+    assert lora_sync_symbols([0x12], sf) == [8, 16]
+    assert lora_sync_symbols([0x34], sf) == [24, 32]
+    assert lora_sync_symbols([0xAB], sf) == [
+        ((1 << sf) - 48) % (1 << sf),
+        ((1 << sf) - 40) % (1 << sf),
+    ]
+    assert lora_sync_symbols([0, 0], sf) == [0, 0]
+    assert lora_sync_symbols([8, 16], sf) == [8, 16]
+
+
+@pytest.mark.unit
 @pytest.mark.parametrize(
     "values",
     [
@@ -79,7 +93,7 @@ def test_lora_payload_remains_opaque():
 
 @pytest.mark.integration
 @pytest.mark.parametrize(
-    "scenario", ["graph", "worker", "modes", "resampled", "persistence", "continuity"]
+    "scenario", ["graph", "worker", "modes", "meshtastic", "resampled", "persistence", "continuity"]
 )
 def test_native_recorded_lora(scenario):
     if importlib.util.find_spec("gnuradio") is None:

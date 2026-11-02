@@ -110,6 +110,24 @@ def test_modes():
     )
 
 
+def test_meshtastic():
+    payload = b"\xff\xff\xff\xffMeshtastic sync regression\x00\x7e"
+    for sf in (7, 9, 11):
+        params = normalize_lora({"sf": sf, "bw": 250000, "sync_word": [0x2B], "preamble_len": 16})
+        # A captured SF11 Meshtastic packet uses sync bins 16 and 2008 (-40).
+        # Supply hardware symbol offsets directly: the native transmitter also
+        # expands byte 0x2B incorrectly, masking the receiver bug in a loopback.
+        waveform = transmit(payload, {**params, "sync_word": [16, (1 << sf) - 40]})
+        valid = receive(waveform, **params)
+        assert len(valid) == 1 and valid[0][0] == payload, (params, valid)
+        assert valid[0][1]["crc_valid"] is True
+        assert receive(waveform, **{**params, "sync_word": [0x2A]}) == []
+    print(
+        "Meshtastic: signed sync offsets decode at SF7/9/11, exact binary payload and CRC verified",
+        flush=True,
+    )
+
+
 def test_worker(sample_rate=500000, inverted=False):
     iq_queue, data_queue = multiprocessing.Queue(), multiprocessing.Queue()
     # On assertion failure there may be unconsumed IQ; do not hang the runner
@@ -269,6 +287,7 @@ if __name__ == "__main__":
         "graph": test_graph,
         "worker": test_worker,
         "modes": test_modes,
+        "meshtastic": test_meshtastic,
         "resampled": lambda: test_worker(800000, True),
         "persistence": test_persistence,
         "continuity": test_continuity,
