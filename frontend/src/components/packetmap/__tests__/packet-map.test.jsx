@@ -8,7 +8,7 @@ import i18n from 'i18next';
 import {initReactI18next} from 'react-i18next';
 import PacketMap, {MapViewport} from '../packet-map.jsx';
 import TransmitterTable from '../transmitter-table.jsx';
-import packetMapReducer from '../packet-map-slice.jsx';
+import packetMapReducer, {setTransmitterTableColumnVisibility} from '../packet-map-slice.jsx';
 import {mapSettingsStoreName, mapViewStoreName} from '../storage.js';
 
 await i18n.use(initReactI18next).init({lng: 'en', resources: {
@@ -653,9 +653,11 @@ it('remembers hidden and enabled transmitter columns when fields disappear and t
         <TransmitterTable rows={data} loading={false} hiddenTypes={[]} />
     </ThemeProvider></Provider>;
     const {rerender, unmount} = render(element(rows));
-    fireEvent.click(screen.getByRole('button', {name: 'Columns', exact: true}));
-    fireEvent.click(screen.getByRole('checkbox', {name: 'Source', exact: true}));
-    fireEvent.click(screen.getByRole('checkbox', {name: 'Frame · Sequence', exact: true}));
+    // Label queries avoid repeatedly calculating accessible names across the full grid.
+    fireEvent.click(screen.getByLabelText('Columns', {selector: 'button'}));
+    expect(screen.getByRole('button', {name: 'Reset', exact: true})).toBeDisabled();
+    fireEvent.click(screen.getByLabelText('Source'));
+    fireEvent.click(screen.getByLabelText('Frame · Sequence'));
     expect(store.getState().packetMap.transmitterTableColumnVisibility).toMatchObject({
         source: false, 'info:frame.sequence': true, 'info:signal.frequency_hz': true,
     });
@@ -663,15 +665,20 @@ it('remembers hidden and enabled transmitter columns when fields disappear and t
     expect(store.getState().packetMap.transmitterTableColumnVisibility['info:frame.sequence']).toBe(true);
     unmount();
     render(element(rows));
-    fireEvent.click(screen.getByRole('button', {name: 'Columns', exact: true}));
-    expect(screen.getByRole('checkbox', {name: 'Source', exact: true})).not.toBeChecked();
-    expect(screen.getByRole('checkbox', {name: 'Frame · Sequence', exact: true})).toBeChecked();
-    expect(screen.getByRole('checkbox', {name: 'Signal · Frequency hz', exact: true})).toBeChecked();
+    fireEvent.click(screen.getByLabelText('Columns', {selector: 'button'}));
+    expect(screen.getByLabelText('Source')).not.toBeChecked();
+    expect(screen.getByLabelText('Frame · Sequence')).toBeChecked();
+    expect(screen.getByLabelText('Signal · Frequency hz')).toBeChecked();
     // Mounting both native column panels can exceed the default five-second DOM test budget.
 }, 10000);
 
-it('resets column choices to defaults after live updates and remounts', () => {
+it.each(['live updates', 'remounts'])('resets saved column choices to defaults after %s', (scenario) => {
     const store = configureStore({reducer: {packetMap: packetMapReducer}});
+    // Checkbox editing is covered above. Seed saved choices so each reset case
+    // only mounts the native column panel once and stays within its DOM test budget.
+    store.dispatch(setTransmitterTableColumnVisibility({
+        source: false, 'info:frame.sequence': true, 'info:signal.frequency_hz': true,
+    }));
     const rows = [{id: 'aprs:A', name: 'A', kind: 'aprs', source: 'SV1A', packet_count: 1,
         details: {frame: {sequence: 42}, signal: {frequency_hz: 144800000}},
     }];
@@ -679,27 +686,21 @@ it('resets column choices to defaults after live updates and remounts', () => {
         <TransmitterTable rows={data} loading={false} hiddenTypes={[]} />
     </ThemeProvider></Provider>;
     const {rerender, unmount} = render(element(rows));
-    fireEvent.click(screen.getByRole('button', {name: 'Columns', exact: true}));
-    let reset = screen.getByRole('button', {name: 'Reset', exact: true});
-    let panel = within(reset.parentElement.parentElement);
-    expect(reset).toBeDisabled();
-    fireEvent.click(panel.getByRole('checkbox', {name: 'Source', exact: true}));
-    fireEvent.click(panel.getByRole('checkbox', {name: 'Frame · Sequence', exact: true}));
-    fireEvent.keyDown(panel.getByRole('checkbox', {name: 'Source', exact: true}), {key: 'Escape'});
-    // A live report rebuilds the dynamic columns but must not replace the defaults.
-    rerender(element(rows.map((row) => ({...row, packet_count: 2}))));
-    fireEvent.click(screen.getByRole('button', {name: 'Columns', exact: true}));
-    expect(screen.getByRole('button', {name: 'Reset', exact: true})).toBeEnabled();
-    unmount();
-    render(element(rows));
-    fireEvent.click(screen.getByRole('button', {name: 'Columns', exact: true}));
-    reset = screen.getByRole('button', {name: 'Reset', exact: true});
-    panel = within(reset.parentElement.parentElement);
+    if (scenario === 'live updates') {
+        // Rebuilding dynamic columns must not replace the application defaults.
+        rerender(element(rows.map((row) => ({...row, packet_count: 2}))));
+    } else {
+        unmount();
+        render(element(rows));
+    }
+    fireEvent.click(screen.getByLabelText('Columns', {selector: 'button'}));
+    const reset = screen.getByRole('button', {name: 'Reset', exact: true});
+    const panel = within(reset.parentElement.parentElement);
     expect(reset).toBeEnabled();
     fireEvent.click(reset);
-    expect(panel.getByRole('checkbox', {name: 'Source', exact: true})).toBeChecked();
-    expect(panel.getByRole('checkbox', {name: 'Frame · Sequence', exact: true})).not.toBeChecked();
-    expect(panel.getByRole('checkbox', {name: 'Signal · Frequency hz', exact: true})).toBeChecked();
+    expect(panel.getByLabelText('Source')).toBeChecked();
+    expect(panel.getByLabelText('Frame · Sequence')).not.toBeChecked();
+    expect(panel.getByLabelText('Signal · Frequency hz')).toBeChecked();
     expect(reset).toBeDisabled();
     expect(store.getState().packetMap.transmitterTableColumnVisibility).toEqual({});
 }, 10000);
@@ -761,7 +762,8 @@ it('selects table rows and centers their markers, then restores all bounds with 
     render(<Provider store={store}><ThemeProvider theme={createTheme()}><Harness /></ThemeProvider></Provider>);
     expect(map.fitBounds).not.toHaveBeenCalled();
     expect(screen.queryByTestId('track')).not.toBeInTheDocument();
-    const aprsRow = screen.getByRole('row', {name: /A APRS/});
+    // Locate rows by their unique source cells instead of naming every grid cell.
+    const aprsRow = screen.getByText('SV1A').closest('[role="row"]');
     expect(screen.queryByTestId('visibility-circle')).not.toBeInTheDocument();
     fireEvent.click(within(aprsRow).getByRole('button', {name: 'A'}));
     expect(screen.queryByTestId('visibility-circle')).not.toBeInTheDocument();
@@ -772,7 +774,7 @@ it('selects table rows and centers their markers, then restores all bounds with 
     expect(screen.getAllByTestId('position')).toHaveLength(1);
 
     act(() => { listeners.get('movestart')(); listeners.get('moveend')(); });
-    const sondeRow = screen.getByRole('row', {name: /S Radiosonde/});
+    const sondeRow = screen.getByText('SONDE').closest('[role="row"]');
     fireEvent.click(within(sondeRow).getByText('SONDE'));
     expect(sondeRow).toHaveAttribute('aria-selected', 'true');
     expect(aprsRow).toHaveAttribute('aria-selected', 'false');
