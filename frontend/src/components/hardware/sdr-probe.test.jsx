@@ -6,13 +6,17 @@ import {act, fireEvent, render, screen, waitFor, within} from '@testing-library/
 import {expect, it, vi} from 'vitest';
 import {setupTheme} from '../../theme.js';
 import '../../i18n/config.js';
-import sdrReducer, {fetchSDRs, fetchSoapySDRServers, setFormValues, setOpenAddDialog} from './sdr-slice.jsx';
+import sdrReducer, {fetchSDRs, fetchSoapySDRServers, querySoapySDRServer, setFormValues, setOpenAddDialog} from './sdr-slice.jsx';
 import tasksReducer, {taskStarted, taskCompleted} from '../tasks/tasks-slice.jsx';
 import SDRsPage from './sdr-table.jsx';
 
 const {socket} = vi.hoisted(() => ({socket: {emit: vi.fn(), timeout: vi.fn()}}));
 vi.mock('../common/socket.jsx', () => ({useSocket: () => ({socket})}));
-vi.mock('@mui/x-data-grid', () => ({DataGrid: () => <div/>, gridClasses: {}}));
+vi.mock('@mui/x-data-grid', () => ({DataGrid: ({rows, columns}) => <div>
+    {rows.map((row) => <div key={row.id}>
+        {row.name}{columns.find((column) => column.field === 'row_actions').renderCell({row})}
+    </div>)}
+</div>, gridClasses: {}}));
 
 it('adds antenna ports from a dialog probe while preserving the name and custom labels', async () => {
     const store = configureStore({reducer: {
@@ -41,7 +45,7 @@ it('adds antenna ports from a dialog probe while preserving the name and custom 
 });
 
 
-it('offers a separate explicit probe for a configured SDR on the hardware page', async () => {
+it('probes the configured SDR directly from its table row', async () => {
     const store = configureStore({reducer: {
         sdrs: sdrReducer, backgroundTasks: () => ({tasks: {}}),
     }});
@@ -58,9 +62,9 @@ it('offers a separate explicit probe for a configured SDR on the hardware page',
     });
     render(<Provider store={store}><ThemeProvider theme={setupTheme('dark')}><SDRsPage/></ThemeProvider></Provider>);
     expect(socket.emit.mock.calls.some((call) => call[1].cmd === 'probe-sdr')).toBe(false);
-    fireEvent.mouseDown(screen.getByRole('combobox', {name: 'Select SDR to probe'}));
-    fireEvent.click(screen.getByRole('option', {name: 'Configured receiver'}));
-    await act(async () => fireEvent.click(screen.getByRole('button', {name: 'Probe selected SDR'})));
+    await waitFor(() => expect(screen.getByRole('button', {name: 'Probe Configured receiver'})).toBeEnabled());
+    await act(async () => fireEvent.click(screen.getByRole('button', {name: 'Probe Configured receiver'})));
+    expect(screen.queryByRole('combobox', {name: 'Select SDR to probe'})).not.toBeInTheDocument();
     expect(screen.getByText('SDR is streaming. Showing cached capabilities.')).toBeInTheDocument();
     expect(store.getState().sdrs.sdrs).toEqual([device]);
 });
@@ -287,4 +291,57 @@ it('does not apply a late server query to another dialog connection', async () =
     expect(within(dialog).getByRole('textbox', {name: 'Server hostname or IP address'})).toHaveValue('new.example.org');
     expect(within(dialog).getByRole('combobox', {name: 'SDR Device'})).toHaveTextContent('No SDR devices available');
     expect(store.getState().sdrs.formValues.driver).toBe('');
+});
+
+it('adds a discovered device from its server and automatically probes the selected connection', async () => {
+    const store = configureStore({reducer: {sdrs: sdrReducer, backgroundTasks: tasksReducer}});
+    store.dispatch(fetchSDRs.fulfilled([
+        {id: 'saved', type: 'soapysdrremote', host: 'radio.local', port: 55132, driver: 'rtlsdr', serial: 'ABC', name: 'Saved radio'},
+        {id: 'usb', type: 'soapysdrlocal', driver: 'rtlsdr', serial: 'DEF', name: 'Local radio'},
+    ], 'load'));
+    store.dispatch(querySoapySDRServer.fulfilled({ip: 'radio.local', port: 55133, name: 'Manual server', status: 'active',
+        sdrs: [{driver: 'remote', 'remote:driver': 'rtlsdr', serial: 'ABC', label: 'Other server radio'}]}, 'manual'));
+    const servers = {found: {ip: 'radio.local', port: 55132, name: 'rfbox5', status: 'active', sdrs: [
+        {driver: 'remote', 'remote:driver': 'rtlsdr', serial: 'ABC', label: 'Configured receiver'},
+        {driver: 'remote', 'remote:driver': 'rtlsdr', serial: 'DEF', label: 'New receiver'},
+    ]}};
+    const probes = [];
+    socket.timeout.mockReturnValue(socket);
+    socket.emit.mockImplementation((_event, request, reply) => {
+        if (request.cmd === 'probe-sdr') probes.push({request, reply});
+        else reply({success: true, data: servers});
+    });
+    render(<Provider store={store}><ThemeProvider theme={setupTheme('dark')}><SDRsPage/></ThemeProvider></Provider>);
+    const panel = screen.getByRole('region', {name: 'Remote SoapySDR servers'});
+    fireEvent.click(await within(panel).findByRole('button', {name: /rfbox5/}));
+    expect(within(panel).getByText('Configured')).toBeVisible();
+    expect(within(panel).queryByRole('button', {name: 'Add Configured receiver'})).not.toBeInTheDocument();
+    expect(within(panel).getByText('Manual')).toBeVisible();
+    fireEvent.click(within(panel).getByRole('button', {name: /Manual server/}));
+    expect(within(panel).getByRole('button', {name: 'Add Other server radio'})).toBeVisible();
+    fireEvent.click(within(panel).getByRole('button', {name: 'Add New receiver'}));
+    const dialog = screen.getByRole('dialog', {name: 'Add SDR'});
+    expect(probes).toHaveLength(1);
+    expect(probes[0].request.data).toMatchObject({type: 'soapysdrremote', host: 'radio.local', port: 55132,
+        driver: 'rtlsdr', serial: 'DEF', name: 'New receiver'});
+    expect(within(dialog).getByRole('textbox', {name: 'Name'})).toBeDisabled();
+    await act(async () => probes[0].reply(null, {success: true, data: {antennas: {rx: ['RX'], tx: []}}}));
+    expect(within(dialog).getByRole('textbox', {name: 'Name'})).toHaveValue('New receiver');
+    expect(within(dialog).getByPlaceholderText('RX')).toBeInTheDocument();
+    expect(store.getState().sdrs.sdrs).toHaveLength(2);
+});
+
+it('opens manual server entry directly from the server panel without starting a network scan', async () => {
+    const store = configureStore({reducer: {sdrs: sdrReducer, backgroundTasks: tasksReducer}});
+    socket.emit.mockClear();
+    socket.emit.mockImplementation((_event, _request, reply) => reply({success: true, data: {}}));
+    render(<Provider store={store}><ThemeProvider theme={setupTheme('dark')}><SDRsPage/></ThemeProvider></Provider>);
+    const panel = screen.getByRole('region', {name: 'Remote SoapySDR servers'});
+    await waitFor(() => expect(within(panel).getByRole('button', {name: 'Enter server manually…'})).toBeEnabled());
+    fireEvent.click(within(panel).getByRole('button', {name: 'Enter server manually…'}));
+    const dialog = screen.getByRole('dialog', {name: 'Add SDR'});
+    expect(within(dialog).getByRole('textbox', {name: 'Server hostname or IP address'})).toHaveValue('');
+    expect(within(dialog).getByRole('spinbutton', {name: 'Port'})).toHaveValue(55132);
+    expect(within(dialog).getByRole('button', {name: 'Query server'})).toBeDisabled();
+    expect(socket.emit.mock.calls.every(([, request]) => request.cmd === 'get-soapy-servers')).toBe(true);
 });

@@ -25,7 +25,7 @@ import {useTranslation} from 'react-i18next';
 
 export default function SoapyProbeControls({
     socket, values, discovering = false, onDiscover, onParameters, onProbingChange, selector,
-    autoProbeRequest = null, onAutoProbeStarted,
+    autoProbeRequest = null, onAutoProbeStarted, showHelp = true,
 }) {
     const {t} = useTranslation('hardware');
     const [probing, setProbing] = useState(false);
@@ -110,7 +110,7 @@ export default function SoapyProbeControls({
                     {probing ? t('sdr.probing_selected') : t('sdr.probe_selected')}
                 </Button>
             </Stack>
-            <Typography variant="caption" color="text.secondary">{t('sdr.probe_help')}</Typography>
+            {showHelp && <Typography variant="caption" color="text.secondary">{t('sdr.probe_help')}</Typography>}
             {error && <Alert severity="error">{error}</Alert>}
             {result && (
                 <Alert severity="success">
