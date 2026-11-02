@@ -95,7 +95,6 @@ const installOneShotFinalizeFailureInterceptor = async (page) => {
         setup_required: true,
         steps: {
           location: { status: 'success', detail: 'Location saved.' },
-          soapy: { status: 'success', detail: 'Discovery task submitted.' },
           orbital: { status: 'success', detail: 'Synchronization task submitted.' },
           admin: {
             status: 'error',
@@ -200,7 +199,7 @@ test.describe('Setup Wizard', () => {
     await expect(setupDialog.getByText(/setup checklist/i)).toBeVisible({ timeout: 30000 });
     await expect(setupDialog.getByText(/^background task status$/i)).toBeVisible();
     await expect(setupDialog.getByText(/^orbital data sync$/i)).toBeVisible();
-    await expect(setupDialog.getByText(/^soapysdr detection$/i)).toBeVisible();
+    await expect(setupDialog.getByText(/^soapysdr detection$/i)).toHaveCount(0);
 
     await expect(setupDialog).toContainText(/identity and location setup/i);
     await expect(setupDialog).toContainText(/identity and location setup[\s\S]*done/i);

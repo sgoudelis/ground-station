@@ -86,12 +86,17 @@ describe('wizard timezone', () => {
         expect(selector).toHaveValue('Asia/Kathmandu');
         advanceFromIdentityToReview();
         expect(screen.queryByRole('combobox', { name: 'Time Zone' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('checkbox', { name: /discover soapysdr/i })).not.toBeInTheDocument();
         expect(screen.getByText('Asia/Kathmandu (UTC+05:45)')).toBeInTheDocument();
         fireEvent.click(screen.getByRole('button', { name: 'Save location' }));
         await waitFor(() => expect(socket.emitWithAck).toHaveBeenCalledWith('api.call', {
             cmd: 'setup.finalize',
             data: expect.objectContaining({ timezone: 'Asia/Kathmandu', location: expect.objectContaining({ lat: 52.3676, lon: 4.9041 }) }),
         }));
+        const finalizePayload = socket.emitWithAck.mock.calls.find(([, payload]) => payload.cmd === 'setup.finalize')[1].data;
+        expect(finalizePayload).not.toHaveProperty('discover_soapy');
+        expect(screen.queryByText('SoapySDR Detection')).not.toBeInTheDocument();
+        expect(screen.getByText('Orbital data sync started')).toBeInTheDocument();
         expect(screen.getByText('Asia/Kathmandu (UTC+05:45)')).toBeInTheDocument();
     }, WIZARD_TEST_TIMEOUT_MS);
 

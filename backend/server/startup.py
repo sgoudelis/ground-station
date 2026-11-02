@@ -161,6 +161,29 @@ async def _reconcile_library_periodically() -> None:
         logger.exception("Filesystem library reconciliation stopped unexpectedly")
 
 
+async def start_soapy_discovery(background_task_manager: BackgroundTaskManager) -> None:
+    """Only explicitly enabled discovery runs at startup; monitor includes its first scan."""
+    # SoapySDR discovery (runs as background tasks)
+    if arguments.runonce_soapy_discovery and not arguments.enable_soapy_discovery:
+        # Single discovery at startup
+        logger.info("Starting one-time SoapySDR discovery at startup...")
+
+        discovery_func = get_task("soapysdr_discovery")
+        await background_task_manager.start_task(
+            func=discovery_func, kwargs={"mode": "single"}, name="SoapySDR Discovery (startup)"
+        )
+    if arguments.enable_soapy_discovery:
+        # Continuous monitoring mode
+        logger.info("Starting continuous SoapySDR discovery monitoring...")
+
+        discovery_func = get_task("soapysdr_discovery")
+        await background_task_manager.start_task(
+            func=discovery_func,
+            kwargs={"mode": "monitor", "refresh_interval": 120},
+            name="SoapySDR Discovery (monitor)",
+        )
+
+
 @asynccontextmanager
 async def lifespan(fastapiapp: FastAPI):
     """Custom lifespan for FastAPI."""
@@ -253,25 +276,7 @@ async def lifespan(fastapiapp: FastAPI):
     await restore_tracker_instances_from_db()
     await emit_tracker_instances(sio)
 
-    # SoapySDR discovery (runs as background tasks)
-    if arguments.runonce_soapy_discovery:
-        # Single discovery at startup
-        logger.info("Starting one-time SoapySDR discovery at startup...")
-
-        discovery_func = get_task("soapysdr_discovery")
-        await background_task_manager.start_task(
-            func=discovery_func, kwargs={"mode": "single"}, name="SoapySDR Discovery (startup)"
-        )
-    if arguments.enable_soapy_discovery:
-        # Continuous monitoring mode
-        logger.info("Starting continuous SoapySDR discovery monitoring...")
-
-        discovery_func = get_task("soapysdr_discovery")
-        await background_task_manager.start_task(
-            func=discovery_func,
-            kwargs={"mode": "monitor", "refresh_interval": 120},
-            name="SoapySDR Discovery (monitor)",
-        )
+    await start_soapy_discovery(background_task_manager)
 
     # Schedule initial sync if needed.
     # During first-time setup we defer this background sync so the setup wizard

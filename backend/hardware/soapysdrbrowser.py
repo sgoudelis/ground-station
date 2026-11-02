@@ -49,12 +49,6 @@ _service_tasks_by_name: Dict[str, asyncio.Task] = {}
 _discovery_shutting_down = threading.Event()
 
 
-def _log_if_active(level: int, message: str, *args) -> None:
-    if _discovery_shutting_down.is_set():
-        return
-    logger.log(level, message, *args)
-
-
 # Custom JSON encoder to handle SoapySDR types
 class SoapySDREncoder(json.JSONEncoder):
     def default(self, obj):
@@ -84,7 +78,6 @@ def update_discovered_servers(servers_data: Dict[str, Dict[str, Any]]) -> None:
     Args:
         servers_data: Dictionary of server data to update
     """
-    global discovered_servers
     with _servers_lock:
         discovered_servers.clear()
         discovered_servers.update(servers_data)
@@ -118,122 +111,6 @@ def soapysdr_to_dict(sdr_obj):
     else:
         # Basic types should be serializable
         return sdr_obj
-
-
-def _normalize_antenna_ports(ports: Any) -> List[str]:
-    """Normalize SDR antenna names into a stable list of non-empty unique strings."""
-    if ports is None:
-        return []
-
-    if isinstance(ports, (str, bytes, bytearray)):
-        candidate_ports = [ports]
-    else:
-        try:
-            # Soapy can return custom iterable vector types.
-            candidate_ports = list(ports)
-        except Exception:
-            return []
-
-    normalized: List[str] = []
-    for port in candidate_ports:
-        name = str(port).strip()
-        if name and name not in normalized:
-            normalized.append(name)
-    return normalized
-
-
-def _format_device_ports_row(device: Dict[str, Any]) -> str:
-    label = str(device.get("label", device.get("driver", "unknown")) or "unknown").strip()
-    serial = str(device.get("serial", "") or "").strip()
-    serial_short = serial[-6:] if serial else "-"
-    raw_antennas = device.get("antennas")
-    if isinstance(raw_antennas, dict):
-        rx = raw_antennas.get("rx", [])
-        tx = raw_antennas.get("tx", [])
-    else:
-        rx = []
-        tx = []
-    rx_count = len(rx) if isinstance(rx, list) else 0
-    tx_count = len(tx) if isinstance(tx, list) else 0
-    return f"{label}[{serial_short}]={rx_count}/{tx_count}"
-
-
-def _compact_ports_rows(devices: List[Dict[str, Any]], max_items: int = 12) -> str:
-    rows = [_format_device_ports_row(device) for device in devices if isinstance(device, dict)]
-    if len(rows) > max_items:
-        extra = len(rows) - max_items
-        rows = rows[:max_items] + [f"...(+{extra})"]
-    return ", ".join(rows) if rows else "-"
-
-
-def _probe_remote_device_antennas_via_remoteprobe(
-    ip: str, port: int, device: Dict[str, Any]
-) -> Dict[str, List[str]]:
-    """
-    Probe antennas through the dedicated per-device remote probe path.
-
-    This path mirrors the explicit remote probe used elsewhere in backend flows
-    and is more reliable than ad-hoc Device(args) matching for discovery.
-    """
-    if not HAS_SOAPYSDR:
-        return {"rx": [], "tx": []}
-
-    # Lazy import to avoid unnecessary module initialization when remote probing is unused.
-    from hardware.soapysdrremoteprobe import probe_remote_soapy_sdr
-
-    remote_driver = str(device.get("remote:driver", "") or "").strip()
-    raw_driver = str(device.get("driver", "") or "").strip()
-    serial = str(device.get("serial", "") or "").strip()
-    mode = str(device.get("mode", "") or "").strip()
-    remote_type = str(device.get("remote:type", "") or "").strip()
-    label = str(device.get("label", device.get("serial", "unknown")) or "").strip()
-
-    probe_driver = remote_driver or (raw_driver if raw_driver.lower() != "remote" else "")
-    probe_details: Dict[str, Any] = {
-        "host": str(ip),
-        "port": int(port),
-        "name": label,
-        "driver": probe_driver,
-        "serial": serial,
-    }
-    if mode:
-        probe_details["mode"] = mode
-    if remote_type:
-        probe_details["remote:type"] = remote_type
-
-    try:
-        probe_reply = probe_remote_soapy_sdr(probe_details)
-    except Exception as exc:
-        _log_if_active(
-            logging.WARNING,
-            "Remote per-device probe crashed for %s:%s device %s: %s",
-            ip,
-            port,
-            label,
-            str(exc),
-        )
-        return {"rx": [], "tx": []}
-
-    if not probe_reply.get("success"):
-        _log_if_active(
-            logging.WARNING,
-            "Remote per-device probe failed for %s:%s device %s | driver=%s serial=%s mode=%s type=%s error=%s",
-            ip,
-            port,
-            label,
-            probe_details.get("driver", ""),
-            probe_details.get("serial", ""),
-            probe_details.get("mode", ""),
-            probe_details.get("remote:type", ""),
-            probe_reply.get("error", "unknown error"),
-        )
-        return {"rx": [], "tx": []}
-
-    antennas = (probe_reply.get("data") or {}).get("antennas") or {}
-    rx_ports = _normalize_antenna_ports(antennas.get("rx"))
-    tx_ports = _normalize_antenna_ports(antennas.get("tx"))
-
-    return {"rx": rx_ports, "tx": tx_ports}
 
 
 async def _run_soapy_probe(function_name: str, *args: Any, timeout: float) -> Any:
@@ -274,68 +151,6 @@ async def _run_soapy_probe(function_name: str, *args: Any, timeout: float) -> An
     return json.loads(stdout)
 
 
-async def enrich_remote_sdrs_with_antennas(
-    ip: str, port: int, devices: List[Dict[str, Any]], timeout: float = 8.0
-) -> List[Dict[str, Any]]:
-    """
-    Enrich remote discovery results with antenna-port metadata.
-
-    This intentionally uses short per-device timeouts so one slow device does
-    not block server discovery.
-    """
-    if not devices:
-        return []
-
-    # Keep per-device probes serialized for stability with busy SoapyRemote endpoints.
-    semaphore = asyncio.Semaphore(1)
-
-    async def _enrich_device(device: Dict[str, Any]) -> Dict[str, Any]:
-        device_dict = dict(device) if isinstance(device, dict) else soapysdr_to_dict(device)
-        antennas: Dict[str, List[str]] = {"rx": [], "tx": []}
-
-        if HAS_SOAPYSDR:
-            try:
-                async with semaphore:
-                    antennas = await _run_soapy_probe(
-                        "_probe_remote_device_antennas_via_remoteprobe",
-                        ip,
-                        int(port),
-                        device_dict,
-                        timeout=timeout,
-                    )
-            except asyncio.TimeoutError:
-                _log_if_active(
-                    logging.WARNING,
-                    "Timeout probing antennas for %s:%s device %s",
-                    ip,
-                    port,
-                    device_dict.get("label", device_dict.get("serial", "unknown")),
-                )
-            except Exception as exc:
-                _log_if_active(
-                    logging.WARNING,
-                    "Unexpected error probing antennas for %s:%s device %s: %s",
-                    ip,
-                    port,
-                    device_dict.get("label", device_dict.get("serial", "unknown")),
-                    str(exc),
-                )
-
-        device_dict["antennas"] = antennas
-        _log_if_active(
-            logging.INFO,
-            "Remote antenna probe result for %s:%s device %s | rx_ports=%d tx_ports=%d",
-            ip,
-            port,
-            device_dict.get("label", device_dict.get("serial", "unknown")),
-            len(antennas.get("rx", [])),
-            len(antennas.get("tx", [])),
-        )
-        return device_dict
-
-    return await asyncio.gather(*[_enrich_device(device) for device in devices])
-
-
 async def query_sdrs_with_python_module(ip, port, timeout=5):
     """Query for SDRs using Python SoapySDR module with timeout protection."""
     if not HAS_SOAPYSDR:
@@ -346,39 +161,9 @@ async def query_sdrs_with_python_module(ip, port, timeout=5):
         raw_results = await _run_soapy_probe(
             "_query_with_soapysdr_module", ip, port, timeout=timeout
         )
-        logger.info(
-            "Remote enumerate returned %d device(s) for %s:%s before antenna enrichment",
-            len(raw_results),
-            ip,
-            port,
-        )
-
-        # Convert the results to serializable dictionaries
+        # Discovery lists devices without opening them. Capability/antenna reads
+        # belong to an explicit selected-device probe in the server process.
         serializable_results = [soapysdr_to_dict(device) for device in raw_results]
-        serializable_results = await enrich_remote_sdrs_with_antennas(
-            ip, int(port), serializable_results
-        )
-
-        rx_ready = 0
-        tx_ready = 0
-        for device in serializable_results:
-            antennas = device.get("antennas") if isinstance(device, dict) else {}
-            rx_ports = antennas.get("rx") if isinstance(antennas, dict) else []
-            tx_ports = antennas.get("tx") if isinstance(antennas, dict) else []
-            if isinstance(rx_ports, list) and rx_ports:
-                rx_ready += 1
-            if isinstance(tx_ports, list) and tx_ports:
-                tx_ready += 1
-
-        logger.info(
-            "Remote antenna enrichment complete for %s:%s | devices=%d rx_ready=%d tx_ready=%d rows=%s",
-            ip,
-            port,
-            len(serializable_results),
-            rx_ready,
-            tx_ready,
-            _compact_ports_rows(serializable_results),
-        )
 
         logger.debug(f"Found {len(serializable_results)} devices on server {ip}:{port}")
         return serializable_results, "active"
@@ -436,8 +221,8 @@ async def query_server_for_sdrs(ip, port):
     # Server is reachable, try the SoapySDR Python module
     try:
         results, status = await query_sdrs_with_python_module(ip, port)
-        if results or status == "active":
-            return results, status
+        # Preserve timeout and missing-binding states for direct server queries.
+        return results, status
     except Exception as e:
         logger.error(f"Failed to query SDRs on {ip}:{port}: {str(e)}")
 
@@ -447,7 +232,6 @@ async def query_server_for_sdrs(ip, port):
 
 async def on_service_state_change(zeroconf, service_type, name, state_change):
     """Callback for service state changes."""
-    global discovered_servers
     started_at = time.perf_counter()
     logger.info(f"Service {name} of type {service_type} state changed: {state_change}")
 
@@ -493,10 +277,9 @@ async def on_service_state_change(zeroconf, service_type, name, state_change):
 
                 if status == "active":
                     logger.info(
-                        "Server %s has %d connected SDR devices | rows=%s",
+                        "Server %s has %d connected SDR devices",
                         name,
                         len(connected_sdrs),
-                        _compact_ports_rows(connected_sdrs),
                     )
                 else:
                     logger.warning(f"Server {name} is available but has status: {status}")

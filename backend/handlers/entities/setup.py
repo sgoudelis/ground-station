@@ -25,7 +25,7 @@ from typing import Any, Dict, Optional, cast
 
 from common import auth as authsvc
 from common.timezones import normalize_coordinates, timezone_for_coordinates, validate_timezone
-from handlers.entities import control, locations, satellites
+from handlers.entities import locations, satellites
 from server import runtimestate
 from server.scheduler import schedule_celestial_sync_warmup_job
 from tlesync.state import sync_state_manager
@@ -40,7 +40,6 @@ SETUP_STATE_RUNNING = "running"
 SETUP_STATE_COMPLETED = "completed"
 SETUP_STATE_FAILED = "failed"
 
-SOAPY_SETUP_TASK_NAME = "SoapySDR Discovery (setup)"
 SOCKET_EVENT_SETUP_STATUS = "setup:status"
 
 _setup_finalize_lock = asyncio.Lock()
@@ -72,7 +71,6 @@ def _new_finalize_state(
         "setup_required": True,
         "steps": {
             "location": _new_step(),
-            "soapy": _new_step(),
             "orbital": _new_step(),
             "admin": _new_step(),
         },
@@ -213,34 +211,6 @@ async def _run_finalize_job(
             await _emit_setup_status(sio, sid)
             raise RuntimeError(error_message)
         _set_step("location", CALL_STATUS_SUCCESS, "Location saved.")
-        await _emit_setup_status(sio, sid)
-
-        _set_step("soapy", CALL_STATUS_PENDING, "Starting SoapySDR discovery...")
-        await _emit_setup_status(sio, sid)
-        soapy_reply = await control.background_task_start(
-            sio,
-            {
-                "task_name": "soapysdr_discovery",
-                "args": [],
-                "kwargs": {
-                    "mode": "single",
-                    "refresh_interval": 120,
-                },
-                "name": SOAPY_SETUP_TASK_NAME,
-            },
-            logger,
-            sid,
-        )
-        if soapy_reply.get("success"):
-            _set_step("soapy", CALL_STATUS_SUCCESS, "Discovery task submitted.")
-        elif _is_already_running_error(soapy_reply.get("error")):
-            _set_step("soapy", CALL_STATUS_SUCCESS, "Discovery already running.")
-        else:
-            _set_step(
-                "soapy",
-                CALL_STATUS_ERROR,
-                str(soapy_reply.get("error") or "Failed to start SoapySDR discovery."),
-            )
         await _emit_setup_status(sio, sid)
 
         _set_step("orbital", CALL_STATUS_PENDING, "Starting orbital synchronization...")

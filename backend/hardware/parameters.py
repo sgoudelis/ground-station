@@ -38,6 +38,27 @@ def sdr_parameter_lock(sdr_id: str) -> asyncio.Lock:
     return _sdr_parameter_locks.setdefault(str(sdr_id), asyncio.Lock())
 
 
+def sdr_hardware_lock(device: Dict) -> asyncio.Lock:
+    # Drafts have no database ID. Use the endpoint so they share the startup
+    # gate of any saved radio on that server, while unrelated receivers proceed.
+    device_type = device.get("type")
+    if device_type == "soapysdrremote":
+        resource = [
+            "soapyremote",
+            str(device.get("host") or "").strip().lower(),
+            str(device.get("port") or 55132),
+        ]
+    elif device_type == "soapysdrlocal":
+        resource = ["soapylocal"]
+    else:
+        resource = ["device", str(device.get("id"))]
+    return sdr_parameter_lock(f"<hardware:{json.dumps(resource)}>")
+
+
+def cache_sdr_parameters(sdr_id: str, parameters: Dict) -> None:
+    sdr_parameters_cache[_cache_key(sdr_id)] = parameters
+
+
 def _cache_key(sdr_id: str, recording_path: Optional[str] = None) -> tuple[str, str]:
     return (str(sdr_id), str(recording_path or "") if str(sdr_id) == "sigmf-playback" else "")
 
@@ -57,15 +78,19 @@ def _decode_subprocess_output(raw: Optional[bytes]) -> str:
     return raw.decode(errors="replace").strip()
 
 
-async def _communicate_probe(process, timeout):
+async def communicate_sdr_probe(process, timeout):
     """Reap a timed-out or canceled probe before the SDR startup gate opens."""
+    communication = asyncio.create_task(process.communicate())
     try:
-        return await asyncio.wait_for(process.communicate(), timeout=timeout)
-    except (asyncio.TimeoutError, asyncio.CancelledError):
+        return await asyncio.wait_for(asyncio.shield(communication), timeout=timeout)
+    finally:
         if process.returncode is None:
-            process.kill()
-            await process.wait()
-        raise
+            try:
+                process.kill()
+            except ProcessLookupError:
+                pass  # The child exited while cancellation was being delivered.
+        # Drain pipes as well as reaping the child before releasing hardware.
+        await communication
 
 
 def _nearest_rate(sorted_rates: list[float], target: float) -> float:
@@ -122,6 +147,52 @@ def _strip_sample_rate_ranges(capabilities: Dict[str, Any]) -> Dict[str, Any]:
     sanitized = dict(capabilities)
     sanitized.pop("sample_rate_ranges", None)
     return sanitized
+
+
+async def probe_soapy_parameters(sdr: Dict[str, Any], timeout: float = 30.0) -> Dict[str, Any]:
+    """Read a selected Soapy radio, including unsaved form values, under the caller's gate."""
+    module = "soapysdrremoteprobe" if sdr["type"] == "soapysdrremote" else "soapysdrlocalprobe"
+    function = (
+        "probe_remote_soapy_sdr" if sdr["type"] == "soapysdrremote" else "probe_local_soapy_sdr"
+    )
+    # Native drivers may write to stdout. Keep their diagnostics separate from
+    # the JSON result, and pass form values as data rather than Python source.
+    process = await asyncio.create_subprocess_exec(
+        sys.executable,
+        "-c",
+        "import importlib, json, os, sys\n"
+        "with os.fdopen(os.dup(sys.stdout.fileno()), 'w') as output:\n"
+        "    os.dup2(sys.stderr.fileno(), sys.stdout.fileno())\n"
+        "    probe = getattr(importlib.import_module(sys.argv[1]), sys.argv[2])\n"
+        "    json.dump(probe(json.loads(sys.argv[3])), output)\n",
+        f"hardware.{module}",
+        function,
+        json.dumps(sdr),
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    stdout, stderr = await communicate_sdr_probe(process, timeout)
+    if process.returncode:
+        raise RuntimeError(_decode_subprocess_output(stderr) or "SoapySDR probe failed")
+    result = json.loads(stdout)
+    if not result.get("success"):
+        raise RuntimeError(result.get("error") or "SoapySDR probe failed")
+    for line in result.get("log", []):
+        logger.debug(line)
+    data = result["data"]
+    return {
+        "gain_values": data["gains"],
+        "sample_rate_values": _select_neat_sample_rates(data["rates"]),
+        "sample_rate_values_full": data["rates"],
+        "fft_size_values": [256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536],
+        "fft_window_values": list(window_functions.keys()),
+        "has_soapy_agc": data["has_soapy_agc"],
+        "antennas": data["antennas"],
+        "frequency_ranges": data.get("frequency_ranges", {}),
+        "clock_info": data.get("clock_info", {}),
+        "temperature": data.get("temperature", {}),
+        "capabilities": _strip_sample_rate_ranges(data.get("capabilities", {})),
+    }
 
 
 async def probe_sdr_parameters(dbsession, sdr_id, timeout=30.0, recording_path=None):
@@ -249,7 +320,7 @@ async def probe_sdr_parameters(dbsession, sdr_id, timeout=30.0, recording_path=N
             )
 
             try:
-                stdout, stderr = await _communicate_probe(probe_process, timeout)
+                stdout, stderr = await communicate_sdr_probe(probe_process, timeout)
                 if probe_process.returncode != 0:
                     error_output = _decode_subprocess_output(stderr)
                     raise Exception(f"Native Airspy probe process failed: {error_output}")
@@ -289,81 +360,7 @@ async def probe_sdr_parameters(dbsession, sdr_id, timeout=30.0, recording_path=N
             reply = {"success": True, "data": params}
 
         elif sdr.get("type") in ["soapysdrremote", "soapysdrlocal"]:
-            if sdr.get("type") == "soapysdrremote":
-                logger.info("Getting SDR parameters from SoapySDR server for SDR: %s", sdr)
-                probe_process = await asyncio.create_subprocess_exec(
-                    "python3",
-                    "-c",
-                    "from hardware.soapysdrremoteprobe import probe_remote_soapy_sdr; "
-                    f"print(probe_remote_soapy_sdr({sdr}))",
-                    stdout=asyncio.subprocess.PIPE,
-                )
-
-                try:
-                    stdout, _ = await _communicate_probe(probe_process, timeout)
-
-                except asyncio.TimeoutError:
-                    raise TimeoutError(
-                        "Timed out while getting SDR parameters from SoapySDR server"
-                    )
-            else:
-                logger.info("Getting SDR parameters from local SoapySDR for SDR: %s", sdr)
-                probe_process = await asyncio.create_subprocess_exec(
-                    "python3",
-                    "-c",
-                    "from hardware.soapysdrlocalprobe import probe_local_soapy_sdr; "
-                    f"print(probe_local_soapy_sdr({sdr}))",
-                    stdout=asyncio.subprocess.PIPE,
-                )
-
-                try:
-                    stdout, _ = await _communicate_probe(probe_process, timeout)
-
-                except asyncio.TimeoutError:
-                    raise TimeoutError(
-                        "Timed out while getting SDR parameters from SoapySDR server"
-                    )
-
-            sdr_params_reply = eval(stdout.decode().strip())
-
-            if sdr_params_reply["success"] is False:
-                logger.error(sdr_params_reply)
-                raise Exception(sdr_params_reply["error"])
-
-            sdr_params = sdr_params_reply["data"]
-
-            logger.debug("Got SDR parameters from SoapySDR server: %s", sdr_params)
-            for log_line in sdr_params_reply["log"]:
-                logger.debug(log_line)
-
-            window_function_names = list(window_functions.keys())
-            fft_size_values = [256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536]
-
-            params = {
-                "gain_values": sdr_params["gains"],
-                "sample_rate_values": _select_neat_sample_rates(sdr_params["rates"]),
-                "sample_rate_values_full": sdr_params["rates"],
-                "fft_size_values": fft_size_values,
-                "fft_window_values": window_function_names,
-                "has_soapy_agc": sdr_params["has_soapy_agc"],
-                "antennas": sdr_params["antennas"],
-                "frequency_ranges": sdr_params.get("frequency_ranges", {}),
-                "clock_info": sdr_params.get("clock_info", {}),
-                "temperature": sdr_params.get("temperature", {}),
-                "capabilities": _strip_sample_rate_ranges(sdr_params.get("capabilities", {})),
-            }
-
-            # try:
-            #     pretty_params = json.dumps(params, indent=2, sort_keys=True)
-            #     print(
-            #         f"[DEBUG] SoapySDR parameters for {sdr.get('name', sdr_id)}:\\n{pretty_params}"
-            #     )
-            # except Exception as e:
-            #     print(
-            #         f"[DEBUG] SoapySDR parameters (non-JSON) for {sdr.get('name', sdr_id)}: {params}"
-            #     )
-            #     print(f"[DEBUG] Pretty print failed: {e}")
-
+            params = await probe_soapy_parameters(sdr, timeout)
             sdr_parameters_cache[cache_key] = params
             reply = {"success": True, "data": params}
 
@@ -379,7 +376,7 @@ async def probe_sdr_parameters(dbsession, sdr_id, timeout=30.0, recording_path=N
             )
 
             try:
-                stdout, stderr = await _communicate_probe(probe_process, timeout)
+                stdout, stderr = await communicate_sdr_probe(probe_process, timeout)
 
                 if probe_process.returncode != 0:
                     error_output = stderr.decode().strip()
@@ -456,7 +453,7 @@ async def probe_sdr_parameters(dbsession, sdr_id, timeout=30.0, recording_path=N
             )
 
             try:
-                stdout, stderr = await _communicate_probe(probe_process, timeout)
+                stdout, stderr = await communicate_sdr_probe(probe_process, timeout)
 
                 if probe_process.returncode != 0:
                     error_output = stderr.decode().strip()

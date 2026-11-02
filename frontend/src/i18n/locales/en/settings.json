@@ -124,6 +124,8 @@
     "field_libretranslate_url": "LibreTranslate service base URL. Leave empty to disable local translation. Changes apply to new transcription workers."
   },
   "location": {
+    "setup_call_orbital_started": "Orbital data sync started",
+    "setup_task_status_help": "Live runtime status for orbital synchronization.",
     "title": "Select location on map",
     "subtitle": "Use the map below to set the ground station location",
     "ground_station_location": "Ground Station Location",

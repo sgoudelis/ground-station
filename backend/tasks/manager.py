@@ -244,6 +244,15 @@ class BackgroundTaskManager:
         if kwargs is None:
             kwargs = {}
 
+        # Discovery and refresh share the same server snapshot. Multiple clients
+        # must not launch competing workers even if each disables its own button.
+        if _is_soapysdr_task(name, func.__name__):
+            if any(
+                task.status == TaskStatus.RUNNING and _is_soapysdr_task(task.name, task.func_name)
+                for task in self.tasks.values()
+            ):
+                raise ValueError("A SoapySDR discovery task is already running")
+
         # Check for singleton tasks (tasks that should not run concurrently with themselves)
         # Orbital sync is a singleton task because it modifies shared database state.
         # Keep legacy tle_sync pattern for backward compatibility.

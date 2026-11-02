@@ -27,12 +27,16 @@ import crud
 from common.constants import TrackerCommands
 from db import AsyncSessionLocal
 from hardware.parameters import (
+    cache_sdr_parameters,
+    communicate_sdr_probe,
     get_cached_sdr_parameters,
     invalidate_sdr_parameters,
     probe_sdr_parameters,
+    probe_soapy_parameters,
+    sdr_hardware_lock,
     sdr_parameter_lock,
 )
-from hardware.soapysdrbrowser import discovered_servers
+from hardware.soapysdrbrowser import discovered_servers, query_server_for_sdrs
 from server import runtimestate
 from session.store import active_sdr_clients
 from tracker.contracts import InvalidTrackerIdError, get_tracking_state_name, require_tracker_id
@@ -164,7 +168,7 @@ async def get_local_soapy_sdr_devices():
         )
 
         try:
-            stdout, stderr = await asyncio.wait_for(probe_process.communicate(), timeout=35)
+            stdout, stderr = await communicate_sdr_probe(probe_process, timeout=35)
             stdout_text = _decode_subprocess_output(stdout)
             stderr_text = _decode_subprocess_output(stderr)
 
@@ -200,7 +204,6 @@ async def get_local_soapy_sdr_devices():
             _log_probe_antenna_summary(probe_name, result)
 
         except asyncio.TimeoutError:
-            probe_process.kill()
             logger.error("Process timed out while probing USB SDRs")
             reply["success"] = False
             reply["error"] = "Operation timed out after 5 seconds"
@@ -1021,6 +1024,56 @@ async def delete_sdr(
         }
 
 
+async def query_soapy_server(
+    sio: Any, data: Optional[Dict], logger: Any, sid: str
+) -> Dict[str, Any]:
+    """Enumerate one user-specified endpoint without requiring an mDNS advertisement."""
+    if not isinstance(data, dict) or not isinstance(data.get("host"), str):
+        return {"success": False, "error": "A server hostname or IP address is required"}
+    host = data["host"].strip()
+    if not host or "://" in host or any(character.isspace() for character in host):
+        return {"success": False, "error": "Enter a server hostname or IP address without a URL"}
+    try:
+        port = int(str(data.get("port", 55132)))
+    except (TypeError, ValueError):
+        return {"success": False, "error": "A valid remote port (1–65535) is required"}
+    if not 1 <= port <= 65535:
+        return {"success": False, "error": "A valid remote port (1–65535) is required"}
+
+    gate = sdr_hardware_lock({"type": "soapysdrremote", "host": host, "port": port})
+    if gate.locked():
+        return {"success": False, "error": "Server is busy. Wait and try again."}
+    # Share the endpoint gate with probes and receiver startup. Enumeration does
+    # not open a device, so an established stream can continue running.
+    async with gate:
+        try:
+            devices, status = await asyncio.wait_for(query_server_for_sdrs(host, port), timeout=10)
+        except asyncio.TimeoutError:
+            return {
+                "success": False,
+                "error": "Server query timed out. Check the connection and retry.",
+            }
+        except Exception as exc:
+            logger.warning("Manual SoapySDR server query failed: %s", exc)
+            return {"success": False, "error": "Could not query the SoapySDR server. Try again."}
+
+    if status != "active":
+        errors = {
+            "unreachable": "Could not connect to the server. Check its hostname and port, then retry.",
+            "timeout": "Server query timed out. Check the connection and retry.",
+            "unavailable": "SoapySDR Python bindings are not installed on the backend.",
+        }
+        return {
+            "success": False,
+            "error": errors.get(status, "Could not list the server's SDR devices. Try again."),
+        }
+    # Return draft results to the requesting client; discovery owns its own cache.
+    return {
+        "success": True,
+        "data": {"ip": host, "port": port, "name": host, "status": status, "sdrs": devices},
+    }
+
+
 async def get_soapy_servers(
     sio: Any, data: Optional[Dict], logger: Any, sid: str
 ) -> Dict[str, Union[bool, list]]:
@@ -1093,9 +1146,20 @@ async def get_sdr_parameters(
             }
         async with AsyncSessionLocal() as dbsession:
             logger.debug("Getting SDR parameters")
-            parameters = await probe_sdr_parameters(
-                dbsession, sdr_id, recording_path=recording_path
-            )
+            # Resolve the endpoint while holding the definition lock. Unsaved
+            # manual probes share this gate even when they have no SDR ID.
+            if sdr_id == "sigmf-playback":
+                device: Dict[str, Any] = {"id": sdr_id}
+            else:
+                saved = await crud.hardware.fetch_sdr(dbsession, sdr_id)
+                saved_device = saved.get("data")
+                if not saved_device:
+                    return {"success": False, "data": None, "error": "SDR device not found"}
+                device = saved_device
+            async with sdr_hardware_lock(device):
+                parameters = await probe_sdr_parameters(
+                    dbsession, sdr_id, recording_path=recording_path
+                )
             return {
                 "success": parameters["success"],
                 "data": parameters.get("data", []),
@@ -1103,12 +1167,116 @@ async def get_sdr_parameters(
             }
 
 
+async def probe_sdr(sio: Any, data: Optional[Dict], logger: Any, sid: str) -> Dict[str, Any]:
+    """Explicitly probe a saved or draft Soapy SDR without changing its definition."""
+    if not isinstance(data, dict) or data.get("type") not in {"soapysdrremote", "soapysdrlocal"}:
+        return {"success": False, "error": "Select a SoapySDR device to probe"}
+    # Only connection fields belong in a hardware probe. In particular, do not
+    # replace a saved definition with an unsaved name or custom antenna labels.
+    device: Dict[str, Any] = {
+        key: str(data.get(key) or "").strip() for key in ("type", "host", "driver", "serial")
+    }
+    if not device["driver"]:
+        return {"success": False, "error": "A driver is required to probe the selected SDR"}
+    if device["type"] == "soapysdrremote":
+        try:
+            device["port"] = int(data.get("port") or 0)
+        except (TypeError, ValueError):
+            return {"success": False, "error": "A valid remote port is required"}
+        if not device["host"] or not 1 <= device["port"] <= 65535:
+            return {"success": False, "error": "A host and port (1–65535) are required"}
+    device["name"] = str(data.get("name") or "SoapySDR")
+    sdr_id = str(data.get("id") or "")
+    gate = sdr_hardware_lock(device)
+    # Use the same ID-then-endpoint lock order as waterfall reads and startup.
+    # Reject duplicate clicks before waiting rather than opening a second handle.
+    async with AsyncExitStack() as locks:
+        if sdr_id:
+            definition_lock = sdr_parameter_lock(sdr_id)
+            if definition_lock.locked():
+                return {
+                    "success": False,
+                    "error": "SDR hardware is busy. Wait for the current operation to finish.",
+                }
+            await locks.enter_async_context(definition_lock)
+        if gate.locked():
+            return {
+                "success": False,
+                "error": "SDR hardware is busy. Wait for the current operation to finish.",
+            }
+        await locks.enter_async_context(gate)
+        manager = runtimestate.process_manager
+        for running_id, info in (getattr(manager, "processes", {}) or {}).items():
+            if not manager.is_sdr_process_running(running_id):
+                continue
+            running_device = info.get("device") or {}
+            if str(running_id) == sdr_id or _same_soapy_endpoint(device, running_device):
+                if _same_soapy_device(device, running_device):
+                    parameters = info.get("parameters") or get_cached_sdr_parameters(running_id)
+                    if parameters is not None:
+                        return {"success": True, "data": parameters, "cached": True}
+                return {
+                    "success": False,
+                    "error": "Stop the active SDR stream before probing this hardware.",
+                }
+        try:
+            parameters = await probe_soapy_parameters(device)
+            # Only warm the saved cache when the probed connection still matches
+            # the database. Draft edits must never poison a running user's cache.
+            if sdr_id:
+                async with AsyncSessionLocal() as dbsession:
+                    saved = await crud.hardware.fetch_sdr(dbsession, sdr_id)
+                if saved.get("data") and _same_soapy_device(device, saved["data"]):
+                    cache_sdr_parameters(sdr_id, parameters)
+            return {"success": True, "data": parameters, "cached": False}
+        except asyncio.TimeoutError:
+            return {
+                "success": False,
+                "error": "Timed out while probing the SDR. Check its connection and try again.",
+            }
+        except Exception as exc:
+            logger.warning("Explicit SoapySDR probe failed: %s", exc)
+            return {"success": False, "error": str(exc)}
+
+    # AsyncExitStack may suppress an exception, so keep the response explicit.
+    return {"success": False, "error": "SDR probe ended without a result"}
+
+
+def _same_soapy_endpoint(first: Dict, second: Dict) -> bool:
+    if first.get("type") != second.get("type"):
+        return False
+    if first.get("type") == "soapysdrlocal":
+        return True
+    # Be conservative with servers whose drivers serialize access across radios.
+    return str(first.get("host") or "").strip().lower() == str(
+        second.get("host") or ""
+    ).strip().lower() and str(first.get("port") or 55132) == str(second.get("port") or 55132)
+
+
+def _same_soapy_device(first: Dict, second: Dict) -> bool:
+    return _same_soapy_endpoint(first, second) and all(
+        str(first.get(key) or "").strip() == str(second.get(key) or "").strip()
+        for key in ("driver", "serial")
+    )
+
+
 async def get_local_soapy_sdr_devices_handler(
     sio: Any, data: Optional[Dict], logger: Any, sid: str
 ) -> Dict[str, Union[bool, list, str]]:
     """Get local SoapySDR devices."""
     logger.debug("Getting local SoapySDR devices")
-    devices = await get_local_soapy_sdr_devices()
+    async with sdr_hardware_lock({"type": "soapysdrlocal"}):
+        manager = runtimestate.process_manager
+        for sdr_id, info in (getattr(manager, "processes", {}) or {}).items():
+            if (info.get("device") or {}).get(
+                "type"
+            ) == "soapysdrlocal" and manager.is_sdr_process_running(sdr_id):
+                return {
+                    "success": False,
+                    "data": [],
+                    "error": "Stop local SoapySDR streams before discovering local devices.",
+                }
+        devices = await get_local_soapy_sdr_devices()
     return {
         "success": devices["success"],
         "data": devices["data"],
@@ -1183,7 +1351,9 @@ def register_handlers(registry):
             "edit-sdr": (edit_sdr, "api_call"),
             "delete-sdr": (delete_sdr, "api_call"),
             "get-soapy-servers": (get_soapy_servers, "api_call"),
+            "query-soapy-server": (query_soapy_server, "api_call"),
             "get-sdr-parameters": (get_sdr_parameters, "api_call"),
+            "probe-sdr": (probe_sdr, "api_call"),
             "get-local-soapy-sdr-devices": (get_local_soapy_sdr_devices_handler, "api_call"),
             "get-local-rtl-sdr-devices": (get_local_rtl_sdr_devices_handler, "api_call"),
             "get-local-uhd-devices": (get_local_uhd_devices_handler, "api_call"),

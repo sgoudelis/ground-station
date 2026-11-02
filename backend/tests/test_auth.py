@@ -165,6 +165,10 @@ def test_operator_cannot_run_admin_only_commands():
     assert auth.is_command_allowed_for_role("update-preferences", "operator") is True
     assert auth.is_command_allowed_for_role("update-system-preferences", "operator") is False
     assert auth.is_command_allowed_for_role("update-app-config", "operator") is False
+    assert auth.is_command_allowed_for_role("probe-sdr", "operator") is False
+    assert auth.is_command_allowed_for_role("probe-sdr", "admin") is True
+    assert auth.is_command_allowed_for_role("query-soapy-server", "operator") is False
+    assert auth.is_command_allowed_for_role("query-soapy-server", "admin") is True
     assert auth.is_command_allowed_for_role("database-backup.full_backup", "operator") is False
 
 

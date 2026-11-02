@@ -104,7 +104,7 @@ if os.environ.get("ALEMBIC_CONTEXT"):
         track_interval_ms=2000,
         max_tracker_targets=10,
         enable_soapy_discovery=False,
-        runonce_soapy_discovery=True,
+        runonce_soapy_discovery=False,
         parakeet_url=DEFAULT_APP_CONFIG["parakeet_url"],
         libretranslate_url=DEFAULT_APP_CONFIG["libretranslate_url"],
         orbital_sync_satellite_metadata_urls=["http://db.satnogs.org/api/satellites/?format=json"],

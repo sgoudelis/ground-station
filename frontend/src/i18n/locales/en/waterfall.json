@@ -85,7 +85,7 @@
     "enable_tuner_agc": "Enable tuner AGC",
     "enable_agc": "Enable AGC",
     "enable_rtl_agc": "Enable RTL AGC",
-    "refresh_params": "Refresh SDR params"
+    "refresh_params": "Reload SDR parameters (uses cached capabilities when available)"
   },
   "fft": {
     "title": "FFT",

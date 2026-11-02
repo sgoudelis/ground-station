@@ -61,6 +61,8 @@ import {
     setFormValues,
     resetFormValues,
     fetchSoapySDRServers,
+    getSoapyServerKey,
+    querySoapySDRServer,
     setSelectedSdrDevice,
     fetchLocalSoapySDRDevices,
     startSoapySDRDiscovery,
@@ -79,6 +81,7 @@ import CancelIcon from '@mui/icons-material/Cancel';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import {toRowSelectionModel, toSelectedIds} from '../../utils/datagrid-selection.js';
 import SelectionActionBar from './selection-action-bar.jsx';
+import SoapyProbeControls from './soapy-probe-controls.jsx';
 
 // SDR type field configurations with default values
 const sdrTypeFields = {
@@ -201,6 +204,10 @@ const getMergedRtlValue = (type) => {
 const isMergedRtlValue = (value) => value === 'rtlsdrusb' || value === 'rtlsdrtcp';
 const MAX_ANTENNA_LABEL_LENGTH = 64;
 
+const getSdrProbeKey = (values) => JSON.stringify([
+    values.id, values.type, values.host, values.port, values.driver, values.serial,
+]);
+
 const isSoapyDiscoveryTask = (task) => {
     if (!task) return false;
     const name = String(task.name || '').toLowerCase();
@@ -315,6 +322,10 @@ export default function SDRsPage() {
     const [selectedAirspyDevice, setSelectedAirspyDevice] = useState('');
     const [deleteConfirmText, setDeleteConfirmText] = useState('');
     const [discovering, setDiscovering] = useState(false);
+    const [manualSoapyServer, setManualSoapyServer] = useState(false);
+    const [probing, setProbing] = useState(false);
+    const [autoProbeRequest, setAutoProbeRequest] = useState(null);
+    const [probeTargetId, setProbeTargetId] = useState('');
     const [stickyAntennaPorts, setStickyAntennaPorts] = useState({ rx: [], tx: [] });
     const hasInitialized = useRef(false);
     const rtlProbeRequested = useRef(false);
@@ -331,6 +342,8 @@ export default function SDRsPage() {
         openDeleteConfirm,
         formValues,
         soapyServers,
+        manualSoapyServers,
+        soapyServerQuery,
         selectedSdrDevice,
         localSoapyDevices,
         loadingLocalSDRs,
@@ -345,12 +358,6 @@ export default function SDRsPage() {
     const rowSelectionModel = useMemo(() => toRowSelectionModel(selected), [selected]);
     const isEditing = Boolean(formValues.id);
     const isLocalSoapyProbeLoading = formValues.type === 'soapysdrlocal' && loadingLocalSDRs;
-    const isDialogFormInputsDisabled =
-        loading ||
-        loadingLocalRtlSDRs ||
-        loadingLocalUhdSDRs ||
-        loadingLocalAirspySDRs ||
-        isLocalSoapyProbeLoading;
     const isSoapyServerDiscoveryRunning = useMemo(
         () =>
             Object.values(backgroundTasks).some(
@@ -358,7 +365,39 @@ export default function SDRsPage() {
             ),
         [backgroundTasks]
     );
-    const showSoapyDiscoveryOverlay = openAddDialog && isSoapyServerDiscoveryRunning;
+    // The scan keeps running after its start request has been acknowledged.
+    const isRemoteSoapyDiscoveryLoading = formValues.type === 'soapysdrremote'
+        && (discovering || isSoapyServerDiscoveryRunning);
+    const isRemoteSoapyQueryLoading = formValues.type === 'soapysdrremote'
+        && soapyServerQuery.status === 'loading';
+    const isDialogSoapyDiscoveryLoading = isRemoteSoapyDiscoveryLoading
+        || isRemoteSoapyQueryLoading || isLocalSoapyProbeLoading;
+    const dialogDiscoveryLabel = isRemoteSoapyQueryLoading ? t('sdr.querying_server')
+        : isLocalSoapyProbeLoading ? t('sdr.probing_local') : t('sdr.discovering_servers');
+    const formServerKey = getSoapyServerKey(formValues.host, formValues.port);
+    const currentServerQuery = soapyServerQuery.endpoint === formServerKey ? soapyServerQuery : null;
+    const availableSoapyServers = useMemo(() => {
+        const servers = {};
+        Object.values(soapyServers || {}).forEach((server) => {
+            servers[getSoapyServerKey(server.ip, server.port)] = server;
+        });
+        // Manual results survive discovery updates and take precedence for their endpoint.
+        return {...servers, ...manualSoapyServers};
+    }, [soapyServers, manualSoapyServers]);
+    const useManualSoapyServer = manualSoapyServer
+        || Boolean(formValues.host && !availableSoapyServers[formServerKey]);
+    const isDialogFormInputsDisabled =
+        probing || loading || isRemoteSoapyDiscoveryLoading || isRemoteSoapyQueryLoading ||
+        loadingLocalRtlSDRs ||
+        loadingLocalUhdSDRs ||
+        loadingLocalAirspySDRs ||
+        isLocalSoapyProbeLoading;
+    const configuredSoapySdrs = (sdrs || []).filter((sdr) =>
+        ['soapysdrremote', 'soapysdrlocal'].includes(sdr.type));
+    const probeTarget = configuredSoapySdrs.find((sdr) => sdr.id === probeTargetId);
+    // A changed connection remounts its probe controls so old replies cannot
+    // overwrite antenna information for the next selected radio.
+    const formProbeKey = getSdrProbeKey(formValues);
     const [taskDurationTick, setTaskDurationTick] = useState(() => Date.now());
     const requiresDeleteConfirmationText = selected.length > 1;
     const canConfirmDelete = !requiresDeleteConfirmationText || deleteConfirmText.trim() === 'DELETE';
@@ -425,6 +464,8 @@ export default function SDRsPage() {
             setSelectedUhdDevice('');
             setSelectedAirspyDevice('');
         } else {
+            setManualSoapyServer(false);
+            setAutoProbeRequest(null);
             rtlProbeRequested.current = false;
             uhdProbeRequested.current = false;
             airspyProbeRequested.current = false;
@@ -441,6 +482,9 @@ export default function SDRsPage() {
         formValues.id,
         formValues.type,
         formValues.host,
+        formValues.port,
+        formValues.driver,
+        formValues.serial,
         selectedRtlDevice,
         selectedUhdDevice,
         selectedAirspyDevice,
@@ -477,7 +521,7 @@ export default function SDRsPage() {
     }, [dispatch, formValues.type, loadingLocalAirspySDRs, openAddDialog, socket]);
 
     const handleStartSoapyDiscovery = async () => {
-        if (!socket) return;
+        if (!socket || discovering || isSoapyServerDiscoveryRunning || isRemoteSoapyQueryLoading) return;
         setDiscovering(true);
         try {
             await dispatch(startSoapySDRDiscovery({ socket })).unwrap();
@@ -487,6 +531,19 @@ export default function SDRsPage() {
         } finally {
             setDiscovering(false);
         }
+    };
+
+    const handleQuerySoapyServer = () => {
+        if (!socket || isDialogFormInputsDisabled) return;
+        const host = String(formValues.host || '').trim();
+        const port = Number(formValues.port);
+        if (!host || !Number.isInteger(port) || port < 1 || port > 65535) return;
+        setManualSoapyServer(true);
+        setAutoProbeRequest(null);
+        dispatch(setSelectedSdrDevice(''));
+        dispatch(setFormValues({...formValues, host, port, driver: '', serial: ''}));
+        // Results populate the endpoint cache; a late reply never changes another form's values.
+        dispatch(querySoapySDRServer({socket, host, port}));
     };
 
     const getTypeLabel = (type) => {
@@ -605,11 +662,7 @@ export default function SDRsPage() {
     ];
 
     const getSelectedSoapyServerInfo = () => {
-        if (!formValues.host || !soapyServers) return null;
-        const selectedServerEntry = Object.entries(soapyServers).find(
-            ([_, server]) => server.ip === formValues.host
-        );
-        return selectedServerEntry ? selectedServerEntry[1] : null;
+        return availableSoapyServers[formServerKey] || null;
     };
 
     const getSelectedRemoteSdr = () => {
@@ -779,6 +832,7 @@ export default function SDRsPage() {
 
         // If changing the SDR type, apply default values for that type
         if (name === 'type') {
+            setManualSoapyServer(false);
             const newType = value;
             const typeConfig = sdrTypeFields[newType];
 
@@ -800,13 +854,20 @@ export default function SDRsPage() {
                 dispatch(setFormValues({...formValues, type: newType, antenna_labels: {}}));
             }
 
-            // Probe local Soapy devices only when the user explicitly selects the local Soapy type.
+            // Selecting the connection type is the user's request to discover devices.
             if (newType === 'soapysdrlocal') {
                 dispatch(fetchLocalSoapySDRDevices({ socket }));
+            } else if (newType === 'soapysdrremote') {
+                void handleStartSoapyDiscovery();
             }
             if (newType === 'airspy' || newType === 'airspyhf') {
                 dispatch(fetchLocalAirspyDevices({ socket }));
             }
+        } else if (formValues.type === 'soapysdrremote' && ['host', 'port'].includes(name)) {
+            // A new endpoint must not retain the previous radio's probe arguments.
+            setAutoProbeRequest(null);
+            dispatch(setSelectedSdrDevice(''));
+            dispatch(setFormValues({...formValues, [name]: value, driver: '', serial: ''}));
         } else {
             // Normal field update
             dispatch(setFormValues({...formValues, [name]: value}));
@@ -886,7 +947,7 @@ export default function SDRsPage() {
             const portValue = getFieldValue('port');
             if (portValue === '' || portValue === null || portValue === undefined) {
                 errors.port = t('shared.required');
-            } else if (Number(portValue) <= 0 || Number(portValue) > 65535) {
+            } else if (!Number.isInteger(Number(portValue)) || Number(portValue) <= 0 || Number(portValue) > 65535) {
                 errors.port = t('shared.port_range');
             }
         }
@@ -919,13 +980,30 @@ export default function SDRsPage() {
         const rtlVersion = selectedType.endsWith('v3') ? 'v3' : 'v4';
         const antennaPorts = getVisibleAntennaInfo();
         const antennaLabels = normalizeAntennaLabels(formValues.antenna_labels);
+        const soapyProbeControls = ['soapysdrremote', 'soapysdrlocal'].includes(selectedType) ? (
+            <SoapyProbeControls
+                key={formProbeKey}
+                socket={socket}
+                values={formValues}
+                discovering={discovering || isSoapyServerDiscoveryRunning || isRemoteSoapyQueryLoading}
+                onDiscover={isEditing ? handleStartSoapyDiscovery : undefined}
+                onProbingChange={setProbing}
+                autoProbeRequest={!isEditing && selectedType === 'soapysdrremote'
+                    && autoProbeRequest?.connection === formProbeKey ? autoProbeRequest : null}
+                onAutoProbeStarted={() => setAutoProbeRequest(null)}
+                onParameters={(parameters) => setStickyAntennaPorts(
+                    normalizeAntennaInfo(parameters.antennas)
+                )}
+            />
+        ) : null;
 
         // Define common fields that all SDR types have
         const fields = [];
 
         if (!isEditing) {
             fields.push(
-                <FormControl key="type-select" fullWidth size="small" error={Boolean(validationErrors.type)}>
+                <FormControl key="type-select" fullWidth size="small" disabled={isDialogFormInputsDisabled}
+                             error={Boolean(validationErrors.type)}>
                     <InputLabel id="sdr-type-label">{t('sdr.sdr_type')}</InputLabel>
                     <Select
                         name="type"
@@ -960,10 +1038,24 @@ export default function SDRsPage() {
             );
         }
 
+        if (isEditing && soapyProbeControls) {
+            fields.push(soapyProbeControls);
+        } else if (selectedType === 'soapysdrremote') {
+            fields.push(
+                <Box key="discover-soapy-servers">
+                    <Button size="small" variant="outlined" onClick={handleStartSoapyDiscovery}
+                            disabled={!socket || discovering || isSoapyServerDiscoveryRunning || probing || isRemoteSoapyQueryLoading}
+                            startIcon={<RefreshIcon/>}>
+                        {discovering || isSoapyServerDiscoveryRunning
+                            ? t('sdr.discovering_servers') : t('sdr.discover_servers')}
+                    </Button>
+                </Box>
+            );
+        }
+
         // If a valid SDR type is selected, add the corresponding fields
         if (selectedType && sdrTypeFields[selectedType]) {
             const config = sdrTypeFields[selectedType];
-            let renderedPortUnderServerSelect = false;
 
             if (rtlUsbTypes.has(selectedType) && !isEditing) {
                 if (loadingLocalRtlSDRs) {
@@ -1105,75 +1197,80 @@ export default function SDRsPage() {
                             </Typography>
                         </Alert>
                     );
-                } else {
-                    fields.push(
-                        <Box
-                            key="local-sdr-controls-row"
-                            sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
-                        >
-                            <FormControl fullWidth size="small">
-                                <InputLabel id="local-sdr-device-label">{t('sdr.local_sdr_device')}</InputLabel>
-                                <Select
-                                    labelId="local-sdr-device-label"
-                                    label={t('sdr.local_sdr_device')}
-                                    size="small"
-                                    value={selectedSdrDevice}
-                                    disabled={!localSoapyDevices || localSoapyDevices.length === 0}
-                                    onChange={(e) => {
-                                        const selectedSdrIndex = e.target.value;
-                                        dispatch(setSelectedSdrDevice(selectedSdrIndex));
+                }
+                fields.push(
+                    <Box
+                        key="local-sdr-controls-row"
+                        sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+                    >
+                        <FormControl fullWidth size="small" disabled={isDialogFormInputsDisabled || !localSoapyDevices?.length}>
+                            <InputLabel id="local-sdr-device-label" shrink>{t('sdr.local_sdr_device')}</InputLabel>
+                            <Select
+                                labelId="local-sdr-device-label"
+                                label={t('sdr.local_sdr_device')}
+                                size="small"
+                                displayEmpty
+                                value={localSoapyDevices?.[selectedSdrDevice] ? selectedSdrDevice : ''}
+                                onChange={(e) => {
+                                    const selectedSdrIndex = e.target.value;
+                                    dispatch(setSelectedSdrDevice(selectedSdrIndex));
 
-                                        if (selectedSdrIndex !== '') {
-                                            const selectedSdr = localSoapyDevices[selectedSdrIndex];
+                                    if (selectedSdrIndex !== '') {
+                                        const selectedSdr = localSoapyDevices[selectedSdrIndex];
 
-                                            if (selectedSdr) {
-                                                // Prepare new form values with SDR device information
-                                                const newValues = {
-                                                    ...formValues,
-                                                    name: selectedSdr.label || 'SoapySDR USB Device',
-                                                    driver: selectedSdr.driver || '',
-                                                    serial: selectedSdr.serial || ''
-                                                };
+                                        if (selectedSdr) {
+                                            // Prepare new form values with SDR device information
+                                            const newValues = {
+                                                ...formValues,
+                                                name: selectedSdr.label || 'SoapySDR USB Device',
+                                                driver: selectedSdr.driver || '',
+                                                serial: selectedSdr.serial || ''
+                                            };
 
-                                                dispatch(setFormValues(newValues));
-                                            }
+                                            dispatch(setFormValues(newValues));
                                         }
-                                    }}
-                                >
-                                    <MenuItem value="" disabled>{t('sdr.select_sdr')}</MenuItem>
-                                    {(localSoapyDevices || []).map((sdr, index) => (
-                                        <MenuItem key={index} value={index}>
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                <MemoryIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
-                                                <Box component="span">
-                                                    {sdr.label || sdr.driver || `SDR Device ${index}`}
-                                                    {sdr.serial ? ` :: ${sdr.serial}` : ''}
-                                                </Box>
+                                    }
+                                }}
+                            >
+                                <MenuItem value="" disabled>
+                                    {loadingLocalSDRs ? t('sdr.probing_local')
+                                        : localSoapyDevices?.length ? t('sdr.select_sdr') : t('sdr.no_devices_found')}
+                                </MenuItem>
+                                {(localSoapyDevices || []).map((sdr, index) => (
+                                    <MenuItem key={index} value={index}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                            <MemoryIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
+                                            <Box component="span">
+                                                {sdr.label || sdr.driver || `SDR Device ${index}`}
+                                                {sdr.serial ? ` :: ${sdr.serial}` : ''}
                                             </Box>
-                                        </MenuItem>
-                                    ))}
-                                </Select>
-                            </FormControl>
-                            <Tooltip title={t('sdr.refresh_soapy_devices', 'Refresh SoapySDR devices')}>
-                                <IconButton
-                                    size="small"
-                                    color="primary"
-                                    aria-label={t('sdr.refresh_soapy_devices', 'Refresh SoapySDR devices')}
-                                    onClick={() => dispatch(fetchLocalSoapySDRDevices({ socket }))}
-                                >
-                                    <RefreshIcon fontSize="small" />
-                                </IconButton>
-                            </Tooltip>
-                        </Box>
-                    );
+                                        </Box>
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                        <Tooltip title={t('sdr.refresh_soapy_devices', 'Refresh SoapySDR devices')}>
+                            <IconButton
+                                size="small"
+                                color="primary"
+                                aria-label={t('sdr.refresh_soapy_devices', 'Refresh SoapySDR devices')}
+                                disabled={isDialogFormInputsDisabled}
+                                onClick={() => dispatch(fetchLocalSoapySDRDevices({ socket }))}
+                            >
+                                <RefreshIcon fontSize="small" />
+                            </IconButton>
+                        </Tooltip>
+                    </Box>
+                );
 
-                    if (!localSoapyDevices || localSoapyDevices.length === 0) {
-                        fields.push(
-                            <Alert key="no-local-devices" severity="info" sx={{ mt: 1 }}>
-                                {t('sdr.no_soapy_devices')}
-                            </Alert>
-                        );
-                    }
+                fields.push(soapyProbeControls);
+
+                if (!loadingLocalSDRs && !localSoapyDevices?.length) {
+                    fields.push(
+                        <Alert key="no-local-devices" severity="info" sx={{ mt: 1 }}>
+                            {t('sdr.no_soapy_devices')}
+                        </Alert>
+                    );
                 }
             }
 
@@ -1437,127 +1534,63 @@ export default function SDRsPage() {
                             disabled
                         />
                     );
-                } else if (selectedType === 'soapysdrremote' && soapyServers && Object.keys(soapyServers).length > 0) {
-                    // For SoapySDRRemote, create a dropdown of available servers
+                } else if (selectedType === 'soapysdrremote') {
                     fields.push(
-                        <FormControl key="host-select" fullWidth size="small">
-                            <InputLabel id="host-label">{t('sdr.soapysdr_server')}</InputLabel>
+                        <FormControl key="host-select" fullWidth size="small" disabled={isDialogFormInputsDisabled}>
+                            <InputLabel id="host-label" shrink>{t('sdr.soapysdr_server')}</InputLabel>
                             <Select
-                                name="host"
                                 labelId="host-label"
                                 label={t('sdr.soapysdr_server')}
                                 size="small"
-                                value={formValues.host || ''}
+                                displayEmpty
+                                value={useManualSoapyServer ? 'manual' : formValues.host ? formServerKey : ''}
                                 onChange={(e) => {
-                                    const serverIp = e.target.value;
-                                    const selectedServerEntry = Object.entries(soapyServers).find(([_, server]) => server.ip === serverIp);
-                                    const serverInfo = selectedServerEntry ? selectedServerEntry[1] : {};
-                                    
-                                    // Reset selected SDR when server changes
+                                    const isManual = e.target.value === 'manual';
+                                    const server = availableSoapyServers[e.target.value];
+                                    setManualSoapyServer(isManual);
+                                    setAutoProbeRequest(null);
                                     dispatch(setSelectedSdrDevice(''));
-
-                                    // Use a single dispatch call with all values that need to be updated
                                     dispatch(setFormValues({
                                         ...formValues,
-                                        host: serverInfo.ip || '',
-                                        port: serverInfo.port || 1234
+                                        host: isManual ? '' : server.ip,
+                                        port: isManual ? 55132 : server.port,
+                                        driver: '',
+                                        serial: '',
                                     }));
                                 }}
-            >
-                                {Object.entries(soapyServers).map(([key, server]) => {
-                                    const hostLabel = toDisplayServerName(server?.name || key || 'server');
-                                    const endpointLabel = `${server?.ip || ''}:${server?.port || ''}`;
-                                    const displayKey = toDisplayServerName(key);
-                                    const extraDetails = [
-                                        displayKey && displayKey !== hostLabel ? displayKey : null,
-                                        server?.status ? `status=${server.status}` : null,
-                                        `${Array.isArray(server?.sdrs) ? server.sdrs.length : 0} SDRs`,
-                                    ]
-                                        .filter(Boolean)
-                                        .join(' | ');
-
-                                    return (
-                                    <MenuItem key={key} value={server.ip}>
+                            >
+                                <MenuItem value="" disabled>
+                                    {Object.keys(availableSoapyServers).length
+                                        ? t('sdr.select_server') : t('sdr.no_servers_discovered')}
+                                </MenuItem>
+                                {Object.entries(availableSoapyServers).map(([key, server]) => (
+                                    <MenuItem key={key} value={key}>
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                             <DnsIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
                                             <Box component="span">
-                                                {`${hostLabel}/${endpointLabel} (${extraDetails})`}
+                                                {`${toDisplayServerName(server.name || server.ip)}/${server.ip}:${server.port} (${Array.isArray(server.sdrs) ? server.sdrs.length : 0} SDRs)`}
                                             </Box>
                                         </Box>
                                     </MenuItem>
-                                    );
-                                })}
+                                ))}
+                                <MenuItem value="manual">{t('sdr.enter_server_manually')}</MenuItem>
                             </Select>
                         </FormControl>
                     );
-
-                    // Keep the remote port directly under the server selector so endpoint fields stay grouped.
-                    fields.push(
-                        <TextField
-                            key="remote-port-under-server-select"
-                            name="port"
-                            label={t('sdr.port')}
-                            fullWidth
-                            size="small"
-                            type="number"
-                            onChange={handleChange}
-                            value={getFieldValue('port')}
-                            error={Boolean(validationErrors.port)}
-                            required
-                        />
-                    );
-                    renderedPortUnderServerSelect = true;
-
-                    // If a server is selected, add a dropdown to select SDR devices from that server
-                    if (formValues.host && !isEditing) {
-                        const selectedServerInfo = getSelectedSoapyServerInfo();
-                        
-                        if (selectedServerInfo && selectedServerInfo.sdrs && selectedServerInfo.sdrs.length > 0) {
-                            fields.push(
-                                <FormControl key="sdr-device-select" fullWidth size="small">
-                                    <InputLabel id="sdr-device-label">{t('sdr.sdr_device')}</InputLabel>
-                                    <Select
-                                        labelId="sdr-device-label"
-                                        label={t('sdr.sdr_device')}
-                                        size="small"
-                                        value={selectedSdrDevice}
-                                        onChange={(e) => {
-                                            const selectedSdrIndex = e.target.value;
-                                            dispatch(setSelectedSdrDevice(selectedSdrIndex));
-                                            
-                                            if (selectedSdrIndex !== '') {
-                                                const selectedSdr = selectedServerInfo.sdrs[selectedSdrIndex];
-                                                
-                                                if (selectedSdr) {
-                                                    // Prepare new form values with SDR device information
-                                                    const newValues = {
-                                                        ...formValues,
-                                                        name: selectedSdr.label || 'SoapySDR Device',
-                                                        driver: selectedSdr['remote:driver'] || selectedSdr.driver || '',
-                                                        serial: selectedSdr.serial || ''
-                                                    };
-                                                    
-                                                    dispatch(setFormValues(newValues));
-                                                }
-                                            }
-                                        }}
-                    >
-                                        <MenuItem value="" disabled>{t('sdr.select_sdr')}</MenuItem>
-                                        {selectedServerInfo.sdrs.map((sdr, index) => (
-                                            <MenuItem key={index} value={index}>
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                    <MemoryIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
-                                                    <Box component="span">
-                                                        {sdr.label || sdr.driver || `SDR Device ${index}`}
-                                                        {sdr.serial ? ` :: ${sdr.serial}` : ''}
-                                                    </Box>
-                                                </Box>
-                                            </MenuItem>
-                                        ))}
-                                    </Select>
-                                </FormControl>
-                            );
-                        }
+                    if (useManualSoapyServer) {
+                        fields.push(
+                            <TextField
+                                key="manual-soapy-host"
+                                name="host"
+                                label={t('sdr.server_host')}
+                                fullWidth
+                                size="small"
+                                onChange={handleChange}
+                                value={getFieldValue('host')}
+                                error={Boolean(validationErrors.host)}
+                                required
+                            />
+                        );
                     }
                 } else {
                     fields.push(
@@ -1576,8 +1609,9 @@ export default function SDRsPage() {
                 }
             }
 
-            // Port field - only show for types that don't exclude it
-            if (!config.excludeFields.includes('port') && !renderedPortUnderServerSelect) {
+            // Discovered and saved SoapyRemote endpoints already include their port.
+            if (!config.excludeFields.includes('port')
+                && (selectedType !== 'soapysdrremote' || (!isEditing && useManualSoapyServer))) {
                 fields.push(
                     <TextField
                         key="port"
@@ -1589,9 +1623,82 @@ export default function SDRsPage() {
                         onChange={handleChange}
                         value={getFieldValue('port')}
                         error={Boolean(validationErrors.port)}
-                        disabled={isEditing && selectedType === 'soapysdrremote'}
                         required
                     />
+                );
+            }
+
+            if (selectedType === 'soapysdrremote' && !isEditing) {
+                const serverInfo = getSelectedSoapyServerInfo();
+                const queryHasFailed = useManualSoapyServer && currentServerQuery?.status === 'failed';
+                const remoteDevices = !isRemoteSoapyQueryLoading && !queryHasFailed && Array.isArray(serverInfo?.sdrs)
+                    ? serverInfo.sdrs : [];
+                const emptyLabel = isRemoteSoapyQueryLoading
+                    ? t('sdr.querying_server')
+                    : isRemoteSoapyDiscoveryLoading ? t('sdr.discovering_servers')
+                        : queryHasFailed ? t('sdr.query_server_failed')
+                            : !formValues.host && Object.keys(availableSoapyServers).length
+                                ? t('sdr.select_server_first') : t('sdr.no_remote_sdr_devices');
+
+                if (useManualSoapyServer) {
+                    fields.push(
+                        <Box key="query-soapy-server">
+                            <Button size="small" variant="outlined" onClick={handleQuerySoapyServer}
+                                    disabled={!socket || isDialogFormInputsDisabled || !String(formValues.host || '').trim()
+                                        || !Number.isInteger(Number(formValues.port))
+                                        || Number(formValues.port) < 1 || Number(formValues.port) > 65535}
+                                    startIcon={isRemoteSoapyQueryLoading ? <CircularProgress size={16}/> : <RefreshIcon/>}>
+                                {isRemoteSoapyQueryLoading ? t('sdr.querying_server') : t('sdr.query_server')}
+                            </Button>
+                            {queryHasFailed && <Alert severity="error" sx={{mt: 1}}>{currentServerQuery.error}</Alert>}
+                        </Box>
+                    );
+                }
+
+                // Keep the selector in place through discovery and empty server results.
+                fields.push(
+                    <FormControl key="sdr-device-select" fullWidth size="small"
+                                 disabled={isDialogFormInputsDisabled || remoteDevices.length === 0}>
+                        <InputLabel id="sdr-device-label" shrink>{t('sdr.sdr_device')}</InputLabel>
+                        <Select
+                            labelId="sdr-device-label"
+                            label={t('sdr.sdr_device')}
+                            size="small"
+                            displayEmpty
+                            value={remoteDevices[selectedSdrDevice] ? selectedSdrDevice : ''}
+                            onChange={(e) => {
+                                const selectedSdrIndex = e.target.value;
+                                dispatch(setSelectedSdrDevice(selectedSdrIndex));
+                                const selectedSdr = remoteDevices[selectedSdrIndex];
+                                if (!selectedSdr) return;
+                                const newValues = {
+                                    ...formValues,
+                                    name: selectedSdr.label || 'SoapySDR Device',
+                                    driver: selectedSdr['remote:driver'] || selectedSdr.driver || '',
+                                    serial: selectedSdr.serial || '',
+                                };
+                                dispatch(setFormValues(newValues));
+                                // Probe only after the chosen connection has reached the dialog.
+                                setAutoProbeRequest({connection: getSdrProbeKey(newValues)});
+                            }}
+                        >
+                            <MenuItem value="" disabled>
+                                {remoteDevices.length > 0 ? t('sdr.select_sdr') : emptyLabel}
+                            </MenuItem>
+                            {remoteDevices.map((sdr, index) => (
+                                <MenuItem key={index} value={index}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <MemoryIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
+                                        <Box component="span">
+                                            {sdr.label || sdr.driver || `SDR Device ${index}`}
+                                            {sdr.serial ? ` :: ${sdr.serial}` : ''}
+                                        </Box>
+                                    </Box>
+                                </MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>,
+                    soapyProbeControls
                 );
             }
 
@@ -1721,7 +1828,9 @@ export default function SDRsPage() {
                 ((selectedType === 'airspy' || selectedType === 'airspyhf') && selectedAirspyDevice !== '') ||
                 ((selectedType === 'soapysdrlocal' || selectedType === 'soapysdrremote') &&
                     selectedSdrDevice !== '');
-            if (hasSelectedProbedDevice && !hasProbeAntennaPorts) {
+            // Include queued automatic probes so the warning cannot flash before probing starts.
+            const isAntennaProbePending = probing || autoProbeRequest?.connection === formProbeKey;
+            if (hasSelectedProbedDevice && !hasProbeAntennaPorts && !isAntennaProbePending) {
                 fields.push(
                     <Alert key="no-antenna-ports" severity="warning" sx={{ mt: 1 }}>
                         {t(
@@ -1932,6 +2041,24 @@ export default function SDRsPage() {
 
                 {/* Card Body */}
                 <Box sx={{ px: { xs: 2, md: 2.5 }, pt: 1.75, pb: 2 }}>
+
+                    {configuredSoapySdrs.length > 0 && (
+                        <Box sx={{mb: 2}}>
+                            <SoapyProbeControls key={JSON.stringify(probeTarget)} socket={socket}
+                                values={probeTarget || {}} discovering={discovering || isSoapyServerDiscoveryRunning}
+                                selector={
+                                    <FormControl size="small" fullWidth>
+                                        <InputLabel id="probe-sdr-label">{t('sdr.select_probe_sdr')}</InputLabel>
+                                        <Select labelId="probe-sdr-label" label={t('sdr.select_probe_sdr')}
+                                                value={probeTarget?.id || ''} onChange={(event) => setProbeTargetId(event.target.value)}>
+                                            {configuredSoapySdrs.map((sdr) => (
+                                                <MenuItem key={sdr.id} value={sdr.id}>{sdr.name}</MenuItem>
+                                            ))}
+                                        </Select>
+                                    </FormControl>
+                                }/>
+                        </Box>
+                    )}
 
                     {/* Status row */}
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 0.75 }}>
@@ -2163,6 +2290,7 @@ export default function SDRsPage() {
                             open={openAddDialog}
                             onClose={() => dispatch(setOpenAddDialog(false))}
                             PaperProps={{
+                                'aria-busy': isDialogSoapyDiscoveryLoading,
                                 sx: {
                                     position: 'relative',
                                     bgcolor: 'background.paper',
@@ -2224,35 +2352,30 @@ export default function SDRsPage() {
                                     color="success"
                                     variant="contained"
                                     onClick={handleSubmit}
-                                    disabled={hasValidationErrors || loading}
+                                    disabled={hasValidationErrors || isDialogFormInputsDisabled}
                                 >
                                     {t('sdr.submit')}
                                 </Button>
                             </DialogActions>
-                            {showSoapyDiscoveryOverlay && (
+                            {isDialogSoapyDiscoveryLoading && (
                                 <Box
                                     sx={{
                                         position: 'absolute',
                                         inset: 0,
-                                        zIndex: 2,
-                                        backgroundColor: (theme) =>
-                                            theme.palette.mode === 'dark'
-                                                ? 'rgba(0, 0, 0, 0.65)'
-                                                : 'rgba(255, 255, 255, 0.65)',
+                                        zIndex: 1,
+                                        bgcolor: (theme) => alpha(theme.palette.background.paper, 0.8),
+                                        borderRadius: 'inherit',
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
+                                        // Inputs are already disabled; keep Cancel available beneath the overlay.
+                                        pointerEvents: 'none',
                                     }}
                                 >
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                        <CircularProgress size={40} />
-                                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                                            {t(
-                                                'sdr.waiting_for_soapy_discovery',
-                                                'Waiting for SoapySDR server discovery to complete...'
-                                            )}
-                                        </Typography>
-                                    </Box>
+                                    <Stack spacing={2} alignItems="center" role="status">
+                                        <CircularProgress aria-label={dialogDiscoveryLabel}/>
+                                        <Typography variant="body2">{dialogDiscoveryLabel}</Typography>
+                                    </Stack>
                                 </Box>
                             )}
                         </Dialog>

@@ -56,24 +56,9 @@ const CALL_STATUS_ERROR = 'error';
 
 const createInitialCallChecklist = () => ({
     location: { status: CALL_STATUS_IDLE, detail: '' },
-    soapy: { status: CALL_STATUS_IDLE, detail: '' },
     orbital: { status: CALL_STATUS_IDLE, detail: '' },
     admin: { status: CALL_STATUS_IDLE, detail: '' },
 });
-
-const createInitialSoapyRuntimeState = () => ({
-    status: 'idle',
-    detail: '',
-    serverCount: null,
-    sdrCount: null,
-    lastUpdate: null,
-});
-
-const isSoapyTask = (task) => {
-    const taskName = String(task?.name || '').toLowerCase();
-    const taskCommand = String(task?.command || '').toLowerCase();
-    return taskName.includes('soapysdr') || taskCommand.includes('soapysdr');
-};
 
 const normalizeChecklistStep = (stepValue) => {
     const status = String(stepValue?.status || CALL_STATUS_IDLE).toLowerCase();
@@ -124,7 +109,6 @@ const SetupWizard = ({
     const [wizardFinalizing, setWizardFinalizing] = React.useState(false);
     const [wizardFinalizationCompleted, setWizardFinalizationCompleted] = React.useState(false);
     const [callChecklist, setCallChecklist] = React.useState(createInitialCallChecklist);
-    const [soapyRuntimeState, setSoapyRuntimeState] = React.useState(createInitialSoapyRuntimeState);
 
     const showWizardAdminStep = Boolean(wizardRequireAdminSetup);
     const showWizardFinalizeStep = showWizardAdminStep;
@@ -214,7 +198,6 @@ const SetupWizard = ({
         setCallChecklist((previous) => ({
             ...previous,
             location: steps.location ? normalizeChecklistStep(steps.location) : previous.location,
-            soapy: steps.soapy ? normalizeChecklistStep(steps.soapy) : previous.soapy,
             orbital: steps.orbital ? normalizeChecklistStep(steps.orbital) : previous.orbital,
             admin: steps.admin ? normalizeChecklistStep(steps.admin) : previous.admin,
         }));
@@ -390,110 +373,12 @@ const SetupWizard = ({
             }
         };
 
-        const handleSoapyDiscoveryStarted = () => {
-            setSoapyRuntimeState((previous) => ({
-                ...previous,
-                status: 'inprogress',
-                detail: t('setup.discovery_running', { defaultValue: 'Discovery running...' }),
-            }));
-        };
-
-        const handleSoapyDiscoveryComplete = (data) => {
-            setSoapyRuntimeState({
-                status: 'complete',
-                detail: t('setup.discovery_complete', { defaultValue: 'Discovery complete.' }),
-                serverCount: Number.isFinite(Number(data?.server_count))
-                    ? Number(data.server_count)
-                    : null,
-                sdrCount: Number.isFinite(Number(data?.sdr_count))
-                    ? Number(data.sdr_count)
-                    : Number.isFinite(Number(data?.active_count))
-                        ? Number(data.active_count)
-                        : null,
-                lastUpdate: Date.now(),
-            });
-        };
-
-        const handleSoapyRefreshComplete = (data) => {
-            setSoapyRuntimeState((previous) => ({
-                ...previous,
-                status: 'complete',
-                detail: t('setup.discovery_refresh_complete', { defaultValue: 'Discovery refresh complete.' }),
-                sdrCount: Number.isFinite(Number(data?.sdr_count))
-                    ? Number(data.sdr_count)
-                    : Number.isFinite(Number(data?.active_count))
-                        ? Number(data.active_count)
-                        : previous.sdrCount,
-                lastUpdate: Date.now(),
-            }));
-        };
-
-        const handleSoapyDiscoveryError = (data) => {
-            setSoapyRuntimeState((previous) => ({
-                ...previous,
-                status: 'error',
-                detail: String(data?.error || 'Discovery failed.'),
-                lastUpdate: Date.now(),
-            }));
-        };
-
-        const handleBackgroundTaskStarted = (data) => {
-            if (!isSoapyTask(data)) return;
-            setSoapyRuntimeState((previous) => ({
-                ...previous,
-                status: 'inprogress',
-                detail: t('setup.discovery_task_started', { defaultValue: 'Discovery task started.' }),
-            }));
-        };
-
-        const handleBackgroundTaskCompleted = (data) => {
-            if (!isSoapyTask(data)) return;
-            if (String(data?.status || '').toLowerCase() === 'failed') {
-                setSoapyRuntimeState((previous) => ({
-                    ...previous,
-                    status: 'error',
-                    detail: t('setup.discovery_task_failed', { defaultValue: 'Discovery task failed.' }),
-                    lastUpdate: Date.now(),
-                }));
-                return;
-            }
-            setSoapyRuntimeState((previous) => ({
-                ...previous,
-                status: previous.status === 'complete' ? 'complete' : 'idle',
-                lastUpdate: Date.now(),
-            }));
-        };
-
-        const handleBackgroundTaskError = (data) => {
-            if (!isSoapyTask(data)) return;
-            setSoapyRuntimeState((previous) => ({
-                ...previous,
-                status: 'error',
-                detail: String(data?.error || 'Discovery task failed.'),
-                lastUpdate: Date.now(),
-            }));
-        };
-
         socket.on('setup:status', handleSetupStatus);
         socket.on('sat-sync-events', handleSatSyncEvents);
-        socket.on('soapysdr:discovery_started', handleSoapyDiscoveryStarted);
-        socket.on('soapysdr:discovery_complete', handleSoapyDiscoveryComplete);
-        socket.on('soapysdr:refresh_complete', handleSoapyRefreshComplete);
-        socket.on('soapysdr:discovery_error', handleSoapyDiscoveryError);
-        socket.on('background_task:started', handleBackgroundTaskStarted);
-        socket.on('background_task:completed', handleBackgroundTaskCompleted);
-        socket.on('background_task:error', handleBackgroundTaskError);
 
         return () => {
             socket.off('setup:status', handleSetupStatus);
             socket.off('sat-sync-events', handleSatSyncEvents);
-            socket.off('soapysdr:discovery_started', handleSoapyDiscoveryStarted);
-            socket.off('soapysdr:discovery_complete', handleSoapyDiscoveryComplete);
-            socket.off('soapysdr:refresh_complete', handleSoapyRefreshComplete);
-            socket.off('soapysdr:discovery_error', handleSoapyDiscoveryError);
-            socket.off('background_task:started', handleBackgroundTaskStarted);
-            socket.off('background_task:completed', handleBackgroundTaskCompleted);
-            socket.off('background_task:error', handleBackgroundTaskError);
         };
     }, [applySetupStatus, socket]);
 
@@ -566,9 +451,7 @@ const SetupWizard = ({
         setWizardFinalizing(true);
         setWizardFinalizationCompleted(false);
         setCallChecklist(createInitialCallChecklist());
-        setSoapyRuntimeState(createInitialSoapyRuntimeState());
         setChecklistStatus('location', CALL_STATUS_PENDING, 'Submitting location...');
-        setChecklistStatus('soapy', CALL_STATUS_PENDING, 'Starting SoapySDR discovery...');
         setChecklistStatus('orbital', CALL_STATUS_PENDING, 'Starting orbital synchronization...');
         setChecklistStatus('admin', CALL_STATUS_PENDING, 'Creating admin user...');
 
@@ -623,143 +506,6 @@ const SetupWizard = ({
         }
     };
 
-    const soapyLastUpdateText = React.useMemo(() => {
-        if (!soapyRuntimeState.lastUpdate) {
-            return t('location.state_unavailable', { defaultValue: 'Unavailable' });
-        }
-        const timestamp = new Date(soapyRuntimeState.lastUpdate);
-        return Number.isNaN(timestamp.getTime())
-            ? t('location.state_unavailable', { defaultValue: 'Unavailable' })
-            : timestamp.toLocaleString();
-    }, [soapyRuntimeState.lastUpdate, t]);
-
-    const soapyUiState = React.useMemo(() => {
-        const runtimeStatus = String(soapyRuntimeState.status || '').toLowerCase();
-
-        if (runtimeStatus === 'inprogress' || callChecklist.soapy.status === CALL_STATUS_PENDING) {
-            return {
-                label: t('location.soapy_discovery_in_progress', {
-                    defaultValue: 'Discovery in progress',
-                }),
-                color: 'info',
-                loading: true,
-            };
-        }
-
-        if (runtimeStatus === 'complete') {
-            return {
-                label: t('location.soapy_discovery_complete', {
-                    defaultValue: 'Discovery complete',
-                }),
-                color: 'success',
-                loading: false,
-            };
-        }
-
-        if (runtimeStatus === 'error' || callChecklist.soapy.status === CALL_STATUS_ERROR) {
-            return {
-                label: t('location.soapy_discovery_failed', {
-                    defaultValue: 'Discovery failed',
-                }),
-                color: 'error',
-                loading: false,
-            };
-        }
-
-        if (callChecklist.soapy.status === CALL_STATUS_SUCCESS) {
-            return {
-                label: t('location.soapy_discovery_submitted', {
-                    defaultValue: 'Discovery task submitted',
-                }),
-                color: 'success',
-                loading: false,
-            };
-        }
-
-        return {
-            label: t('location.soapy_discovery_idle', {
-                defaultValue: 'Discovery status unavailable',
-            }),
-            color: 'default',
-            loading: false,
-        };
-    }, [callChecklist.soapy.status, soapyRuntimeState.status, t]);
-
-    const soapySummaryText = React.useMemo(() => {
-        const normalizedStatusLabel = String(soapyUiState.label || '')
-            .trim()
-            .replace(/[.!?]+$/, '')
-            .toLowerCase();
-        const normalizedDetail = String(soapyRuntimeState.detail || '')
-            .trim()
-            .replace(/[.!?]+$/, '')
-            .toLowerCase();
-        const parsedServerCount = (
-            soapyRuntimeState.serverCount == null
-                ? null
-                : Number(soapyRuntimeState.serverCount)
-        );
-        const parsedSdrCount = (
-            soapyRuntimeState.sdrCount == null
-                ? null
-                : Number(soapyRuntimeState.sdrCount)
-        );
-        const hasServerCount = parsedServerCount !== null && Number.isFinite(parsedServerCount);
-        const hasSdrCount = parsedSdrCount !== null && Number.isFinite(parsedSdrCount);
-
-        // Keep the Soapy card to two lines by merging optional runtime details into one compact summary row.
-        const segments = [
-            `${t('location.soapy_last_update', { defaultValue: 'Last update' })}: ${soapyLastUpdateText}`,
-            hasServerCount
-                ? `${t('location.soapy_servers_found', { defaultValue: 'Servers found' })}: ${parsedServerCount}`
-                : null,
-            hasSdrCount
-                ? `${t('location.soapy_sdrs_found', { defaultValue: 'SDRs detected' })}: ${parsedSdrCount}`
-                : null,
-            normalizedDetail && normalizedDetail !== normalizedStatusLabel ? soapyRuntimeState.detail : null,
-        ].filter(Boolean);
-
-        return segments.join(' • ');
-    }, [
-        soapyLastUpdateText,
-        soapyRuntimeState.detail,
-        soapyRuntimeState.sdrCount,
-        soapyRuntimeState.serverCount,
-        soapyUiState.label,
-        t,
-    ]);
-
-    const soapyAndOrbitalChecklist = React.useMemo(() => {
-        const soapyStatus = callChecklist.soapy.status;
-        const orbitalStatus = callChecklist.orbital.status;
-
-        // Aggregate two backend task starters into one checklist row.
-        let status = CALL_STATUS_IDLE;
-        if (soapyStatus === CALL_STATUS_ERROR || orbitalStatus === CALL_STATUS_ERROR) {
-            status = CALL_STATUS_ERROR;
-        } else if (soapyStatus === CALL_STATUS_PENDING || orbitalStatus === CALL_STATUS_PENDING) {
-            status = CALL_STATUS_PENDING;
-        } else if (soapyStatus === CALL_STATUS_SUCCESS && orbitalStatus === CALL_STATUS_SUCCESS) {
-            status = CALL_STATUS_SUCCESS;
-        } else if (soapyStatus === CALL_STATUS_SUCCESS || orbitalStatus === CALL_STATUS_SUCCESS) {
-            status = CALL_STATUS_PENDING;
-        }
-
-        const details = [];
-        if (callChecklist.soapy.detail) details.push(`SoapySDR: ${callChecklist.soapy.detail}`);
-        if (callChecklist.orbital.detail) details.push(`Orbital sync: ${callChecklist.orbital.detail}`);
-
-        return {
-            status,
-            detail: details.join(' • '),
-        };
-    }, [
-        callChecklist.orbital.detail,
-        callChecklist.orbital.status,
-        callChecklist.soapy.detail,
-        callChecklist.soapy.status,
-    ]);
-
     const checklistItems = React.useMemo(
         () => [
             {
@@ -777,14 +523,14 @@ const SetupWizard = ({
                 value: callChecklist.admin,
             },
             {
-                key: 'runtime',
-                label: t('location.setup_call_runtime_started', {
-                    defaultValue: 'Soapy server discovery and orbital data sync started',
+                key: 'orbital',
+                label: t('location.setup_call_orbital_started', {
+                    defaultValue: 'Orbital data sync started',
                 }),
-                value: soapyAndOrbitalChecklist,
+                value: callChecklist.orbital,
             },
         ],
-        [callChecklist.admin, callChecklist.location, soapyAndOrbitalChecklist, t]
+        [callChecklist.admin, callChecklist.location, callChecklist.orbital, t]
     );
 
     const getChecklistStatusColor = (status) => {
@@ -964,7 +710,7 @@ const SetupWizard = ({
         <SettingsSection
             title={t('location.setup_task_status_title', { defaultValue: 'Background Task Status' })}
             description={t('location.setup_task_status_help', {
-                defaultValue: 'Live runtime status for orbital synchronization and SoapySDR discovery.',
+                defaultValue: 'Live runtime status for orbital synchronization.',
             })}
             sx={sectionSx}
         >
@@ -1014,54 +760,6 @@ const SetupWizard = ({
                             {orbitalSyncUiState.error}
                         </Typography>
                     )}
-                </Box>
-
-                <Box
-                    sx={{
-                        px: 1,
-                        py: 0.85,
-                        borderRadius: 0.75,
-                        border: '1px solid',
-                        borderColor: 'divider',
-                    }}
-                >
-                    <Stack direction="row" spacing={0.75} alignItems="center" justifyContent="space-between">
-                        <Stack direction="row" spacing={0.7} alignItems="center" sx={{ minWidth: 0 }}>
-                            {soapyUiState.loading && <CircularProgress size={13} thickness={5.5} />}
-                            <Typography variant="body2" sx={{ fontWeight: 600, lineHeight: 1.15 }}>
-                                {t('location.soapy_status_title', { defaultValue: 'SoapySDR Detection' })}
-                            </Typography>
-                        </Stack>
-                        <Box
-                            sx={{
-                                px: 0.7,
-                                py: 0.2,
-                                borderRadius: 5,
-                                bgcolor: (theme) =>
-                                    alpha(
-                                        theme.palette[getStatusTone(soapyUiState.color).bg]?.main
-                                            || theme.palette.grey[500],
-                                        theme.palette.mode === 'dark' ? 0.18 : 0.12
-                                    ),
-                            }}
-                        >
-                            <Typography
-                                variant="caption"
-                                sx={{ color: getStatusTone(soapyUiState.color).text, lineHeight: 1.1 }}
-                            >
-                                {soapyUiState.label}
-                            </Typography>
-                        </Box>
-                    </Stack>
-                    <Typography
-                        variant="caption"
-                        color="text.secondary"
-                        noWrap
-                        title={soapySummaryText}
-                        sx={{ display: 'block', mt: 0.25, lineHeight: 1.2 }}
-                    >
-                        {soapySummaryText}
-                    </Typography>
                 </Box>
             </Stack>
         </SettingsSection>

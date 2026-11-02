@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+from unittest.mock import AsyncMock
 
 import pytest
 import pytest_asyncio
 
+from handlers.entities import control
 from handlers.entities import setup as setuphandler
 
 
@@ -47,11 +49,15 @@ async def _reset_setup_state():
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("legacy_discover_soapy", [False, True])
 @pytest.mark.parametrize("selected_timezone", [None, "Asia/Kathmandu"])
-async def test_setup_finalize_runs_backend_orchestration(monkeypatch, selected_timezone):
+async def test_setup_finalize_runs_backend_orchestration(
+    monkeypatch, selected_timezone, legacy_discover_soapy
+):
     sio = _Sio()
     logger = _Logger()
     setup_completed = False
+    start_task = AsyncMock()
 
     async def _is_setup_required(force_refresh=False):
         del force_refresh
@@ -62,12 +68,6 @@ async def test_setup_finalize_runs_backend_orchestration(monkeypatch, selected_t
         assert data["name"] == "home"
         assert data["station_type"] == "stationary"
         return {"success": True, "data": {"id": 1}}
-
-    async def _start_task(sio, data, logger, sid):
-        del sio, logger, sid
-        assert data["task_name"] == "soapysdr_discovery"
-        assert data["name"] == setuphandler.SOAPY_SETUP_TASK_NAME
-        return {"success": True, "task_id": "task-1"}
 
     async def _sync_orbitals(sio, data, logger, sid):
         del sio, data, logger, sid
@@ -86,7 +86,7 @@ async def test_setup_finalize_runs_backend_orchestration(monkeypatch, selected_t
 
     monkeypatch.setattr(setuphandler.authsvc, "is_setup_required", _is_setup_required)
     monkeypatch.setattr(setuphandler.locations, "submit_location", _submit_location)
-    monkeypatch.setattr(setuphandler.control, "background_task_start", _start_task)
+    monkeypatch.setattr(control, "background_task_start", start_task)
     monkeypatch.setattr(setuphandler.satellites, "sync_satellite_data", _sync_orbitals)
     monkeypatch.setattr(setuphandler.authsvc, "bootstrap_admin", _bootstrap_admin)
 
@@ -94,6 +94,8 @@ async def test_setup_finalize_runs_backend_orchestration(monkeypatch, selected_t
         sio,
         {
             **({"timezone": selected_timezone} if selected_timezone else {}),
+            # Older clients may still send the removed option; setup must ignore it.
+            **({"discover_soapy": True} if legacy_discover_soapy else {}),
             "location": {
                 "lat": 40.7128,
                 "lon": -74.006,
@@ -123,7 +125,8 @@ async def test_setup_finalize_runs_backend_orchestration(monkeypatch, selected_t
     assert status_reply is not None
     assert status_reply["data"]["state"] == "completed"
     assert status_reply["data"]["steps"]["location"]["status"] == "success"
-    assert status_reply["data"]["steps"]["soapy"]["status"] == "success"
+    assert "soapy" not in status_reply["data"]["steps"]
+    start_task.assert_not_awaited()
     assert status_reply["data"]["steps"]["orbital"]["status"] == "success"
     assert status_reply["data"]["steps"]["admin"]["status"] == "success"
 
@@ -143,10 +146,6 @@ async def test_setup_finalize_returns_already_running_for_parallel_calls(monkeyp
         await release_location_step.wait()
         return {"success": True, "data": {"id": 1}}
 
-    async def _start_task(sio, data, logger, sid):
-        del sio, data, logger, sid
-        return {"success": True, "task_id": "task-1"}
-
     async def _sync_orbitals(sio, data, logger, sid):
         del sio, data, logger, sid
         return {"success": True, "task_id": "task-2"}
@@ -159,7 +158,6 @@ async def test_setup_finalize_returns_already_running_for_parallel_calls(monkeyp
 
     monkeypatch.setattr(setuphandler.authsvc, "is_setup_required", _is_setup_required)
     monkeypatch.setattr(setuphandler.locations, "submit_location", _submit_location)
-    monkeypatch.setattr(setuphandler.control, "background_task_start", _start_task)
     monkeypatch.setattr(setuphandler.satellites, "sync_satellite_data", _sync_orbitals)
     monkeypatch.setattr(setuphandler.authsvc, "bootstrap_admin", _bootstrap_admin)
 

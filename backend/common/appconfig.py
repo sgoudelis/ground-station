@@ -32,7 +32,8 @@ DEFAULT_APP_CONFIG: Dict[str, Any] = {
     "track_interval_ms": 2000,
     "max_tracker_targets": 10,
     "enable_soapy_discovery": False,
-    "runonce_soapy_discovery": True,
+    "runonce_soapy_discovery": False,
+    "_manual_soapy_discovery_migrated": True,
     # Shared Parakeet inference endpoint. New transcription workers use hot updates.
     "parakeet_url": "",
     # Optional self-hosted text translation endpoint.
@@ -65,6 +66,20 @@ def load_app_config(config_path: Path) -> Dict[str, Any]:
             with config_path.open("r") as f:
                 config_data = json.load(f)
             if isinstance(config_data, dict):
+                # Earlier versions wrote startup discovery=True into every generated
+                # config. Migrate it once so upgrades also adopt manual discovery;
+                # subsequent explicit opt-ins remain intact.
+                if not config_data.get("_manual_soapy_discovery_migrated"):
+                    config_data["runonce_soapy_discovery"] = False
+                    config_data["_manual_soapy_discovery_migrated"] = True
+                    try:
+                        with config_path.open("w") as f:
+                            json.dump(config_data, f, indent=2)
+                            f.write("\n")
+                    except OSError:
+                        # Read-only mounted configs still get the safe effective
+                        # default without losing unrelated station settings.
+                        logger.warning("Could not persist manual SoapySDR discovery migration")
                 config_data = {k: v for k, v in config_data.items() if not k.startswith("_")}
                 return {**DEFAULT_APP_CONFIG, **config_data}
             logger.warning("App config at %s is not a JSON object, using defaults", config_path)

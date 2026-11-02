@@ -1,6 +1,7 @@
 import asyncio
 import logging
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -28,6 +29,11 @@ async def test_first_stream_and_ui_probe_share_one_gate(monkeypatch, first_reque
     monkeypatch.setattr(parameters, "sdr_parameters_cache", {})
     monkeypatch.setattr(parameters, "_sdr_parameter_locks", {})
     monkeypatch.setattr(hardwarehandlers, "AsyncSessionLocal", _DbSession)
+    monkeypatch.setattr(
+        hardwarehandlers.crud.hardware,
+        "fetch_sdr",
+        AsyncMock(return_value={"data": {"id": "sdr-a"}}),
+    )
     monkeypatch.setattr(processlifecycle, "AsyncSessionLocal", _DbSession)
 
     manager = processlifecycle.ProcessLifecycleManager({}, None, None, None, None)
@@ -161,6 +167,11 @@ async def test_sdr_change_waits_for_probe_then_invalidates_its_result(monkeypatc
     monkeypatch.setattr(parameters, "sdr_parameters_cache", {})
     monkeypatch.setattr(parameters, "_sdr_parameter_locks", {})
     monkeypatch.setattr(hardwarehandlers, "AsyncSessionLocal", _DbSession)
+    monkeypatch.setattr(
+        hardwarehandlers.crud.hardware,
+        "fetch_sdr",
+        AsyncMock(return_value={"data": {"id": "sdr-a"}}),
+    )
     monkeypatch.setattr(hardwarehandlers, "get_all_tracker_managers", lambda: {})
     monkeypatch.setattr(
         hardwarehandlers.runtimestate,

@@ -28,7 +28,7 @@ from common.sdrconfig import SDRConfig
 from db import AsyncSessionLocal
 from fft.processor import fft_processor_process
 from handlers.entities.filebrowser import emit_file_browser_state, refresh_file_browser_library
-from hardware.parameters import probe_sdr_parameters, sdr_parameter_lock
+from hardware.parameters import probe_sdr_parameters, sdr_hardware_lock, sdr_parameter_lock
 from monitoring.timing import TimestampedQueue, get_enabled_event
 from pipeline.orchestration.adsb import AdsbPublisher
 from pipeline.orchestration.gnssfix import derive_gnss_fix_status_from_output, gnss_fix_stream_key
@@ -432,7 +432,7 @@ class ProcessLifecycleManager:
     async def start_sdr_process(self, sdr_device, sdr_config, client_id, force_takeover=False):
         """Warm capabilities before the first worker opens this SDR."""
         sdr_id = str(sdr_device["id"])
-        async with sdr_parameter_lock(sdr_id):
+        async with sdr_parameter_lock(sdr_id), sdr_hardware_lock(sdr_device):
             capabilities = None
             process_info = self.processes.get(sdr_id)
             if process_info and process_info.get("stopping"):

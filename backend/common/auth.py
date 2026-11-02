@@ -92,6 +92,8 @@ admin_only_commands = {
     "delete-rotator",
     "submit-sdr",
     "edit-sdr",
+    "probe-sdr",
+    "query-soapy-server",
     "delete-sdr",
     "get-orbital-sources",
     "submit-orbital-sources",

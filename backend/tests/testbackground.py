@@ -260,3 +260,15 @@ async def test_termination_failure_does_not_report_success(monkeypatch, operatio
 if __name__ == "__main__":
     asyncio.run(_run_scenario(sys.argv[1]))
     assert not multiprocessing.active_children()
+
+
+@pytest.mark.asyncio
+async def test_duplicate_soapy_discovery_and_refresh_are_rejected_before_spawning():
+    from tasks.soapysdrdiscovery import soapysdr_quick_refresh_task
+
+    manager = BackgroundTaskManager(Socket())
+    manager.tasks["existing"] = SimpleNamespace(
+        status=TaskStatus.RUNNING, name="SoapySDR Discovery", func_name="soapysdr_discovery_task"
+    )
+    with pytest.raises(ValueError, match="already running"):
+        await manager.start_task(soapysdr_quick_refresh_task)

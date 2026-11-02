@@ -112,6 +112,31 @@ export const fetchLocalAirspyDevices = createAsyncThunk(
 );
 
 
+// Include the port so separate SoapyRemote instances on one host stay distinct.
+export const getSoapyServerKey = (host, port = 55132) =>
+    JSON.stringify([String(host || '').trim().toLowerCase(), Number(port)]);
+
+export const querySoapySDRServer = createAsyncThunk(
+    'sdrs/querySoapySDRServer',
+    async ({socket, host, port}, {rejectWithValue}) => {
+        try {
+            return await new Promise((resolve, reject) => {
+                socket.timeout(15000).emit('api.call', {
+                    cmd: 'query-soapy-server',
+                    data: {host: host.trim(), port: Number(port)},
+                }, (timeoutError, response) => {
+                    if (timeoutError) reject(new Error('Server query timed out. Check the connection and retry.'));
+                    else if (!response?.success) reject(new Error(response?.error || 'Could not query the SoapySDR server.'));
+                    else resolve(response.data);
+                });
+            });
+        } catch (error) {
+            return rejectWithValue(error.message);
+        }
+    },
+    {condition: (_args, {getState}) => getState().sdrs.soapyServerQuery.status !== 'loading'}
+);
+
 export const fetchSoapySDRServers = createAsyncThunk(
     'sdrs/fetchSoapySDRServers',
     async ({socket}, {rejectWithValue}) => {
@@ -265,6 +290,8 @@ const sdrsSlice = createSlice({
         pageSize: 10,
         formValues: defaultSDR,
         soapyServers: {},
+        manualSoapyServers: {},
+        soapyServerQuery: {endpoint: '', status: 'idle', error: null},
         selectedSdrDevice: "",
         localSoapyDevices: [],
         localRtlDevices: [],
@@ -364,6 +391,22 @@ const sdrsSlice = createSlice({
                 state.loading = false;
                 state.status = 'failed';
                 state.error = action.payload;
+            })
+            .addCase(querySoapySDRServer.pending, (state, action) => {
+                const {host, port} = action.meta.arg;
+                state.soapyServerQuery = {
+                    endpoint: getSoapyServerKey(host, port), status: 'loading', error: null,
+                };
+            })
+            .addCase(querySoapySDRServer.fulfilled, (state, action) => {
+                const server = action.payload;
+                // Keep manually queried results separate from replaceable mDNS snapshots.
+                state.manualSoapyServers[getSoapyServerKey(server.ip, server.port)] = server;
+                state.soapyServerQuery.status = 'succeeded';
+            })
+            .addCase(querySoapySDRServer.rejected, (state, action) => {
+                state.soapyServerQuery.status = 'failed';
+                state.soapyServerQuery.error = action.payload;
             })
             .addCase(fetchSoapySDRServers.pending, (state) => {
                 state.loading = true;

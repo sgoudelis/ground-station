@@ -219,3 +219,22 @@ def test_libretranslate_url_is_empty_by_default_and_hot_applied(tmp_path, monkey
     cleared = service.update({"libretranslate_url": ""})
     assert cleared["success"] is True
     assert appsettings.arguments.libretranslate_url == ""
+
+
+def test_soapy_discovery_defaults_to_manual_and_migrates_legacy_config_once(tmp_path):
+    config_path = tmp_path / "app_config.json"
+    fresh = appconfig.load_app_config(config_path)
+    assert fresh["runonce_soapy_discovery"] is False
+    assert fresh["enable_soapy_discovery"] is False
+
+    _write_json(config_path, {"runonce_soapy_discovery": True, "port": 5050, "secret_key": "keep"})
+    upgraded = appconfig.load_app_config(config_path)
+    assert upgraded["runonce_soapy_discovery"] is False
+    assert upgraded["port"] == 5050
+    assert _read_json(config_path)["secret_key"] == "keep"
+
+    # After migration, an explicit opt-in must survive subsequent restarts.
+    explicit = _read_json(config_path)
+    explicit["runonce_soapy_discovery"] = True
+    _write_json(config_path, explicit)
+    assert appconfig.load_app_config(config_path)["runonce_soapy_discovery"] is True

@@ -11,6 +11,7 @@ from pathlib import Path
 import pytest
 
 from hardware import soapysdrbrowser as browser
+from hardware.parameters import probe_soapy_parameters
 
 pytestmark = pytest.mark.unit
 
@@ -95,8 +96,8 @@ def probes(monkeypatch, tmp_path):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("mode", ["normal", "noisy"])
-async def test_discovery_returns_enumeration_and_antenna_data(monkeypatch, probes, mode):
+@pytest.mark.parametrize("mode", ["normal", "noisy", "antenna-timeout"])
+async def test_discovery_lists_devices_without_opening_them(monkeypatch, probes, mode):
     monkeypatch.setenv("SOAPY_TEST_MODE", mode)
     devices, status = await browser.query_sdrs_with_python_module("127.0.0.1", 55132)
 
@@ -106,10 +107,9 @@ async def test_discovery_returns_enumeration_and_antenna_data(monkeypatch, probe
             "driver": "remote",
             "remote:driver": "mock",
             "serial": "ABC",
-            "antennas": {"rx": ["RX"], "tx": ["TX"]},
         }
     ]
-    assert len(probes) == 2
+    assert len(probes) == 1
     assert all(process.returncode == 0 for process in probes)
 
 
@@ -129,18 +129,29 @@ async def test_enumeration_timeout_reaps_native_call(monkeypatch, probes):
 
 
 @pytest.mark.asyncio
-async def test_antenna_timeout_keeps_device_and_reaps_probe(monkeypatch, probes):
+async def test_explicit_probe_timeout_reaps_device_handle(monkeypatch, probes):
     monkeypatch.setenv("SOAPY_TEST_MODE", "antenna-timeout")
-    device = {"driver": "mock", "serial": "ABC"}
-
-    devices = await browser.enrich_remote_sdrs_with_antennas(
-        "127.0.0.1", 55132, [device], timeout=1
-    )
-
-    assert devices == [{**device, "antennas": {"rx": [], "tx": []}}]
+    with pytest.raises(asyncio.TimeoutError):
+        await probe_soapy_parameters(
+            {"type": "soapysdrremote", "driver": "mock", "serial": "ABC"}, timeout=1
+        )
     assert len(probes) == 1
     assert probes[0].returncode is not None
     assert Path(os.environ["SOAPY_TEST_STARTED"]).exists()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("sdr_type", ["soapysdrremote", "soapysdrlocal"])
+async def test_explicit_probe_reads_capabilities_despite_noisy_driver_output(
+    monkeypatch, probes, sdr_type
+):
+    monkeypatch.setenv("SOAPY_TEST_MODE", "noisy")
+    result = await probe_soapy_parameters({"type": sdr_type, "driver": "mock", "serial": "ABC"})
+    assert result["antennas"] == {"rx": ["RX"], "tx": ["TX"]}
+    assert result["sample_rate_values"] == [1000000.0]
+    assert "sample_rate_ranges" not in result["capabilities"]
+    assert len(probes) == 1
+    assert probes[0].returncode == 0
 
 
 @pytest.mark.asyncio
@@ -150,9 +161,7 @@ async def test_cancellation_reaps_probe_before_returning(monkeypatch, probes, mo
     if mode == "enumerate-timeout":
         operation = browser.query_sdrs_with_python_module("127.0.0.1", 55132, timeout=60)
     else:
-        operation = browser.enrich_remote_sdrs_with_antennas(
-            "127.0.0.1", 55132, [{"driver": "mock"}], timeout=60
-        )
+        operation = probe_soapy_parameters({"type": "soapysdrremote", "driver": "mock"}, timeout=60)
     task = asyncio.create_task(operation)
     try:
 

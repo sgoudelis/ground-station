@@ -103,6 +103,20 @@ single web interface.
 
 *Comprehensive SDR device management interface supporting RTL-SDR, SoapySDR, and UHD/USRP radios with remote capability*
 
+SoapySDR discovery is manual by default. In **Hardware → SDRs**, use **Discover SoapySDR Servers**
+to list remote servers and devices, then **Probe selected SDR** to read a radio's capabilities and
+antenna ports. Both controls are also available in the add/edit dialog; probing uses the current
+form values without saving them. A streaming radio returns its cached capabilities.
+If a remote server is missing from discovery, select **Enter server manually…** in the add
+dialog, enter its hostname/IP and port (default **55132**), and click **Query server**.
+Select a returned SDR to probe its capabilities automatically. Manually queried results
+remain available through discovery refreshes, and saved connections do not require mDNS.
+
+Upgrades disable the old default startup scan once. Automatic enumeration can be explicitly
+re-enabled with `--runonce-soapy-discovery true` or `--enable-soapy-discovery true`; these scans
+list remote devices without opening them for capability probing. First-time setup leaves SDR
+discovery and configuration to **Hardware → SDRs**.
+
 ---
 
 ### File Browser & Decoders
@@ -585,7 +599,7 @@ docker pull ghcr.io/sgoudelis/ground-station:<version>-arm64
 
 **Option 1: With SoapySDR Remote Server Discovery (Recommended)**
 
-Uses host networking to enable automatic mDNS discovery of SoapySDR remote servers:
+Uses host networking to enable mDNS discovery of SoapySDR remote servers:
 
 ```bash
 # AMD64
@@ -646,7 +660,7 @@ docker run -d \
 - With host networking, change `GS_HTTP_PORT=7000` to choose the HTTP port (for example, `GS_HTTP_PORT=8080`). Docker ignores `-p` in this mode.
 - With bridge networking, change the host side of `-p 7000:7000` (for example, `-p 8080:7000`). Leave the container port at 7000.
 - The backend stays on `127.0.0.1:7001` inside the container; its port is controlled by the image startup command.
-- Option 1 (host networking) is required for automatic discovery of SoapySDR remote servers via mDNS
+- Option 1 (host networking) is required for discovery of SoapySDR remote servers via mDNS
 - Option 2 works for local SDRs and all other features
 - For Raspberry Pi hardware, only the Raspberry Pi 5 is recommended
 - For ARM64, using `-v /dev:/dev` ensures all USB devices are accessible
