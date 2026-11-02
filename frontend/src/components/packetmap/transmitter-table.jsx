@@ -17,6 +17,7 @@ import {setTransmitterTableColumnVisibility} from './packet-map-slice.jsx';
 import AircraftFlag from '../common/aircraft-flag.jsx';
 import {aircraftLabel, aircraftValue} from '../../utils/aircraft-metadata.js';
 import {aircraftEmergency, aircraftEmergencyLabel} from '../../utils/aircraft-emergency.js';
+import {getReceiverDistances} from '../filebrowser/position-utils.js';
 
 const visibleDetails = new Set([
     'signal.frequency_hz', 'telemetry.vel_h', 'telemetry.vel_v', 'telemetry.heading',
@@ -42,6 +43,7 @@ export default function TransmitterTable({rows, loading, hiddenTypes, gridEditab
     const {t: aircraftT} = useTranslation('common');
     const timeSettings = useUserTimeSettings();
     const dispatch = useDispatch();
+    const receiver = useSelector((state) => state.location?.location);
     // Retain saved choices even when their decoded fields are absent from the results.
     const columnVisibility = useSelector((state) => state.packetMap.transmitterTableColumnVisibility);
     const [toolbarContainer, setToolbarContainer] = useState(null);
@@ -49,11 +51,13 @@ export default function TransmitterTable({rows, loading, hiddenTypes, gridEditab
         ids: new Set(selectedTransmitterId === null ? [] : [selectedTransmitterId]),
     }), [selectedTransmitterId]);
     const data = useMemo(() => rows.map((row) => ({...row, fields: flattenDetails(row.details),
+        // Use ground distance for every protocol, including reports without altitude.
+        distance: getReceiverDistances(row, receiver)?.groundKm ?? null,
         // Saved fixes carry compact icon metadata; full transmitter details add
         // registration and database flags. Aircraft-only columns stay blank for other protocols.
         aircraft: row.kind === 'adsb' ? {...row.aircraft, ...row.details?.telemetry?.aircraft} : null,
         emergencyStatus: aircraftEmergency(row),
-    })), [rows]);
+    })), [rows, receiver]);
     const fields = useMemo(() => [...new Set(data.flatMap((row) => Object.keys(row.fields)))].sort(), [data]);
     const format = (value) => formatDateTime(value, timeSettings);
     const columns = useMemo(() => [
@@ -71,6 +75,12 @@ export default function TransmitterTable({rows, loading, hiddenTypes, gridEditab
             valueFormatter: typeLabel,
             renderCell: ({value}) => <Typography variant="caption" sx={{color: typeColor(value)}}>{typeLabel(value)}</Typography>},
         {field: 'source', headerName: t('packet_map.source', {defaultValue: 'Source'}), width: 90},
+        {field: 'distance', headerName: t('packet_map.column_headers.distance', {defaultValue: 'Distance (km)'}),
+            description: t('packet_map.distance', {defaultValue: 'Ground distance from the home station to the latest position'}),
+            type: 'number', width: 115,
+            valueFormatter: (value) => value == null ? '' : `${value.toLocaleString(timeSettings.locale, {
+                minimumFractionDigits: 1, maximumFractionDigits: 1,
+            })} km`},
         ...['registration', 'type_code', 'classification'].map((key) => ({
             // Stable columns remain available without depending on which aircraft
             // happen to appear in the current range. Reuse the info panel's labels.

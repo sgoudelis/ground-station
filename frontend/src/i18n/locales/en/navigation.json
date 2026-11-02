@@ -43,6 +43,7 @@
     "latitude": "Latitude",
     "longitude": "Longitude",
     "altitude": "Altitude (m)",
+    "distance": "Ground distance from the home station to the latest position",
     "latest_file": "Latest file",
     "column_headers": {
       "name": "Name",
@@ -51,7 +52,8 @@
       "last_seen": "Last",
       "latitude": "Lat",
       "longitude": "Lon",
-      "altitude": "Alt (m)"
+      "altitude": "Alt (m)",
+      "distance": "Distance (km)"
     },
     "details": "Transmitter details",
     "info": {
