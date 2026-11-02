@@ -17,6 +17,7 @@ import {detailLabel, flattenDetails, typeColor, typeLabel} from './transmitters.
 import AircraftFlag from '../common/aircraft-flag.jsx';
 import AircraftDetails from '../common/aircraft-details.jsx';
 import {aircraftCountry} from '../../utils/aircraft-country.js';
+import {renderAircraftSymbol, selectAircraftShape} from './aircraft-symbol.js';
 
 function InfoSection({title, icon: Icon, fields}) {
     const titleId = useId();
@@ -46,6 +47,12 @@ export default function TransmitterInfo({transmitter, selectedTransmitterId = nu
     const label = (key, fallback) => t(`packet_map.${key}`, {defaultValue: fallback});
     // Source is the ICAO address for both saved and live aircraft records.
     const country = transmitter?.kind === 'adsb' ? aircraftCountry(transmitter.source) : null;
+    const aircraft = transmitter?.aircraft ?? transmitter?.details?.telemetry?.aircraft;
+    // Share the map's model selection and artwork, displayed upright without
+    // its map-only heading, label or ground shadow.
+    const aircraftSymbol = useMemo(() => transmitter?.kind === 'adsb'
+        ? renderAircraftSymbol(selectAircraftShape(aircraft), {angle: 0, color: typeColor('adsb')}) : null,
+    [transmitter?.kind, aircraft]);
     const formatTime = (value) => formatDateTime(value, timeSettings);
     const formatNumber = (value, digits) => Number.isFinite(value)
         ? value.toLocaleString(timeSettings.locale, {maximumFractionDigits: digits}) : value;
@@ -88,20 +95,27 @@ export default function TransmitterInfo({transmitter, selectedTransmitterId = nu
             </Tooltip>}
         </TitleBar>
         {transmitter ? <>
-            <Box sx={{p: 1.25, borderBottom: 1, borderColor: 'divider',
+            <Box sx={{p: 1.25, borderBottom: 1, borderColor: 'divider', flexShrink: 0,
+                display: 'flex', alignItems: 'center', gap: 1,
                 bgcolor: (theme) => alpha(typeColor(transmitter.kind), theme.palette.mode === 'dark' ? 0.1 : 0.06)}}>
-                <Box sx={{display: 'flex', alignItems: 'center', gap: 1, mb: 0.5}}>
-                    <Box sx={{width: 8, height: 8, borderRadius: '50%', bgcolor: typeColor(transmitter.kind), flexShrink: 0}} />
-                    {country && <AircraftFlag icao={transmitter.source} />}
-                    <Typography variant="subtitle2" sx={{fontWeight: 700, overflowWrap: 'anywhere', minWidth: 0, flex: 1}}>
-                        {transmitter.name}
+                {aircraftSymbol && <Box aria-hidden="true"
+                    sx={{width: 44, height: 44, flexShrink: 0, '& > svg': {display: 'block', width: '100%', height: '100%'}}}
+                    dangerouslySetInnerHTML={{__html: aircraftSymbol}} />}
+                <Box sx={{minWidth: 0, flex: 1}}>
+                    <Box sx={{display: 'flex', alignItems: 'center', gap: 1, mb: 0.5}}>
+                        {!aircraftSymbol && <Box sx={{width: 8, height: 8, borderRadius: '50%', bgcolor: typeColor(transmitter.kind), flexShrink: 0}} />}
+                        {country && <AircraftFlag icao={transmitter.source} />}
+                        <Typography variant={aircraftSymbol ? 'subtitle1' : 'subtitle2'}
+                            sx={{fontWeight: 700, lineHeight: 1.15, overflowWrap: 'anywhere', minWidth: 0, flex: 1}}>
+                            {transmitter.name}
+                        </Typography>
+                        <Chip size="small" variant="outlined" label={typeLabel(transmitter.kind)}
+                            sx={{height: 20, fontSize: '0.65rem', color: typeColor(transmitter.kind), borderColor: typeColor(transmitter.kind)}} />
+                    </Box>
+                    <Typography variant="caption" sx={{display: 'block', color: 'text.secondary', overflowWrap: 'anywhere'}}>
+                        {label('info.identifier', 'ID')}: {transmitter.id}
                     </Typography>
-                    <Chip size="small" variant="outlined" label={typeLabel(transmitter.kind)}
-                        sx={{height: 20, fontSize: '0.65rem', color: typeColor(transmitter.kind), borderColor: typeColor(transmitter.kind)}} />
                 </Box>
-                <Typography variant="caption" sx={{display: 'block', color: 'text.secondary', overflowWrap: 'anywhere'}}>
-                    {label('info.identifier', 'ID')}: {transmitter.id}
-                </Typography>
             </Box>
             <Box sx={{flex: 1, minHeight: 0, overflowY: 'auto', p: 1.5}}>
                 {transmitter.kind === 'adsb' && <AircraftDetails aircraft={transmitter.details?.telemetry?.aircraft} />}
