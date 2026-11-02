@@ -25,6 +25,7 @@ from SoapySDR import SOAPY_SDR_CF32, SOAPY_SDR_RX
 
 from common.errors import format_device_error
 from common.iqsamples import require_complex64
+from hardware.soapybandwidth import apply_bandwidth
 
 # Configure logging for the worker process
 logger = logging.getLogger("soapysdr-remote")
@@ -310,6 +311,25 @@ def soapysdr_remote_worker_process(
             config.get("soapy_agc", False),
         )
 
+        # Readback is sent independently from requested settings so the UI can
+        # show driver rounding, mode restrictions, and configuration failures.
+        def update_bandwidth(selection):
+            status = apply_bandwidth(
+                sdr,
+                SOAPY_SDR_RX,
+                channel,
+                actual_sample_rate,
+                selection,
+                driver,
+                logger,
+            )
+            data_queue.put({"type": "bandwidth", "sdr_id": sdr_id, "status": status})
+
+        bandwidth_selection = (sdr_settings if isinstance(sdr_settings, dict) else {}).get(
+            "bandwidth"
+        )
+        update_bandwidth(bandwidth_selection)
+
         # Enable DC offset correction for devices that support it (e.g., USRP B200/B210)
         try:
             if sdr.hasDCOffsetMode(SOAPY_SDR_RX, channel):
@@ -405,7 +425,19 @@ def soapysdr_remote_worker_process(
             try:
                 if not config_queue.empty():
                     new_config = config_queue.get_nowait()
+                    # Partial updates must not discard the chosen filter mode.
+                    next_bandwidth = bandwidth_selection
+                    if "sdr_settings" in new_config:
+                        next_bandwidth = (new_config["sdr_settings"] or {}).get("bandwidth")
+                    previous_channel = channel
                     channel = new_config.get("channel", channel)
+                    bandwidth_changed = (
+                        previous_channel != channel
+                        or actual_sample_rate != new_config.get("sample_rate", actual_sample_rate)
+                        or old_config.get("antenna")
+                        != new_config.get("antenna", old_config.get("antenna"))
+                        or bandwidth_selection != next_bandwidth
+                    )
 
                     if "sample_rate" in new_config:
                         if actual_sample_rate != new_config["sample_rate"]:
@@ -541,6 +573,17 @@ def soapysdr_remote_worker_process(
                                 bias_setting_keys,
                                 new_config.get("soapy_agc", False),
                             )
+
+                    if bandwidth_changed:
+                        # setSampleRate resets SDRplay's filter even when its
+                        # saved bandwidth selection has not changed.
+                        # An older client's empty settings also restore the
+                        # driver policy after an explicit filter selection.
+                        selection = next_bandwidth
+                        if selection is None and bandwidth_selection is not None:
+                            selection = "driver"
+                        update_bandwidth(selection)
+                        bandwidth_selection = next_bandwidth
 
                     old_config = new_config
 

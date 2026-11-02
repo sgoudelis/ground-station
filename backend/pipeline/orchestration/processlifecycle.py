@@ -649,7 +649,15 @@ class ProcessLifecycleManager:
             # Add this client to the room (skip for internal observation sessions)
             if not VFOManager.is_internal_session(client_id):
                 await self.sio.enter_room(client_id, sdr_id)
-                await self.sio.emit(SocketEvents.SDR_STATUS, {"streaming": True}, room=client_id)
+                await self.sio.emit(
+                    SocketEvents.SDR_STATUS,
+                    {
+                        "streaming": True,
+                        "sdr_id": sdr_id,
+                        "bandwidth_status": process_info.get("bandwidth_status"),
+                    },
+                    room=client_id,
+                )
 
             return sdr_id
 
@@ -1315,6 +1323,16 @@ class ProcessLifecycleManager:
                                 ]
 
                             await self.sio.emit(SocketEvents.SDR_FFT_DATA, fft_payload, room=sdr_id)
+
+                        elif data_type == "bandwidth":
+                            # Keep measured filter state separate from requested
+                            # config, including for clients joining this worker later.
+                            process_info["bandwidth_status"] = data["status"]
+                            await self.sio.emit(
+                                SocketEvents.SDR_STATUS,
+                                {"sdr_id": sdr_id, "bandwidth_status": data["status"]},
+                                room=sdr_id,
+                            )
 
                         elif data_type == "stats":
                             # Store stats for performance monitoring

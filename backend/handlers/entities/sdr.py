@@ -207,7 +207,15 @@ def _live_sdr_config(sdr_id: str, process_info: Dict[str, Any]) -> Dict[str, Any
         "recording_path",
     )
     config = process_info.get("config") or {}
-    return {"sdr_id": sdr_id, **{key: config[key] for key in fields if key in config}}
+    return {
+        "sdr_id": sdr_id,
+        **{key: config[key] for key in fields if key in config},
+        **(
+            {"bandwidth_status": process_info["bandwidth_status"]}
+            if "bandwidth_status" in process_info
+            else {}
+        ),
+    }
 
 
 async def sdr_command_routing(

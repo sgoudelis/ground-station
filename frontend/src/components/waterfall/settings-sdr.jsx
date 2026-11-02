@@ -94,6 +94,8 @@ const SdrAccordion = ({
                           onAntennaChange,
                           sdrCapabilities,
                           sdrSettings,
+                          bandwidthStatus,
+                          onBandwidthChange,
                           hasBiasT,
                           biasT,
                           onBiasTChange,
@@ -294,6 +296,18 @@ const SdrAccordion = ({
     }, [selectedSdrRecord]);
     const selectedCapabilities = sdrCapabilities?.[selectedSDRId] || null;
     const isSdrplay = String(selectedSdrRecord?.driver || '').toLowerCase() === 'sdrplay';
+    const hasBandwidthControl = ['soapysdrlocal', 'soapysdrremote'].includes(selectedSdrRecord?.type)
+        && Array.isArray(selectedCapabilities?.bandwidths?.rx)
+        && selectedCapabilities.bandwidths.rx.some((value) => Number.isFinite(value) && value > 0);
+    const bandwidthOptions = [...new Set(selectedCapabilities?.bandwidths?.rx || [])]
+        .filter((value) => Number.isFinite(value) && value > 0
+            // Low-rate SDRplay modes cannot use the wide zero-IF filters.
+            && !(isSdrplay && localSampleRate <= 2000000 && value > 1536000))
+        .sort((left, right) => left - right);
+    const selectedBandwidth = sdrSettings?.bandwidth ?? 'driver';
+    const hasCurrentBandwidthStatus = isStreaming && bandwidthStatus
+        && bandwidthStatus.mode === selectedBandwidth
+        && bandwidthStatus.sample_rate === Number(localSampleRate);
     const biasTSupported = hasBiasT || selectedCapabilities?.bias_t?.supported;
     const isNoneSourceOption = (source) =>
         typeof source === 'string' && source.trim().toLowerCase() === 'none';
@@ -669,6 +683,45 @@ const SdrAccordion = ({
                                 </FormHelperText>
                             )}
                         </SdrFormControl>
+                        {hasBandwidthControl && (
+                            <SdrFormControl
+                                hint={t('sdr.if_bandwidth_hint')}
+                                disabled={gettingSDRParameters || isRecording}
+                                error={Boolean(hasCurrentBandwidthStatus && bandwidthStatus.error)}
+                                sx={{minWidth: 200, marginTop: 0, marginBottom: 1}}
+                                fullWidth variant="outlined" size="small"
+                            >
+                                <InputLabel id={`${controlId}-bandwidth-label`}>{t('sdr.if_bandwidth')}</InputLabel>
+                                <Select
+                                    labelId={`${controlId}-bandwidth-label`}
+                                    label={t('sdr.if_bandwidth')}
+                                    value={selectedBandwidth}
+                                    onChange={(event) => onBandwidthChange?.(event.target.value)}
+                                    size="small"
+                                >
+                                    <MenuItem value="auto">{t('sdr.if_bandwidth_auto')}</MenuItem>
+                                    <MenuItem value="driver">{t('sdr.if_bandwidth_driver')}</MenuItem>
+                                    {bandwidthOptions.map((value) => (
+                                        <MenuItem key={value} value={value}>{formatHz(value)}</MenuItem>
+                                    ))}
+                                    {typeof selectedBandwidth === 'number' && !bandwidthOptions.includes(selectedBandwidth) && (
+                                        <MenuItem value={selectedBandwidth} disabled>
+                                            {formatHz(selectedBandwidth)} ({t('sdr.if_bandwidth_unavailable')})
+                                        </MenuItem>
+                                    )}
+                                </Select>
+                                {hasCurrentBandwidthStatus && (
+                                    <FormHelperText>
+                                        {bandwidthStatus.actual_hz > 0 && t('sdr.if_bandwidth_applied', {
+                                            value: formatHz(bandwidthStatus.actual_hz),
+                                        })}
+                                        {bandwidthStatus.actual_hz > 0 && bandwidthStatus.actual_hz < localSampleRate
+                                            && ` · ${t('sdr.if_bandwidth_limited')}`}
+                                        {bandwidthStatus.error && ` ${bandwidthStatus.error}`}
+                                    </FormHelperText>
+                                )}
+                            </SdrFormControl>
+                        )}
                         <SdrFormControl hint={t('sdr.antenna_hint')}
                                      disabled={gettingSDRParameters || isRecording || (selectedSDRId === 'sigmf-playback' && isStreaming)}
                                      error={antennaRequiredError}
@@ -978,6 +1031,8 @@ function areSdrAccordionPropsEqual(prevProps, nextProps) {
         prevProps.onAntennaChange === nextProps.onAntennaChange &&
         prevProps.sdrCapabilities === nextProps.sdrCapabilities &&
         prevProps.sdrSettings === nextProps.sdrSettings &&
+        prevProps.bandwidthStatus === nextProps.bandwidthStatus &&
+        prevProps.onBandwidthChange === nextProps.onBandwidthChange &&
         prevProps.hasBiasT === nextProps.hasBiasT &&
         prevProps.biasT === nextProps.biasT &&
         prevProps.onBiasTChange === nextProps.onBiasTChange &&

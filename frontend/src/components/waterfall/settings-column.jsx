@@ -167,6 +167,7 @@ const WaterfallSettings = forwardRef(function WaterfallSettings({ playbackRemain
         sampleRateValues,
         sdrCapabilities,
         sdrSettingsById,
+        sdrBandwidthById,
         hasBiasT,
         hasTunerAgc,
         hasRtlAgc,
@@ -220,6 +221,7 @@ const WaterfallSettings = forwardRef(function WaterfallSettings({ playbackRemain
             sampleRateValues: state.waterfall.sampleRateValues,
             sdrCapabilities: state.waterfall.sdrCapabilities,
             sdrSettingsById: state.waterfall.sdrSettingsById,
+            sdrBandwidthById: state.waterfall.sdrBandwidthById,
             hasBiasT: state.waterfall.hasBiasT,
             hasTunerAgc: state.waterfall.hasTunerAgc,
             hasRtlAgc: state.waterfall.hasRtlAgc,
@@ -1045,6 +1047,13 @@ const WaterfallSettings = forwardRef(function WaterfallSettings({ playbackRemain
         });
     }, [dispatch, selectedSDRId, sdrSettings, getValidGainElements, filterGains, sendSDRConfigToBackend]);
 
+    const handleBandwidthChange = useCallback((bandwidth) => {
+        if (!selectedSDRId || selectedSDRId === "none") return;
+        const settings = { ...(sdrSettings || {}), bandwidth };
+        dispatch(setSdrSettings({ sdrId: selectedSDRId, settings }));
+        sendSDRConfigToBackend({ sdrSettings: settings });
+    }, [dispatch, selectedSDRId, sdrSettings, sendSDRConfigToBackend]);
+
     const handleClockSourceChange = useCallback((value) => {
         if (!selectedSDRId || selectedSDRId === "none") {
             return;
@@ -1689,6 +1698,8 @@ const WaterfallSettings = forwardRef(function WaterfallSettings({ playbackRemain
                     onAntennaChange={handleAntennaChange}
                     sdrCapabilities={sdrCapabilities}
                     sdrSettings={sdrSettings}
+                    bandwidthStatus={sdrBandwidthById?.[selectedSDRId]}
+                    onBandwidthChange={handleBandwidthChange}
                     hasBiasT={hasBiasT}
                     biasT={biasT}
                     onBiasTChange={handleBiasTChange}

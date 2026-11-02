@@ -147,6 +147,31 @@ def _new_manager(processes=None):
 
 
 @pytest.mark.asyncio
+async def test_bandwidth_readback_is_cached_and_broadcast_to_sdr_room():
+    status = {"mode": "auto", "sample_rate": 4e6, "actual_hz": 5e6}
+    messages = queue.Queue()
+    messages.put({"type": "bandwidth", "sdr_id": "radio", "status": status})
+    messages.put({"type": "terminated"})
+    process_info = {
+        "process": _StoppedProcess(),
+        "fft_process": None,
+        "data_queue": messages,
+        "stop_event": asyncio.Event(),
+        "clients": {"viewer"},
+        "iq_broadcaster": _Broadcaster(),
+    }
+    manager = _new_manager({"radio": process_info})
+
+    await asyncio.wait_for(manager._monitor_data_queue("radio", 42), timeout=1)
+
+    assert process_info["bandwidth_status"] == status
+    assert (
+        ("sdr-status", {"sdr_id": "radio", "bandwidth_status": status}),
+        {"room": "radio"},
+    ) in manager.sio.emitted
+
+
+@pytest.mark.asyncio
 async def test_sdr_readiness_requires_stream_activation_and_samples(monkeypatch):
     broker = EventBroker()
     subscription = broker.subscribe("station-token", ["station:read"])

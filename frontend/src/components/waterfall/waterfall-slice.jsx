@@ -207,6 +207,7 @@ const initialState = {
     sampleRateValues: [],
     sdrCapabilities: {},
     sdrSettingsById: {},
+    sdrBandwidthById: {},
     hasBiasT: false,
     hasTunerAgc: false,
     hasRtlAgc: false,
@@ -546,6 +547,10 @@ export const waterfallSlice = createSlice({
         updateSDRConfig: (state, action) => {
             // Update all SDR configuration parameters at once
             const config = action.payload;
+            if (config.sdr_id && Object.prototype.hasOwnProperty.call(config, 'bandwidth_status')) {
+                state.sdrBandwidthById ??= {};
+                state.sdrBandwidthById[config.sdr_id] = config.bandwidth_status;
+            }
             if (config.center_freq !== undefined) state.centerFrequency = config.center_freq;
             if (config.sample_rate !== undefined) {
                 state.sampleRate = config.sample_rate;

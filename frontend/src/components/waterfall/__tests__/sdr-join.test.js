@@ -15,6 +15,8 @@ describe('SDR joining', () => {
                     ? { success: true, data: { config: {
                         sdr_id: 'sdr-a', center_freq: 145_800_000,
                         sample_rate: 2_048_000, gain: 20, antenna: 'RX', bias_t: true,
+                        sdr_settings: {bandwidth: 'auto'},
+                        bandwidth_status: {mode: 'auto', sample_rate: 2_048_000, actual_hz: 5_000_000},
                     }, parameters: {
                         gain_values: [0, 10, 20, 30],
                         sample_rate_values: [1_024_000, 2_048_000, 2_400_000],
@@ -45,6 +47,8 @@ describe('SDR joining', () => {
         expect(state.antennasList.rx).toEqual(['RX', 'AUX']);
         expect(state.sdrCapabilities['sdr-a'].clock_sources).toEqual(['internal', 'external']);
         expect(state.sdrSettingsById['sdr-a'].draft.biasT).toBe(true);
+        expect(state.sdrSettingsById['sdr-a'].draft.bandwidth).toBe('auto');
+        expect(state.sdrBandwidthById['sdr-a'].actual_hz).toBe(5_000_000);
 
         dispatch(updateSDRConfig({ sdr_id: 'sdr-a', bias_t: false, center_freq: 145_810_000 }));
         expect(state.sdrSettingsById['sdr-a'].draft.biasT).toBe(false);
