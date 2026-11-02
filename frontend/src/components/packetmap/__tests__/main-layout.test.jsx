@@ -177,6 +177,33 @@ it('advances the live clock without incoming packets and stops the timer in hist
     }
 });
 
+it('freezes live updates when LIVE is toggled off and resumes them when toggled on', () => {
+    vi.useFakeTimers();
+    try {
+        vi.setSystemTime(new Date('2026-11-01T12:00:00Z'));
+        const store = createStore();
+        render(<Provider store={store}><ThemeProvider theme={createTheme()}><PacketMapLayout /></ThemeProvider></Provider>);
+        act(() => vi.advanceTimersByTime(30000));
+        const cursor = mapRender.mock.lastCall[0].playbackTime;
+        const start = store.getState().packetMap.range.start;
+        fireEvent.click(screen.getByRole('button', {name: 'LIVE', exact: true}));
+        expect(store.getState().packetMap.range).toEqual({start, end: new Date(cursor).toISOString()});
+        expect(useAircraft.mock.lastCall[1]).toBe(false);
+        expect(screen.getByRole('button', {name: 'LIVE', exact: true})).toHaveAttribute('aria-pressed', 'false');
+        expect(screen.getByRole('slider', {name: 'Playback time'})).not.toBeDisabled();
+        act(() => vi.advanceTimersByTime(60000));
+        expect(mapRender.mock.lastCall[0].playbackTime).toBe(cursor);
+        fireEvent.click(screen.getByRole('button', {name: 'LIVE', exact: true}));
+        expect(store.getState().packetMap.range).toEqual({start, end: null});
+        expect(useAircraft.mock.lastCall[1]).toBe(true);
+        expect(screen.getByRole('button', {name: 'LIVE', exact: true})).toHaveAttribute('aria-pressed', 'true');
+        expect(mapRender.mock.lastCall[0].playbackTime).toBeGreaterThan(cursor);
+        expect(screen.getByRole('slider', {name: 'Live time'})).toBeDisabled();
+    } finally {
+        vi.useRealTimers();
+    }
+});
+
 it.each(['LIVE', '12h', '24h', '7d', 'All'])('stores %s in Redux and restores it when revisiting the map', (preset) => {
     usePacketPositions.mockImplementation(() => ({...fixture, available_range: historyRange, loading: false}));
     const store = createStore(historyRange);

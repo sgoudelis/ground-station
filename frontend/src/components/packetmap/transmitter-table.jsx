@@ -77,7 +77,7 @@ export default function TransmitterTable({rows, loading, hiddenTypes, gridEditab
         {field: 'source', headerName: t('packet_map.source', {defaultValue: 'Source'}), width: 90},
         {field: 'distance', headerName: t('packet_map.column_headers.distance', {defaultValue: 'Distance (km)'}),
             description: t('packet_map.distance', {defaultValue: 'Ground distance from the home station to the latest position'}),
-            type: 'number', width: 115,
+            type: 'number', width: 90,
             valueFormatter: (value) => value == null ? '' : `${value.toLocaleString(timeSettings.locale, {
                 minimumFractionDigits: 1, maximumFractionDigits: 1,
             })} km`},

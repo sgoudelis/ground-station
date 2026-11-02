@@ -1,5 +1,5 @@
 import React from 'react';
-import {fireEvent, render, screen} from '@testing-library/react';
+import {fireEvent, render, screen, within} from '@testing-library/react';
 import {beforeEach, describe, expect, it, vi} from 'vitest';
 import i18n from 'i18next';
 import {initReactI18next} from 'react-i18next';
@@ -106,6 +106,27 @@ describe('Packet map dates', () => {
         expect(activity()).toEqual(highlighted);
         rerender(<DateRangeBar {...props} positions={[]} />);
         expect(activity()).toEqual([]);
+    });
+
+    it('toggles LIVE off at the displayed cursor and back on, with a red dot only while selected', () => {
+        const onPresetChange = vi.fn();
+        const now = Date.parse(range.end) + 12345;
+        const props = {range: {...range, end: null}, playbackTime: now, onChange: vi.fn(), onPresetChange};
+        const {rerender} = render(<DateRangeBar {...props} />);
+        const live = screen.getByRole('button', {name: 'LIVE', exact: true});
+        const dot = () => within(live).getByTestId('FiberManualRecordIcon');
+        expect(live).toHaveAttribute('aria-pressed', 'true');
+        expect(dot()).toHaveClass('MuiSvgIcon-colorError');
+        fireEvent.click(live);
+        const frozen = {start: range.start, end: new Date(now).toISOString()};
+        expect(onPresetChange).toHaveBeenLastCalledWith(frozen);
+        rerender(<DateRangeBar {...props} range={frozen} />);
+        expect(live).toHaveAttribute('aria-pressed', 'false');
+        expect(dot()).toHaveClass('MuiSvgIcon-colorDisabled');
+        expect(screen.getByLabelText('To')).not.toBeDisabled();
+        expect(screen.getByRole('slider', {name: 'Playback time'})).not.toBeDisabled();
+        fireEvent.click(live);
+        expect(onPresetChange).toHaveBeenLastCalledWith({start: range.start, end: null});
     });
 
     it('disables a zero-duration playback window without inventing a wider range', () => {

@@ -21,6 +21,7 @@
     "live": "LIVE",
     "live_time": "Live time",
     "live_description": "Follow new packets from the selected start date",
+    "stop_live": "Stop live updates and enable playback",
     "refresh": "Refresh",
     "reception_time": "Reception time",
     "playback_time": "Playback time",

@@ -1,7 +1,7 @@
 /** Copyright (c) 2026 Efstratios Goudelis — GPL-3.0-or-later */
 
 import React, {useEffect, useMemo, useState} from 'react';
-import {Box, IconButton, Stack, Tooltip} from '@mui/material';
+import {Box, IconButton, Stack, ToggleButton, Tooltip} from '@mui/material';
 import {DateTimePicker} from '@mui/x-date-pickers/DateTimePicker';
 import {LocalizationProvider} from '@mui/x-date-pickers/LocalizationProvider';
 import {AdapterMoment} from '@mui/x-date-pickers/AdapterMoment';
@@ -140,13 +140,23 @@ export default function DateRangeBar({range, availableRange, positions, onChange
             {/* Keep presets at the right edge even while the timeline is hidden. */}
             <Stack direction="row" spacing={1} alignItems="center" useFlexGap
                 sx={{ml: 'auto', [compactActionsQuery]: {gap: 0.25}}}>
-            <ResponsiveActionButton label={t('packet_map.live', {defaultValue: 'LIVE'})}
-                tooltip={t('packet_map.live_description', {defaultValue: 'Follow new packets from the selected start date'})}
-                compactQuery={compactActionsQuery} sx={actionButtonSx}
-                size="medium" variant={isLive ? 'contained' : 'outlined'} color={isLive ? 'success' : 'primary'}
-                aria-pressed={isLive} onClick={() => onPresetChange({start: range.start, end: null})}
-                startIcon={<FiberManualRecordIcon sx={{fontSize: '10px !important',
-                    [compactActionsQuery]: {fontSize: '20px !important'}}} />} />
+            <Tooltip title={isLive ? t('packet_map.stop_live', {defaultValue: 'Stop live updates and enable playback'})
+                : t('packet_map.live_description', {defaultValue: 'Follow new packets from the selected start date'})}>
+                <ToggleButton value="live" selected={isLive} color="primary"
+                    aria-label={t('packet_map.live', {defaultValue: 'LIVE'})}
+                    onChange={() => onPresetChange({
+                        start: range.start,
+                        // Freeze at the displayed live cursor so playback starts from the same time.
+                        end: isLive ? new Date(maximum).toISOString() : null,
+                    })}
+                    sx={{...actionButtonSx, gap: 0.75, whiteSpace: 'nowrap', flexShrink: 0,
+                        [compactActionsQuery]: {...actionButtonSx[compactActionsQuery],
+                            '& .responsive-action-label': {display: 'none'}}}}>
+                    <FiberManualRecordIcon color={isLive ? 'error' : 'disabled'} sx={{fontSize: 10,
+                        [compactActionsQuery]: {fontSize: 20}}} />
+                    <span className="responsive-action-label">{t('packet_map.live', {defaultValue: 'LIVE'})}</span>
+                </ToggleButton>
+            </Tooltip>
             <ResponsiveActionButton label="12h" compactQuery={compactActionsQuery} sx={periodButtonSx}
                 size="medium" startIcon={<AccessTimeIcon />} onClick={() => recent(12)} />
             <ResponsiveActionButton label="24h" compactQuery={compactActionsQuery} sx={periodButtonSx}
