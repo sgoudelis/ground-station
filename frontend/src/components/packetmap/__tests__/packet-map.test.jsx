@@ -670,6 +670,40 @@ it('remembers hidden and enabled transmitter columns when fields disappear and t
     // Mounting both native column panels can exceed the default five-second DOM test budget.
 }, 10000);
 
+it('resets column choices to defaults after live updates and remounts', () => {
+    const store = configureStore({reducer: {packetMap: packetMapReducer}});
+    const rows = [{id: 'aprs:A', name: 'A', kind: 'aprs', source: 'SV1A', packet_count: 1,
+        details: {frame: {sequence: 42}, signal: {frequency_hz: 144800000}},
+    }];
+    const element = (data) => <Provider store={store}><ThemeProvider theme={createTheme()}>
+        <TransmitterTable rows={data} loading={false} hiddenTypes={[]} />
+    </ThemeProvider></Provider>;
+    const {rerender, unmount} = render(element(rows));
+    fireEvent.click(screen.getByRole('button', {name: 'Columns', exact: true}));
+    let reset = screen.getByRole('button', {name: 'Reset', exact: true});
+    let panel = within(reset.parentElement.parentElement);
+    expect(reset).toBeDisabled();
+    fireEvent.click(panel.getByRole('checkbox', {name: 'Source', exact: true}));
+    fireEvent.click(panel.getByRole('checkbox', {name: 'Frame · Sequence', exact: true}));
+    fireEvent.keyDown(panel.getByRole('checkbox', {name: 'Source', exact: true}), {key: 'Escape'});
+    // A live report rebuilds the dynamic columns but must not replace the defaults.
+    rerender(element(rows.map((row) => ({...row, packet_count: 2}))));
+    fireEvent.click(screen.getByRole('button', {name: 'Columns', exact: true}));
+    expect(screen.getByRole('button', {name: 'Reset', exact: true})).toBeEnabled();
+    unmount();
+    render(element(rows));
+    fireEvent.click(screen.getByRole('button', {name: 'Columns', exact: true}));
+    reset = screen.getByRole('button', {name: 'Reset', exact: true});
+    panel = within(reset.parentElement.parentElement);
+    expect(reset).toBeEnabled();
+    fireEvent.click(reset);
+    expect(panel.getByRole('checkbox', {name: 'Source', exact: true})).toBeChecked();
+    expect(panel.getByRole('checkbox', {name: 'Frame · Sequence', exact: true})).not.toBeChecked();
+    expect(panel.getByRole('checkbox', {name: 'Signal · Frequency hz', exact: true})).toBeChecked();
+    expect(reset).toBeDisabled();
+    expect(store.getState().packetMap.transmitterTableColumnVisibility).toEqual({});
+}, 10000);
+
 it('highlights emergency squawks and decoded priorities, and clears badges with current telemetry', () => {
     const store = configureStore({reducer: {packetMap: packetMapReducer}});
     const rows = [

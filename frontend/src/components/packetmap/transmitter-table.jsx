@@ -5,6 +5,7 @@ import {Box, Button, Chip, Tooltip, Typography} from '@mui/material';
 import {alpha} from '@mui/material/styles';
 import {DataGrid} from '@mui/x-data-grid';
 import GridTableToolbar from '../common/grid-table-toolbar.jsx';
+import TransmitterColumnsManagement from './transmitter-columns-management.jsx';
 import {useTranslation} from 'react-i18next';
 import {useDispatch, useSelector} from 'react-redux';
 import {getClassNamesBasedOnGridEditing, islandTitleBarCompactSx, TitleBar} from '../common/common.jsx';
@@ -121,6 +122,10 @@ export default function TransmitterTable({rows, loading, hiddenTypes, gridEditab
         }),
     ], [data, fields, t, aircraftT, timeSettings.timezone, timeSettings.locale, onSelectTransmitter]);
     const visibility = Object.fromEntries(fields.map((path) => [`info:${path}`, visibleDetails.has(path)]));
+    // Compare saved overrides with application defaults, including decoded
+    // fields absent from this range, so Reset also clears those saved choices.
+    const visibilityChanged = Object.entries(columnVisibility).some(([field, visible]) =>
+        (visible !== false) !== (!field.startsWith('info:') || visibleDetails.has(field.slice(5))));
 
     return <Box sx={{height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column'}}>
         <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ['window-title-bar'])}
@@ -141,8 +146,11 @@ export default function TransmitterTable({rows, loading, hiddenTypes, gridEditab
                 onColumnVisibilityModelChange={(model) => dispatch(setTransmitterTableColumnVisibility(model))}
                 getRowClassName={({row}) => [hiddenTypes.includes(row.kind) ? 'transmitter-hidden' : '',
                     row.emergencyStatus ? `transmitter-emergency-${row.emergencyStatus.severity}` : ''].filter(Boolean).join(' ')}
-                slots={{toolbar: GridTableToolbar}}
-                slotProps={{toolbar: {container: toolbarContainer}, basePagination: {ActionsComponent: GridPaginationActions},
+                slots={{toolbar: GridTableToolbar, columnsManagement: TransmitterColumnsManagement}}
+                slotProps={{toolbar: {container: toolbarContainer},
+                    columnsManagement: {resetDisabled: !visibilityChanged,
+                        onReset: () => dispatch(setTransmitterTableColumnVisibility({}))},
+                    basePagination: {ActionsComponent: GridPaginationActions},
                     loadingOverlay: {variant: 'linear-progress', noRowsVariant: 'linear-progress'}}}
                 sx={(theme) => ({border: 0, borderRadius: 0, '& .MuiDataGrid-row': {cursor: 'pointer'}, '& .transmitter-hidden': {opacity: 0.55},
                     // Keep selection and hover visible within the emergency tint.
