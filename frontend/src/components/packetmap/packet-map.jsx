@@ -58,11 +58,16 @@ export function MapViewport({bounds, ready, fitRequest, preserveViewRequest = 0,
     const programmatic = useRef(false);
     const lastFitRequest = useRef(fitRequest);
     const lastPreserveViewRequest = useRef(preserveViewRequest);
-    const following = selectedTransmitterId !== null;
+    // Navigation can release the camera without clearing the selected transmitter.
+    const following = useRef(selectedTransmitterId !== null);
     const targetLatitude = selectedPoint?.latitude;
     const targetLongitude = selectedPoint?.longitude;
     const fitOptions = useMemo(() => ({paddingTopLeft: [padding, paddingTop], paddingBottomRight: [padding, padding],
         maxZoom: 13, animate: false}), [padding, paddingTop]);
+
+    useEffect(() => {
+        following.current = selectedTransmitterId !== null;
+    }, [selectedTransmitterId]);
 
     useEffect(() => {
         // Guard map-generated events during restoration and automatic fitting.
@@ -72,7 +77,15 @@ export function MapViewport({bounds, ready, fitRequest, preserveViewRequest = 0,
             map.setView(savedView.center, savedView.zoom, {animate: false});
             programmatic.current = false;
         }
-        const interacted = () => {
+        let zooming = false;
+        const panStarted = () => {
+            if (programmatic.current) return;
+            hasUserView.current = true;
+            // Leaflet also emits movestart during zooms; changing zoom keeps the lock.
+            if (!zooming) following.current = false;
+        };
+        const zoomStarted = () => {
+            zooming = true;
             if (!programmatic.current) hasUserView.current = true;
         };
         const persist = () => {
@@ -81,22 +94,30 @@ export function MapViewport({bounds, ready, fitRequest, preserveViewRequest = 0,
                 writeStored(mapViewStoreName, {center: [lat, lng], zoom: map.getZoom()});
             }
         };
+        const zoomEnded = () => {
+            zooming = false;
+            persist();
+        };
         // Movement from navigation buttons also counts as manual navigation.
-        map.on('movestart zoomstart', interacted);
-        map.on('moveend zoomend', persist);
+        map.on('movestart', panStarted);
+        map.on('zoomstart', zoomStarted);
+        map.on('moveend', persist);
+        map.on('zoomend', zoomEnded);
         return () => {
-            map.off('movestart zoomstart', interacted);
-            map.off('moveend zoomend', persist);
+            map.off('movestart', panStarted);
+            map.off('zoomstart', zoomStarted);
+            map.off('moveend', persist);
+            map.off('zoomend', zoomEnded);
         };
     }, [map, savedView]);
 
     useEffect(() => {
         const observer = new ResizeObserver(() => {
-            const center = ready && following && isValidMapPosition(targetLatitude, targetLongitude)
+            const center = ready && following.current && isValidMapPosition(targetLatitude, targetLongitude)
                 ? [targetLatitude, targetLongitude] : map.getCenter();
             programmatic.current = true;
             map.invalidateSize({pan: false});
-            if (!following && ready && !hasUserView.current && bounds.length) {
+            if (!following.current && ready && !hasUserView.current && bounds.length) {
                 map.fitBounds(bounds, fitOptions);
             } else {
                 // Leaflet otherwise shifts the center when the grid window
@@ -107,7 +128,7 @@ export function MapViewport({bounds, ready, fitRequest, preserveViewRequest = 0,
         });
         observer.observe(map.getContainer());
         return () => observer.disconnect();
-    }, [map, bounds, ready, fitOptions, following, targetLatitude, targetLongitude]);
+    }, [map, bounds, ready, fitOptions, targetLatitude, targetLongitude]);
 
     useEffect(() => {
         // Presets preserve even an automatically fitted view through loading and
@@ -120,7 +141,7 @@ export function MapViewport({bounds, ready, fitRequest, preserveViewRequest = 0,
             hasUserView.current = false;
             writeStored(mapViewStoreName, null);
         }
-        if (following) {
+        if (following.current) {
             // Following owns the center, while the user's current zoom stays intact.
             // Retain that view after deselection until an explicit Fit all request.
             hasUserView.current = true;
@@ -138,7 +159,7 @@ export function MapViewport({bounds, ready, fitRequest, preserveViewRequest = 0,
         map.invalidateSize({pan: false});
         map.fitBounds(bounds, fitOptions);
         programmatic.current = false;
-    }, [map, bounds, ready, fitRequest, preserveViewRequest, fitOptions, following, selectedTransmitterId, targetLatitude, targetLongitude]);
+    }, [map, bounds, ready, fitRequest, preserveViewRequest, fitOptions, selectedTransmitterId, targetLatitude, targetLongitude]);
     return null;
 }
 
