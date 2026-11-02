@@ -1,12 +1,13 @@
 /** Copyright (c) 2026 Efstratios Goudelis — GPL-3.0-or-later */
 
 import {createSlice} from '@reduxjs/toolkit';
+import {liveRangeAt} from './live.js';
 
 const packetMapSlice = createSlice({
     name: 'packetMap',
-    // Start first-time visitors in LIVE with the last day of packets.
+    // LIVE always follows a bounded recent window, including after rehydration.
     initialState: () => ({
-        range: {start: new Date(Date.now() - 86400000).toISOString(), end: null},
+        range: liveRangeAt(),
         transmitterTableColumnVisibility: {},
     }),
     reducers: {

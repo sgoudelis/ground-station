@@ -198,13 +198,21 @@ export default function PacketMap({positions, transmitters, hasPositions = posit
             if (!groups.has(point.transmitter_id)) groups.set(point.transmitter_id, []);
             groups.get(point.transmitter_id).push(point);
         });
-        return [...groups.entries()].map(([id, points]) => ({id, ...buildPlaybackTrack(points)}))
+        return [...groups.entries()].map(([id, points]) => ({id, ...buildPlaybackTrack(points, {
+            smooth: points[0]?.kind !== 'adsb',
+        })}))
             .filter((track) => track.points.length);
     }, [positions]);
+    // Only the selected aircraft needs the curve used by its visible trail.
+    const selectedTrack = useMemo(() => {
+        const track = tracks.find(({id}) => id === selectedTransmitterId);
+        return track?.points[0]?.kind === 'adsb' ? {...track, ...buildPlaybackTrack(track.points)} : track;
+    }, [tracks, selectedTransmitterId]);
     // Keep track geometry fixed while playback moves the symbols and followed target.
     const playback = useMemo(() => new Map(tracks.map((track) => {
         const details = transmitterDetails.get(track.id);
-        const current = trackPositionAt(track, Number.isFinite(playbackTime) ? playbackTime : Date.now(), details?.telemetry?.vel_v);
+        const current = trackPositionAt(track.id === selectedTransmitterId ? selectedTrack : track,
+            Number.isFinite(playbackTime) ? playbackTime : Date.now(), details?.telemetry?.vel_v);
         const point = current?.point;
         // New captures carry explicit status clears. For older map responses,
         // latest telemetry belongs only to the endpoint, never an earlier fix.
@@ -223,7 +231,7 @@ export default function PacketMap({positions, transmitters, hasPositions = posit
             point.aircraft ?? point._details?.telemetry?.aircraft ?? details?.telemetry?.aircraft
         ) : null;
         return [track.id, current ? {...current, icon, aircraftShape, aircraftReport} : null];
-    })), [tracks, playbackTime, transmitterDetails, selectedTransmitterId]);
+    })), [tracks, selectedTrack, playbackTime, transmitterDetails, selectedTransmitterId]);
     // Follow the selected sonde's displayed position, including historical
     // interpolation. Unknown altitude must not produce a misleading footprint.
     const selectedPoint = playback.get(selectedTransmitterId)?.point;
@@ -240,12 +248,22 @@ export default function PacketMap({positions, transmitters, hasPositions = posit
             })} · ${circle.label}`,
         };
     }) : [];
+    const visibleAircraftIds = tracks.filter((track) => track.points[0]?.kind === 'adsb' && playback.get(track.id))
+        .map((track) => track.id).join(',');
     const bounds = useMemo(() => {
+        const visible = new Set(visibleAircraftIds.split(','));
         // Include the interpolated curve so fitting never clips a rounded bend.
-        const coordinates = tracks.flatMap((track) => track.path);
+        const coordinates = tracks.flatMap((track) => {
+            // Expired aircraft must not pull Fit all toward obsolete positions.
+            if (track.points[0]?.kind === 'adsb') {
+                return visible.has(track.id) ? (track.id === selectedTransmitterId ? selectedTrack.path
+                    : track.path) : [];
+            }
+            return track.path;
+        });
         if (hasReceiver) coordinates.push([receiverLatitude, receiverLongitude]);
         return coordinates;
-    }, [tracks, hasReceiver, receiverLatitude, receiverLongitude]);
+    }, [tracks, visibleAircraftIds, selectedTrack, selectedTransmitterId, hasReceiver, receiverLatitude, receiverLongitude]);
     const hasBalloons = tracks.some((track) => track.points[0].kind === 'radiosonde'
         || getAprsSymbol(aprsPosition(track.points.at(-1), transmitterDetails.get(track.id)))?.balloon);
     const hasAprsPins = tracks.some((track) => track.points[0].kind === 'aprs');
@@ -309,7 +327,8 @@ export default function PacketMap({positions, transmitters, hasPositions = posit
                 </Pane>
                 {hasReceiver && <Marker position={[receiverLatitude, receiverLongitude]} icon={receiverIcon} />}
                 {/* Point clicks select the transmitter; details stay in the info panel. */}
-                {tracks.map(({id, points, path}) => {
+                {tracks.map(({id, points, path: originalPath}) => {
+                    const path = id === selectedTransmitterId ? selectedTrack.path : originalPath;
                     const latest = points[points.length - 1];
                     const color = typeColor(latest.kind);
                     const current = playback.get(id);
@@ -337,14 +356,15 @@ export default function PacketMap({positions, transmitters, hasPositions = posit
                 flexDirection: 'column', alignItems: 'flex-end', gap: 1, pointerEvents: 'none'}}>
                 {!loading && !positions.length && <Alert severity="info" sx={{alignSelf: 'stretch'}}>
                     {hasPositions ? t('packet_map.all_hidden', {defaultValue: 'All transmitter types are hidden.'})
-                        : t('packet_map.empty', {defaultValue: 'No decoded transmitter positions in this date range.'})}
+                        : t('packet_map.empty', {defaultValue: 'No packets containing location coordinates were decoded in the selected timeframe.'})}
                 </Alert>}
             </Box>
         </Box>
         <MapStatusBar sx={{position: 'relative', bottom: 'auto', zIndex: 'auto', flexShrink: 0,
             display: 'flex', alignItems: 'center', gap: 2, overflowX: 'auto', whiteSpace: 'nowrap'}}>
             <Typography variant="caption">{t('packet_map.packet_count', {defaultValue: '{{count}} positions', count: positions.length})}</Typography>
-            <Typography variant="caption">{t('packet_map.transmitter_count', {defaultValue: '{{count}} transmitters', count: tracks.length})}</Typography>
+            <Typography variant="caption">{t('packet_map.transmitter_count', {defaultValue: '{{count}} transmitters',
+                count: [...playback.values()].filter(Boolean).length})}</Typography>
             {!hasReceiver && <Typography variant="caption" color="warning.main">
                 {t('packet_map.no_home', {defaultValue: 'Set your home location in station settings.'})}
             </Typography>}

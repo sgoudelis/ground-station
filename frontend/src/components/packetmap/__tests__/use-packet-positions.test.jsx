@@ -1,6 +1,7 @@
 import {act, renderHook, waitFor} from '@testing-library/react';
 import {afterEach, describe, expect, it, vi} from 'vitest';
 import usePacketPositions from '../use-packet-positions.js';
+import {liveRangeAt, LIVE_WINDOW_MS} from '../live.js';
 
 function socketMock() {
     const handlers = new Map();
@@ -79,7 +80,7 @@ describe('Packet position loading', () => {
         await act(async () => requests[0].reply(null, {success: true, data: initial}));
         act(() => {handlers.get('library.changed')(); vi.advanceTimersByTime(750);});
         expect(result.current).toMatchObject({...initial, loading: true});
-        expect(requests[1].request.data).toEqual(liveRange);
+        expect(requests[1].request.data).toEqual(liveRangeAt());
         for (let index = 0; index < 3; index += 1) {
             act(() => {handlers.get('library.changed')(); vi.advanceTimersByTime(750);});
         }
@@ -102,14 +103,15 @@ describe('Packet position loading', () => {
         await act(async () => requests[0].reply(null, {success: false,
             error: 'start and end must be timezone-aware ISO dates or epoch seconds'}));
         expect(requests).toHaveLength(2);
-        expect(requests[1].request.data).toEqual({...liveRange, end: new Date().toISOString()});
+        expect(requests[1].request.data).toEqual({...liveRangeAt(), end: new Date().toISOString()});
         await act(async () => requests[1].reply(null, {success: true, data: {positions: [{id: 'first'}]}}));
         expect(result.current.error).toBe('');
         vi.advanceTimersByTime(3600000);
         act(() => {handlers.get('library.changed')(); vi.advanceTimersByTime(750);});
         expect(requests).toHaveLength(3);
         expect(Date.parse(requests[2].request.data.end)).toBeGreaterThan(Date.parse(requests[1].request.data.end));
-        expect(requests[2].request.data.start).toBe(liveRange.start);
+        expect(requests[2].request.data.start).toBe(liveRangeAt().start);
+        expect(Date.parse(requests[2].request.data.end) - Date.parse(requests[2].request.data.start)).toBe(LIVE_WINDOW_MS);
         await act(async () => requests[2].reply(null, {success: true, data: {positions: [{id: 'new-sonde'}]}}));
         expect(result.current.positions).toEqual([{id: 'new-sonde'}]);
         expect(result.current.error).toBe('');

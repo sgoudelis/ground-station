@@ -1,6 +1,6 @@
 import {expect, it, vi} from 'vitest';
 import {map as createMap, marker as createMarker} from 'leaflet';
-import {mergeAircraftHistory} from '../aircraft.js';
+import {createAircraftHistory, mergeAircraftHistory} from '../aircraft.js';
 import {createAircraftIcon} from '../aircraft-marker.js';
 import {renderAircraftSymbol, selectAircraftShape} from '../aircraft-symbol.js';
 import collection from '../icons/aircraft.json';
@@ -198,12 +198,12 @@ it('restores normal colors when cleared and keeps stale reports gray', () => {
 it('merges new aircraft fixes without duplicating saved coordinates or changing other protocols', () => {
     const stamp = Date.parse('2026-11-01T12:00:00Z');
     const point = {id: 'saved', kind: 'adsb', transmitter_id: 'adsb:406b90', captured_at: new Date(stamp).toISOString()};
-    const sonde = {id: 'sonde', kind: 'radiosonde'};
+    const sonde = {id: 'sonde', kind: 'radiosonde', captured_at: new Date(stamp).toISOString()};
     const record = {icao: '406b90', timestamp: stamp / 1000, position_timestamp: stamp / 1000,
         latitude: 40, longitude: 23, altitude_baro_m: 1000, callsign: 'TEST', aircraft: {type_code: 'A320'},
         squawk: '7700', emergency: 'general', groundspeed_mps: 100, vertical_rate_mps: 5, on_ground: false};
     const merged = mergeAircraftHistory([point, sonde], [], {aircraft: [record], positions: [record]},
-        {start: '2026-11-01T00:00:00Z', end: null});
+        {start: '2026-11-01T00:00:00Z', end: null}, {now: stamp + 5000});
     expect(merged.positions).toHaveLength(2);
     expect(merged.positions[0]).toBe(sonde);
     expect(merged.transmitters[0]).toMatchObject({id: 'adsb:406b90', name: 'TEST', altitude: 1000});
@@ -213,7 +213,7 @@ it('merges new aircraft fixes without duplicating saved coordinates or changing 
         altitude_baro_m: 1000, altitude_geom_m: null, on_ground: false});
     const clear = {...record, squawk: null, emergency: 'none', position_timestamp: stamp / 1000 + 5};
     const updated = mergeAircraftHistory(merged.positions, merged.transmitters, {aircraft: [clear], positions: [clear]},
-        {start: '2026-11-01T00:00:00Z', end: null});
+        {start: '2026-11-01T00:00:00Z', end: null}, {now: stamp + 5000});
     expect(updated.positions.at(-1)).toMatchObject({squawk: null, emergency: 'none'});
     expect(updated.transmitters[0].details.telemetry).toMatchObject({squawk: null, emergency: 'none'});
 });
@@ -222,4 +222,64 @@ it('historical playback never receives live positions', () => {
     const positions = [];
     const merged = mergeAircraftHistory(positions, [], {aircraft: [{}], positions: [{}]}, {end: '2026-11-01T00:00:00Z'});
     expect(merged.positions).toBe(positions);
+});
+
+it('keeps quiet aircraft for 30 minutes and prunes them even without new packets', () => {
+    const now = Date.parse('2026-11-01T12:00:00Z');
+    const merge = createAircraftHistory();
+    const saved = [];
+    const range = {start: '2020-01-01T00:00:00Z', end: null};
+    const record = {icao: '406b90', timestamp: now / 1000, position_timestamp: now / 1000, latitude: 40, longitude: 23};
+    const empty = {aircraft: [], positions: []};
+    const initial = merge(saved, [], {aircraft: [record], positions: [record]}, range, {now});
+    expect(initial.positions).toHaveLength(1);
+    expect(merge(saved, [], empty, range, {now: now + 60001}).positions).toEqual(initial.positions);
+    expect(merge(saved, [], empty, range, {now: now + 1800000}).positions).toHaveLength(1);
+    expect(merge(saved, [], empty, range, {now: now + 1800001})).toEqual({positions: [], transmitters: []});
+});
+
+it('keeps every aircraft under heavy traffic and carries a trail only for the selected aircraft', () => {
+    const now = Date.parse('2026-11-01T12:00:00Z');
+    const aircraft = Array.from({length: 260}, (_, index) => ({
+        icao: index.toString(16).padStart(6, '0'), timestamp: now / 1000, position_timestamp: now / 1000,
+        latitude: 40 + index / 1000, longitude: 23,
+    }));
+    const live = {aircraft, positions: aircraft.flatMap((record) => Array.from({length: 120}, (_, index) => ({
+        ...record, position_timestamp: record.position_timestamp - 119 + index, latitude: record.latitude + index / 10000,
+    })))};
+    const range = {start: '2020-01-01T00:00:00Z', end: null};
+    const merged = mergeAircraftHistory([], [], live, range, {now});
+    expect(merged.positions).toHaveLength(260);
+    expect(merged.transmitters).toHaveLength(260);
+    const selected = mergeAircraftHistory([], [], live, range, {now, selectedTransmitterId: 'adsb:000000'});
+    expect(selected.positions.filter((point) => point.transmitter_id === 'adsb:000000')).toHaveLength(120);
+    expect(selected.positions.filter((point) => point.transmitter_id !== 'adsb:000000')).toHaveLength(259);
+    expect(selected.transmitters).toHaveLength(260);
+});
+
+it('reconciles expired saved fixes and remote deletions without resurrecting cached aircraft', () => {
+    const now = Date.parse('2026-11-01T12:00:00Z');
+    const merge = createAircraftHistory();
+    const range = {start: '2020-01-01T00:00:00Z', end: null};
+    const point = {kind: 'adsb', transmitter_id: 'adsb:406b90', captured_at: new Date(now).toISOString()};
+    const empty = {aircraft: [], positions: []};
+    const saved = [point, {...point, transmitter_id: 'adsb:expired', captured_at: '2026-11-01T10:00:00Z'}];
+    expect(merge(saved, undefined, empty, range, {now}).positions).toEqual([point]);
+    expect(merge([], [], empty, range, {now}).positions).toEqual([]);
+});
+
+it('keeps status clears at an unchanged position after the live cache expires', () => {
+    const now = Date.parse('2026-11-01T12:00:00Z');
+    const record = {icao: '406b90', timestamp: now / 1000, position_timestamp: now / 1000,
+        latitude: 40, longitude: 23, squawk: '7700', emergency: 'general'};
+    const range = {start: '2020-01-01T00:00:00Z', end: null};
+    const merge = createAircraftHistory();
+    const saved = [{kind: 'adsb', transmitter_id: 'adsb:406b90', captured_at: new Date(now).toISOString(), squawk: '7700'}];
+    const options = {now, selectedTransmitterId: 'adsb:406b90'};
+    const clear = {...record, timestamp: now / 1000 + 1, squawk: null, emergency: 'none'};
+    const initial = merge(saved, undefined, {aircraft: [clear], positions: [record]}, range, options);
+    expect(initial.positions[0]).toMatchObject({squawk: null, emergency: 'none'});
+    const quiet = merge(saved, undefined, {aircraft: [], positions: []}, range, {...options, now: now + 90000});
+    expect(quiet.positions[0]).toMatchObject({squawk: null, emergency: 'none'});
+    expect(quiet.transmitters[0].details.telemetry).toMatchObject({squawk: null, emergency: 'none'});
 });

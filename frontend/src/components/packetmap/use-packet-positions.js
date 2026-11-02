@@ -1,6 +1,7 @@
 /** Copyright (c) 2026 Efstratios Goudelis — GPL-3.0-or-later */
 
 import {useCallback, useEffect, useRef, useState} from 'react';
+import {liveRangeAt} from './live.js';
 
 const LEGACY_DATE_ERROR = 'start and end must be timezone-aware ISO dates or epoch seconds';
 
@@ -38,8 +39,11 @@ export default function usePacketPositions(socket, range) {
         let pending = false;
         let liveEndRequired = false;
         const query = async () => {
+            // Resolve LIVE at request time: persisted dates and reconnects must
+            // never turn a recent view into an ever-growing history query.
+            const currentRange = range.end === null ? liveRangeAt() : range;
             const requestRange = range.end === null && liveEndRequired
-                ? {...range, end: new Date().toISOString()} : range;
+                ? {...currentRange, end: new Date().toISOString()} : currentRange;
             try {
                 return await callLibrary(socket, 'filebrowser.positions', requestRange);
             } catch (failure) {
@@ -47,7 +51,7 @@ export default function usePacketPositions(socket, range) {
                 // Older running servers require an end date. Retry with a fresh
                 // snapshot and advance that date on every subsequent LIVE update.
                 liveEndRequired = true;
-                return callLibrary(socket, 'filebrowser.positions', {...range, end: new Date().toISOString()});
+                return callLibrary(socket, 'filebrowser.positions', {...liveRangeAt(), end: new Date().toISOString()});
             }
         };
         // Clear only when the query changes. Background updates retain the map,

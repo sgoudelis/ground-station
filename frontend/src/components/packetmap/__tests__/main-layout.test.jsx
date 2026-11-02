@@ -12,6 +12,7 @@ import {defaultLayouts, LAYOUT_SCHEMA_VERSION} from '../layouts.js';
 import usePacketPositions from '../use-packet-positions.js';
 import packetMapReducer from '../packet-map-slice.jsx';
 import useAircraft from '../../decoders/use-aircraft.js';
+import {liveRangeAt, LIVE_WINDOW_MS} from '../live.js';
 
 await i18n.use(initReactI18next).init({lng: 'en', resources: {}});
 const {gridRender, mapRender, tableRender, fixture} = vi.hoisted(() => ({
@@ -47,6 +48,13 @@ function createStore(range) {
     });
 }
 
+function recentFixtures() {
+    fixture.positions = fixture.positions.map((point, index) => ({...point,
+        captured_at: new Date(Date.now() - (index + 1) * 300000).toISOString(),
+    }));
+    fixture.transmitters = fixture.positions.map((point) => ({...point, id: point.transmitter_id, packet_count: 1}));
+}
+
 beforeEach(() => {
     localStorage.clear();
     vi.clearAllMocks();
@@ -57,7 +65,7 @@ beforeEach(() => {
         {id: '1', transmitter_id: 'aprs:A', kind: 'aprs', name: 'A', captured_at: '2026-11-01T00:00:00Z'},
         {id: '2', transmitter_id: 'radiosonde:S', kind: 'radiosonde', name: 'S', captured_at: '2026-11-01T01:00:00Z'},
     ];
-    fixture.transmitters = fixture.positions.map((point) => ({...point, id: point.transmitter_id, packet_count: 1}));
+    recentFixtures();
 });
 
 it('shows live aircraft beside saved radiosondes and updates positions without reloading history', async () => {
@@ -68,6 +76,7 @@ it('shows live aircraft beside saved radiosondes and updates positions without r
     vi.useFakeTimers();
     try {
         vi.setSystemTime(new Date('2026-11-01T12:00:00Z'));
+        recentFixtures();
         const received = Date.now() / 1000;
         const record = {icao: '4d2406', callsign: 'EWG46A', timestamp: received,
             position_timestamp: received, latitude: 40.84, longitude: 23.12,
@@ -110,19 +119,25 @@ it('shows live aircraft beside saved radiosondes and updates positions without r
             expect.objectContaining({id: 'radiosonde:S'}),
         ]));
         expect(socket.emit.mock.calls.filter(([, request]) => request.cmd === 'filebrowser.positions')).toHaveLength(1);
+        act(() => vi.advanceTimersByTime(70000));
+        expect(mapRender.mock.lastCall[0].positions.some((point) => point.kind === 'adsb')).toBe(true);
+        act(() => vi.advanceTimersByTime(LIVE_WINDOW_MS));
+        expect(mapRender.mock.lastCall[0].positions.some((point) => point.kind === 'adsb')).toBe(false);
+        expect(tableRender.mock.lastCall[0].rows.some((row) => row.kind === 'adsb')).toBe(false);
+        expect(socket.emit.mock.calls.filter(([, request]) => request.cmd === 'filebrowser.positions')).toHaveLength(1);
         unmount();
     } finally {
         vi.useRealTimers();
     }
 });
 
-it('starts in LIVE with the last day of packets when no selection has been saved', () => {
+it('starts in LIVE with the last 30 minutes of packets when no selection has been saved', () => {
     const store = createStore();
     render(<Provider store={store}><ThemeProvider theme={createTheme()}><PacketMapLayout /></ThemeProvider></Provider>);
     const range = usePacketPositions.mock.lastCall[1];
     expect(range.end).toBeNull();
-    expect(Date.parse(range.start)).toBeGreaterThanOrEqual(Date.now() - 86401000);
-    expect(Date.parse(range.start)).toBeLessThanOrEqual(Date.now() - 86400000);
+    expect(Date.parse(range.start)).toBeGreaterThanOrEqual(Date.now() - LIVE_WINDOW_MS - 1000);
+    expect(Date.parse(range.start)).toBeLessThanOrEqual(Date.now() - LIVE_WINDOW_MS);
     expect(screen.getByRole('button', {name: 'LIVE', exact: true})).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByLabelText('To')).toBeDisabled();
     expect(Number.isFinite(mapRender.mock.lastCall[0].playbackTime)).toBe(true);
@@ -180,6 +195,7 @@ it('advances the live clock without incoming packets and stops the timer in hist
     vi.useFakeTimers();
     try {
         vi.setSystemTime(new Date('2026-11-01T12:00:00Z'));
+        recentFixtures();
         const store = createStore();
         const {unmount} = render(<Provider store={store}><ThemeProvider theme={createTheme()}><PacketMapLayout /></ThemeProvider></Provider>);
         const initialTime = mapRender.mock.lastCall[0].playbackTime;
@@ -202,16 +218,22 @@ it('advances the live clock without incoming packets and stops the timer in hist
     }
 });
 
-it('freezes live updates when LIVE is toggled off and resumes them when toggled on', () => {
+it.each(['LIVE', 'Custom'])('pauses live updates with %s and resumes them with LIVE', (button) => {
     vi.useFakeTimers();
     try {
         vi.setSystemTime(new Date('2026-11-01T12:00:00Z'));
+        recentFixtures();
         const store = createStore();
         render(<Provider store={store}><ThemeProvider theme={createTheme()}><PacketMapLayout /></ThemeProvider></Provider>);
         act(() => vi.advanceTimersByTime(30000));
         const cursor = mapRender.mock.lastCall[0].playbackTime;
-        const start = store.getState().packetMap.range.start;
-        fireEvent.click(screen.getByRole('button', {name: 'LIVE', exact: true}));
+        const start = liveRangeAt(cursor).start;
+        fireEvent.click(screen.getByRole('button', {name: button, exact: true}));
+        if (button === 'Custom') {
+            expect(screen.getByRole('dialog')).toBeInTheDocument();
+            fireEvent.keyDown(screen.getByRole('dialog'), {key: 'Escape'});
+            act(() => vi.advanceTimersByTime(300));
+        }
         expect(store.getState().packetMap.range).toEqual({start, end: new Date(cursor).toISOString()});
         expect(useAircraft.mock.lastCall[1]).toBe(false);
         expect(screen.getByRole('button', {name: 'LIVE', exact: true})).toHaveAttribute('aria-pressed', 'false');
@@ -219,7 +241,7 @@ it('freezes live updates when LIVE is toggled off and resumes them when toggled 
         act(() => vi.advanceTimersByTime(60000));
         expect(mapRender.mock.lastCall[0].playbackTime).toBe(cursor);
         fireEvent.click(screen.getByRole('button', {name: 'LIVE', exact: true}));
-        expect(store.getState().packetMap.range).toEqual({start, end: null});
+        expect(store.getState().packetMap.range).toEqual(liveRangeAt());
         expect(useAircraft.mock.lastCall[1]).toBe(true);
         expect(screen.getByRole('button', {name: 'LIVE', exact: true})).toHaveAttribute('aria-pressed', 'true');
         expect(mapRender.mock.lastCall[0].playbackTime).toBeGreaterThan(cursor);
@@ -229,7 +251,7 @@ it('freezes live updates when LIVE is toggled off and resumes them when toggled 
     }
 });
 
-it.each(['LIVE', '12h', '24h', '7d', 'All'])('stores %s in Redux and restores it when revisiting the map', (preset) => {
+it.each(['LIVE', '1h', '6h', '24h'])('stores %s in Redux and restores it when revisiting the map', (preset) => {
     usePacketPositions.mockImplementation(() => ({...fixture, available_range: historyRange, loading: false}));
     const store = createStore(historyRange);
     const element = <Provider store={store}><ThemeProvider theme={createTheme()}><PacketMapLayout /></ThemeProvider></Provider>;
@@ -298,7 +320,7 @@ it('queries applied dates once, scrubs locally, and resets playback for a new qu
     expect(slider).toHaveAttribute('max', String(Date.parse('2026-10-02T00:00:00Z')));
 });
 
-it.each([['LIVE', 'live'], ['12h', 12], ['24h', 24], ['7d', 168], ['All', null]])('%s clears transmitter selection and preserves the map view through new results', async (button, hours) => {
+it.each([['LIVE', 'live'], ['1h', 1], ['6h', 6], ['24h', 24]])('%s clears transmitter selection and preserves the map view through new results', async (button, hours) => {
     const {default: realUsePacketPositions} = await vi.importActual('../use-packet-positions.js');
     usePacketPositions.mockImplementation(realUsePacketPositions);
     const requests = [];
@@ -315,8 +337,10 @@ it.each([['LIVE', 'live'], ['12h', 12], ['24h', 24], ['7d', 168], ['All', null]]
     fireEvent.click(screen.getByRole('button', {name: button}));
     expect(requests).toHaveLength(2);
     const range = requests[1].request.data;
-    if (hours === 'live') expect(range).toEqual({start: historyRange.start, end: null});
-    else if (hours === null) expect(range).toEqual(availableRange);
+    if (hours === 'live') {
+        expect(range.end).toBeNull();
+        expect(Math.abs(Date.parse(range.start) - Date.parse(liveRangeAt().start))).toBeLessThan(1000);
+    }
     else expect(Date.parse(range.end) - Date.parse(range.start)).toBe(hours * 3600000);
     expect(mapRender.mock.lastCall[0]).toMatchObject({
         selectedTransmitterId: null, preserveViewRequest: previousPreserve + 1, loading: true, positions: [],
@@ -332,12 +356,13 @@ it.each([['LIVE', 'live'], ['12h', 12], ['24h', 24], ['7d', 168], ['All', null]]
     await act(async () => requests[2].reply(null, reply));
 });
 
-it.each(['24h', '7d', 'All'])('follows new radiosondes in LIVE and returns to history with %s', async (preset) => {
+it.each(['1h', '6h', '24h'])('follows new radiosondes in LIVE and returns to history with %s', async (preset) => {
     const {default: realUsePacketPositions} = await vi.importActual('../use-packet-positions.js');
     usePacketPositions.mockImplementation(realUsePacketPositions);
     vi.useFakeTimers();
     try {
         vi.setSystemTime(new Date('2026-11-01T12:00:00Z'));
+        recentFixtures();
         const requests = [];
         const handlers = new Map();
         const socket = {connected: true, on: vi.fn((event, handler) => handlers.set(event, handler)), off: vi.fn(), timeout: () => socket,
@@ -349,7 +374,7 @@ it.each(['24h', '7d', 'All'])('follows new radiosondes in LIVE and returns to hi
         const snapshot = {positions: fixture.positions, transmitters: fixture.transmitters, available_range: initialRange};
         await act(async () => requests[0].reply(null, {success: true, data: snapshot}));
         fireEvent.click(screen.getByRole('button', {name: 'LIVE', exact: true}));
-        expect(requests[1].request.data).toEqual({start: initialRange.start, end: null});
+        expect(requests[1].request.data).toEqual(liveRangeAt());
         expect(screen.getByLabelText('To')).toBeDisabled();
         await act(async () => requests[1].reply(null, {success: true, data: snapshot}));
         act(() => tableRender.mock.lastCall[0].onSelectTransmitter('radiosonde:S'));
@@ -357,7 +382,7 @@ it.each(['24h', '7d', 'All'])('follows new radiosondes in LIVE and returns to hi
 
         vi.setSystemTime(new Date('2026-11-01T12:05:00Z'));
         act(() => {handlers.get('library.changed')(); vi.advanceTimersByTime(750);});
-        expect(requests[2].request.data).toEqual({start: initialRange.start, end: null});
+        expect(requests[2].request.data).toEqual(liveRangeAt());
         expect(mapRender.mock.lastCall[0].positions).toEqual(snapshot.positions);
         expect(screen.getByRole('region', {name: 'Transmitter info'})).toHaveTextContent('radiosonde:S');
         const positions = [...fixture.positions,
@@ -386,9 +411,9 @@ it.each(['24h', '7d', 'All'])('follows new radiosondes in LIVE and returns to hi
 });
 
 it('hides entire types on the map, retains every table row and remembers visibility', () => {
-    // Keep both packet types inside the default 24-hour query window.
+    // Keep both packet types inside the rolling 30-minute query window.
     fixture.positions = fixture.positions.map((point, index) => ({...point,
-        captured_at: new Date(Date.now() - (index + 1) * 3600000).toISOString(),
+        captured_at: new Date(Date.now() - (index + 1) * 300000).toISOString(),
     }));
     const store = createStore();
     const element = <Provider store={store}><ThemeProvider theme={createTheme()}><PacketMapLayout /></ThemeProvider></Provider>;

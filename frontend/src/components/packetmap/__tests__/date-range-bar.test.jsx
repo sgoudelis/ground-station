@@ -1,9 +1,10 @@
 import React from 'react';
-import {fireEvent, render, screen, within} from '@testing-library/react';
+import {fireEvent, render, screen, waitFor, within} from '@testing-library/react';
 import {beforeEach, describe, expect, it, vi} from 'vitest';
 import i18n from 'i18next';
 import {initReactI18next} from 'react-i18next';
 import DateRangeBar from '../date-range-bar.jsx';
+import {LIVE_WINDOW_MS} from '../live.js';
 
 await i18n.use(initReactI18next).init({lng: 'en', resources: {}});
 const {timeSettings} = vi.hoisted(() => ({timeSettings: {timezone: 'Europe/Athens', locale: 'en-GB'}}));
@@ -14,9 +15,17 @@ const range = {start: '2026-11-01T00:00:00Z', end: '2026-11-02T00:00:00Z'};
 const available = {start: '2026-10-01T00:00:00Z', end: '2026-11-01T20:00:00Z'};
 
 describe('Packet map dates', () => {
-    it('applies date inputs in the station timezone and rejects reversed intervals', () => {
+    it('applies date inputs in the station timezone and rejects reversed intervals', async () => {
         const onChange = vi.fn();
-        render(<DateRangeBar range={range} availableRange={available} onChange={onChange} />);
+        render(<DateRangeBar range={range} onChange={onChange} />);
+        expect(screen.queryByRole('button', {name: 'All', exact: true})).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', {name: '7d', exact: true})).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', {name: '12h', exact: true})).not.toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', {name: 'Custom', exact: true}));
+        expect(screen.getByRole('dialog')).toBeInTheDocument();
+        expect(onChange).not.toHaveBeenCalled();
+        fireEvent.keyDown(screen.getByRole('dialog'), {key: 'Escape'});
+        await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
         expect(screen.getByLabelText('From')).toHaveValue('01/11/2026, 02:00');
         expect(screen.queryByText('Europe/Athens')).not.toBeInTheDocument();
         fireEvent.change(screen.getByLabelText('From'), {target: {value: '01/11/2026, 05:00'}});
@@ -30,7 +39,7 @@ describe('Packet map dates', () => {
     it('scrubs one cursor inside the applied query range without changing the query', () => {
         const onChange = vi.fn();
         const onPlaybackTimeChange = vi.fn();
-        const props = {range, availableRange: available, onChange, onPlaybackTimeChange};
+        const props = {range, onChange, onPlaybackTimeChange};
         const {rerender} = render(<DateRangeBar {...props} playbackTime={Date.parse(range.end)} />);
         const slider = screen.getByRole('slider', {name: 'Playback time'});
         expect(screen.getAllByRole('slider')).toHaveLength(1);
@@ -42,8 +51,7 @@ describe('Packet map dates', () => {
         fireEvent.change(slider, {target: {value: cursor}});
         expect(onPlaybackTimeChange).toHaveBeenLastCalledWith(cursor);
         expect(onChange).not.toHaveBeenCalled();
-        fireEvent.click(screen.getByRole('button', {name: 'All'}));
-        expect(onChange).toHaveBeenLastCalledWith(available);
+
         rerender(<DateRangeBar {...props} range={available} playbackTime={Date.parse(available.end)} />);
         expect(slider).toHaveAttribute('min', String(Date.parse(available.start)));
         expect(slider).toHaveAttribute('max', String(Date.parse(available.end)));
@@ -53,7 +61,7 @@ describe('Packet map dates', () => {
     it('preserves exact capture endpoints when editing one side of a range', () => {
         const onChange = vi.fn();
         const precise = {start: '2026-10-01T00:00:00.123456Z', end: '2026-11-01T20:00:00.910671Z'};
-        render(<DateRangeBar range={precise} availableRange={precise} onChange={onChange} />);
+        render(<DateRangeBar range={precise} onChange={onChange} />);
         fireEvent.click(screen.getByRole('button', {name: 'Apply'}));
         expect(onChange).toHaveBeenLastCalledWith(precise);
         fireEvent.change(screen.getByLabelText('From'), {target: {value: '15/10/2026, 05:00'}});
@@ -61,7 +69,7 @@ describe('Packet map dates', () => {
         expect(onChange.mock.lastCall[0]).toEqual({start: '2026-10-15T02:00:00.000Z', end: precise.end});
     });
 
-    it('enters LIVE without an end date, follows the latest time and applies start-only edits', () => {
+    it('enters rolling LIVE, follows the latest time and locks the query dates', () => {
         const onChange = vi.fn();
         const onPresetChange = vi.fn();
         const onPlaybackTimeChange = vi.fn();
@@ -69,7 +77,9 @@ describe('Packet map dates', () => {
         const {rerender} = render(<DateRangeBar {...props} />);
         expect(screen.getByRole('button', {name: 'LIVE', exact: true})).toHaveAttribute('aria-pressed', 'false');
         fireEvent.click(screen.getByRole('button', {name: 'LIVE', exact: true}));
-        expect(onPresetChange).toHaveBeenCalledExactlyOnceWith({start: range.start, end: null});
+        expect(onPresetChange).toHaveBeenCalledOnce();
+        expect(onPresetChange.mock.lastCall[0].end).toBeNull();
+        expect(Math.abs(Date.parse(onPresetChange.mock.lastCall[0].start) - (Date.now() - LIVE_WINDOW_MS))).toBeLessThan(1000);
         expect(onChange).not.toHaveBeenCalled();
         const liveRange = {...range, end: null};
         const now = Date.parse(range.end);
@@ -86,9 +96,9 @@ describe('Packet map dates', () => {
         expect(screen.getByLabelText('To')).toHaveValue('02/11/2026, 03:00');
         fireEvent.change(slider, {target: {value: now}});
         expect(onPlaybackTimeChange).not.toHaveBeenCalled();
-        fireEvent.change(screen.getByLabelText('From'), {target: {value: '01/11/2026, 05:00'}});
-        fireEvent.click(screen.getByRole('button', {name: 'Apply'}));
-        expect(onChange).toHaveBeenCalledExactlyOnceWith({start: '2026-11-01T03:00:00.000Z', end: null});
+        expect(screen.getByLabelText('From')).toBeDisabled();
+        expect(screen.getByRole('button', {name: 'Apply'})).toBeDisabled();
+        expect(onChange).not.toHaveBeenCalled();
     });
 
     it('highlights packet activity independently of the pointer and clears it with new results', () => {
@@ -126,7 +136,8 @@ describe('Packet map dates', () => {
         expect(screen.getByLabelText('To')).not.toBeDisabled();
         expect(screen.getByRole('slider', {name: 'Playback time'})).not.toBeDisabled();
         fireEvent.click(live);
-        expect(onPresetChange).toHaveBeenLastCalledWith({start: range.start, end: null});
+        expect(onPresetChange.mock.lastCall[0].end).toBeNull();
+        expect(Math.abs(Date.parse(onPresetChange.mock.lastCall[0].start) - (Date.now() - LIVE_WINDOW_MS))).toBeLessThan(1000);
     });
 
     it('disables a zero-duration playback window without inventing a wider range', () => {

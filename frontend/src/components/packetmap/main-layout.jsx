@@ -19,8 +19,9 @@ import {transmitterRows} from './transmitters.js';
 import TransmitterTable from './transmitter-table.jsx';
 import TransmitterInfo from './transmitter-info.jsx';
 import useAircraft from '../decoders/use-aircraft.js';
-import {mergeAircraftHistory} from './aircraft.js';
+import {createAircraftHistory} from './aircraft.js';
 import {setPacketMapRange} from './packet-map-slice.jsx';
+import {liveRangeAt} from './live.js';
 
 export {gridLayoutStoreName} from './storage.js';
 
@@ -37,12 +38,15 @@ export default function PacketMapLayout() {
         // Start at the latest fix whenever a new filesystem window is applied.
         setPlaybackTime(nextRange.end === null ? null : Date.parse(nextRange.end));
     };
-    const {positions: savedPositions, transmitters: savedTransmitters, available_range, loading, error, refresh} = usePacketPositions(socket, range);
+    const {positions: savedPositions, transmitters: savedTransmitters, loading, error, refresh} = usePacketPositions(socket, range);
     const liveAircraft = useAircraft(socket, range.end === null);
-    const {positions, transmitters} = useMemo(() => mergeAircraftHistory(savedPositions, savedTransmitters, liveAircraft, range),
-        [savedPositions, savedTransmitters, liveAircraft, range]);
     const isLive = range.end === null;
     const [liveNow, setLiveNow] = useState(Date.now);
+    const [selectedTransmitterId, setSelectedTransmitterId] = useState(null);
+    const mergeHistory = useMemo(() => createAircraftHistory(), [range]);
+    const {positions, transmitters} = useMemo(() => mergeHistory(savedPositions, savedTransmitters, liveAircraft, range,
+        {now: Math.max(liveNow, Date.now()), selectedTransmitterId}),
+    [mergeHistory, savedPositions, savedTransmitters, liveAircraft, range, liveNow, selectedTransmitterId]);
     useEffect(() => {
         if (!isLive) return;
         // Age silent transmitters even when no library updates arrive.
@@ -53,11 +57,11 @@ export default function PacketMapLayout() {
     const liveTime = useMemo(() => positions.reduce((latest, point) => {
         const capturedAt = Date.parse(point.captured_at);
         return capturedAt > latest ? capturedAt : latest;
-    }, Math.max(liveNow, Date.now(), Date.parse(range.start))), [positions, range.start, liveNow]);
+    }, Math.max(liveNow, Date.now())), [positions, liveNow]);
     // Live playback follows every transmitter's newest fix, including new IDs.
     const currentPlaybackTime = isLive ? liveTime : playbackTime;
     const rows = useMemo(() => transmitterRows(positions, transmitters), [positions, transmitters]);
-    const [selectedTransmitterId, setSelectedTransmitterId] = useState(null);
+    const displayedRange = useMemo(() => isLive ? liveRangeAt(currentPlaybackTime) : range, [isLive, currentPlaybackTime, range]);
     const [preserveViewRequest, setPreserveViewRequest] = useState(0);
     const applyPresetRange = (nextRange) => {
         applyRange(nextRange);
@@ -103,7 +107,7 @@ export default function PacketMapLayout() {
     }, []);
 
     return <PageTabsLayout sx={{bgcolor: 'transparent'}} tabs={<Box sx={{position: 'relative'}}>
-        <DateRangeBar range={range} availableRange={available_range} positions={positions} onChange={applyRange}
+        <DateRangeBar range={displayedRange} positions={positions} onChange={applyRange}
             onPresetChange={applyPresetRange}
             playbackTime={currentPlaybackTime} onPlaybackTimeChange={setPlaybackTime}
             onRefresh={reconcile} loading={loading || reconciling} />

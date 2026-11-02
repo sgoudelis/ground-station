@@ -88,3 +88,25 @@ describe('Transmitter playback', () => {
         expect(track.points).toHaveLength(2);
     });
 });
+
+it('expires aircraft relative to the playback cursor and restores them when scrubbing back', () => {
+    const points = [fix(0, 40, 20), fix(7200, 42, 22)].map((point) => ({...point, kind: 'adsb'}));
+    const track = buildPlaybackTrack(points);
+    expect(at(track, 60).stale).toBe(false);
+    expect(at(track, 61).stale).toBe(true);
+    // Long reception gaps hold the observed position instead of inventing movement.
+    expect(at(track, 900).point).toBe(points[0]);
+    expect(at(track, 1800)).not.toBeNull();
+    expect(at(track, 1800.001)).toBeNull();
+    expect(at(track, 7200).point).toBe(points[1]);
+    expect(at(track, 0).point).toBe(points[0]);
+});
+
+it('supports lightweight aircraft interpolation without generating smoothed geometry', () => {
+    const points = [fix(0, 40, 20, 100), fix(10, 41, 21, 200), fix(20, 40, 22, 300)]
+        .map((point) => ({...point, kind: 'adsb'}));
+    const track = buildPlaybackTrack(points, {smooth: false});
+    expect(track.path).toEqual([[40, 20], [41, 21], [40, 22]]);
+    expect(at(track, 5).point.altitude).toBe(150);
+    expect(at(track, 10).point).toBe(points[1]);
+});

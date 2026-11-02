@@ -2,6 +2,7 @@
 
 import {smoothTrackSegments} from './track-path.js';
 import {getFlightPhase} from './radiosonde-marker.js';
+import {AIRCRAFT_EXPIRY_MS} from './live.js';
 
 const staleAfter = 60 * 60 * 1000;
 
@@ -11,11 +12,15 @@ const mercatorY = (latitude) => Math.log(Math.tan(Math.PI / 4 + Math.max(-85.051
 const latitudeAtY = (y) => (2 * Math.atan(Math.exp(y)) - Math.PI / 2) * 180 / Math.PI;
 const mix = (start, end, fraction) => start + (end - start) * fraction;
 
-export function buildPlaybackTrack(fixes) {
+export function buildPlaybackTrack(fixes, {smooth = true} = {}) {
     const points = fixes.filter((point) => Number.isFinite(Date.parse(point.captured_at)))
         .sort((left, right) => Date.parse(left.captured_at) - Date.parse(right.captured_at));
     const times = points.map((point) => Date.parse(point.captured_at));
     const coordinates = points.map((point) => [point.latitude, point.longitude]);
+    // Unselected aircraft need a timestamp index, not thousands of curve vertices.
+    if (!smooth) {
+        return {points, times, samples: coordinates.map((position, index) => ({time: times[index], position})), path: coordinates};
+    }
     const samples = points.length ? [{time: times[0], position: coordinates[0]}] : [];
     smoothTrackSegments(coordinates).forEach((segment, index) => {
         segment.slice(1).forEach((position, sample) => samples.push({
@@ -49,12 +54,17 @@ export function trackPositionAt(track, time, latestVerticalSpeed) {
     if (index < 0) return null;
     const previous = points[index];
     const next = points[index + 1];
+    const aircraft = previous.kind === 'adsb';
+    // Expiry follows the cursor, so old recordings reappear when replayed.
+    if (aircraft && cursor - times[index] > AIRCRAFT_EXPIRY_MS) return null;
+    // A long reception gap is not evidence that the aircraft flew this segment.
+    const interpolate = next && (!aircraft || times[index + 1] - times[index] <= AIRCRAFT_EXPIRY_MS);
     let point = previous;
     let verticalSpeed;
-    if (next && Number.isFinite(previous.altitude) && Number.isFinite(next.altitude)) {
+    if (interpolate && Number.isFinite(previous.altitude) && Number.isFinite(next.altitude)) {
         verticalSpeed = (next.altitude - previous.altitude) / ((times[index + 1] - times[index]) / 1000);
     }
-    if (next && cursor > times[index] && Math.abs(previous.longitude - next.longitude) <= 180) {
+    if (interpolate && cursor > times[index] && Math.abs(previous.longitude - next.longitude) <= 180) {
         const fraction = (cursor - times[index]) / (times[index + 1] - times[index]);
         const sampleIndex = atOrBefore(samples, cursor, (sample) => sample.time);
         const left = samples[sampleIndex];
@@ -69,9 +79,9 @@ export function trackPositionAt(track, time, latestVerticalSpeed) {
     // Latest telemetry belongs only to the endpoint. Replaying the ascent must
     // not inherit a parachute from the most recent descent packet.
     if (!next) verticalSpeed = latestVerticalSpeed;
-    const measuredPhase = getFlightPhase([], verticalSpeed);
+    const measuredPhase = aircraft ? 'unknown' : getFlightPhase([], verticalSpeed);
     const phase = measuredPhase === 'unknown'
-        ? getFlightPhase([...points.slice(0, index + 1), ...(point === previous ? [] : [point])]) : measuredPhase;
+        && !aircraft ? getFlightPhase([...points.slice(0, index + 1), ...(point === previous ? [] : [point])]) : measuredPhase;
     // Interpolation changes captured_at for display, but cannot refresh a node.
     // Aircraft update much faster than sondes. Match their live cache's
     // one-minute timeout without removing the recorded path from playback.

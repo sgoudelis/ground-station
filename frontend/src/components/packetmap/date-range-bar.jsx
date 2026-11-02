@@ -9,9 +9,9 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import CheckIcon from '@mui/icons-material/Check';
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import HistoryIcon from '@mui/icons-material/History';
 import TodayIcon from '@mui/icons-material/Today';
 import DateRangeIcon from '@mui/icons-material/DateRange';
-import AllInclusiveIcon from '@mui/icons-material/AllInclusive';
 import moment from 'moment-timezone';
 import {useTranslation} from 'react-i18next';
 import {useUserTimeSettings} from '../../hooks/useUserTimeSettings.jsx';
@@ -19,6 +19,7 @@ import {formatDateTime} from '../../utils/date-time.js';
 import ResponsiveActionButton from '../common/responsive-action-button.jsx';
 import DateRangeSelector from './date-range-selector.jsx';
 import {datePickerLocalization} from './date-picker-localization.js';
+import {liveRangeAt} from './live.js';
 
 const compactActionsQuery = '@container packet-map-toolbar (max-width: 600px)';
 const actionButtonSx = {
@@ -43,12 +44,15 @@ const datePickerSx = {
         width: 40,
         '& .MuiInputLabel-root, & .MuiInputBase-input, & legend': {display: 'none'},
         '& .MuiInputBase-root': {height: 40, p: 0, justifyContent: 'center'},
+        // The label notch normally lifts the border 5px above the input. With
+        // its legend hidden, keep that border inside the 40px square instead.
+        '& .MuiOutlinedInput-notchedOutline': {top: 0},
         '& .MuiInputAdornment-root': {m: 0},
         '& .MuiIconButton-root': {m: 0, width: 38, height: 38},
     },
 };
 
-export default function DateRangeBar({range, availableRange, positions, onChange, onPresetChange = onChange,
+export default function DateRangeBar({range, positions, onChange, onPresetChange = onChange,
     playbackTime, onPlaybackTimeChange, onRefresh, loading}) {
     const {t} = useTranslation('navigation');
     const applyLabel = t('packet_map.apply', {defaultValue: 'Apply'});
@@ -62,6 +66,7 @@ export default function DateRangeBar({range, availableRange, positions, onChange
     const toInput = (date) => moment.tz(date, timezone).startOf('minute');
     const pickerLocalization = useMemo(() => datePickerLocalization(locale), [locale]);
     const [draft, setDraft] = useState(() => ({start: toInput(range.start), end: isLive ? null : toInput(range.end)}));
+    const [fromPickerOpen, setFromPickerOpen] = useState(false);
     useEffect(() => {
         setDraft({start: toInput(range.start), end: isLive ? null : toInput(range.end)});
     }, [range, timezone, isLive]);
@@ -86,7 +91,7 @@ export default function DateRangeBar({range, availableRange, positions, onChange
     return <LocalizationProvider dateAdapter={AdapterMoment} dateLibInstance={moment} adapterLocale={pickerLocalization.adapterLocale}>
         <Box component="form" noValidate onSubmit={(event) => {
         event.preventDefault();
-        if (valid) onChange({
+        if (valid && !isLive) onChange({
             start: start.valueOf() === toInput(range.start).valueOf() ? range.start : start.toISOString(),
             end: isLive ? null : end.valueOf() === toInput(range.end).valueOf() ? range.end : end.toISOString(),
         });
@@ -101,7 +106,8 @@ export default function DateRangeBar({range, availableRange, positions, onChange
         <Stack direction="row" spacing={1} alignItems="center" useFlexGap
             sx={{width: '100%', minWidth: 'max-content', whiteSpace: 'nowrap', '& > *': {flexShrink: 0},
                 [compactActionsQuery]: {gap: 0.25}}}>
-            <DateTimePicker label={fromLabel} timezone={timezone}
+            <DateTimePicker label={fromLabel} timezone={timezone} disabled={isLive}
+                open={fromPickerOpen && !isLive} onOpen={() => setFromPickerOpen(true)} onClose={() => setFromPickerOpen(false)}
                 format={pickerLocalization.format} ampm={pickerLocalization.ampm} enableAccessibleFieldDOMStructure={false}
                 value={start} onChange={(value) => setDraft({...draft, start: value})}
                 slotProps={{textField: {size: 'small', error: !start?.isValid(), slotProps: {inputLabel: {shrink: true}}},
@@ -115,7 +121,7 @@ export default function DateRangeBar({range, availableRange, positions, onChange
                 sx={datePickerSx} />
             <Tooltip title={applyLabel}>
                 <Box component="span" sx={{display: 'inline-flex'}}>
-                    <IconButton type="submit" size="small" color="primary" disabled={!valid}
+                    <IconButton type="submit" size="small" color="primary" disabled={!valid || isLive}
                         aria-label={applyLabel} sx={outlinedIconButtonSx}>
                         <CheckIcon />
                     </IconButton>
@@ -141,14 +147,14 @@ export default function DateRangeBar({range, availableRange, positions, onChange
             <Stack direction="row" spacing={1} alignItems="center" useFlexGap
                 sx={{ml: 'auto', [compactActionsQuery]: {gap: 0.25}}}>
             <Tooltip title={isLive ? t('packet_map.stop_live', {defaultValue: 'Stop live updates and enable playback'})
-                : t('packet_map.live_description', {defaultValue: 'Follow new packets from the selected start date'})}>
+                : t('packet_map.live_recent_description', {defaultValue: 'Follow the last 30 minutes of packets'})}>
                 <ToggleButton value="live" selected={isLive} color="primary"
                     aria-label={t('packet_map.live', {defaultValue: 'LIVE'})}
-                    onChange={() => onPresetChange({
+                    onChange={() => onPresetChange(isLive ? {
                         start: range.start,
                         // Freeze at the displayed live cursor so playback starts from the same time.
-                        end: isLive ? new Date(maximum).toISOString() : null,
-                    })}
+                        end: new Date(maximum).toISOString(),
+                    } : liveRangeAt())}
                     sx={{...actionButtonSx, gap: 0.75, whiteSpace: 'nowrap', flexShrink: 0,
                         [compactActionsQuery]: {...actionButtonSx[compactActionsQuery],
                             '& .responsive-action-label': {display: 'none'}}}}>
@@ -157,16 +163,21 @@ export default function DateRangeBar({range, availableRange, positions, onChange
                     <span className="responsive-action-label">{t('packet_map.live', {defaultValue: 'LIVE'})}</span>
                 </ToggleButton>
             </Tooltip>
-            <ResponsiveActionButton label="12h" compactQuery={compactActionsQuery} sx={periodButtonSx}
-                size="medium" startIcon={<AccessTimeIcon />} onClick={() => recent(12)} />
+            <ResponsiveActionButton label="1h" compactQuery={compactActionsQuery} sx={periodButtonSx}
+                size="medium" startIcon={<AccessTimeIcon />} onClick={() => recent(1)} />
+            <ResponsiveActionButton label="6h" compactQuery={compactActionsQuery} sx={periodButtonSx}
+                size="medium" startIcon={<HistoryIcon />} onClick={() => recent(6)} />
             <ResponsiveActionButton label="24h" compactQuery={compactActionsQuery} sx={periodButtonSx}
                 size="medium" startIcon={<TodayIcon />} onClick={() => recent(24)} />
-            <ResponsiveActionButton label="7d" compactQuery={compactActionsQuery} sx={periodButtonSx}
-                size="medium" startIcon={<DateRangeIcon />} onClick={() => recent(168)} />
-            <ResponsiveActionButton label={t('packet_map.all', {defaultValue: 'All'})}
-                tooltip={t('packet_map.all_dates', {defaultValue: 'All dates'})}
-                compactQuery={compactActionsQuery} sx={periodButtonSx} size="medium" startIcon={<AllInclusiveIcon />}
-                disabled={!availableRange} onClick={() => onPresetChange({...availableRange})} />
+            <ResponsiveActionButton label={t('packet_map.custom', {defaultValue: 'Custom'})}
+                tooltip={t('packet_map.custom_dates', {defaultValue: 'Choose a custom date range'})}
+                compactQuery={compactActionsQuery} sx={periodButtonSx} size="medium" startIcon={<DateRangeIcon />}
+                onClick={() => {
+                    // Freeze the displayed LIVE window before opening its date
+                    // editor. Historical edits stay local until Apply is used.
+                    if (isLive) onPresetChange({start: range.start, end: new Date(maximum).toISOString()});
+                    setFromPickerOpen(true);
+                }} />
             <Tooltip title={refreshLabel}>
                 <Box component="span" sx={{display: 'inline-flex'}}>
                     <IconButton type="button" size="small" color="primary" aria-label={refreshLabel}

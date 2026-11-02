@@ -904,3 +904,20 @@ it('selects table rows and centers their markers, then restores all bounds with 
     expect(sondeRow).toHaveAttribute('aria-selected', 'true');
     expect(screen.getAllByTestId('visibility-circle')).toHaveLength(2);
 });
+
+it('removes expired aircraft markers and restores them when the historical cursor returns', () => {
+    const store = configureStore({reducer: () => ({location: {location: null}})});
+    const received = Date.parse('2026-11-01T12:00:00Z');
+    const positions = [{id: 'fix', transmitter_id: 'adsb:406b90', kind: 'adsb', source: '406B90',
+        latitude: 40, longitude: 23, captured_at: new Date(received).toISOString()}];
+    const element = (time) => <Provider store={store}><ThemeProvider theme={createTheme()}>
+        <PacketMap positions={positions} playbackTime={time} loading={false} />
+    </ThemeProvider></Provider>;
+    const {rerender} = render(element(received + 1800000));
+    expect(screen.getByTestId('aircraft-marker')).toBeInTheDocument();
+    rerender(element(received + 1800001));
+    expect(screen.queryByTestId('aircraft-marker')).not.toBeInTheDocument();
+    expect(screen.getByText('0 transmitters')).toBeInTheDocument();
+    rerender(element(received));
+    expect(screen.getByTestId('aircraft-marker')).toBeInTheDocument();
+});
