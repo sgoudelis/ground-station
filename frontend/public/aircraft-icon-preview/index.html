@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Aircraft icon gallery · Ground Station</title>
+    <link rel="stylesheet" href="gallery.css">
+    <script defer src="icons.js"></script>
+    <script defer src="gallery.js"></script>
+</head>
+<body>
+    <main>
+        <header>
+            <div class="eyebrow">Ground Station <span>/</span> Marker preview</div>
+            <div class="title-row">
+                <div>
+                    <h1>Aircraft icon gallery</h1>
+                    <p>Explore the silhouettes. Turn them, change their size, and compare their shadows.</p>
+                </div>
+                <a class="source-link" href="https://github.com/wiedehopf/tar1090/blob/5d59b1ba2c5e30eb23f1161940367b7767f10ad5/html/markers.js" target="_blank" rel="noreferrer">View original collection ↗</a>
+            </div>
+            <div class="summary">
+                <span><strong>81</strong> aviation silhouettes</span>
+                <span><strong>11</strong> utility &amp; novelty markers</span>
+                <span><strong>3</strong> supplementary icons</span>
+            </div>
+        </header>
+
+        <section class="controls" aria-label="Preview controls">
+            <div class="filter-row">
+                <label class="search-field">Search
+                    <input id="search" type="search" placeholder="A320, helicopter, glider…" autocomplete="off">
+                </label>
+                <label>Collection
+                    <select id="collection">
+                        <option value="all">All 95 icons</option>
+                        <option value="aviation">Aviation only · 81</option>
+                        <option value="other">Utility &amp; novelty · 11</option>
+                        <option value="supplementary">Supplementary · 3</option>
+                        <optgroup id="categories" label="Aircraft groups"></optgroup>
+                    </select>
+                </label>
+                <label>Terrain
+                    <select id="terrain">
+                        <option value="light">Light map</option>
+                        <option value="dark">Dark map</option>
+                    </select>
+                </label>
+            </div>
+            <div class="adjustments">
+                <label class="slider-label" for="heading">Heading <output id="heading-value" for="heading">0°</output>
+                    <input id="heading" type="range" min="0" max="359" value="0">
+                </label>
+                <label class="slider-label" for="size">Map size <output id="size-value" for="size">32 px</output>
+                    <input id="size" type="range" min="20" max="64" value="32">
+                </label>
+                <label class="toggle"><input id="shadows" type="checkbox" checked> Ground shadows</label>
+                <button id="reset" type="button">Reset preview</button>
+            </div>
+        </section>
+
+        <div class="results-row">
+            <p id="results" role="status" aria-live="polite"></p>
+            <span>Click an icon for a closer look</span>
+        </div>
+        <div id="gallery" class="gallery" aria-label="Aircraft icons"></div>
+        <p id="empty" hidden>No matching icons. Try another name or collection.</p>
+
+        <footer>
+            <p>The map now selects silhouettes from this collection using aircraft model, class and broadcast category. Novelty markers remain gallery-only.</p>
+            <p>tar1090 artwork: <a href="LICENSE.tar1090.txt">GPL-2.0-or-later</a>. C130 silhouette by Peter Lowden: <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>.
+                Supplementary rocket, parachute and drone icons by Paweł Kuna / Tabler: <a href="LICENSE.tabler.txt">MIT</a>.</p>
+            <p>Credits also include pimlie, alkissack and bukadako. <a href="NOTICE.md">Full credits and adaptation notes</a> · <a href="sources.json">Pinned sources</a>.</p>
+        </footer>
+    </main>
+
+    <dialog id="detail" aria-labelledby="detail-title">
+        <div class="dialog-heading"><div><span id="detail-group" class="eyebrow"></span><h2 id="detail-title"></h2></div>
+            <button id="close-detail" type="button" aria-label="Close icon details">✕</button></div>
+        <div id="detail-preview" class="terrain detail-preview"></div>
+        <dl>
+            <div><dt>Icon name</dt><dd id="detail-key"></dd></div>
+            <div><dt>Source</dt><dd id="detail-source"></dd></div>
+            <div><dt>Rotation</dt><dd id="detail-rotation"></dd></div>
+            <div><dt>License</dt><dd id="detail-license"></dd></div>
+        </dl>
+        <p id="detail-note" class="detail-note"></p>
+        <div class="dialog-actions"><a id="download" class="download" download>Download SVG</a><a id="original" target="_blank" rel="noreferrer">Original source ↗</a></div>
+    </dialog>
+</body>
+</html>

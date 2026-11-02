@@ -17,9 +17,14 @@
     transform: translateY(calc(-1 * var(--aircraft-lift)));
 }
 
-.packet-aircraft-symbol svg {
+.packet-aircraft-symbol > svg {
     display: block;
+    transform-origin: center;
     filter: drop-shadow(0 1px 2px rgb(0 0 0 / 65%));
+}
+
+.packet-marker-stale .packet-aircraft-symbol {
+    filter: grayscale(1);
 }
 
 .packet-aircraft-shadow {
@@ -31,8 +36,9 @@
     pointer-events: none;
 }
 
-.packet-aircraft-shadow svg {
+.packet-aircraft-shadow > svg {
     display: block;
+    transform-origin: center;
 }
 
 .packet-aircraft-label {

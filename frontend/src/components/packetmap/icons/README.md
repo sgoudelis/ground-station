@@ -27,3 +27,20 @@ The map displays these pins at 40 × 45 CSS pixels, with the bottom tip anchored
 to the reported coordinates. APRS balloons keep the existing balloon/parachute
 markers and flight-phase behavior. Callsign labels and symbol overlays remain
 separate from the supplied artwork.
+
+Aircraft use `aircraft.json`: locally bundled tar1090 silhouettes and 382 ICAO
+type-designator mappings, plus three supplementary Tabler icons. Known models
+take priority, followed by aircraft class, engine configuration/wake category,
+and the ADS-B emitter category. Unknown aircraft keep a generic plane icon.
+Military flags alone never select a fighter silhouette.
+
+The C130 silhouette is CC BY 4.0 (Peter Lowden), the other tar1090 artwork and
+mappings are GPL-2.0-or-later, and Tabler icons are MIT (Paweł Kuna). See the
+[full notices](../../../../public/aircraft-icon-preview/NOTICE.md) for pinned
+sources, upstream contributors, license texts and adaptation notes.
+
+The standalone gallery's `icons.js` is a generated snapshot of the same
+`shapes` and `supplemental` data in `aircraft.json`. Keep it in sync when
+updating artwork. Both the map and gallery render icons entirely locally;
+the gallery also includes utility and novelty artwork that the aircraft map
+does not select for aircraft.

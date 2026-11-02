@@ -342,6 +342,25 @@ const AboutPage = () => {
                     </Typography>
                 </Card>
 
+                <Card elevation={1} sx={{ p: 2 }}>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                        {t('about.aircraft_icons_title', {defaultValue: 'Aircraft map icons'})}
+                    </Typography>
+                    <Typography component="div" variant="body2" color="text.secondary">
+                        <Link href="https://github.com/wiedehopf/tar1090" target="_blank" rel="noopener noreferrer">tar1090</Link>
+                        {' (GPL-2.0-or-later), '}
+                        <Link href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">
+                            C130: Peter Lowden (CC BY 4.0)
+                        </Link>
+                        {', '}
+                        <Link href="https://github.com/tabler/tabler-icons" target="_blank" rel="noopener noreferrer">Tabler</Link>
+                        {' (MIT, Paweł Kuna). '}
+                        <Link href="/aircraft-icon-preview/NOTICE.md" target="_blank" rel="noopener noreferrer">
+                            {t('about.aircraft_icons_credits', {defaultValue: 'Full credits and licenses'})}
+                        </Link>
+                    </Typography>
+                </Card>
+
                 <Card elevation={1} sx={{ p: 2, border: `1px solid ${theme.palette.info.main}33` }}>
                     <Typography variant="body2" color="text.secondary">
                         <strong>{t('about.note_label', { defaultValue: 'Note' })}:</strong>{' '}

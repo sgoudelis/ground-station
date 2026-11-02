@@ -127,6 +127,39 @@ def test_incremental_index_reads_only_new_complete_records(tmp_path):
     assert inventory.get(item_id)["packet_count"] == 2
 
 
+def test_map_history_exposes_airframe_metadata_at_each_fix(tmp_path):
+    storage = AdsbStorage(tmp_path / "data/decoded", "rx01")
+    first = report()
+    first["aircraft"] = {
+        "type_code": "A320",
+        "type_description": "L2J",
+        "engine_count": 2,
+        "engine_type": "J",
+        "wake_category": "M",
+        "category": "A3",
+        "database": {"version": 529},
+        "operator_name": "Example operator",
+    }
+    storage.append("track", first)
+    # A subsequent lookup correction must not rewrite the earlier map fix.
+    storage.append("track", {**report(STAMP + 5), "aircraft": {"type_code": "B738"}})
+    storage.flush()
+    inventory = LibraryInventory(tmp_path)
+    history = inventory.query_positions(first["captured_at"])
+    assert [point["aircraft"]["type_code"] for point in history["positions"]] == [
+        "A320",
+        "B738",
+    ]
+    metadata = history["positions"][0]["aircraft"]
+    assert metadata["type_description"] == "L2J"
+    assert metadata["engine_count"] == 2
+    assert metadata["category"] == "A3"
+    assert "database" not in metadata
+    assert "operator_name" not in metadata
+    assert "_details" not in history["positions"][0]
+    assert history["transmitters"][0]["details"]["telemetry"]["aircraft"]["type_code"] == "B738"
+
+
 @pytest.mark.asyncio
 async def test_late_socket_binding_publishes_aircraft_and_library_changes(tmp_path, monkeypatch):
     inventory = LibraryInventory(tmp_path)

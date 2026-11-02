@@ -706,6 +706,14 @@ The bundled snapshot is version **529**, dated **2026-11-01**. Its license and n
 are included with the installed database; the database remains under ODC-By separately
 from Ground Station's application code.
 
+Aircraft map silhouettes and ICAO model mappings are adapted from
+[tar1090](https://github.com/wiedehopf/tar1090) (GPL-2.0-or-later). The C130
+silhouette is by **Peter Lowden**, licensed under
+[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Supplementary icons
+are from [Tabler](https://github.com/tabler/tabler-icons) (MIT, **Paweł Kuna**).
+The [artwork notices](frontend/public/aircraft-icon-preview/NOTICE.md) include
+all upstream credits, pinned sources, adaptation details and bundled licenses.
+
 ## License
 
 This project is licensed under the GNU GPL v3. See the [LICENSE](LICENSE) file for details.

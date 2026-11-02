@@ -81,6 +81,21 @@ def aircraft_position(record, item_id):
             else record.get("altitude_baro_m")
         ),
         "track_deg": record.get("track_deg"),
+        # Public map fixes need icon metadata during playback. Keep the full
+        # database attribution/operator details in telemetry rather than repeat
+        # them at every coordinate in the bounded history response.
+        "aircraft": {
+            key: (record.get("aircraft") or {}).get(key)
+            for key in (
+                "type_code",
+                "type_description",
+                "aircraft_class",
+                "engine_count",
+                "engine_type",
+                "wake_category",
+                "category",
+            )
+        },
         "_details": {
             "telemetry": {key: value for key, value in record.items() if key != "readsb"},
             "readsb": record.get("readsb", {}),

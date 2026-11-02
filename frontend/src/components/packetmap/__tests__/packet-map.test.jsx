@@ -95,6 +95,7 @@ it('shows a named aircraft pointing along its track, selects it and marks an old
     const received = Date.parse('2026-11-01T18:15:00Z');
     const point = {id: 'plane-fix', transmitter_id: 'adsb:4d2406', kind: 'adsb', name: 'EWG46A', source: '4D2406',
         latitude: 40.84, longitude: 23.12, altitude: 11064, track_deg: 326.06,
+        aircraft: {type_code: 'A320'},
         captured_at: new Date(received).toISOString()};
     const positions = [point];
     const onSelectTransmitter = vi.fn();
@@ -108,12 +109,34 @@ it('shows a named aircraft pointing along its track, selects it and marks an old
     expect(plane.dataset.iconHtml).toContain('EWG46A');
     expect(plane.dataset.iconHtml).toContain('🇲🇹');
     expect(plane.dataset.iconHtml).toContain('rotate(326.06deg)');
+    expect(plane.dataset.iconHtml).toContain('data-aircraft-shape="a320"');
     fireEvent.click(plane);
     expect(onSelectTransmitter).toHaveBeenCalledWith('adsb:4d2406');
     map.fitBounds.mockClear();
     rerender(element(received + 61000));
     expect(screen.getByTestId('aircraft-marker').dataset.iconClass).toContain('packet-marker-stale');
     expect(map.fitBounds).not.toHaveBeenCalled();
+});
+
+it('uses each saved or live fix silhouette during playback and falls back for older map results', () => {
+    const store = configureStore({reducer: () => ({location: {location: null}})});
+    const received = Date.parse('2026-11-01T18:15:00Z');
+    const base = {transmitter_id: 'adsb:4d2406', kind: 'adsb', name: 'TEST', source: '4D2406',
+        latitude: 40.84, longitude: 23.12, altitude: 11064};
+    const positions = [
+        {...base, id: 'old', captured_at: new Date(received).toISOString(), aircraft: {type_code: 'A320'}},
+        {...base, id: 'live', captured_at: new Date(received + 10000).toISOString(), aircraft: {type_code: 'H60'}},
+    ];
+    const transmitters = [{id: base.transmitter_id, details: {telemetry: {aircraft: {type_code: 'F35'}}}}];
+    const element = (time, fixes = positions) => <Provider store={store}><ThemeProvider theme={createTheme()}>
+        <PacketMap positions={fixes} transmitters={transmitters} playbackTime={time} loading={false} />
+    </ThemeProvider></Provider>;
+    const {rerender} = render(element(received + 5000));
+    expect(screen.getByTestId('aircraft-marker').dataset.iconHtml).toContain('data-aircraft-shape="a320"');
+    rerender(element(received + 11000));
+    expect(screen.getByTestId('aircraft-marker').dataset.iconHtml).toContain('data-aircraft-shape="blackhawk"');
+    rerender(element(received + 5000, [{...positions[0], aircraft: undefined}]));
+    expect(screen.getByTestId('aircraft-marker').dataset.iconHtml).toContain('data-aircraft-shape="f35"');
 });
 
 it.each([

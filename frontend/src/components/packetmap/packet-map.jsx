@@ -189,6 +189,8 @@ export default function PacketMap({positions, transmitters, hasPositions = posit
             phase: current.phase, altitude: point.altitude, name: point.name, stale: current.stale,
         }) : point?.kind === 'adsb' ? createAircraftIcon({
             track: point.track_deg, name: point.name || point.source, icao: point.source, stale: current.stale,
+            // Per-fix metadata follows playback; older captures use the row's lookup.
+            aircraft: point.aircraft ?? point._details?.telemetry?.aircraft ?? details?.telemetry?.aircraft,
         }) : null;
         return [track.id, current ? {...current, icon} : null];
     })), [tracks, playbackTime, transmitterDetails]);

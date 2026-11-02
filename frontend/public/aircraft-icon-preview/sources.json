@@ -1,0 +1,34 @@
+{
+  "tar1090_revision": "5d59b1ba2c5e30eb23f1161940367b7767f10ad5",
+  "tabler_revision": "ed177a085b652fe04ec4f37ced867c94621e7840",
+  "files": {
+    "markers.js": {
+      "url": "https://raw.githubusercontent.com/wiedehopf/tar1090/5d59b1ba2c5e30eb23f1161940367b7767f10ad5/html/markers.js",
+      "sha256": "ef6e8324f8d48d5442f641e54f4b41e6de1e8e28bf9eff1bfffeca3a5991e48f"
+    },
+    "LICENSE.tar1090.txt": {
+      "url": "https://raw.githubusercontent.com/wiedehopf/tar1090/5d59b1ba2c5e30eb23f1161940367b7767f10ad5/LICENSE",
+      "sha256": "ac886256dc15e1f53b7bc2a70b6b6f34ae4fc69d74f070aa123caf22999bccf0"
+    },
+    "LICENSE.tabler.txt": {
+      "url": "https://raw.githubusercontent.com/tabler/tabler-icons/ed177a085b652fe04ec4f37ced867c94621e7840/LICENSE",
+      "sha256": "b740a1d46122672da62833e97f7e7c8a13fa85cbc7445b584b297cc00dde93db"
+    },
+    "LICENSE.CC-BY-4.0.txt": {
+      "url": "https://creativecommons.org/licenses/by/4.0/legalcode.txt",
+      "sha256": "9ba9550ad48438d0836ddab3da480b3b69ffa0aac7b7878b5a0039e7ab429411"
+    },
+    "rocket.svg": {
+      "url": "https://raw.githubusercontent.com/tabler/tabler-icons/ed177a085b652fe04ec4f37ced867c94621e7840/icons/outline/rocket.svg",
+      "sha256": "ea5f8a0922691d4c36d56c61c6e5c1dab1ae11ff5856a1036430f26d0eb23214"
+    },
+    "parachute.svg": {
+      "url": "https://raw.githubusercontent.com/tabler/tabler-icons/ed177a085b652fe04ec4f37ced867c94621e7840/icons/outline/parachute.svg",
+      "sha256": "ec2df4108efeb3d56c2065be014f8e2f330a4af039a2c73890b8898175e7bad7"
+    },
+    "drone.svg": {
+      "url": "https://raw.githubusercontent.com/tabler/tabler-icons/ed177a085b652fe04ec4f37ced867c94621e7840/icons/outline/drone.svg",
+      "sha256": "fff7a5b4f4e51e17e520ab380f7e1c9b7cf65e42dbe2a517adff5c168c52925a"
+    }
+  }
+}
