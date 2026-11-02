@@ -82,6 +82,10 @@ beforeEach(() => {
         listeners.get('zoomstart')?.();
         listeners.get('moveend')?.();
     });
+    map.setView.mockImplementation(() => {
+        listeners.get('movestart')?.();
+        listeners.get('moveend')?.();
+    });
 });
 
 afterEach(() => vi.restoreAllMocks());
@@ -189,6 +193,39 @@ describe('Packet map viewport', () => {
         expect(map.fitBounds).toHaveBeenCalledExactlyOnceWith(newBounds, expect.any(Object));
     });
 
+    it('preserves an unpanned view through preset loading, new results and resize until Fit all', () => {
+        let resize;
+        vi.spyOn(globalThis, 'ResizeObserver').mockImplementation(function (callback) {
+            resize = callback;
+            this.observe = vi.fn();
+            this.disconnect = vi.fn();
+        });
+        const bounds = [[40, 23]];
+        const {rerender} = render(<MapViewport ready bounds={bounds} fitRequest={0} preserveViewRequest={0} />);
+        expect(map.fitBounds).toHaveBeenCalledOnce();
+        map.fitBounds.mockClear();
+        map.setView.mockClear();
+
+        rerender(<MapViewport ready={false} bounds={bounds} fitRequest={0} preserveViewRequest={1} />);
+        rerender(<MapViewport ready={false} bounds={[]} fitRequest={0} preserveViewRequest={1} />);
+        const results = [[48, 12], [52, 16]];
+        rerender(<MapViewport ready bounds={results} fitRequest={0} preserveViewRequest={1} />);
+        expect(map.fitBounds).not.toHaveBeenCalled();
+        expect(map.setView).not.toHaveBeenCalled();
+        act(() => resize());
+        expect(map.setView).toHaveBeenLastCalledWith({lat: 40.2, lng: 24.3}, 8, {animate: false});
+        expect(map.fitBounds).not.toHaveBeenCalled();
+
+        // The same preset and subsequent live updates also leave the camera alone.
+        map.setView.mockClear();
+        rerender(<MapViewport ready bounds={results} fitRequest={0} preserveViewRequest={2} />);
+        rerender(<MapViewport ready bounds={[[50, 30]]} fitRequest={0} preserveViewRequest={2} />);
+        expect(map.fitBounds).not.toHaveBeenCalled();
+        expect(map.setView).not.toHaveBeenCalled();
+        rerender(<MapViewport ready bounds={results} fitRequest={1} preserveViewRequest={2} />);
+        expect(map.fitBounds).toHaveBeenCalledExactlyOnceWith(results, expect.any(Object));
+    });
+
     it('persists button-driven panning and removes map listeners on unmount', () => {
         const {rerender, unmount} = render(<MapViewport ready bounds={[[40, 23]]} fitRequest={0} />);
         // Arrow controls emit move events without Leaflet drag events.
@@ -227,35 +264,53 @@ describe('Packet map viewport', () => {
         expect(map.fitBounds).toHaveBeenCalledOnce();
     });
 
-    it('uses the current visibility circle on explicit fits and resize without following playback', () => {
+    it('follows a selected target at the current zoom through updates and resize, then stops on deselection', () => {
         let resize;
         vi.spyOn(globalThis, 'ResizeObserver').mockImplementation(function (callback) {
             resize = callback;
             this.observe = vi.fn();
             this.disconnect = vi.fn();
         });
-        const bounds = [[40, 23]];
-        const initialCircle = [[39, 22], [41, 24]];
-        const {rerender} = render(<MapViewport ready bounds={bounds} visibilityBounds={initialCircle} fitRequest={0} />);
-        expect(map.fitBounds).toHaveBeenLastCalledWith([...bounds, ...initialCircle], expect.objectContaining({
-            paddingTopLeft: [42, 42], paddingBottomRight: [42, 42],
-        }));
-        map.fitBounds.mockClear();
-        const updatedCircle = [[38, 21], [42, 25]];
-        rerender(<MapViewport ready bounds={bounds} visibilityBounds={updatedCircle} fitRequest={0} />);
+        const saved = JSON.stringify({center: [10, 10], zoom: 4});
+        localStorage.setItem(mapViewStoreName, saved);
+        const bounds = [[40, 23], [42, 25]];
+        const point = {latitude: 40, longitude: 23};
+        const {rerender} = render(<MapViewport ready bounds={bounds} fitRequest={0}
+            selectedTransmitterId="A" selectedPoint={point} />);
         expect(map.fitBounds).not.toHaveBeenCalled();
-        rerender(<MapViewport ready bounds={bounds} visibilityBounds={updatedCircle} fitRequest={1} />);
-        expect(map.fitBounds).toHaveBeenLastCalledWith([...bounds, ...updatedCircle], expect.any(Object));
+        expect(map.setView).toHaveBeenLastCalledWith([40, 23], 8, {animate: false});
+        expect(localStorage.getItem(mapViewStoreName)).toBe(saved);
+
+        // Following continues after manual navigation and retains a newly chosen zoom.
+        act(() => { listeners.get('movestart')(); listeners.get('moveend')(); });
+        const manualView = localStorage.getItem(mapViewStoreName);
+        map.getZoom.mockReturnValueOnce(11);
+        rerender(<MapViewport ready bounds={bounds} fitRequest={0}
+            selectedTransmitterId="A" selectedPoint={{latitude: 41, longitude: 24}} />);
+        expect(map.setView).toHaveBeenLastCalledWith([41, 24], 11, {animate: false});
+        expect(localStorage.getItem(mapViewStoreName)).toBe(manualView);
         act(() => resize());
-        expect(map.fitBounds).toHaveBeenLastCalledWith([...bounds, ...updatedCircle], expect.any(Object));
-        act(() => listeners.get('movestart')());
-        map.fitBounds.mockClear();
-        act(() => resize());
+        expect(map.setView).toHaveBeenLastCalledWith([41, 24], 8, {animate: false});
         expect(map.fitBounds).not.toHaveBeenCalled();
+
+        // Missing target positions must never fall back to fitting all tracks.
+        map.setView.mockClear();
+        rerender(<MapViewport ready bounds={bounds} fitRequest={0} selectedTransmitterId="B" />);
+        expect(map.setView).not.toHaveBeenCalled();
+        expect(map.fitBounds).not.toHaveBeenCalled();
+        rerender(<MapViewport ready bounds={bounds} fitRequest={0}
+            selectedTransmitterId="B" selectedPoint={{latitude: 42, longitude: 25}} />);
+        expect(map.setView).toHaveBeenLastCalledWith([42, 25], 8, {animate: false});
+        map.setView.mockClear();
+        rerender(<MapViewport ready bounds={bounds} fitRequest={0} />);
+        expect(map.setView).not.toHaveBeenCalled();
+        expect(map.fitBounds).not.toHaveBeenCalled();
+        rerender(<MapViewport ready bounds={bounds} fitRequest={1} />);
+        expect(map.fitBounds).toHaveBeenCalledExactlyOnceWith(bounds, expect.any(Object));
     });
 });
 
-it('renders smooth transmitter paths with only start and end markers and no popups', () => {
+it('renders the selected transmitter path with only start and end markers and no popups', () => {
     const state = {location: {location: {lat: '40.6', lon: '22.9'}}};
     const store = configureStore({reducer: () => state});
     const points = [
@@ -265,7 +320,7 @@ it('renders smooth transmitter paths with only start and end markers and no popu
         {id: '3', file_id: 'decoded:sonde.bin', transmitter_id: 'radiosonde:S', kind: 'radiosonde', name: 'S', latitude: 42, longitude: 25, altitude: 10000, captured_at: '2026-11-01T02:00:00Z'},
     ];
     const element = <Provider store={store}><ThemeProvider theme={createTheme()}>
-        <PacketMap positions={points} loading={false} fitRequest={0} />
+        <PacketMap positions={points} loading={false} fitRequest={0} selectedTransmitterId="aprs:A" />
     </ThemeProvider></Provider>;
     const {unmount} = render(element);
     expect(screen.getByTestId('map').closest('.packet-map')).not.toBeNull();
@@ -286,7 +341,8 @@ it('renders smooth transmitter paths with only start and end markers and no popu
     expect(legend).toHaveTextContent('APRS');
     expect(legend).toHaveTextContent('Radiosonde');
     expect(screen.getByTestId('map-title')).not.toContainElement(legend);
-    expect(map.fitBounds).toHaveBeenLastCalledWith([...path, [42, 25], [40.6, 22.9]], expect.any(Object));
+    expect(map.fitBounds).not.toHaveBeenCalled();
+    expect(map.setView).toHaveBeenLastCalledWith([41, 24], 8, {animate: false});
     fireEvent.click(screen.getByRole('button', {name: 'Show transmitter tracks'}));
     expect(screen.queryByTestId('track')).not.toBeInTheDocument();
     expect(screen.getAllByTestId('position')).toHaveLength(2);
@@ -401,7 +457,7 @@ it('matches Earth view gestures, updates live handlers without resetting the vie
     expect(map.scrollWheelZoom.disable).toHaveBeenCalledOnce();
 });
 
-it('scrubs sonde symbols and historical flight phases while keeping the full path and viewport fixed', () => {
+it('scrubs sonde symbols and historical flight phases while following the marker and keeping its full path', () => {
     const store = configureStore({reducer: () => ({location: {location: null}})});
     const points = [
         {id: 'first', file_id: 'decoded:first.bin', transmitter_id: 'radiosonde:S', kind: 'radiosonde', name: 'S',
@@ -434,7 +490,7 @@ it('scrubs sonde symbols and historical flight phases while keeping the full pat
     expect(screen.getByTestId('sonde-marker').dataset.center).not.toBe(ascendingPosition);
     expect(screen.getByTestId('track')).toHaveAttribute('data-positions', track);
     expect(map.fitBounds).not.toHaveBeenCalled();
-    expect(map.setView).not.toHaveBeenCalled();
+    expect(map.setView).toHaveBeenLastCalledWith(JSON.parse(screen.getByTestId('sonde-marker').dataset.center), 8, {animate: false});
     rerender(element('2026-11-01T00:01:45Z'));
     expect(Number(screen.getAllByTestId('visibility-circle')[0].dataset.radius)).toBeLessThan(initialRadius);
     expect(screen.getAllByTestId('visibility-circle').map((circle) => circle.dataset.center))
@@ -461,7 +517,7 @@ it('uses each APRS fix symbol during playback and selects transmitters without p
     const transmitters = [{id: 'aprs:A', details: {telemetry: {position: {symbol_table: '/', symbol_code: '-'}}}}];
     const element = (time) => <Provider store={store}><ThemeProvider theme={createTheme()}>
         <PacketMap positions={points} transmitters={transmitters} playbackTime={Date.parse(time)}
-            onSelectTransmitter={onSelectTransmitter} loading={false} fitRequest={0} />
+            onSelectTransmitter={onSelectTransmitter} loading={false} fitRequest={0} selectedTransmitterId="aprs:A" />
     </ThemeProvider></Provider>;
     const {rerender} = render(element('2026-11-01T00:00:30Z'));
     const marker = screen.getByTestId('aprs-marker');
@@ -514,7 +570,7 @@ it('uses the object pin for APRS objects without a recognized symbol and keeps s
     expect(map.fitBounds).toHaveBeenLastCalledWith([[40, 23]], expect.objectContaining({paddingTopLeft: [42, 72]}));
 });
 
-it('reuses the weather balloon and parachute for APRS balloons with room above the fitted track', () => {
+it('reuses the weather balloon and parachute for APRS balloons and follows their displayed position', () => {
     const store = configureStore({reducer: () => ({location: {location: null}})});
     const points = [100, 10000, 100].map((altitude, index) => ({
         id: String(index), file_id: `decoded:${index}.bin`, transmitter_id: 'aprs:B', kind: 'aprs', name: 'B',
@@ -529,7 +585,8 @@ it('reuses the weather balloon and parachute for APRS balloons with room above t
     expect(screen.getByTestId('sonde-marker').dataset.iconHtml).toContain('data-flight-phase="ascending"');
     expect(screen.getByTestId('sonde-marker').dataset.iconHtml).toContain('balloon.png');
     expect(screen.getByTestId('sonde-marker')).toBeEmptyDOMElement();
-    expect(map.fitBounds).toHaveBeenLastCalledWith(expect.any(Array), expect.objectContaining({paddingTopLeft: [42, 124]}));
+    expect(map.fitBounds).not.toHaveBeenCalled();
+    expect(map.setView).toHaveBeenLastCalledWith(JSON.parse(screen.getByTestId('sonde-marker').dataset.center), 8, {animate: false});
     expect(screen.queryByTestId('visibility-circle')).not.toBeInTheDocument();
     rerender(element('2026-11-01T00:01:30Z'));
     expect(screen.getByTestId('sonde-marker').dataset.iconHtml).toContain('data-flight-phase="descending"');
@@ -562,7 +619,7 @@ it('remembers hidden and enabled transmitter columns when fields disappear and t
     // Mounting both native column panels can exceed the default five-second DOM test budget.
 }, 10000);
 
-it('selects table rows and fits their whole paths, then restores all bounds with Fit all', () => {
+it('selects table rows and centers their markers, then restores all bounds with Fit all', () => {
     localStorage.setItem(mapViewStoreName, JSON.stringify({center: [10, 10], zoom: 4}));
     const store = configureStore({reducer: {
         location: () => ({location: {lat: 0, lon: 0}}), packetMap: packetMapReducer,
@@ -586,12 +643,14 @@ it('selects table rows and fits their whole paths, then restores all bounds with
     }
     render(<Provider store={store}><ThemeProvider theme={createTheme()}><Harness /></ThemeProvider></Provider>);
     expect(map.fitBounds).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('track')).not.toBeInTheDocument();
     const aprsRow = screen.getByRole('row', {name: /A APRS/});
     expect(screen.queryByTestId('visibility-circle')).not.toBeInTheDocument();
     fireEvent.click(within(aprsRow).getByRole('button', {name: 'A'}));
     expect(screen.queryByTestId('visibility-circle')).not.toBeInTheDocument();
     expect(aprsRow).toHaveAttribute('aria-selected', 'true');
-    expect(map.fitBounds).toHaveBeenLastCalledWith([[40, 23], [41, 24]], expect.any(Object));
+    expect(map.fitBounds).not.toHaveBeenCalled();
+    expect(map.setView).toHaveBeenLastCalledWith([41, 24], 8, {animate: false});
     expect(screen.getByTestId('track')).toHaveAttribute('data-positions', '[[40,23],[41,24]]');
     expect(screen.getAllByTestId('position')).toHaveLength(2);
 
@@ -600,14 +659,9 @@ it('selects table rows and fits their whole paths, then restores all bounds with
     fireEvent.click(within(sondeRow).getByText('SONDE'));
     expect(sondeRow).toHaveAttribute('aria-selected', 'true');
     expect(aprsRow).toHaveAttribute('aria-selected', 'false');
-    const [sondeBounds, sondeFitOptions] = map.fitBounds.mock.lastCall;
-    expect(sondeBounds[0]).toEqual([42, 25]);
-    expect(sondeBounds).toHaveLength(3);
-    // Fit to half the green circle's 104 km radius for a closer selected view.
-    expect(sondeBounds[1][0]).toBeCloseTo(41.5308, 3);
-    expect(sondeBounds[2][0]).toBeCloseTo(42.4692, 3);
-    expect(sondeFitOptions.paddingTopLeft).toEqual([24, 24]);
-    expect(sondeFitOptions.paddingBottomRight).toEqual([24, 24]);
+    expect(screen.queryByTestId('track')).not.toBeInTheDocument();
+    expect(map.fitBounds).not.toHaveBeenCalled();
+    expect(map.setView).toHaveBeenLastCalledWith([42, 25], 8, {animate: false});
     const circles = screen.getAllByTestId('visibility-circle');
     expect(circles).toHaveLength(2);
     expect(circles.map((circle) => circle.dataset.color)).toEqual(['#2196f3', '#4caf50']);
@@ -627,6 +681,7 @@ it('selects table rows and fits their whole paths, then restores all bounds with
     expect(screen.getByRole('list', {name: 'Radio visibility'})).toHaveTextContent('5° elevation · 104 km');
 
     fireEvent.click(screen.getByRole('button', {name: 'Fit all'}));
+    expect(screen.queryByTestId('track')).not.toBeInTheDocument();
     expect(screen.queryByTestId('visibility-circle')).not.toBeInTheDocument();
     expect(sondeRow).toHaveAttribute('aria-selected', 'false');
     expect(map.fitBounds).toHaveBeenLastCalledWith([[40, 23], [41, 24], [42, 25], [0, 0]], expect.any(Object));

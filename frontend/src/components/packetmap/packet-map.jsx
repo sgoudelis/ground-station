@@ -23,7 +23,7 @@ import {createRadiosondeIcon} from './radiosonde-marker.js';
 import {createAircraftIcon} from './aircraft-marker.js';
 import {createAprsIcon, getAprsSymbol} from './aprs-marker.js';
 import {buildPlaybackTrack, trackPositionAt} from './playback.js';
-import {getCircleBounds, getHorizonRadii} from './horizon.js';
+import {getHorizonRadii} from './horizon.js';
 import VisibilityCircle from './visibility-circle.jsx';
 
 export const POSITION_COLORS = Object.fromEntries(Object.entries(TRANSMITTER_TYPES).map(([kind, value]) => [kind, value.color]));
@@ -50,21 +50,19 @@ function aprsPosition(point, details) {
         ? point : details?.telemetry?.position;
 }
 
-export function MapViewport({bounds, visibilityBounds = [], ready, fitRequest, padding = 42, paddingTop = padding}) {
+export function MapViewport({bounds, ready, fitRequest, preserveViewRequest = 0, padding = 42, paddingTop = padding,
+    selectedTransmitterId = null, selectedPoint}) {
     const map = useMap();
     const [savedView] = useState(readMapView);
     const hasUserView = useRef(Boolean(savedView));
     const programmatic = useRef(false);
     const lastFitRequest = useRef(fitRequest);
-    const fitBounds = useRef(bounds);
+    const lastPreserveViewRequest = useRef(preserveViewRequest);
+    const following = selectedTransmitterId !== null;
+    const targetLatitude = selectedPoint?.latitude;
+    const targetLongitude = selectedPoint?.longitude;
     const fitOptions = useMemo(() => ({paddingTopLeft: [padding, paddingTop], paddingBottomRight: [padding, padding],
         maxZoom: 13, animate: false}), [padding, paddingTop]);
-
-    useEffect(() => {
-        // Use the current circle on selection, explicit fits, and resize without
-        // moving the camera just because playback changes its radius or position.
-        fitBounds.current = visibilityBounds.length ? [...bounds, ...visibilityBounds] : bounds;
-    }, [bounds, visibilityBounds]);
 
     useEffect(() => {
         // Guard map-generated events during restoration and automatic fitting.
@@ -94,11 +92,12 @@ export function MapViewport({bounds, visibilityBounds = [], ready, fitRequest, p
 
     useEffect(() => {
         const observer = new ResizeObserver(() => {
-            const center = map.getCenter();
+            const center = ready && following && isValidMapPosition(targetLatitude, targetLongitude)
+                ? [targetLatitude, targetLongitude] : map.getCenter();
             programmatic.current = true;
             map.invalidateSize({pan: false});
-            if (ready && !hasUserView.current && bounds.length) {
-                map.fitBounds(fitBounds.current, fitOptions);
+            if (!following && ready && !hasUserView.current && bounds.length) {
+                map.fitBounds(bounds, fitOptions);
             } else {
                 // Leaflet otherwise shifts the center when the grid window
                 // shrinks. Preserve the user's view without saving resize events.
@@ -108,27 +107,43 @@ export function MapViewport({bounds, visibilityBounds = [], ready, fitRequest, p
         });
         observer.observe(map.getContainer());
         return () => observer.disconnect();
-    }, [map, bounds, ready, fitOptions]);
+    }, [map, bounds, ready, fitOptions, following, targetLatitude, targetLongitude]);
 
     useEffect(() => {
+        // Presets preserve even an automatically fitted view through loading and
+        // subsequent results. Only an explicit Fit all request releases it.
+        if (lastPreserveViewRequest.current !== preserveViewRequest) hasUserView.current = true;
+        lastPreserveViewRequest.current = preserveViewRequest;
         const explicitFit = lastFitRequest.current !== fitRequest;
         lastFitRequest.current = fitRequest;
         if (explicitFit) {
             hasUserView.current = false;
             writeStored(mapViewStoreName, null);
         }
+        if (following) {
+            // Following owns the center, while the user's current zoom stays intact.
+            // Retain that view after deselection until an explicit Fit all request.
+            hasUserView.current = true;
+            if (ready && isValidMapPosition(targetLatitude, targetLongitude)) {
+                programmatic.current = true;
+                map.setView([targetLatitude, targetLongitude], map.getZoom(), {animate: false});
+                programmatic.current = false;
+            }
+            return;
+        }
         // Keep the fit request active while the new range is loading; fit its
         // results once ready instead of fitting the previous range's bounds.
         if (!ready || hasUserView.current || !bounds.length) return;
         programmatic.current = true;
         map.invalidateSize({pan: false});
-        map.fitBounds(fitBounds.current, fitOptions);
+        map.fitBounds(bounds, fitOptions);
         programmatic.current = false;
-    }, [map, bounds, ready, fitRequest, fitOptions]);
+    }, [map, bounds, ready, fitRequest, preserveViewRequest, fitOptions, following, selectedTransmitterId, targetLatitude, targetLongitude]);
     return null;
 }
 
-export default function PacketMap({positions, transmitters, hasPositions = positions.length > 0, loading, gridEditable, fitRequest,
+export default function PacketMap({positions, transmitters, hasPositions = positions.length > 0, loading, gridEditable, fitRequest = 0,
+    preserveViewRequest = 0,
     selectedTransmitterId = null, onSelectTransmitter, hiddenTypes = [], onHiddenTypesChange, onFitAll, playbackTime}) {
     const {t} = useTranslation('navigation');
     const receiver = useSelector((state) => state.location?.location);
@@ -162,8 +177,7 @@ export default function PacketMap({positions, transmitters, hasPositions = posit
         return [...groups.entries()].map(([id, points]) => ({id, ...buildPlaybackTrack(points)}))
             .filter((track) => track.points.length);
     }, [positions]);
-    // Geometry and fitting stay fixed while the cursor moves. Only the symbols
-    // and their historical altitude/flight phase are updated during scrubbing.
+    // Keep track geometry fixed while playback moves the symbols and followed target.
     const playback = useMemo(() => new Map(tracks.map((track) => {
         const details = transmitterDetails.get(track.id);
         const current = trackPositionAt(track, Number.isFinite(playbackTime) ? playbackTime : Date.now(), details?.telemetry?.vel_v);
@@ -182,9 +196,6 @@ export default function PacketMap({positions, transmitters, hasPositions = posit
     // interpolation. Unknown altitude must not produce a misleading footprint.
     const selectedPoint = playback.get(selectedTransmitterId)?.point;
     const horizonRadii = selectedPoint?.kind === 'radiosonde' ? getHorizonRadii(selectedPoint.altitude) : null;
-    // Fit inside the green footprint for a closer view without changing either ring.
-    const visibilityBounds = horizonRadii
-        ? getCircleBounds([selectedPoint.latitude, selectedPoint.longitude], horizonRadii.fiveDegrees / 2) : [];
     const visibilityCircles = horizonRadii ? [
         {id: 'horizon', radius: horizonRadii.horizon, color: '#2196f3',
             label: t('packet_map.radio_horizon', {defaultValue: 'Radio horizon (0°)'})},
@@ -199,23 +210,15 @@ export default function PacketMap({positions, transmitters, hasPositions = posit
     }) : [];
     const bounds = useMemo(() => {
         // Include the interpolated curve so fitting never clips a rounded bend.
-        const fittedTracks = selectedTransmitterId === null ? tracks
-            : tracks.filter((track) => track.id === selectedTransmitterId);
-        const coordinates = fittedTracks.flatMap((track) => track.path);
-        if (selectedTransmitterId === null && hasReceiver) coordinates.push([receiverLatitude, receiverLongitude]);
+        const coordinates = tracks.flatMap((track) => track.path);
+        if (hasReceiver) coordinates.push([receiverLatitude, receiverLongitude]);
         return coordinates;
-    }, [tracks, selectedTransmitterId, hasReceiver, receiverLatitude, receiverLongitude]);
-    const fittedBalloons = tracks.filter((track) => (track.points[0].kind === 'radiosonde'
-        || getAprsSymbol(aprsPosition(track.points.at(-1), transmitterDetails.get(track.id)))?.balloon)
-        && (selectedTransmitterId === null || track.id === selectedTransmitterId));
-    // The selected sonde's inner footprint supplies space around its symbol.
-    // APRS balloons have no circle, so reserve room for their raised icon.
-    // Keep this tied to selection so playback alone cannot change the viewport.
-    const padding = selectedTransmitterId !== null && fittedBalloons.some((track) => track.points[0].kind === 'radiosonde') ? 24 : 42;
-    const hasAprsPins = tracks.some((track) => track.points[0].kind === 'aprs'
-        && (selectedTransmitterId === null || track.id === selectedTransmitterId));
+    }, [tracks, hasReceiver, receiverLatitude, receiverLongitude]);
+    const hasBalloons = tracks.some((track) => track.points[0].kind === 'radiosonde'
+        || getAprsSymbol(aprsPosition(track.points.at(-1), transmitterDetails.get(track.id)))?.balloon);
+    const hasAprsPins = tracks.some((track) => track.points[0].kind === 'aprs');
     // Pins extend upward from their coordinates; leave space for the callsign above them.
-    const paddingTop = padding === 24 ? padding : fittedBalloons.length ? 124 : hasAprsPins ? 72 : padding;
+    const paddingTop = hasBalloons ? 124 : hasAprsPins ? 72 : 42;
 
     // MapContainer freezes its initial className; keep pane styling on a live
     // wrapper so layer-order changes also apply to maps that are already open.
@@ -256,8 +259,9 @@ export default function PacketMap({positions, transmitters, hasPositions = posit
                 zoomSnap={0.25} zoomDelta={0.25} bounceAtZoomLimits={false}
                 style={{height: '100%', width: '100%'}}>
                 <MapInteractions enableMapDragging={settings.enableMapDragging} enableMapZooming={settings.enableMapZooming} />
-                <MapViewport bounds={bounds} ready={!loading} fitRequest={`${fitRequest}:${selectedTransmitterId}:${localFit}`}
-                    visibilityBounds={visibilityBounds} padding={padding} paddingTop={paddingTop} />
+                <MapViewport bounds={bounds} ready={!loading} fitRequest={`${fitRequest}:${localFit}`}
+                    preserveViewRequest={preserveViewRequest} selectedTransmitterId={selectedTransmitterId}
+                    selectedPoint={selectedPoint} paddingTop={paddingTop} />
                 <TileLayer key={baseLayerId} url={layer.url} attribution={layer.attribution} zIndex={0} />
                 {/* Transparent references share the tile pane, below transmitter paths and markers. */}
                 {tileLayerId === 'hybrid' && hybridReferenceLayers.map(({id, ...reference}) =>
@@ -279,7 +283,7 @@ export default function PacketMap({positions, transmitters, hasPositions = posit
                     const cursorColor = current?.stale && (current.point.kind === 'radiosonde' || current.point.kind === 'aprs')
                         ? '#9e9e9e' : color;
                     return <React.Fragment key={id}>
-                        {settings.showTracks && path.length > 1 && <Polyline positions={path} smoothFactor={0.5}
+                        {settings.showTracks && id === selectedTransmitterId && path.length > 1 && <Polyline positions={path} smoothFactor={0.5}
                             pathOptions={{color, weight: 2, opacity: latest.kind === 'adsb' ? 0.3 : 1, lineCap: 'round', lineJoin: 'round'}} />}
                         {endpoints.filter((point) => point !== current?.point).map((point) => <CircleMarker key={point.id}
                             center={[point.latitude, point.longitude]} radius={3.42}

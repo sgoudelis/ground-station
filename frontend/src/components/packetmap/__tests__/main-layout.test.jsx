@@ -152,7 +152,7 @@ it('advances the live clock without incoming packets and stops the timer in hist
     }
 });
 
-it.each(['LIVE', '24h', '7d', 'All'])('stores %s in Redux and restores it when revisiting the map', (preset) => {
+it.each(['LIVE', '12h', '24h', '7d', 'All'])('stores %s in Redux and restores it when revisiting the map', (preset) => {
     usePacketPositions.mockImplementation(() => ({...fixture, available_range: historyRange, loading: false}));
     const store = createStore(historyRange);
     const element = <Provider store={store}><ThemeProvider theme={createTheme()}><PacketMapLayout /></ThemeProvider></Provider>;
@@ -221,7 +221,7 @@ it('queries applied dates once, scrubs locally, and resets playback for a new qu
     expect(slider).toHaveAttribute('max', String(Date.parse('2026-10-02T00:00:00Z')));
 });
 
-it.each([['24h', 24], ['7d', 168], ['All', null]])('%s clears transmitter selection and requests a fit for the new results', async (button, hours) => {
+it.each([['LIVE', 'live'], ['12h', 12], ['24h', 24], ['7d', 168], ['All', null]])('%s clears transmitter selection and preserves the map view through new results', async (button, hours) => {
     const {default: realUsePacketPositions} = await vi.importActual('../use-packet-positions.js');
     usePacketPositions.mockImplementation(realUsePacketPositions);
     const requests = [];
@@ -229,28 +229,29 @@ it.each([['24h', 24], ['7d', 168], ['All', null]])('%s clears transmitter select
         emit: vi.fn((_event, request, reply) => requests.push({request, reply}))};
     fixture.socket = socket;
     const availableRange = {start: '2026-10-01T00:00:00Z', end: '2026-11-01T12:00:00Z'};
-    const store = createStore();
+    const store = createStore(historyRange);
     render(<Provider store={store}><ThemeProvider theme={createTheme()}><PacketMapLayout /></ThemeProvider></Provider>);
     const reply = {success: true, data: {positions: fixture.positions, transmitters: fixture.transmitters, available_range: availableRange}};
     await act(async () => requests[0].reply(null, reply));
     act(() => tableRender.mock.lastCall[0].onSelectTransmitter('aprs:A'));
-    const previousFit = mapRender.mock.lastCall[0].fitRequest;
+    const previousPreserve = mapRender.mock.lastCall[0].preserveViewRequest;
     fireEvent.click(screen.getByRole('button', {name: button}));
     expect(requests).toHaveLength(2);
     const range = requests[1].request.data;
-    if (hours === null) expect(range).toEqual(availableRange);
+    if (hours === 'live') expect(range).toEqual({start: historyRange.start, end: null});
+    else if (hours === null) expect(range).toEqual(availableRange);
     else expect(Date.parse(range.end) - Date.parse(range.start)).toBe(hours * 3600000);
     expect(mapRender.mock.lastCall[0]).toMatchObject({
-        selectedTransmitterId: null, fitRequest: previousFit + 1, loading: true, positions: [],
-        playbackTime: Date.parse(range.end),
+        selectedTransmitterId: null, preserveViewRequest: previousPreserve + 1, loading: true, positions: [],
+        playbackTime: hours === 'live' ? expect.any(Number) : Date.parse(range.end),
     });
     const positions = [{...fixture.positions[1], id: 'new-range-position'}];
     await act(async () => requests[1].reply(null, {...reply, data: {...reply.data, positions}}));
-    expect(mapRender.mock.lastCall[0]).toMatchObject({positions, loading: false, fitRequest: previousFit + 1});
-    // Repeated presets must refit even with no selection and unchanged dates.
+    expect(mapRender.mock.lastCall[0]).toMatchObject({positions, loading: false, preserveViewRequest: previousPreserve + 1});
+    // Repeated presets preserve the camera even with no selection and unchanged dates.
     fireEvent.click(screen.getByRole('button', {name: button}));
     expect(requests).toHaveLength(3);
-    expect(mapRender.mock.lastCall[0].fitRequest).toBe(previousFit + 2);
+    expect(mapRender.mock.lastCall[0].preserveViewRequest).toBe(previousPreserve + 2);
     await act(async () => requests[2].reply(null, reply));
 });
 
@@ -275,7 +276,7 @@ it.each(['24h', '7d', 'All'])('follows new radiosondes in LIVE and returns to hi
         expect(screen.getByLabelText('To')).toBeDisabled();
         await act(async () => requests[1].reply(null, {success: true, data: snapshot}));
         act(() => tableRender.mock.lastCall[0].onSelectTransmitter('radiosonde:S'));
-        const liveFit = mapRender.mock.lastCall[0].fitRequest;
+        const preservedView = mapRender.mock.lastCall[0].preserveViewRequest;
 
         vi.setSystemTime(new Date('2026-11-01T12:05:00Z'));
         act(() => {handlers.get('library.changed')(); vi.advanceTimersByTime(750);});
@@ -291,7 +292,7 @@ it.each(['24h', '7d', 'All'])('follows new radiosondes in LIVE and returns to hi
             {...fixture.transmitters[1], id: 'radiosonde:NEW', name: 'NEW'},
         ];
         await act(async () => requests[2].reply(null, {success: true, data: {...snapshot, positions, transmitters}}));
-        expect(mapRender.mock.lastCall[0]).toMatchObject({positions, selectedTransmitterId: 'radiosonde:S', fitRequest: liveFit});
+        expect(mapRender.mock.lastCall[0]).toMatchObject({positions, selectedTransmitterId: 'radiosonde:S', preserveViewRequest: preservedView});
         expect(tableRender.mock.lastCall[0].rows).toHaveLength(3);
         expect(mapRender.mock.lastCall[0].playbackTime).toBeGreaterThanOrEqual(Date.parse(positions[3].captured_at));
         expect(screen.getByRole('slider', {name: 'Live time'})).toHaveValue(String(mapRender.mock.lastCall[0].playbackTime));

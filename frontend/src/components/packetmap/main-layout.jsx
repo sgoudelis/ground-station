@@ -58,13 +58,13 @@ export default function PacketMapLayout() {
     const currentPlaybackTime = isLive ? liveTime : playbackTime;
     const rows = useMemo(() => transmitterRows(positions, transmitters), [positions, transmitters]);
     const [selectedTransmitterId, setSelectedTransmitterId] = useState(null);
-    const [fitRequest, setFitRequest] = useState(0);
+    const [preserveViewRequest, setPreserveViewRequest] = useState(0);
     const applyPresetRange = (nextRange) => {
         applyRange(nextRange);
         setSelectedTransmitterId(null);
-        // Explicit requests override a saved or manually panned view, even when
-        // no transmitter is selected or the same preset is clicked again.
-        setFitRequest((value) => value + 1);
+        // Freeze the current camera before the replacement results arrive,
+        // including repeated presets and views that have never been panned.
+        setPreserveViewRequest((value) => value + 1);
     };
     const selectedTransmitter = rows.find((row) => row.id === selectedTransmitterId) || null;
     const [hiddenTypes, setHiddenTypes] = useState(() => {
@@ -79,7 +79,7 @@ export default function PacketMapLayout() {
     const selectTransmitter = (id) => {
         setSelectedTransmitterId(id);
         const kind = rows.find((row) => row.id === id)?.kind;
-        // Selecting a hidden transmitter should reveal the path being fitted.
+        // Selecting a hidden transmitter should reveal its marker and track.
         if (hiddenTypes.includes(kind)) changeHiddenTypes(hiddenTypes.filter((value) => value !== kind));
     };
     const [refreshError, setRefreshError] = useState('');
@@ -120,7 +120,7 @@ export default function PacketMapLayout() {
                 <StyledIslandParentNoScrollbar key="packet-map">
                     <PacketMap positions={visiblePositions} transmitters={rows} playbackTime={currentPlaybackTime}
                         hasPositions={positions.length > 0} loading={loading} gridEditable={gridEditable}
-                        fitRequest={fitRequest} selectedTransmitterId={selectedTransmitterId} onSelectTransmitter={selectTransmitter}
+                        preserveViewRequest={preserveViewRequest} selectedTransmitterId={selectedTransmitterId} onSelectTransmitter={selectTransmitter}
                         hiddenTypes={hiddenTypes} onHiddenTypesChange={changeHiddenTypes} onFitAll={() => setSelectedTransmitterId(null)} />
                 </StyledIslandParentNoScrollbar>
                 <StyledIslandParentNoScrollbar key="transmitter-info">
