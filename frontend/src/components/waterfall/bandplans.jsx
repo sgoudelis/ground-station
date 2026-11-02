@@ -104,6 +104,49 @@ export const frequencyBands = [
         color: 'rgba(156, 39, 176, 0.3)',
         textColor: '#ffffff'
     },
+    // Meshtastic regional tuning ranges: https://meshtastic.org/docs/configuration/radio/lora/
+    {
+        startFrequency: 433000000,
+        endFrequency: 434000000,
+        name: 'Meshtastic EU433',
+        color: 'rgba(0, 188, 212, 0.4)',
+        textColor: '#ffffff'
+    },
+    {
+        startFrequency: 869400000,
+        endFrequency: 869650000,
+        name: 'Meshtastic EU868',
+        color: 'rgba(0, 188, 212, 0.4)',
+        textColor: '#ffffff'
+    },
+    {
+        startFrequency: 902000000,
+        endFrequency: 928000000,
+        name: 'Meshtastic US/Canada',
+        color: 'rgba(255, 152, 0, 0.4)',
+        textColor: '#ffffff'
+    },
+    {
+        startFrequency: 915000000,
+        endFrequency: 928000000,
+        name: 'Meshtastic Australia/NZ',
+        color: 'rgba(255, 193, 7, 0.4)',
+        textColor: '#000000'
+    },
+    {
+        startFrequency: 865000000,
+        endFrequency: 867000000,
+        name: 'Meshtastic India',
+        color: 'rgba(0, 200, 83, 0.4)',
+        textColor: '#ffffff'
+    },
+    {
+        startFrequency: 920500000,
+        endFrequency: 923500000,
+        name: 'Meshtastic Japan',
+        color: 'rgba(33, 150, 243, 0.4)',
+        textColor: '#ffffff'
+    },
     {
         startFrequency: 225000000,
         endFrequency: 350000000,
