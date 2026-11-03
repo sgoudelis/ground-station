@@ -2,6 +2,7 @@
 
 import json
 import queue
+from pathlib import Path
 
 import numpy as np
 
@@ -191,13 +192,15 @@ def test_aprs_decoder_writes_common_packet_and_metadata_outputs(tmp_path):
     )
 
     output_message = data_queue.get_nowait()
-    binary_path = tmp_path / output_message["output"]["filename"]
-    metadata_path = tmp_path / output_message["output"]["metadata_filename"]
+    binary_path = Path(output_message["output"]["filepath"])
+    metadata_path = Path(output_message["output"]["metadata_filepath"])
     metadata = json.loads(metadata_path.read_text())
 
     assert output_message["type"] == "decoder-output"
     assert output_message["decoder_type"] == "aprs"
     assert binary_path.read_bytes() == payload
+    assert binary_path.parent.name.endswith(".gsaprs")
+    assert binary_path.parent.parent.name == "aprs_N0CALL-0"
     assert metadata["decoder"]["type"] == "aprs"
     assert metadata["decoder_config"] == {
         "source": "test",

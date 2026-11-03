@@ -24,10 +24,12 @@ import queue
 import time
 from _thread import LockType
 from multiprocessing.synchronize import Lock as ProcessLock
+from pathlib import Path
 from typing import Any, Dict, Optional
 
 import numpy as np
 
+from common.aprsstorage import AprsStorage
 from constants import get_modulation_display, payload_protocol_from_framing
 from telemetry.context import ParseContext
 from telemetry.result import failure_result
@@ -321,7 +323,8 @@ class BaseDecoder:
         return self.output_dir
 
     def _finalize_packet_storage(self, filepath: str, metadata: dict) -> str:
-        return filepath
+        # APRS is a payload type: other AX.25 demodulators can receive it too.
+        return str(AprsStorage(self.output_dir).group(Path(filepath), metadata))
 
     def _get_parse_context(self) -> ParseContext:
         """Allow external codecs to preserve state needed to interpret a frame."""

@@ -3,7 +3,8 @@
   "bundle_types": {
     "adsb": "Aircraft · ADS-B",
     "radiosonde": "Radiosonde",
-    "meshtastic": "Meshtastic node"
+    "meshtastic": "Meshtastic node",
+    "aprs": "APRS station"
   },
   "telemetry_position_map": {
     "receiver": "Receiver",
@@ -238,5 +239,38 @@
       "transcription": "Transcriptions"
     },
     "retry": "Retry"
+  },
+  "aprs_folder": {
+    "title": "APRS · {{name}}",
+    "packet_count": "{{count}} packets",
+    "run_count": "{{count}} runs",
+    "close_folder": "Close APRS folder",
+    "details": "Station details",
+    "source_callsign": "Callsign and SSID",
+    "first_received": "First received",
+    "last_received": "Last received",
+    "comment": "Latest comment",
+    "position_received": "Position received: {{date}}",
+    "position": "Latest position",
+    "packets": "APRS packets",
+    "run": "Capture run",
+    "window": "Each capture run covers 12 hours from its first received packet.",
+    "all_runs": "All runs",
+    "loading": "Loading packets…",
+    "received": "Received",
+    "packet_type": "Packet type",
+    "status": "Status",
+    "file": "File",
+    "actions": "Actions",
+    "view": "View",
+    "download_packet": "Download {{filename}}",
+    "empty": "No packets in this run.",
+    "delete": "Delete station captures",
+    "download": "Download all captures",
+    "close": "Close",
+    "latest_status": "Latest status",
+    "latest_message": "Latest message",
+    "latest_weather": "Latest weather",
+    "latest_telemetry": "Latest telemetry"
   }
 }

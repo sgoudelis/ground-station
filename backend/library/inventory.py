@@ -34,6 +34,7 @@ from urllib.parse import quote
 from common.artifactdates import artifact_dates, parse_artifact_time, transcription_end
 from common.events import public_events
 from library.adsb import AdsbFiles
+from library.aprsfiles import scan_aprs
 from library.meshfiles import scan_mesh
 from library.positions import packet_positions
 from library.search import match_search, normalize_search, search_text
@@ -508,7 +509,7 @@ class LibraryInventory:
         if not internal:
             return None
         path = Path(str(internal["_path"]))
-        if internal.get("folder_kind") in {"radiosonde", "meshtastic"}:
+        if internal.get("folder_kind") in {"radiosonde", "meshtastic", "aprs"}:
             # The index holds compact packet rows; only send the requested page.
             packets = internal.get("_packets", [])
             if run is not None:
@@ -971,6 +972,11 @@ class LibraryInventory:
             return
         for folder in root.iterdir():
             if folder.is_symlink() or not folder.is_dir():
+                continue
+            if folder.name.startswith("aprs_"):
+                item = scan_aprs(folder)
+                if item:
+                    self._add(items, item, folder)
                 continue
             if folder.name.startswith("radiosonde_"):
                 self._scan_radiosonde_folder(items, folder)

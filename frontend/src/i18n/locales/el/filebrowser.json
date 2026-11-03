@@ -146,5 +146,41 @@
       "transcription": "Απομαγνητοφωνήσεις"
     },
     "retry": "Δοκιμή ξανά"
+  },
+  "bundle_types": {
+    "aprs": "Σταθμός APRS"
+  },
+  "aprs_folder": {
+    "title": "APRS · {{name}}",
+    "packet_count": "{{count}} πακέτα",
+    "run_count": "{{count}} λήψεις",
+    "close_folder": "Κλείσιμο φακέλου APRS",
+    "details": "Στοιχεία σταθμού",
+    "source_callsign": "Διακριτικό και SSID",
+    "first_received": "Πρώτη λήψη",
+    "last_received": "Τελευταία λήψη",
+    "comment": "Τελευταίο σχόλιο",
+    "position_received": "Λήψη θέσης: {{date}}",
+    "position": "Τελευταία θέση",
+    "latest_status": "Τελευταία κατάσταση",
+    "latest_message": "Τελευταίο μήνυμα",
+    "latest_weather": "Τελευταία μετεωρολογικά δεδομένα",
+    "latest_telemetry": "Τελευταία τηλεμετρία",
+    "packets": "Πακέτα APRS",
+    "run": "Περίοδος λήψης",
+    "window": "Κάθε περίοδος καλύπτει 12 ώρες από το πρώτο πακέτο.",
+    "all_runs": "Όλες οι λήψεις",
+    "loading": "Φόρτωση πακέτων…",
+    "received": "Λήψη",
+    "packet_type": "Τύπος πακέτου",
+    "status": "Κατάσταση",
+    "file": "Αρχείο",
+    "actions": "Ενέργειες",
+    "view": "Προβολή",
+    "download_packet": "Λήψη {{filename}}",
+    "empty": "Δεν υπάρχουν πακέτα σε αυτή την περίοδο.",
+    "delete": "Διαγραφή λήψεων σταθμού",
+    "download": "Λήψη όλων των καταγραφών",
+    "close": "Κλείσιμο"
   }
 }

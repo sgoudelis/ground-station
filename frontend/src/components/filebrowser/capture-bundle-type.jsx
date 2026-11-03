@@ -4,11 +4,13 @@ import React from 'react';
 import {Chip} from '@mui/material';
 import FlightIcon from '@mui/icons-material/Flight';
 import FolderIcon from '@mui/icons-material/Folder';
+import RadioIcon from '@mui/icons-material/Radio';
 import {useTranslation} from 'react-i18next';
 import {MeshtasticIcon, WeatherBalloonIcon} from '../common/custom-icons.jsx';
 
 // Cards and table rows share one identity, including thumbnail overlays.
 const BUNDLE_TYPES = {
+    aprs: {label: 'APRS station', color: 'primary', Icon: RadioIcon},
     adsb: {label: 'Aircraft · ADS-B', color: 'info', Icon: FlightIcon},
     radiosonde: {label: 'Radiosonde', color: 'warning', Icon: WeatherBalloonIcon},
     meshtastic: {label: 'Meshtastic node', color: 'success', Icon: MeshtasticIcon},

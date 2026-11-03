@@ -237,7 +237,7 @@ function FileTableRow({ item, sortBy, selectionMode, isSelected, onToggleSelecti
 
         // Decoded folder chips
         if (item.type === 'decoded_folder') {
-            if (item.folder_kind === 'meshtastic') {
+            if (['meshtastic', 'aprs'].includes(item.folder_kind)) {
                 chips.push(<Chip key="mesh" label={`${item.packet_count || 0} packets · ${item.run_count || 0} runs`} size="small" variant="outlined" />);
             }
             if (item.folder_kind === 'adsb') {
