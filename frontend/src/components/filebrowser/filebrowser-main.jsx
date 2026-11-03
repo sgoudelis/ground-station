@@ -275,6 +275,7 @@ export default function FileBrowserMain() {
     };
 
     const formatRelativeTime = (isoDate) => {
+        if (!isoDate) return '—';
         const date = new Date(isoDate);
         const now = new Date();
         const diffMs = now - date;
@@ -1002,6 +1003,7 @@ export default function FileBrowserMain() {
                             onChange={handleSortChange}
                             startAdornment={<SortIcon sx={{ mr: 1, color: 'action.active' }} />}
                         >
+                            <MenuItem value="latest_activity">{t('sort.latest_activity', 'Last Activity')}</MenuItem>
                             <MenuItem value="captured_at">{t('sort.captured_at', 'Date Captured')}</MenuItem>
                             <MenuItem value="completed_at">{t('sort.completed_at', 'Date Completed')}</MenuItem>
                             <MenuItem value="modified">{t('sort.modified', 'Date Modified')}</MenuItem>
@@ -1454,7 +1456,7 @@ export default function FileBrowserMain() {
                                                         fontSize: '0.75rem',
                                                     }}
                                                 >
-                                                    {formatRelativeTime(getFileBrowserDate(item, 'captured_at'))}
+                                                    {formatRelativeTime(getFileBrowserDate(item, sortBy))}
                                                 </Typography>
                                             </Box>
                                         </Box>
@@ -1736,7 +1738,7 @@ export default function FileBrowserMain() {
                                                         fontSize: '0.75rem',
                                                     }}
                                                 >
-                                                    {formatRelativeTime(getFileBrowserDate(item, 'captured_at'))}
+                                                    {formatRelativeTime(getFileBrowserDate(item, sortBy))}
                                                 </Typography>
                                             </Box>
                                         </Box>

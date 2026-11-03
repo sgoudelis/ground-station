@@ -123,6 +123,58 @@ def test_inventory_returns_compact_server_side_pages(inventory):
     assert len(last_page["items"]) == 2
 
 
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "relative,manifest,metadata",
+    [
+        ("decoded/meshtastic_deadbeef", None, None),
+        ("decoded/aprs_N0CALL-7", None, None),
+        ("decoded/radiosonde_RS41_TEST", None, None),
+        ("observations/old.gsobs", "manifest.json", {"created_at": "1970-01-01T00:01:40Z"}),
+        ("decoded/old.satdump_lrpt", "dataset.json", {"timestamp": 100}),
+    ],
+)
+async def test_last_activity_moves_growing_folders_across_pages(
+    tmp_path, monkeypatch, relative, manifest, metadata
+):
+    folder = tmp_path / "data" / relative
+    _write(folder / "run" / "first.bin", b"packet")
+    _write(folder / "run" / "first.json", json.dumps({"packet": {"timestamp": 100}}))
+    if manifest:
+        _write(folder / manifest, json.dumps(metadata))
+    for path in folder.rglob("*"):
+        if path.is_file():
+            os.utime(path, (100, 100))
+    audio = tmp_path / "data" / "audio"
+    _write(audio / "voice.wav", b"audio")
+    _write(audio / "voice.json", json.dumps({"start_time": "1970-01-01T00:02:30Z"}))
+    for path in audio.iterdir():
+        os.utime(path, (150, 150))
+    catalogue = LibraryInventory(tmp_path)
+    first_page = catalogue.query(page_size=1)
+    assert first_page["items"][0]["id"] == "audio:voice.wav"
+    before = catalogue.query(page=2, page_size=1)["items"][0]
+
+    # A new member makes an existing folder active without changing its first capture.
+    _write(folder / "run" / "next.bin", b"packet")
+    _write(folder / "run" / "next.json", json.dumps({"packet": {"timestamp": 200}}))
+    for name in ("next.bin", "next.json"):
+        os.utime(folder / "run" / name, (200, 200))
+    catalogue.rebuild()
+    after = catalogue.query(page_size=1)["items"][0]
+    assert after["id"] == before["id"]
+    assert after["captured_at"] == before["captured_at"]
+    assert after["latest_activity"] > before["latest_activity"]
+    monkeypatch.setattr(library, "get_inventory", lambda: catalogue)
+    response = await library.query_library(None, {}, logging.getLogger(__name__), "sid")
+    assert response["data"]["items"][0]["id"] == before["id"]
+    assert (
+        catalogue.query(sort_by="latest_activity", sort_order="asc")["items"][0]["id"]
+        == "audio:voice.wav"
+    )
+    assert catalogue.query(sort_by="captured_at")["items"][0]["id"] == "audio:voice.wav"
+
+
 def test_inventory_filters_without_rescanning_filesystem(inventory):
     page = inventory.query(
         filters={

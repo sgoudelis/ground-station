@@ -168,9 +168,9 @@ def test_copied_library_keeps_capture_order_and_pagination(tmp_path):
         "recording:iq",
         "observation:old.gsobs",
     ]
-    assert [item["id"] for item in original.query()["items"]] == expected
-    assert [item["id"] for item in copied.query()["items"]] == expected
-    pages = [copied.query(page=page, page_size=2) for page in range(1, 5)]
+    assert [item["id"] for item in original.query(sort_by="captured_at")["items"]] == expected
+    assert [item["id"] for item in copied.query(sort_by="captured_at")["items"]] == expected
+    pages = [copied.query(sort_by="captured_at", page=page, page_size=2) for page in range(1, 5)]
     assert [item["id"] for page in pages for item in page["items"]] == expected
     for item_id in expected:
         before = original.get(item_id)

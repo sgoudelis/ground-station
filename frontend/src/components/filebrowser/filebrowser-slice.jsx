@@ -19,6 +19,8 @@
 
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 
+export const fileBrowserPersistVersion = 1;
+
 const callLibrary = (socket, cmd, data) => new Promise((resolve, reject) => {
     if (!socket?.connected) {
         reject(new Error('Not connected to server'));
@@ -37,7 +39,7 @@ const callLibrary = (socket, cmd, data) => new Promise((resolve, reject) => {
 // response bounded even when the storage library contains many artifacts.
 export const fetchFiles = createAsyncThunk(
     'filebrowser/fetchFiles',
-    async ({ socket, filters, search = '', sortBy = 'captured_at', sortOrder = 'desc', page = 1, pageSize = 25, reconcile = false }, { rejectWithValue }) => {
+    async ({ socket, filters, search = '', sortBy = 'latest_activity', sortOrder = 'desc', page = 1, pageSize = 25, reconcile = false }, { rejectWithValue }) => {
         try {
             // An explicit refresh must discover files copied outside the app;
             // ordinary paging and sorting can keep using the cached inventory.
@@ -344,7 +346,7 @@ const initialState = {
     total: 0,
     // Retained while navigating within the app, without hiding files after a reload.
     search: '',
-    sortBy: 'captured_at',
+    sortBy: 'latest_activity',
     sortOrder: 'desc',
     filters: {
         showRecordings: true,
@@ -384,12 +386,15 @@ const initialState = {
 export function reconcileFileBrowserPersistedState(inboundState, currentState) {
     if (!inboundState) return currentState;
     const savedFilters = inboundState.filters || {};
+    // Adopt the new default once. An explicit Date Captured choice made after
+    // this upgrade must still survive later reloads.
+    const upgradeSort = (inboundState._persist?.version ?? -1) < fileBrowserPersistVersion
+        && ['created', 'captured_at'].includes(inboundState.sortBy);
     return {
         ...currentState,
         ...inboundState,
-        // Move the former default to portable capture chronology on upgrade.
-        sortBy: inboundState.sortBy === 'created' ? 'captured_at'
-            : inboundState.sortBy || currentState.sortBy,
+        sortBy: upgradeSort ? currentState.sortBy : inboundState.sortBy || currentState.sortBy,
+        sortOrder: upgradeSort ? 'desc' : inboundState.sortOrder || currentState.sortOrder,
         filters: {
             ...currentState.filters,
             ...savedFilters,

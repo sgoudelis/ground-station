@@ -356,7 +356,7 @@ class LibraryInventory:
     def query(
         self,
         filters: Optional[Dict[str, bool]] = None,
-        sort_by: str = "captured_at",
+        sort_by: str = "latest_activity",
         sort_order: str = "desc",
         page: int = 1,
         page_size: int = 25,
@@ -388,11 +388,12 @@ class LibraryInventory:
             "size",
             "created",
             "modified",
+            "latest_activity",
             "captured_at",
             "completed_at",
             "sample_rate",
         }
-        sort_by = sort_by if sort_by in allowed_sorts else "captured_at"
+        sort_by = sort_by if sort_by in allowed_sorts else "latest_activity"
         reverse = sort_order != "asc"
 
         def key(item: Dict[str, Any]) -> Any:
@@ -402,11 +403,18 @@ class LibraryInventory:
                 return item.get("data_size") or item.get("size") or 0
             if sort_by == "sample_rate":
                 return item.get("metadata", {}).get("sample_rate") or item.get("sample_rate") or 0
-            parsed = parse_artifact_time(item.get(sort_by))
-            # Unknown completion dates stay at the end in either direction.
+            date = item.get(sort_by)
+            if sort_by == "latest_activity":
+                # Legacy summaries may lack activity metadata. Match the UI's
+                # fallback so sorting, day groups and displayed dates agree.
+                date = (
+                    date or item.get("modified") or item.get("captured_at") or item.get("created")
+                )
+            parsed = parse_artifact_time(date)
+            # Unknown dates stay at the end in either direction.
             return parsed.timestamp() if parsed else (float("-inf") if reverse else float("inf"))
 
-        # Equal capture dates are common; stable IDs keep pagination repeatable
+        # Equal dates are common; stable IDs keep pagination repeatable
         # even if filesystem iteration order changes after a copy or restart.
         items.sort(key=lambda item: item["id"])
         items.sort(key=key, reverse=reverse)

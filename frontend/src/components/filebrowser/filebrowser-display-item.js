@@ -1,5 +1,5 @@
 export function getFileBrowserDateField(sortBy) {
-    return ['modified', 'completed_at'].includes(sortBy) ? sortBy : 'captured_at';
+    return ['latest_activity', 'modified', 'completed_at'].includes(sortBy) ? sortBy : 'captured_at';
 }
 
 export function getDecodedFolderDescription(item) {
@@ -17,6 +17,8 @@ export function getDecodedFolderDescription(item) {
 
 export function getFileBrowserDate(item, sortBy) {
     const field = getFileBrowserDateField(sortBy);
+    // Keep this fallback in sync with inventory sorting for legacy summaries.
+    if (field === 'latest_activity') return item.latest_activity || item.modified || item.captured_at || item.created || null;
     // Older payloads may not include capture metadata yet. Their content mtime
     // is a better approximation than Linux ctime. Completion stays unknown.
     return field === 'captured_at'

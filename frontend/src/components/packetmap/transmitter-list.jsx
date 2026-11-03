@@ -57,7 +57,7 @@ export default function TransmitterList({rows, loading, hiddenTypes = emptyTypes
     const prepareRows = useMemo(() => createTransmitterListRows(), []);
     const data = useMemo(() => prepareRows(rows, receiver), [prepareRows, rows, receiver]);
     const pages = useTransmitterPages(data, search, excludedTypes, sort, pageSize, selectedTransmitterId);
-    const {pageRows: visible, page, pageCount, offset, total, newCount} = pages;
+    const {pageRows: visible, page, pageCount, offset, total} = pages;
     const kinds = useMemo(() => [...new Set([...Object.keys(TRANSMITTER_TYPES), ...data.map((row) => row.kind)])], [data]);
     const counts = useMemo(() => {
         const result = new Map();
@@ -155,7 +155,7 @@ export default function TransmitterList({rows, loading, hiddenTypes = emptyTypes
                 {t('packet_map.transmitters', 'Transmitters')}
             </Typography>
             <Typography variant="caption" sx={{color: 'text.secondary', fontVariantNumeric: 'tabular-nums'}}>
-                {total + newCount === rows.length ? rows.length : `${total + newCount} / ${rows.length}`}
+                {total === rows.length ? rows.length : `${total} / ${rows.length}`}
             </Typography>
             <Box onMouseDown={(event) => event.stopPropagation()} onTouchStart={(event) => event.stopPropagation()}
                 sx={{ml: 'auto', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 0.75, minWidth: 0}}>
@@ -196,7 +196,7 @@ export default function TransmitterList({rows, loading, hiddenTypes = emptyTypes
         <Box sx={{position: 'relative', flex: 1, minHeight: 0}} aria-busy={Boolean(loading)}>
             {loading && <LinearProgress sx={{position: 'absolute', top: 0, left: 0, right: 0, height: 2, zIndex: 1}} />}
             <PlaybackTimeContext.Provider value={Number.isFinite(playbackTime) ? playbackTime : Date.now()}>
-                {visible.length > 0 ? <List key={`${pages.query}:${page}:${pageSize}:${pages.revision}`} listRef={captureList} rowComponent={VirtualRow} rowProps={rowProps}
+                {visible.length > 0 ? <List key={`${pages.query}:${page}:${pageSize}`} listRef={captureList} rowComponent={VirtualRow} rowProps={rowProps}
                     rowCount={visible.length} rowHeight={rowHeight} overscanCount={4} defaultHeight={248}
                     style={listStyle} aria-label={t('packet_map.transmitters', 'Transmitters')}
                     onKeyDown={navigate} onRowsRendered={rowsRendered} />
@@ -214,11 +214,6 @@ export default function TransmitterList({rows, loading, hiddenTypes = emptyTypes
             sx={{display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1, px: 1.25, py: 0.5,
                 flexShrink: 0, minHeight: 36, borderTop: 1, borderColor: 'divider',
                 '@container (max-width: 650px)': {gap: 0.5, px: 0.75}}}>
-            {newCount > 0 && <Button size="small" onClick={pages.refresh}
-                sx={{fontSize: '0.7rem', py: 0.25, minWidth: 0}}
-                title={t('packet_map.list.show_new', 'Refresh the listing and return to the first page')}>
-                {t('packet_map.list.new_transmitters', {defaultValue: '{{count}} new transmitters', count: newCount})}
-            </Button>}
             <Typography variant="caption" aria-live="polite" sx={{fontSize: '0.7rem', color: 'text.secondary', fontVariantNumeric: 'tabular-nums'}}>
                 {t('packet_map.list.page_range', {defaultValue: '{{from}}–{{to}} of {{count}}',
                     from: total ? numberFormatters[0].format(offset + 1) : '0',

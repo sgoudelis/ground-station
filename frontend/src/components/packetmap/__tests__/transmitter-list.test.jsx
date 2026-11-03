@@ -282,21 +282,52 @@ it('pages the complete filtered listing and saves the page size across remounts'
     expectPage(1);
 });
 
-it('refreshes telemetry in place, holds new arrivals and refreshes page membership only on request', () => {
+it.each(['first_seen', 'last_seen', 'name', 'distance'])('shows new transmitters immediately in %s order without a refresh link', (sort) => {
+    const rows = fixtures.slice(1).map((row, index) => ({...row, name: `NODE-${index}`}));
+    const {update} = setup({rows}, {excludedTypes: [], sort, pageSize: 100});
+    const newRow = {...fixtures[1], id: 'new', name: 'NEW NODE', latitude: 40,
+        first_seen: new Date(received + 1000).toISOString(), last_seen: new Date(received + 5000).toISOString()};
+    update({rows: [...rows, newRow]});
+    const items = within(screen.getByRole('list', {name: 'Transmitters'})).getAllByRole('listitem');
+    expect(within(items[0]).getByRole('button', {name: 'NEW NODE'})).toBeInTheDocument();
+    expect(screen.getByText('1–4 of 4')).toBeInTheDocument();
+    expect(screen.queryByRole('button', {name: /new transmitters/i})).not.toBeInTheDocument();
+});
+
+it('adds matching arrivals to an empty search result while respecting type filters', () => {
+    const {update} = setup({rows: [fixtures[0]]}, {excludedTypes: ['aprs'], sort: 'first_seen', pageSize: 100});
+    fireEvent.change(screen.getByRole('textbox', {name: 'Search transmitters'}), {target: {value: 'MESH'}});
+    expect(screen.getByText('No transmitters match your search or type filters.')).toBeInTheDocument();
+    const newRow = {...fixtures[1], name: 'MESH NODE'};
+    const rows = [fixtures[0], newRow, {...fixtures[2], name: 'MESH APRS'}];
+    update({rows});
+    expect(screen.getByRole('button', {name: 'MESH NODE'})).toBeInTheDocument();
+    expect(screen.queryByRole('button', {name: 'MESH APRS'})).not.toBeInTheDocument();
+    expect(screen.getByText('1–1 of 1')).toBeInTheDocument();
+    // An arrival can replace an expired node without changing the result count.
+    update({rows: rows.map((row) => row.id === newRow.id ? {...row, id: 'replacement', name: 'MESH REPLACEMENT'} : row)});
+    expect(screen.getByRole('button', {name: 'MESH REPLACEMENT'})).toBeInTheDocument();
+    expect(screen.queryByRole('button', {name: 'MESH NODE'})).not.toBeInTheDocument();
+});
+
+it('refreshes telemetry in place and includes arrivals without resetting the current page', () => {
     const rows = manyRows();
     const {update} = setup({rows});
     goToPage(2);
     const first = screen.getByRole('button', {name: 'NODE-100'});
-    const newRow = {...fixtures[1], id: 'new', name: 'NEW NODE', first_seen: new Date(received + 1000).toISOString()};
-    update({rows: [newRow, ...rows.map((row) => ({...row, packet_count: 77, first_seen: new Date(received + 5000).toISOString()}))]});
+    update({rows: rows.map((row) => ({...row, packet_count: 77, first_seen: new Date(received + 5000).toISOString()}))});
     expect(screen.getByRole('button', {name: 'NODE-100'})).toBe(first);
     expect(first).toHaveTextContent('77 packets');
     expectPage(2);
     expect(screen.getByText('101–125 of 125')).toBeInTheDocument();
-    expect(screen.getByRole('button', {name: '1 new transmitters'})).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', {name: '1 new transmitters'}));
+    const newRow = {...fixtures[1], id: 'new', name: 'NEW NODE', first_seen: new Date(received + 1000).toISOString()};
+    update({rows: [newRow, ...rows]});
+    expectPage(2);
+    expect(screen.getByText('101–126 of 126')).toBeInTheDocument();
+    expect(screen.queryByRole('button', {name: /new transmitters/i})).not.toBeInTheDocument();
+    goToPage(1);
+    expect(screen.getByRole('button', {name: 'NEW NODE'})).toBeInTheDocument();
     expect(screen.getByText('1–100 of 126')).toBeInTheDocument();
-    expect(screen.queryByRole('button', {name: /new transmitters/})).not.toBeInTheDocument();
     // A sort change starts again at the first page, using the latest measurements.
     goToPage(2);
     fireEvent.mouseDown(screen.getByRole('combobox', {name: 'Sort transmitters'}));
@@ -318,12 +349,13 @@ it('reveals explicit map selections across pages and filters without pulling bac
     update({selectedTransmitterId: 'node:123'});
     expect(screen.getByRole('textbox', {name: 'Search transmitters'})).toHaveValue('');
     expect(screen.getByRole('button', {name: 'NODE-123'})).toHaveAttribute('aria-pressed', 'true');
-    const pending = {...fixtures[1], id: 'pending', name: 'PENDING', first_seen: new Date(received + 2000).toISOString()};
-    update({rows: [pending, ...rows], selectedTransmitterId: 'node:123'});
-    expect(screen.getByRole('button', {name: '1 new transmitters'})).toBeInTheDocument();
-    update({rows: [pending, ...rows], selectedTransmitterId: 'pending'});
-    expect(screen.getByRole('button', {name: 'PENDING'})).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.queryByRole('button', {name: /new transmitters/})).not.toBeInTheDocument();
+    const arrival = {...fixtures[1], id: 'arrival', name: 'ARRIVAL', first_seen: new Date(received + 2000).toISOString()};
+    update({rows: [arrival, ...rows], selectedTransmitterId: 'node:123'});
+    expectPage(2);
+    expect(screen.getByText('101–126 of 126')).toBeInTheDocument();
+    update({rows: [arrival, ...rows], selectedTransmitterId: 'arrival'});
+    expectPage(1);
+    expect(screen.getByRole('button', {name: 'ARRIVAL'})).toHaveAttribute('aria-pressed', 'true');
 });
 
 it('handles page-boundary keyboard navigation and clamps the page when transmitters expire', () => {

@@ -9,10 +9,12 @@ const item = {
     id: 'audio:voice.wav', type: 'audio', name: 'voice', size: 10,
     captured_at: '2026-09-07T01:36:25Z', captured_at_source: 'metadata',
     completed_at: '2026-09-07T01:43:13Z',
+    latest_activity: '2026-11-03T08:15:00Z',
     modified: '2026-10-29T17:07:02Z', created: '2026-10-30T12:00:00Z',
 };
 
 test.each([
+    ['latest_activity', item.latest_activity],
     ['captured_at', item.captured_at],
     ['completed_at', item.completed_at],
     ['modified', item.modified],
@@ -23,6 +25,15 @@ test.each([
         sortBy={sortBy} timezone="UTC" selectedItems={[]}
     />);
     expect(screen.getByText(new Date(expected).toLocaleTimeString('en-US', { timeZone: 'UTC' }))).toBeInTheDocument();
+});
+
+test('activity dates fall back through modification, capture and creation dates', () => {
+    expect(getFileBrowserDate(item, 'latest_activity')).toBe(item.latest_activity);
+    expect(getFileBrowserDate({ modified: item.modified, captured_at: item.captured_at }, 'latest_activity')).toBe(item.modified);
+    expect(getFileBrowserDate({ captured_at: item.captured_at, created: item.created }, 'latest_activity')).toBe(item.captured_at);
+    expect(getFileBrowserDate({ created: item.created }, 'latest_activity')).toBe(item.created);
+    expect(getFileBrowserDate({}, 'latest_activity')).toBeNull();
+    expect(isFileBrowserDateApproximate(item, 'latest_activity')).toBe(false);
 });
 
 test('missing completion remains unknown instead of showing a capture or copy time', () => {
@@ -45,7 +56,7 @@ test('legacy and missing metadata use modification time and report an approximat
     expect(isFileBrowserDateApproximate(legacy, 'modified')).toBe(false);
     render(<FileTableView
         filesByDay={[{ dateKey: 'Estimated date', files: [{ ...item, captured_at_source: 'filesystem' }] }]}
-        timezone="UTC" selectedItems={[]}
+        sortBy="captured_at" timezone="UTC" selectedItems={[]}
     />);
     expect(screen.getByText('≈ 1:36:25 AM')).toBeInTheDocument();
 });

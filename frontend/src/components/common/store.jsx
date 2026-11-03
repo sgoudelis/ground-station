@@ -40,7 +40,7 @@ import vfoReducer from '../waterfall/vfo-marker/vfo-slice.jsx';
 import sdrsReducer from '../hardware/sdr-slice.jsx';
 import versionReducer from "../dashboard/version-slice.jsx";
 import updateCheckReducer from "../dashboard/update-slice.jsx";
-import fileBrowserReducer, { reconcileFileBrowserPersistedState } from '../filebrowser/filebrowser-slice.jsx';
+import fileBrowserReducer, { fileBrowserPersistVersion, reconcileFileBrowserPersistedState } from '../filebrowser/filebrowser-slice.jsx';
 import packetMapReducer from '../packetmap/packet-map-slice.jsx';
 import decodersReducer from '../decoders/decoders-slice.jsx';
 import libraryVersionsReducer from '../settings/library-versions-slice.jsx';
@@ -252,6 +252,7 @@ const updateCheckConfig = {
 // Persist configuration for file browser slice
 const fileBrowserPersistConfig = {
     key: 'filebrowser',
+    version: fileBrowserPersistVersion,
     storage,
     stateReconciler: reconcileFileBrowserPersistedState,
     whitelist: ['sortBy', 'sortOrder', 'viewMode', 'pageSize', 'filters']

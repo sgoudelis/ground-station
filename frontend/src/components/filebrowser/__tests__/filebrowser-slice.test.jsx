@@ -36,6 +36,7 @@ import reducer, {
     setAllFilters,
     toggleFilter,
     reconcileFileBrowserPersistedState,
+    fileBrowserPersistVersion,
     markFileBrowserVisited,
     libraryItemsChanged,
     resetLibraryRevision,
@@ -106,11 +107,18 @@ test('restores explicit weather balloon and aircraft choices independently of de
     expect(restored.filters).toMatchObject({ showDecoded: true, showRadiosondes: false, showAircraft: false });
 });
 
-test('uses capture chronology by default and migrates the former created sort', () => {
+test('defaults to newest activity and upgrades the former date defaults once', () => {
     const current = reducer(undefined, { type: '@@INIT' });
-    expect(current.sortBy).toBe('captured_at');
-    expect(reconcileFileBrowserPersistedState({ sortBy: 'created' }, current).sortBy).toBe('captured_at');
-    expect(reconcileFileBrowserPersistedState({ sortBy: 'modified' }, current).sortBy).toBe('modified');
+    expect(current).toMatchObject({ sortBy: 'latest_activity', sortOrder: 'desc' });
+    for (const sortBy of ['created', 'captured_at']) {
+        expect(reconcileFileBrowserPersistedState({ sortBy, sortOrder: 'asc' }, current))
+            .toMatchObject({ sortBy: 'latest_activity', sortOrder: 'desc' });
+    }
+    expect(reconcileFileBrowserPersistedState({ sortBy: 'modified', sortOrder: 'asc' }, current))
+        .toMatchObject({ sortBy: 'modified', sortOrder: 'asc' });
+    expect(reconcileFileBrowserPersistedState({
+        sortBy: 'captured_at', sortOrder: 'asc', _persist: { version: fileBrowserPersistVersion },
+    }, current)).toMatchObject({ sortBy: 'captured_at', sortOrder: 'asc' });
 });
 
 test('explicit refresh rescans copied files before requesting the current page', async () => {
@@ -120,7 +128,7 @@ test('explicit refresh rescans copied files before requesting the current page',
     };
     await createStore().dispatch(fetchFiles({ socket, reconcile: true })).unwrap();
     expect(socket.emit.mock.calls.map((call) => call[1].cmd)).toEqual(['filebrowser.reconcile', 'filebrowser.query']);
-    expect(socket.emit.mock.calls[1][1].data.sortBy).toBe('captured_at');
+    expect(socket.emit.mock.calls[1][1].data.sortBy).toBe('latest_activity');
 });
 
 test('selecting or clearing every type updates filters in one action', () => {

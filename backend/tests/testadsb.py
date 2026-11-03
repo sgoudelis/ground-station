@@ -127,6 +127,21 @@ def test_incremental_index_reads_only_new_complete_records(tmp_path):
     assert inventory.get(item_id)["packet_count"] == 2
 
 
+def test_last_activity_sort_follows_latest_aircraft_reception(tmp_path):
+    storage = AdsbStorage(tmp_path / "data/decoded", "rx01")
+    storage.append("track", report(STAMP, "406b90"))
+    storage.append("track", report(STAMP + 10, "4d2406"))
+    storage.flush()
+    inventory = LibraryInventory(tmp_path)
+    assert inventory.query(page_size=1)["items"][0]["icao"] == "4d2406"
+
+    storage.append("track", report(STAMP + 20, "406b90"))
+    storage.flush()
+    inventory.update_adsb(["adsb_406b90"])
+    assert inventory.query(page_size=1)["items"][0]["icao"] == "406b90"
+    assert inventory.query(sort_by="captured_at", page_size=1)["items"][0]["icao"] == "4d2406"
+
+
 def test_map_history_exposes_airframe_metadata_at_each_fix(tmp_path):
     storage = AdsbStorage(tmp_path / "data/decoded", "rx01")
     first = report()

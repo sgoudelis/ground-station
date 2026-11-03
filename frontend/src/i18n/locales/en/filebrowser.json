@@ -89,6 +89,7 @@
   },
   "sort_by": "Sort By",
   "sort": {
+    "latest_activity": "Last Activity",
     "captured_at": "Date Captured",
     "completed_at": "Date Completed",
     "created": "Date Created",

@@ -22,7 +22,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import { configureStore } from '@reduxjs/toolkit';
 import { Provider } from 'react-redux';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
-import { expect, test, vi } from 'vitest';
+import { afterEach, expect, test, vi } from 'vitest';
 import '../../../i18n/config.js';
 import FileBrowserMain from '../filebrowser-main.jsx';
 import filebrowserReducer, { setSortBy, setViewMode } from '../filebrowser-slice.jsx';
@@ -42,12 +42,15 @@ vi.mock('../observation-folder-dialog.jsx', () => ({ default: () => null }));
 vi.mock('../processing-dialog.jsx', () => ({ default: () => null }));
 vi.mock('../purge-dialog.jsx', () => ({ default: () => null }));
 
+afterEach(() => vi.useRealTimers());
+
 const parent = {
     id: 'observation:pass.gsobs', type: 'decoded_folder', folder_kind: 'observation',
     name: 'pass', foldername: 'pass.gsobs', satellite_name: 'ISS', size: 10,
     created: '2026-10-29T08:00:00Z', modified: '2026-10-29T08:00:00Z',
     captured_at: '2026-09-07T01:36:25Z', completed_at: '2026-09-07T01:43:13Z',
     captured_at_source: 'metadata',
+    latest_activity: '2026-11-03T08:15:00Z',
     matched_files: ['decoded/beacon.bin'],
 };
 
@@ -115,9 +118,21 @@ test('routes a sonde folder to its packet browser and describes it in both views
     expect(await screen.findByRole('table', { name: 'Radiosonde packets' })).toBeInTheDocument();
 });
 
-test('day groups and row times use the selected capture, modified or completion date', async () => {
+test('defaults to activity dates and uses the selected date for grouping in both views', async () => {
+    vi.useFakeTimers({toFake: ['Date']});
+    vi.setSystemTime(new Date('2026-11-03T08:20:00Z'));
     const store = renderBrowser();
     fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'beacon' } });
+    expect(await screen.findByText('November 3, 2026')).toBeInTheDocument();
+    expect(screen.getByText('8:15:00 AM')).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Last Activity' })).toBeInTheDocument();
+    expect(socket.emit.mock.lastCall[1]).toMatchObject({ cmd: 'filebrowser.query', data: { sortBy: 'latest_activity', sortOrder: 'desc' } });
+
+    await act(async () => store.dispatch(setViewMode('card')));
+    expect(screen.getByText(/11\/3\/2026, 8:15:00 AM/)).toBeInTheDocument();
+    expect(screen.getByText('5 minutes ago')).toBeInTheDocument();
+    await act(async () => store.dispatch(setViewMode('table')));
+    await act(async () => store.dispatch(setSortBy('captured_at')));
     expect(await screen.findByText('September 7, 2026')).toBeInTheDocument();
     expect(screen.getByText('1:36:25 AM')).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: 'Date Captured' })).toBeInTheDocument();

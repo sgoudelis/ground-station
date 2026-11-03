@@ -661,7 +661,7 @@ function FileTableRow({ item, sortBy, selectionMode, isSelected, onToggleSelecti
 
 export default function FileTableView({
     filesByDay,
-    sortBy = 'captured_at',
+    sortBy = 'latest_activity',
     selectionMode,
     selectedItems,
     onToggleSelection,

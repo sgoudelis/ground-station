@@ -10,27 +10,24 @@ export default function useTransmitterPages(rows, search, excludedTypes, sort, p
     const matches = useMemo(() => filterTransmitterList(rows, search, excludedTypes), [rows, search, excludedTypes]);
     const byId = useMemo(() => new Map(matches.map((row) => [row.id, row])), [matches]);
     const orderedIds = () => sortTransmitterList(matches, sort).map((row) => row.id);
-    const [listing, setListing] = useState(() => ({query, ids: orderedIds(), page: 0, pageSize, selection: null, revision: 0}));
+    const [listing, setListing] = useState(() => ({query, ids: orderedIds(), page: 0, pageSize, selection: null}));
     const retainedIds = useMemo(() => listing.ids.every((id) => byId.has(id)) ? listing.ids
         : listing.ids.filter((id) => byId.has(id)), [listing.ids, byId]);
 
-    // Store membership and ordering only. Measurements always come from byId,
-    // so live packets update the page without sorting or moving its rows.
+    // Measurements update in place. Rebuild the order for new arrivals so they
+    // appear immediately in the selected sort without resetting the current page.
     let next = listing;
-    if (listing.query !== query || (!listing.ids.length && matches.length)) {
+    if (listing.query !== query) {
         next = {...listing, query, ids: orderedIds(), page: 0};
+    } else if (matches.length > retainedIds.length) {
+        next = {...listing, ids: orderedIds()};
     } else if (retainedIds !== listing.ids) {
-        // Expired/deleted nodes leave immediately, even before a manual refresh.
+        // Expired/deleted nodes leave immediately as well.
         next = {...listing, ids: retainedIds};
     }
     if (listing.pageSize !== pageSize) next = {...next, pageSize, page: 0};
     if (selectedId !== listing.selection && (selectedId === null || byId.has(selectedId))) {
-        let index = next.ids.indexOf(selectedId);
-        if (selectedId !== null && index < 0) {
-            // Explicit map selection may reveal a node waiting in the new batch.
-            next = {...next, ids: orderedIds()};
-            index = next.ids.indexOf(selectedId);
-        }
+        const index = next.ids.indexOf(selectedId);
         next = {...next, selection: selectedId, page: selectedId === null ? next.page : Math.floor(index / pageSize)};
     }
     const pageCount = Math.max(1, Math.ceil(next.ids.length / pageSize));
@@ -42,13 +39,9 @@ export default function useTransmitterPages(rows, search, excludedTypes, sort, p
     const offset = next.page * pageSize;
     const pageRows = useMemo(() => next.ids.slice(offset, offset + pageSize).map((id) => byId.get(id)),
         [next.ids, offset, pageSize, byId]);
-    const refresh = () => setListing((previous) => ({...previous, query, ids: orderedIds(), page: 0, pageSize,
-        revision: previous.revision + 1,
-    }));
     const changePage = (page) => setListing((previous) => ({...previous,
         page: Math.max(0, Math.min(pageCount - 1, page)),
     }));
     return {pageRows, ids: next.ids, page: next.page, pageCount, offset, total: next.ids.length,
-        newCount: matches.length - next.ids.length, selectedIndex: next.ids.indexOf(selectedId),
-        revision: next.revision, query, refresh, changePage};
+        selectedIndex: next.ids.indexOf(selectedId), query, changePage};
 }

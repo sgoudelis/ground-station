@@ -26,7 +26,7 @@ import { setInitialDataLoading } from '../components/dashboard/dashboard-slice.j
 import { initializeAppData } from '../services/data-sync.js';
 import { toast } from '../utils/toast-with-timestamp.jsx';
 import { setErrorDialogOpen, setErrorMessage } from '../components/waterfall/waterfall-slice.jsx';
-import { setFileBrowserVisible, setHasNewFiles, setSearch } from '../components/filebrowser/filebrowser-slice.jsx';
+import { fetchFiles, setFileBrowserVisible, setHasNewFiles, setSearch, setSortBy, resetLibraryRevision } from '../components/filebrowser/filebrowser-slice.jsx';
 import { useSocketEventHandlers } from './useSocketEventHandlers.jsx';
 
 vi.mock('../services/data-sync.js', () => ({
@@ -39,6 +39,8 @@ afterEach(() => {
     store.dispatch(setFileBrowserVisible(false));
     store.dispatch(setHasNewFiles(false));
     store.dispatch(setSearch(''));
+    store.dispatch(setSortBy('latest_activity'));
+    store.dispatch(resetLibraryRevision());
 });
 
 test('library changes coalesce and preserve the visible browser query', async () => {
@@ -98,6 +100,36 @@ test('hidden file browser only checks its badge and stops querying once it is li
     act(() => listeners.get('library.changed')());
     await act(async () => vi.advanceTimersByTimeAsync(500));
     expect(socket.emit).toHaveBeenCalledTimes(1);
+    unmount();
+});
+
+test.each(['meshtastic', 'aprs', 'adsb', 'radiosonde', 'observation'])('activity sorting refetches and reorders an updated %s folder', async (kind) => {
+    vi.useFakeTimers();
+    const listeners = new Map();
+    const other = {id: 'audio:voice.wav', latest_activity: '2026-11-03T08:00:00Z'};
+    const folder = {id: `decoded_folder:${kind}_node`, folder_kind: kind, latest_activity: '2026-11-02T08:00:00Z'};
+    const updated = {...folder, latest_activity: '2026-11-03T09:00:00Z', packet_count: 2};
+    const socket = {
+        connected: false,
+        on: vi.fn((event, handler) => listeners.set(event, handler)),
+        off: vi.fn((event) => listeners.delete(event)),
+        emit: vi.fn((_event, _request, reply) => reply({success: true,
+            data: {items: [updated, other], total: 2, revision: 2}})),
+    };
+    store.dispatch(setFileBrowserVisible(true));
+    store.dispatch(setSortBy('latest_activity'));
+    await store.dispatch(fetchFiles({socket: {connected: true, emit: (_event, _request, reply) => reply({
+        success: true, data: {items: [other, folder], total: 2, revision: 1},
+    })}, page: 1}));
+    expect(store.getState().filebrowser.files.map((item) => item.id)).toEqual([other.id, folder.id]);
+    const wrapper = ({ children }) => <Provider store={store}>{children}</Provider>;
+    const {unmount} = renderHook(() => useSocketEventHandlers(socket), {wrapper});
+    socket.connected = true;
+    act(() => listeners.get('library.changed')({revision: 2, changes: [{operation: 'updated', item: updated}]}));
+    await act(async () => vi.advanceTimersByTimeAsync(500));
+    expect(socket.emit).toHaveBeenCalledTimes(1);
+    expect(socket.emit.mock.calls[0][1]).toMatchObject({cmd: 'filebrowser.query', data: {sortBy: 'latest_activity', sortOrder: 'desc'}});
+    expect(store.getState().filebrowser.files.map((item) => item.id)).toEqual([folder.id, other.id]);
     unmount();
 });
 

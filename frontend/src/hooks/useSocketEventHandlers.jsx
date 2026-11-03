@@ -485,7 +485,7 @@ export const useSocketEventHandlers = (socket, enabled = true) => {
                 if (changes.some((change) => change.operation === 'created')) store.dispatch(setHasNewFiles(true));
                 return;
             }
-            // Size/modified sorting and text filters may change page membership.
+            // Activity, size/modified sorting and text filters may change page membership.
             // Stable address/date ordering lets existing rows update in place.
             const stableOrder = ['name', 'captured_at', 'completed_at', 'sample_rate'].includes(browser.sortBy);
             if (stableOrder && !browser.search && !browser.filesLoading && changes.every((change) => change.operation === 'updated')) {
