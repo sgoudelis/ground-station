@@ -179,7 +179,7 @@ export const useSocketEventHandlers = (socket, enabled = true) => {
 
             // Reconnect bootstrap pulls wait for the version decision, including
             // task reconciliation and the tracker command snapshot.
-            store.dispatch(setCurrentSessionId(socketId));
+            store.dispatch(setCurrentSessionId(store.getState().waterfall.receivingSessionId || socketId));
             setTimeout(() => {
                 if (isCurrentSession(generation, socketId)) {
                     store.dispatch(cleanupStaleDecoders());
@@ -323,6 +323,10 @@ export const useSocketEventHandlers = (socket, enabled = true) => {
             dispatch(setConnected(false));
             dispatch(setDisconnected(true));
             dispatch(setInitialDataLoading(false));
+            // This handler also runs when the waterfall page is unmounted.
+            // A reconnected socket must JOIN again to acquire observation control.
+            dispatch(setIsStreaming(false));
+            dispatch(setJoinedSdrId(null));
         });
 
         socket.on('connect_error', (error) => {

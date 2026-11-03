@@ -23,6 +23,28 @@ from fft.waterfallgenerator import WaterfallConfig, WaterfallGenerator
 logger = logging.getLogger("waterfall-task")
 
 
+class _ProgressHandler(logging.Handler):
+    def __init__(self, progress_queue: Queue):
+        super().__init__(level=logging.INFO)
+        self.progress_queue = progress_queue
+
+    def emit(self, record: logging.LogRecord) -> None:
+        if record.levelno != logging.INFO:
+            return
+        rendered = record.getMessage()
+        message: Dict[str, Any] = {
+            "type": "output",
+            "output": rendered,
+            "stream": "stdout",
+        }
+        if "Progress:" in rendered and "%" in rendered:
+            try:
+                message["progress"] = float(rendered.split("Progress:")[1].split("%")[0].strip())
+            except (ValueError, IndexError):
+                pass
+        self.progress_queue.put(message)
+
+
 def generate_waterfall_task(
     recording_path: str,
     options: Optional[Dict[str, Any]] = None,
@@ -75,47 +97,20 @@ def generate_waterfall_task(
         # Create generator
         generator = WaterfallGenerator(config)
 
-        # Monkey-patch the logger to send progress updates
-        if _progress_queue:
-            original_info = generator.logger.info
-
-            def progress_info(msg, *args, **kwargs):
-                original_info(msg, *args, **kwargs)
-                # Render the final message text so progress parsing works
-                # for both f-strings and printf-style logger calls.
-                if args:
-                    try:
-                        rendered = str(msg) % args
-                    except Exception:
-                        rendered = " ".join([str(msg), *[str(arg) for arg in args]])
-                else:
-                    rendered = str(msg)
-
-                # Parse progress from message if it contains "Progress: XX%"
-                if "Progress:" in rendered and "%" in rendered:
-                    try:
-                        # Extract percentage from "Progress: 50%"
-                        progress_str = rendered.split("Progress:")[1].split("%")[0].strip()
-                        progress = float(progress_str)
-                        _progress_queue.put(
-                            {
-                                "type": "output",
-                                "output": rendered,
-                                "stream": "stdout",
-                                "progress": progress,
-                            }
-                        )
-                    except (ValueError, IndexError):
-                        _progress_queue.put(
-                            {"type": "output", "output": rendered, "stream": "stdout"}
-                        )
-                else:
-                    _progress_queue.put({"type": "output", "output": rendered, "stream": "stdout"})
-
-            generator.logger.info = progress_info
-
-        # Generate waterfall
-        success = generator.generate_from_sigmf(recording_path_obj)
+        # Attach progress reporting for this invocation without replacing a
+        # shared logger method or leaking callbacks into the next task.
+        progress_handler = _ProgressHandler(_progress_queue) if _progress_queue else None
+        original_log_level = generator.logger.level
+        if progress_handler is not None:
+            generator.logger.addHandler(progress_handler)
+            # Task progress must remain available when console logging is quiet.
+            generator.logger.setLevel(logging.INFO)
+        try:
+            success = generator.generate_from_sigmf(recording_path_obj)
+        finally:
+            if progress_handler is not None:
+                generator.logger.removeHandler(progress_handler)
+                generator.logger.setLevel(original_log_level)
 
         if success:
             if _progress_queue:

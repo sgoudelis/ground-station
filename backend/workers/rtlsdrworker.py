@@ -124,6 +124,9 @@ def rtlsdr_worker_process(
             logger.info(f"Connecting to RTL-SDR with serial number {serial_number} over USB...")
             sdr = rtlsdr.RtlSdr(serial_number=serial_number)
 
+        if sdr is None:
+            raise RuntimeError("RTL-SDR device initialization failed")
+
         # Configure the device
         stage = "configuring receiver"
         offset_freq = config.get("offset_freq", 0)

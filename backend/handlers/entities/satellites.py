@@ -81,8 +81,8 @@ def _build_body_transmitter_target_key(body_id: str) -> str:
 
 
 async def get_satellites(
-    sio: Any, data: Optional[Dict], logger: Any, sid: str
-) -> Dict[str, Union[bool, list]]:
+    sio: Any, data: Union[str, int, list[int], None], logger: Any, sid: str
+) -> Dict[str, Union[bool, list, None]]:
     """
     Get list of satellites.
 
@@ -102,8 +102,8 @@ async def get_satellites(
 
 
 async def get_satellite(
-    sio: Any, data: Optional[Dict], logger: Any, sid: str
-) -> Dict[str, Union[bool, dict]]:
+    sio: Any, data: int, logger: Any, sid: str
+) -> Dict[str, Union[bool, dict, None]]:
     """
     Get single satellite with complete details, position, and orbit paths.
 
@@ -128,7 +128,7 @@ async def get_satellite(
 
 async def get_satellites_for_group_id(
     sio: Any, data: Optional[Dict], logger: Any, sid: str
-) -> Dict[str, Union[bool, list]]:
+) -> Dict[str, Union[bool, list, None]]:
     """
     Get satellites for a specific group ID with their transmitters.
 
@@ -370,8 +370,8 @@ async def search_targets(
 
 
 async def delete_satellite(
-    sio: Any, data: Optional[Dict], logger: Any, sid: str
-) -> Dict[str, Union[bool, list]]:
+    sio: Any, data: Union[int, str], logger: Any, sid: str
+) -> Dict[str, Union[bool, list, None]]:
     """
     Delete a satellite.
 
@@ -397,7 +397,7 @@ async def delete_satellite(
 
 async def submit_satellite(
     sio: Any, data: Optional[Dict], logger: Any, sid: str
-) -> Dict[str, Union[bool, list, str]]:
+) -> Dict[str, Union[bool, list, str, None]]:
     """
     Add a new satellite.
 
@@ -412,12 +412,12 @@ async def submit_satellite(
     """
     async with AsyncSessionLocal() as dbsession:
         logger.debug(f"Adding satellite, data: {data}")
-        submit_reply = await crud.satellites.add_satellite(dbsession, data)
+        submit_reply = await crud.satellites.add_satellite(dbsession, data or {})
 
         satellites = await crud.satellites.fetch_satellites(dbsession, None)
         if data and data.get("norad_id"):
             for manager in get_all_tracker_managers().values():
-                await manager.notify_tle_updated(data.get("norad_id"))
+                await manager.notify_tle_updated(data["norad_id"])
         return {
             "success": (satellites["success"] & submit_reply["success"]),
             "data": satellites.get("data", []),
@@ -427,7 +427,7 @@ async def submit_satellite(
 
 async def edit_satellite(
     sio: Any, data: Optional[Dict], logger: Any, sid: str
-) -> Dict[str, Union[bool, list, str]]:
+) -> Dict[str, Union[bool, list, str, None]]:
     """
     Edit an existing satellite.
 
@@ -455,7 +455,7 @@ async def edit_satellite(
 
         satellites = await crud.satellites.fetch_satellites(dbsession, None)
         for manager in get_all_tracker_managers().values():
-            await manager.notify_tle_updated(data.get("norad_id"))
+            await manager.notify_tle_updated(data["norad_id"])
         return {
             "success": (satellites["success"] & edit_reply["success"]),
             "data": satellites.get("data", []),

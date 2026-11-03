@@ -33,7 +33,7 @@ from observations.validation import validate_transmitter_frequencies
 
 async def get_scheduled_observations(
     sio: Any, data: Optional[Dict], logger: Any, sid: str
-) -> Dict[str, Union[bool, List, str]]:
+) -> Dict[str, Union[bool, List, str, None]]:
     """
     Get all scheduled observations or a single observation by ID.
 
@@ -57,7 +57,7 @@ async def get_scheduled_observations(
 
 async def create_scheduled_observation(
     sio: Any, data: Optional[Dict], logger: Any, sid: str
-) -> Dict[str, Union[bool, Dict, str]]:
+) -> Dict[str, Union[bool, Dict, str, None]]:
     """
     Create a new scheduled observation.
 
@@ -120,7 +120,7 @@ async def create_scheduled_observation(
 
 async def update_scheduled_observation(
     sio: Any, data: Optional[Dict], logger: Any, sid: str
-) -> Dict[str, Union[bool, Dict, str]]:
+) -> Dict[str, Union[bool, Dict, str, None]]:
     """
     Update an existing scheduled observation.
 
@@ -184,7 +184,7 @@ async def update_scheduled_observation(
 
 async def delete_scheduled_observations(
     sio: Any, data: Optional[List], logger: Any, sid: str
-) -> Dict[str, Union[bool, Dict, str]]:
+) -> Dict[str, Union[bool, Dict, str, None]]:
     """
     Delete one or more scheduled observations.
 
@@ -253,7 +253,7 @@ async def delete_scheduled_observations(
 
 async def toggle_observation_enabled(
     sio: Any, data: Optional[Dict], logger: Any, sid: str
-) -> Dict[str, Union[bool, Dict, str]]:
+) -> Dict[str, Union[bool, Dict, str, None]]:
     """
     Enable or disable a scheduled observation.
 
@@ -297,7 +297,7 @@ async def toggle_observation_enabled(
 
 async def cancel_observation(
     sio: Any, data: Optional[str], logger: Any, sid: str
-) -> Dict[str, Union[bool, Dict, str]]:
+) -> Dict[str, Union[bool, Dict, str, None]]:
     """
     Cancel a running observation.
 
@@ -342,7 +342,7 @@ async def cancel_observation(
 
 async def get_monitored_satellites(
     sio: Any, data: Optional[Dict], logger: Any, sid: str
-) -> Dict[str, Union[bool, List, str]]:
+) -> Dict[str, Union[bool, List, str, None]]:
     """
     Get all monitored satellites.
 
@@ -362,7 +362,7 @@ async def get_monitored_satellites(
 
 async def create_monitored_satellite(
     sio: Any, data: Optional[Dict], logger: Any, sid: str
-) -> Dict[str, Union[bool, Dict, str]]:
+) -> Dict[str, Union[bool, Dict, str, None]]:
     """
     Create a new monitored satellite.
 
@@ -401,7 +401,7 @@ async def create_monitored_satellite(
 
 async def update_monitored_satellite(
     sio: Any, data: Optional[Dict], logger: Any, sid: str
-) -> Dict[str, Union[bool, Dict, str]]:
+) -> Dict[str, Union[bool, Dict, str, None]]:
     """
     Update an existing monitored satellite.
 
@@ -440,7 +440,7 @@ async def update_monitored_satellite(
 
 async def delete_monitored_satellites(
     sio: Any, data: Optional[Dict], logger: Any, sid: str
-) -> Dict[str, Union[bool, Dict, str]]:
+) -> Dict[str, Union[bool, Dict, str, None]]:
     """
     Delete one or more monitored satellites.
 
@@ -490,7 +490,7 @@ async def delete_monitored_satellites(
 
 async def toggle_monitored_satellite_enabled(
     sio: Any, data: Optional[Dict], logger: Any, sid: str
-) -> Dict[str, Union[bool, Dict, str]]:
+) -> Dict[str, Union[bool, Dict, str, None]]:
     """
     Enable or disable a monitored satellite.
 
@@ -531,7 +531,7 @@ async def toggle_monitored_satellite_enabled(
 
 async def regenerate_observations(
     sio: Any, data: Optional[Dict], logger: Any, sid: str
-) -> Dict[str, Union[bool, Dict[str, int], str]]:
+) -> Dict[str, Union[bool, Dict[str, int], str, None]]:
     """
     Regenerate scheduled observations for monitored satellites.
 

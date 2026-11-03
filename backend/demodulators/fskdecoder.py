@@ -1113,6 +1113,9 @@ class FSKDecoder(BaseDecoderProcess):
                         self._update_power_measurement(power_dbfs)
 
                         # Step 2: Decimate to target sample rate
+                        if self.sdr_sample_rate is None or self.sample_rate is None:
+                            # Initialization can defer until a valid IQ chunk arrives.
+                            continue
                         decimation = int(self.sdr_sample_rate / self.sample_rate)
                         if decimation < 1:
                             decimation = 1

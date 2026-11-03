@@ -91,6 +91,7 @@ const PerformanceMetricsDialog = React.lazy(() => import("../performance/perform
 import SchedulerDialogHost from "../scheduler/scheduler-dialog-host.jsx";
 import BackgroundTasksPopover from "../tasks/tasks-popover.jsx";
 import VfoAudioPopover from "./vfoaudio.jsx";
+import BackgroundObservationsPopover from "./background-observations-popover.jsx";
 const LocationPage = React.lazy(() => import("../settings/location-form.jsx"));
 import DeferredIslandPlaceholder from "../common/deferredplaceholder.jsx";
 import { useDelayedUnmount } from "../../hooks/useDelayedUnmount.js";
@@ -248,6 +249,7 @@ function ToolbarActions() {
             <SatelliteInfoPopover />
             <HardwareSettingsPopover />
             <VfoAudioPopover />
+            <BackgroundObservationsPopover />
             <BackgroundTasksPopover />
             <WakeLockStatus />
             <TimeDisplay />

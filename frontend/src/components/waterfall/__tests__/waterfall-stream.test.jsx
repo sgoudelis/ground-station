@@ -9,6 +9,8 @@ import { setupTheme } from '../../../theme.js';
 import waterfallReducer from '../waterfall-slice.jsx';
 import vfoReducer from '../vfo-marker/vfo-slice.jsx';
 import SdrAccordion from '../settings-sdr.jsx';
+
+vi.mock('../background-stream-control.jsx', () => ({ default: () => null }));
 import useWaterfallStream from '../waterfall-stream.jsx';
 
 const socket = {

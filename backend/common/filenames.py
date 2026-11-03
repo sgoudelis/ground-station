@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 from common.pathguard import ensure_path_in_allowed_roots
 
@@ -57,6 +57,4 @@ def resolve_base_path_within_root(root_dir: str | Path, base_name: str) -> Path:
     """Return a resolved base path constrained to the provided root directory."""
     root = Path(root_dir).resolve()
     root.mkdir(parents=True, exist_ok=True)
-    # `ensure_path_in_allowed_roots` is fully typed, but mypy may treat imports
-    # as `Any` depending on invocation scope; cast keeps this boundary explicit.
-    return cast(Path, ensure_path_in_allowed_roots(root / base_name, [root]))
+    return ensure_path_in_allowed_roots(root / base_name, [root])

@@ -1,6 +1,17 @@
 {
   "title": "Waterfall settings",
   "main_title": "Waterfall & Spectrum",
+  "background": {
+    "keep_receiving": "Keep receiving in background",
+    "description": "Keep VFOs, decoders, and recordings running after closing this tab. Unattended VFOs stay at their last frequency. The next user to join takes control.",
+    "observations": "Background observations",
+    "observation": "Observation",
+    "controlled": "Controller connected",
+    "unattended": "Unattended · frequencies held",
+    "adopt_description": "Adopt the running observation and replace your current VFOs.",
+    "take_control": "Take control",
+    "join_description": "Joining an unattended observation gives you control of its running VFOs and decoders. Frequencies stay fixed until you change them."
+  },
   "toolbar": {
     "start_streaming": "Start streaming",
     "stop_streaming": "Stop streaming",

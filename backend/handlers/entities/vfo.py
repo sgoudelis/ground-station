@@ -33,14 +33,16 @@ from pipeline.config.decoderconfigservice import decoder_config_service
 from pipeline.orchestration.processmanager import process_manager
 from pipeline.registries.decoderregistry import decoder_registry
 from server.startup import audio_queue
+from session.background import background_sessions
 from session.service import get_sdr_session, session_service
 from session.tracker import session_tracker
+from vfos.parameters import decoder_parameter_overrides
 from vfos.state import VFOManager
 
 # Module-level cache for decoder parameter overrides from UI
 # Key format: "{session_id}_{vfo_number}"
 # Value: Dict of decoder-specific parameters (e.g., {"sf": 7, "bw": 125000, ...})
-_decoder_param_overrides_cache: Dict[str, Dict[str, Any]] = {}
+_decoder_param_overrides_cache = decoder_parameter_overrides
 
 
 async def update_vfo_parameters(
@@ -58,6 +60,11 @@ async def update_vfo_parameters(
     Returns:
         Dictionary with success status
     """
+    socket_id = sid
+    sid = background_sessions.resolve(sid)
+    session = background_sessions.sessions.get(sid)
+    if session and session.controller != socket_id:
+        return {"success": False, "error": "This observation has no attached controller"}
     logger.debug(f"Updating VFO parameters, data: {data}")
 
     if not data:
@@ -201,6 +208,19 @@ async def update_vfo_parameters(
     # Start/stop demodulator based on VFO state (after update)
     if vfo_id > 0:  # Valid VFO (not deselect-all case)
         vfo_state = vfomanager.get_vfo_state(sid, vfo_id)
+        if vfo_state is None:
+            return {"success": False, "error": "Unknown VFO number"}
+
+        if data.get("active") is False:
+            # Closing an adopted VFO must finalize its recordings too, before
+            # its demodulator/audio broadcaster is torn down.
+            sdr_id = session_tracker.get_session_sdr(sid)
+            if sdr_id:
+                vfo_process_info = process_manager.processes.get(sdr_id, {})
+                if vfo_id in vfo_process_info.get("audio_recorders", {}).get(sid, {}):
+                    process_manager.audio_recorder_manager.stop_audio_recorder(sdr_id, sid, vfo_id)
+                if process_manager.transcription_manager:
+                    process_manager.transcription_manager.stop_transcription(sdr_id, sid, vfo_id)
 
         # Handle demodulator state changes ONLY if active state or mode was changed in the update
         # This prevents VFO updates (like selecting a different VFO) from starting/stopping demodulators
@@ -348,12 +368,19 @@ async def toggle_transcription(
     Returns:
         Dictionary with success status and updated VFO state
     """
+    socket_id = sid
+    sid = background_sessions.resolve(sid)
+    session = background_sessions.sessions.get(sid)
+    if session and session.controller != socket_id:
+        return {"success": False, "error": "This observation has no attached controller"}
     logger.debug(f"Toggling transcription, data: {data}")
 
     if not data or "vfoNumber" not in data:
         return {"success": False, "error": "vfoNumber is required"}
 
     vfo_number = data.get("vfoNumber")
+    if not isinstance(vfo_number, int) or vfo_number < 1:
+        return {"success": False, "error": "A positive integer vfoNumber is required"}
     enabled = data.get("enabled", False)
 
     logger.info(f"toggle_transcription called: vfo={vfo_number}, enabled={enabled}")
@@ -664,6 +691,11 @@ async def check_decoder_params_changed(sdr_id, session_id, vfo_state, logger):
         old_value = getattr(old_config, param, None)
         new_value = getattr(new_config, param, None)
 
+        # Both forms mean no framing overrides. A frozen configuration must not
+        # restart merely because resolution normalizes None to an empty dict.
+        if param == "framing_params":
+            old_value, new_value = old_value or {}, new_value or {}
+
         # Handle list comparisons (e.g., sync_word)
         if isinstance(old_value, list) and isinstance(new_value, list):
             if old_value != new_value:
@@ -738,6 +770,7 @@ async def handle_vfo_decoder_state(vfo_state, session_id, logger, force_restart=
         return
 
     # This VFO wants a decoder (decoder_class is already set from registry)
+    assert decoder_class is not None
 
     # Check if the same decoder is already running for this VFO
     # Use type() for exact match, not isinstance() which returns True for subclasses

@@ -176,6 +176,8 @@ const initialState = {
     errorDialogOpen: false,
     isStreaming: false,
     joinedSdrId: null,
+    receivingSessionId: null,
+    backgroundStreaming: false,
     isPlaying: false,
     targetFPS: 10,
     settingsDialogOpen: false,
@@ -302,6 +304,17 @@ export const waterfallSlice = createSlice({
         },
         setIsStreaming: (state, action) => {
             state.isStreaming = action.payload;
+            if (!action.payload) {
+                state.receivingSessionId = null;
+                state.backgroundStreaming = false;
+                state.isRecording = false;
+                state.recordingStartTime = null;
+                state.recordingDuration = 0;
+            }
+        },
+        setReceivingSession: (state, action) => {
+            state.receivingSessionId = action.payload?.session_id || null;
+            state.backgroundStreaming = Boolean(action.payload?.enabled);
         },
         setJoinedSdrId: (state, action) => {
             state.joinedSdrId = action.payload;
@@ -806,6 +819,7 @@ export const {
     setErrorMessage,
     setIsStreaming,
     setJoinedSdrId,
+    setReceivingSession,
     setTargetFPS,
     setIsPlaying,
     setSettingsDialogOpen,

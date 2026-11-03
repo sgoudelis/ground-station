@@ -34,7 +34,11 @@ from pipeline.orchestration.adsb import AdsbPublisher
 from pipeline.orchestration.gnssfix import derive_gnss_fix_status_from_output, gnss_fix_stream_key
 from pipeline.orchestration.gnsssatelliteresolver import GnssSatelliteResolver
 from pipeline.streaming.iqbroadcaster import IQBroadcaster
+from server import runtimestate
+from session.background import background_sessions
+from session.store import active_sdr_clients
 from session.tracker import session_tracker
+from vfos.parameters import clear_session_parameters
 from vfos.state import VFOManager
 from workers.airspyhfworker import airspyhf_worker_process
 from workers.airspyworker import airspy_worker_process
@@ -648,7 +652,7 @@ class ProcessLifecycleManager:
 
             # Add this client to the room (skip for internal observation sessions)
             if not VFOManager.is_internal_session(client_id):
-                await self.sio.enter_room(client_id, sdr_id)
+                await self.sio.enter_room(background_sessions.socket_for(client_id), sdr_id)
                 await self.sio.emit(
                     SocketEvents.SDR_STATUS,
                     {
@@ -804,7 +808,7 @@ class ProcessLifecycleManager:
 
             # Add this client to the room (skip for internal observation sessions)
             if not VFOManager.is_internal_session(client_id):
-                await self.sio.enter_room(client_id, sdr_id)
+                await self.sio.enter_room(background_sessions.socket_for(client_id), sdr_id)
 
             # Start async task to monitor the data queue
             asyncio.create_task(self._monitor_data_queue(sdr_id, process.pid))
@@ -828,9 +832,9 @@ class ProcessLifecycleManager:
         process_info["clients"].discard(client_id)
         process_info.get("joiners", set()).discard(client_id)
 
-        if not VFOManager.is_internal_session(client_id):
-            await (sio or self.sio).leave_room(client_id, sdr_id)
-
+        controller = background_sessions.socket_for(client_id)
+        # Release consumers before yielding to room operations. Another last
+        # participant may otherwise tear down the worker during this detach.
         self.demodulator_manager.stop_demodulator(sdr_id, client_id)
         self.recorder_manager.stop_recorder(sdr_id, client_id)
         if self.audio_recorder_manager:
@@ -840,6 +844,19 @@ class ProcessLifecycleManager:
         if self.transcription_manager:
             self.transcription_manager.stop_transcription(sdr_id, client_id)
 
+        if client_id in background_sessions.sessions:
+            if runtimestate.audio_consumer:
+                runtimestate.audio_consumer.cleanup_session(client_id)
+            if controller != client_id:
+                # Detached/adopted logical sessions have no original browser
+                # left to clear their configuration after failure or shutdown.
+                active_sdr_clients.pop(client_id, None)
+                session_tracker.clear_session(client_id)
+            background_sessions.remove(client_id)
+            session_tracker.unregister_session_streaming(client_id)
+            VFOManager().clear_session_vfos(client_id)
+            clear_session_parameters(client_id)
+
         if was_joiner:
             # JOIN has no configuration-store entry, so leaving must clear its
             # tracker and VFO state here rather than through stop_streaming().
@@ -847,6 +864,11 @@ class ProcessLifecycleManager:
                 session_tracker.unregister_session_streaming(client_id)
                 session_tracker.set_session_vfo_int(client_id, None)
             VFOManager().clear_session_vfos(client_id)
+
+        if not VFOManager.is_internal_session(client_id) and controller:
+            await (sio or self.sio).leave_room(controller, sdr_id)
+            if controller != client_id:
+                await (sio or self.sio).leave_room(controller, client_id)
 
         self.logger.info("Removed client %s from SDR process %s", client_id, sdr_id)
         return True
@@ -976,11 +998,11 @@ class ProcessLifecycleManager:
                 self.transcription_manager.stop_transcription(sdr_id, session_id)
 
         # Clean up
-        # On worker failure or forced teardown, notify and detach any joiners.
+        # Worker failure/shutdown must stop retained controllers as well as joiners.
         # Normal departure never reaches here while another client remains.
-        if process_info.get("joiners"):
+        if process_info.get("clients"):
             await self.sio.emit("sdr-status", {"streaming": False}, room=sdr_id)
-            for joiner_id in list(process_info["joiners"]):
+            for joiner_id in list(process_info["clients"]):
                 try:
                     await self._detach_sdr_client(sdr_id, process_info, joiner_id)
                 except Exception:
@@ -1518,6 +1540,17 @@ class ProcessLifecycleManager:
 
                                 if data_type == "decoder-status":
                                     self._log_decoder_error_status(data)
+                                    entry = (
+                                        process_info.get("decoders", {})
+                                        .get(session_id, {})
+                                        .get(data.get("vfo"))
+                                    )
+                                    if entry is not None:
+                                        instance_id = getattr(
+                                            entry.get("instance"), "decoder_id", None
+                                        )
+                                        if not instance_id or data.get("decoder_id") == instance_id:
+                                            entry["status"] = dict(data)
 
                                 # Reset backend transition memory when a GNSS decoder reports terminal/non-tracking states.
                                 if (
@@ -1536,6 +1569,12 @@ class ProcessLifecycleManager:
                                 if is_internal:
                                     # Broadcast internal session decoder events to all clients
                                     await self.sio.emit(SocketEvents.DECODER_DATA, data)
+                                elif session_id in background_sessions.sessions:
+                                    # JOIN viewers see the retained decoder output;
+                                    # audio stays in the controller's session room.
+                                    await self.sio.emit(
+                                        SocketEvents.DECODER_DATA, data, room=sdr_id
+                                    )
                                 else:
                                     # Send to specific session only (user sessions)
                                     await self.sio.emit(

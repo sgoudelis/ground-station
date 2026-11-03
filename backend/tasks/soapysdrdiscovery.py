@@ -29,6 +29,12 @@ from hardware.soapysdrbrowser import (
 logger = logging.getLogger("soapysdr-discovery-task")
 
 
+def _serialize_timestamp(value: object) -> float:
+    if not isinstance(value, (str, int, float)):
+        raise ValueError("Invalid discovery timestamp")
+    return float(value)
+
+
 class GracefulKiller:
     """Handle SIGTERM gracefully within the process."""
 
@@ -155,7 +161,7 @@ def soapysdr_discovery_task(
                     "status": server_info.get("status"),
                     "sdrs": server_info.get("sdrs", []),
                     "addresses": server_info.get("addresses", []),
-                    "last_updated": float(server_info.get("last_updated", 0)),
+                    "last_updated": _serialize_timestamp(server_info.get("last_updated", 0)),
                 }
 
             if _progress_queue:
@@ -298,7 +304,7 @@ def soapysdr_discovery_task(
                         "status": server_info.get("status"),
                         "sdrs": server_info.get("sdrs", []),
                         "addresses": server_info.get("addresses", []),
-                        "last_updated": float(server_info.get("last_updated", 0)),
+                        "last_updated": _serialize_timestamp(server_info.get("last_updated", 0)),
                     }
 
                 if _progress_queue:
@@ -420,7 +426,7 @@ def soapysdr_quick_refresh_task(_progress_queue: Optional[Queue] = None):
                     "status": server_info.get("status"),
                     "sdrs": server_info.get("sdrs", []),
                     "addresses": server_info.get("addresses", []),
-                    "last_updated": float(server_info.get("last_updated", 0)),
+                    "last_updated": _serialize_timestamp(server_info.get("last_updated", 0)),
                 }
 
             if _progress_queue:

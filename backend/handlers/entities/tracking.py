@@ -19,7 +19,7 @@ import asyncio
 import re
 import time
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, TypedDict, Union
 
 import crud
 from celestial.bodycatalog import get_celestial_body
@@ -944,7 +944,9 @@ async def fetch_next_passes(
     Returns:
         Dictionary with success status and next passes
     """
-    norad_id = data.get("norad_id", None) if data else None
+    norad_id = _coerce_int(data.get("norad_id")) if data else None
+    if norad_id is None or norad_id <= 0:
+        return {"success": False, "data": []}
     hours = data.get("hours", 4.0) if data else 4.0
     min_elevation = data.get("min_elevation", 0) if data else 0
     force_recalculate = data.get("force_recalculate", False) if data else False
@@ -1053,6 +1055,17 @@ def _pick_active_or_upcoming_pass(
     return active_pass, next_pass
 
 
+class NormalizedTracker(TypedDict):
+    tracker_id: str
+    target_type: str
+    norad_id: Optional[int]
+    mission_id: str
+    command: str
+    body_id: str
+    target_key: Optional[str]
+    min_elevation: float
+
+
 async def fetch_next_pass_summaries_for_trackers(
     sio: Any, data: Optional[Dict], logger: Any, sid: str
 ) -> Dict[str, Union[bool, dict, str]]:
@@ -1103,7 +1116,7 @@ async def fetch_next_pass_summaries_for_trackers(
             "message": "trackers must be a list",
         }
 
-    normalized_trackers = []
+    normalized_trackers: list[NormalizedTracker] = []
     for raw in tracker_requests:
         if not isinstance(raw, dict):
             continue

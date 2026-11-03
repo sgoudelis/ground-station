@@ -135,7 +135,7 @@ audio_broadcaster: AudioBroadcaster = AudioBroadcaster(audio_queue)
 runtimestate.audio_queue = audio_queue
 
 # Background task manager (initialized after sio is created)
-background_task_manager: BackgroundTaskManager = None
+background_task_manager: Optional[BackgroundTaskManager] = None
 runtimestate.process_manager = process_manager
 _LIBRARY_RECONCILIATION_SECONDS = 60
 
@@ -948,13 +948,15 @@ async def api_events(request: Request):
         raise HTTPException(
             status_code=403, detail="Station, observations, or artifacts read scope required."
         )
+    raw_token = authsvc.extract_bearer_token(request.headers.get("authorization"))
+    if raw_token is None:
+        raise HTTPException(status_code=401, detail="A Bearer API token is required.")
     try:
         subscription = public_events.subscribe(context["token_id"], context["scopes"])
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=429, detail=str(exc)) from exc
-    raw_token = authsvc.extract_bearer_token(request.headers.get("authorization"))
     return StreamingResponse(
         _stream_api_events(raw_token, context["token_id"], subscription),
         media_type="text/event-stream",

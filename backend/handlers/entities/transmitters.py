@@ -23,7 +23,7 @@ from tracker.runner import get_all_tracker_managers
 
 
 def _resolve_owner_from_payload(
-    data: Optional[Dict[str, Any]]
+    data: Optional[Dict[str, Any]],
 ) -> tuple[Optional[int], Optional[str]]:
     payload = data or {}
     norad_cat_id_raw = payload.get("norad_cat_id")
@@ -90,7 +90,7 @@ async def submit_transmitter(
     """
     async with AsyncSessionLocal() as dbsession:
         logger.debug(f"Adding transmitter, data: {data}")
-        add_reply = await crud.transmitters.add_transmitter(dbsession, data)
+        add_reply = await crud.transmitters.add_transmitter(dbsession, data or {})
         norad_cat_id, target_key = _resolve_owner_from_payload(data)
         if add_reply.get("success"):
             add_data = add_reply.get("data") or {}
@@ -133,7 +133,7 @@ async def edit_transmitter(
     async with AsyncSessionLocal() as dbsession:
         logger.debug(f"Editing transmitter, data: {data}")
         transmitter_id = data.get("id") if data else None
-        edit_reply = await crud.transmitters.edit_transmitter(dbsession, data)
+        edit_reply = await crud.transmitters.edit_transmitter(dbsession, data or {})
         logger.info(edit_reply)
         norad_cat_id, target_key = _resolve_owner_from_payload(data)
         if edit_reply.get("success"):
@@ -178,6 +178,8 @@ async def delete_transmitter(
     async with AsyncSessionLocal() as dbsession:
         logger.debug(f"Deleting transmitter, data: {data}")
         transmitter_id = data.get("transmitter_id") if data else None
+        if not isinstance(transmitter_id, str) or not transmitter_id:
+            return {"success": False, "data": []}
         norad_cat_id, target_key = _resolve_owner_from_payload(data)
         if transmitter_id and not norad_cat_id and not target_key:
             fetch_reply = await crud.transmitters.fetch_transmitter(dbsession, transmitter_id)

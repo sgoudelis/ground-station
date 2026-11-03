@@ -1295,7 +1295,7 @@ class PerformanceMonitor(threading.Thread):
                     real_ip = x_forwarded
                 # Try X-Real-IP header
                 elif environ.get("HTTP_X_REAL_IP"):
-                    real_ip = environ.get("HTTP_X_REAL_IP")
+                    real_ip = str(environ["HTTP_X_REAL_IP"])
                 # Try ASGI scope client tuple (ASGI-specific)
                 elif "asgi.scope" in environ and "client" in environ["asgi.scope"]:
                     client = environ["asgi.scope"]["client"]
@@ -1303,7 +1303,7 @@ class PerformanceMonitor(threading.Thread):
                         real_ip = client[0]
                 # Fallback to REMOTE_ADDR
                 elif environ.get("REMOTE_ADDR"):
-                    real_ip = environ.get("REMOTE_ADDR")
+                    real_ip = str(environ["REMOTE_ADDR"])
 
                 sessions[sid] = {
                     "type": "Browser",

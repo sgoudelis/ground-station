@@ -125,6 +125,12 @@ const filterUIOnlyFields = (vfoState) => {
 };
 
 const backendSyncMiddleware = (store) => (next) => (action) => {
+    if (action.type === 'vfo/restoreReceivingSession'
+        || (action.type === 'waterfallState/setIsStreaming' && !action.payload)) {
+        // Old debounced edits must never land in a newly adopted observation.
+        Object.values(debounceTimers).forEach(clearTimeout);
+        Object.keys(debounceTimers).forEach((key) => delete debounceTimers[key]);
+    }
     // Get state BEFORE action is processed for VFO activation checks
     const stateBefore = store.getState();
 
@@ -266,6 +272,7 @@ const backendSyncMiddleware = (store) => (next) => (action) => {
         // Re-read state at fire time to avoid sending stale active/selected values.
         debouncedBackendUpdate(store, vfoNumber, () => {
             const currentState = store.getState();
+            if (!currentState.waterfall.isStreaming) return;
             const currentVfoState = currentState.vfo.vfoMarkers[vfoNumber];
             if (!currentVfoState) {
                 return;
@@ -366,7 +373,8 @@ const backendSyncMiddleware = (store) => (next) => (action) => {
     }
 
     // Handle streaming start - send all VFO data to backend
-    if (action.type === 'waterfallState/setIsStreaming' && action.payload === true) {
+    if (action.type === 'waterfallState/setIsStreaming' && action.payload === true
+        && !stateBefore.waterfall.isStreaming && !action.meta?.preserveVfos) {
         const vfoMarkers = state.vfo.vfoMarkers;
         const vfoActive = state.vfo.vfoActive;
         const selectedVFO = state.vfo.selectedVFO;

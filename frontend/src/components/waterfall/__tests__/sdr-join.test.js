@@ -1,9 +1,15 @@
 import { configureStore } from '@reduxjs/toolkit';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import reducer, { updateSDRConfig, setSelectedSDRId } from '../waterfall-slice.jsx';
 import { leaveSdr, joinSdr } from '../sdr-join.js';
 import backendSyncMiddleware, { setSocketForMiddleware } from '../vfo-marker/vfo-middleware.jsx';
 import vfoReducer, { setVFOProperty, setVfoActive } from '../vfo-marker/vfo-slice.jsx';
+import decodersReducer from '../../decoders/decoders-slice.jsx';
+
+afterEach(() => {
+    setSocketForMiddleware(null);
+    vi.useRealTimers();
+});
 
 describe('SDR joining', () => {
     it('uses only the join subscription and applies the worker settings', async () => {
@@ -88,5 +94,78 @@ describe('SDR joining', () => {
         ]);
         expect(requests[1].data).toMatchObject({ vfoNumber: 1, frequency: 145_810_000, active: true });
         setSocketForMiddleware(null);
+    });
+
+    it.each(['join-sdr', 'claim-sdr'])('adopts workers through %s without sending stale or restored VFO settings', async (command) => {
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date('2026-11-03T10:02:00Z'));
+        const requests = [];
+        const socket = { id: 'new-socket', emit: vi.fn((_event, request, callback) => {
+            requests.push(request);
+            callback({ success: true, data: {
+                config: { sdr_id: 'sdr-a', center_freq: 145_800_000, sample_rate: 2_048_000 },
+                observation: {
+                    session_id: 'original-session', enabled: true, is_recording: true, audio_recordings: [1],
+                    recording_start_time: '2026-11-03T10:00:00Z', audio_recording_durations: { 1: 10.5 },
+                    vfos: {
+                        1: { active: true, center_freq: 145_810_000, modulation: 'FM', bandwidth: 14500 },
+                        2: { active: true, selected: true, center_freq: 145_820_000, decoder: 'fsk', bandwidth: 27000,
+                            locked_transmitter_id: 'old-transmitter', parameters_enabled: false,
+                            decoder_parameters: { baudrate: 4800, framing: 'ax25', deviation: 2400 } },
+                    },
+                    decoder_statuses: [{ session_id: 'original-session', vfo: 2, decoder_type: 'fsk',
+                        status: 'decoding', decoder_id: 'decoder-original' }],
+                },
+            } });
+        }) };
+        setSocketForMiddleware(socket);
+        const store = configureStore({
+            reducer: { waterfall: reducer, vfo: vfoReducer, decoders: decodersReducer },
+            middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(backendSyncMiddleware),
+        });
+        if (command === 'claim-sdr') {
+            // A viewer may have queued edits on its own VFOs at adoption time.
+            store.dispatch({ type: 'waterfallState/setIsStreaming', payload: true });
+        }
+        store.dispatch(setVFOProperty({ vfoNumber: 1, updates: { frequency: 99_000_000, lockedTransmitterId: 'stale-lock' } }));
+
+        await joinSdr(socket, store.dispatch, 'sdr-a', command);
+        await vi.runAllTimersAsync();
+
+        expect(requests.map((request) => request.cmd)).toEqual([`sdr.${command}`]);
+        const state = store.getState();
+        expect(state.waterfall).toMatchObject({ isStreaming: true, joinedSdrId: null,
+            receivingSessionId: 'original-session', backgroundStreaming: true, isRecording: true,
+            recordingStartTime: '2026-11-03T10:00:00Z', recordingDuration: 120 });
+        expect(state.vfo.vfoMarkers[1]).toMatchObject({ frequency: 145_810_000, bandwidth: 14500, lockedTransmitterId: 'none' });
+        expect(state.vfo.vfoMarkers[2]).toMatchObject({ frequency: 145_820_000, bandwidth: 27000, mode: 'none',
+            decoder: 'fsk', parametersEnabled: false, lockedTransmitterId: 'none', lockedTransmitterTrackerId: null,
+            parameters: { fsk_baudrate: 4800, fsk_deviation: 2400, fsk_framing: 'ax25' } });
+        expect(state.vfo.vfoActive).toEqual({ 1: true, 2: true, 3: false, 4: false });
+        expect(state.vfo.selectedVFO).toBe(2);
+        expect(state.vfo.audioRecording[1]).toEqual({ isRecording: true, duration: 10 });
+        expect(state.decoders.currentSessionId).toBe('original-session');
+        expect(state.decoders.active['original-session_vfo2'].decoder_id).toBe('decoder-original');
+
+        // A duplicate stream-status notification must not restart restored VFOs.
+        store.dispatch({ type: 'waterfallState/setIsStreaming', payload: true });
+        expect(requests).toHaveLength(1);
+    });
+
+    it('hydrates background decoder status for a viewer joining a controlled observation', async () => {
+        const socket = { id: 'viewer', emit: (_event, _request, callback) => callback({
+            success: true, data: {
+                config: { sdr_id: 'sdr-a', center_freq: 145_800_000, sample_rate: 2_048_000 },
+                background_observations: [{ session_id: 'original', decoder_statuses: [{
+                    session_id: 'original', vfo: 2, decoder_type: 'fsk', status: 'decoding', decoder_id: 'running-worker',
+                }] }],
+            },
+        }) };
+        const store = configureStore({ reducer: { waterfall: reducer, vfo: vfoReducer, decoders: decodersReducer } });
+        await joinSdr(socket, store.dispatch, 'sdr-a');
+        expect(store.getState().waterfall.joinedSdrId).toBe('sdr-a');
+        expect(store.getState().decoders.currentSessionId).toBe('viewer');
+        expect(store.getState().decoders.observedSessionIds).toEqual(['original']);
+        expect(store.getState().decoders.active.original_vfo2.decoder_id).toBe('running-worker');
     });
 });

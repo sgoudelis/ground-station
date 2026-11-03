@@ -141,7 +141,7 @@ class AdsbDecoder(BaseDecoderProcess):
         ]
         aircraft_database.cache_clear()
         self.aircraft_database = aircraft_database()
-        if self.aircraft_database.path:
+        if self.aircraft_database is not None and self.aircraft_database.path:
             command.extend(["--db-file", str(self.aircraft_database.path), "--db-file-lt"])
             logger.info("Using aircraft database %s", self.aircraft_database.path)
         else:

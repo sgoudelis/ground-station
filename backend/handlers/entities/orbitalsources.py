@@ -26,7 +26,7 @@ from tlesync.state import sync_state_manager
 
 async def get_orbital_sources(
     sio: Any, data: Optional[Dict], logger: Any, sid: str
-) -> Dict[str, Union[bool, list]]:
+) -> Dict[str, Union[bool, list, None]]:
     """Get all orbital sources."""
     async with AsyncSessionLocal() as dbsession:
         logger.debug("Getting orbital sources")
@@ -36,11 +36,11 @@ async def get_orbital_sources(
 
 async def submit_orbital_source(
     sio: Any, data: Optional[Dict], logger: Any, sid: str
-) -> Dict[str, Union[bool, list]]:
+) -> Dict[str, Union[bool, list, None]]:
     """Add a new orbital source."""
     async with AsyncSessionLocal() as dbsession:
         logger.debug("Adding orbital source")
-        submit_reply = await orbital_sources_crud.add_orbital_source(dbsession, data)
+        submit_reply = await orbital_sources_crud.add_orbital_source(dbsession, data or {})
 
         orbital_sources = await orbital_sources_crud.fetch_orbital_source(dbsession)
         return {
@@ -52,7 +52,7 @@ async def submit_orbital_source(
 
 async def edit_orbital_source(
     sio: Any, data: Optional[Dict], logger: Any, sid: str
-) -> Dict[str, Union[bool, list, str]]:
+) -> Dict[str, Union[bool, list, str, None]]:
     """Edit an existing orbital source."""
     async with AsyncSessionLocal() as dbsession:
         logger.debug("Editing orbital source")
@@ -71,11 +71,11 @@ async def edit_orbital_source(
 
 async def delete_orbital_sources(
     sio: Any, data: Optional[Dict], logger: Any, sid: str
-) -> Dict[str, Union[bool, list, dict, str]]:
+) -> Dict[str, Union[bool, list, dict, str, None]]:
     """Delete orbital sources."""
     async with AsyncSessionLocal() as dbsession:
         logger.debug(f"Deleting orbital source, data: {data}")
-        delete_reply = await orbital_sources_crud.delete_orbital_sources(dbsession, data)
+        delete_reply = await orbital_sources_crud.delete_orbital_sources(dbsession, data or {})
 
         orbital_sources = await orbital_sources_crud.fetch_orbital_source(dbsession)
         return {
@@ -88,7 +88,7 @@ async def delete_orbital_sources(
 
 async def fetch_sync_state(
     sio: Any, data: Optional[Dict], logger: Any, sid: str
-) -> Dict[str, Union[bool, dict]]:
+) -> Dict[str, Union[bool, dict, None]]:
     """Get orbital synchronization state."""
     del sio, data, sid
     logger.debug("Getting orbital synchronization state")

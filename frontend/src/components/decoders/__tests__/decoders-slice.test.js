@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import reducer, { clearGnssOutputsForDecoder, decoderOutputReceived, decoderProgressUpdated, decoderStatusChanged, deleteOutputByFilename, isStaleDecoderStatus } from '../decoders-slice.jsx';
+import reducer, { clearGnssOutputsForDecoder, cleanupStaleDecoders, decoderOutputReceived, decoderProgressUpdated, decoderStatusChanged, deleteOutputByFilename, isStaleDecoderStatus, setCurrentSessionId, setObservedSessionIds } from '../decoders-slice.jsx';
 
 it('deletes only the specified nested packet when basenames match', () => {
     const initial = reducer(undefined, { type: '@@INIT' });
@@ -15,6 +15,30 @@ it('deletes only the specified nested packet when basenames match', () => {
 });
 
 describe('decoders slice status lifecycle', () => {
+    it('preserves observed decoders across session changes and prunes departed observations', () => {
+        let state = reducer(undefined, setCurrentSessionId('previous-socket'));
+        state = reducer(state, setObservedSessionIds(['background']));
+        for (const session_id of ['background', 'internal:scheduled', 'previous-socket']) {
+            state = reducer(state, decoderStatusChanged({ session_id, vfo: 1, decoder_type: 'fsk', status: 'decoding' }));
+        }
+        state = reducer(state, setCurrentSessionId('viewer'));
+        state = reducer(state, cleanupStaleDecoders());
+        expect(Object.keys(state.active).sort()).toEqual(['background_vfo1', 'internal:scheduled_vfo1']);
+        state = reducer(state, setObservedSessionIds([]));
+        expect(Object.keys(state.active)).toEqual(['internal:scheduled_vfo1']);
+    });
+
+    it('clears user decoders and retained receiving state on Stop while preserving scheduled observations', () => {
+        let state = reducer(undefined, setCurrentSessionId('adopted'));
+        state = reducer(state, setObservedSessionIds(['background']));
+        for (const session_id of ['adopted', 'background', 'internal:scheduled']) {
+            state = reducer(state, decoderStatusChanged({ session_id, vfo: 1, decoder_type: 'fsk', status: 'decoding' }));
+        }
+        state = reducer(state, { type: 'waterfallState/setIsStreaming', payload: false });
+        expect(Object.keys(state.active)).toEqual(['internal:scheduled_vfo1']);
+        expect(state.observedSessionIds).toEqual([]);
+    });
+
     it('keeps starting status as active decoder state', () => {
         let state = reducer(undefined, { type: '@@INIT' });
 

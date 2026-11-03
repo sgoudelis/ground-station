@@ -24,64 +24,91 @@ logger = logging.getLogger("decoder-registry")
 unavailable_decoder_reasons: Dict[str, str] = {}
 
 # Import decoder classes
+APRSDecoder: Optional[Type] = None
 try:
-    from demodulators.aprsdecoder import APRSDecoder
+    from demodulators.aprsdecoder import APRSDecoder as _APRSDecoder
+
+    APRSDecoder = _APRSDecoder
 except Exception as error:
     logger.warning("APRS decoder is unavailable: %s", error)
     unavailable_decoder_reasons["aprs"] = f"{type(error).__name__}: {error}"
     APRSDecoder = None
 
+BPSKDecoder: Optional[Type] = None
 try:
-    from demodulators.bpskdecoder import BPSKDecoder
+    from demodulators.bpskdecoder import BPSKDecoder as _BPSKDecoder
+
+    BPSKDecoder = _BPSKDecoder
 except Exception as error:
     logger.warning("BPSK decoder is unavailable: %s", error)
     unavailable_decoder_reasons["bpsk"] = f"{type(error).__name__}: {error}"
     BPSKDecoder = None
 
+FSKDecoder: Optional[Type] = None
 try:
-    from demodulators.fskdecoder import FSKDecoder
+    from demodulators.fskdecoder import FSKDecoder as _FSKDecoder
+
+    FSKDecoder = _FSKDecoder
 except Exception as error:
     logger.warning("FSK decoder is unavailable: %s", error)
     unavailable_decoder_reasons["fsk"] = f"{type(error).__name__}: {error}"
     FSKDecoder = None
 
+GFSKDecoder: Optional[Type] = None
 try:
-    from demodulators.gfskdecoder import GFSKDecoder
+    from demodulators.gfskdecoder import GFSKDecoder as _GFSKDecoder
+
+    GFSKDecoder = _GFSKDecoder
 except Exception as error:
     logger.warning("GFSK decoder is unavailable: %s", error)
     unavailable_decoder_reasons["gfsk"] = f"{type(error).__name__}: {error}"
     GFSKDecoder = None
 
+GMSKDecoder: Optional[Type] = None
 try:
-    from demodulators.gmskdecoder import GMSKDecoder
+    from demodulators.gmskdecoder import GMSKDecoder as _GMSKDecoder
+
+    GMSKDecoder = _GMSKDecoder
 except Exception as error:
     logger.warning("GMSK decoder is unavailable: %s", error)
     unavailable_decoder_reasons["gmsk"] = f"{type(error).__name__}: {error}"
     GMSKDecoder = None
 
+MorseDecoder: Optional[Type] = None
 try:
-    from demodulators.morsedecoder import MorseDecoder
+    from demodulators.morsedecoder import MorseDecoder as _MorseDecoder
+
+    MorseDecoder = _MorseDecoder
 except Exception as error:
     logger.warning("Morse decoder is unavailable: %s", error)
     unavailable_decoder_reasons["morse"] = f"{type(error).__name__}: {error}"
     MorseDecoder = None
 
+SSTVDecoder: Optional[Type] = None
 try:
-    from demodulators.sstvdecoder import SSTVDecoder
+    from demodulators.sstvdecoder import SSTVDecoder as _SSTVDecoder
+
+    SSTVDecoder = _SSTVDecoder
 except Exception as error:
     logger.warning("SSTV decoder is unavailable: %s", error)
     unavailable_decoder_reasons["sstv"] = f"{type(error).__name__}: {error}"
     SSTVDecoder = None
 
+GeoscanImageDecoder: Optional[Type] = None
 try:
-    from demodulators.geoscanimage import GeoscanImageDecoder
+    from demodulators.geoscanimage import GeoscanImageDecoder as _GeoscanImageDecoder
+
+    GeoscanImageDecoder = _GeoscanImageDecoder
 except Exception as error:
     logger.warning("Geoscan image decoder is unavailable: %s", error)
     unavailable_decoder_reasons["geoscanimage"] = f"{type(error).__name__}: {error}"
     GeoscanImageDecoder = None
 
+GNSSSdrDecoder: Optional[Type] = None
 try:
-    from demodulators.gnsssdrdecoder import GNSSSdrDecoder
+    from demodulators.gnsssdrdecoder import GNSSSdrDecoder as _GNSSSdrDecoder
+
+    GNSSSdrDecoder = _GNSSSdrDecoder
 except Exception as error:
     logger.warning("GNSS decoder is unavailable: %s", error)
     unavailable_decoder_reasons["gnss"] = f"{type(error).__name__}: {error}"

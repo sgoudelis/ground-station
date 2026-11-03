@@ -92,7 +92,7 @@ class ObservationExecutor:
         """
         self.process_manager = process_manager
         self.sio = sio
-        self._vfo_manager = None
+        self._vfo_manager: Optional[VFOManager] = None
 
         # Initialize task handlers
         self.decoder_handler = DecoderHandler(process_manager)
@@ -660,9 +660,9 @@ class ObservationExecutor:
 
             # Clean up running observation tracking
             self._running_observations.discard(observation_id)
-            bundle_dir = self._bundle_dirs.pop(observation_id, None)
-            if bundle_dir:
-                await self._finalize_bundle(observation_id, bundle_dir, "failed")
+            failed_bundle_dir = self._bundle_dirs.pop(observation_id, None)
+            if failed_bundle_dir:
+                await self._finalize_bundle(observation_id, failed_bundle_dir, "failed")
 
             await update_observation_status(self.sio, observation_id, STATUS_FAILED, str(e))
             # Remove scheduled stop job on error
@@ -770,9 +770,9 @@ class ObservationExecutor:
 
             # Clean up running observation tracking even on error
             self._running_observations.discard(observation_id)
-            bundle_dir = self._bundle_dirs.pop(observation_id, None)
-            if bundle_dir:
-                await self._finalize_bundle(observation_id, bundle_dir, "failed")
+            failed_bundle_dir = self._bundle_dirs.pop(observation_id, None)
+            if failed_bundle_dir:
+                await self._finalize_bundle(observation_id, failed_bundle_dir, "failed")
 
             # Mark observation as failed since stop encountered a critical error
             try:

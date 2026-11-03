@@ -199,6 +199,7 @@ const WaterfallToolbar = ({
                     <StopIcon/>
                 </IconButton>
 
+
                 <IconButton
                     color={showLeftSideWaterFallAccessories ? 'warning' : 'primary'}
                     onClick={toggleLeftSideWaterFallAccessories}

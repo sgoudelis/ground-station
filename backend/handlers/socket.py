@@ -188,8 +188,8 @@ def register_socketio_handlers(sio):
         SOCKET_TOKENS.pop(sid, None)
         remote_addr = session_env.get("REMOTE_ADDR", "unknown")
         logger.info(f"Client {sid} from {remote_addr} disconnected")
-        # Clean up session via SessionService (stops processes and clears tracker including metadata).
-        await session_service.cleanup_session(sid)
+        # Retain explicitly backgrounded reception; release other session resources.
+        await session_service.disconnect_session(sid)
 
     @sio.on("api.call")
     async def handle_api_call(sid: str, payload: Optional[Dict[str, Any]] = None):

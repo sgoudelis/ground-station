@@ -272,10 +272,16 @@ class DecoderManager:
 
             # Get decoder capabilities from registry
             caps = decoder_registry.get_capabilities(decoder_name)
+            if caps is None:
+                self.logger.error("Decoder capabilities unavailable: %s", decoder_name)
+                return False
             needs_raw_iq = caps.needs_raw_iq
             needs_internal_demod = caps.needs_internal_demod
             required_demodulator = caps.required_demodulator
             demodulator_mode = caps.demodulator_mode
+            if needs_internal_demod and not required_demodulator:
+                self.logger.error("Decoder %s requires a demodulator type", decoder_name)
+                return False
 
             # Check if there's an active demodulator for this session
             # If not, or if it's not in internal mode, create an internal demodulator specifically for the decoder
@@ -291,6 +297,7 @@ class DecoderManager:
                 )
                 # Skip all demodulator creation logic
             elif needs_internal_demod:
+                assert required_demodulator is not None
                 # Audio decoder - needs an internal demodulator
                 need_to_create_demod = False
 
@@ -689,10 +696,8 @@ class DecoderManager:
                     demod_class_name = type(vfo_demod).__name__
                     demod_type = "UNKNOWN"
                     for demod_name in demodulator_registry.list_demodulators():
-                        if (
-                            demodulator_registry.get_demodulator_class(demod_name).__name__
-                            == demod_class_name
-                        ):
+                        registered_demod = demodulator_registry.get_demodulator_class(demod_name)
+                        if registered_demod and registered_demod.__name__ == demod_class_name:
                             demod_type = demod_name.upper()
                             break
 
@@ -812,7 +817,7 @@ class DecoderManager:
             decoder_class = None
             for name in decoder_registry.list_decoders():
                 cls = decoder_registry.get_decoder_class(name)
-                if cls.__name__ == decoder_type:
+                if cls is not None and cls.__name__ == decoder_type:
                     decoder_class = cls
                     break
 

@@ -504,6 +504,10 @@ async def synchronize_satellite_data_internal(dbsession, logger, emit_callback):
                 logger.info("Fetching satellite metadata (%s)", satellite_metadata_url)
                 try:
                     response = await async_fetch(satellite_metadata_url, pool)
+                    if response is None:
+                        raise requests.exceptions.RequestException(
+                            "No response from metadata source"
+                        )
                     if response.status_code != 200:
                         raise requests.exceptions.RequestException(
                             f"Unable to fetch data from {satellite_metadata_url}, "
@@ -567,6 +571,10 @@ async def synchronize_satellite_data_internal(dbsession, logger, emit_callback):
                 logger.info("Fetching transmitter metadata (%s)", transmitter_metadata_url)
                 try:
                     response = await async_fetch(transmitter_metadata_url, pool)
+                    if response is None:
+                        raise requests.exceptions.RequestException(
+                            "No response from metadata source"
+                        )
                     if response.status_code != 200:
                         raise requests.exceptions.RequestException(
                             f"Unable to fetch data from {transmitter_metadata_url}, "

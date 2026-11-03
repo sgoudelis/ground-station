@@ -53,6 +53,7 @@ const initialState = {
 
     // Current socket session ID (used to clean up stale decoders on reconnect)
     currentSessionId: null,
+    observedSessionIds: [],
 
     // Decoded output history (limited to last 100 items)
     outputs: [],
@@ -99,6 +100,16 @@ export const decodersSlice = createSlice({
     name: 'decoders',
     initialState,
     reducers: {
+        setObservedSessionIds: (state, action) => {
+            // A stopped background observation may no longer have a room in
+            // which to publish its final decoder status. Prune it on discovery.
+            for (const [key, decoder] of Object.entries(state.active)) {
+                if (state.observedSessionIds.includes(decoder.session_id)
+                    && !action.payload.includes(decoder.session_id)
+                    && decoder.session_id !== state.currentSessionId) delete state.active[key];
+            }
+            state.observedSessionIds = action.payload;
+        },
         // Decoder status changed
         decoderStatusChanged: (state, action) => {
             const { session_id, status, mode, decoder_type, decoder_id, worker_started_at, vfo, timestamp, progress, info } = action.payload;
@@ -361,7 +372,10 @@ export const decodersSlice = createSlice({
             if (state.currentSessionId && state.currentSessionId !== newSessionId) {
                 console.log(`Session ID changed from ${state.currentSessionId} to ${newSessionId}, clearing stale decoders`);
                 const internalDecoders = Object.entries(state.active)
-                    .filter(([_, decoder]) => decoder.session_id && decoder.session_id.startsWith('internal:'))
+                    .filter(([_, decoder]) => decoder.session_id && (
+                        decoder.session_id.startsWith('internal:')
+                        || state.observedSessionIds.includes(decoder.session_id)
+                    ))
                     .reduce((acc, [key, decoder]) => {
                         acc[key] = decoder;
                         return acc;
@@ -386,6 +400,7 @@ export const decodersSlice = createSlice({
                     if (decoder.session_id === state.currentSessionId) {
                         return false;
                     }
+                    if (state.observedSessionIds.includes(decoder.session_id)) return false;
                     // Keep internal sessions (automated observations)
                     if (decoder.session_id && decoder.session_id.startsWith('internal:')) {
                         return false;
@@ -405,6 +420,13 @@ export const decodersSlice = createSlice({
     },
     extraReducers: (builder) => {
         builder
+            .addCase('waterfallState/setIsStreaming', (state, action) => {
+                if (!action.payload) {
+                    state.active = Object.fromEntries(Object.entries(state.active)
+                        .filter(([, decoder]) => decoder.session_id?.startsWith('internal:')));
+                    state.observedSessionIds = [];
+                }
+            })
             // fetchDetectedSatellite cases
             .addCase(fetchDetectedSatellite.pending, (state, action) => {
                 const { noradId } = action.meta.arg;
@@ -443,6 +465,7 @@ export const decodersSlice = createSlice({
 
 export const {
     decoderStatusChanged,
+    setObservedSessionIds,
     decoderProgressUpdated,
     decoderOutputReceived,
     clearDecoderSession,

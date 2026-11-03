@@ -384,7 +384,12 @@ class DeepgramTranscriptionWorker(TranscriptionWorker):
         return translated_text
 
     async def _emit_transcription(
-        self, text: str, language: str, is_final: bool, confidence: Optional[float] = None
+        self,
+        text: str,
+        language: str,
+        is_final: bool,
+        confidence: Optional[float] = None,
+        detected_language: Optional[str] = None,
     ):
         """
         Override to add translation step for Deepgram transcriptions.
@@ -396,7 +401,7 @@ class DeepgramTranscriptionWorker(TranscriptionWorker):
             confidence: Optional confidence score (0.0 to 1.0)
         """
         # Identify the source text before the optional translation replaces it.
-        detected_language = (
+        detected_language = detected_language or (
             self._detect_source_language(text) if is_final else self._last_detected_language
         )
 

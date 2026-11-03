@@ -24,7 +24,7 @@ from common.arguments import arguments
 
 async def get_app_config(
     sio: Any, data: Optional[Dict], logger: Any, sid: str
-) -> Dict[str, Union[bool, dict, str]]:
+) -> Dict[str, Union[bool, dict, str, None]]:
     """Return schema and effective application config values for UI editing."""
     del sio, data, sid  # handler signature is fixed by dispatcher
     logger.debug("Fetching app config settings payload")
@@ -33,7 +33,7 @@ async def get_app_config(
 
 async def update_app_config(
     sio: Any, data: Optional[Dict], logger: Any, sid: str
-) -> Dict[str, Union[bool, dict, str]]:
+) -> Dict[str, Union[bool, dict, str, None]]:
     """Validate and persist app config updates."""
     del sio, sid
     payload = data or {}

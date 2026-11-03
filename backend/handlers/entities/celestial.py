@@ -39,12 +39,12 @@ def _find_static_spacecraft_match(query: str) -> Optional[Dict[str, Any]]:
 
     for entry in get_spacecraft_index():
         if needle == str(entry.get("command") or "").strip().lower():
-            return cast(Dict[str, Any], entry)
+            return entry
         if needle == str(entry.get("display_name") or "").strip().lower():
-            return cast(Dict[str, Any], entry)
+            return entry
         aliases = entry.get("aliases") or []
         if any(needle == str(alias).strip().lower() for alias in aliases):
-            return cast(Dict[str, Any], entry)
+            return entry
     return None
 
 
@@ -298,7 +298,7 @@ async def get_celestial_scene(
         force_refresh=False,
         allow_network_fetch=allow_network_fetch,
     )
-    return cast(Dict[str, Any], scene)
+    return scene
 
 
 async def get_solar_system_scene(
@@ -333,7 +333,7 @@ async def get_solar_system_scene(
         allow_network_fetch=allow_network_fetch,
         per_body_callback=emit_body if allow_network_fetch and request_id else None,
     )
-    return cast(Dict[str, Any], scene)
+    return scene
 
 
 async def get_celestial_tracks(
@@ -358,7 +358,7 @@ async def get_celestial_tracks(
         allow_network_fetch=allow_network_fetch,
         per_row_callback=emit_partial_row,
     )
-    return cast(Dict[str, Any], tracks)
+    return tracks
 
 
 async def refresh_celestial_now(
@@ -382,7 +382,7 @@ async def refresh_celestial_now(
         await sio.emit("solar-system-scene-update", scene_data)
         await sio.emit("celestial-tracks-update", scene_data)
         await sio.emit("celestial-scene-update", scene_data)
-    return cast(Dict[str, Any], scene)
+    return scene
 
 
 async def refresh_monitored_celestial_now(
@@ -468,7 +468,7 @@ async def refresh_monitored_celestial_now(
             per_row_callback=emit_partial_row,
         )
         if not tracks.get("success"):
-            return cast(Dict[str, Any], tracks)
+            return tracks
 
         refreshed_at = datetime.now(timezone.utc)
         scene_data_obj = tracks.get("data")
@@ -509,7 +509,7 @@ async def refresh_monitored_celestial_now(
 
         if not selected_ids:
             await sio.emit("celestial-tracks-update", tracks.get("data", {}))
-        return cast(Dict[str, Any], tracks)
+        return tracks
 
 
 async def get_monitored_celestial(

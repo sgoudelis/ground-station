@@ -334,7 +334,7 @@ async def test_worker_failure_detaches_joiner_without_recursive_teardown(monkeyp
 
     assert "sdr-a" not in sdrhandlers.process_manager.processes
     assert session_tracker.get_session_sdr("joiner") is None
-    assert sio.left == [("joiner", "sdr-a")]
+    assert set(sio.left) == {("joiner", "sdr-a"), ("owner", "sdr-a")}
 
 
 @pytest.mark.asyncio

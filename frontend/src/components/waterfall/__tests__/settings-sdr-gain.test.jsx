@@ -6,6 +6,8 @@ import {setupTheme} from '../../../theme.js';
 import '../../../i18n/config.js';
 import SdrAccordion from '../settings-sdr.jsx';
 
+vi.mock('../background-stream-control.jsx', () => ({ default: () => null }));
+
 function renderGains(gainRanges, onGainElementChange = vi.fn()) {
     render(<ThemeProvider theme={setupTheme()}>
         <SdrAccordion expanded gettingSDRParameters={false} isStreaming={false}

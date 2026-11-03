@@ -6,6 +6,8 @@ import {setupTheme} from '../../../theme.js';
 import '../../../i18n/config.js';
 import SdrAccordion from '../settings-sdr.jsx';
 
+vi.mock('../background-stream-control.jsx', () => ({ default: () => null }));
+
 const widths = [200000, 300000, 600000, 1536000, 5000000, 6000000, 7000000, 8000000];
 
 function receiver(props = {}) {

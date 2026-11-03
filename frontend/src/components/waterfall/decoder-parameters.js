@@ -724,6 +724,21 @@ export function getDecoderDefaultParameters(decoder, t = englishFallback) {
  * @param {Object} parameters - Frontend parameters object
  * @returns {Object} Backend-compatible parameters (for DecoderConfigService overrides)
  */
+export function mapParametersFromBackend(decoder, parameters = {}) {
+    const restored = getDecoderDefaultParameters(decoder);
+    for (const key of Object.keys(restored)) {
+        const backendKey = key.startsWith(`${decoder}_`) ? key.slice(decoder.length + 1) : key;
+        const value = parameters[key] ?? parameters[backendKey]
+            ?? parameters.framing_params?.[backendKey]
+            ?? (backendKey === 'geoscan_frame_size' ? parameters.framing_params?.frame_size : undefined);
+        if (value !== undefined && value !== null) restored[key] = value;
+    }
+    if (decoder === 'lora' && parameters.ldro_mode == null && parameters.fldro != null) {
+        restored.lora_ldro_mode = parameters.fldro ? 1 : 2;
+    }
+    return restored;
+}
+
 export function mapParametersToBackend(decoder, parameters) {
     if (decoder === 'lora') {
         return {

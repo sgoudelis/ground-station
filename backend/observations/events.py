@@ -15,11 +15,29 @@
 
 """Event emission helpers for scheduled observations."""
 
+from typing import Any, Dict, Optional, Protocol
+
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+
+
+class ObservationSync(Protocol):
+    """Runtime scheduler interface, independent of executor implementation imports."""
+
+    scheduler: AsyncIOScheduler
+    executor: Any
+
+    async def sync_observation(self, observation_id: str) -> Dict[str, Any]: ...
+
+    async def sync_all_observations(self) -> Dict[str, Any]: ...
+
+    async def remove_observation(self, observation_id: str) -> Dict[str, Any]: ...
+
+
 # Global socketio instance (set by startup.py)
 _sio = None
 
 # Global observation sync instance (set by startup.py)
-observation_sync = None
+observation_sync: Optional[ObservationSync] = None
 
 
 def set_socketio_instance(sio):

@@ -23,6 +23,7 @@ import logging
 import time
 from typing import Any, Dict, List, Optional, Set, TypedDict, cast
 
+from session.background import background_sessions
 from session.store import active_sdr_clients, get_sdr_session
 from vfos.state import VFOManager
 
@@ -342,7 +343,7 @@ class SessionTracker:
         Returns:
             SDR configuration dict or None if session not found
         """
-        return cast(Dict[str, Any] | None, get_sdr_session(session_id))
+        return get_sdr_session(session_id)
 
     def get_all_active_sdrs_with_config(self) -> Dict[str, Dict[str, Any]]:
         """
@@ -447,6 +448,15 @@ class SessionTracker:
                 "metadata": metadata if metadata else {},
                 "is_internal": self.is_internal_session(sid),  # Flag for internal observations
                 "vfos": vfos_state,  # VFO state for all VFOs (1-4)
+                "background": (
+                    {
+                        "enabled": background_sessions.sessions[sid].enabled,
+                        "controller_connected": background_sessions.sessions[sid].controller
+                        is not None,
+                    }
+                    if sid in background_sessions.sessions
+                    else None
+                ),
             }
 
         # Query ProcessManager for process/consumer state

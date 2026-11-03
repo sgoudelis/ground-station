@@ -25,7 +25,7 @@ from tracking.events import fetch_next_events_for_group
 
 async def get_satellite_groups(
     sio: Any, data: Optional[Dict], logger: Any, sid: str
-) -> Dict[str, Union[bool, list]]:
+) -> Dict[str, Union[bool, list, None]]:
     """
     Get all satellite groups.
 
@@ -49,7 +49,7 @@ async def get_satellite_groups(
 
 async def get_satellite_groups_user(
     sio: Any, data: Optional[Dict], logger: Any, sid: str
-) -> Dict[str, Union[bool, list]]:
+) -> Dict[str, Union[bool, list, None]]:
     """
     Get user-created satellite groups only.
 
@@ -79,7 +79,7 @@ async def get_satellite_groups_user(
 
 async def get_satellite_groups_system(
     sio: Any, data: Optional[Dict], logger: Any, sid: str
-) -> Dict[str, Union[bool, list]]:
+) -> Dict[str, Union[bool, list, None]]:
     """
     Get system-created satellite groups only.
 
@@ -151,7 +151,7 @@ async def submit_satellite_group(
 
 async def edit_satellite_group(
     sio: Any, data: Optional[Dict], logger: Any, sid: str
-) -> Dict[str, Union[bool, list, str]]:
+) -> Dict[str, Union[bool, list, str, None]]:
     """
     Edit an existing satellite group.
 
@@ -207,7 +207,7 @@ async def delete_satellite_group(
     async with AsyncSessionLocal() as dbsession:
         logger.debug(f"Deleting satellite groups, data: {data}")
         delete_reply = await crud.groups.delete_satellite_group(
-            dbsession, data, group_type=SatelliteGroupType.USER
+            dbsession, data or {}, group_type=SatelliteGroupType.USER
         )
         if not delete_reply["success"]:
             return {"success": False, "data": [], "error": delete_reply.get("error")}
@@ -222,7 +222,7 @@ async def delete_satellite_group(
 
 async def fetch_next_passes_for_group(
     sio: Any, data: Optional[Dict], logger: Any, sid: str
-) -> Dict[str, Union[bool, list, float]]:
+) -> Dict[str, Union[bool, list, float, None]]:
     """
     Fetch next passes for a satellite group.
 
@@ -236,6 +236,8 @@ async def fetch_next_passes_for_group(
         Dictionary with success status and next passes
     """
     group_id = data.get("group_id", None) if data else None
+    if not isinstance(group_id, str) or not group_id:
+        return {"success": False, "data": []}
     hours = data.get("hours", 2.0) if data else 2.0
     force_recalculate = data.get("force_recalculate", False) if data else False
     logger.info(

@@ -32,7 +32,7 @@ def _current_user_id() -> Optional[str]:
 
 async def fetch_preferences(
     sio: Any, data: Optional[Dict], logger: Any, sid: str
-) -> Dict[str, Union[bool, list, str]]:
+) -> Dict[str, Union[bool, list, str, None]]:
     """
     Fetch user-scoped preferences for the authenticated session user.
 
@@ -60,7 +60,7 @@ async def fetch_preferences(
 
 async def update_preferences(
     sio: Any, data: Optional[Dict], logger: Any, sid: str
-) -> Dict[str, Union[bool, list, str]]:
+) -> Dict[str, Union[bool, list, str, None]]:
     """
     Update user-scoped preferences for the authenticated session user.
 
@@ -92,7 +92,7 @@ async def update_preferences(
 
 async def fetch_system_preferences(
     sio: Any, data: Optional[Dict], logger: Any, sid: str
-) -> Dict[str, Union[bool, list, str]]:
+) -> Dict[str, Union[bool, list, str, None]]:
     """
     Fetch global/system preferences.
 
@@ -111,7 +111,7 @@ async def fetch_system_preferences(
 
 async def update_system_preferences(
     sio: Any, data: Optional[Dict], logger: Any, sid: str
-) -> Dict[str, Union[bool, list, str]]:
+) -> Dict[str, Union[bool, list, str, None]]:
     """
     Update global/system preferences.
 
@@ -132,8 +132,8 @@ async def update_system_preferences(
 
 
 async def get_map_settings(
-    sio: Any, data: Optional[Dict], logger: Any, sid: str
-) -> Dict[str, Union[bool, list]]:
+    sio: Any, data: str, logger: Any, sid: str
+) -> Dict[str, Union[bool, list, None]]:
     """
     Fetch map settings.
 
@@ -154,7 +154,7 @@ async def get_map_settings(
 
 async def set_map_settings(
     sio: Any, data: Optional[Dict], logger: Any, sid: str
-) -> Dict[str, Union[bool, dict]]:
+) -> Dict[str, Union[bool, dict, None]]:
     """
     Update map settings and emit tracker data.
 
@@ -169,7 +169,7 @@ async def set_map_settings(
     """
     async with AsyncSessionLocal() as dbsession:
         logger.debug(f"Updating map settings, data: {data}")
-        map_settings_reply = await crud.preferences.set_map_settings(dbsession, data)
+        map_settings_reply = await crud.preferences.set_map_settings(dbsession, data or {})
         if not map_settings_reply.get("success"):
             return {
                 "success": False,

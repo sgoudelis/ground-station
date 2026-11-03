@@ -30,6 +30,7 @@ import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
 import AutorenewIcon from '@mui/icons-material/Autorenew';
 import SettingsInputAntennaIcon from '@mui/icons-material/SettingsInputAntenna';
 import { useTranslation } from 'react-i18next';
+import BackgroundStreamControl from './background-stream-control.jsx';
 
 // Factory (rather than a module-level constant) so the labels are translated with the
 // translator of the rendering component and follow runtime language changes.
@@ -886,6 +887,8 @@ const SdrAccordion = ({
                             />
                         )}
                     </Box>
+
+                    <BackgroundStreamControl />
 
                     {selectedCapabilities && (
                         <Box sx={{mt: 2}}>

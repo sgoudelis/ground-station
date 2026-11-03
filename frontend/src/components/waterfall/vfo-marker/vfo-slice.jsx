@@ -21,6 +21,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { getDefaultVFOConfig, DEMODULATORS, getDemodulatorConfig, getDecoderConfig } from './vfo-config.js';
 import { setIsStreaming } from '../waterfall-slice.jsx';
+import { mapParametersFromBackend } from '../decoder-parameters.js';
 
 export const backendUpdateVFOParameters = createAsyncThunk(
     'vfo/updateVFOParameters',
@@ -160,6 +161,47 @@ export const vfoSlice = createSlice({
     name: 'vfo',
     initialState: initialState,
     reducers: {
+        restoreReceivingSession: (state, action) => {
+            const observation = action.payload;
+            state.selectedVFO = null;
+            state.streamingVFOs = [];
+            for (let number = 1; number <= state.maxVFOMarkers; number++) {
+                const vfo = observation.vfos?.[number] || {};
+                const decoder = vfo.decoder || 'none';
+                // Replace local drafts in one action. No activation/property
+                // actions may reach the backend while adopting running workers.
+                state.vfoMarkers[number] = {
+                    ...createDefaultVFO(`VFO${number}`),
+                    frequency: vfo.center_freq ?? null,
+                    bandwidth: vfo.bandwidth ?? 10000,
+                    mode: decoder !== 'none' ? 'none' : (vfo.modulation || 'none'),
+                    decoder,
+                    volume: vfo.volume ?? 50,
+                    squelch: vfo.squelch ?? -150,
+                    squelchMode: vfo.squelch_mode || 'carrier',
+                    vadSensitivity: vfo.vad_sensitivity || 'medium',
+                    vadCloseDelayMs: vfo.vad_close_delay_ms ?? 300,
+                    parametersEnabled: vfo.parameters_enabled ?? true,
+                    parameters: mapParametersFromBackend(decoder, {
+                        ...vfo.decoder_parameters, ...vfo.decoder_overrides,
+                    }),
+                    transcriptionEnabled: Boolean(vfo.transcription_enabled),
+                    transcriptionProvider: vfo.transcription_provider || 'gemini',
+                    transcriptionLanguage: vfo.transcription_language || 'auto',
+                    transcriptionTranslateTo: vfo.transcription_translate_to || 'none',
+                    transcriptionTranslationBackend: vfo.transcription_translation_backend || 'none',
+                };
+                state.vfoActive[number] = Boolean(vfo.active);
+                state.vfoMuted[number] = false;
+                state.audioRecording[number] = {
+                    isRecording: (observation.audio_recordings || []).includes(number),
+                    duration: Math.floor(observation.audio_recording_durations?.[number] || 0),
+                };
+                if (vfo.selected) state.selectedVFO = number;
+                if (vfo.active) state.streamingVFOs.push(number);
+            }
+            state.selectedVFOTab = Math.max(0, (state.selectedVFO || 1) - 1);
+        },
         enableVFO1: (state, action) => {
             state.vfoMarkers[0].active = true;
         },
@@ -395,6 +437,7 @@ export const {
     setVfoInactive,
     setSelectedVFOTab,
     updateAllVFOStates,
+    restoreReceivingSession,
 } = vfoSlice.actions;
 
 export default vfoSlice.reducer;

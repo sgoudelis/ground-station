@@ -19,6 +19,7 @@ import {
 import { toast } from '../../utils/toast-with-timestamp.jsx';
 import { useSdrTakeoverDialog } from './use-sdr-takeover-dialog.jsx';
 import { joinSdr, leaveSdr } from './sdr-join.js';
+import { setCurrentSessionId } from '../decoders/decoders-slice.jsx';
 
 const useWaterfallStream = ({
     workerRef,
@@ -307,6 +308,7 @@ const useWaterfallStream = ({
             }
 
             dispatch(clearStartStreamValidationErrors());
+            dispatch(setCurrentSessionId(socket?.id));
             dispatch(setStartStreamingLoading(true));
             dispatch(setErrorMessage(''));
 

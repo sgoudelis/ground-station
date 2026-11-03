@@ -458,7 +458,7 @@ async def submit_rig(
     """Add a new rig."""
     async with AsyncSessionLocal() as dbsession:
         logger.debug(f"Adding rig, data: {data}")
-        add_reply = await crud.hardware.add_rig(dbsession, data)
+        add_reply = await crud.hardware.add_rig(dbsession, data or {})
 
         rigs = await crud.hardware.fetch_rigs(dbsession)
         if add_reply.get("success"):
@@ -476,7 +476,7 @@ async def edit_rig(
     """Edit an existing rig."""
     async with AsyncSessionLocal() as dbsession:
         logger.debug(f"Editing rig, data: {data}")
-        edit_reply = await crud.hardware.edit_rig(dbsession, data)
+        edit_reply = await crud.hardware.edit_rig(dbsession, data or {})
 
         rigs = await crud.hardware.fetch_rigs(dbsession)
         if edit_reply.get("success") and data:
@@ -494,7 +494,7 @@ async def delete_rig(
     """Delete a rig."""
     async with AsyncSessionLocal() as dbsession:
         logger.debug(f"Delete rig, data: {data}")
-        delete_reply = await crud.hardware.delete_rig(dbsession, data)
+        delete_reply = await crud.hardware.delete_rig(dbsession, data or {})
 
         rigs = await crud.hardware.fetch_rigs(dbsession)
         if delete_reply.get("success") and data:
@@ -532,7 +532,7 @@ async def submit_rotator(
     """Add a new rotator."""
     async with AsyncSessionLocal() as dbsession:
         logger.debug(f"Adding rotator, data: {data}")
-        add_reply = await crud.hardware.add_rotator(dbsession, data)
+        add_reply = await crud.hardware.add_rotator(dbsession, data or {})
 
         rotators = await crud.hardware.fetch_rotators(dbsession)
         if add_reply.get("success"):
@@ -574,7 +574,7 @@ async def delete_rotator(
     """Delete rotators."""
     async with AsyncSessionLocal() as dbsession:
         logger.debug(f"Delete rotator, data: {data}")
-        delete_reply = await crud.hardware.delete_rotators(dbsession, data)
+        delete_reply = await crud.hardware.delete_rotators(dbsession, data or {})
 
         rotators = await crud.hardware.fetch_rotators(dbsession)
         if delete_reply.get("success") and data:
@@ -595,6 +595,8 @@ async def nudge_rotator(sio: Any, data: Optional[Dict], logger: Any, sid: str) -
     """Nudge rotator position."""
     logger.info(f"Nudging rotator, data: {data}")
     cmd = data.get("cmd", None) if data else None
+    if not isinstance(cmd, str) or not cmd:
+        return {"success": False, "error": "A rotator command is required", "data": None}
     try:
         tracker_id = require_tracker_id((data or {}).get("tracker_id"))
     except InvalidTrackerIdError:
@@ -876,7 +878,7 @@ async def submit_camera(
     """Add a new camera."""
     async with AsyncSessionLocal() as dbsession:
         logger.debug(f"Adding camera, data: {data}")
-        add_reply = await crud.hardware.add_camera(dbsession, data)
+        add_reply = await crud.hardware.add_camera(dbsession, data or {})
 
         cameras = await crud.hardware.fetch_cameras(dbsession)
         return {
@@ -891,7 +893,7 @@ async def edit_camera(
     """Edit an existing camera."""
     async with AsyncSessionLocal() as dbsession:
         logger.debug(f"Editing camera, data: {data}")
-        edit_reply = await crud.hardware.edit_camera(dbsession, data)
+        edit_reply = await crud.hardware.edit_camera(dbsession, data or {})
         logger.debug(f"Edit camera reply: {edit_reply}")
 
         cameras = await crud.hardware.fetch_cameras(dbsession)
@@ -908,7 +910,7 @@ async def delete_camera(
     """Delete cameras."""
     async with AsyncSessionLocal() as dbsession:
         logger.debug(f"Delete camera, data: {data}")
-        delete_reply = await crud.hardware.delete_cameras(dbsession, data)
+        delete_reply = await crud.hardware.delete_cameras(dbsession, data or {})
 
         cameras = await crud.hardware.fetch_cameras(dbsession)
         return {
@@ -954,7 +956,7 @@ async def submit_sdr(
     """Add a new SDR."""
     async with AsyncSessionLocal() as dbsession:
         logger.debug(f"Adding SDR, data: {data}")
-        add_reply = await crud.hardware.add_sdr(dbsession, data)
+        add_reply = await crud.hardware.add_sdr(dbsession, data or {})
         logger.info(add_reply)
 
         sdrs = await crud.hardware.fetch_sdrs(dbsession)
@@ -977,7 +979,7 @@ async def edit_sdr(
         # Serialize the database change and invalidation with a pending probe.
         # Otherwise that probe could repopulate capabilities for the old device.
         async with sdr_parameter_lock(str((data or {}).get("id"))):
-            edit_reply = await crud.hardware.edit_sdr(dbsession, data)
+            edit_reply = await crud.hardware.edit_sdr(dbsession, data or {})
             if edit_reply.get("success") and data:
                 invalidate_sdr_parameters(str(data.get("id")))
         logger.debug(f"Edit SDR reply: {edit_reply}")
@@ -1076,7 +1078,7 @@ async def query_soapy_server(
 
 async def get_soapy_servers(
     sio: Any, data: Optional[Dict], logger: Any, sid: str
-) -> Dict[str, Union[bool, list]]:
+) -> Dict[str, Union[bool, dict]]:
     """Get discovered SoapySDR servers."""
     logger.info("Getting discovered SoapySDR servers | servers=%d", len(discovered_servers))
     for server_name, server_info in discovered_servers.items():

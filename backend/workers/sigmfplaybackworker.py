@@ -85,6 +85,8 @@ def sigmf_playback_worker_process(
         has_iq_consumers = iq_queue_fft is not None or iq_queue_demod is not None
 
         allowed_roots = get_sigmf_allowed_roots()
+        if not isinstance(recording_path, str) or not recording_path:
+            raise ValueError("A SigMF recording path is required")
         meta_path = resolve_sigmf_meta_path(recording_path, allowed_roots=allowed_roots)
 
         if not meta_path.exists():

@@ -14,7 +14,7 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 import asyncio
-from typing import Any, Dict, List, Optional, Union, cast
+from typing import Any, Dict, List, Optional, Union
 
 import crud
 from common.pathguard import resolve_sigmf_meta_path
@@ -35,7 +35,9 @@ from server.audiorecorder import start_audio_recording, stop_audio_recording
 from server.recorder import start_recording, stop_recording
 from server.snapshots import save_waterfall_snapshot
 from server.startup import audio_queue
+from session.background import background_sessions
 from session.service import session_service
+from session.store import active_sdr_clients
 from session.tracker import session_tracker
 from vfos.state import VFOManager
 
@@ -154,6 +156,15 @@ def _build_sdr_in_use_conflict(
                 "session_id": session_id,
                 "is_internal": is_internal,
                 "username": metadata.get("username"),
+                "is_background": bool(
+                    session_id in background_sessions.sessions
+                    and background_sessions.sessions[session_id].enabled
+                ),
+                "unattended": (
+                    background_sessions.sessions[session_id].controller is None
+                    if session_id in background_sessions.sessions
+                    else False
+                ),
             }
         )
 
@@ -182,7 +193,7 @@ def _running_sdr_info(sdr_id: str) -> Optional[Dict[str, Any]]:
         and not process_info.get("stopping")
         and process_manager.is_sdr_process_running(sdr_id)
     ):
-        return cast(Dict[str, Any], process_info)
+        return process_info
     return None
 
 
@@ -222,6 +233,15 @@ async def sdr_command_routing(
     sio: Any, cmd: str, data: Dict[str, Any], logger: Any, client_id: str
 ) -> Dict[str, Union[bool, None, dict, list, str]]:
 
+    # Only the server's controller mapping can select another session's VFOs.
+    # JOIN/claim still operate on the physical socket that will enter the rooms.
+    socket_id = client_id
+    if cmd not in ("join-sdr", "watch-sdr", "claim-sdr"):
+        client_id = background_sessions.resolve(socket_id)
+        session = background_sessions.sessions.get(client_id)
+        if session and session.controller != socket_id:
+            return {"success": False, "error": "This observation has no attached controller"}
+
     async with AsyncSessionLocal() as dbsession:
         reply: Dict[str, Union[bool, None, dict, list, str]] = {"success": False, "data": None}
 
@@ -244,13 +264,46 @@ async def sdr_command_routing(
                 ),
             }
 
-        elif cmd in ("join-sdr", "watch-sdr"):
+        elif cmd == "set-background":
+            background_sdr_id = str(data.get("selectedSDRId") or "")
+            process_info = _running_sdr_info(background_sdr_id)
+            if not isinstance(data.get("enabled"), bool):
+                reply["error"] = "enabled must be a boolean"
+            elif (
+                not process_info
+                or client_id not in process_info.get("clients", set())
+                or _is_joiner(background_sdr_id, client_id)
+                or VFOManager.is_internal_session(client_id)
+            ):
+                reply["error"] = "Only the observation controller can change background receiving"
+            else:
+                session = background_sessions.set_enabled(
+                    socket_id, background_sdr_id, data["enabled"]
+                )
+                reply["success"] = True
+                observation = background_sessions.describe(session, process_info)
+                reply["data"] = observation
+                for status in observation["decoder_statuses"]:
+                    await sio.emit(
+                        "decoder-data", {**status, "type": "decoder-status"}, room=background_sdr_id
+                    )
+
+        elif cmd in ("join-sdr", "watch-sdr", "claim-sdr"):
             target_sdr_id = str(data.get("selectedSDRId") or "")
             process_info = _running_sdr_info(target_sdr_id)
+            adopted = background_sessions.sessions.get(background_sessions.resolve(client_id))
+            already_adopted = bool(
+                adopted
+                and adopted.session_id != client_id
+                and adopted.controller == client_id
+                and adopted.sdr_id == target_sdr_id
+            )
             if not process_info:
                 reply["error"] = "SDR is no longer streaming"
-            elif client_id in process_info.get("clients", set()) and not _is_joiner(
-                target_sdr_id, client_id
+            elif not already_adopted and any(
+                background_sessions.resolve(client_id) in info.get("clients", set())
+                and background_sessions.resolve(client_id) not in info.get("joiners", set())
+                for info in process_manager.processes.values()
             ):
                 # A controller must leave through its normal stream lifecycle.
                 reply["error"] = "Stop your SDR stream before joining it"
@@ -258,6 +311,13 @@ async def sdr_command_routing(
                 live_config = _live_sdr_config(target_sdr_id, process_info)
                 if "center_freq" not in live_config or "sample_rate" not in live_config:
                     reply["error"] = "Live SDR settings are unavailable"
+                    return reply
+                if (
+                    cmd == "claim-sdr"
+                    and not already_adopted
+                    and client_id not in process_info.get("joiners", set())
+                ):
+                    reply["error"] = "Join this SDR before taking control"
                     return reply
                 # JOIN subscribes to this worker without sending configuration.
                 # Its clients membership keeps the worker alive as a peer.
@@ -286,12 +346,61 @@ async def sdr_command_routing(
                     return reply
                 # A reconfiguration may have completed while the room was joined.
                 live_config = _live_sdr_config(target_sdr_id, process_info)
-                process_info.setdefault("joiners", set()).add(client_id)
-                process_info["clients"].add(client_id)
-                session_tracker.register_session_streaming(client_id, target_sdr_id)
+                session = background_sessions.claim(target_sdr_id, client_id)
+                observation = None
+                if session:
+                    try:
+                        # A viewer can explicitly give up its own VFOs to adopt
+                        # an unattended observation. The retained participant keeps
+                        # the worker alive throughout this detach.
+                        if client_id in process_info.get("joiners", set()):
+                            await process_manager.stop_sdr_join(target_sdr_id, client_id, sio=sio)
+                            await sio.enter_room(client_id, target_sdr_id)
+                        await sio.enter_room(client_id, session.session_id)
+                        if (
+                            _running_sdr_info(target_sdr_id) is not process_info
+                            or session.controller != client_id
+                        ):
+                            raise RuntimeError("SDR stopped or controller disconnected during JOIN")
+                        metadata = session_tracker.get_session_metadata(client_id) or {}
+                        # The public setter uses ip_address; snapshots expose ip.
+                        session_tracker.set_session_metadata(
+                            session.session_id,
+                            ip_address=metadata.get("ip"),
+                            user_agent=metadata.get("user_agent"),
+                            origin=metadata.get("origin"),
+                            referer=metadata.get("referer"),
+                            connected_at=metadata.get("connected_at"),
+                            user_id=metadata.get("user_id"),
+                            username=metadata.get("username"),
+                            role=metadata.get("role"),
+                        )
+                        active_sdr_clients.pop(client_id, None)
+                        observation = background_sessions.describe(session, process_info)
+                    except (Exception, asyncio.CancelledError):
+                        # A failed room attachment must not strand the reservation.
+                        if session.controller == client_id:
+                            session.controller = None
+                            background_sessions.controllers.pop(client_id, None)
+                        await sio.leave_room(client_id, session.session_id)
+                        await sio.leave_room(client_id, target_sdr_id)
+                        raise
+                elif cmd == "claim-sdr":
+                    reply["error"] = "This observation already has a controller"
+                    return reply
+                else:
+                    process_info.setdefault("joiners", set()).add(client_id)
+                    process_info["clients"].add(client_id)
+                    session_tracker.register_session_streaming(client_id, target_sdr_id)
                 reply["success"] = True
                 reply["data"] = {
                     "config": live_config,
+                    "observation": observation,
+                    "background_observations": [
+                        background_sessions.describe(receiving, process_info)
+                        for receiving in background_sessions.sessions.values()
+                        if receiving.sdr_id == target_sdr_id and receiving.enabled
+                    ],
                     "parameters": (
                         get_cached_sdr_parameters(target_sdr_id, live_config.get("recording_path"))
                         if target_sdr_id == "sigmf-playback"
@@ -463,8 +572,8 @@ async def sdr_command_routing(
                     sdr_id=sdr_id,
                     recording_path=recording_path,
                     serial_number=sdr_serial,
-                    host=sdr_host,
-                    port=sdr_port,
+                    host=str(sdr_host) if sdr_host is not None else None,
+                    port=int(sdr_port) if sdr_port is not None else None,
                     client_id=client_id,
                     soapy_agc=soapy_agc,
                     offset_freq=offset_freq,
@@ -553,7 +662,6 @@ async def sdr_command_routing(
                 if not session_service.session_exists(client_id):
                     raise Exception(f"Client with id: {client_id} not registered")
 
-                sdr_config = session_service.get_session_config(client_id)
                 logger.info(f"Starting streaming SDR data for client {client_id}")
 
                 # Takeover guard:
@@ -643,14 +751,10 @@ async def sdr_command_routing(
                     # Stop or leave the SDR process (via service)
                     await session_service.stop_streaming(client_id, sdr_id)
 
-                if not session_service.session_exists(client_id):
-                    logger.error(f"Client {client_id} not registered while stopping SDR stream")
-                    reply["success"] = False
-
                 # Note: We do NOT cleanup the session here - the session should persist
                 # until the socket disconnects. Only stop streaming updates the state.
 
-                await sio.emit("sdr-status", {"streaming": False}, room=client_id)
+                await sio.emit("sdr-status", {"streaming": False}, room=socket_id)
                 logger.info(f"Stopped streaming SDR data for client {client_id}")
                 reply["success"] = True
                 reply["data"] = {"sdr_id": sdr_id}
@@ -807,6 +911,8 @@ async def sdr_command_routing(
             try:
                 sdr_id = data.get("selectedSDRId")
                 vfo_number = data.get("vfoNumber")
+                if not isinstance(vfo_number, int) or vfo_number < 1:
+                    raise ValueError("A positive integer vfoNumber is required")
                 recording_name = data.get("recordingName", "")
                 center_frequency = data.get("centerFrequency", 0)
                 vfo_frequency = data.get("vfoFrequency", 0)
@@ -857,6 +963,8 @@ async def sdr_command_routing(
             try:
                 sdr_id = data.get("selectedSDRId")
                 vfo_number = data.get("vfoNumber")
+                if not isinstance(vfo_number, int) or vfo_number < 1:
+                    raise ValueError("A positive integer vfoNumber is required")
 
                 result = stop_audio_recording(sdr_id, client_id, vfo_number)
                 reply.update(result)
@@ -1224,6 +1332,8 @@ def register_handlers(registry):
     commands = (
         "configure-sdr",
         "inspect-sdr",
+        "set-background",
+        "claim-sdr",
         "join-sdr",
         "leave-sdr",
         # Keep the old commands for clients already connected during rollout.

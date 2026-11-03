@@ -25,6 +25,9 @@ const normalizeSessions = (sessions) => {
 };
 
 const resolveSessionDisplayName = (session) => {
+    if (session?.is_background) {
+        return `${session.username || 'Observation'} · ${session.unattended ? 'Background, unattended' : 'Background receiving'}`;
+    }
     if (session?.is_internal) {
         return 'Automated observation';
     }
@@ -111,6 +114,11 @@ export const useSdrTakeoverDialog = ({ defaultSdrId } = {}) => {
                 <Typography variant="body2" sx={{ mb: 2 }}>
                     {t('use_sdr_takeover_dialog.you_are_about_to', { defaultValue: 'You are about to' })} {pendingActionLabel || 'continue'} {t('use_sdr_takeover_dialog.on_this_sdr_joining_lets_you_use_its_current_stream_and_', { defaultValue: 'on this SDR. Joining lets you use its current stream and your own VFOs. The stream stays live while any participant remains. Taking over may disrupt active sessions.' })}
                 </Typography>
+                {otherSessions.some((session) => session.is_background && session.unattended) && (
+                    <Alert severity="info" sx={{ mb: 2 }}>
+                        {t('background.join_description', { defaultValue: 'Joining an unattended observation gives you control of its running VFOs and decoders. Frequencies stay fixed until you change them.' })}
+                    </Alert>
+                )}
                 {pendingConflict?.includes_internal_observation && (
                     <Alert severity="warning" sx={{ mb: 2 }}>
                         <AlertTitle>{t('use_sdr_takeover_dialog.automated_observation_active', { defaultValue: 'Automated observation active' })}</AlertTitle>

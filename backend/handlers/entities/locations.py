@@ -57,7 +57,7 @@ async def get_locations(
 
 async def submit_location(
     sio: Any, data: Optional[Dict], logger: Any, sid: str
-) -> Dict[str, Union[bool, None]]:
+) -> Dict[str, Union[bool, str, None]]:
     """
     Add a new location.
 
@@ -70,6 +70,9 @@ async def submit_location(
     Returns:
         Dictionary with success status
     """
+    # An empty payload has defaults in CRUD; missing data must still fail.
+    if data is None:
+        return {"success": False, "data": None, "error": "Location data is required"}
     async with AsyncSessionLocal() as dbsession:
         logger.debug(f"Adding location, data: {data}")
         add_reply = await crud.locations.add_location(dbsession, data)
@@ -100,7 +103,7 @@ async def edit_location(
     """
     async with AsyncSessionLocal() as dbsession:
         logger.debug(f"Editing location, data: {data}")
-        edit_reply = await crud.locations.edit_location(dbsession, data)
+        edit_reply = await crud.locations.edit_location(dbsession, data or {})
         if edit_reply.get("success"):
             for manager in get_all_tracker_managers().values():
                 await manager.notify_locations_changed()
@@ -112,7 +115,7 @@ async def edit_location(
 
 
 async def delete_location(
-    sio: Any, data: Optional[Dict], logger: Any, sid: str
+    sio: Any, data: str, logger: Any, sid: str
 ) -> Dict[str, Union[bool, None]]:
     """
     Delete a location.

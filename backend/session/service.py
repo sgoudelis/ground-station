@@ -12,8 +12,10 @@ import logging
 from typing import Any, Dict, List, Optional, cast
 
 from server import runtimestate
+from session.background import background_sessions
 from session.store import active_sdr_clients, add_sdr_session, get_sdr_session
 from session.tracker import session_tracker
+from vfos.parameters import clear_session_parameters
 from vfos.state import VFOManager
 
 logger = logging.getLogger("session-service")
@@ -48,7 +50,7 @@ async def cleanup_sdr_session(sid: str) -> None:
                     process_manager.transcription_manager.stop_all_for_session(sid)
                     logger.info("Stopped all transcription consumers for session %s", sid)
 
-        del active_sdr_clients[sid]
+        active_sdr_clients.pop(sid, None)
 
     else:
         logger.debug(
@@ -61,6 +63,9 @@ async def cleanup_sdr_session(sid: str) -> None:
             process_manager.transcription_manager.stop_all_for_session(sid)
 
     session_tracker.clear_session(sid)
+    background_sessions.remove(sid)
+    VFOManager().clear_session_vfos(sid)
+    clear_session_parameters(sid)
 
 
 class SessionService:
@@ -70,9 +75,28 @@ class SessionService:
     """
 
     # -------------------- Query helpers --------------------
+    async def disconnect_session(self, socket_id: str) -> None:
+        """Release browser control while explicitly retained consumers keep running."""
+        session_id = background_sessions.resolve(socket_id)
+        process_manager = _get_process_manager()
+        session = background_sessions.sessions.get(session_id)
+        if session and process_manager:
+            process_info = process_manager.processes.get(session.sdr_id)
+            if (
+                process_info
+                and not process_info.get("stopping")
+                and process_manager.is_sdr_process_running(session.sdr_id)
+                and background_sessions.detach(socket_id, process_info)
+            ):
+                if socket_id != session_id:
+                    session_tracker.clear_session(socket_id)
+                return
+        await self.cleanup_session(session_id)
+        if socket_id != session_id:
+            session_tracker.clear_session(socket_id)
+
     def get_session_config(self, session_id: str) -> Optional[Dict[str, Any]]:
-        # get_sdr_session is dynamically typed; cast to our declared return type
-        return cast(Optional[Dict[str, Any]], get_sdr_session(session_id))
+        return get_sdr_session(session_id)
 
     def session_exists(self, session_id: str) -> bool:
         return session_id in active_sdr_clients
@@ -141,9 +165,15 @@ class SessionService:
             if not process_manager:
                 logger.error("ProcessManager not initialized; cannot stop streaming")
                 return
+            controller = background_sessions.socket_for(session_id)
             await process_manager.stop_sdr_process(sdr_id, session_id)
             # Unregister streaming relationship from tracker, but keep the session alive
             session_tracker.unregister_session_streaming(session_id)
+            if controller and controller != session_id:
+                # The adopted run has ended. Future configuration belongs to the
+                # current browser, so its obsolete logical store entry can go.
+                active_sdr_clients.pop(session_id, None)
+                session_tracker.clear_session(session_id)
 
     async def select_vfo(self, session_id: str, vfo_number: Optional[int]) -> None:
         """Update the selected VFO in SessionTracker (normalized Optional[int])."""
