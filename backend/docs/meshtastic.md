@@ -39,6 +39,37 @@ not an integrity or identity guarantee. Radio CRC checking still belongs to the
 LoRa decoder. Arbitrary truncated/corrupted encrypted bytes cannot reliably be
 distinguished from a packet using a different key.
 
+## Capture folders
+
+Recognized packets are stored under `data/decoded/meshtastic_<sender-id>/`.
+Each UTC-named `.gsmesh` run covers twelve hours from its first received
+packet, shared across VFOs and sessions. `run.json` retains the window anchor;
+`node.json` retains the latest announced names, hardware/role codes and first/last
+reception times. Encrypted packets can still be grouped by their radio sender.
+Binary and JSON packet pairs keep their existing format. Unrecognized LoRa data
+remains in the original decoded directory. Observation captures stay inside their
+observation bundle.
+
+The file browser shows a node summary with capture-run filtering, paginated
+packets, latest position/telemetry, individual packet viewing and full-folder
+download/deletion. Every saved position remains available on the packet map.
+
+Run the optional migration from `backend/`:
+
+```bash
+./venv/bin/python -m tools.migratemesh                 # Read-only preview
+./venv/bin/python -m tools.migratemesh --apply         # Back up, verify and group
+```
+
+Pause legacy LoRa reception before applying a migration. The tool examines flat
+captures and completed observation bundles, preserves packet bytes, dates and
+metadata, and updates stored binary paths. Older unsupported captures are parsed
+using their saved context to identify Meshtastic. Unrecognized packets remain
+untouched. Each apply creates a checked recovery archive under `data/backups/`
+containing original binary/metadata pairs and `migration.json` with source/target
+paths and SHA-256 checksums. Re-running after a successful migration moves zero
+packets. No migration runs automatically at startup.
+
 ## Wire definitions
 
 `telemetry/parsers/specs/meshtastic.proto` is a wire-compatible subset of the

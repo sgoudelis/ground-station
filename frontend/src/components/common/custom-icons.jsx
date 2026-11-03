@@ -18,6 +18,7 @@
 
 import { SvgIcon } from '@mui/material';
 import { useTranslation } from 'react-i18next';
+import meshtasticLogo from '../../assets/meshtastic/meshtastic.svg';
 
 /**
  * Orbit-style icon for orbital data sources.
@@ -293,3 +294,19 @@ export const RotatorLinesIcon = (props) => {
         </SvgIcon>
     );
 };
+
+/** Weather balloon with a suspended radiosonde. */
+export const WeatherBalloonIcon = (props) => (
+    <SvgIcon {...props} viewBox="0 0 24 24">
+        <ellipse cx="12" cy="7" rx="5" ry="6" />
+        <path d="M12 13v6" fill="none" stroke="currentColor" strokeWidth="1.5" />
+        <rect x="10" y="19" width="4" height="4" rx="0.75" />
+    </SvgIcon>
+);
+
+/** Use the upstream community artwork without changing its colors or proportions. */
+export const MeshtasticIcon = (props) => (
+    <SvgIcon {...props} viewBox="0 0 24 24">
+        <image href={meshtasticLogo} width="24" height="24" preserveAspectRatio="xMidYMid meet" />
+    </SvgIcon>
+);

@@ -9,6 +9,7 @@ import queue
 import threading
 import time
 from fractions import Fraction
+from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
@@ -22,6 +23,7 @@ os.environ.setdefault("GR_BUFFER_TYPE", "vmcirc_mmap_tmpfile")
 from gnuradio import filter, gr, lora_sdr  # noqa: E402
 
 from common.iqsamples import require_complex64  # noqa: E402
+from common.meshstorage import MeshStorage  # noqa: E402
 from demodulators.basedecoderprocess import BaseDecoderProcess  # noqa: E402
 from demodulators.loraconfig import lora_sync_symbols, normalize_lora  # noqa: E402
 from telemetry.parser import TelemetryParser  # noqa: E402
@@ -240,6 +242,9 @@ class LoRaDecoder(BaseDecoderProcess):
 
     def _get_payload_protocol(self):
         return "lora"
+
+    def _finalize_packet_storage(self, filepath: str, metadata: dict) -> str:
+        return str(MeshStorage(self.output_dir).group(Path(filepath), metadata))
 
     def _get_vfo_state(self):
         return SimpleNamespace(**self.cached_vfo_state) if self.cached_vfo_state else None

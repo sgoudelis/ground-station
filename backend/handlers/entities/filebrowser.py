@@ -977,11 +977,13 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
                         }
                     )
 
-                # Preserve grouped sondes for clients of the legacy listing too.
-                for folder in sorted(decoded_dir.glob("radiosonde_*")):
-                    item = get_inventory().get(f"decoded_folder:{folder.name}")
-                    if item:
-                        processed_items.append(item)
+                # Preserve grouped captures for clients of the legacy listing too.
+                for folder in sorted(
+                    [*decoded_dir.glob("radiosonde_*"), *decoded_dir.glob("meshtastic_*")]
+                ):
+                    grouped_item = get_inventory().get(f"decoded_folder:{folder.name}")
+                    if grouped_item:
+                        processed_items.append(grouped_item)
 
                 # Keep each automated observation compact in the browser even when
                 # it produced recordings, packets, audio, and transcripts together.

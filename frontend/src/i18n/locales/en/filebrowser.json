@@ -1,5 +1,10 @@
 {
   "title": "File Browser",
+  "bundle_types": {
+    "adsb": "Aircraft · ADS-B",
+    "radiosonde": "Radiosonde",
+    "meshtastic": "Meshtastic node"
+  },
   "telemetry_position_map": {
     "receiver": "Receiver",
     "path": "Path",

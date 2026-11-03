@@ -21,8 +21,9 @@ import json
 import logging
 import os
 import queue
-import threading
 import time
+from _thread import LockType
+from multiprocessing.synchronize import Lock as ProcessLock
 from typing import Any, Dict, Optional
 
 import numpy as np
@@ -100,7 +101,7 @@ class BaseDecoder:
 
     # Type hints for attributes that must be defined by subclasses
     packet_count: int
-    stats_lock: threading.Lock
+    stats_lock: LockType | ProcessLock
     stats: Dict[str, Any]
     telemetry_parser: Any  # TelemetryParser
     output_dir: str
@@ -279,6 +280,15 @@ class BaseDecoder:
             )
             metadata["parse_context"] = parse_context.to_dict()
 
+            # Preserve bytes before parsing, then let application-aware decoders
+            # group the capture once a validated sender identity is available.
+            try:
+                filepath = self._finalize_packet_storage(filepath, metadata)
+                output_dir = os.path.dirname(filepath)
+                filename = os.path.basename(filepath)
+            except Exception:
+                logger.exception("Could not group packet; retaining the original capture path")
+
             # Save metadata JSON
             metadata_filename = filename.replace(".bin", ".json")
             metadata_filepath = os.path.join(output_dir, metadata_filename)
@@ -309,6 +319,9 @@ class BaseDecoder:
     def _get_packet_output_dir(self, timestamp: float) -> str:
         """Allow decoders to group packets without changing their configured root."""
         return self.output_dir
+
+    def _finalize_packet_storage(self, filepath: str, metadata: dict) -> str:
+        return filepath
 
     def _get_parse_context(self) -> ParseContext:
         """Allow external codecs to preserve state needed to interpret a frame."""

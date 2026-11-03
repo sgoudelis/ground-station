@@ -180,15 +180,14 @@ async def delete_satellite_group(
     Delete satellite group record(s).
     """
     try:
-        satellite_group_ids = convert_strings_to_uuids(satellite_group_ids)
-        result = await session.execute(select(Groups).filter(Groups.id.in_(satellite_group_ids)))
+        group_uuids = convert_strings_to_uuids(list(satellite_group_ids))
+        result = await session.execute(select(Groups).filter(Groups.id.in_(group_uuids)))
         groups = result.scalars().all()
 
         if not groups or (
             group_type is not None
             and (
-                len(groups) != len(satellite_group_ids)
-                or any(group.type != group_type for group in groups)
+                len(groups) != len(group_uuids) or any(group.type != group_type for group in groups)
             )
         ):
             return {"success": False, "data": None, "error": "Satellite group not found."}

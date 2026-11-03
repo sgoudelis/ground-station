@@ -34,6 +34,7 @@ from urllib.parse import quote
 from common.artifactdates import artifact_dates, parse_artifact_time, transcription_end
 from common.events import public_events
 from library.adsb import AdsbFiles
+from library.meshfiles import scan_mesh
 from library.positions import packet_positions
 from library.search import match_search, normalize_search, search_text
 from library.sondefiles import sonde_identity
@@ -507,7 +508,7 @@ class LibraryInventory:
         if not internal:
             return None
         path = Path(str(internal["_path"]))
-        if internal.get("folder_kind") == "radiosonde":
+        if internal.get("folder_kind") in {"radiosonde", "meshtastic"}:
             # The index holds compact packet rows; only send the requested page.
             packets = internal.get("_packets", [])
             if run is not None:
@@ -973,6 +974,11 @@ class LibraryInventory:
                 continue
             if folder.name.startswith("radiosonde_"):
                 self._scan_radiosonde_folder(items, folder)
+                continue
+            if folder.name.startswith("meshtastic_"):
+                item = scan_mesh(folder)
+                if item:
+                    self._add(items, item, folder)
                 continue
             if folder.name.startswith("adsb_"):
                 try:

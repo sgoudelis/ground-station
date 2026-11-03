@@ -80,7 +80,6 @@ import ViewModuleIcon from '@mui/icons-material/ViewModule';
 import ViewListIcon from '@mui/icons-material/ViewList';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
-import FolderIcon from '@mui/icons-material/Folder';
 import BuildIcon from '@mui/icons-material/Build';
 import CleaningServicesIcon from '@mui/icons-material/CleaningServices';
 import { useSocket } from '../common/socket.jsx';
@@ -116,11 +115,13 @@ import MeteorHrptFolderDialog from './meteor-hrpt-folder-dialog.jsx';
 import ObservationFolderDialog from './observation-folder-dialog.jsx';
 import RadiosondeFolderDialog from './radiosonde-folder-dialog.jsx';
 import AircraftFolderDialog from './aircraft-folder-dialog.jsx';
+import MeshtasticFolderDialog from './meshtastic-folder-dialog.jsx';
 import ProcessingDialog from './processing-dialog.jsx';
 import PurgeDialog from './purge-dialog.jsx';
 import ImageViewerDialog from '../common/image-viewer-dialog.jsx';
 import ResponsiveActionButton from '../common/responsive-action-button.jsx';
 import DecodedFolderThumbnail from './decoded-folder-thumbnail.jsx';
+import { CaptureBundleBadge, CaptureBundleIcon } from './capture-bundle-type.jsx';
 import { buildFileBrowserDisplayItem, getDecodedFolderDescription, getFileBrowserDate, isFileBrowserDateApproximate } from './filebrowser-display-item.js';
 import FileTypeFilter from './file-type-filter.jsx';
 import FileSearchInput from './file-search-input.jsx';
@@ -363,6 +364,7 @@ export default function FileBrowserMain() {
     const [observationFolder, setObservationFolder] = useState(null);
     const [radiosondeFolder, setRadiosondeFolder] = useState(null);
     const [aircraftFolder, setAircraftFolder] = useState(null);
+    const [meshtasticFolder, setMeshtasticFolder] = useState(null);
     const [returnToObservationFolder, setReturnToObservationFolder] = useState(false);
     const [processingDialogOpen, setProcessingDialogOpen] = useState(false);
     const [processingRecording, setProcessingRecording] = useState(null);
@@ -551,6 +553,10 @@ export default function FileBrowserMain() {
     };
 
     const handleShowDetails = async (item) => {
+        if (item.folder_kind === 'meshtastic') {
+            setMeshtasticFolder(item);
+            return;
+        }
         if (item.folder_kind === 'adsb') {
             setAircraftFolder(item);
             return;
@@ -618,6 +624,7 @@ export default function FileBrowserMain() {
                 }
                 if (itemToDelete.folder_kind === 'radiosonde') setRadiosondeFolder(null);
                 if (itemToDelete.folder_kind === 'adsb') setAircraftFolder(null);
+                if (itemToDelete.folder_kind === 'meshtastic') setMeshtasticFolder(null);
             } catch (error) {
                 // Error will be shown by socket error event listener, but show local toast too
                 toast.error(t('toast.delete_failed', 'Failed to delete: {{error}}', { error }));
@@ -1349,7 +1356,7 @@ export default function FileBrowserMain() {
                                                             }}
                                                         />
                                                     ) : item.type === 'decoded_folder' ? (
-                                                        <FolderIcon sx={{ color: 'warning.main', fontSize: 20 }} />
+                                                        <CaptureBundleIcon item={item} sx={{ fontSize: 20 }} />
                                                     ) : item.type === 'decoded' ? (
                                                         item.url?.endsWith('.png') ? (
                                                             <ImageIcon sx={{ color: 'success.main', fontSize: 20 }} />
@@ -1536,10 +1543,10 @@ export default function FileBrowserMain() {
                                                             }}
                                                         />
                                                     ) : item.type === 'decoded_folder' ? (
-                                                        <FolderIcon
+                                                        <CaptureBundleIcon
+                                                            item={item}
                                                             sx={{
                                                                 fontSize: 80,
-                                                                color: 'warning.main',
                                                                 mb: 1,
                                                             }}
                                                         />
@@ -1628,7 +1635,7 @@ export default function FileBrowserMain() {
                                                             }}
                                                         />
                                                     ) : item.type === 'decoded_folder' ? (
-                                                        <FolderIcon sx={{ color: 'warning.main', fontSize: 20 }} />
+                                                        <CaptureBundleIcon item={item} sx={{ fontSize: 20 }} />
                                                     ) : item.type === 'decoded' ? (
                                                         item.url?.endsWith('.png') ? (
                                                             <ImageIcon sx={{ color: 'success.main', fontSize: 20 }} />
@@ -1773,6 +1780,7 @@ export default function FileBrowserMain() {
                                             </Typography>
                                         )}
                                         <Box sx={{ display: 'flex', gap: 0.5, mt: 1, flexWrap: 'wrap' }}>
+                                            <CaptureBundleBadge item={item} />
                                             <Chip
                                                 label={formatBytes(item.data_size || item.size)}
                                                 size="small"
@@ -1826,8 +1834,9 @@ export default function FileBrowserMain() {
                                                     sx={{ height: '20px', fontSize: '0.65rem', '& .MuiChip-label': { px: 0.75 }, '& .MuiChip-icon': { fontSize: '0.85rem' } }}
                                                 />
                                             )}
-                                            {item.folder_kind === 'radiosonde' && <Chip
+                                            {item.folder_kind === 'radiosonde' && item.model && <Chip
                                                 label={item.model} size="small" color="info" variant="outlined"
+                                                sx={{ height: '20px', fontSize: '0.65rem', '& .MuiChip-label': { px: 0.75 } }}
                                             />}
                                             {item.folder_kind === 'observation' && (
                                                 <>
@@ -2631,6 +2640,8 @@ export default function FileBrowserMain() {
 
             {aircraftFolder && <AircraftFolderDialog folder={aircraftFolder} socket={socket}
                 onClose={() => setAircraftFolder(null)} onDelete={handleDelete} />}
+            {meshtasticFolder && <MeshtasticFolderDialog key={meshtasticFolder.id} folder={meshtasticFolder} socket={socket}
+                onClose={() => setMeshtasticFolder(null)} onOpenPacket={handleViewTelemetry} onDelete={handleDelete} />}
             {radiosondeFolder && <RadiosondeFolderDialog
                 key={radiosondeFolder.id}
                 folder={radiosondeFolder}

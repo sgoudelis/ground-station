@@ -44,10 +44,10 @@ import SubjectIcon from '@mui/icons-material/Subject';
 import SatelliteAltIcon from '@mui/icons-material/SatelliteAlt';
 import CellTowerIcon from '@mui/icons-material/CellTower';
 import ImageIcon from '@mui/icons-material/Image';
-import FolderIcon from '@mui/icons-material/Folder';
 import BuildIcon from '@mui/icons-material/Build';
 import { useTranslation } from 'react-i18next';
 import FileSearchMatch from './file-search-match.jsx';
+import { CaptureBundleBadge, CaptureBundleIcon, getCaptureBundleType } from './capture-bundle-type.jsx';
 import { getFileBrowserDate, getFileBrowserDateField, isFileBrowserDateApproximate } from './filebrowser-display-item.js';
 
 function formatBytes(bytes) {
@@ -84,8 +84,8 @@ function FileTableRow({ item, sortBy, selectionMode, isSelected, onToggleSelecti
         if (item.type === 'recording') {
             return 'IQ Recording';
         } else if (item.type === 'decoded_folder') {
-            if (item.folder_kind === 'radiosonde') return 'Radiosonde Folder';
-            if (item.folder_kind === 'adsb') return 'Aircraft Captures';
+            const bundleType = getCaptureBundleType(item);
+            if (bundleType) return t(`bundle_types.${item.folder_kind}`, {defaultValue: bundleType.label});
             return item.folder_kind === 'observation' ? 'Observation Folder' : 'SatDump Folder';
         } else if (item.type === 'decoded') {
             if (item.decoder_type === 'SSTV') {
@@ -120,7 +120,7 @@ function FileTableRow({ item, sortBy, selectionMode, isSelected, onToggleSelecti
                 })
             }} />;
         } else if (item.type === 'decoded_folder') {
-            return <FolderIcon sx={{ color: 'warning.main', fontSize: 32 }} />;
+            return <CaptureBundleIcon item={item} sx={{ fontSize: 32 }} />;
         } else if (item.type === 'decoded') {
             // Use image icon for SSTV files
             if (item.decoder_type === 'SSTV') {
@@ -237,6 +237,9 @@ function FileTableRow({ item, sortBy, selectionMode, isSelected, onToggleSelecti
 
         // Decoded folder chips
         if (item.type === 'decoded_folder') {
+            if (item.folder_kind === 'meshtastic') {
+                chips.push(<Chip key="mesh" label={`${item.packet_count || 0} packets · ${item.run_count || 0} runs`} size="small" variant="outlined" />);
+            }
             if (item.folder_kind === 'adsb') {
                 chips.push(<Chip key="aircraft" label={`${item.packet_count || 0} states · ${item.run_count || 0} runs`} size="small" variant="outlined" />);
             }
@@ -552,7 +555,7 @@ function FileTableRow({ item, sortBy, selectionMode, isSelected, onToggleSelecti
             )}
             <TableCell sx={{ width: 50 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Tooltip title={item.type}>
+                    <Tooltip title={getFileType()}>
                         {getTypeIcon()}
                     </Tooltip>
                 </Box>
@@ -586,9 +589,13 @@ function FileTableRow({ item, sortBy, selectionMode, isSelected, onToggleSelecti
                 </Typography>
             </TableCell>
             <TableCell sx={{ verticalAlign: 'middle' }}>
-                <Typography variant="body2">
-                    {getFileType()}
-                </Typography>
+                {getCaptureBundleType(item) ? (
+                    <CaptureBundleBadge item={item} />
+                ) : (
+                    <Typography variant="body2">
+                        {getFileType()}
+                    </Typography>
+                )}
             </TableCell>
             <TableCell sx={{ verticalAlign: 'middle' }}>
                 {satelliteName ? (

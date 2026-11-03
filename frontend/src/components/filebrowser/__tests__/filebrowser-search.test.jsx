@@ -107,7 +107,7 @@ test('routes a sonde folder to its packet browser and describes it in both views
         name: 'RS41 TEST0042', model: 'RS41', serial: 'TEST0042', packet_count: 51, run_count: 2,
     });
     fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'beacon' } });
-    expect(await screen.findByText('Radiosonde Folder')).toBeInTheDocument();
+    expect(await screen.findByText('Radiosonde')).toBeInTheDocument();
     act(() => store.dispatch(setViewMode('card')));
     expect(screen.getAllByText('51 packets · 2 flights').length).toBeGreaterThan(0);
     act(() => store.dispatch(setViewMode('table')));
