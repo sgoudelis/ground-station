@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Badge, Box, Button, Divider, IconButton, Popover, Stack, Tooltip, Typography } from '@mui/material';
-import SensorsIcon from '@mui/icons-material/Sensors';
+import DynamicFeedOutlinedIcon from '@mui/icons-material/DynamicFeedOutlined';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { useSocket } from '../common/socket.jsx';
@@ -79,7 +79,7 @@ export default function BackgroundObservationsPopover() {
                                 fontWeight: 700,
                             },
                         }}>
-                        <SensorsIcon />
+                        <DynamicFeedOutlinedIcon />
                     </Badge>
                 </IconButton>
             </Tooltip>
