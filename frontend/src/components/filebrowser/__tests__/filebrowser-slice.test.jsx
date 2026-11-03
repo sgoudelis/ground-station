@@ -92,19 +92,20 @@ test.each([true, false])('rehydrates separate decoded filters from the former ch
 
     expect(restored.filters).toMatchObject({
         showDecoded, showObservations: showDecoded, showRadiosondes: showDecoded, showAircraft: showDecoded,
+        showMeshtastic: showDecoded,
     });
     const changed = reducer(restored, toggleFilter('showObservations'));
     expect(changed.filters).toMatchObject({ showDecoded, showObservations: !showDecoded });
     expect(changed.page).toBe(1);
 });
 
-test('restores explicit weather balloon and aircraft choices independently of decoded', () => {
+test('restores explicit weather balloon, aircraft and Meshtastic choices independently of decoded', () => {
     const current = reducer(undefined, { type: '@@INIT' });
-    expect(current.filters).toMatchObject({ showRadiosondes: true, showAircraft: true });
+    expect(current.filters).toMatchObject({ showRadiosondes: true, showAircraft: true, showMeshtastic: true });
     const restored = reconcileFileBrowserPersistedState({
-        filters: { showDecoded: true, showRadiosondes: false, showAircraft: false },
+        filters: { showDecoded: true, showRadiosondes: false, showAircraft: false, showMeshtastic: false },
     }, current);
-    expect(restored.filters).toMatchObject({ showDecoded: true, showRadiosondes: false, showAircraft: false });
+    expect(restored.filters).toMatchObject({ showDecoded: true, showRadiosondes: false, showAircraft: false, showMeshtastic: false });
 });
 
 test('defaults to newest activity and upgrades the former date defaults once', () => {

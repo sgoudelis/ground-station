@@ -829,6 +829,7 @@ class LibraryInventory:
                 "observation": "showObservations",
                 "radiosonde": "showRadiosondes",
                 "adsb": "showAircraft",
+                "meshtastic": "showMeshtastic",
             }.get(kind, "showDecoded")
             # Older clients and saved filters controlled all these types via Decoded.
             return filters.get(filter_key, filters.get("showDecoded", True))

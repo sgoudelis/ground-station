@@ -15,6 +15,7 @@ test('opens a type checklist with a live count and bulk controls', async () => {
         showObservations: true,
         showRadiosondes: true,
         showAircraft: false,
+        showMeshtastic: true,
         showAudio: false,
         showTranscriptions: false,
     };
@@ -22,7 +23,7 @@ test('opens a type checklist with a live count and bulk controls', async () => {
         <FileTypeFilter filters={filters} onToggle={onToggle} onSetAll={onSetAll} />
     );
 
-    await user.click(screen.getByRole('button', { name: /Filter 4\/8/i }));
+    await user.click(screen.getByRole('button', { name: /Filter 5\/9/i }));
     expect(screen.getByRole('dialog', { name: 'Filter' })).toBeInTheDocument();
     expect(screen.getByRole('checkbox', { name: 'Observations' })).toBeChecked();
 
@@ -34,6 +35,9 @@ test('opens a type checklist with a live count and bulk controls', async () => {
     expect(onToggle).toHaveBeenCalledWith('showRadiosondes');
     await user.click(screen.getByRole('checkbox', { name: 'Aircraft' }));
     expect(onToggle).toHaveBeenCalledWith('showAircraft');
+    expect(screen.getByRole('checkbox', { name: 'Meshtastic nodes' })).toBeChecked();
+    await user.click(screen.getByRole('checkbox', { name: 'Meshtastic nodes' }));
+    expect(onToggle).toHaveBeenCalledWith('showMeshtastic');
     await user.click(screen.getByRole('button', { name: 'Select All' }));
     expect(onSetAll).toHaveBeenCalledWith(true);
     await user.click(screen.getByRole('button', { name: 'Clear' }));
@@ -42,5 +46,5 @@ test('opens a type checklist with a live count and bulk controls', async () => {
     await user.keyboard('{Escape}');
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Filter' })).not.toBeInTheDocument());
     rerender(<FileTypeFilter filters={{ ...filters, showObservations: false }} onToggle={onToggle} onSetAll={onSetAll} />);
-    expect(screen.getByRole('button', { name: /Filter 3\/8/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Filter 4\/9/i })).toBeInTheDocument();
 });

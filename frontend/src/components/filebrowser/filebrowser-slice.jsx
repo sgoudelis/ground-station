@@ -355,6 +355,7 @@ const initialState = {
         showObservations: true,
         showRadiosondes: true,
         showAircraft: true,
+        showMeshtastic: true,
         showAudio: true,
         showTranscriptions: true,
     },
@@ -409,6 +410,9 @@ export function reconcileFileBrowserPersistedState(inboundState, currentState) {
             showAircraft: savedFilters.showAircraft
                 ?? savedFilters.showDecoded
                 ?? currentState.filters.showAircraft,
+            showMeshtastic: savedFilters.showMeshtastic
+                ?? savedFilters.showDecoded
+                ?? currentState.filters.showMeshtastic,
         },
     };
 }

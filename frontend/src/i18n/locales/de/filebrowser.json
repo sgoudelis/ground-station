@@ -22,6 +22,7 @@
     "observations": "Beobachtungen",
     "weather_balloons": "Wetterballons",
     "aircraft": "Luftfahrzeuge",
+    "meshtastic_nodes": "Meshtastic-Knoten",
     "audio": "Audio"
   },
   "sort_order": {

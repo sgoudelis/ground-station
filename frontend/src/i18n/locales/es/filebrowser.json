@@ -22,6 +22,7 @@
     "observations": "Observaciones",
     "weather_balloons": "Globos meteorológicos",
     "aircraft": "Aeronaves",
+    "meshtastic_nodes": "Nodos Meshtastic",
     "audio": "Audio"
   },
   "sort_order": {

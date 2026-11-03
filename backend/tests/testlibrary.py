@@ -229,12 +229,14 @@ def test_observation_filter_is_independent_of_decoded_products(inventory):
         (True, True, True),
     ],
 )
-def test_weather_balloon_and_aircraft_filters_are_independent(
-    inventory, show_decoded, show_radiosondes, show_aircraft
+@pytest.mark.parametrize("show_meshtastic", [False, True])
+def test_weather_balloon_aircraft_and_meshtastic_filters_are_independent(
+    inventory, show_decoded, show_radiosondes, show_aircraft, show_meshtastic
 ):
     root = inventory.roots.decoded
     _write(root / "weather.satdump_lrpt" / "image.png", b"image")
     _write(root / "radiosonde_RS41_TEST" / "run.gssonde" / "packet.bin", b"sonde")
+    _write(root / "meshtastic_deadbeef" / "run.gsmesh" / "packet.bin", b"mesh")
     _write(root / "legacy.bin", b"sonde")
     _write(root / "legacy.json", json.dumps({"decoder": {"type": "radiosonde"}}))
     storage = AdsbStorage(root, "receiver")
@@ -250,6 +252,7 @@ def test_weather_balloon_and_aircraft_filters_are_independent(
         "showDecoded": show_decoded,
         "showRadiosondes": show_radiosondes,
         "showAircraft": show_aircraft,
+        "showMeshtastic": show_meshtastic,
     }
     expected = set()
     if show_decoded:
@@ -258,6 +261,8 @@ def test_weather_balloon_and_aircraft_filters_are_independent(
         expected.update({"decoded:legacy.bin", "decoded_folder:radiosonde_RS41_TEST"})
     if show_aircraft:
         expected.add("decoded_folder:adsb_406b90")
+    if show_meshtastic:
+        expected.add("decoded_folder:meshtastic_deadbeef")
     page = inventory.query(filters=filters, page_size=50)
     assert {item["id"] for item in page["items"]} == expected
     assert page["total"] == len(expected)
@@ -265,7 +270,8 @@ def test_weather_balloon_and_aircraft_filters_are_independent(
     # Clients that omit the new switches keep the former Decoded behavior.
     del filters["showRadiosondes"]
     del filters["showAircraft"]
-    assert inventory.query(filters=filters)["total"] == (5 if show_decoded else 0)
+    del filters["showMeshtastic"]
+    assert inventory.query(filters=filters)["total"] == (6 if show_decoded else 0)
 
 
 def test_inventory_filters_a_single_observation_session(inventory):

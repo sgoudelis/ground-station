@@ -10,6 +10,7 @@ const FILE_TYPES = [
     { key: 'showObservations', label: 'filters.observations', fallback: 'Observations' },
     { key: 'showRadiosondes', label: 'filters.weather_balloons', fallback: 'Weather balloons' },
     { key: 'showAircraft', label: 'filters.aircraft', fallback: 'Aircraft' },
+    { key: 'showMeshtastic', label: 'filters.meshtastic_nodes', fallback: 'Meshtastic nodes' },
     { key: 'showAudio', label: 'filters.audio', fallback: 'Audio' },
     { key: 'showTranscriptions', label: 'filters.transcriptions', fallback: 'Transcriptions' },
 ];

@@ -1,7 +1,8 @@
 {
   "filters": {
     "weather_balloons": "Palloni meteorologici",
-    "aircraft": "Aeromobili"
+    "aircraft": "Aeromobili",
+    "meshtastic_nodes": "Nodi Meshtastic"
   },
   "dates": {
     "unavailable": "Data non disponibile",

@@ -22,6 +22,7 @@
     "observations": "Παρατηρήσεις",
     "weather_balloons": "Μετεωρολογικά μπαλόνια",
     "aircraft": "Αεροσκάφη",
+    "meshtastic_nodes": "Κόμβοι Meshtastic",
     "audio": "Ηχος"
   },
   "sort_order": {
