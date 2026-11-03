@@ -7,7 +7,8 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import '../../../i18n/config.js';
 import { setupTheme } from '../../../theme.js';
 import waterfallReducer from '../waterfall-slice.jsx';
-import vfoReducer from '../vfo-marker/vfo-slice.jsx';
+import vfoReducer, { restoreReceivingSession } from '../vfo-marker/vfo-slice.jsx';
+import backendSyncMiddleware, { setSocketForMiddleware } from '../vfo-marker/vfo-middleware.jsx';
 import decodersReducer from '../../decoders/decoders-slice.jsx';
 import SdrAccordion from '../settings-sdr.jsx';
 
@@ -38,13 +39,20 @@ vi.mock('../use-sdr-takeover-dialog.jsx', () => ({
 }));
 vi.mock('../../../utils/toast-with-timestamp.jsx', () => ({ toast: { error: vi.fn() } }));
 
-beforeEach(() => vi.clearAllMocks());
-afterEach(() => vi.unstubAllGlobals());
+beforeEach(() => {
+    vi.clearAllMocks();
+    setSocketForMiddleware(socket);
+});
+afterEach(() => {
+    setSocketForMiddleware(null);
+    vi.unstubAllGlobals();
+});
 
 const createStore = (overrides = {}) => {
     const initialWaterfall = waterfallReducer(undefined, { type: '@@INIT' });
     return configureStore({
         reducer: { waterfall: waterfallReducer, vfo: vfoReducer, decoders: decodersReducer },
+        middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(backendSyncMiddleware),
         preloadedState: {
             waterfall: {
                 ...initialWaterfall,
@@ -71,6 +79,10 @@ test.each(['original-socket', 'adopted-session'])(
             receivingSessionId,
             isRecording: true,
         });
+        store.dispatch(restoreReceivingSession({ vfos: {
+            1: { active: true, selected: true, center_freq: 145_810_000, decoder: 'fsk' },
+            3: { active: true, center_freq: 145_820_000, modulation: 'FM' },
+        } }));
         const wrapper = ({ children }) => <Provider store={store}>{children}</Provider>;
         const { result } = renderHook(() => useWaterfallStream({}), { wrapper });
 
@@ -88,6 +100,11 @@ test.each(['original-socket', 'adopted-session'])(
             isRecording: false,
         });
         expect(store.getState().decoders.currentSessionId).toBe('dashboard-socket');
+        expect(store.getState().vfo).toMatchObject({
+            vfoActive: { 1: false, 2: false, 3: false, 4: false },
+            selectedVFO: null,
+            streamingVFOs: [],
+        });
     }
 );
 
@@ -95,18 +112,24 @@ test('Stop waits for detach acknowledgement and keeps reception active on failur
     let acknowledge;
     socket.emit.mockImplementationOnce((_event, _request, callback) => { acknowledge = callback; });
     const store = createStore({ isStreaming: true, isRecording: true, backgroundStreaming: true });
+    store.dispatch(restoreReceivingSession({ vfos: {
+        2: { active: true, selected: true, center_freq: 145_810_000, decoder: 'fsk' },
+    } }));
+    const activeVfos = store.getState().vfo;
     const wrapper = ({ children }) => <Provider store={store}>{children}</Provider>;
     const { result } = renderHook(() => useWaterfallStream({}), { wrapper });
 
     let stopping;
     act(() => { stopping = result.current.stopStreaming(); });
     expect(store.getState().waterfall.isStreaming).toBe(true);
+    expect(store.getState().vfo).toEqual(activeVfos);
     await act(async () => {
         acknowledge({ success: false, error: 'Could not release control' });
         await stopping;
     });
 
     expect(store.getState().waterfall).toMatchObject({ isStreaming: true, isRecording: true, backgroundStreaming: true });
+    expect(store.getState().vfo).toEqual(activeVfos);
     expect(toast.error).toHaveBeenCalledWith('Could not release control');
     expect(socket.disconnect).not.toHaveBeenCalled();
 });

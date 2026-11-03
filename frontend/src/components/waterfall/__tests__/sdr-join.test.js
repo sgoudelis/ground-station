@@ -1,14 +1,86 @@
 import { configureStore } from '@reduxjs/toolkit';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import reducer, { updateSDRConfig, setSelectedSDRId } from '../waterfall-slice.jsx';
-import { leaveSdr, joinSdr } from '../sdr-join.js';
+import { detachSdr, leaveSdr, joinSdr } from '../sdr-join.js';
 import backendSyncMiddleware, { setSocketForMiddleware } from '../vfo-marker/vfo-middleware.jsx';
-import vfoReducer, { setVFOProperty, setVfoActive } from '../vfo-marker/vfo-slice.jsx';
+import vfoReducer, { restoreReceivingSession, setVFOProperty, setVfoActive } from '../vfo-marker/vfo-slice.jsx';
 import decodersReducer from '../../decoders/decoders-slice.jsx';
 
 afterEach(() => {
     setSocketForMiddleware(null);
     vi.useRealTimers();
+});
+
+describe('SDR detaching', () => {
+    it.each(['sdr-a', 'sigmf-playback'])(
+        'deactivates local VFOs only after %s detaches, without updating background workers',
+        async (selectedSDRId) => {
+            vi.useFakeTimers();
+            let acknowledge;
+            const observation = {
+                session_id: 'receiving-background', enabled: true, audio_recordings: [1],
+                vfos: {
+                    1: { active: true, selected: true, center_freq: 145_810_000, decoder: 'fsk', bandwidth: 27000 },
+                    3: { active: true, center_freq: 145_820_000, modulation: 'FM' },
+                },
+            };
+            const socket = { id: 'dashboard-socket', connected: true, emit: vi.fn((_event, request, callback) => {
+                if (request.cmd === 'sdr.detach-streaming') {
+                    acknowledge = callback;
+                } else {
+                    callback({ success: true, data: { observation } });
+                }
+            }) };
+            setSocketForMiddleware(socket);
+            const store = configureStore({
+                reducer: { waterfall: reducer, vfo: vfoReducer, decoders: decodersReducer },
+                middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(backendSyncMiddleware),
+                preloadedState: { waterfall: {
+                    ...reducer(undefined, { type: '@@INIT' }),
+                    selectedSDRId, isStreaming: true, backgroundStreaming: true,
+                    receivingSessionId: observation.session_id,
+                } },
+            });
+            store.dispatch(restoreReceivingSession(observation));
+            // A queued edit must not reach the background session after detach.
+            store.dispatch(setVFOProperty({ vfoNumber: 1, updates: {
+                volume: 42, lockedTransmitterId: 'old-lock',
+                lockedTransmitterTrackerId: 'tracker-a', frequencyOffset: 100,
+            } }));
+            const activeVfos = store.getState().vfo;
+
+            const detaching = detachSdr(socket, store.dispatch, selectedSDRId);
+            expect(store.getState().waterfall.isStreaming).toBe(true);
+            expect(store.getState().vfo).toEqual(activeVfos);
+            acknowledge({ success: true });
+            await detaching;
+            await vi.runAllTimersAsync();
+
+            expect(socket.emit.mock.calls.map(([, request]) => request.cmd)).toEqual(['sdr.detach-streaming']);
+            expect(socket.emit.mock.calls[0][1].data).toEqual({ selectedSDRId });
+            expect(store.getState().waterfall.isStreaming).toBe(false);
+            expect(store.getState().decoders.currentSessionId).toBe('dashboard-socket');
+            expect(store.getState().vfo).toMatchObject({
+                vfoActive: { 1: false, 2: false, 3: false, 4: false },
+                selectedVFO: null, streamingVFOs: [],
+                audioRecording: { 1: { isRecording: false, duration: 0 } },
+                vfoMarkers: { 1: {
+                    frequency: 145_810_000, decoder: 'fsk', bandwidth: 27000, volume: 42,
+                    lockedTransmitterId: 'none', lockedTransmitterTrackerId: null, frequencyOffset: 0,
+                } },
+            });
+
+            // Rejoining restores the background VFOs without restarting their workers.
+            await joinSdr(socket, store.dispatch, selectedSDRId);
+            await vi.runAllTimersAsync();
+            expect(store.getState().vfo.vfoActive).toEqual({ 1: true, 2: false, 3: true, 4: false });
+            expect(store.getState().vfo.selectedVFO).toBe(1);
+            expect(store.getState().vfo.audioRecording[1].isRecording).toBe(true);
+            expect(socket.emit.mock.calls.map(([, request]) => request.cmd)).toEqual([
+                'sdr.detach-streaming', 'sdr.join-sdr',
+            ]);
+        }
+    );
 });
 
 describe('SDR joining', () => {

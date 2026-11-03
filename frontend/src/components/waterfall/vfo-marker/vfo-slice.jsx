@@ -161,6 +161,18 @@ export const vfoSlice = createSlice({
     name: 'vfo',
     initialState: initialState,
     reducers: {
+        deactivateDetachedVfos: (state) => {
+            // Clear only the dashboard's VFOs; detached backend workers stay active.
+            state.selectedVFO = null;
+            state.streamingVFOs = [];
+            for (let number = 1; number <= state.maxVFOMarkers; number++) {
+                state.vfoActive[number] = false;
+                // Keep tuning and decoder drafts, but drop the detached stream's locks.
+                state.vfoMarkers[number].lockedTransmitterId = 'none';
+                state.vfoMarkers[number].lockedTransmitterTrackerId = null;
+                state.vfoMarkers[number].frequencyOffset = 0;
+            }
+        },
         restoreReceivingSession: (state, action) => {
             const observation = action.payload;
             state.selectedVFO = null;
@@ -438,6 +450,7 @@ export const {
     setSelectedVFOTab,
     updateAllVFOStates,
     restoreReceivingSession,
+    deactivateDetachedVfos,
 } = vfoSlice.actions;
 
 export default vfoSlice.reducer;

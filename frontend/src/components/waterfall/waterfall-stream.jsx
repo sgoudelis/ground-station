@@ -19,7 +19,7 @@ import {
 } from './waterfall-slice.jsx';
 import { toast } from '../../utils/toast-with-timestamp.jsx';
 import { useSdrTakeoverDialog } from './use-sdr-takeover-dialog.jsx';
-import { callSdrApi, joinSdr, leaveSdr } from './sdr-join.js';
+import { detachSdr, joinSdr, leaveSdr } from './sdr-join.js';
 import { setCurrentSessionId } from '../decoders/decoders-slice.jsx';
 
 const useWaterfallStream = ({
@@ -399,13 +399,11 @@ const useWaterfallStream = ({
                 return;
             }
             if (backgroundStreaming) {
-                const response = await callSdrApi(socket, 'detach-streaming', selectedSDRId);
+                const response = await detachSdr(socket, dispatch, selectedSDRId);
                 if (!response?.success) {
                     toast.error(response?.error || 'Could not detach SDR');
                     return;
                 }
-                dispatch(setIsStreaming(false));
-                dispatch(setCurrentSessionId(socket.id));
                 cancelAnimations();
                 return;
             }

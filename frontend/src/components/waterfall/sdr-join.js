@@ -10,7 +10,7 @@ import {
     setRecordingStartTime,
     setRecordingDuration,
 } from './waterfall-slice.jsx';
-import { restoreReceivingSession } from './vfo-marker/vfo-slice.jsx';
+import { restoreReceivingSession, deactivateDetachedVfos } from './vfo-marker/vfo-slice.jsx';
 import { setCurrentSessionId, setObservedSessionIds, decoderStatusChanged } from '../decoders/decoders-slice.jsx';
 
 export const callSdrApi = (socket, command, selectedSDRId) => new Promise((resolve) => {
@@ -100,6 +100,17 @@ export const leaveSdr = async (socket, dispatch, selectedSDRId) => {
         dispatch(setIsStreaming(false));
         dispatch(setCurrentSessionId(socket.id));
         dispatch(setObservedSessionIds([]));
+    }
+    return response;
+};
+
+export const detachSdr = async (socket, dispatch, selectedSDRId) => {
+    const response = await callSdrApi(socket, 'detach-streaming', selectedSDRId);
+    if (response?.success) {
+        // Stop backend synchronization and cancel queued VFO edits before local cleanup.
+        dispatch(setIsStreaming(false));
+        dispatch(deactivateDetachedVfos());
+        dispatch(setCurrentSessionId(socket.id));
     }
     return response;
 };

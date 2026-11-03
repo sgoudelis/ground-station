@@ -109,7 +109,7 @@ import { useTranslation } from 'react-i18next';
 import { selectRunningRigTransmitterOptions } from "../target/transmitter-selectors.js";
 import { fetchPlaybackRecordings } from "../filebrowser/filebrowser-slice.jsx";
 import { useSdrTakeoverDialog } from './use-sdr-takeover-dialog.jsx';
-import { callSdrApi, liveConfigToUpdates, joinSdr } from './sdr-join.js';
+import { callSdrApi, detachSdr, liveConfigToUpdates, joinSdr } from './sdr-join.js';
 import { setCurrentSessionId } from '../decoders/decoders-slice.jsx';
 import { DevRenderProfiler } from './render-profiler.jsx';
 import { formatGnssRate, getGnssTuningAdvice } from './gnss-tuning.js';
@@ -1629,15 +1629,18 @@ const WaterfallSettings = forwardRef(function WaterfallSettings({ playbackRemain
 
     const handlePlaybackStop = async () => {
         if (isStreaming && selectedSDRId === 'sigmf-playback') {
-            const command = store.getState().waterfall.backgroundStreaming
-                ? 'detach-streaming' : 'stop-streaming';
-            const response = await callSdrApi(socket, command, 'sigmf-playback');
+            const backgroundStreaming = store.getState().waterfall.backgroundStreaming;
+            const response = backgroundStreaming
+                ? await detachSdr(socket, dispatch, 'sigmf-playback')
+                : await callSdrApi(socket, 'stop-streaming', 'sigmf-playback');
             if (!response?.success) {
                 toast.error(response?.error || 'Could not stop playback');
                 return;
             }
-            dispatch(setIsStreaming(false));
-            dispatch(setCurrentSessionId(socket.id));
+            if (!backgroundStreaming) {
+                dispatch(setIsStreaming(false));
+                dispatch(setCurrentSessionId(socket.id));
+            }
             dispatch(resetPlaybackStartTime());
         }
     };
