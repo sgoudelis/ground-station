@@ -198,8 +198,8 @@ const TransmitterListRow = React.memo(function TransmitterListRow({row, selected
         onFocus={() => onFocusRow(row.id)} onClick={() => onSelect(row.id)}
         sx={(theme) => ({width: '100%', height: '100%', boxSizing: 'border-box', border: 0,
             borderBottom: `1px solid ${theme.palette.divider}`, borderLeft: '3px solid',
-            borderLeftColor: row.kind === 'meshtastic' ? alpha(typeColor(row.kind), selected ? 1 : 0.45)
-                : selected ? 'primary.main' : 'transparent', borderRadius: 0,
+            borderLeftColor: selected ? row.kind === 'meshtastic' ? typeColor(row.kind) : 'primary.main'
+                : 'transparent', borderRadius: 0,
             display: 'flex', alignItems: 'center', gap: 1.25, px: 1.25, py: 0.75,
             color: 'text.primary', font: 'inherit', textAlign: 'left', cursor: 'pointer',
             opacity: hidden ? 0.55 : 1,
