@@ -26,6 +26,7 @@ function snapshot(row) {
         captured_at: row.captured_at, packet_count: finite(row.packet_count),
         latitude: finite(row.latitude), longitude: finite(row.longitude), altitude: finite(row.altitude),
         registration: text(aircraft.registration), model: text(aircraft.type_code), operator: text(aircraft.operator_name),
+        operatorCallsign: text(aircraft.operator_callsign), operatorCountry: text(aircraft.operator_country),
         fullModel: text(aircraft.model), owner: text(aircraft.owner), year: text(aircraft.year),
         military_status: text(aircraft.military_status), interesting: aircraft.interesting === true,
         type_description: text(aircraft.type_description), aircraft_class: text(aircraft.aircraft_class),
@@ -51,6 +52,9 @@ function snapshot(row) {
         selectedHeading: finite(readsb.nav_heading), qnh: finite(readsb.nav_qnh),
         roll: finite(readsb.roll), trackRate: finite(readsb.track_rate),
         windSpeed: finite(readsb.ws), windHeading: finite(readsb.wd), outsideTemperature: finite(readsb.oat),
+        totalTemperature: finite(readsb.tat), geometricVertical: Number.isFinite(readsb.geom_rate) ? readsb.geom_rate * 0.00508 : null,
+        // Flatten only the reported mode list so equal live snapshots still reuse their models.
+        navigationModes: Array.isArray(readsb.nav_modes) ? readsb.nav_modes.filter((mode) => typeof mode === 'string').join(' · ').toUpperCase() : '',
         sondeModel: text(telemetry.subtype) || text(telemetry.type), sondeType: text(telemetry.type),
         sondeTime: text(telemetry.datetime), altitudeReference: text(telemetry.ref_position),
         sondeAprsId: text(telemetry.aprsid), rawSerial: text(telemetry.rawid),
@@ -101,7 +105,8 @@ export function createTransmitterListRows() {
             const model = previous && same(previous.model, values) ? previous.model : {
                 ...values,
                 search: [values.name, values.source, values.id, values.registration, values.model, values.operator,
-                    values.sondeModel, values.fullModel, values.nodeName, values.owner].join(' ').toLowerCase(),
+                    values.sondeModel, values.fullModel, values.nodeName, values.owner,
+                    values.operatorCallsign, values.operatorCountry].join(' ').toLowerCase(),
             };
             nextCache.set(row.id, {model, receiverKey});
             return model;

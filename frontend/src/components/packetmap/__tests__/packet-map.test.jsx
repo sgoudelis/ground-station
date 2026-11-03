@@ -67,6 +67,11 @@ vi.mock('react-leaflet', () => ({
     TileLayer: ({url, zIndex}) => <div data-testid="tile-layer" data-url={url} data-z-index={zIndex} />,
 }));
 vi.mock('../../common/tile-layers.jsx', () => ({getTileLayerById: () => ({url: 'tiles', attribution: 'OSM'})}));
+vi.mock('../meshtastic-map-marker.jsx', () => ({
+    default: ({id, latitude, longitude, name, selected, onSelectTransmitter}) => <div data-testid="position"
+        data-center={JSON.stringify([latitude, longitude])} data-selected={String(selected)}
+        onClick={() => onSelectTransmitter?.(id)}>{name}</div>,
+}));
 vi.mock('../../common/dataurl-icons.jsx', () => ({homeIcon: {}}));
 vi.mock('../../common/common.jsx', () => ({
     TitleBar: ({children}) => <div data-testid="map-title">{children}</div>,
@@ -96,7 +101,7 @@ beforeEach(() => {
 
 afterEach(() => vi.restoreAllMocks());
 
-it('plots Meshtastic location packets with a node label and selects their transmitter', () => {
+it('plots Meshtastic location packets with a permanent name and no tooltip and selects their transmitter', () => {
     const store = configureStore({reducer: () => ({location: {location: null}})});
     const point = {id: 'mesh-fix', transmitter_id: 'meshtastic:!2008e299', kind: 'meshtastic',
         name: '!2008e299', source: '!2008e299', latitude: 40.6585344, longitude: 22.9376,
@@ -108,8 +113,8 @@ it('plots Meshtastic location packets with a node label and selects their transm
     </ThemeProvider></Provider>);
     const marker = screen.getByTestId('position');
     expect(marker).toHaveAttribute('data-center', '[40.6585344,22.9376]');
-    expect(marker).toHaveAttribute('data-color', '#67ea94');
-    expect(within(marker).getByTestId('map-tooltip')).toHaveTextContent('!2008e299');
+    expect(marker).toHaveTextContent('!2008e299');
+    expect(within(marker).queryByTestId('map-tooltip')).not.toBeInTheDocument();
     fireEvent.click(marker);
     expect(onSelectTransmitter).toHaveBeenCalledWith('meshtastic:!2008e299');
 });
@@ -127,10 +132,12 @@ it('reuses the aircraft crosshair for the selected Meshtastic node and follows p
     expect(screen.queryByTestId('node-selection')).not.toBeInTheDocument();
     rerender(element('meshtastic:A'));
     const crosshair = screen.getByTestId('node-selection');
+    expect(screen.getByTestId('position')).toHaveAttribute('data-selected', 'true');
     expect(crosshair).toHaveAttribute('data-center', '[40,23]');
     expect(crosshair.dataset.iconHtml).toContain('viewBox="0 0 52 52"');
     expect(crosshair.dataset.iconHtml).toContain('<rect x="6" y="6" width="40" height="40"');
     const icon = markerRenders.mock.lastCall[0].icon;
+    expect(icon.options.iconAnchor).toEqual([26, 44.25]);
     expect(markerRenders.mock.lastCall[0]).toMatchObject({interactive: false, keyboard: false});
     rerender(element('meshtastic:A', start + 60000));
     expect(screen.getByTestId('node-selection')).toHaveAttribute('data-center', '[41,23]');
@@ -703,6 +710,10 @@ it('uses each APRS fix symbol during playback and selects transmitters without p
     const marker = screen.getByTestId('aprs-marker');
     expect(marker.dataset.iconHtml).toContain('aria-label="Car"');
     expect(marker.dataset.iconHtml).toContain('/aprs/mobile.png');
+    expect(marker).toHaveAttribute('data-icon-class', 'packet-aprs-marker packet-aprs-selected');
+    expect(screen.getByTestId('node-selection')).toHaveAttribute('data-center', marker.dataset.center);
+    expect(markerRenders.mock.lastCall[0].icon.options.iconAnchor).toEqual([26, 45.2375]);
+    expect(screen.getByTestId('node-selection').dataset.iconHtml).toContain('viewBox="0 0 52 52"');
     expect(marker).toBeEmptyDOMElement();
     fireEvent.click(marker);
     expect(onSelectTransmitter).toHaveBeenCalledWith('aprs:A');
@@ -718,6 +729,8 @@ it('uses each APRS fix symbol during playback and selects transmitters without p
     rerender(element('2026-11-01T00:02:00Z'));
     expect(screen.queryByTestId('aprs-marker')).not.toBeInTheDocument();
     expect(screen.getAllByTestId('position').some((marker) => marker.dataset.center === '[42,25]')).toBe(true);
+    expect(screen.getByTestId('node-selection')).toHaveAttribute('data-center', '[42,25]');
+    expect(markerRenders.mock.lastCall[0].icon.options.iconAnchor).toEqual([26, 26]);
 });
 
 it('uses APRS symbols from transmitter details on older servers', () => {
@@ -765,6 +778,7 @@ it('reuses the weather balloon and parachute for APRS balloons and follows their
     expect(screen.getByTestId('sonde-marker').dataset.iconHtml).toContain('data-flight-phase="ascending"');
     expect(screen.getByTestId('sonde-marker').dataset.iconHtml).toContain('balloon.png');
     expect(screen.getByTestId('sonde-marker').dataset.iconHtml).toContain('packet-radiosonde-crosshair');
+    expect(screen.queryByTestId('node-selection')).not.toBeInTheDocument();
     expect(screen.getByTestId('sonde-marker')).toBeEmptyDOMElement();
     expect(map.fitBounds).not.toHaveBeenCalled();
     expect(map.setView).toHaveBeenLastCalledWith(JSON.parse(screen.getByTestId('sonde-marker').dataset.center), 8, {animate: false});

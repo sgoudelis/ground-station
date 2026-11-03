@@ -8,6 +8,18 @@ Both transparent images are resized directly from the original 128 × 128 files
 to 80 × 80 pixels and displayed at 80 × 80 CSS pixels on the map. Their colors are
 preserved, with the map adding the altitude lift and ground shadow.
 
+`meshtastic.png` was supplied by the project maintainer as
+`Meshtastic-Style Green Map Pin Icon.png`. The transparent artwork is cropped to
+the visible pin and resized to 96 × 125 pixels, preserving its original colors.
+`meshtastic-shadow.png` precomposes the APRS/radiosonde shadows at 2× resolution:
+a zero-offset, 2px blur at 56% black, followed by a 2px downward-offset, 4px blur
+at 45.5% black, with 20 CSS pixels of transparent padding on each side.
+Meshtastic nodes share one Leaflet canvas renderer and decoded shadow sprite.
+The pin is displayed at 28 × 36.5 CSS pixels with the tip anchored to the reported
+coordinates. Permanent callsign labels are drawn on the canvas above each pin;
+the selected node retains the shared crosshair, with its label raised above it.
+Text metrics are cached, and no per-frame shadow filters or tooltips are added.
+
 The ten transparent APRS pins in `aprs/` were supplied by the project maintainer
 in `Colorful Map Pin Icon Collection.png`. They were split from the sheet,
 cleaned of detached background speckles, and fitted into 256 × 288 RGBA PNGs:

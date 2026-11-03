@@ -33,18 +33,25 @@ it('uses deterministic numeric distance sorting with missing coordinates last an
 
 it('keeps new aircraft and sonde fields cached while reacting to optional telemetry changes', () => {
     const prepare = createTransmitterListRows();
-    const plane = {id: 'plane', kind: 'adsb', details: {readsb: {nav_altitude_fms: 30000, nav_heading: 0}}};
+    const plane = {id: 'plane', kind: 'adsb', aircraft: {operator_callsign: 'AEGEAN', operator_country: 'Greece'},
+        details: {readsb: {nav_altitude_fms: 30000, nav_heading: 0, geom_rate: 0, tat: -12.5, nav_modes: ['autopilot', 'lnav']}}};
     const sonde = {id: 'sonde', kind: 'radiosonde', details: {
         telemetry: {freq: 403500}, vfo: {center_freq_hz: 403600000},
     }};
     const first = prepare([plane, sonde]);
     expect(first[0].targetAltitude).toBe(30000);
     expect(first[0].selectedHeading).toBe(0);
+    expect(first[0].geometricVertical).toBe(0);
+    expect(first[0].totalTemperature).toBe(-12.5);
+    expect(first[0].navigationModes).toBe('AUTOPILOT · LNAV');
+    expect(filterTransmitterList(first, 'aegean greece', [], 'name').map((row) => row.id)).toEqual(['plane']);
     expect(first[1].transmitFrequency).toBe(403500);
     expect(first[1].frequency).toBe(403600000);
     expect(prepare([structuredClone(plane), structuredClone(sonde)])).toBe(first);
-    const changed = prepare([{...plane, details: {readsb: {nav_altitude_mcp: 0, nav_altitude_fms: 30000}}}, sonde]);
+    const changed = prepare([{...plane, details: {readsb: {nav_altitude_mcp: 0, nav_altitude_fms: 30000, geom_rate: 1000}}}, sonde]);
     expect(changed[0].targetAltitude).toBe(0);
+    expect(changed[0].geometricVertical).toBeCloseTo(5.08);
+    expect(changed[0].navigationModes).toBe('');
     expect(changed[0]).not.toBe(first[0]);
     expect(changed[1]).toBe(first[1]);
     const cleared = prepare([{...plane, details: {}}, {...sonde, details: {telemetry: {tx_frequency: 404000}}}]);

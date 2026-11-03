@@ -28,6 +28,8 @@ import {buildPlaybackTrack, trackPositionAt} from './playback.js';
 import {getHorizonRadii} from './horizon.js';
 import VisibilityCircle from './visibility-circle.jsx';
 import {selectionCrosshair} from './selection-crosshair.js';
+import MeshtasticMapMarker from './meshtastic-map-marker.jsx';
+import {createMeshtasticRenderer, meshtasticPinSize} from './meshtastic-marker.js';
 
 export const POSITION_COLORS = Object.fromEntries(Object.entries(TRANSMITTER_TYPES).map(([kind, value]) => [kind, value.color]));
 
@@ -181,10 +183,7 @@ export default function PacketMap({positions, transmitters, hasPositions = posit
     const mapRef = useRef(null);
     // Share an SVG renderer for curved ring labels; transmitter paths use canvas.
     const visibilityRenderer = useMemo(() => svg({pane: 'packet-visibility'}), []);
-    // Keep the many ground nodes on canvas; only the selected node needs a DOM reticle.
-    const nodeSelectionIcon = useMemo(() => new DivIcon({
-        className: 'packet-node-selection-marker', iconSize: [52, 52], iconAnchor: [26, 26], html: selectionCrosshair,
-    }), []);
+    const meshtasticRenderer = useMemo(createMeshtasticRenderer, []);
     const {islandRef, isFullscreen, toggleFullscreen} = useMapIslandFullscreen(() => mapRef.current?.invalidateSize({pan: false}));
     const applySettings = (next) => {
         setSettings(next);
@@ -239,7 +238,18 @@ export default function PacketMap({positions, transmitters, hasPositions = posit
     })), [tracks, selectedTrack, playbackTime, transmitterDetails, selectedTransmitterId]);
     // Follow the selected sonde's displayed position, including historical
     // interpolation. Unknown altitude must not produce a misleading footprint.
-    const selectedPoint = playback.get(selectedTransmitterId)?.point;
+    const selectedCursor = playback.get(selectedTransmitterId);
+    const selectedPoint = selectedCursor?.point;
+    // APRS balloons already draw a reticle around their raised flight symbol.
+    const showNodeSelection = selectedPoint?.kind === 'meshtastic'
+        || (selectedPoint?.kind === 'aprs' && !selectedCursor.icon?.options.className?.includes('packet-radiosonde-marker'));
+    const selectedPinHeight = selectedPoint?.kind === 'meshtastic' ? meshtasticPinSize[1]
+        : showNodeSelection ? selectedCursor.icon?.options.iconSize?.[1] ?? 0 : 0;
+    // Keep ground nodes/labels on canvas; only the selected node needs a DOM reticle.
+    const nodeSelectionIcon = useMemo(() => new DivIcon({
+        className: 'packet-node-selection-marker', iconSize: [52, 52],
+        iconAnchor: [26, 26 + selectedPinHeight / 2], html: selectionCrosshair,
+    }), [selectedPinHeight]);
     const horizonRadii = selectedPoint?.kind === 'radiosonde' ? getHorizonRadii(selectedPoint.altitude) : null;
     const visibilityCircles = horizonRadii ? [
         {id: 'horizon', radius: horizonRadii.horizon, color: '#2196f3',
@@ -271,9 +281,9 @@ export default function PacketMap({positions, transmitters, hasPositions = posit
     }, [tracks, visibleAircraftIds, selectedTrack, selectedTransmitterId, hasReceiver, receiverLatitude, receiverLongitude]);
     const hasBalloons = tracks.some((track) => track.points[0].kind === 'radiosonde'
         || getAprsSymbol(aprsPosition(track.points.at(-1), transmitterDetails.get(track.id)))?.balloon);
-    const hasAprsPins = tracks.some((track) => track.points[0].kind === 'aprs');
+    const hasGroundPins = tracks.some((track) => ['aprs', 'meshtastic'].includes(track.points[0].kind));
     // Pins extend upward from their coordinates; leave space for the callsign above them.
-    const paddingTop = hasBalloons ? 124 : hasAprsPins ? 72 : 42;
+    const paddingTop = hasBalloons ? 124 : hasGroundPins ? 72 : 42;
 
     // MapContainer freezes its initial className; keep pane styling on a live
     // wrapper so layer-order changes also apply to maps that are already open.
@@ -332,7 +342,10 @@ export default function PacketMap({positions, transmitters, hasPositions = posit
                         renderer={visibilityRenderer} label={pathLabel}
                         pathOptions={{color, fill: false, weight: 2, opacity: 0.85, dashArray: '8 6'}} />)}
                 </Pane>
-                {hasReceiver && <Marker position={[receiverLatitude, receiverLongitude]} icon={receiverIcon} />}
+                {/* Keep home above ground shadows (350), below canvas labels (400) and transmitter markers (600). */}
+                {hasReceiver && <Pane name="packet-home" style={{zIndex: 375}}>
+                    <Marker position={[receiverLatitude, receiverLongitude]} icon={receiverIcon} />
+                </Pane>}
                 {/* Point clicks select the transmitter; details stay in the info panel. */}
                 {tracks.map(({id, points, path: originalPath}) => {
                     const path = id === selectedTransmitterId ? selectedTrack.path : originalPath;
@@ -344,7 +357,11 @@ export default function PacketMap({positions, transmitters, hasPositions = posit
                     return <React.Fragment key={id}>
                         {settings.showTracks && id === selectedTransmitterId && path.length > 1 && <Polyline positions={path} smoothFactor={0.5}
                             pathOptions={{color, weight: 2, opacity: latest.kind === 'adsb' ? 0.3 : 1, lineCap: 'round', lineJoin: 'round'}} />}
-                        {current && (current.aircraftShape ? <AircraftMapMarker key="cursor" id={id}
+                        {current && (current.point.kind === 'meshtastic' ? <MeshtasticMapMarker key="cursor" id={id}
+                            latitude={current.point.latitude} longitude={current.point.longitude}
+                            name={current.point.name || current.point.source} selected={id === selectedTransmitterId}
+                            renderer={meshtasticRenderer} onSelectTransmitter={selectTransmitter}
+                        /> : current.aircraftShape ? <AircraftMapMarker key="cursor" id={id}
                             latitude={current.point.latitude} longitude={current.point.longitude}
                             track={current.point.track_deg} name={current.point.name || current.point.source}
                             icao={current.point.source} shapeName={current.aircraftShape.name} shapeScale={current.aircraftShape.scale}
@@ -355,11 +372,11 @@ export default function PacketMap({positions, transmitters, hasPositions = posit
                         /> : <CircleMarker key="cursor" center={[current.point.latitude, current.point.longitude]} radius={5.985}
                             eventHandlers={{click: () => onSelectTransmitter?.(id)}}
                             pathOptions={{color: cursorColor, fillColor: cursorColor, fillOpacity: 0.85, weight: 2}}>
-                            <Tooltip>{current.point.name || current.point.source}</Tooltip>
+                            {current.point.kind !== 'meshtastic' && <Tooltip>{current.point.name || current.point.source}</Tooltip>}
                         </CircleMarker>)}
                     </React.Fragment>;
                 })}
-                {selectedPoint?.kind === 'meshtastic' && <Marker
+                {showNodeSelection && <Marker
                     position={[selectedPoint.latitude, selectedPoint.longitude]} icon={nodeSelectionIcon}
                     interactive={false} keyboard={false} zIndexOffset={1000} />}
             </MapContainer>

@@ -53,3 +53,8 @@
     line-height: 14px;
     text-align: center;
 }
+
+.packet-aprs-selected .packet-aprs-label {
+    /* Leave room above the shared selection crosshair's upper tick. */
+    bottom: calc(100% + 16px);
+}

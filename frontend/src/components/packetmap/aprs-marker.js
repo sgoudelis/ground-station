@@ -112,7 +112,7 @@ export function createAprsIcon({position, report, phase, altitude, name, stale =
     image.alt = '';
     image.draggable = false;
     return new DivIcon({
-        className: `packet-aprs-marker${stale ? ' packet-marker-stale' : ''}`,
+        className: `packet-aprs-marker${selected ? ' packet-aprs-selected' : ''}${stale ? ' packet-marker-stale' : ''}`,
         // Anchor the tip of each pin to the received position, rather than its center.
         iconSize: [34.2, 38.475],
         iconAnchor: [17.1, 38.475],

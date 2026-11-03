@@ -3,7 +3,6 @@
 import React, {createContext, useContext, useId, useMemo} from 'react';
 import {Box, Chip, Typography} from '@mui/material';
 import {alpha} from '@mui/material/styles';
-import HubOutlinedIcon from '@mui/icons-material/HubOutlined';
 import SensorsIcon from '@mui/icons-material/Sensors';
 import {useTranslation} from 'react-i18next';
 import {typeColor, typeLabel} from './transmitters.js';
@@ -14,12 +13,14 @@ import AircraftFlag from '../common/aircraft-flag.jsx';
 import {aircraftValue} from '../../utils/aircraft-metadata.js';
 import balloon from './icons/balloon.png';
 import parachute from './icons/parachute.png';
+import meshtasticPin from './icons/meshtastic.png';
 
 export const PlaybackTimeContext = createContext(0);
 const metricPriorities = {primary: 0, secondary: 1, wide: 2, comment: 3};
 
 const iconSx = {width: 32, height: 32, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
     '& > svg, & > img': {width: 30, height: 30, display: 'block', objectFit: 'contain'},
+    '& > .transmitter-meshtastic-pin': {filter: 'drop-shadow(0 0 2px rgb(0 0 0 / 56%)) drop-shadow(0 2px 4px rgb(0 0 0 / 45.5%))'},
     '@container (max-width: 650px)': {width: 24, height: 24, '& > svg, & > img': {width: 24, height: 24}}};
 
 const AircraftSymbol = React.memo(function AircraftSymbol({name, scale, squawk, emergency, capturedAt}) {
@@ -41,10 +42,11 @@ function ProtocolIcon({row}) {
     if (shape) return <AircraftSymbol name={shape.name} scale={shape.scale}
         squawk={row.squawk} emergency={row.emergency} capturedAt={row.captured_at} />;
     const symbol = row.kind === 'aprs' ? getAprsSymbol(row) : null;
-    const image = row.kind === 'radiosonde' || symbol?.balloon ? row.vertical < -0.3 ? parachute : balloon : symbol?.image;
+    const image = row.kind === 'meshtastic' ? meshtasticPin
+        : row.kind === 'radiosonde' || symbol?.balloon ? row.vertical < -0.3 ? parachute : balloon : symbol?.image;
     return <Box component="span" aria-hidden="true" sx={{...iconSx, color: typeColor(row.kind)}}>
-        {image ? <img src={image} alt="" draggable={false} />
-            : row.kind === 'meshtastic' ? <HubOutlinedIcon /> : <SensorsIcon />}
+        {image ? <img src={image} alt="" draggable={false} className={row.kind === 'meshtastic' ? 'transmitter-meshtastic-pin' : undefined} />
+            : <SensorsIcon />}
     </Box>;
 }
 
@@ -52,11 +54,11 @@ function ProtocolIcon({row}) {
 function telemetryFields(row, number, t) {
     const label = (key, fallback) => t(`packet_map.list.${key}`, fallback);
     const fields = [];
-    const add = (value, name, unit = '', digits = 0, priority = 'primary') => {
-        if (Number.isFinite(value)) fields.push({label: name, value: `${number(value, digits)}${unit ? ` ${unit}` : ''}`, priority});
+    const add = (value, name, unit = '', digits = 0, priority = 'primary', placement = 'detail') => {
+        if (Number.isFinite(value)) fields.push({label: name, value: `${number(value, digits)}${unit ? ` ${unit}` : ''}`, priority, placement});
     };
-    const addText = (value, name, priority = 'secondary') => {
-        if (value) fields.push({label: name, value, priority});
+    const addText = (value, name, priority = 'secondary', placement = 'detail') => {
+        if (value) fields.push({label: name, value, priority, placement});
     };
     add(row.altitude, label('altitude', 'Alt'), 'm');
     if (row.kind === 'adsb') {
@@ -67,19 +69,23 @@ function telemetryFields(row, number, t) {
         if (row.squawk !== null && row.squawk !== '') addText(String(row.squawk).padStart(4, '0'), t('packet_map.flight.squawk', 'Squawk'));
         if (row.barometric !== row.altitude) add(row.barometric, label('barometric', 'Baro'), 'm', 0, 'wide');
         if (row.geometric !== row.altitude) add(row.geometric, label('geometric', 'Geom'), 'm', 0, 'wide');
+        if (row.geometricVertical !== row.vertical) add(row.geometricVertical, label('geom_vertical_rate', 'Geom V/S'), 'm/s', 1, 'wide');
         add(row.airspeed, 'TAS', 'kt', 0, 'secondary');
         add(row.indicatedSpeed, 'IAS', 'kt', 0, 'secondary');
         add(row.mach, 'Mach', '', 2, 'secondary');
-        add(row.targetAltitude, label('target_altitude', 'Target alt'), 'ft', 0, 'wide');
-        add(row.selectedHeading, label('selected_heading', 'Selected hdg'), '°', 0, 'wide');
-        add(row.qnh, 'QNH', 'hPa', 1, 'wide');
+        // Navigation/environment details use spare header space on wide lists.
+        add(row.targetAltitude, label('target_altitude', 'Target alt'), 'ft', 0, 'wide', 'header');
+        add(row.qnh, 'QNH', 'hPa', 1, 'wide', 'header');
+        addText(row.navigationModes, label('navigation_modes', 'Modes'), 'wide', 'header');
+        add(row.windSpeed, label('wind', 'Wind'), 'kt', 0, 'wide', 'header');
+        add(row.outsideTemperature, 'OAT', '°C', 1, 'wide', 'header');
+        add(row.selectedHeading, label('selected_heading', 'Selected hdg'), '°', 0, 'wide', 'header');
         add(row.magneticHeading, label('magnetic_heading', 'Mag hdg'), '°', 0, 'wide');
         add(row.trueHeading, label('true_heading', 'True hdg'), '°', 0, 'wide');
         add(row.roll, label('roll', 'Roll'), '°', 1, 'wide');
         add(row.trackRate, label('track_rate', 'Turn rate'), '°/s', 1, 'wide');
-        add(row.windSpeed, label('wind', 'Wind'), 'kt', 0, 'wide');
-        add(row.windHeading, label('wind_direction', 'Wind direction'), '°', 0, 'wide');
-        add(row.outsideTemperature, 'OAT', '°C', 1, 'wide');
+        add(row.windHeading, label('wind_direction', 'Wind direction'), '°', 0, 'wide', 'header');
+        add(row.totalTemperature, 'TAT', '°C', 1, 'wide', 'header');
     } else if (row.kind === 'radiosonde') {
         add(row.vertical, label('vertical_rate', 'V/S'), 'm/s', 1);
         add(row.temperature, label('temperature', 'Temp'), '°C', 1);
@@ -140,11 +146,16 @@ const TransmitterListRow = React.memo(function TransmitterListRow({row, selected
     const {t} = useTranslation('navigation');
     const {t: aircraftT} = useTranslation('common');
     const descriptionId = useId();
+    const flightId = `${descriptionId}-flight`;
     const status = useMemo(() => row.kind === 'adsb' ? aircraftEmergency(row) : null, [row.kind, row.squawk, row.emergency]);
     const number = (value, digits = 0) => numberFormatters[digits].format(value);
     // Formatting happens only for the viewport and its small overscan buffer.
-    const fields = useMemo(() => telemetryFields(row, number, t), [row, numberFormatters, t]);
-    const details = fields.map(({label, value}) => [label, value].filter(Boolean).join(' ')).join('  ·  ');
+    const {fields, headerFields, details} = useMemo(() => {
+        const all = telemetryFields(row, number, t);
+        return {fields: all.filter((field) => field.placement !== 'header'),
+            headerFields: all.filter((field) => field.placement === 'header'),
+            details: all.map(({label, value}) => [label, value].filter(Boolean).join(' ')).join('  ·  ')};
+    }, [row, numberFormatters, t]);
     const classification = row.kind === 'adsb' && (row.category || row.aircraft_class || row.military_status === 'military' || row.interesting)
         ? aircraftValue(row, 'classification', aircraftT) : '';
     // Phase is derived from the latest reported rate, so it needs no clock subscription.
@@ -169,9 +180,10 @@ const TransmitterListRow = React.memo(function TransmitterListRow({row, selected
     ] : [];
     const metadata = [
         row.source && row.source !== row.name ? `${row.kind === 'adsb' ? 'ICAO ' : ''}${row.source}` : '',
-        row.registration, row.model || row.sondeModel, row.operator, row.nodeName,
+        row.registration, row.model || row.sondeModel, row.operator, row.nodeName, phase,
         row.fullModel, classification, row.owner && row.owner !== row.operator ? row.owner : '',
-        phase, ...aircraftDetails, ...sondeDetails,
+        row.operatorCallsign ? `${t('packet_map.list.operator_callsign', 'Radio')} ${row.operatorCallsign}` : '', row.operatorCountry,
+        ...aircraftDetails, ...sondeDetails,
         row.kind === 'aprs' ? getAprsSymbol(row)?.label : '',
     ].filter(Boolean).join(' · ');
     const reception = [row.decoder, row.vfo !== null ? `VFO ${number(row.vfo)}` : '', row.satellite].filter(Boolean).join(' · ');
@@ -181,7 +193,8 @@ const TransmitterListRow = React.memo(function TransmitterListRow({row, selected
     const lastSeen = stamp && Number.isFinite(stamp.getTime()) ? timeFormatter.format(stamp) : '—';
     return <Box component="button" type="button" data-id={row.id} data-index={index}
         className={[hidden ? 'transmitter-hidden' : '', status ? `transmitter-emergency-${status.severity}` : ''].filter(Boolean).join(' ')}
-        aria-label={row.name} aria-describedby={descriptionId} aria-pressed={selected} tabIndex={focused ? 0 : -1}
+        aria-label={row.name} aria-describedby={headerFields.length ? `${descriptionId} ${flightId}` : descriptionId}
+        aria-pressed={selected} tabIndex={focused ? 0 : -1}
         onFocus={() => onFocusRow(row.id)} onClick={() => onSelect(row.id)}
         sx={(theme) => ({width: '100%', height: '100%', boxSizing: 'border-box', border: 0,
             borderBottom: `1px solid ${theme.palette.divider}`, borderLeft: '3px solid',
@@ -217,7 +230,22 @@ const TransmitterListRow = React.memo(function TransmitterListRow({row, selected
                         '@container (max-width: 650px)': {'& .emergency-label': {display: 'none'}, '& .emergency-code': {display: 'inline'}},
                         '& .MuiChip-label': {px: 0.75, overflow: 'hidden', textOverflow: 'ellipsis'}}} />}
                 <Typography component="span" variant="caption" noWrap title={metadata}
-                    sx={{minWidth: 0, color: 'text.secondary'}}>{metadata}</Typography>
+                    sx={{minWidth: 0, color: 'text.secondary', ...(headerFields.length ? {
+                        '@container (min-width: 1101px)': {maxWidth: '35%'},
+                    } : {})}}>{metadata}</Typography>
+                {headerFields.length > 0 && <Box id={flightId} className="transmitter-flight-details" sx={{
+                    display: 'flex', flex: 1, minWidth: 0, height: 24, lineHeight: '24px', overflow: 'hidden',
+                    flexWrap: 'wrap', alignContent: 'flex-start', columnGap: 1.5, fontSize: '0.75rem', whiteSpace: 'nowrap',
+                    fontVariantNumeric: 'tabular-nums', '& .transmitter-metric': {flexShrink: 0},
+                    '& .metric-label': {color: 'text.secondary', mr: 0.5},
+                    '& .metric-value': {color: 'text.primary', fontWeight: 500},
+                    '@container (max-width: 1100px)': {display: 'none'},
+                }}>
+                    {headerFields.map(({label, value}, index) => <Box component="span" key={index} className="transmitter-metric"
+                        title={`${label} ${value}`}>
+                        <span className="metric-label">{label}{' '}</span><span className="metric-value">{value}</span>
+                    </Box>)}
+                </Box>}
                 <Box sx={{ml: 'auto', display: 'flex', alignItems: 'center', gap: 1.5, flexShrink: 0, color: 'text.secondary',
                     '@container (max-width: 1100px)': {display: 'none'}}}>
                     {reception && <Typography component="span" variant="caption" title={reception}>{reception}</Typography>}

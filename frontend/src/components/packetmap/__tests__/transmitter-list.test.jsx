@@ -19,11 +19,11 @@ const received = Date.parse('2026-11-02T12:00:00Z');
 const fixtures = [
     {id: 'adsb:4d2406', kind: 'adsb', name: 'AEE608', source: '4D2406',
         aircraft: {type_code: 'A320', registration: 'SX-DVA', operator_name: 'Aegean', model: 'A320-214', category: 'A3',
-            engine_count: 2, engine_type: 'J', wake_category: 'M', year: '2012'},
+            engine_count: 2, engine_type: 'J', wake_category: 'M', year: '2012', operator_callsign: 'AEGEAN', operator_country: 'Greece'},
         details: {telemetry: {groundspeed_mps: 200, vertical_rate_mps: 2, track_deg: 145, squawk: '0042', altitude_baro_m: 9500},
             readsb: {tas: 455, ias: 280, mach: 0.78, rssi: -24, nav_altitude_mcp: 35000, nav_heading: 0,
                 nav_qnh: 1013.2, mag_heading: 141, true_heading: 145, roll: 0, track_rate: -0.5,
-                ws: 42, wd: 270, oat: -48.5}}},
+                ws: 42, wd: 270, oat: -48.5, tat: -12.5, geom_rate: -500, nav_modes: ['autopilot', 'lnav']}}},
     {id: 'meshtastic:!2008e299', kind: 'meshtastic', name: '!2008e299', source: '!2008e299',
         details: {telemetry: {channel_hash: '0x08', destination: 'Broadcast', hop_limit: 0, sats_in_view: 9,
             hop_start: 3, relay_node: '0x52', packet_id: '0x1234', encryption: 'Public default key', HDOP: 1.23}}},
@@ -91,11 +91,17 @@ it('shows protocol-specific two-line summaries with reception details, real symb
     expect(plane).toHaveTextContent('Wind 42 kt');
     expect(plane).toHaveTextContent('Wind direction 270 °');
     expect(plane).toHaveTextContent('OAT -48.5 °C');
+    expect(plane).toHaveTextContent('TAT -12.5 °C');
+    expect(plane).toHaveTextContent('Geom V/S -2.5 m/s');
+    expect(plane).toHaveTextContent('Modes AUTOPILOT · LNAV');
+    expect(plane).toHaveTextContent('Radio AEGEAN');
+    expect(plane).toHaveTextContent('Greece');
     expect(plane).toHaveTextContent('Power -24 dBFS');
     expect(plane).toHaveTextContent('0 km');
     expect(plane).toHaveTextContent('11/2/26, 12:00:00 PM');
     expect(plane.querySelector('[data-aircraft-shape]')).not.toBeNull();
     const mesh = screen.getByRole('button', {name: '!2008e299'});
+    expect(mesh.querySelector('img')).toHaveAttribute('src', expect.stringContaining('/icons/meshtastic.png'));
     expect(mesh).toHaveTextContent('Channel 0x08');
     expect(mesh).toHaveTextContent('Hop limit 0');
     expect(mesh).toHaveTextContent('GPS 9 sats');
@@ -136,7 +142,7 @@ it('omits unavailable aircraft and sonde details and never invents a level-fligh
     const {update} = setup({rows});
     for (const name of ['AEE608', 'V1234567']) {
         const row = screen.getByRole('button', {name});
-        expect(row).not.toHaveTextContent(/Target alt|QNH|Engines|Built|TX|Sonde time|Level flight|Climbing|Descending|NaN|Invalid Date/);
+        expect(row).not.toHaveTextContent(/Target alt|QNH|Modes|Geom V\/S|TAT|Radio |Engines|Built|TX|Sonde time|Level flight|Climbing|Descending|NaN|Invalid Date/);
     }
     update({rows: rows.map((row) => ({...row, details: {telemetry: {vel_v: 0, vertical_rate_mps: 0}, readsb: {nav_altitude_fms: 0}}}))});
     expect(screen.getByRole('button', {name: 'AEE608'})).toHaveTextContent('Level flight');
