@@ -6,6 +6,7 @@ import { useWaterfallEngine } from './waterfall-engine-provider.jsx';
 import {
     setIsStreaming,
     setJoinedSdrId,
+    setReceivingSession,
     updateSDRConfig,
     setErrorMessage,
     setErrorDialogOpen,
@@ -18,7 +19,7 @@ import {
 } from './waterfall-slice.jsx';
 import { toast } from '../../utils/toast-with-timestamp.jsx';
 import { useSdrTakeoverDialog } from './use-sdr-takeover-dialog.jsx';
-import { joinSdr, leaveSdr } from './sdr-join.js';
+import { callSdrApi, joinSdr, leaveSdr } from './sdr-join.js';
 import { setCurrentSessionId } from '../decoders/decoders-slice.jsx';
 
 const useWaterfallStream = ({
@@ -360,6 +361,13 @@ const useWaterfallStream = ({
                 dispatch(setStartStreamingLoading(false));
                 return;
             }
+            // Consumers have an identity independent of the dashboard socket,
+            // so detaching reception never requires reconnecting the whole app.
+            const sessionId = configureResult.response?.data?.session_id;
+            if (sessionId) {
+                dispatch(setReceivingSession({ session_id: sessionId, enabled: false }));
+                dispatch(setCurrentSessionId(sessionId));
+            }
 
             const startResult = await callWithTakeoverConfirmation(
                 'sdr.start-streaming',
@@ -391,13 +399,14 @@ const useWaterfallStream = ({
                 return;
             }
             if (backgroundStreaming) {
-                // Disconnect retains the acknowledged background observation,
-                // including recordings. A fresh socket ID lets this tab receive
-                // again without reusing the running consumers' session identity.
+                const response = await callSdrApi(socket, 'detach-streaming', selectedSDRId);
+                if (!response?.success) {
+                    toast.error(response?.error || 'Could not detach SDR');
+                    return;
+                }
                 dispatch(setIsStreaming(false));
+                dispatch(setCurrentSessionId(socket.id));
                 cancelAnimations();
-                socket.disconnect();
-                socket.connect();
                 return;
             }
             // If recording is active, stop it first

@@ -38,6 +38,7 @@ from hardware.parameters import (
 )
 from hardware.soapysdrbrowser import discovered_servers, query_server_for_sdrs
 from server import runtimestate
+from session.background import background_sessions
 from session.store import active_sdr_clients
 from tracker.contracts import InvalidTrackerIdError, get_tracking_state_name, require_tracker_id
 from tracker.operations import operations, validate_external_request
@@ -1122,7 +1123,7 @@ async def get_sdr_parameters(
     """Get SDR parameters."""
     sdr_id = str(data or "")
     recording_path = (
-        (active_sdr_clients.get(sid) or {}).get("recording_path")
+        (active_sdr_clients.get(background_sessions.resolve(sid)) or {}).get("recording_path")
         if sdr_id == "sigmf-playback"
         else None
     )

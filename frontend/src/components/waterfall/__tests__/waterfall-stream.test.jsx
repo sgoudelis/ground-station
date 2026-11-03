@@ -8,12 +8,15 @@ import '../../../i18n/config.js';
 import { setupTheme } from '../../../theme.js';
 import waterfallReducer from '../waterfall-slice.jsx';
 import vfoReducer from '../vfo-marker/vfo-slice.jsx';
+import decodersReducer from '../../decoders/decoders-slice.jsx';
 import SdrAccordion from '../settings-sdr.jsx';
 
 vi.mock('../background-stream-control.jsx', () => ({ default: () => null }));
 import useWaterfallStream from '../waterfall-stream.jsx';
+import { toast } from '../../../utils/toast-with-timestamp.jsx';
 
 const socket = {
+    id: 'dashboard-socket',
     on: vi.fn(),
     off: vi.fn(),
     disconnect: vi.fn(),
@@ -33,6 +36,7 @@ vi.mock('../waterfall-engine-provider.jsx', () => ({
 vi.mock('../use-sdr-takeover-dialog.jsx', () => ({
     useSdrTakeoverDialog: () => ({ requestTakeoverConfirmation: vi.fn(), takeoverDialog: null }),
 }));
+vi.mock('../../../utils/toast-with-timestamp.jsx', () => ({ toast: { error: vi.fn() } }));
 
 beforeEach(() => vi.clearAllMocks());
 afterEach(() => vi.unstubAllGlobals());
@@ -40,7 +44,7 @@ afterEach(() => vi.unstubAllGlobals());
 const createStore = (overrides = {}) => {
     const initialWaterfall = waterfallReducer(undefined, { type: '@@INIT' });
     return configureStore({
-        reducer: { waterfall: waterfallReducer, vfo: vfoReducer },
+        reducer: { waterfall: waterfallReducer, vfo: vfoReducer, decoders: decodersReducer },
         preloadedState: {
             waterfall: {
                 ...initialWaterfall,
@@ -72,20 +76,40 @@ test.each(['original-socket', 'adopted-session'])(
 
         await act(async () => result.current.stopStreaming());
 
-        // Neither the stream-stop nor recorder-stop RPC may reach the retained run.
-        expect(socket.emit).not.toHaveBeenCalled();
+        // Only detach is requested; the stream and recorders must stay alive.
+        expect(socket.emit.mock.calls.map(([, request]) => request.cmd)).toEqual(['sdr.detach-streaming']);
         expect(captureSnapshot).not.toHaveBeenCalled();
-        expect(socket.disconnect).toHaveBeenCalledOnce();
-        expect(socket.connect).toHaveBeenCalledOnce();
-        expect(socket.disconnect.mock.invocationCallOrder[0]).toBeLessThan(socket.connect.mock.invocationCallOrder[0]);
+        expect(socket.disconnect).not.toHaveBeenCalled();
+        expect(socket.connect).not.toHaveBeenCalled();
         expect(store.getState().waterfall).toMatchObject({
             isStreaming: false,
             receivingSessionId: null,
             backgroundStreaming: false,
             isRecording: false,
         });
+        expect(store.getState().decoders.currentSessionId).toBe('dashboard-socket');
     }
 );
+
+test('Stop waits for detach acknowledgement and keeps reception active on failure', async () => {
+    let acknowledge;
+    socket.emit.mockImplementationOnce((_event, _request, callback) => { acknowledge = callback; });
+    const store = createStore({ isStreaming: true, isRecording: true, backgroundStreaming: true });
+    const wrapper = ({ children }) => <Provider store={store}>{children}</Provider>;
+    const { result } = renderHook(() => useWaterfallStream({}), { wrapper });
+
+    let stopping;
+    act(() => { stopping = result.current.stopStreaming(); });
+    expect(store.getState().waterfall.isStreaming).toBe(true);
+    await act(async () => {
+        acknowledge({ success: false, error: 'Could not release control' });
+        await stopping;
+    });
+
+    expect(store.getState().waterfall).toMatchObject({ isStreaming: true, isRecording: true, backgroundStreaming: true });
+    expect(toast.error).toHaveBeenCalledWith('Could not release control');
+    expect(socket.disconnect).not.toHaveBeenCalled();
+});
 
 test('Stop with background receiving disabled finalizes the recording and stops the stream', async () => {
     const store = createStore({ isStreaming: true, isRecording: true, backgroundStreaming: false });
@@ -129,6 +153,20 @@ test('shows the detailed startup command error in one dialog', async () => {
         'Airspy serial 0000000000001234: AIRSPY_ERROR_NOT_FOUND (code -5)'
     );
     expect(store.getState().waterfall.errorDialogOpen).toBe(true);
+});
+
+test('uses the receiving identity returned by configuration before starting consumers', async () => {
+    socket.emit.mockImplementationOnce((_event, _request, callback) => callback({
+        success: true, data: { session_id: 'receiving:independent' },
+    }));
+    const store = createStore();
+    const wrapper = ({ children }) => <Provider store={store}>{children}</Provider>;
+    const { result } = renderHook(() => useWaterfallStream({}), { wrapper });
+
+    await act(async () => result.current.startStreaming());
+
+    expect(store.getState().waterfall.receivingSessionId).toBe('receiving:independent');
+    expect(store.getState().decoders.currentSessionId).toBe('receiving:independent');
 });
 
 test.each([

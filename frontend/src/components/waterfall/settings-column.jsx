@@ -47,6 +47,7 @@ import {
     setCenterFrequency,
     setErrorMessage,
     setIsStreaming,
+    setReceivingSession,
     updateSDRConfig,
     setTargetFPS,
     setSettingsDialogOpen,
@@ -109,6 +110,7 @@ import { selectRunningRigTransmitterOptions } from "../target/transmitter-select
 import { fetchPlaybackRecordings } from "../filebrowser/filebrowser-slice.jsx";
 import { useSdrTakeoverDialog } from './use-sdr-takeover-dialog.jsx';
 import { callSdrApi, liveConfigToUpdates, joinSdr } from './sdr-join.js';
+import { setCurrentSessionId } from '../decoders/decoders-slice.jsx';
 import { DevRenderProfiler } from './render-profiler.jsx';
 import { formatGnssRate, getGnssTuningAdvice } from './gnss-tuning.js';
 import useStableEvent from '../../hooks/useStableEvent.js';
@@ -612,6 +614,13 @@ const WaterfallSettings = forwardRef(function WaterfallSettings({ playbackRemain
                     operationLabel
                 ).then((response) => {
                     if (response?.success) {
+                        if (response.data?.session_id) {
+                            dispatch(setReceivingSession({
+                                session_id: response.data.session_id,
+                                enabled: Boolean(store.getState().waterfall.backgroundStreaming),
+                            }));
+                            dispatch(setCurrentSessionId(response.data.session_id));
+                        }
                         applySdrSettingsLocally(SDRSettings);
                     }
                     return response;
@@ -1618,15 +1627,17 @@ const WaterfallSettings = forwardRef(function WaterfallSettings({ playbackRemain
         }
     };
 
-    const handlePlaybackStop = () => {
-        // Playback accordion stop button only stops playback streaming
+    const handlePlaybackStop = async () => {
         if (isStreaming && selectedSDRId === 'sigmf-playback') {
-            socket.emit("api.call", {
-  cmd: "sdr.stop-streaming",
-  data: {
-    selectedSDRId: 'sigmf-playback'
-  }
-});
+            const command = store.getState().waterfall.backgroundStreaming
+                ? 'detach-streaming' : 'stop-streaming';
+            const response = await callSdrApi(socket, command, 'sigmf-playback');
+            if (!response?.success) {
+                toast.error(response?.error || 'Could not stop playback');
+                return;
+            }
+            dispatch(setIsStreaming(false));
+            dispatch(setCurrentSessionId(socket.id));
             dispatch(resetPlaybackStartTime());
         }
     };

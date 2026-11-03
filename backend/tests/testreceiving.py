@@ -12,6 +12,7 @@ from handlers.entities import sdr as sdrhandlers
 from handlers.entities import vfo as vfohandlers
 from pipeline.config.decoderconfig import DecoderConfig
 from pipeline.orchestration import processlifecycle
+from pipeline.streaming.iqbroadcaster import IQBroadcaster
 from session import service, store, tracker
 from session.background import background_sessions
 from session.tracker import session_tracker
@@ -139,6 +140,177 @@ async def detach(socket):
     await service.session_service.disconnect_session("original")
 
 
+@pytest.fixture
+def independent(receiving):
+    """Model workers started with a receiving ID separate from their browser."""
+    socket, pipeline, manager = receiving
+    session = background_sessions.start("original", "radio")
+    session_id = session.session_id
+    pipeline["clients"] = {session_id}
+    for key in ("demodulators", "recorders", "audio_recorders", "decoders"):
+        pipeline[key][session_id] = pipeline[key].pop("original")
+    store.active_sdr_clients[session_id] = store.active_sdr_clients.pop("original")
+    session_tracker.unregister_session_streaming("original")
+    session_tracker.register_session_streaming(session_id, "radio")
+    vfos = VFOManager()._session_vfo_states
+    vfos[session_id] = vfos.pop("original")
+    return socket, pipeline, manager, session_id
+
+
+@pytest.mark.asyncio
+async def test_configure_reserves_receiving_identity_without_reconnecting_browser(receiving):
+    socket, _pipeline, _manager = receiving
+    session_tracker.set_session_metadata("browser", username="observer")
+    reply = await command(
+        socket,
+        "configure-sdr",
+        "browser",
+        selectedSDRId="sigmf-playback",
+        centerFrequency=145_800_000,
+        sampleRate=2_048_000,
+    )
+    assert reply["success"]
+    session_id = reply["data"]["session_id"]
+    assert session_id != "browser"
+    assert background_sessions.resolve("browser") == session_id
+    assert not background_sessions.sessions[session_id].enabled
+    assert store.active_sdr_clients[session_id]["client_id"] == session_id
+    assert session_tracker.get_session_metadata(session_id)["username"] == "observer"
+    assert ("browser", session_id) in socket.entered
+    broadcaster = IQBroadcaster(queue.Queue(), "radio")
+    for subscription in (f"decoder:{session_id}:vfo1", f"recorder:{session_id}"):
+        assert broadcaster._extract_session_id(subscription) == session_id
+
+
+@pytest.mark.asyncio
+async def test_detach_keeps_consumers_and_releases_only_reception_rooms(independent):
+    socket, pipeline, manager, session_id = independent
+    worker = pipeline["process"]
+    decoder = pipeline["decoders"][session_id][2]["instance"]
+    assert (await command(socket, "set-background", enabled=True))["success"]
+
+    assert (await command(socket, "detach-streaming"))["success"]
+
+    assert socket.left == [("original", "radio"), ("original", session_id)]
+    assert background_sessions.sessions[session_id].controller is None
+    assert background_sessions.resolve("original") == "original"
+    assert pipeline["clients"] == {session_id}
+    assert pipeline["process"] is worker
+    assert pipeline["decoders"][session_id][2]["instance"] is decoder
+    assert not pipeline["stop_event"].is_set()
+    for consumer in (
+        manager.decoder_manager.stop_decoder,
+        manager.demodulator_manager.stop_demodulator,
+        manager.recorder_manager.stop_recorder,
+        manager.audio_recorder_manager.stop_audio_recorder,
+    ):
+        consumer.assert_not_called()
+    state = VFOManager().get_vfo_state(session_id, 2)
+    assert state.center_freq == 145_820_000
+    assert state.locked_transmitter_id == "none"
+    assert state.doppler_status == "idle"
+
+
+@pytest.mark.asyncio
+async def test_same_browser_can_rejoin_detach_and_disconnect_without_stopping_retained_run(
+    independent,
+):
+    socket, pipeline, _manager, session_id = independent
+    assert (await command(socket, "set-background", enabled=True))["success"]
+    assert (await command(socket, "detach-streaming"))["success"]
+
+    joined = await command(socket, "join-sdr")
+    assert joined["success"]
+    assert joined["data"]["observation"]["session_id"] == session_id
+    assert joined["data"]["observation"]["is_recording"]
+    assert background_sessions.resolve("original") == session_id
+    assert (await command(socket, "detach-streaming"))["success"]
+    assert (await command(socket, "join-sdr", "another-browser"))["success"]
+
+    await service.session_service.disconnect_session("original")
+    assert background_sessions.sessions[session_id].controller == "another-browser"
+    assert pipeline["clients"] == {session_id}
+    assert not pipeline["stop_event"].is_set()
+
+
+@pytest.mark.asyncio
+async def test_detached_browser_can_configure_another_stream_without_overwriting_retained_run(
+    independent,
+):
+    socket, pipeline, _manager, session_id = independent
+    assert (await command(socket, "set-background", enabled=True))["success"]
+    assert (await command(socket, "detach-streaming"))["success"]
+    reply = await command(
+        socket,
+        "configure-sdr",
+        selectedSDRId="sigmf-playback",
+        centerFrequency=100_000_000,
+        sampleRate=1_024_000,
+    )
+    assert reply["success"]
+    next_session = reply["data"]["session_id"]
+    assert next_session not in ("original", session_id)
+    assert background_sessions.resolve("original") == next_session
+    assert store.active_sdr_clients[session_id]["sdr_id"] == "radio"
+    assert store.active_sdr_clients[next_session]["sdr_id"] == "sigmf-playback"
+
+    await service.session_service.disconnect_session("original")
+    assert next_session not in background_sessions.sessions
+    assert session_id in background_sessions.sessions
+    assert not pipeline["stop_event"].is_set()
+
+
+@pytest.mark.asyncio
+async def test_detach_rejects_disabled_background_and_other_viewers(independent):
+    socket, _pipeline, _manager, session_id = independent
+    assert not (await command(socket, "detach-streaming"))["success"]
+    assert (await command(socket, "set-background", enabled=True))["success"]
+    assert (await command(socket, "join-sdr", "viewer"))["success"]
+    assert not (await command(socket, "detach-streaming", "viewer"))["success"]
+    assert background_sessions.sessions[session_id].controller == "original"
+
+
+@pytest.mark.asyncio
+async def test_failed_detach_restores_controller_subscriptions(independent, monkeypatch):
+    socket, pipeline, _manager, session_id = independent
+    assert (await command(socket, "set-background", enabled=True))["success"]
+    monkeypatch.setattr(socket, "leave_room", AsyncMock(side_effect=RuntimeError("room failure")))
+
+    reply = await command(socket, "detach-streaming")
+
+    assert not reply["success"]
+    assert background_sessions.sessions[session_id].controller == "original"
+    assert background_sessions.resolve("original") == session_id
+    assert socket.entered == [("original", "radio"), ("original", session_id)]
+    assert not pipeline["stop_event"].is_set()
+
+
+@pytest.mark.asyncio
+async def test_configured_browser_can_join_as_viewer_using_its_receiving_identity(receiving):
+    socket, pipeline, _manager = receiving
+    # Keep the existing controller occupied so JOIN must create independent VFOs.
+    assert (await command(socket, "set-background", enabled=True))["success"]
+    configured = await command(
+        socket,
+        "configure-sdr",
+        "browser",
+        selectedSDRId="sigmf-playback",
+        centerFrequency=100_000_000,
+    )
+    session_id = configured["data"]["session_id"]
+
+    joined = await command(socket, "join-sdr", "browser")
+
+    assert joined["success"]
+    assert joined["data"]["observation"] is None
+    assert joined["data"]["session_id"] == session_id
+    assert session_id in pipeline["joiners"]
+    assert session_tracker.get_session_sdr(session_id) == "radio"
+    assert (await command(socket, "leave-sdr", "browser"))["success"]
+    assert pipeline["clients"] == {"original"}
+    assert session_id not in background_sessions.sessions
+
+
 @pytest.mark.asyncio
 async def test_default_disconnect_still_stops_the_pipeline(receiving):
     _socket, pipeline, manager = receiving
@@ -235,9 +407,10 @@ async def test_simultaneous_joiners_grant_one_controller_and_keep_other_vfos_sep
     assert sum(reply["data"]["observation"] is not None for reply in replies) == 1
     owner = background_sessions.sessions["original"].controller
     viewer = "second" if owner == "first" else "first"
-    assert pipeline["clients"] == {"original", viewer}
-    assert pipeline["joiners"] == {viewer}
-    assert background_sessions.resolve(viewer) == viewer
+    viewer_session = background_sessions.resolve(viewer)
+    assert pipeline["clients"] == {"original", viewer_session}
+    assert pipeline["joiners"] == {viewer_session}
+    assert viewer_session != viewer
     assert not (await command(socket, "set-background", viewer, enabled=False))["success"]
     assert not (await command(socket, "claim-sdr", viewer))["success"]
     assert background_sessions.sessions["original"].controller == owner
@@ -258,7 +431,7 @@ async def test_original_user_returns_as_viewer_after_another_user_claims(receivi
     await command(socket, "join-sdr", "new")
     returned = await command(socket, "join-sdr", "returning-original-user")
     assert returned["data"]["observation"] is None
-    assert pipeline["joiners"] == {"returning-original-user"}
+    assert pipeline["joiners"] == {returned["data"]["session_id"]}
     assert background_sessions.sessions["original"].controller == "new"
 
 
@@ -271,12 +444,13 @@ async def test_retained_session_cleanup_and_other_participant_lifetime(receiving
         await command(socket, "join-sdr", "new")
     if stop_mode in {"disconnect", "explicit"}:
         await command(socket, "join-sdr", "viewer")
+        viewer_session = background_sessions.resolve("viewer")
         if stop_mode == "disconnect":
             await command(socket, "set-background", "new", enabled=False)
             await service.session_service.disconnect_session("new")
         else:
             assert (await command(socket, "stop-streaming", "new"))["success"]
-        assert pipeline["clients"] == {"viewer"}
+        assert pipeline["clients"] == {viewer_session}
         assert not pipeline["stop_event"].is_set()
         await command(socket, "leave-sdr", "viewer")
     elif stop_mode == "failure":

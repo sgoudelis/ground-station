@@ -18,7 +18,7 @@ describe('SDR joining', () => {
             emit: (_event, request, callback) => {
                 commands.push(request.cmd);
                 callback(request.cmd === 'sdr.join-sdr'
-                    ? { success: true, data: { config: {
+                    ? { success: true, data: { session_id: 'receiving:viewer', config: {
                         sdr_id: 'sdr-a', center_freq: 145_800_000,
                         sample_rate: 2_048_000, gain: 20, antenna: 'RX', bias_t: true,
                         sdr_settings: {bandwidth: 'auto'},
@@ -46,6 +46,7 @@ describe('SDR joining', () => {
         expect(state.selectedSDRId).toBe('sdr-a');
         expect(state.joinedSdrId).toBe('sdr-a');
         expect(state.isStreaming).toBe(true);
+        expect(state.receivingSessionId).toBe('receiving:viewer');
         expect(state.centerFrequency).toBe(145_800_000);
         expect(state.sampleRate).toBe(2_048_000);
         expect(state.gainValues).toEqual([0, 10, 20, 30]);

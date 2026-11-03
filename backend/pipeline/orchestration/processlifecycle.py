@@ -1569,7 +1569,10 @@ class ProcessLifecycleManager:
                                 if is_internal:
                                     # Broadcast internal session decoder events to all clients
                                     await self.sio.emit(SocketEvents.DECODER_DATA, data)
-                                elif session_id in background_sessions.sessions:
+                                elif (
+                                    session_id in background_sessions.sessions
+                                    and background_sessions.sessions[session_id].enabled
+                                ):
                                     # JOIN viewers see the retained decoder output;
                                     # audio stays in the controller's session room.
                                     await self.sio.emit(

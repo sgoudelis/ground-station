@@ -1,12 +1,13 @@
 """Receiving-session ownership, independent of the lifetime of a browser socket.
 
-The original session ID stays on workers, queues, and decoder processes. A new
+The receiving session ID stays on workers, queues, and decoder processes. A new
 controller subscribes to that session's Socket.IO room and resolves commands to
 its ID; adoption never rebuilds or renames a running consumer.
 """
 
 from dataclasses import asdict, dataclass
 from typing import Any, Dict, Optional
+from uuid import uuid4
 
 from vfos.parameters import decoder_parameter_overrides
 from vfos.state import VFOManager
@@ -32,6 +33,17 @@ class BackgroundSessions:
         session = self.sessions.get(session_id)
         return session.controller if session else session_id
 
+    def start(self, socket_id: str, sdr_id: str) -> ReceivingSession:
+        """Reserve a consumer identity distinct from the browser's private room."""
+        session = self.sessions.get(self.resolve(socket_id))
+        if session is None or session.controller != socket_id:
+            # IQ subscription keys use ':' to separate the session and VFO.
+            session = ReceivingSession(f"receiving-{uuid4().hex}", sdr_id, socket_id, enabled=False)
+            self.sessions[session.session_id] = session
+            self.controllers[socket_id] = session.session_id
+        session.sdr_id = sdr_id
+        return session
+
     def set_enabled(self, socket_id: str, sdr_id: str, enabled: bool) -> ReceivingSession:
         session_id = self.resolve(socket_id)
         session = self.sessions.get(session_id)
@@ -44,7 +56,12 @@ class BackgroundSessions:
 
     def claim(self, sdr_id: str, socket_id: str) -> Optional[ReceivingSession]:
         current = self.sessions.get(self.resolve(socket_id))
-        if current and current.sdr_id == sdr_id and current.controller == socket_id:
+        if (
+            current
+            and current.enabled
+            and current.sdr_id == sdr_id
+            and current.controller == socket_id
+        ):
             return current
         # Reserve synchronously before any room/consumer awaits. Concurrent JOINs
         # on the event loop can never acquire the same unattended observation.

@@ -44,6 +44,22 @@ from vfos.state import VFOManager
 SDR_IN_USE_CONFLICT_CODE = "sdr_in_use_conflict"
 
 
+def _copy_controller_metadata(socket_id: str, session_id: str) -> None:
+    metadata = session_tracker.get_session_metadata(socket_id) or {}
+    # The public setter uses ip_address; snapshots expose ip.
+    session_tracker.set_session_metadata(
+        session_id,
+        ip_address=metadata.get("ip"),
+        user_agent=metadata.get("user_agent"),
+        origin=metadata.get("origin"),
+        referer=metadata.get("referer"),
+        connected_at=metadata.get("connected_at"),
+        user_id=metadata.get("user_id"),
+        username=metadata.get("username"),
+        role=metadata.get("role"),
+    )
+
+
 def _coerce_float(value, default, field_name, logger):
     if value is None:
         return default
@@ -234,10 +250,10 @@ async def sdr_command_routing(
 ) -> Dict[str, Union[bool, None, dict, list, str]]:
 
     # Only the server's controller mapping can select another session's VFOs.
-    # JOIN/claim still operate on the physical socket that will enter the rooms.
+    # Room membership belongs to the physical socket; consumers use the receiving ID.
     socket_id = client_id
+    client_id = background_sessions.resolve(socket_id)
     if cmd not in ("join-sdr", "watch-sdr", "claim-sdr"):
-        client_id = background_sessions.resolve(socket_id)
         session = background_sessions.sessions.get(client_id)
         if session and session.controller != socket_id:
             return {"success": False, "error": "This observation has no attached controller"}
@@ -288,21 +304,59 @@ async def sdr_command_routing(
                         "decoder-data", {**status, "type": "decoder-status"}, room=background_sdr_id
                     )
 
+        elif cmd == "detach-streaming":
+            target_sdr_id = str(data.get("selectedSDRId") or "")
+            process_info = _running_sdr_info(target_sdr_id)
+            session = background_sessions.sessions.get(client_id)
+            if (
+                not session
+                or not session.enabled
+                or session.sdr_id != target_sdr_id
+                or session.controller != socket_id
+                or not process_info
+                or client_id not in process_info.get("clients", set())
+                or _is_joiner(target_sdr_id, client_id)
+            ):
+                reply["error"] = "Only a background observation's controller can detach it"
+            elif session.session_id == socket_id:
+                # Older in-memory sessions predate independent receiving identities.
+                reply["error"] = "Restart this stream before detaching without reconnecting"
+            else:
+                # Remove reception subscriptions before releasing ownership so a
+                # concurrent JOIN cannot have its new rooms removed by this detach.
+                try:
+                    await sio.leave_room(socket_id, target_sdr_id)
+                    await sio.leave_room(socket_id, session.session_id)
+                except Exception:
+                    # Keep the existing controller usable if room removal fails.
+                    if session.controller == socket_id:
+                        await sio.enter_room(socket_id, target_sdr_id)
+                        await sio.enter_room(socket_id, session.session_id)
+                    logger.exception("Could not detach receiving session %s", client_id)
+                    reply["error"] = "Could not detach observation"
+                    return reply
+                if background_sessions.detach(socket_id, process_info):
+                    reply["success"] = True
+                else:
+                    reply["error"] = "Observation control changed before detaching"
+
         elif cmd in ("join-sdr", "watch-sdr", "claim-sdr"):
             target_sdr_id = str(data.get("selectedSDRId") or "")
             process_info = _running_sdr_info(target_sdr_id)
-            adopted = background_sessions.sessions.get(background_sessions.resolve(client_id))
+            adopted = background_sessions.sessions.get(client_id)
             already_adopted = bool(
                 adopted
-                and adopted.session_id != client_id
-                and adopted.controller == client_id
+                and adopted.controller == socket_id
                 and adopted.sdr_id == target_sdr_id
+                and process_info
+                and client_id in process_info.get("clients", set())
+                and client_id not in process_info.get("joiners", set())
             )
             if not process_info:
                 reply["error"] = "SDR is no longer streaming"
             elif not already_adopted and any(
-                background_sessions.resolve(client_id) in info.get("clients", set())
-                and background_sessions.resolve(client_id) not in info.get("joiners", set())
+                client_id in info.get("clients", set())
+                and client_id not in info.get("joiners", set())
                 for info in process_manager.processes.values()
             ):
                 # A controller must leave through its normal stream lifecycle.
@@ -321,13 +375,13 @@ async def sdr_command_routing(
                     return reply
                 # JOIN subscribes to this worker without sending configuration.
                 # Its clients membership keeps the worker alive as a peer.
-                await sio.enter_room(client_id, target_sdr_id)
+                await sio.enter_room(socket_id, target_sdr_id)
                 if (
                     process_manager.processes.get(target_sdr_id) is not process_info
                     or process_info.get("stopping")
                     or not process_manager.is_sdr_process_running(target_sdr_id)
                 ):
-                    await sio.leave_room(client_id, target_sdr_id)
+                    await sio.leave_room(socket_id, target_sdr_id)
                     reply["error"] = "SDR stopped before joining began"
                     return reply
                 # Bind this socket to the live IQ source for its own VFOs.
@@ -341,12 +395,16 @@ async def sdr_command_routing(
                     or process_info.get("stopping")
                     or not process_manager.is_sdr_process_running(target_sdr_id)
                 ):
-                    await sio.leave_room(client_id, target_sdr_id)
+                    await sio.leave_room(socket_id, target_sdr_id)
                     reply["error"] = "SDR stopped before joining began"
                     return reply
                 # A reconfiguration may have completed while the room was joined.
                 live_config = _live_sdr_config(target_sdr_id, process_info)
-                session = background_sessions.claim(target_sdr_id, client_id)
+                session = (
+                    adopted
+                    if already_adopted
+                    else background_sessions.claim(target_sdr_id, socket_id)
+                )
                 observation = None
                 if session:
                     try:
@@ -355,45 +413,49 @@ async def sdr_command_routing(
                         # the worker alive throughout this detach.
                         if client_id in process_info.get("joiners", set()):
                             await process_manager.stop_sdr_join(target_sdr_id, client_id, sio=sio)
-                            await sio.enter_room(client_id, target_sdr_id)
-                        await sio.enter_room(client_id, session.session_id)
+                            await sio.enter_room(socket_id, target_sdr_id)
+                        if (
+                            client_id != session.session_id
+                            and client_id in background_sessions.sessions
+                        ):
+                            # A failed startup can leave an unused receiving ID.
+                            # Adoption replaces it without disturbing the live run.
+                            await session_service.cleanup_session(client_id)
+                            await sio.leave_room(socket_id, client_id)
+                        await sio.enter_room(socket_id, session.session_id)
                         if (
                             _running_sdr_info(target_sdr_id) is not process_info
-                            or session.controller != client_id
+                            or session.controller != socket_id
                         ):
                             raise RuntimeError("SDR stopped or controller disconnected during JOIN")
-                        metadata = session_tracker.get_session_metadata(client_id) or {}
-                        # The public setter uses ip_address; snapshots expose ip.
-                        session_tracker.set_session_metadata(
-                            session.session_id,
-                            ip_address=metadata.get("ip"),
-                            user_agent=metadata.get("user_agent"),
-                            origin=metadata.get("origin"),
-                            referer=metadata.get("referer"),
-                            connected_at=metadata.get("connected_at"),
-                            user_id=metadata.get("user_id"),
-                            username=metadata.get("username"),
-                            role=metadata.get("role"),
-                        )
-                        active_sdr_clients.pop(client_id, None)
+                        _copy_controller_metadata(socket_id, session.session_id)
+                        if client_id != session.session_id:
+                            active_sdr_clients.pop(client_id, None)
                         observation = background_sessions.describe(session, process_info)
                     except (Exception, asyncio.CancelledError):
                         # A failed room attachment must not strand the reservation.
-                        if session.controller == client_id:
+                        if session.controller == socket_id:
                             session.controller = None
-                            background_sessions.controllers.pop(client_id, None)
-                        await sio.leave_room(client_id, session.session_id)
-                        await sio.leave_room(client_id, target_sdr_id)
+                            background_sessions.controllers.pop(socket_id, None)
+                        await sio.leave_room(socket_id, session.session_id)
+                        await sio.leave_room(socket_id, target_sdr_id)
                         raise
                 elif cmd == "claim-sdr":
                     reply["error"] = "This observation already has a controller"
                     return reply
                 else:
+                    # Viewers also need independent consumer identities: taking
+                    # over later must not reuse the dashboard's private room.
+                    receiving = background_sessions.start(socket_id, target_sdr_id)
+                    client_id = receiving.session_id
+                    _copy_controller_metadata(socket_id, client_id)
+                    await sio.enter_room(socket_id, client_id)
                     process_info.setdefault("joiners", set()).add(client_id)
                     process_info["clients"].add(client_id)
                     session_tracker.register_session_streaming(client_id, target_sdr_id)
                 reply["success"] = True
                 reply["data"] = {
+                    "session_id": background_sessions.resolve(socket_id),
                     "config": live_config,
                     "observation": observation,
                     "background_observations": [
@@ -609,6 +671,11 @@ async def sdr_command_routing(
                     return reply
 
                 # Create or update SDR session via SessionService (also updates tracker)
+                receiving = background_sessions.start(socket_id, str(sdr_id))
+                client_id = receiving.session_id
+                sdr_config["client_id"] = client_id
+                _copy_controller_metadata(socket_id, client_id)
+                await sio.enter_room(socket_id, client_id)
                 logger.info(f"Creating an SDR session for client {client_id}")
                 await session_service.configure_sdr(client_id, sdr_device, sdr_config)
 
@@ -620,6 +687,7 @@ async def sdr_command_routing(
                     await process_manager.update_configuration(sdr_id, sdr_config)
 
                 reply["success"] = True
+                reply["data"] = {"session_id": client_id}
 
             except Exception as e:
                 logger.error(f"Error configuring SDR: {str(e)}")
@@ -1333,6 +1401,7 @@ def register_handlers(registry):
         "configure-sdr",
         "inspect-sdr",
         "set-background",
+        "detach-streaming",
         "claim-sdr",
         "join-sdr",
         "leave-sdr",

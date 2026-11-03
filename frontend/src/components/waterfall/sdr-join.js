@@ -74,8 +74,9 @@ export const joinSdr = async (socket, dispatch, selectedSDRId, command = 'join-s
         const backgrounds = response.data?.background_observations || [];
         dispatch(setObservedSessionIds(backgrounds.map((receiving) => receiving.session_id)));
         dispatch(setJoinedSdrId(observation ? null : selectedSDRId));
-        dispatch(setReceivingSession(observation));
-        dispatch(setCurrentSessionId(observation?.session_id || socket.id));
+        dispatch(setReceivingSession(observation || (response.data?.session_id
+            ? { session_id: response.data.session_id, enabled: false } : null)));
+        dispatch(setCurrentSessionId(observation?.session_id || response.data?.session_id || socket.id));
         if (observation) {
             dispatch(restoreReceivingSession(observation));
             dispatch(setIsRecording(Boolean(observation.is_recording)));

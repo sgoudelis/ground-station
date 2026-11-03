@@ -6,8 +6,15 @@ import pytest
 from handlers.entities import sdr as sdrhandlers
 from handlers.entities import vfo as vfohandlers
 from hardware import parameters as sdrparameters
+from session.background import background_sessions
 from session.tracker import session_tracker
 from vfos.state import VFOManager
+
+
+@pytest.fixture(autouse=True)
+def receivingstate(monkeypatch):
+    monkeypatch.setattr(background_sessions, "sessions", {})
+    monkeypatch.setattr(background_sessions, "controllers", {})
 
 
 class _DbSession:
@@ -140,20 +147,22 @@ async def test_join_claims_worker_lifetime_without_configuring_it(monkeypatch):
     assert joined["success"] is True
     assert joined["data"]["config"]["center_freq"] == 145_800_000
     assert joined["data"]["parameters"]["gain_values"] == [0, 10, 20]
-    assert sio.entered == [("viewer", "sdr-a")]
-    assert process_info["clients"] == {"internal:obs-123", "viewer"}
-    assert process_info["joiners"] == {"viewer"}
-    assert session_tracker.get_session_sdr("viewer") == "sdr-a"
+    receiving_id = joined["data"]["session_id"]
+    assert receiving_id != "viewer"
+    assert sio.entered == [("viewer", "sdr-a"), ("viewer", receiving_id)]
+    assert process_info["clients"] == {"internal:obs-123", receiving_id}
+    assert process_info["joiners"] == {receiving_id}
+    assert session_tracker.get_session_sdr(receiving_id) == "sdr-a"
     configure.assert_not_awaited()
     process_info["config_queue"].put.assert_not_called()
 
     await sdrhandlers.sdr_command_routing(
         sio, "leave-sdr", {"selectedSDRId": "sdr-a"}, logging.getLogger(__name__), "viewer"
     )
-    assert sio.left == [("viewer", "sdr-a")]
+    assert sio.left == [("viewer", "sdr-a"), ("viewer", receiving_id)]
     assert process_info["joiners"] == set()
     assert process_info["clients"] == {"internal:obs-123"}
-    assert session_tracker.get_session_sdr("viewer") is None
+    assert session_tracker.get_session_sdr(receiving_id) is None
 
 
 @pytest.mark.asyncio
@@ -196,6 +205,7 @@ async def test_joiner_vfo_uses_own_consumer_and_cannot_tune_outside_live_band(mo
     await sdrhandlers.sdr_command_routing(
         sio, "join-sdr", {"selectedSDRId": "sdr-a"}, logging.getLogger(__name__), "viewer"
     )
+    receiving_id = background_sessions.resolve("viewer")
     accepted = await vfohandlers.update_vfo_parameters(
         sio,
         {"vfoNumber": 1, "frequency": 145_810_000, "mode": "FM", "active": True},
@@ -212,15 +222,15 @@ async def test_joiner_vfo_uses_own_consumer_and_cannot_tune_outside_live_band(mo
     assert accepted["success"] is True
     assert rejected["success"] is False
     assert "live SDR bandwidth" in rejected["error"]
-    assert starts == [("FM", "sdr-a", "viewer", 1)]
-    assert process_info["clients"] == {"internal:obs-123", "viewer"}
+    assert starts == [("FM", "sdr-a", receiving_id, 1)]
+    assert process_info["clients"] == {"internal:obs-123", receiving_id}
     assert process_info["config"]["center_freq"] == 145_800_000
-    assert VFOManager().get_vfo_state("viewer", 1).center_freq == 145_810_000
+    assert VFOManager().get_vfo_state(receiving_id, 1).center_freq == 145_810_000
 
     await sdrhandlers.sdr_command_routing(
         sio, "leave-sdr", {"selectedSDRId": "sdr-a"}, logging.getLogger(__name__), "viewer"
     )
-    assert "viewer" not in VFOManager().get_all_session_ids()
+    assert receiving_id not in VFOManager().get_all_session_ids()
 
 
 @pytest.mark.asyncio
@@ -237,12 +247,13 @@ async def test_disconnect_detaches_joiner_without_stopping_observation(monkeypat
     await sdrhandlers.sdr_command_routing(
         sio, "join-sdr", {"selectedSDRId": "sdr-a"}, logging.getLogger(__name__), "viewer"
     )
-    await service_module.cleanup_sdr_session("viewer")
+    receiving_id = background_sessions.resolve("viewer")
+    await service_module.session_service.disconnect_session("viewer")
 
     assert process_info["clients"] == {"internal:obs-123"}
     assert process_info["joiners"] == set()
-    assert session_tracker.get_session_sdr("viewer") is None
-    assert sio.left == [("viewer", "sdr-a")]
+    assert session_tracker.get_session_sdr(receiving_id) is None
+    assert sio.left == [("viewer", "sdr-a"), ("viewer", receiving_id)]
     stop_process.assert_not_awaited()
 
 
@@ -269,16 +280,17 @@ async def test_joiner_keeps_worker_alive_after_owner_leaves_and_stops_it_last(mo
         sio, "join-sdr", {"selectedSDRId": "sdr-a"}, logging.getLogger(__name__), "joiner"
     )
     assert joined["success"] is True
-    VFOManager().update_vfo_state("joiner", 1, center_freq=145_810_000, active=True)
+    receiving_id = joined["data"]["session_id"]
+    VFOManager().update_vfo_state(receiving_id, 1, center_freq=145_810_000, active=True)
 
     await lifecycle.stop_sdr_process("sdr-a", "owner")
 
     assert sdrhandlers.process_manager.processes["sdr-a"] is process_info
-    assert process_info["clients"] == {"joiner"}
-    assert process_info["joiners"] == {"joiner"}
+    assert process_info["clients"] == {receiving_id}
+    assert process_info["joiners"] == {receiving_id}
     assert not process_info["stop_event"].set.called
-    assert session_tracker.get_session_sdr("joiner") == "sdr-a"
-    assert VFOManager().get_vfo_state("joiner", 1).active is True
+    assert session_tracker.get_session_sdr(receiving_id) == "sdr-a"
+    assert VFOManager().get_vfo_state(receiving_id, 1).active is True
     starts = []
     monkeypatch.setattr(
         sdrhandlers,
@@ -296,7 +308,7 @@ async def test_joiner_keeps_worker_alive_after_owner_leaves_and_stops_it_last(mo
         "joiner",
     )
     assert vfo_reply["success"] is True
-    assert starts == [("FM", "sdr-a", "joiner", 1)]
+    assert starts == [("FM", "sdr-a", receiving_id, 1)]
 
     left = await sdrhandlers.sdr_command_routing(
         sio, "leave-sdr", {"selectedSDRId": "sdr-a"}, logging.getLogger(__name__), "joiner"
@@ -305,9 +317,9 @@ async def test_joiner_keeps_worker_alive_after_owner_leaves_and_stops_it_last(mo
     assert left["success"] is True
     assert "sdr-a" not in sdrhandlers.process_manager.processes
     process_info["stop_event"].set.assert_called_once()
-    assert session_tracker.get_session_sdr("joiner") is None
-    assert "joiner" not in VFOManager().get_all_session_ids()
-    assert sio.left == [("owner", "sdr-a"), ("joiner", "sdr-a")]
+    assert session_tracker.get_session_sdr(receiving_id) is None
+    assert receiving_id not in VFOManager().get_all_session_ids()
+    assert sio.left == [("owner", "sdr-a"), ("joiner", "sdr-a"), ("joiner", receiving_id)]
 
 
 @pytest.mark.asyncio

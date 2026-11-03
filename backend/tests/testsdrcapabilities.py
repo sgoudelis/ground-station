@@ -8,6 +8,7 @@ import pytest
 from handlers.entities import hardware as hardwarehandlers
 from hardware import parameters
 from pipeline.orchestration import processlifecycle
+from session.background import background_sessions
 
 
 class _DbSession:
@@ -21,6 +22,28 @@ class _DbSession:
 class _RunningProcess:
     def is_alive(self):
         return True
+
+
+@pytest.mark.asyncio
+async def test_playback_capabilities_use_receiving_session_configuration(monkeypatch):
+    recording_path = "/recordings/example.sigmf-meta"
+    capabilities = {"sample_rate_values": [2_048_000]}
+    monkeypatch.setattr(background_sessions, "controllers", {"browser": "receiving:playback"})
+    monkeypatch.setattr(
+        hardwarehandlers,
+        "active_sdr_clients",
+        {"receiving:playback": {"recording_path": recording_path}},
+    )
+    monkeypatch.setitem(
+        parameters.sdr_parameters_cache, ("sigmf-playback", recording_path), capabilities
+    )
+
+    response = await hardwarehandlers.get_sdr_parameters(
+        None, "sigmf-playback", logging.getLogger(__name__), "browser"
+    )
+
+    assert response["success"]
+    assert response["data"] == capabilities
 
 
 @pytest.mark.asyncio
