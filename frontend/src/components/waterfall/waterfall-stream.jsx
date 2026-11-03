@@ -53,6 +53,7 @@ const useWaterfallStream = ({
         fftAveraging,
         isStreaming,
         joinedSdrId,
+        backgroundStreaming,
         gettingSDRParameters,
         autoDBRange,
         playbackRecordingPath,
@@ -389,6 +390,16 @@ const useWaterfallStream = ({
                 }
                 return;
             }
+            if (backgroundStreaming) {
+                // Disconnect retains the acknowledged background observation,
+                // including recordings. A fresh socket ID lets this tab receive
+                // again without reusing the running consumers' session identity.
+                dispatch(setIsStreaming(false));
+                cancelAnimations();
+                socket.disconnect();
+                socket.connect();
+                return;
+            }
             // If recording is active, stop it first
             if (isRecording) {
                 try {
@@ -421,7 +432,7 @@ const useWaterfallStream = ({
             dispatch(setIsStreaming(false));
             cancelAnimations();
         }
-    }, [isStreaming, joinedSdrId, isRecording, socket, selectedSDRId, dispatch, cancelAnimations]);
+    }, [isStreaming, joinedSdrId, backgroundStreaming, isRecording, socket, selectedSDRId, dispatch, cancelAnimations]);
 
     const seekPlayback = useCallback((positionSeconds) => callWithTakeoverConfirmation(
         'sdr.seek-playback',

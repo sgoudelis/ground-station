@@ -3,7 +3,8 @@
   "main_title": "Waterfall & Spectrum",
   "background": {
     "keep_receiving": "Keep receiving in background",
-    "description": "Keep VFOs, decoders, and recordings running after closing this tab. Unattended VFOs stay at their last frequency. The next user to join takes control.",
+    "description": "Keep VFOs, decoders, and recordings running after pressing Stop or closing this tab. Unattended VFOs stay at their last frequency. The next user to join takes control. Uncheck this before pressing Stop to end the observation.",
+    "detach_stream": "Detach and keep receiving in background",
     "observations": "Background observations",
     "observation": "Observation",
     "controlled": "Controller connected",

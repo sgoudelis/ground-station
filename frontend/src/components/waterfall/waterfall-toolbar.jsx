@@ -68,9 +68,10 @@ const WaterfallToolbar = ({
     const theme = useTheme();
     const dispatch = useDispatch();
     const showNeighboringTransmitters = useSelector((state) => state.waterfall.showNeighboringTransmitters);
-    const { isRecording, recordingBandSelectionEnabled } = useSelector((state) => ({
+    const { isRecording, recordingBandSelectionEnabled, backgroundStreaming } = useSelector((state) => ({
         isRecording: state.waterfall.isRecording,
         recordingBandSelectionEnabled: state.waterfall.recordingBandSelectionEnabled,
+        backgroundStreaming: state.waterfall.backgroundStreaming,
     }), shallowEqual);
     const [menuAnchorEl, setMenuAnchorEl] = React.useState(null);
     const [experimentMenuAnchorEl, setExperimentMenuAnchorEl] = React.useState(null);
@@ -187,7 +188,9 @@ const WaterfallToolbar = ({
                 <IconButton
                     disabled={!isStreaming}
                     onClick={stopStreaming}
-                    title={joinedSdrId ? t('toolbar.leave_stream') : t('toolbar.stop_streaming')}
+                    title={joinedSdrId ? t('toolbar.leave_stream') : backgroundStreaming
+                        ? t('background.detach_stream', { defaultValue: 'Detach and keep receiving in background' })
+                        : t('toolbar.stop_streaming')}
                     sx={{
                         borderRadius: 0,
                         color: 'action.stop',

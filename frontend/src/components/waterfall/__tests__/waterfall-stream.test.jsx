@@ -3,7 +3,7 @@ import { configureStore } from '@reduxjs/toolkit';
 import { act, render, renderHook, screen } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { ThemeProvider } from '@mui/material/styles';
-import { beforeEach, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import '../../../i18n/config.js';
 import { setupTheme } from '../../../theme.js';
 import waterfallReducer from '../waterfall-slice.jsx';
@@ -16,6 +16,8 @@ import useWaterfallStream from '../waterfall-stream.jsx';
 const socket = {
     on: vi.fn(),
     off: vi.fn(),
+    disconnect: vi.fn(),
+    connect: vi.fn(),
     emit: vi.fn((_event, request, callback) => {
         if (typeof callback !== 'function') return;
         callback(request.cmd === 'sdr.start-streaming'
@@ -32,7 +34,8 @@ vi.mock('../use-sdr-takeover-dialog.jsx', () => ({
     useSdrTakeoverDialog: () => ({ requestTakeoverConfirmation: vi.fn(), takeoverDialog: null }),
 }));
 
-beforeEach(() => socket.emit.mockClear());
+beforeEach(() => vi.clearAllMocks());
+afterEach(() => vi.unstubAllGlobals());
 
 const createStore = (overrides = {}) => {
     const initialWaterfall = waterfallReducer(undefined, { type: '@@INIT' });
@@ -52,6 +55,65 @@ const createStore = (overrides = {}) => {
         },
     });
 };
+
+test.each(['original-socket', 'adopted-session'])(
+    'Stop detaches %s with background receiving enabled and leaves recordings running',
+    async (receivingSessionId) => {
+        const captureSnapshot = vi.fn();
+        vi.stubGlobal('captureWaterfallSnapshot', captureSnapshot);
+        const store = createStore({
+            isStreaming: true,
+            backgroundStreaming: true,
+            receivingSessionId,
+            isRecording: true,
+        });
+        const wrapper = ({ children }) => <Provider store={store}>{children}</Provider>;
+        const { result } = renderHook(() => useWaterfallStream({}), { wrapper });
+
+        await act(async () => result.current.stopStreaming());
+
+        // Neither the stream-stop nor recorder-stop RPC may reach the retained run.
+        expect(socket.emit).not.toHaveBeenCalled();
+        expect(captureSnapshot).not.toHaveBeenCalled();
+        expect(socket.disconnect).toHaveBeenCalledOnce();
+        expect(socket.connect).toHaveBeenCalledOnce();
+        expect(socket.disconnect.mock.invocationCallOrder[0]).toBeLessThan(socket.connect.mock.invocationCallOrder[0]);
+        expect(store.getState().waterfall).toMatchObject({
+            isStreaming: false,
+            receivingSessionId: null,
+            backgroundStreaming: false,
+            isRecording: false,
+        });
+    }
+);
+
+test('Stop with background receiving disabled finalizes the recording and stops the stream', async () => {
+    const store = createStore({ isStreaming: true, isRecording: true, backgroundStreaming: false });
+    const wrapper = ({ children }) => <Provider store={store}>{children}</Provider>;
+    const { result } = renderHook(() => useWaterfallStream({}), { wrapper });
+
+    await act(async () => result.current.stopStreaming());
+
+    expect(socket.emit.mock.calls.map(([, request]) => request.cmd)).toEqual([
+        'sdr.stop-recording', 'sdr.stop-streaming',
+    ]);
+    expect(socket.disconnect).not.toHaveBeenCalled();
+    expect(socket.connect).not.toHaveBeenCalled();
+    expect(store.getState().waterfall.isStreaming).toBe(false);
+});
+
+test('Stop leaves a joined stream without disconnecting the tab', async () => {
+    const store = createStore({ isStreaming: true, joinedSdrId: 'sdr-a' });
+    const wrapper = ({ children }) => <Provider store={store}>{children}</Provider>;
+    const { result } = renderHook(() => useWaterfallStream({}), { wrapper });
+
+    await act(async () => result.current.stopStreaming());
+
+    expect(socket.emit.mock.calls.map(([, request]) => request.cmd)).toEqual(['sdr.leave-sdr']);
+    expect(socket.disconnect).not.toHaveBeenCalled();
+    expect(socket.connect).not.toHaveBeenCalled();
+    expect(store.getState().waterfall).toMatchObject({ isStreaming: false, joinedSdrId: null });
+});
 
 test('shows the detailed startup command error in one dialog', async () => {
     const store = createStore();

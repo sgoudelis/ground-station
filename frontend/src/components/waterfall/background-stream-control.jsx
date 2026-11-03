@@ -32,7 +32,7 @@ export default function BackgroundStreamControl() {
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', mt: 1, ml: 1.5 }}>
             <Tooltip describeChild title={t('background.description', {
-                defaultValue: 'Keep VFOs, decoders, and recordings running after closing this tab. Unattended VFOs stay at their last frequency. The next user to join takes control.',
+                defaultValue: 'Keep VFOs, decoders, and recordings running after pressing Stop or closing this tab. Unattended VFOs stay at their last frequency. The next user to join takes control. Uncheck this before pressing Stop to end the observation.',
             })}>
                 <FormControlLabel
                     sx={{ mr: 0 }}
