@@ -3,15 +3,11 @@
 #
 # Satellite Configuration Service
 #
-# Loads satellite decoder configuration from:
-# 1. gr-satellites YAML database (381 satellites)
-# 2. User overrides (data/configs/satellite_overrides.json)
+# Loads satellite decoder configuration from the gr-satellites YAML database.
 #
-# Priority: User overrides > YAML > Smart defaults
+# Priority: YAML > Smart defaults
 
-import json
 import logging
-import pathlib
 from typing import Any, Dict, Optional
 
 try:
@@ -26,29 +22,16 @@ logger = logging.getLogger("satellite-config")
 
 class SatelliteConfigService:
     """
-    Service to load and manage satellite decoder configurations.
-
-    Combines data from:
-    - gr-satellites YAML database (official satellite configs)
-    - User overrides (tested/verified configurations)
+    Service to load satellite decoder configurations from gr-satellites YAML.
 
     Priority order:
-    1. User override (if exists) - manually verified configs
-    2. YAML deviation (if specified) - official satellite team data
-    3. Smart default (estimated) - industry standard heuristics
-    4. Fallback - last resort defaults
+    1. YAML deviation (if specified) - official satellite team data
+    2. Smart default (estimated) - industry standard heuristics
+    3. Fallback - last resort defaults
     """
 
-    def __init__(self, overrides_path: str = "backend/data/configs/satellite_overrides.json"):
-        """
-        Initialize satellite config service.
-
-        Args:
-            overrides_path: Path to user overrides JSON file (relative to project root)
-        """
-        self.overrides_path = pathlib.Path(overrides_path)
-        self.overrides = self._load_overrides()
-
+    def __init__(self):
+        """Initialize satellite config service."""
         # Initialize gr-satellites YAML parser
         if SatYAML is None:
             logger.warning("SatYAML unavailable; satellite YAML lookup disabled")
@@ -62,35 +45,6 @@ class SatelliteConfigService:
             except Exception as e:
                 logger.error(f"Failed to initialize SatYAML: {e}")
                 self.satyaml = None
-
-    def _load_overrides(self) -> Dict[str, Any]:
-        """Load user overrides from JSON file."""
-        if not self.overrides_path.exists():
-            logger.info(f"No overrides file found at {self.overrides_path}")
-            return {}
-
-        try:
-            with open(self.overrides_path, "r") as f:
-                overrides: Dict[str, Any] = json.load(f)
-            logger.info(
-                f"Loaded overrides for {len(overrides)} satellites from {self.overrides_path}"
-            )
-            return overrides
-        except Exception as e:
-            logger.error(f"Failed to load overrides: {e}")
-            return {}
-
-    def save_overrides(self):
-        """Save current overrides to JSON file."""
-        try:
-            # Create directory if it doesn't exist
-            self.overrides_path.parent.mkdir(parents=True, exist_ok=True)
-
-            with open(self.overrides_path, "w") as f:
-                json.dump(self.overrides, f, indent=2)
-            logger.info(f"Saved overrides to {self.overrides_path}")
-        except Exception as e:
-            logger.error(f"Failed to save overrides: {e}")
 
     def get_satellite_by_norad(self, norad_id: int) -> Optional[Dict[str, Any]]:
         """
@@ -184,10 +138,9 @@ class SatelliteConfigService:
     ) -> Dict[str, Any]:
         """
         Get decoder parameters for a satellite, with priority system:
-        1. User overrides (if exist)
-        2. gr-satellites YAML (if deviation specified)
-        3. Smart defaults (estimated from baudrate/modulation)
-        4. Fallback defaults
+        1. gr-satellites YAML (if deviation specified)
+        2. Smart defaults (estimated from baudrate/modulation)
+        3. Fallback defaults
 
         Args:
             norad_id: NORAD catalog number
@@ -211,29 +164,6 @@ class SatelliteConfigService:
             "deviation": 5000,  # Fallback
             "source": "fallback",
         }
-
-        # Check user overrides first
-        norad_str = str(norad_id)
-        if norad_str in self.overrides:
-            override = self.overrides[norad_str]
-            baudrate_str = str(baudrate)
-
-            if "transmitters" in override and baudrate_str in override["transmitters"]:
-                tx_override = override["transmitters"][baudrate_str]
-                logger.info(f"Using override config for NORAD {norad_id} @ {baudrate} baud")
-
-                # Apply overrides
-                if "deviation" in tx_override:
-                    params["deviation"] = tx_override["deviation"]
-                    params["source"] = "user_override"
-                if "framing" in tx_override:
-                    params["framing"] = tx_override["framing"]
-                if "modulation" in tx_override:
-                    params["modulation"] = tx_override["modulation"]
-                if "af_carrier" in tx_override:
-                    params["af_carrier"] = tx_override["af_carrier"]
-
-                return params
 
         # Load from gr-satellites YAML
         tx = self.get_transmitter_config(norad_id, frequency, baudrate)
@@ -329,54 +259,3 @@ class SatelliteConfigService:
         # Unknown modulation: conservative default
         logger.warning(f"Unknown modulation '{modulation}', using conservative default")
         return float(baudrate / 2)
-
-    def add_override(
-        self,
-        norad_id: int,
-        baudrate: int,
-        deviation: float,
-        framing: Optional[str] = None,
-        verified: bool = False,
-        notes: Optional[str] = None,
-    ):
-        """
-        Add or update a user override for a satellite transmitter.
-
-        Args:
-            norad_id: NORAD catalog number
-            baudrate: Baud rate
-            deviation: Deviation in Hz
-            framing: Framing protocol (optional)
-            verified: Whether this config is verified to work
-            notes: User notes about this configuration
-        """
-        norad_str = str(norad_id)
-        baudrate_str = str(baudrate)
-
-        # Initialize satellite entry if needed
-        if norad_str not in self.overrides:
-            # Try to get satellite name from gr-satellites
-            sat = self.get_satellite_by_norad(norad_id)
-            sat_name = sat.get("name", f"NORAD-{norad_id}") if sat else f"NORAD-{norad_id}"
-
-            self.overrides[norad_str] = {"name": sat_name, "norad": norad_id, "transmitters": {}}
-
-        # Add transmitter override
-        if "transmitters" not in self.overrides[norad_str]:
-            self.overrides[norad_str]["transmitters"] = {}
-
-        self.overrides[norad_str]["transmitters"][baudrate_str] = {
-            "deviation": deviation,
-            "verified": verified,
-        }
-
-        if framing:
-            self.overrides[norad_str]["transmitters"][baudrate_str]["framing"] = framing
-
-        if notes:
-            self.overrides[norad_str]["notes"] = notes
-
-        logger.info(
-            f"Added override for NORAD {norad_id} @ {baudrate} baud: deviation={deviation} Hz"
-        )
-        self.save_overrides()
