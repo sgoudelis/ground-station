@@ -970,9 +970,12 @@ export const createFlowFromMetrics = (metrics) => {
                 });
             });
 
-            // Implicit edge: Decoders -> Browser (by session)
+            // Match backend routing: observation events reach every browser;
+            // user decoder events reach only their owning session.
             const decodersBySession = nodeMap.get('decoders-by-session') || {};
-            const sessionDecoders = decodersBySession[sessionId] || [];
+            const sessionDecoders = Object.entries(decodersBySession)
+                .filter(([decoderSessionId]) => decoderSessionId === sessionId || decoderSessionId.startsWith('internal:'))
+                .flatMap(([, decoders]) => decoders);
             sessionDecoders.forEach(({ nodeId: decoderNodeId, decoder }) => {
                 const isAnimated = hasPositiveOutputRate(decoder);
                 edges.push({
