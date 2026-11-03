@@ -7,6 +7,10 @@ import '../../../i18n/config.js';
 import RadiosondeFolderDialog from '../radiosonde-folder-dialog.jsx';
 import reducer from '../filebrowser-slice.jsx';
 
+vi.mock('../../../hooks/useUserTimeSettings.jsx', () => ({
+    useUserTimeSettings: () => ({ timezone: 'UTC', locale: 'en-GB' }),
+}));
+
 const runName = '20261101T103000.000000Z.gssonde';
 const folder = {
     id: 'decoded_folder:radiosonde_RS41_TEST0042', name: 'RS41 TEST0042',
@@ -62,7 +66,7 @@ test('requests bounded packet pages and resets to the first page when filtering 
         id: folder.id, page: 2, pageSize: 50,
     } });
     fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Flight' }));
-    fireEvent.click(await screen.findByRole('option', { name: `${runName} (3)` }));
+    fireEvent.click(await screen.findByRole('option', { name: `1 Nov 2026, 10:30:00 (${runName}) (3)` }));
     await waitFor(() => expect(socket.emit.mock.lastCall[1].data).toEqual({
         id: folder.id, page: 1, pageSize: 50, run: runName,
     }));

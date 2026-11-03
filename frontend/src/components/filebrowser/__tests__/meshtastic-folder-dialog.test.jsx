@@ -9,6 +9,9 @@ import reducer from '../filebrowser-slice.jsx';
 
 vi.mock('../telemetry-position-map.jsx', () => ({default: ({source, position}) =>
     <div>Position of {source}: {position.latitude}, {position.longitude}</div>}));
+vi.mock('../../../hooks/useUserTimeSettings.jsx', () => ({
+    useUserTimeSettings: () => ({timezone: 'UTC', locale: 'en-GB'}),
+}));
 
 const runName = '20261103T080000.000000Z.gsmesh';
 const folder = {id: 'decoded_folder:meshtastic_2008e299', name: 'SV2TEST (!2008e299)',
@@ -59,7 +62,7 @@ test('paginates and filters capture runs, then refreshes when packets are saved'
     await screen.findByText('older.bin');
     expect(socket.emit.mock.lastCall[1].data.page).toBe(2);
     fireEvent.mouseDown(screen.getByRole('combobox', {name: 'Capture run'}));
-    fireEvent.click(await screen.findByRole('option', {name: `${runName} (3)`}));
+    fireEvent.click(await screen.findByRole('option', {name: `3 Nov 2026, 08:00:00 (${runName}) (3)`}));
     await waitFor(() => expect(socket.emit.mock.lastCall[1].data).toEqual({id: folder.id, page: 1, pageSize: 50, run: runName}));
     await screen.findByText('packet.bin');
     const before = socket.emit.mock.calls.length;

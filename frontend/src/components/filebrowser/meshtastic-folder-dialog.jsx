@@ -16,6 +16,7 @@ import {formatDateTime} from '../../utils/date-time.js';
 import {Values} from './telemetry-fields.jsx';
 import TelemetryPositionMap from './telemetry-position-map.jsx';
 import FileDialogDetails from './file-dialog-details.jsx';
+import {formatCaptureRunLabel} from './capture-run-label.js';
 import {
     fileDialogActionsSx,
     fileDialogContentSx,
@@ -123,7 +124,7 @@ export default function MeshtasticFolderDialog({folder, socket, onClose, onOpenP
                         onChange={event => {setRun(event.target.value); setPage(1);}}>
                         <MenuItem value="">{text('all_runs', 'All runs')}</MenuItem>
                         {(detail.runs || []).map(item => <MenuItem key={item.name} value={item.name}>
-                            {item.name} ({item.packet_count})
+                            {formatCaptureRunLabel(item, settings)} ({item.packet_count})
                         </MenuItem>)}
                     </TextField>
                     {error && <Alert severity="error">{error}</Alert>}

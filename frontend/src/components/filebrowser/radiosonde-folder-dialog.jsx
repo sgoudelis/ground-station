@@ -14,6 +14,7 @@ import { fetchFileDetails } from './filebrowser-slice.jsx';
 import { useUserTimeSettings } from '../../hooks/useUserTimeSettings.jsx';
 import { formatDateTime } from '../../utils/date-time.js';
 import FileDialogDetails from './file-dialog-details.jsx';
+import { formatCaptureRunLabel } from './capture-run-label.js';
 import {
     fileDialogActionsSx,
     fileDialogContentSx,
@@ -107,7 +108,8 @@ export default function RadiosondeFolderDialog({ folder, socket, onClose, onOpen
                             onChange={(event) => { setRun(event.target.value); setPage(1); }}>
                             <MenuItem value="">{t('radiosonde_folder.all_flights', 'All flights')}</MenuItem>
                             {(detail.runs || []).map(item => <MenuItem key={item.name} value={item.name}>
-                                {item.name === 'legacy' ? t('radiosonde_folder.legacy', 'Legacy packets') : item.name}
+                                {formatCaptureRunLabel(item, { timezone, locale },
+                                    item.name === 'legacy' ? t('radiosonde_folder.legacy', 'Legacy packets') : item.name)}
                                 {` (${item.packet_count})`}
                             </MenuItem>)}
                         </TextField>

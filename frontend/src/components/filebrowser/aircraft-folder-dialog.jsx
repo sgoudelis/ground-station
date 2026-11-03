@@ -11,6 +11,7 @@ import {useUserTimeSettings} from '../../hooks/useUserTimeSettings.jsx';
 import {formatDateTime} from '../../utils/date-time.js';
 import {AIRCRAFT_FIELDS, aircraftLabel, aircraftValue} from '../../utils/aircraft-metadata.js';
 import FileDialogDetails from './file-dialog-details.jsx';
+import {formatCaptureRunLabel} from './capture-run-label.js';
 import {
     fileDialogActionsSx,
     fileDialogContentSx,
@@ -126,7 +127,9 @@ export default function AircraftFolderDialog({folder, socket, onClose, onDelete}
                         helperText={t('adsb.window', 'Each capture run covers 12 hours from its first received state.')}
                         onChange={(event) => {setRun(event.target.value); setPageStart(null); setSelected(null);}}>
                         <MenuItem value="">{t('adsb.all_runs', 'All runs')}</MenuItem>
-                        {(detail.runs || []).map((item) => <MenuItem key={item.name} value={item.name}>{item.name}</MenuItem>)}
+                        {(detail.runs || []).map((item) => <MenuItem key={item.name} value={item.name}>
+                            {formatCaptureRunLabel(item, timeSettings)}
+                        </MenuItem>)}
                     </TextField>
                     {error && <Alert severity="error">{error}</Alert>}
                     <TableContainer>
