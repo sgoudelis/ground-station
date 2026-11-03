@@ -7,8 +7,8 @@ import {createTheme, ThemeProvider} from '@mui/material/styles';
 import i18n from 'i18next';
 import {initReactI18next} from 'react-i18next';
 import PacketMap, {MapViewport} from '../packet-map.jsx';
-import TransmitterTable from '../transmitter-table.jsx';
-import packetMapReducer, {setTransmitterTableColumnVisibility} from '../packet-map-slice.jsx';
+import TransmitterList from '../transmitter-list.jsx';
+import packetMapReducer, {setTransmitterListColumnVisibility} from '../packet-map-slice.jsx';
 import {mapSettingsStoreName, mapViewStoreName} from '../storage.js';
 
 await i18n.use(initReactI18next).init({lng: 'en', resources: {
@@ -50,12 +50,13 @@ vi.mock('react-leaflet', () => ({
         </div>;
     },
     Pane: ({children, style}) => <div data-testid="visibility-pane" style={style}>{children}</div>,
-    Marker: ({position, children, icon, eventHandlers, title}) => {
-        markerRenders({position, icon, title});
+    Marker: ({position, children, icon, eventHandlers, title, interactive, keyboard}) => {
+        markerRenders({position, icon, title, interactive, keyboard});
         return <div title={title} onClick={eventHandlers?.click}
         data-testid={icon?.options?.className?.includes('packet-radiosonde-marker') ? 'sonde-marker'
             : icon?.options?.className?.includes('packet-aprs-marker') ? 'aprs-marker'
-                : icon?.options?.className?.includes('packet-aircraft-marker') ? 'aircraft-marker' : 'home'}
+                : icon?.options?.className?.includes('packet-aircraft-marker') ? 'aircraft-marker'
+                    : icon?.options?.className === 'packet-node-selection-marker' ? 'node-selection' : 'home'}
         data-center={JSON.stringify(position)} data-icon-class={icon?.options?.className}
         data-icon-html={icon?.options?.html}>{children}</div>;
     },
@@ -107,10 +108,36 @@ it('plots Meshtastic location packets with a node label and selects their transm
     </ThemeProvider></Provider>);
     const marker = screen.getByTestId('position');
     expect(marker).toHaveAttribute('data-center', '[40.6585344,22.9376]');
-    expect(marker).toHaveAttribute('data-color', '#ab47bc');
+    expect(marker).toHaveAttribute('data-color', '#67ea94');
     expect(within(marker).getByTestId('map-tooltip')).toHaveTextContent('!2008e299');
     fireEvent.click(marker);
     expect(onSelectTransmitter).toHaveBeenCalledWith('meshtastic:!2008e299');
+});
+
+it('reuses the aircraft crosshair for the selected Meshtastic node and follows playback without replacing its canvas marker', () => {
+    const store = configureStore({reducer: () => ({location: {location: null}})});
+    const points = [40, 41].map((latitude, index) => ({id: String(index), transmitter_id: 'meshtastic:A',
+        kind: 'meshtastic', name: 'A', latitude, longitude: 23, captured_at: `2026-11-02T12:0${index}:00Z`}));
+    const start = Date.parse(points[0].captured_at);
+    const element = (selected, time = start) => <Provider store={store}><ThemeProvider theme={createTheme()}>
+        <PacketMap positions={points} playbackTime={time} selectedTransmitterId={selected} />
+    </ThemeProvider></Provider>;
+    const {rerender} = render(element(null));
+    const node = screen.getByTestId('position');
+    expect(screen.queryByTestId('node-selection')).not.toBeInTheDocument();
+    rerender(element('meshtastic:A'));
+    const crosshair = screen.getByTestId('node-selection');
+    expect(crosshair).toHaveAttribute('data-center', '[40,23]');
+    expect(crosshair.dataset.iconHtml).toContain('viewBox="0 0 52 52"');
+    expect(crosshair.dataset.iconHtml).toContain('<rect x="6" y="6" width="40" height="40"');
+    const icon = markerRenders.mock.lastCall[0].icon;
+    expect(markerRenders.mock.lastCall[0]).toMatchObject({interactive: false, keyboard: false});
+    rerender(element('meshtastic:A', start + 60000));
+    expect(screen.getByTestId('node-selection')).toHaveAttribute('data-center', '[41,23]');
+    expect(markerRenders.mock.lastCall[0].icon).toBe(icon);
+    expect(screen.getByTestId('position')).toBe(node);
+    rerender(element(null, start + 60000));
+    expect(screen.queryByTestId('node-selection')).not.toBeInTheDocument();
 });
 
 it('shows a named aircraft pointing along its track, selects it and marks an old fix stale', () => {
@@ -748,111 +775,7 @@ it('reuses the weather balloon and parachute for APRS balloons and follows their
     expect(screen.getByTestId('sonde-marker').dataset.iconHtml).toContain('packet-radiosonde-crosshair');
 });
 
-it('remembers hidden and enabled transmitter columns when fields disappear and the table remounts', () => {
-    const store = configureStore({reducer: {packetMap: packetMapReducer}});
-    const rows = [{id: 'aprs:A', name: 'A', kind: 'aprs', source: 'SV1A', packet_count: 1,
-        details: {frame: {sequence: 42}, signal: {frequency_hz: 144800000}},
-    }];
-    const element = (data) => <Provider store={store}><ThemeProvider theme={createTheme()}>
-        <TransmitterTable rows={data} loading={false} hiddenTypes={[]} />
-    </ThemeProvider></Provider>;
-    const {rerender, unmount} = render(element(rows));
-    // Label queries avoid repeatedly calculating accessible names across the full grid.
-    fireEvent.click(screen.getByLabelText('Columns', {selector: 'button'}));
-    expect(screen.getByRole('button', {name: 'Reset', exact: true})).toBeDisabled();
-    fireEvent.click(screen.getByLabelText('ICAO'));
-    fireEvent.click(screen.getByLabelText('Frame · Sequence'));
-    fireEvent.click(screen.getByLabelText('Signal · Frequency hz'));
-    expect(store.getState().packetMap.transmitterTableColumnVisibility).toMatchObject({
-        source: false, 'info:frame.sequence': true, 'info:signal.frequency_hz': true,
-    });
-    rerender(element([]));
-    expect(store.getState().packetMap.transmitterTableColumnVisibility['info:frame.sequence']).toBe(true);
-    unmount();
-    render(element(rows));
-    fireEvent.click(screen.getByLabelText('Columns', {selector: 'button'}));
-    expect(screen.getByLabelText('ICAO')).not.toBeChecked();
-    expect(screen.getByLabelText('Frame · Sequence')).toBeChecked();
-    expect(screen.getByLabelText('Signal · Frequency hz')).toBeChecked();
-    // Mounting both native column panels can exceed the default five-second DOM test budget.
-}, 10000);
-
-it.each(['live updates', 'remounts'])('resets saved column choices to defaults after %s', (scenario) => {
-    const store = configureStore({reducer: {packetMap: packetMapReducer}});
-    // Checkbox editing is covered above. Seed saved choices so each reset case
-    // only mounts the native column panel once and stays within its DOM test budget.
-    store.dispatch(setTransmitterTableColumnVisibility({
-        source: false, 'info:frame.sequence': true, 'info:signal.frequency_hz': true,
-    }));
-    const rows = [{id: 'aprs:A', name: 'A', kind: 'aprs', source: 'SV1A', packet_count: 1,
-        details: {frame: {sequence: 42}, signal: {frequency_hz: 144800000}},
-    }];
-    const element = (data) => <Provider store={store}><ThemeProvider theme={createTheme()}>
-        <TransmitterTable rows={data} loading={false} hiddenTypes={[]} />
-    </ThemeProvider></Provider>;
-    const {rerender, unmount} = render(element(rows));
-    if (scenario === 'live updates') {
-        // Rebuilding dynamic columns must not replace the application defaults.
-        rerender(element(rows.map((row) => ({...row, packet_count: 2}))));
-    } else {
-        unmount();
-        render(element(rows));
-    }
-    fireEvent.click(screen.getByLabelText('Columns', {selector: 'button'}));
-    const reset = screen.getByRole('button', {name: 'Reset', exact: true});
-    const panel = within(reset.parentElement.parentElement);
-    expect(reset).toBeEnabled();
-    fireEvent.click(reset);
-    expect(panel.getByLabelText('ICAO')).toBeChecked();
-    expect(panel.getByLabelText('Frame · Sequence')).not.toBeChecked();
-    expect(panel.getByLabelText('Signal · Frequency hz')).not.toBeChecked();
-    expect(reset).toBeDisabled();
-    expect(store.getState().packetMap.transmitterTableColumnVisibility).toEqual({});
-}, 10000);
-
-it('highlights emergency squawks and decoded priorities, and clears badges with current telemetry', () => {
-    const store = configureStore({reducer: {packetMap: packetMapReducer}});
-    const received = Date.parse('2026-11-02T12:00:00Z');
-    const rows = [
-        {id: 'unlawful', squawk: '7500'}, {id: 'radio', squawk: '7600'},
-        {id: 'general', squawk: '7700'}, {id: 'ordinary', squawk: '0042'},
-        {id: 'priority', emergency: 'minfuel'}, {id: 'sonde', kind: 'radiosonde', squawk: '7700'},
-    ].map((row) => ({kind: 'adsb', ...row, name: row.id, packet_count: 1, captured_at: new Date(received).toISOString()}));
-    const element = (data, time = received) => <Provider store={store}><ThemeProvider theme={createTheme()}>
-        <TransmitterTable rows={data} loading={false} hiddenTypes={[]} playbackTime={time} />
-    </ThemeProvider></Provider>;
-    const {container, rerender} = render(element(rows));
-    const row = (id) => container.querySelector(`[data-id="${id}"]`);
-    const squawk = (id) => row(id).querySelector('[data-field="squawk"]');
-    const icon = (id) => row(id).querySelector('[data-field="name"] path[fill]');
-    for (const id of ['unlawful', 'general']) {
-        expect(row(id)).toHaveClass('transmitter-emergency-error');
-        expect(squawk(id).querySelector('.MuiChip-colorError')).not.toBeNull();
-        expect(icon(id)).toHaveAttribute('fill', '#ef5350');
-    }
-    for (const id of ['radio', 'priority']) {
-        expect(row(id)).toHaveClass('transmitter-emergency-warning');
-        expect(squawk(id).querySelector('.MuiChip-colorWarning')).not.toBeNull();
-        expect(icon(id)).toHaveAttribute('fill', '#ffb300');
-    }
-    expect(squawk('priority')).toHaveTextContent('Alert');
-    expect(squawk('ordinary')).toHaveTextContent('0042');
-    expect(squawk('ordinary').querySelector('.MuiChip-root')).toBeNull();
-    expect(icon('ordinary')).toHaveAttribute('fill', '#66bb6a');
-    expect(squawk('sonde')).toBeEmptyDOMElement();
-    expect(row('sonde').className).not.toContain('transmitter-emergency');
-    // Gray takes precedence over the last reported emergency, as it does on the map.
-    rerender(element(rows, received + 61000));
-    expect(icon('general')).toHaveAttribute('fill', '#9e9e9e');
-    expect(icon('ordinary')).toHaveAttribute('fill', '#9e9e9e');
-    rerender(element(rows.map((entry) => ({...entry, details: {telemetry: {squawk: null, emergency: 'none'}}}))));
-    expect(squawk('general')).toBeEmptyDOMElement();
-    expect(row('general').className).not.toContain('transmitter-emergency');
-    expect(container.querySelector('.MuiChip-root')).toBeNull();
-    expect(icon('general')).toHaveAttribute('fill', '#66bb6a');
-});
-
-it('selects table rows and centers their markers, then restores all bounds with Fit all', () => {
+it('selects list rows and centers their markers, then restores all bounds with Fit all', () => {
     localStorage.setItem(mapViewStoreName, JSON.stringify({center: [10, 10], zoom: 4}));
     const store = configureStore({reducer: {
         location: () => ({location: {lat: 0, lon: 0}}), packetMap: packetMapReducer,
@@ -870,29 +793,28 @@ it('selects table rows and centers their markers, then restores all bounds with 
             <PacketMap positions={points} loading={false} fitRequest={0} selectedTransmitterId={selectedTransmitterId}
                 onSelectTransmitter={setSelectedTransmitterId}
                 onFitAll={() => setSelectedTransmitterId(null)} />
-            <TransmitterTable rows={rows} loading={false} hiddenTypes={[]} selectedTransmitterId={selectedTransmitterId}
+            <TransmitterList rows={rows} loading={false} hiddenTypes={[]} selectedTransmitterId={selectedTransmitterId}
                 onSelectTransmitter={setSelectedTransmitterId} />
         </>;
     }
     render(<Provider store={store}><ThemeProvider theme={createTheme()}><Harness /></ThemeProvider></Provider>);
     expect(map.fitBounds).not.toHaveBeenCalled();
     expect(screen.queryByTestId('track')).not.toBeInTheDocument();
-    // Locate rows by their unique source cells instead of naming every grid cell.
-    const aprsRow = screen.getByText('SV1A').closest('[role="row"]');
+    const aprsRow = screen.getByRole('button', {name: 'A', exact: true});
     expect(screen.queryByTestId('visibility-circle')).not.toBeInTheDocument();
-    fireEvent.click(within(aprsRow).getByRole('button', {name: 'A'}));
+    fireEvent.click(aprsRow);
     expect(screen.queryByTestId('visibility-circle')).not.toBeInTheDocument();
-    expect(aprsRow).toHaveAttribute('aria-selected', 'true');
+    expect(aprsRow).toHaveAttribute('aria-pressed', 'true');
     expect(map.fitBounds).not.toHaveBeenCalled();
     expect(map.setView).toHaveBeenLastCalledWith([41, 24], 8, {animate: false});
     expect(screen.getByTestId('track')).toHaveAttribute('data-positions', '[[40,23],[41,24]]');
     expect(screen.getAllByTestId('position')).toHaveLength(1);
 
     act(() => { listeners.get('movestart')(); listeners.get('moveend')(); });
-    const sondeRow = screen.getByText('SONDE').closest('[role="row"]');
+    const sondeRow = screen.getByRole('button', {name: 'S', exact: true});
     fireEvent.click(within(sondeRow).getByText('SONDE'));
-    expect(sondeRow).toHaveAttribute('aria-selected', 'true');
-    expect(aprsRow).toHaveAttribute('aria-selected', 'false');
+    expect(sondeRow).toHaveAttribute('aria-pressed', 'true');
+    expect(aprsRow).toHaveAttribute('aria-pressed', 'false');
     expect(screen.queryByTestId('track')).not.toBeInTheDocument();
     expect(map.fitBounds).not.toHaveBeenCalled();
     expect(map.setView).toHaveBeenLastCalledWith([42, 25], 8, {animate: false});
@@ -916,10 +838,10 @@ it('selects table rows and centers their markers, then restores all bounds with 
     fireEvent.click(screen.getByRole('button', {name: 'Fit all'}));
     expect(screen.queryByTestId('track')).not.toBeInTheDocument();
     expect(screen.queryByTestId('visibility-circle')).not.toBeInTheDocument();
-    expect(sondeRow).toHaveAttribute('aria-selected', 'false');
+    expect(sondeRow).toHaveAttribute('aria-pressed', 'false');
     expect(map.fitBounds).toHaveBeenLastCalledWith([[40, 23], [41, 24], [42, 25], [0, 0]], expect.any(Object));
     fireEvent.click(screen.getByTestId('sonde-marker'));
-    expect(sondeRow).toHaveAttribute('aria-selected', 'true');
+    expect(sondeRow).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getAllByTestId('visibility-circle')).toHaveLength(2);
 });
 

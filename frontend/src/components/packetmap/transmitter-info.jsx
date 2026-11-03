@@ -20,6 +20,7 @@ import {aircraftCountry} from '../../utils/aircraft-country.js';
 import {renderAircraftSymbol, selectAircraftShape} from './aircraft-symbol.js';
 import {aircraftEmergency, aircraftEmergencyLabel} from '../../utils/aircraft-emergency.js';
 import FlightInstruments from './flight-instruments.jsx';
+import MeshtasticInfo from './meshtastic-info.jsx';
 import {aircraftFlightAt, FLIGHT_TELEMETRY_FIELDS} from './aircraft-flight.js';
 import {radiosondeFlightAt, SONDE_FLIGHT_TELEMETRY_FIELDS} from './radiosonde-flight.js';
 import {buildPlaybackTrack} from './playback.js';
@@ -75,6 +76,8 @@ export default function TransmitterInfo({transmitter, selectedTransmitterId = nu
     const formatNumber = (value, digits) => Number.isFinite(value)
         ? value.toLocaleString(timeSettings.locale, {maximumFractionDigits: digits}) : value;
     const groups = useMemo(() => {
+        // The node dashboard formats raw details only when its disclosure is opened.
+        if (transmitter?.kind === 'meshtastic') return [];
         const grouped = new Map();
         for (const [path, value] of Object.entries(flattenDetails(transmitter?.details))) {
             // Aircraft metadata has its own translated section and attribution.
@@ -119,7 +122,7 @@ export default function TransmitterInfo({transmitter, selectedTransmitterId = nu
                     aria-label={label('info.clear_selection', 'Clear transmitter selection')}><CloseIcon sx={{fontSize: 16}} /></IconButton>
             </Tooltip>}
         </TitleBar>
-        {transmitter ? <>
+        {transmitter?.kind === 'meshtastic' ? <MeshtasticInfo key={transmitter.id} transmitter={transmitter} /> : transmitter ? <>
             <Box sx={{p: 1.25, borderBottom: 1, borderColor: 'divider', flexShrink: 0,
                 display: 'flex', alignItems: 'center', gap: 1,
                 bgcolor: (theme) => alpha(typeColor(transmitter.kind), theme.palette.mode === 'dark' ? 0.1 : 0.06)}}>
@@ -193,7 +196,7 @@ export default function TransmitterInfo({transmitter, selectedTransmitterId = nu
             justifyContent: 'center', gap: 1, p: 2, color: 'text.secondary', textAlign: 'center'}}>
             {loading && selectedTransmitterId !== null ? <CircularProgress size={22} /> : <InfoOutlinedIcon sx={{fontSize: 28, opacity: 0.6}} />}
             <Typography variant="body2" sx={{fontSize: '0.75rem'}}>
-                {selectedTransmitterId === null ? label('info.select', 'Select a transmitter on the map or in the table to view its information.')
+                {selectedTransmitterId === null ? label('info.select', 'Select a transmitter on the map or in the list to view its information.')
                     : loading ? label('info.loading', 'Loading transmitter information…')
                         : label('info.unavailable', 'No packets for the selected transmitter in this date range.')}
             </Typography>

@@ -16,7 +16,7 @@ import usePacketPositions, {callLibrary} from './use-packet-positions.js';
 import {gridLayoutStoreName, hiddenTypesStoreName, readStored, writeStored} from './storage.js';
 import {columns, LAYOUT_SCHEMA_VERSION, loadLayouts} from './layouts.js';
 import {transmitterRows} from './transmitters.js';
-import TransmitterTable from './transmitter-table.jsx';
+import TransmitterList from './transmitter-list.jsx';
 import TransmitterInfo from './transmitter-info.jsx';
 import useAircraft from '../decoders/use-aircraft.js';
 import {createAircraftHistory} from './aircraft.js';
@@ -133,7 +133,7 @@ export default function PacketMapLayout() {
                         loading={loading} gridEditable={gridEditable} onClearSelection={() => setSelectedTransmitterId(null)} />
                 </StyledIslandParentNoScrollbar>
                 <StyledIslandParentNoScrollbar key="transmitters">
-                    <TransmitterTable rows={rows} loading={loading} hiddenTypes={hiddenTypes} gridEditable={gridEditable}
+                    <TransmitterList rows={rows} loading={loading} hiddenTypes={hiddenTypes} gridEditable={gridEditable}
                         selectedTransmitterId={selectedTransmitterId} onSelectTransmitter={selectTransmitter}
                         playbackTime={currentPlaybackTime} />
                 </StyledIslandParentNoScrollbar>

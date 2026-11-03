@@ -34,7 +34,7 @@ vi.mock('../../common/common.jsx', () => ({
 }));
 vi.mock('../use-packet-positions.js', async (importOriginal) => ({...await importOriginal(), default: vi.fn()}));
 vi.mock('../packet-map.jsx', () => ({default: (props) => {mapRender(props); return null;}}));
-vi.mock('../transmitter-table.jsx', () => ({default: (props) => {tableRender(props); return null;}}));
+vi.mock('../transmitter-list.jsx', () => ({default: (props) => {tableRender(props); return null;}}));
 
 const historyRange = {start: '2026-10-31T12:00:00Z', end: '2026-11-01T12:00:00Z'};
 function createStore(range) {
@@ -101,7 +101,7 @@ it('loads Meshtastic positions into the map page and refreshes new captures in L
         act(() => mapRender.mock.lastCall[0].onSelectTransmitter(point.transmitter_id));
         const details = screen.getByRole('region', {name: 'Transmitter info'});
         expect(details).toHaveTextContent('!2008e299');
-        expect(details).toHaveTextContent('Satellites in view');
+        expect(within(details).getByRole('region', {name: 'GPS satellites'})).toHaveTextContent('12');
 
         const next = {...point, id: 'new-fix', latitude: 40.66, captured_at: '2026-11-02T21:35:01Z'};
         fixture.positions = [point, next];
@@ -112,6 +112,7 @@ it('loads Meshtastic positions into the map page and refreshes new captures in L
         });
         expect(mapRender.mock.lastCall[0].positions).toEqual([point, next]);
         expect(tableRender.mock.lastCall[0].rows[0].packet_count).toBe(2);
+        expect(within(details).getByRole('region', {name: 'Position'})).toHaveTextContent('40.66 °');
         act(() => mapRender.mock.lastCall[0].onHiddenTypesChange(['meshtastic']));
         expect(mapRender.mock.lastCall[0].positions).toEqual([]);
         act(() => mapRender.mock.lastCall[0].onHiddenTypesChange([]));

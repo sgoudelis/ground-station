@@ -375,7 +375,7 @@ const celestialDisplayPersistConfig = {
 const packetMapPersistConfig = {
     key: 'packetMap',
     storage,
-    whitelist: ['range', 'transmitterTableColumnVisibility'],
+    whitelist: ['range', 'transmitterList'],
 };
 
 const authPersistConfig = {

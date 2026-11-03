@@ -3,12 +3,7 @@ import './aircraft-marker.css';
 import {aircraftCountry} from '../../utils/aircraft-country.js';
 import {aircraftSymbolRotation, renderAircraftSymbol, selectAircraftShape} from './aircraft-symbol.js';
 import {aircraftColor, aircraftEmergency, aircraftEmergencyLabel} from '../../utils/aircraft-emergency.js';
-
-// Raise the reticle with the plane, outside the silhouette's rotation and stale filters.
-const selectionCrosshair = `<svg class="packet-aircraft-crosshair" viewBox="0 0 52 52" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1">
-    <rect x="6" y="6" width="40" height="40" />
-    <path d="M26 1V11 M26 41V51 M1 26H11 M41 26H51" />
-</svg>`;
+import {aircraftSelectionCrosshair as selectionCrosshair} from './selection-crosshair.js';
 
 class AircraftIcon extends DivIcon {
     updateSymbol(holder) {

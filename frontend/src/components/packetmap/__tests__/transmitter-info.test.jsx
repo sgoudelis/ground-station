@@ -229,6 +229,6 @@ describe('Transmitter information', () => {
         rerender(<TransmitterInfo selectedTransmitterId={transmitter.id} loading={false} />);
         expect(screen.getByText('No packets for the selected transmitter in this date range.')).toBeInTheDocument();
         rerender(<TransmitterInfo selectedTransmitterId={null} />);
-        expect(screen.getByText('Select a transmitter on the map or in the table to view its information.')).toBeInTheDocument();
+        expect(screen.getByText('Select a transmitter on the map or in the list to view its information.')).toBeInTheDocument();
     });
 });

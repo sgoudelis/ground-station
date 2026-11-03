@@ -3,7 +3,7 @@
 import React, {useEffect, useMemo, useRef, useState} from 'react';
 import {Alert, Box, Typography} from '@mui/material';
 import {alpha} from '@mui/material/styles';
-import {Icon, svg} from 'leaflet';
+import {DivIcon, Icon, svg} from 'leaflet';
 import {CircleMarker, MapContainer, Marker, Pane, Polyline, TileLayer, Tooltip, useMap} from 'react-leaflet';
 import {useSelector} from 'react-redux';
 import {useTranslation} from 'react-i18next';
@@ -27,6 +27,7 @@ import {createAprsIcon, getAprsSymbol} from './aprs-marker.js';
 import {buildPlaybackTrack, trackPositionAt} from './playback.js';
 import {getHorizonRadii} from './horizon.js';
 import VisibilityCircle from './visibility-circle.jsx';
+import {selectionCrosshair} from './selection-crosshair.js';
 
 export const POSITION_COLORS = Object.fromEntries(Object.entries(TRANSMITTER_TYPES).map(([kind, value]) => [kind, value.color]));
 
@@ -180,6 +181,10 @@ export default function PacketMap({positions, transmitters, hasPositions = posit
     const mapRef = useRef(null);
     // Share an SVG renderer for curved ring labels; transmitter paths use canvas.
     const visibilityRenderer = useMemo(() => svg({pane: 'packet-visibility'}), []);
+    // Keep the many ground nodes on canvas; only the selected node needs a DOM reticle.
+    const nodeSelectionIcon = useMemo(() => new DivIcon({
+        className: 'packet-node-selection-marker', iconSize: [52, 52], iconAnchor: [26, 26], html: selectionCrosshair,
+    }), []);
     const {islandRef, isFullscreen, toggleFullscreen} = useMapIslandFullscreen(() => mapRef.current?.invalidateSize({pan: false}));
     const applySettings = (next) => {
         setSettings(next);
@@ -278,7 +283,9 @@ export default function PacketMap({positions, transmitters, hasPositions = posit
         // Floating symbols fade their data separately so selection frames stay red.
         '& .packet-marker-stale:not(.packet-aircraft-marker):not(.packet-radiosonde-marker)': {filter: 'grayscale(1)', opacity: 0.65},
         // Match the tracked-satellite crosshair in Earth View for every theme.
-        '& .packet-aircraft-crosshair, & .packet-radiosonde-crosshair': {color: theme.palette.error.main},
+        '& .packet-aircraft-crosshair, & .packet-radiosonde-crosshair, & .packet-selection-crosshair': {color: theme.palette.error.main},
+        '& .packet-node-selection-marker': {background: 'transparent', border: 0, pointerEvents: 'none'},
+        '& .packet-selection-crosshair': {display: 'block', width: 52, height: 52, filter: 'drop-shadow(0 0 1px #000)'},
         '& .packet-visibility-label': {
             fill: theme.palette.text.secondary,
             stroke: alpha(theme.palette.background.paper, 0.85),
@@ -352,6 +359,9 @@ export default function PacketMap({positions, transmitters, hasPositions = posit
                         </CircleMarker>)}
                     </React.Fragment>;
                 })}
+                {selectedPoint?.kind === 'meshtastic' && <Marker
+                    position={[selectedPoint.latitude, selectedPoint.longitude]} icon={nodeSelectionIcon}
+                    interactive={false} keyboard={false} zIndexOffset={1000} />}
             </MapContainer>
             {/* Keep overlays clear of the pan buttons and let map gestures pass through. */}
             <Box sx={{position: 'absolute', top: 12, left: 12, right: 12, zIndex: 500, display: 'flex',
