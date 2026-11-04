@@ -243,18 +243,35 @@ function ToolbarActions() {
     const showLocationSetupDialog = useSelector((state) => state.dashboard.showLocationSetupDialog);
 
     return (
-        <Stack direction="row" sx={{padding: "6px 0px 0px 0px"}}>
-            <ConnectionStatus />
-            {!showLocationSetupDialog && <LocationWarningPopover />}
-            <SatelliteInfoPopover />
-            <HardwareSettingsPopover />
-            <VfoAudioPopover />
-            <BackgroundObservationsPopover />
-            <BackgroundTasksPopover />
-            <WakeLockStatus />
-            <TimeDisplay />
-            <ThemeSwitcher />
-        </Stack>
+        <Box sx={{
+            // Let this row shrink within the app bar so overflow scrolls locally.
+            minWidth: 0,
+            overflowX: 'auto',
+            overflowY: 'hidden',
+            WebkitOverflowScrolling: 'touch',
+            scrollbarWidth: 'none',
+            '&::-webkit-scrollbar': { display: 'none' },
+        }}>
+            <Stack direction="row" sx={{
+                padding: "6px 0px 0px 0px",
+                width: 'max-content',
+                flexWrap: 'nowrap',
+                whiteSpace: 'nowrap',
+                // Preserve icon hit areas and the clock while the viewport narrows.
+                '& > *': { flexShrink: 0 },
+            }}>
+                <ConnectionStatus />
+                {!showLocationSetupDialog && <LocationWarningPopover />}
+                <SatelliteInfoPopover />
+                <HardwareSettingsPopover />
+                <VfoAudioPopover />
+                <BackgroundObservationsPopover />
+                <BackgroundTasksPopover />
+                <WakeLockStatus />
+                <TimeDisplay />
+                <ThemeSwitcher />
+            </Stack>
+        </Box>
     );
 }
 
@@ -1471,11 +1488,11 @@ export default function Layout() {
                         aria-label={t('dashboard_layout.toggle_drawer', { defaultValue: 'toggle drawer' })}
                         onClick={handleDrawerToggle}
                         edge="start"
-                        sx={{ mr: 2 }}
+                        sx={{ mr: 2, flexShrink: 0 }}
                     >
                         {open ? <ChevronLeftIcon /> : <MenuIcon />}
                     </IconButton>
-                    <Box sx={{ flexGrow: 1 }}>
+                    <Box sx={{ flexGrow: 1, flexShrink: 0 }}>
                         <CustomAppTitle />
                     </Box>
                     <Box
