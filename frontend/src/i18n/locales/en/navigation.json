@@ -32,6 +32,16 @@
     "positions": "Map",
     "types": "Transmitter types",
     "transmitters": "Transmitters",
+    "reception": {
+      "upcoming": "Not yet seen",
+      "receiving": "Receiving",
+      "lost": "Signal lost · {{minutes}}m ago",
+      "expired": "Last seen · {{minutes}}m ago",
+      "unknown": "No position",
+      "no_position": "No position received for {{minutes}} minutes.",
+      "jump_first": "Jump to first position",
+      "jump_last": "Jump to last position"
+    },
     "list": {
       "search": "Search transmitters",
       "types": "Types",

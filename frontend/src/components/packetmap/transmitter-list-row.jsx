@@ -14,8 +14,10 @@ import {aircraftValue} from '../../utils/aircraft-metadata.js';
 import balloon from './icons/balloon.png';
 import parachute from './icons/parachute.png';
 import meshtasticPin from './icons/meshtastic.png';
+import {aircraftReceptionAt, aircraftReceptionLabel} from './reception.js';
 
 export const PlaybackTimeContext = createContext(0);
+export const AircraftReceptionContext = createContext(new Map());
 const metricPriorities = {primary: 0, secondary: 1, wide: 2, comment: 3};
 
 const iconSx = {width: 32, height: 32, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -23,14 +25,29 @@ const iconSx = {width: 32, height: 32, flexShrink: 0, display: 'flex', alignItem
     '& > .transmitter-meshtastic-pin': {filter: 'drop-shadow(0 0 2px rgb(0 0 0 / 56%)) drop-shadow(0 2px 4px rgb(0 0 0 / 45.5%))'},
     '@container (max-width: 650px)': {width: 24, height: 24, '& > svg, & > img': {width: 24, height: 24}}};
 
-const AircraftSymbol = React.memo(function AircraftSymbol({name, scale, squawk, emergency, capturedAt}) {
-    // Only mounted aircraft icons subscribe to playback ageing. The list models,
-    // sorting and telemetry text remain stable when the cursor moves.
+function useAircraftReception(id, capturedAt) {
     const cursor = useContext(PlaybackTimeContext);
+    const times = useContext(AircraftReceptionContext);
+    const fallback = Date.parse(capturedAt);
+    return aircraftReceptionAt(times.get(id) ?? (Number.isFinite(fallback) ? [fallback] : []), cursor);
+}
+
+const AircraftSymbol = React.memo(function AircraftSymbol({id, name, scale, squawk, emergency, capturedAt}) {
+    // Only mounted aircraft icons and reception labels subscribe to ageing.
+    // List models, sorting and telemetry stay stable as the cursor moves.
+    const reception = useAircraftReception(id, capturedAt);
     const status = useMemo(() => aircraftEmergency({squawk, emergency}), [squawk, emergency]);
-    const color = aircraftColor(status, cursor - Date.parse(capturedAt) > 60000);
+    const color = aircraftColor(status, reception.status !== 'receiving');
     const symbol = useMemo(() => renderAircraftSymbol({name, scale}, {angle: 315, color}), [name, scale, color]);
     return <Box component="span" aria-hidden="true" sx={iconSx} dangerouslySetInnerHTML={{__html: symbol}} />;
+});
+
+const AircraftReceptionLabel = React.memo(function AircraftReceptionLabel({id, capturedAt}) {
+    const {t} = useTranslation('navigation');
+    const reception = useAircraftReception(id, capturedAt);
+    const label = aircraftReceptionLabel(reception, t);
+    return <Typography component="span" variant="caption" title={label} sx={{flexShrink: 0, fontSize: '0.65rem',
+        color: reception.status === 'receiving' ? 'success.main' : 'text.secondary'}}>{label}{' '}</Typography>;
 });
 
 function ProtocolIcon({row}) {
@@ -39,7 +56,7 @@ function ProtocolIcon({row}) {
         engine_count: row.engine_count, engine_type: row.engine_type, category: row.category, wake_category: row.wake_category,
     }) : null, [row.kind, row.model, row.type_description, row.aircraft_class, row.engine_count,
         row.engine_type, row.category, row.wake_category]);
-    if (shape) return <AircraftSymbol name={shape.name} scale={shape.scale}
+    if (shape) return <AircraftSymbol id={row.id} name={shape.name} scale={shape.scale}
         squawk={row.squawk} emergency={row.emergency} capturedAt={row.captured_at} />;
     const symbol = row.kind === 'aprs' ? getAprsSymbol(row) : null;
     const image = row.kind === 'meshtastic' ? meshtasticPin
@@ -268,6 +285,7 @@ const TransmitterListRow = React.memo(function TransmitterListRow({row, selected
                 '@container (max-width: 1100px)': {columnGap: 1, '& .metric-wide': {display: 'none'}},
                 '@container (max-width: 650px)': {columnGap: 0.75, fontSize: '0.68rem', '& .metric-secondary, & .metric-comment': {display: 'none'}},
             }}>
+                {row.kind === 'adsb' && <AircraftReceptionLabel id={row.id} capturedAt={row.captured_at} />}
                 {status && <Box component="span" sx={{position: 'absolute', width: 1, height: 1, overflow: 'hidden', clipPath: 'inset(50%)'}}>
                     {aircraftEmergencyLabel(status, aircraftT)}.{' '}
                 </Box>}

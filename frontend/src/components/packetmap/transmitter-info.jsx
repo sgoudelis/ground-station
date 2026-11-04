@@ -1,7 +1,7 @@
 /** Copyright (c) 2026 Efstratios Goudelis — GPL-3.0-or-later */
 
 import React, {useId, useMemo} from 'react';
-import {Alert, Box, Chip, CircularProgress, IconButton, Tooltip, Typography} from '@mui/material';
+import {Alert, Box, Button, Chip, CircularProgress, IconButton, Tooltip, Typography} from '@mui/material';
 import {alpha} from '@mui/material/styles';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import ExploreIcon from '@mui/icons-material/Explore';
@@ -18,12 +18,13 @@ import AircraftFlag from '../common/aircraft-flag.jsx';
 import AircraftDetails from '../common/aircraft-details.jsx';
 import {aircraftCountry} from '../../utils/aircraft-country.js';
 import {renderAircraftSymbol, selectAircraftShape} from './aircraft-symbol.js';
-import {aircraftEmergency, aircraftEmergencyLabel} from '../../utils/aircraft-emergency.js';
+import {aircraftColor, aircraftEmergency, aircraftEmergencyLabel} from '../../utils/aircraft-emergency.js';
 import FlightInstruments from './flight-instruments.jsx';
 import MeshtasticInfo from './meshtastic-info.jsx';
 import {aircraftFlightAt, FLIGHT_TELEMETRY_FIELDS} from './aircraft-flight.js';
 import {radiosondeFlightAt, SONDE_FLIGHT_TELEMETRY_FIELDS} from './radiosonde-flight.js';
 import {buildPlaybackTrack} from './playback.js';
+import {aircraftReceptionAt, aircraftReceptionLabel} from './reception.js';
 import balloon from './icons/balloon.png';
 import parachute from './icons/parachute.png';
 
@@ -49,7 +50,7 @@ function InfoSection({title, icon: Icon, fields}) {
 }
 
 export default function TransmitterInfo({transmitter, selectedTransmitterId = null, loading, gridEditable, onClearSelection,
-    positions, playbackTime, isLive = false}) {
+    positions, playbackTime, isLive = false, onJumpToPosition}) {
     const {t} = useTranslation('navigation');
     const {t: aircraftT} = useTranslation('common');
     const timeSettings = useUserTimeSettings();
@@ -65,13 +66,18 @@ export default function TransmitterInfo({transmitter, selectedTransmitterId = nu
         ? aircraftFlightAt(transmitter, selectedTrack, playbackTime, isLive) : transmitter?.kind === 'radiosonde'
             ? radiosondeFlightAt(transmitter, selectedTrack, playbackTime, isLive) : null,
     [transmitter, selectedTrack, playbackTime, isLive]);
+    const reception = transmitter?.kind === 'adsb' && Number.isFinite(playbackTime)
+        ? aircraftReceptionAt(selectedTrack?.times.length ? selectedTrack.times
+            : [Date.parse(transmitter.captured_at)].filter(Number.isFinite), playbackTime) : null;
+    const absent = reception?.status === 'upcoming' || reception?.status === 'expired';
     const emergency = transmitter?.kind === 'adsb' ? aircraftEmergency(flight.report) : null;
+    const aircraftIsStale = reception && reception.status !== 'receiving';
     const displayedPosition = flight?.historical ? flight.position : transmitter;
     // Share the map's model selection and artwork, displayed upright without
     // its map-only heading, label or ground shadow.
     const aircraftSymbol = useMemo(() => transmitter?.kind === 'adsb'
-        ? renderAircraftSymbol(selectAircraftShape(aircraft), {angle: 0, color: emergency?.color ?? typeColor('adsb')}) : null,
-    [transmitter?.kind, aircraft, emergency?.color]);
+        ? renderAircraftSymbol(selectAircraftShape(aircraft), {angle: 0, color: aircraftColor(emergency, aircraftIsStale)}) : null,
+    [transmitter?.kind, aircraft, emergency?.color, aircraftIsStale]);
     const formatTime = (value) => formatDateTime(value, timeSettings);
     const formatNumber = (value, digits) => Number.isFinite(value)
         ? value.toLocaleString(timeSettings.locale, {maximumFractionDigits: digits}) : value;
@@ -152,6 +158,16 @@ export default function TransmitterInfo({transmitter, selectedTransmitterId = nu
                 </Box>
             </Box>
             <Box sx={{flex: 1, minHeight: 0, overflowY: 'auto', p: 1.5}}>
+                {reception && reception.status !== 'receiving' && <Alert severity="info" role="status" sx={{mb: 1.5}}>
+                    {reception.status === 'expired' ? t('packet_map.reception.no_position', {
+                        defaultValue: 'No position received for {{minutes}} minutes.', minutes: Math.floor(reception.age / 60000),
+                    }) : aircraftReceptionLabel(reception, t)}
+                    {!isLive && absent && onJumpToPosition && Number.isFinite(reception.jumpTime) && <Button
+                        size="small" onClick={() => onJumpToPosition(reception.jumpTime)} sx={{display: 'block', mt: 0.5}}>
+                        {reception.status === 'upcoming' ? label('reception.jump_first', 'Jump to first position')
+                            : label('reception.jump_last', 'Jump to last position')}
+                    </Button>}
+                </Alert>}
                 {emergency && <Alert severity={emergency.severity} sx={{mb: 1.5}}>
                     <Typography variant="body2" sx={{fontWeight: 700}}>
                         {aircraftT('aircraft.emergency.reported', 'Reported emergency / priority')}

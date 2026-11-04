@@ -24,7 +24,7 @@ import AircraftMapMarker from './aircraft-map-marker.jsx';
 import {selectAircraftShape} from './aircraft-symbol.js';
 import useStableEvent from '../../hooks/useStableEvent.js';
 import {createAprsIcon, getAprsSymbol} from './aprs-marker.js';
-import {buildPlaybackTrack, trackPositionAt} from './playback.js';
+import {aircraftPathsAt, buildPlaybackTrack, trackPositionAt} from './playback.js';
 import {getHorizonRadii} from './horizon.js';
 import VisibilityCircle from './visibility-circle.jsx';
 import {selectionCrosshair} from './selection-crosshair.js';
@@ -240,6 +240,13 @@ export default function PacketMap({positions, transmitters, hasPositions = posit
     // interpolation. Unknown altitude must not produce a misleading footprint.
     const selectedCursor = playback.get(selectedTransmitterId);
     const selectedPoint = selectedCursor?.point;
+    // Only aircraft trails depend on the clock. Stable bounds prevent idle
+    // reception ticks from refitting the camera for other map content.
+    const aircraftCursor = selectedTrack?.points[0]?.kind === 'adsb' ? selectedCursor : null;
+    const aircraftTime = aircraftCursor ? playbackTime : null;
+    const selectedPaths = useMemo(() => selectedTrack?.points[0]?.kind === 'adsb'
+        ? aircraftPathsAt(selectedTrack, aircraftTime, aircraftCursor)
+        : selectedTrack ? [selectedTrack.path] : [], [selectedTrack, aircraftTime, aircraftCursor]);
     // APRS balloons already draw a reticle around their raised flight symbol.
     const showNodeSelection = selectedPoint?.kind === 'meshtastic'
         || (selectedPoint?.kind === 'aprs' && !selectedCursor.icon?.options.className?.includes('packet-radiosonde-marker'));
@@ -271,14 +278,14 @@ export default function PacketMap({positions, transmitters, hasPositions = posit
         const coordinates = tracks.flatMap((track) => {
             // Expired aircraft must not pull Fit all toward obsolete positions.
             if (track.points[0]?.kind === 'adsb') {
-                return visible.has(track.id) ? (track.id === selectedTransmitterId ? selectedTrack.path
+                return visible.has(track.id) ? (track.id === selectedTransmitterId ? selectedPaths.flat()
                     : track.path) : [];
             }
             return track.path;
         });
         if (hasReceiver) coordinates.push([receiverLatitude, receiverLongitude]);
         return coordinates;
-    }, [tracks, visibleAircraftIds, selectedTrack, selectedTransmitterId, hasReceiver, receiverLatitude, receiverLongitude]);
+    }, [tracks, visibleAircraftIds, selectedPaths, selectedTransmitterId, hasReceiver, receiverLatitude, receiverLongitude]);
     const hasBalloons = tracks.some((track) => track.points[0].kind === 'radiosonde'
         || getAprsSymbol(aprsPosition(track.points.at(-1), transmitterDetails.get(track.id)))?.balloon);
     const hasGroundPins = tracks.some((track) => ['aprs', 'meshtastic'].includes(track.points[0].kind));
@@ -347,16 +354,18 @@ export default function PacketMap({positions, transmitters, hasPositions = posit
                     <Marker position={[receiverLatitude, receiverLongitude]} icon={receiverIcon} />
                 </Pane>}
                 {/* Point clicks select the transmitter; details stay in the info panel. */}
-                {tracks.map(({id, points, path: originalPath}) => {
-                    const path = id === selectedTransmitterId ? selectedTrack.path : originalPath;
+                {tracks.map(({id, points}) => {
                     const latest = points[points.length - 1];
                     const color = typeColor(latest.kind);
                     const current = playback.get(id);
                     const cursorColor = current?.stale && (current.point.kind === 'radiosonde' || current.point.kind === 'aprs')
                         ? '#9e9e9e' : color;
                     return <React.Fragment key={id}>
-                        {settings.showTracks && id === selectedTransmitterId && path.length > 1 && <Polyline positions={path} smoothFactor={0.5}
-                            pathOptions={{color, weight: 2, opacity: latest.kind === 'adsb' ? 0.3 : 1, lineCap: 'round', lineJoin: 'round'}} />}
+                        {settings.showTracks && id === selectedTransmitterId && selectedPaths.filter((path) => path.length > 1)
+                            .map((path, index) => <Polyline key={`trail:${index}`} positions={path} smoothFactor={0.5}
+                                pathOptions={{color: latest.kind === 'adsb' && current?.stale ? '#9e9e9e' : color,
+                                    weight: 2, opacity: latest.kind === 'adsb' ? current?.stale ? 0.15 : 0.3 : 1,
+                                    lineCap: 'round', lineJoin: 'round'}} />)}
                         {current && (current.point.kind === 'meshtastic' ? <MeshtasticMapMarker key="cursor" id={id}
                             latitude={current.point.latitude} longitude={current.point.longitude}
                             name={current.point.name || current.point.source} selected={id === selectedTransmitterId}

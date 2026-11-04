@@ -875,3 +875,31 @@ it('removes expired aircraft markers and restores them when the historical curso
     rerender(element(received));
     expect(screen.getByTestId('aircraft-marker')).toBeInTheDocument();
 });
+
+it('clips the selected aircraft trail at the cursor, fades it on signal loss and removes it with the icon', () => {
+    const store = configureStore({reducer: () => ({location: {location: null}})});
+    const received = Date.parse('2026-11-01T12:00:00Z');
+    const positions = [0, 10000, 20000].map((offset, index) => ({id: String(index), transmitter_id: 'adsb:406b90',
+        kind: 'adsb', source: '406B90', latitude: 40 + index, longitude: 23 + index,
+        captured_at: new Date(received + offset).toISOString()}));
+    const element = (time) => <Provider store={store}><ThemeProvider theme={createTheme()}>
+        <PacketMap positions={positions} playbackTime={time} selectedTransmitterId="adsb:406b90" loading={false} />
+    </ThemeProvider></Provider>;
+    const {rerender} = render(element(received - 1));
+    expect(screen.queryByTestId('track')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('aircraft-marker')).not.toBeInTheDocument();
+    rerender(element(received + 5000));
+    const path = JSON.parse(screen.getByTestId('track').dataset.positions);
+    expect(path.at(-1)).toEqual(JSON.parse(screen.getByTestId('aircraft-marker').dataset.center));
+    expect(path).not.toContainEqual([42, 25]);
+    expect(screen.getByTestId('track')).toHaveAttribute('data-opacity', '0.3');
+    rerender(element(received + 81000));
+    expect(screen.getByTestId('aircraft-marker').dataset.iconClass).toContain('packet-marker-stale');
+    expect(screen.getByTestId('track')).toHaveAttribute('data-opacity', '0.15');
+    rerender(element(received + 1820001));
+    expect(screen.queryByTestId('aircraft-marker')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('track')).not.toBeInTheDocument();
+    rerender(element(received + 20000));
+    expect(screen.getByTestId('aircraft-marker')).toBeInTheDocument();
+    expect(screen.getByTestId('track')).toBeInTheDocument();
+});

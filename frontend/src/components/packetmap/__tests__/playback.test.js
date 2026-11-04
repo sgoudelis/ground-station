@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest';
 import {CRS, latLng} from 'leaflet';
-import {buildPlaybackTrack, trackPositionAt} from '../playback.js';
+import {aircraftPathsAt, buildPlaybackTrack, trackPositionAt} from '../playback.js';
 import {smoothTrack} from '../track-path.js';
 
 const epoch = Date.parse('2026-11-01T00:00:00Z');
@@ -109,4 +109,27 @@ it('supports lightweight aircraft interpolation without generating smoothed geom
     expect(track.path).toEqual([[40, 20], [41, 21], [40, 22]]);
     expect(at(track, 5).point.altitude).toBe(150);
     expect(at(track, 10).point).toBe(points[1]);
+});
+
+it('ends an aircraft trail at its cursor and hides it together with its icon', () => {
+    const track = buildPlaybackTrack([fix(0, 40, 20), fix(10, 41, 21), fix(20, 40, 22)]
+        .map((point) => ({...point, kind: 'adsb'})));
+    expect(aircraftPathsAt(track, epoch - 1)).toEqual([]);
+    const paths = aircraftPathsAt(track, epoch + 5000);
+    const current = at(track, 5).point;
+    expect(paths[0].at(-1)).toEqual([current.latitude, current.longitude]);
+    expect(paths[0]).not.toContainEqual([40, 22]);
+    expect(aircraftPathsAt(track, epoch + 1820000)).toEqual([track.path]);
+    expect(aircraftPathsAt(track, epoch + 1820001)).toEqual([]);
+});
+
+it('keeps resumed aircraft trails disconnected across long reception gaps', () => {
+    const track = buildPlaybackTrack([fix(0, 40, 20), fix(10, 41, 21), fix(7200, 50, 30), fix(7210, 51, 31)]
+        .map((point) => ({...point, kind: 'adsb'})));
+    expect(aircraftPathsAt(track, epoch + 7210000)).toEqual([
+        [[40, 20], [41, 21]], [[50, 30], [51, 31]],
+    ]);
+    expect(aircraftPathsAt(track, epoch + 3600000)).toEqual([]);
+    expect(at(track, 7205).point.latitude).toBeGreaterThan(50);
+    expect(at(track, 7205).point.latitude).toBeLessThan(51);
 });

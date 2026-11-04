@@ -1,6 +1,8 @@
 /** Copyright (c) 2026 Efstratios Goudelis — GPL-3.0-or-later */
 
 import {trackPositionAt} from './playback.js';
+import {aircraftReceptionAt} from './reception.js';
+import {AIRCRAFT_STALE_MS} from './live.js';
 
 const finite = (value) => Number.isFinite(value) ? value : null;
 
@@ -24,8 +26,10 @@ export function aircraftFlightAt(transmitter, track, time, isLive = false) {
     const altitude = barometric ?? geometric ?? finite(report.altitude);
     const rawTrack = finite(report.track_deg);
     const receivedAt = historical ? Date.parse(sample?.captured_at)
-        : Number.isFinite(report.timestamp) ? report.timestamp * 1000 : Date.parse(report.captured_at);
+        : Number.isFinite(report.position_timestamp) ? report.position_timestamp * 1000
+            : Number.isFinite(report.timestamp) ? report.timestamp * 1000 : Date.parse(report.captured_at);
     const age = Number.isFinite(receivedAt) ? Math.max(0, Math.floor((cursor - receivedAt) / 1000)) : null;
+    const reception = track?.times.length ? aircraftReceptionAt(track.times, cursor) : null;
     const verticalSpeed = finite(report.vertical_rate_mps);
     const groundSpeed = finite(report.groundspeed_mps);
     const onGround = report.on_ground === true;
@@ -38,7 +42,8 @@ export function aircraftFlightAt(transmitter, track, time, isLive = false) {
         altitude, altitudeSource: barometric !== null ? 'barometric' : geometric !== null ? 'geometric' : 'unknown',
         geometric, groundSpeed: groundSpeed !== null && groundSpeed >= 0 ? groundSpeed : null, verticalSpeed,
         track: rawTrack === null ? null : ((rawTrack % 360) + 360) % 360,
-        onGround, phase, age, stale: age !== null && age > 60, receivedAt, historical,
+        onGround, phase, age, stale: reception ? ['lost', 'expired'].includes(reception.status)
+            : age !== null && cursor - receivedAt > AIRCRAFT_STALE_MS, receivedAt, historical,
         position, report, squawk: /^[0-7]{1,4}$/.test(code) ? code.padStart(4, '0') : null,
     };
 }

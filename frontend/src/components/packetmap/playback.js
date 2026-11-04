@@ -3,6 +3,7 @@
 import {smoothTrackSegments} from './track-path.js';
 import {getFlightPhase} from './radiosonde-marker.js';
 import {AIRCRAFT_EXPIRY_MS} from './live.js';
+import {aircraftReceptionAt} from './reception.js';
 
 const staleAfter = 60 * 60 * 1000;
 
@@ -19,14 +20,29 @@ export function buildPlaybackTrack(fixes, {smooth = true} = {}) {
     const coordinates = points.map((point) => [point.latitude, point.longitude]);
     // Unselected aircraft need a timestamp index, not thousands of curve vertices.
     if (!smooth) {
-        return {points, times, samples: coordinates.map((position, index) => ({time: times[index], position})), path: coordinates};
+        return {points, times, samples: coordinates.map((position, index) => ({time: times[index], position,
+            breakBefore: index > 0 && points[index].kind === 'adsb'
+                && (times[index] - times[index - 1] > AIRCRAFT_EXPIRY_MS
+                    || Math.abs(points[index].longitude - points[index - 1].longitude) > 180),
+        })), path: coordinates};
     }
-    const samples = points.length ? [{time: times[0], position: coordinates[0]}] : [];
-    smoothTrackSegments(coordinates).forEach((segment, index) => {
-        segment.slice(1).forEach((position, sample) => samples.push({
-            time: mix(times[index], times[index + 1], (sample + 1) / (segment.length - 1)), position,
-        }));
-    });
+    const samples = [];
+    let start = 0;
+    for (let end = 1; end <= points.length; end++) {
+        // Smooth separate observed flights independently. A later reception
+        // must never draw an invented segment across an expired aircraft gap.
+        const boundary = end === points.length || points[end - 1].kind === 'adsb'
+            && (times[end] - times[end - 1] > AIRCRAFT_EXPIRY_MS
+                || Math.abs(points[end].longitude - points[end - 1].longitude) > 180);
+        if (!boundary) continue;
+        samples.push({time: times[start], position: coordinates[start], breakBefore: start > 0});
+        smoothTrackSegments(coordinates.slice(start, end)).forEach((segment, index) => {
+            segment.slice(1).forEach((position, sample) => samples.push({
+                time: mix(times[start + index], times[start + index + 1], (sample + 1) / (segment.length - 1)), position,
+            }));
+        });
+        start = end;
+    }
     const path = samples.map((sample) => sample.position).filter((point, index, all) => index === 0
         || point[0] !== all[index - 1][0] || point[1] !== all[index - 1][1]);
     return {points, times, samples, path};
@@ -55,8 +71,9 @@ export function trackPositionAt(track, time, latestVerticalSpeed) {
     const previous = points[index];
     const next = points[index + 1];
     const aircraft = previous.kind === 'adsb';
+    const reception = aircraft ? aircraftReceptionAt(times, cursor) : null;
     // Expiry follows the cursor, so old recordings reappear when replayed.
-    if (aircraft && cursor - times[index] > AIRCRAFT_EXPIRY_MS) return null;
+    if (reception?.status === 'expired') return null;
     // A long reception gap is not evidence that the aircraft flew this segment.
     const interpolate = next && (!aircraft || times[index + 1] - times[index] <= AIRCRAFT_EXPIRY_MS);
     let point = previous;
@@ -85,7 +102,25 @@ export function trackPositionAt(track, time, latestVerticalSpeed) {
     // Interpolation changes captured_at for display, but cannot refresh a node.
     // Aircraft update much faster than sondes. Match their live cache's
     // one-minute timeout without removing the recorded path from playback.
-    const timeout = previous.kind === 'adsb' ? 60000 : staleAfter;
-    const stale = cursor - times[index] > timeout;
+    const stale = aircraft ? reception.status === 'lost' : cursor - times[index] > staleAfter;
     return {point, phase, stale};
+}
+
+export function aircraftPathsAt(track, time, current = trackPositionAt(track, time)) {
+    if (!current) return [];
+    const cursor = Number.isFinite(time) ? time : track.times.at(-1);
+    const paths = [];
+    let path;
+    for (const sample of track.samples) {
+        if (sample.time > cursor) break;
+        if (!path || sample.breakBefore) paths.push(path = []);
+        const previous = path.at(-1);
+        if (!previous || previous[0] !== sample.position[0] || previous[1] !== sample.position[1]) path.push(sample.position);
+    }
+    // Include the interpolated endpoint so the line ends exactly at the icon,
+    // including between the curve's sampled vertices.
+    const endpoint = [current.point.latitude, current.point.longitude];
+    const last = path?.at(-1);
+    if (last && (last[0] !== endpoint[0] || last[1] !== endpoint[1])) path.push(endpoint);
+    return paths;
 }

@@ -14,10 +14,12 @@ import {TRANSMITTER_TYPES, typeColor, typeLabel} from './transmitters.js';
 import {setTransmitterListSettings} from './packet-map-slice.jsx';
 import {createTransmitterListRows, transmitterSorts} from './transmitter-list-data.js';
 import useTransmitterPages, {transmitterPageSizes} from './use-transmitter-pages.js';
-import TransmitterListRow, {PlaybackTimeContext} from './transmitter-list-row.jsx';
+import TransmitterListRow, {AircraftReceptionContext, PlaybackTimeContext} from './transmitter-list-row.jsx';
+import {aircraftReceptionIndex} from './reception.js';
 
 const rowHeight = 62;
 const emptyTypes = [];
+const emptyPositions = [];
 const defaultSettings = {excludedTypes: emptyTypes, sort: 'first_seen', pageSize: 100};
 const listStyle = {height: '100%', width: '100%', overflowX: 'hidden'};
 const sortLabels = {first_seen: 'Newest discovered', last_seen: 'Recently heard', name: 'Name', distance: 'Nearest first'};
@@ -35,7 +37,7 @@ function VirtualRow({index, style, ariaAttributes, rows, offset, total, selected
 }
 
 export default function TransmitterList({rows, loading, hiddenTypes = emptyTypes, gridEditable, selectedTransmitterId = null,
-    onSelectTransmitter, playbackTime}) {
+    onSelectTransmitter, playbackTime, positions = emptyPositions}) {
     const {t} = useTranslation('navigation');
     const timeSettings = useUserTimeSettings();
     const dispatch = useDispatch();
@@ -56,6 +58,7 @@ export default function TransmitterList({rows, loading, hiddenTypes = emptyTypes
     const focusRow = useCallback((id) => setFocusedId(id), []);
     const prepareRows = useMemo(() => createTransmitterListRows(), []);
     const data = useMemo(() => prepareRows(rows, receiver), [prepareRows, rows, receiver]);
+    const aircraftTimes = useMemo(() => aircraftReceptionIndex(positions), [positions]);
     const pages = useTransmitterPages(data, search, excludedTypes, sort, pageSize, selectedTransmitterId);
     const {pageRows: visible, page, pageCount, offset, total} = pages;
     const kinds = useMemo(() => [...new Set([...Object.keys(TRANSMITTER_TYPES), ...data.map((row) => row.kind)])], [data]);
@@ -196,17 +199,19 @@ export default function TransmitterList({rows, loading, hiddenTypes = emptyTypes
         <Box sx={{position: 'relative', flex: 1, minHeight: 0}} aria-busy={Boolean(loading)}>
             {loading && <LinearProgress sx={{position: 'absolute', top: 0, left: 0, right: 0, height: 2, zIndex: 1}} />}
             <PlaybackTimeContext.Provider value={Number.isFinite(playbackTime) ? playbackTime : Date.now()}>
-                {visible.length > 0 ? <List key={`${pages.query}:${page}:${pageSize}`} listRef={captureList} rowComponent={VirtualRow} rowProps={rowProps}
-                    rowCount={visible.length} rowHeight={rowHeight} overscanCount={4} defaultHeight={248}
-                    style={listStyle} aria-label={t('packet_map.transmitters', 'Transmitters')}
-                    onKeyDown={navigate} onRowsRendered={rowsRendered} />
-                    : <Box sx={{height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', p: 2}}>
-                        <Typography variant="body2" sx={{color: 'text.secondary', textAlign: 'center'}}>
-                            {loading ? t('packet_map.list.loading', 'Loading transmitters…')
-                                : data.length ? t('packet_map.list.no_matches', 'No transmitters match your search or type filters.')
-                                    : t('packet_map.empty', 'No packets containing location coordinates were decoded in the selected timeframe.')}
-                        </Typography>
-                    </Box>}
+                <AircraftReceptionContext.Provider value={aircraftTimes}>
+                    {visible.length > 0 ? <List key={`${pages.query}:${page}:${pageSize}`} listRef={captureList} rowComponent={VirtualRow} rowProps={rowProps}
+                        rowCount={visible.length} rowHeight={rowHeight} overscanCount={4} defaultHeight={248}
+                        style={listStyle} aria-label={t('packet_map.transmitters', 'Transmitters')}
+                        onKeyDown={navigate} onRowsRendered={rowsRendered} />
+                        : <Box sx={{height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', p: 2}}>
+                            <Typography variant="body2" sx={{color: 'text.secondary', textAlign: 'center'}}>
+                                {loading ? t('packet_map.list.loading', 'Loading transmitters…')
+                                    : data.length ? t('packet_map.list.no_matches', 'No transmitters match your search or type filters.')
+                                        : t('packet_map.empty', 'No packets containing location coordinates were decoded in the selected timeframe.')}
+                            </Typography>
+                        </Box>}
+                </AircraftReceptionContext.Provider>
             </PlaybackTimeContext.Provider>
         </Box>
         <Box

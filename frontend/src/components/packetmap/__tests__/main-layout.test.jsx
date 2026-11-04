@@ -179,6 +179,13 @@ it('shows live aircraft beside saved radiosondes and updates positions without r
         act(() => vi.advanceTimersByTime(LIVE_WINDOW_MS));
         expect(mapRender.mock.lastCall[0].positions.some((point) => point.kind === 'adsb')).toBe(false);
         expect(tableRender.mock.lastCall[0].rows.some((row) => row.kind === 'adsb')).toBe(false);
+        const info = screen.getByRole('region', {name: 'Transmitter info'});
+        expect(info).toHaveTextContent('EWG46A');
+        expect(within(info).getByRole('status')).toHaveTextContent(/No position received for \d+ minutes/);
+        expect(within(info).queryByRole('button', {name: 'Jump to last position'})).not.toBeInTheDocument();
+        fireEvent.click(within(info).getByRole('button', {name: 'Clear transmitter selection'}));
+        expect(info).toHaveTextContent('Select a transmitter');
+        expect(info).not.toHaveTextContent('EWG46A');
         expect(socket.emit.mock.calls.filter(([, request]) => request.cmd === 'filebrowser.positions')).toHaveLength(1);
         unmount();
     } finally {
@@ -196,6 +203,51 @@ it('starts in LIVE with the last 30 minutes of packets when no selection has bee
     expect(screen.getByRole('button', {name: 'LIVE', exact: true})).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByLabelText('To')).toBeDisabled();
     expect(Number.isFinite(mapRender.mock.lastCall[0].playbackTime)).toBe(true);
+});
+
+it('does not resurrect selected aircraft details after the source data was removed before expiry', () => {
+    vi.useFakeTimers();
+    try {
+        vi.setSystemTime(new Date('2026-11-01T12:00:00Z'));
+        const point = {id: 'fix', transmitter_id: 'adsb:4d2406', kind: 'adsb', name: 'EWG46A', source: '4D2406',
+            latitude: 40, longitude: 23, captured_at: new Date().toISOString()};
+        fixture.positions = [point];
+        fixture.transmitters = [{...point, id: point.transmitter_id}];
+        const store = createStore();
+        const element = () => <Provider store={store}><ThemeProvider theme={createTheme()}><PacketMapLayout /></ThemeProvider></Provider>;
+        const {rerender, unmount} = render(element());
+        act(() => tableRender.mock.lastCall[0].onSelectTransmitter(point.transmitter_id));
+        expect(screen.getByRole('region', {name: 'Transmitter info'})).toHaveTextContent(point.name);
+        fixture.positions = [];
+        fixture.transmitters = [];
+        rerender(element());
+        expect(screen.getByRole('region', {name: 'Transmitter info'})).not.toHaveTextContent(point.name);
+        act(() => vi.advanceTimersByTime(LIVE_WINDOW_MS + 30000));
+        expect(screen.getByRole('region', {name: 'Transmitter info'})).not.toHaveTextContent(point.name);
+        expect(screen.queryByText(/No position received for/)).not.toBeInTheDocument();
+        unmount();
+    } finally {
+        vi.useRealTimers();
+    }
+});
+
+it('offers a cursor jump to recorded positions when a selected historical aircraft is absent', () => {
+    const first = {id: 'first', transmitter_id: 'adsb:4d2406', kind: 'adsb', name: 'EWG46A', source: '4D2406',
+        latitude: 40, longitude: 23, captured_at: '2026-11-01T10:00:00Z'};
+    const last = {...first, id: 'last', latitude: 41, captured_at: '2026-11-01T10:01:00Z'};
+    fixture.positions = [first, last];
+    fixture.transmitters = [{...last, id: last.transmitter_id}];
+    render(<Provider store={createStore(historyRange)}><ThemeProvider theme={createTheme()}><PacketMapLayout /></ThemeProvider></Provider>);
+    act(() => tableRender.mock.lastCall[0].onSelectTransmitter(first.transmitter_id));
+    expect(screen.getByRole('status')).toHaveTextContent('No position received for 119 minutes.');
+    fireEvent.click(screen.getByRole('button', {name: 'Jump to last position'}));
+    expect(mapRender.mock.lastCall[0].playbackTime).toBe(Date.parse(last.captured_at));
+    expect(screen.queryByRole('button', {name: 'Jump to last position'})).not.toBeInTheDocument();
+    const beforeFirst = Date.parse(first.captured_at) - 1000;
+    fireEvent.change(screen.getByRole('slider', {name: 'Playback time'}), {target: {value: beforeFirst}});
+    expect(screen.getByRole('status')).toHaveTextContent('Not yet seen');
+    fireEvent.click(screen.getByRole('button', {name: 'Jump to first position'}));
+    expect(mapRender.mock.lastCall[0].playbackTime).toBe(Date.parse(first.captured_at));
 });
 
 it('scrubs the aircraft instruments, position and reported emergency together with the map', () => {

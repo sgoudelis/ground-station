@@ -2,6 +2,7 @@
 
 export const LIVE_WINDOW_MS = 30 * 60 * 1000;
 export const AIRCRAFT_EXPIRY_MS = LIVE_WINDOW_MS;
+export const AIRCRAFT_STALE_MS = 60 * 1000;
 
 export function liveRangeAt(now = Date.now()) {
     return {start: new Date(now - LIVE_WINDOW_MS).toISOString(), end: null};

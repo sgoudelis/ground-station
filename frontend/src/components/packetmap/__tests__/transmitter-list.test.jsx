@@ -193,23 +193,44 @@ it('restores saved list controls after a remount', () => {
     expect(screen.getByRole('combobox', {name: 'Sort transmitters'})).toHaveTextContent('Name');
 });
 
-it('keeps selection and latest callbacks working while only aircraft icons age on playback ticks', () => {
+it('keeps selection and telemetry stable while aircraft icons and reception status age on playback ticks', () => {
     const oldCallback = vi.fn();
     const {container, update} = setup({onSelectTransmitter: oldCallback});
     const plane = screen.getByRole('button', {name: 'AEE608'});
-    const telemetry = plane.querySelector('[title^="Alt"]');
+    const telemetry = plane.querySelector('.metric-primary');
     const observer = new MutationObserver(() => {});
     observer.observe(telemetry, {childList: true, subtree: true, characterData: true});
     const callback = vi.fn();
     update({playbackTime: received + 61000, onSelectTransmitter: callback, selectedTransmitterId: fixtures[0].id});
     expect(plane).toHaveAttribute('aria-pressed', 'true');
     expect(plane.querySelector('path[fill]')).toHaveAttribute('fill', '#9e9e9e');
+    expect(plane).toHaveTextContent('Signal lost · 1m ago');
     expect(observer.takeRecords()).toHaveLength(0);
     observer.disconnect();
     fireEvent.click(plane);
     expect(callback).toHaveBeenCalledWith(fixtures[0].id);
     expect(oldCallback).not.toHaveBeenCalled();
     expect(container.querySelectorAll('button[data-id]')).toHaveLength(4);
+});
+
+it('keeps historical aircraft listed and follows fixes at the cursor instead of the latest row timestamp', () => {
+    const aircraft = fixtures[0];
+    const positions = [0, 7200000].map((offset) => ({kind: 'adsb', transmitter_id: aircraft.id,
+        captured_at: new Date(received + offset).toISOString()}));
+    const rows = [{...aircraft, captured_at: positions[1].captured_at}];
+    const {update} = setup({rows, positions, playbackTime: received - 1});
+    const row = () => screen.getByRole('button', {name: aircraft.name});
+    expect(row()).toHaveTextContent('Not yet seen');
+    expect(row().querySelector('path[fill]')).toHaveAttribute('fill', '#9e9e9e');
+    update({rows, positions, playbackTime: received});
+    expect(row()).toHaveTextContent('Receiving');
+    expect(row().querySelector('path[fill]')).toHaveAttribute('fill', '#66bb6a');
+    update({rows, positions, playbackTime: received + 180000});
+    expect(row()).toHaveTextContent('Signal lost · 3m ago');
+    update({rows, positions, playbackTime: received + 3600000});
+    expect(row()).toHaveTextContent('Last seen · 60m ago');
+    update({rows, positions, playbackTime: received + 7200000});
+    expect(row()).toHaveTextContent('Receiving');
 });
 
 it('preserves emergency highlights and explicit telemetry clears at the same position timestamp', () => {

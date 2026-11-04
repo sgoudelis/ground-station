@@ -56,4 +56,13 @@ describe('Aircraft flight samples', () => {
         expect(aircraftFlightAt(transmitter, null, start, true)).toMatchObject({groundSpeed: null, verticalSpeed: null,
             altitude: null, track: null, squawk: null, phase: 'unknown'});
     });
+
+    it('does not refresh position age when live telemetry arrives without a new position', () => {
+        const transmitter = {...latest, details: {telemetry: {timestamp: (start + 90000) / 1000,
+            position_timestamp: start / 1000, groundspeed_mps: 200}}};
+        const track = buildPlaybackTrack([fix(0)]);
+        expect(aircraftFlightAt(transmitter, track, start + 90000, true)).toMatchObject({
+            age: 90, stale: true, receivedAt: start, groundSpeed: 200,
+        });
+    });
 });

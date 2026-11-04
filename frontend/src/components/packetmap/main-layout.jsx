@@ -1,6 +1,6 @@
 /** Copyright (c) 2026 Efstratios Goudelis — GPL-3.0-or-later */
 
-import React, {useCallback, useEffect, useMemo, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {Alert, Box, LinearProgress} from '@mui/material';
 import {useDispatch, useSelector} from 'react-redux';
 import {Responsive, useContainerWidth} from 'react-grid-layout';
@@ -20,6 +20,7 @@ import TransmitterList from './transmitter-list.jsx';
 import TransmitterInfo from './transmitter-info.jsx';
 import useAircraft from '../decoders/use-aircraft.js';
 import {createAircraftHistory} from './aircraft.js';
+import {aircraftReceptionAt} from './reception.js';
 import {setPacketMapRange} from './packet-map-slice.jsx';
 import {liveRangeAt} from './live.js';
 
@@ -71,6 +72,19 @@ export default function PacketMapLayout() {
         setPreserveViewRequest((value) => value + 1);
     };
     const selectedTransmitter = rows.find((row) => row.id === selectedTransmitterId) || null;
+    const lastSelectedAircraft = useRef(null);
+    const retained = lastSelectedAircraft.current;
+    // Keep only the selected aircraft's explanation after LIVE removes its
+    // positions and table row. Range changes and other selections discard it.
+    const expiredAircraft = isLive && retained?.range === range && retained.transmitter.id === selectedTransmitterId
+        && aircraftReceptionAt([Date.parse(retained.transmitter.captured_at)], currentPlaybackTime).status === 'expired'
+        ? retained.transmitter : null;
+    useEffect(() => {
+        if (selectedTransmitter?.kind === 'adsb') lastSelectedAircraft.current = {transmitter: selectedTransmitter, range};
+        // A deletion before expiry is not a timeout. Do not retain its details
+        // and make them reappear later when the old fix would have expired.
+        else if (!expiredAircraft) lastSelectedAircraft.current = null;
+    }, [selectedTransmitter, expiredAircraft, range]);
     const [hiddenTypes, setHiddenTypes] = useState(() => {
         const saved = readStored(hiddenTypesStoreName);
         return Array.isArray(saved) ? saved.filter((kind) => typeof kind === 'string') : [];
@@ -128,12 +142,14 @@ export default function PacketMapLayout() {
                         hiddenTypes={hiddenTypes} onHiddenTypesChange={changeHiddenTypes} onFitAll={() => setSelectedTransmitterId(null)} />
                 </StyledIslandParentNoScrollbar>
                 <StyledIslandParentNoScrollbar key="transmitter-info">
-                    <TransmitterInfo transmitter={selectedTransmitter} selectedTransmitterId={selectedTransmitterId}
+                    <TransmitterInfo transmitter={selectedTransmitter ?? expiredAircraft} selectedTransmitterId={selectedTransmitterId}
                         positions={positions} playbackTime={currentPlaybackTime} isLive={isLive}
+                        onJumpToPosition={isLive ? undefined : setPlaybackTime}
                         loading={loading} gridEditable={gridEditable} onClearSelection={() => setSelectedTransmitterId(null)} />
                 </StyledIslandParentNoScrollbar>
                 <StyledIslandParentNoScrollbar key="transmitters">
                     <TransmitterList rows={rows} loading={loading} hiddenTypes={hiddenTypes} gridEditable={gridEditable}
+                        positions={positions}
                         selectedTransmitterId={selectedTransmitterId} onSelectTransmitter={selectTransmitter}
                         playbackTime={currentPlaybackTime} />
                 </StyledIslandParentNoScrollbar>
