@@ -1,37 +1,46 @@
 /** Copyright (c) 2026 Efstratios Goudelis — GPL-3.0-or-later */
 
-import React, {useEffect, useId, useRef} from 'react';
-import {Circle} from 'react-leaflet';
+import React, {useEffect, useId, useMemo, useState} from 'react';
+import {useMap} from 'react-map-gl/maplibre';
 
-const svgNamespace = 'http://www.w3.org/2000/svg';
-
-export default function VisibilityCircle({label, ...props}) {
-    const circleRef = useRef(null);
+export default function VisibilityCircle({center, radius, label, pathOptions}) {
+    const {current} = useMap();
+    const map = current?.getMap();
     const pathId = `packet-visibility-${useId()}`;
+    const [path, setPath] = useState('');
+    const [latitude, longitude] = center;
+    const coordinates = useMemo(() => {
+        const lat = latitude * Math.PI / 180;
+        const distance = radius / 6371000;
+        // Begin at the west side and trace the lower half left-to-right, so
+        // the label at 25% follows the ring upright in the Mercator projection.
+        return Array.from({length: 129}, (_, index) => {
+            const bearing = (270 - index * 360 / 128) * Math.PI / 180;
+            const nextLat = Math.asin(Math.sin(lat) * Math.cos(distance)
+                + Math.cos(lat) * Math.sin(distance) * Math.cos(bearing));
+            const nextLon = longitude + Math.atan2(Math.sin(bearing) * Math.sin(distance) * Math.cos(lat),
+                Math.cos(distance) - Math.sin(lat) * Math.sin(nextLat)) * 180 / Math.PI;
+            return [nextLon, Math.max(-85.051129, Math.min(85.051129, nextLat * 180 / Math.PI))];
+        });
+    }, [latitude, longitude, radius]);
 
     useEffect(() => {
-        const path = circleRef.current.getElement();
-        const text = document.createElementNS(svgNamespace, 'text');
-        const textPath = document.createElementNS(svgNamespace, 'textPath');
-        path.id = pathId;
-        text.setAttribute('class', 'packet-visibility-label');
-        text.setAttribute('dy', '-5');
-        textPath.setAttribute('href', `#${pathId}`);
-        // Leaflet draws its lower semicircle from left to right. Centering on
-        // that arc keeps the text upright and follows the exact rendered ring.
-        textPath.setAttribute('startOffset', '25%');
-        textPath.setAttribute('text-anchor', 'middle');
-        textPath.textContent = label;
-        text.appendChild(textPath);
-        path.parentNode.appendChild(text);
+        if (!map) return;
+        const update = () => setPath(coordinates.map((coordinate, index) => {
+            const {x, y} = map.project(coordinate);
+            return `${index ? 'L' : 'M'}${x},${y}`;
+        }).join(' ') + ' Z');
+        update();
+        map.on('move', update);
+        map.on('resize', update);
+        return () => {map.off('move', update); map.off('resize', update);};
+    }, [map, coordinates]);
 
-        // Referencing Leaflet's own path also follows zoom and radius changes
-        // without a second projection or any viewport movement.
-        return () => {
-            text.remove();
-            path.removeAttribute('id');
-        };
-    }, [label, pathId]);
-
-    return <Circle ref={circleRef} {...props} />;
+    return <svg aria-hidden="true" data-center={JSON.stringify(center)} data-radius={radius} style={{position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none'}}>
+        <path id={pathId} d={path} fill="none" stroke={pathOptions.color} strokeWidth={pathOptions.weight}
+            strokeOpacity={pathOptions.opacity} strokeDasharray={pathOptions.dashArray} />
+        <text className="packet-visibility-label" dy="-5">
+            <textPath href={`#${pathId}`} startOffset="25%" textAnchor="middle">{label}</textPath>
+        </text>
+    </svg>;
 }

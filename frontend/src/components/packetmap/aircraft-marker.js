@@ -1,11 +1,11 @@
-import {DivIcon} from 'leaflet';
+import {MarkerArtwork} from './marker-artwork.js';
 import './aircraft-marker.css';
 import {aircraftCountry} from '../../utils/aircraft-country.js';
 import {aircraftSymbolRotation, renderAircraftSymbol, selectAircraftShape} from './aircraft-symbol.js';
 import {aircraftColor, aircraftEmergency, aircraftEmergencyLabel} from '../../utils/aircraft-emergency.js';
 import {aircraftSelectionCrosshair as selectionCrosshair} from './selection-crosshair.js';
 
-class AircraftIcon extends DivIcon {
+class AircraftIcon extends MarkerArtwork {
     updateSymbol(holder) {
         // Heading updates only rotate the existing SVG. Reparse artwork only
         // when the silhouette, scale or status color actually changes.
@@ -25,8 +25,7 @@ class AircraftIcon extends DivIcon {
             return icon;
         }
 
-        // Leaflet passes the previous icon to setIcon. Keep its label and SVG
-        // nodes instead of replacing both HTML trees for every received fix.
+        // Keep the previous label and SVG nodes for each received fix.
         const label = content.querySelector('.packet-aircraft-label');
         if (label.textContent !== this.options.labelText) label.textContent = this.options.labelText;
         if (label.title !== this.options.labelTitle) label.title = this.options.labelTitle;
@@ -35,11 +34,11 @@ class AircraftIcon extends DivIcon {
         const crosshair = content.querySelector('.packet-aircraft-crosshair');
         if (this.options.selected && !crosshair) content.insertAdjacentHTML('beforeend', selectionCrosshair);
         else if (!this.options.selected && crosshair) crosshair.remove();
-        this._setIconStyles(oldIcon, 'icon');
+        this.styleElement(oldIcon, 'icon');
         return oldIcon;
     }
 
-    // Let Leaflet move, replace and remove the ground shadow in its shadow pane.
+    // Update the shadow artwork independently from the raised symbol.
     createShadow(oldShadow) {
         const shadow = oldShadow?.tagName === 'DIV' ? oldShadow : document.createElement('div');
         if (!shadow.firstElementChild?.classList.contains('packet-aircraft-shadow')) {
@@ -48,7 +47,7 @@ class AircraftIcon extends DivIcon {
         }
         this.updateSymbol(shadow.firstElementChild);
         shadow.setAttribute('aria-hidden', 'true');
-        this._setIconStyles(shadow, 'shadow');
+        this.styleElement(shadow, 'shadow');
         return shadow;
     }
 }
@@ -57,7 +56,7 @@ export function createAircraftIcon({track = 0, name = '', icao, aircraft, shape 
     const angle = Number.isFinite(track) ? track : 0;
     const status = aircraftEmergency({squawk, emergency});
     const color = aircraftColor(status, stale);
-    // Callsigns come from received messages. Escape them before using Leaflet's
+    // Callsigns come from received messages. Escape them before using the
     // HTML icon, and keep the label outside the rotating aircraft symbol.
     const label = document.createElement('span');
     label.className = 'packet-aircraft-label';

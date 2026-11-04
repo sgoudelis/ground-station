@@ -1,7 +1,7 @@
 /** Copyright (c) 2026 Efstratios Goudelis — GPL-3.0-or-later */
 
 import React, {useMemo} from 'react';
-import {Marker} from 'react-leaflet';
+import ArtworkMapMarker from './artwork-map-marker.jsx';
 import {createAircraftIcon} from './aircraft-marker.js';
 
 // Scalar appearance props keep fresh telemetry objects and another aircraft's
@@ -11,7 +11,6 @@ export default React.memo(function AircraftMapMarker({id, latitude, longitude, t
     const icon = useMemo(() => createAircraftIcon({track, name, icao, shape: {name: shapeName, scale: shapeScale},
         squawk, emergency, stale, selected,
     }), [track, name, icao, shapeName, shapeScale, squawk, emergency, stale, selected]);
-    const position = useMemo(() => [latitude, longitude], [latitude, longitude]);
-    const eventHandlers = useMemo(() => ({click: () => onSelectTransmitter?.(id)}), [id, onSelectTransmitter]);
-    return <Marker position={position} title={name || icao || id} icon={icon} eventHandlers={eventHandlers} />;
+    return <ArtworkMapMarker latitude={latitude} longitude={longitude} title={name || icao || id} icon={icon}
+        onClick={() => onSelectTransmitter?.(id)} />;
 });

@@ -1,6 +1,6 @@
 /** Copyright (c) 2026 Efstratios Goudelis — GPL-3.0-or-later */
 
-import {DivIcon} from 'leaflet';
+import {MarkerArtwork} from './marker-artwork.js';
 import balloon from './icons/balloon.png';
 import parachute from './icons/parachute.png';
 import './radiosonde-marker.css';
@@ -10,18 +10,6 @@ const balloonSize = 58.32;
 const parachuteSize = 64.8;
 const minimumLift = 4;
 const liftRange = 18;
-
-class RadiosondeIcon extends DivIcon {
-    // Use Leaflet's shadow lifecycle to keep the ground shadow in its own pane
-    // while moving, zooming, replacing icons, and removing markers.
-    createShadow(oldShadow) {
-        const shadow = oldShadow?.tagName === 'DIV' ? oldShadow : document.createElement('div');
-        shadow.innerHTML = this.options.shadowHtml;
-        shadow.setAttribute('aria-hidden', 'true');
-        this._setIconStyles(shadow, 'shadow');
-        return shadow;
-    }
-}
 
 export function getFlightPhase(points, verticalSpeed) {
     if (Number.isFinite(verticalSpeed) && Math.abs(verticalSpeed) > minimumClimbRate) {
@@ -58,7 +46,7 @@ export function createRadiosondeIcon({phase, altitude, name, stale = false, sele
     // Keep shadow changes normalized when adjusting the lift's pixel range.
     const height = (lift - minimumLift) / liftRange;
     const image = phase === 'descending' ? parachute : balloon;
-    // Treat received names as text before inserting them into Leaflet's HTML.
+    // Treat received names as text before inserting them into marker HTML.
     const label = document.createElement('span');
     label.className = 'packet-radiosonde-label';
     label.textContent = name ?? '';
@@ -70,7 +58,7 @@ export function createRadiosondeIcon({phase, altitude, name, stale = false, sele
         <rect x="6" y="6" width="${crosshairSize - 12}" height="${crosshairSize - 12}" />
         <path d="M${center} 1V11 M${center} ${crosshairSize - 11}V${crosshairSize - 1} M1 ${center}H11 M${crosshairSize - 11} ${center}H${crosshairSize - 1}" />
     </svg>` : '';
-    return new RadiosondeIcon({
+    return new MarkerArtwork({
         className: `packet-radiosonde-marker${stale ? ' packet-marker-stale' : ''}`,
         // The anchor is the shadow's center, so paths always end underneath
         // the floating symbol without changing the received map coordinates.

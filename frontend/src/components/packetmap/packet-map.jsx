@@ -3,14 +3,16 @@
 import React, {useEffect, useMemo, useRef, useState} from 'react';
 import {Alert, Box, Typography} from '@mui/material';
 import {alpha} from '@mui/material/styles';
-import {DivIcon, Icon, svg} from 'leaflet';
-import {CircleMarker, MapContainer, Marker, Pane, Polyline, TileLayer, Tooltip, useMap} from 'react-leaflet';
+import MapLibreMap, {Marker, Source, Layer, useMap} from 'react-map-gl/maplibre';
+import {maplibregl} from '../common/maplibre.js';
+import {MarkerArtwork} from './marker-artwork.js';
+import ArtworkMapMarker from './artwork-map-marker.jsx';
 import {useSelector} from 'react-redux';
 import {useTranslation} from 'react-i18next';
-import 'leaflet/dist/leaflet.css';
+import 'maplibre-gl/dist/maplibre-gl.css';
 import {homeIcon} from '../common/dataurl-icons.jsx';
-import {getTileLayerById} from '../common/tile-layers.jsx';
-import {getClassNamesBasedOnGridEditing, islandTitleBarCompactSx, MapStatusBar, TitleBar} from '../common/common.jsx';
+import {getTileLayerById, getMapLibreTileURL, MAP_ENGINE_MAPLIBRE} from '../common/tile-layers.jsx';
+import {getClassNamesBasedOnGridEditing, islandTitleBarCompactSx, MapStatusBar, SimpleTruncatedHtml, TitleBar} from '../common/common.jsx';
 import {isValidMapPosition, toLocationNumber} from '../filebrowser/position-utils.js';
 import useMapIslandFullscreen from '../earthview/use-map-island-fullscreen.js';
 import MapTitleControls from '../earthview/map-title-controls.jsx';
@@ -33,19 +35,10 @@ import {createMeshtasticRenderer, meshtasticPinSize} from './meshtastic-marker.j
 
 export const POSITION_COLORS = Object.fromEntries(Object.entries(TRANSMITTER_TYPES).map(([kind, value]) => [kind, value.color]));
 
-// Keep the smaller receiver icon local to this page; other maps share homeIcon.
-const receiverIcon = new Icon({
-    ...homeIcon.options,
-    iconSize: [17.1, 17.1],
-    iconAnchor: [8.55, 8.55],
-    popupAnchor: [8.55, 8.55],
-});
-
-const hybridReferenceLayers = ['World_Transportation', 'World_Boundaries_and_Places'].map((service, index) => ({
+const hybridReferenceLayers = ['World_Transportation', 'World_Boundaries_and_Places'].map((service) => ({
     id: service,
     url: `https://services.arcgisonline.com/ArcGIS/rest/services/Reference/${service}/MapServer/tile/{z}/{y}/{x}`,
     attribution: 'Esri, HERE, Garmin, &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, and the GIS user community',
-    zIndex: index + 1,
 }));
 
 function aprsPosition(point, details) {
@@ -57,7 +50,8 @@ function aprsPosition(point, details) {
 
 export function MapViewport({bounds, ready, fitRequest, preserveViewRequest = 0, padding = 42, paddingTop = padding,
     selectedTransmitterId = null, selectedPoint}) {
-    const map = useMap();
+    const {current} = useMap();
+    const map = current?.getMap();
     const [savedView] = useState(readMapView);
     const hasUserView = useRef(Boolean(savedView));
     const programmatic = useRef(false);
@@ -67,34 +61,40 @@ export function MapViewport({bounds, ready, fitRequest, preserveViewRequest = 0,
     const following = useRef(selectedTransmitterId !== null);
     const targetLatitude = selectedPoint?.latitude;
     const targetLongitude = selectedPoint?.longitude;
-    const fitOptions = useMemo(() => ({paddingTopLeft: [padding, paddingTop], paddingBottomRight: [padding, padding],
-        maxZoom: 13, animate: false}), [padding, paddingTop]);
+    const fitOptions = useMemo(() => ({padding: {top: paddingTop, left: padding, right: padding, bottom: padding},
+        maxZoom: 13, duration: 0}), [padding, paddingTop]);
+    // Playback stores [latitude, longitude]; MapLibre bounds use [longitude, latitude].
+    const fitBounds = useMemo(() => bounds.length ? bounds.reduce(([min, max], [lat, lon]) => [
+        [Math.min(min[0], lon), Math.min(min[1], lat)], [Math.max(max[0], lon), Math.max(max[1], lat)],
+    ], [[Infinity, Infinity], [-Infinity, -Infinity]]) : null, [bounds]);
 
     useEffect(() => {
         following.current = selectedTransmitterId !== null;
     }, [selectedTransmitterId]);
 
     useEffect(() => {
+        if (!map) return;
         // Guard map-generated events during restoration and automatic fitting.
         // Only a user's navigation should disable fitting for future results.
         if (savedView) {
             programmatic.current = true;
-            map.setView(savedView.center, savedView.zoom, {animate: false});
+            map.jumpTo({center: [savedView.center[1], savedView.center[0]], zoom: savedView.zoom});
             programmatic.current = false;
         }
         let zooming = false;
-        const panStarted = () => {
-            if (programmatic.current) return;
+        const panStarted = (event) => {
+            if (programmatic.current || event?.packetMapResize) return;
             hasUserView.current = true;
-            // Leaflet also emits movestart during zooms; changing zoom keeps the lock.
-            if (!zooming) following.current = false;
+            // MapLibre emits movestart before zoomstart. Inspect the camera's
+            // zoom state as well so wheel/button zooms keep the target lock.
+            if (!zooming && !map.isZooming()) following.current = false;
         };
         const zoomStarted = () => {
             zooming = true;
             if (!programmatic.current) hasUserView.current = true;
         };
-        const persist = () => {
-            if (!programmatic.current && hasUserView.current) {
+        const persist = (event) => {
+            if (!programmatic.current && !event?.packetMapResize && hasUserView.current) {
                 const {lat, lng} = map.getCenter();
                 writeStored(mapViewStoreName, {center: [lat, lng], zoom: map.getZoom()});
             }
@@ -117,25 +117,27 @@ export function MapViewport({bounds, ready, fitRequest, preserveViewRequest = 0,
     }, [map, savedView]);
 
     useEffect(() => {
+        if (!map) return;
         const observer = new ResizeObserver(() => {
             const center = ready && following.current && isValidMapPosition(targetLatitude, targetLongitude)
-                ? [targetLatitude, targetLongitude] : map.getCenter();
+                ? [targetLongitude, targetLatitude] : map.getCenter();
             programmatic.current = true;
-            map.invalidateSize({pan: false});
+            map.resize();
             if (!following.current && ready && !hasUserView.current && bounds.length) {
-                map.fitBounds(bounds, fitOptions);
+                map.fitBounds(fitBounds, fitOptions);
             } else {
-                // Leaflet otherwise shifts the center when the grid window
-                // shrinks. Preserve the user's view without saving resize events.
-                map.setView(center, map.getZoom(), {animate: false});
+                // Preserve the camera when a grid window shrinks, without
+                // saving the resize as manual navigation.
+                map.jumpTo({center, zoom: map.getZoom()});
             }
             programmatic.current = false;
         });
         observer.observe(map.getContainer());
         return () => observer.disconnect();
-    }, [map, bounds, ready, fitOptions, targetLatitude, targetLongitude]);
+    }, [map, bounds, fitBounds, ready, fitOptions, targetLatitude, targetLongitude]);
 
     useEffect(() => {
+        if (!map) return;
         // Presets preserve even an automatically fitted view through loading and
         // subsequent results. Only an explicit Fit all request releases it.
         if (lastPreserveViewRequest.current !== preserveViewRequest) hasUserView.current = true;
@@ -152,7 +154,7 @@ export function MapViewport({bounds, ready, fitRequest, preserveViewRequest = 0,
             hasUserView.current = true;
             if (ready && isValidMapPosition(targetLatitude, targetLongitude)) {
                 programmatic.current = true;
-                map.setView([targetLatitude, targetLongitude], map.getZoom(), {animate: false});
+                map.jumpTo({center: [targetLongitude, targetLatitude], zoom: map.getZoom()});
                 programmatic.current = false;
             }
             return;
@@ -161,10 +163,10 @@ export function MapViewport({bounds, ready, fitRequest, preserveViewRequest = 0,
         // results once ready instead of fitting the previous range's bounds.
         if (!ready || hasUserView.current || !bounds.length) return;
         programmatic.current = true;
-        map.invalidateSize({pan: false});
-        map.fitBounds(bounds, fitOptions);
+        map.resize();
+        map.fitBounds(fitBounds, fitOptions);
         programmatic.current = false;
-    }, [map, bounds, ready, fitRequest, preserveViewRequest, fitOptions, selectedTransmitterId, targetLatitude, targetLongitude]);
+    }, [map, bounds, fitBounds, ready, fitRequest, preserveViewRequest, fitOptions, selectedTransmitterId, targetLatitude, targetLongitude]);
     return null;
 }
 
@@ -181,10 +183,12 @@ export default function PacketMap({positions, transmitters, hasPositions = posit
     const [settingsOpen, setSettingsOpen] = useState(false);
     const {tileLayerId} = settings;
     const mapRef = useRef(null);
-    // Share an SVG renderer for curved ring labels; transmitter paths use canvas.
-    const visibilityRenderer = useMemo(() => svg({pane: 'packet-visibility'}), []);
     const meshtasticRenderer = useMemo(createMeshtasticRenderer, []);
-    const {islandRef, isFullscreen, toggleFullscreen} = useMapIslandFullscreen(() => mapRef.current?.invalidateSize({pan: false}));
+    // Fullscreen size adjustments emit movement events too; they must preserve
+    // the target lock and must not overwrite the user's saved camera.
+    const {islandRef, isFullscreen, toggleFullscreen} = useMapIslandFullscreen(
+        () => mapRef.current?.resize({packetMapResize: true})
+    );
     const applySettings = (next) => {
         setSettings(next);
         writeStored(mapSettingsStoreName, next);
@@ -194,7 +198,20 @@ export default function PacketMap({positions, transmitters, hasPositions = posit
     const receiverLongitude = toLocationNumber(receiver?.lon);
     const hasReceiver = isValidMapPosition(receiverLatitude, receiverLongitude);
     const baseLayerId = tileLayerId === 'hybrid' ? 'satellite' : tileLayerId;
-    const layer = getTileLayerById(baseLayerId, {t, preferences});
+    const layer = getTileLayerById(baseLayerId, {t, preferences, mapEngine: MAP_ENGINE_MAPLIBRE});
+    const tileURL = getMapLibreTileURL(baseLayerId, {t, preferences, mapEngine: MAP_ENGINE_MAPLIBRE});
+    const mapStyle = useMemo(() => {
+        const sources = {basemap: {type: 'raster', tiles: [tileURL], tileSize: 256, attribution: layer.attribution}};
+        const layers = [{id: 'basemap', type: 'raster', source: 'basemap'}];
+        // Transparent street references belong below all telemetry overlays.
+        if (tileLayerId === 'hybrid') hybridReferenceLayers.forEach(({id, url, attribution}) => {
+            sources[id] = {type: 'raster', tiles: [url], tileSize: 256, attribution};
+            layers.push({id, type: 'raster', source: id});
+        });
+        return {version: 8, sources, layers};
+    }, [tileURL, tileLayerId, layer.attribution]);
+    const attributionHtml = `<a href="https://maplibre.org/" title="Open source map rendering" target="_blank" rel="noopener noreferrer">MapLibre</a> | ${layer.attribution}`
+        + (tileLayerId === 'hybrid' ? ` | ${hybridReferenceLayers[0].attribution}` : '');
     const transmitterDetails = useMemo(() => new Map((transmitters || []).map((row) => [row.id, row.details])), [transmitters]);
     const tracks = useMemo(() => {
         const groups = new Map();
@@ -253,7 +270,7 @@ export default function PacketMap({positions, transmitters, hasPositions = posit
     const selectedPinHeight = selectedPoint?.kind === 'meshtastic' ? meshtasticPinSize[1]
         : showNodeSelection ? selectedCursor.icon?.options.iconSize?.[1] ?? 0 : 0;
     // Keep ground nodes/labels on canvas; only the selected node needs a DOM reticle.
-    const nodeSelectionIcon = useMemo(() => new DivIcon({
+    const nodeSelectionIcon = useMemo(() => new MarkerArtwork({
         className: 'packet-node-selection-marker', iconSize: [52, 52],
         iconAnchor: [26, 26 + selectedPinHeight / 2], html: selectionCrosshair,
     }), [selectedPinHeight]);
@@ -292,8 +309,6 @@ export default function PacketMap({positions, transmitters, hasPositions = posit
     // Pins extend upward from their coordinates; leave space for the callsign above them.
     const paddingTop = hasBalloons ? 124 : hasGroundPins ? 72 : 42;
 
-    // MapContainer freezes its initial className; keep pane styling on a live
-    // wrapper so layer-order changes also apply to maps that are already open.
     return <Box className="packet-map" ref={islandRef} sx={(theme) => ({height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column',
         '&:fullscreen': {width: '100vw', height: '100vh', bgcolor: 'background.paper'},
         '&:-webkit-full-screen': {width: '100vw', height: '100vh', bgcolor: 'background.paper'},
@@ -328,31 +343,28 @@ export default function PacketMap({positions, transmitters, hasPositions = posit
             isFullscreen={isFullscreen} onFullscreen={toggleFullscreen}
             tooltipContainer={isFullscreen ? islandRef.current : undefined} />
         <Box sx={{position: 'relative', flex: 1, minHeight: 0}}>
-            <MapContainer ref={mapRef} center={initialView?.center || (hasReceiver ? [receiverLatitude, receiverLongitude] : [20, 0])}
-                zoom={initialView?.zoom ?? (hasReceiver ? 9 : 2)} preferCanvas zoomControl={false} keyboard={false}
-                dragging={settings.enableMapDragging} scrollWheelZoom={settings.enableMapZooming}
-                doubleClickZoom={settings.enableMapZooming} touchZoom={settings.enableMapZooming} boxZoom={settings.enableMapZooming}
-                zoomSnap={0.25} zoomDelta={0.25} bounceAtZoomLimits={false}
-                style={{height: '100%', width: '100%'}}>
-                <MapInteractions enableMapDragging={settings.enableMapDragging} enableMapZooming={settings.enableMapZooming} />
+            {/* MapViewport owns resizing so its camera guards cover resize events. */}
+            <MapLibreMap ref={mapRef} mapLib={maplibregl} mapStyle={mapStyle} attributionControl={false}
+                trackResize={false}
+                initialViewState={{latitude: initialView?.center[0] ?? (hasReceiver ? receiverLatitude : 20),
+                    longitude: initialView?.center[1] ?? (hasReceiver ? receiverLongitude : 0),
+                    zoom: initialView?.zoom ?? (hasReceiver ? 9 : 2)}}
+                dragPan={settings.enableMapDragging} scrollZoom={settings.enableMapZooming}
+                doubleClickZoom={settings.enableMapZooming} touchZoomRotate={settings.enableMapZooming}
+                boxZoom={settings.enableMapZooming} dragRotate={false} touchPitch={false} keyboard={false}
+                renderWorldCopies={false} maxPitch={0} style={{height: '100%', width: '100%'}}>
+                <MapInteractions enableMapDragging={settings.enableMapDragging} />
                 <MapViewport bounds={bounds} ready={!loading} fitRequest={`${fitRequest}:${localFit}`}
                     preserveViewRequest={preserveViewRequest} selectedTransmitterId={selectedTransmitterId}
                     selectedPoint={selectedPoint} paddingTop={paddingTop} />
-                <TileLayer key={baseLayerId} url={layer.url} attribution={layer.attribution} zIndex={0} />
-                {/* Transparent references share the tile pane, below transmitter paths and markers. */}
-                {tileLayerId === 'hybrid' && hybridReferenceLayers.map(({id, ...reference}) =>
-                    <TileLayer key={id} {...reference} />)}
-                {/* Keep visibility rings below ground shadows (350) and paths (400). */}
-                <Pane name="packet-visibility" style={{zIndex: 300, pointerEvents: 'none'}}>
-                    {visibilityCircles.map(({id, radius, color, pathLabel}) => <VisibilityCircle key={id}
-                        center={[selectedPoint.latitude, selectedPoint.longitude]} radius={radius} interactive={false}
-                        renderer={visibilityRenderer} label={pathLabel}
-                        pathOptions={{color, fill: false, weight: 2, opacity: 0.85, dashArray: '8 6'}} />)}
-                </Pane>
-                {/* Keep home above ground shadows (350), below canvas labels (400) and transmitter markers (600). */}
-                {hasReceiver && <Pane name="packet-home" style={{zIndex: 375}}>
-                    <Marker position={[receiverLatitude, receiverLongitude]} icon={receiverIcon} />
-                </Pane>}
+                {visibilityCircles.map(({id, radius, color, pathLabel}) => <VisibilityCircle key={id}
+                    center={[selectedPoint.latitude, selectedPoint.longitude]} radius={radius} label={pathLabel}
+                    pathOptions={{color, fill: false, weight: 2, opacity: 0.85, dashArray: '8 6'}} />)}
+                {hasReceiver && <Marker latitude={receiverLatitude} longitude={receiverLongitude} anchor="center"
+                    style={{pointerEvents: 'none', zIndex: 2}}>
+                    <img src={homeIcon.options.iconUrl} alt={t('packet_map.home', {defaultValue: 'Home'})}
+                        style={{width: 17.1, height: 17.1}} />
+                </Marker>}
                 {/* Point clicks select the transmitter; details stay in the info panel. */}
                 {tracks.map(({id, points}) => {
                     const latest = points[points.length - 1];
@@ -362,10 +374,14 @@ export default function PacketMap({positions, transmitters, hasPositions = posit
                         ? '#9e9e9e' : color;
                     return <React.Fragment key={id}>
                         {settings.showTracks && id === selectedTransmitterId && selectedPaths.filter((path) => path.length > 1)
-                            .map((path, index) => <Polyline key={`trail:${index}`} positions={path} smoothFactor={0.5}
-                                pathOptions={{color: latest.kind === 'adsb' && current?.stale ? '#9e9e9e' : color,
-                                    weight: 2, opacity: latest.kind === 'adsb' ? current?.stale ? 0.15 : 0.3 : 1,
-                                    lineCap: 'round', lineJoin: 'round'}} />)}
+                            .map((path, index) => <Source key={`trail:${index}`} id={`packet-trail-${index}`} type="geojson"
+                                data={{type: 'Feature', properties: {}, geometry: {type: 'LineString',
+                                    coordinates: path.map(([lat, lon]) => [lon, lat])}}}>
+                                <Layer id={`packet-trail-line-${index}`} type="line"
+                                    layout={{'line-cap': 'round', 'line-join': 'round'}}
+                                    paint={{'line-color': latest.kind === 'adsb' && current?.stale ? '#9e9e9e' : color,
+                                        'line-width': 2, 'line-opacity': latest.kind === 'adsb' ? current?.stale ? 0.15 : 0.3 : 1}} />
+                            </Source>)}
                         {current && (current.point.kind === 'meshtastic' ? <MeshtasticMapMarker key="cursor" id={id}
                             latitude={current.point.latitude} longitude={current.point.longitude}
                             name={current.point.name || current.point.source} selected={id === selectedTransmitterId}
@@ -376,19 +392,23 @@ export default function PacketMap({positions, transmitters, hasPositions = posit
                             icao={current.point.source} shapeName={current.aircraftShape.name} shapeScale={current.aircraftShape.scale}
                             squawk={current.aircraftReport?.squawk} emergency={current.aircraftReport?.emergency}
                             stale={current.stale} selected={id === selectedTransmitterId} onSelectTransmitter={selectTransmitter}
-                        /> : current.icon ? <Marker key="cursor" position={[current.point.latitude, current.point.longitude]}
-                            icon={current.icon} eventHandlers={{click: () => onSelectTransmitter?.(id)}}
-                        /> : <CircleMarker key="cursor" center={[current.point.latitude, current.point.longitude]} radius={5.985}
-                            eventHandlers={{click: () => onSelectTransmitter?.(id)}}
-                            pathOptions={{color: cursorColor, fillColor: cursorColor, fillOpacity: 0.85, weight: 2}}>
-                            {current.point.kind !== 'meshtastic' && <Tooltip>{current.point.name || current.point.source}</Tooltip>}
-                        </CircleMarker>)}
+                        /> : current.icon ? <ArtworkMapMarker key="cursor"
+                            latitude={current.point.latitude} longitude={current.point.longitude} icon={current.icon}
+                            onClick={() => selectTransmitter(id)}
+                        /> : <Marker key="cursor" latitude={current.point.latitude} longitude={current.point.longitude}
+                            anchor="center" style={{zIndex: 3}} onClick={(event) => {
+                                event.originalEvent.stopPropagation(); selectTransmitter(id);
+                            }}>
+                            <Box title={current.point.name || current.point.source} sx={{width: 12, height: 12,
+                                borderRadius: '50%', border: `2px solid ${cursorColor}`, bgcolor: alpha(cursorColor, 0.85),
+                                cursor: 'pointer'}} />
+                        </Marker>)}
                     </React.Fragment>;
                 })}
-                {showNodeSelection && <Marker
-                    position={[selectedPoint.latitude, selectedPoint.longitude]} icon={nodeSelectionIcon}
-                    interactive={false} keyboard={false} zIndexOffset={1000} />}
-            </MapContainer>
+                {showNodeSelection && <ArtworkMapMarker
+                    latitude={selectedPoint.latitude} longitude={selectedPoint.longitude} icon={nodeSelectionIcon}
+                    interactive={false} />}
+            </MapLibreMap>
             {/* Keep overlays clear of the pan buttons and let map gestures pass through. */}
             <Box sx={{position: 'absolute', top: 12, left: 12, right: 12, zIndex: 500, display: 'flex',
                 flexDirection: 'column', alignItems: 'flex-end', gap: 1, pointerEvents: 'none'}}>
@@ -398,6 +418,9 @@ export default function PacketMap({positions, transmitters, hasPositions = posit
                 </Alert>}
             </Box>
         </Box>
+        <MapStatusBar sx={{position: 'relative', bottom: 'auto', zIndex: 'auto', flexShrink: 0}}>
+            <SimpleTruncatedHtml className="attribution" htmlString={attributionHtml} />
+        </MapStatusBar>
         <MapStatusBar sx={{position: 'relative', bottom: 'auto', zIndex: 'auto', flexShrink: 0,
             display: 'flex', alignItems: 'center', gap: 2, overflowX: 'auto', whiteSpace: 'nowrap'}}>
             <Typography variant="caption">{t('packet_map.packet_count', {defaultValue: '{{count}} positions', count: positions.length})}</Typography>

@@ -7,7 +7,7 @@ import {aircraftReceptionAt} from './reception.js';
 
 const staleAfter = 60 * 60 * 1000;
 
-// Use the same projection as Leaflet's paths so an interpolated marker stays
+// Use the same Mercator projection as the map so an interpolated marker stays
 // on the drawn segment, including at high latitudes.
 const mercatorY = (latitude) => Math.log(Math.tan(Math.PI / 4 + Math.max(-85.051129, Math.min(85.051129, latitude)) * Math.PI / 360));
 const latitudeAtY = (y) => (2 * Math.atan(Math.exp(y)) - Math.PI / 2) * 180 / Math.PI;

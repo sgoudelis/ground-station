@@ -1,35 +1,22 @@
 /** Copyright (c) 2026 Efstratios Goudelis — GPL-3.0-or-later */
 
 import React, {useEffect, useMemo} from 'react';
-import {useMap} from 'react-leaflet';
-import {MeshtasticMarker} from './meshtastic-marker.js';
-import {typeColor} from './transmitters.js';
+import {useMap} from 'react-map-gl/maplibre';
 
 export default React.memo(function MeshtasticMapMarker({id, latitude, longitude, name, selected = false, renderer, onSelectTransmitter}) {
-    const map = useMap();
-    // Position updates move the same layer; telemetry/selection never reloads its image.
-    const marker = useMemo(() => new MeshtasticMarker([latitude, longitude], {
-        renderer, radius: 5.985, color: typeColor('meshtastic'), fillOpacity: 0.85, weight: 2, label: name ?? '', selected,
-    }), [renderer]);
+    const {current} = useMap();
+    const map = current?.getMap();
+    // Keep the registration stable through telemetry, position and selection updates.
+    const marker = useMemo(() => ({}), []);
+    useEffect(() => {
+        if (!map) return;
+        renderer.add(marker, map);
+        return () => renderer.remove(marker);
+    }, [marker, renderer, map]);
 
     useEffect(() => {
-        marker.addTo(map);
-        return () => marker.remove();
-    }, [marker, map]);
-
-    useEffect(() => {
-        marker.setLatLng([latitude, longitude]);
-    }, [marker, latitude, longitude]);
-
-    useEffect(() => {
-        marker.setLabel(name, selected);
-    }, [marker, name, selected]);
-
-    useEffect(() => {
-        const select = () => onSelectTransmitter?.(id);
-        marker.on('click', select);
-        return () => marker.off('click', select);
-    }, [marker, id, onSelectTransmitter]);
-
+        Object.assign(marker, {latitude, longitude, name, selected, onSelect: () => onSelectTransmitter?.(id)});
+        map?.triggerRepaint();
+    }, [marker, map, latitude, longitude, name, selected, id, onSelectTransmitter]);
     return null;
 });

@@ -1,6 +1,6 @@
 /** Copyright (c) 2026 Efstratios Goudelis — GPL-3.0-or-later */
 
-import {DivIcon} from 'leaflet';
+import {MarkerArtwork} from './marker-artwork.js';
 import fixedPin from './icons/aprs/fixed.png';
 import mobilePin from './icons/aprs/mobile.png';
 import portablePin from './icons/aprs/portable.png';
@@ -111,7 +111,7 @@ export function createAprsIcon({position, report, phase, altitude, name, stale =
     image.src = symbol.image;
     image.alt = '';
     image.draggable = false;
-    return new DivIcon({
+    return new MarkerArtwork({
         className: `packet-aprs-marker${selected ? ' packet-aprs-selected' : ''}${stale ? ' packet-marker-stale' : ''}`,
         // Anchor the tip of each pin to the received position, rather than its center.
         iconSize: [34.2, 38.475],

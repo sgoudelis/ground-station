@@ -1,9 +1,3 @@
-.packet-map .leaflet-shadow-pane {
-    /* Ground shadows sit below paths (400); floating icons remain above (600). */
-    z-index: 350;
-    pointer-events: none;
-}
-
 .packet-radiosonde-marker {
     background: transparent;
     border: 0;
