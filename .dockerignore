@@ -111,6 +111,10 @@ backend/de421.bsp
 # Images
 *.png
 !frontend/public/gs-logo-green-blue.png
+!frontend/public/gs-logo-meridian.png
+!frontend/public/gs-logo-meridian-512.png
+!frontend/public/gs-tiny-meridian.png
+!frontend/public/gs-tiny-meridian-64.png
 *.jpg
 *.jpeg
 *.gif
