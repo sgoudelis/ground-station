@@ -2,18 +2,26 @@ import React from 'react';
 import {configureStore} from '@reduxjs/toolkit';
 import {Provider} from 'react-redux';
 import {createTheme, ThemeProvider} from '@mui/material/styles';
-import {fireEvent, render, screen, within} from '@testing-library/react';
+import {act, fireEvent, render, screen, within} from '@testing-library/react';
 import {beforeEach, describe, expect, it, vi} from 'vitest';
 import i18n from 'i18next';
 import {initReactI18next} from 'react-i18next';
 import TransmitterInfo from '../transmitter-info.jsx';
 import {aircraftUnitsStoreName} from '../storage.js';
+import AircraftFolderDialog from '../../filebrowser/aircraft-folder-dialog.jsx';
+import {toast} from 'react-toastify';
 
 await i18n.use(initReactI18next).init({lng: 'en', resources: {}});
 vi.mock('../../common/common.jsx', () => ({
     TitleBar: ({children}) => <div>{children}</div>, islandTitleBarCompactSx: {},
     getClassNamesBasedOnGridEditing: () => '',
 }));
+vi.mock('../../filebrowser/aircraft-folder-dialog.jsx', () => ({
+    default: vi.fn(({folder, onClose}) => <div role="dialog" aria-label={folder.icao}>
+        <button onClick={onClose}>Close aircraft folder</button>
+    </div>),
+}));
+vi.mock('react-toastify', () => ({toast: {error: vi.fn()}}));
 
 const transmitter = {
     id: 'radiosonde:RS41:TEST', name: 'TEST', kind: 'radiosonde', source: 'Receiver A', packet_count: 42,
@@ -36,7 +44,49 @@ function wrapper({children}) {
 }
 
 describe('Transmitter information', () => {
-    beforeEach(() => localStorage.clear());
+    beforeEach(() => {localStorage.clear(); vi.clearAllMocks();});
+
+    it('opens aircraft captures only on demand and keeps the dialog independent of live fixes', async () => {
+        const aircraft = {...transmitter, id: 'adsb:4d2406', kind: 'adsb', source: '4D2406'};
+        const folder = {id: 'decoded_folder:adsb_4d2406', icao: '4d2406'};
+        const socket = {connected: true, timeout: vi.fn(() => socket), emit: vi.fn()};
+        const element = (next) => <TransmitterInfo transmitter={next} socket={socket} />;
+        const {rerender} = render(element(aircraft), {wrapper});
+        expect(socket.emit).not.toHaveBeenCalled();
+        expect(AircraftFolderDialog).not.toHaveBeenCalled();
+        fireEvent.click(screen.getByRole('button', {name: 'Open aircraft captures'}));
+        expect(socket.emit).toHaveBeenCalledExactlyOnceWith('api.call', {
+            cmd: 'filebrowser.item', data: {id: folder.id},
+        }, expect.any(Function));
+        expect(screen.getByRole('button', {name: 'Open aircraft captures'})).toBeDisabled();
+        await act(async () => socket.emit.mock.calls[0][2](null, {success: true, data: folder}));
+        const dialog = screen.getByRole('dialog', {name: '4d2406'});
+        const renders = AircraftFolderDialog.mock.calls.length;
+        rerender(element({...aircraft, latitude: 42, packet_count: 43}));
+        expect(screen.getByRole('dialog', {name: '4d2406'})).toBe(dialog);
+        expect(AircraftFolderDialog).toHaveBeenCalledTimes(renders);
+        expect(socket.emit).toHaveBeenCalledTimes(1);
+        fireEvent.click(screen.getByRole('button', {name: 'Close aircraft folder'}));
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+        rerender(element(transmitter));
+        expect(screen.queryByRole('button', {name: 'Open aircraft captures'})).not.toBeInTheDocument();
+    });
+
+    it('ignores a pending aircraft folder after switching selection and reports missing captures', async () => {
+        const aircraft = {...transmitter, kind: 'adsb', source: '4D2406'};
+        const socket = {connected: true, timeout: vi.fn(() => socket), emit: vi.fn()};
+        const {rerender} = render(<TransmitterInfo transmitter={aircraft} socket={socket} />, {wrapper});
+        fireEvent.click(screen.getByRole('button', {name: 'Open aircraft captures'}));
+        rerender(<TransmitterInfo transmitter={{...aircraft, source: '40621D'}} socket={socket} />);
+        await act(async () => socket.emit.mock.calls[0][2](null, {success: true,
+            data: {id: 'decoded_folder:adsb_4d2406', icao: '4d2406'}}));
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', {name: 'Open aircraft captures'}));
+        await act(async () => socket.emit.mock.calls[1][2](null, {success: false, error: 'Library item not found'}));
+        expect(toast.error).toHaveBeenCalledWith('Library item not found');
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+        expect(screen.getByRole('button', {name: 'Open aircraft captures'})).toBeEnabled();
+    });
 
     it('shows four cockpit instruments with aviation conversions and remembers the metric choice', () => {
         const aircraft = {...transmitter, kind: 'adsb', source: '4D2406', details: {telemetry: {

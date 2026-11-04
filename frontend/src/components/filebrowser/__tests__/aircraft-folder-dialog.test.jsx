@@ -16,7 +16,7 @@ vi.mock('../flight-path-map.jsx', () => ({default: ({filter, run}) => <section d
 const state = (callsign, fields = {}) => ({icao: '406b90', callsign, timestamp: 1, captured_at: '2026-11-01', receiver_id: 'rx',
     aircraft: {registration: `G-${callsign}`, engine_type: 'P', military_status: 'unclassified', database: {version: 529}}, ...fields});
 
-function renderDialog(fields = {}) {
+function renderDialog(fields = {}, props = {}) {
     const handlers = new Map();
     const requests = [];
     const folder = {id: 'decoded_folder:adsb_406b90', icao: '406b90', packet_count: 1, run_count: 1, ...fields};
@@ -31,12 +31,13 @@ function renderDialog(fields = {}) {
         }),
     };
     const respond = async (index, data) => act(async () => requests[index].reply(null, {success: true, data}));
-    return {...render(<AircraftFolderDialog folder={folder} socket={socket} onClose={vi.fn()} onDelete={vi.fn()} />),
+    return {...render(<AircraftFolderDialog folder={folder} socket={socket} onClose={vi.fn()} onDelete={vi.fn()} {...props} />),
         respond, requests, handlers, folder};
 }
 
 it('tails history with its cursor, updates counts and clears the selection when a log resets', async () => {
     const {respond, requests, handlers, folder, unmount} = renderDialog({aircraft: {registration: 'G-LATEST'}});
+    expect(screen.getByRole('button', {name: 'Delete aircraft captures'})).toBeInTheDocument();
     await respond(0, {records: [state('FIRST')], cursor: {offset: 1, generation: 'a'}, start: 0, summary: folder});
     const history = within(screen.getByRole('table', {name: 'Aircraft history'}));
     expect(screen.getByRole('columnheader', {name: 'Classification'})).toBeInTheDocument();
@@ -206,11 +207,12 @@ it('closes row details on paging or run filtering without changing the latest ov
 });
 
 it('falls back to the ICAO address without inventing a country or empty optional fields', async () => {
-    const {respond} = renderDialog({icao: 'ffffff'});
+    const {respond} = renderDialog({icao: 'ffffff'}, {onDelete: undefined});
     await respond(0, {records: [], cursor: {offset: 0}, start: 0});
     const overview = within(screen.getByRole('region', {name: 'Aircraft overview'}));
     expect(screen.getByRole('dialog', {name: 'FFFFFF'})).toBeInTheDocument();
     expect(screen.queryByRole('img')).not.toBeInTheDocument();
     expect(overview.queryByRole('button', {name: 'Additional details'})).not.toBeInTheDocument();
     expect(screen.getByText('No recorded updates to display.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', {name: 'Delete aircraft captures'})).not.toBeInTheDocument();
 });

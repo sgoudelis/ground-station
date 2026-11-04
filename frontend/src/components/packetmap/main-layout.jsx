@@ -167,6 +167,7 @@ export default function PacketMapLayout() {
                 </StyledIslandParentNoScrollbar>
                 <StyledIslandParentNoScrollbar key="transmitter-info">
                     <TransmitterInfo transmitter={selectedTransmitter ?? expiredAircraft} selectedTransmitterId={selectedTransmitterId}
+                        socket={socket}
                         positions={positions} playbackTime={currentPlaybackTime} isLive={isLive}
                         onJumpToPosition={isLive ? undefined : setPlaybackTime}
                         loading={loading} gridEditable={gridEditable} onClearSelection={() => setSelectedTransmitterId(null)} />

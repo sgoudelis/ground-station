@@ -177,6 +177,7 @@
     "info": {
       "title": "Transmitter info",
       "clear_selection": "Clear transmitter selection",
+      "open_aircraft_folder": "Open aircraft captures",
       "select": "Select a transmitter on the map or in the list to view its information.",
       "loading": "Loading transmitter information…",
       "unavailable": "No packets for the selected transmitter in this date range.",

@@ -16,6 +16,7 @@ import {formatDateTime} from '../../utils/date-time.js';
 import {detailLabel, flattenDetails, typeColor, typeLabel} from './transmitters.js';
 import AircraftFlag from '../common/aircraft-flag.jsx';
 import AircraftDetails from '../common/aircraft-details.jsx';
+import AircraftFolderButton from './aircraft-folder-button.jsx';
 import {aircraftCountry} from '../../utils/aircraft-country.js';
 import {renderAircraftSymbol, selectAircraftShape} from './aircraft-symbol.js';
 import {aircraftColor, aircraftEmergency, aircraftEmergencyLabel} from '../../utils/aircraft-emergency.js';
@@ -50,7 +51,7 @@ function InfoSection({title, icon: Icon, fields}) {
 }
 
 export default function TransmitterInfo({transmitter, selectedTransmitterId = null, loading, gridEditable, onClearSelection,
-    positions, playbackTime, isLive = false, onJumpToPosition}) {
+    positions, playbackTime, isLive = false, onJumpToPosition, socket}) {
     const {t} = useTranslation('navigation');
     const {t: aircraftT} = useTranslation('common');
     const timeSettings = useUserTimeSettings();
@@ -59,6 +60,7 @@ export default function TransmitterInfo({transmitter, selectedTransmitterId = nu
     const label = (key, fallback) => t(`packet_map.${key}`, {defaultValue: fallback});
     // Source is the ICAO address for both saved and live aircraft records.
     const country = transmitter?.kind === 'adsb' ? aircraftCountry(transmitter.source) : null;
+    const aircraftAddress = transmitter?.kind === 'adsb' ? transmitter.source?.trim().toLowerCase() : null;
     const aircraft = transmitter?.aircraft ?? transmitter?.details?.telemetry?.aircraft;
     const selectedTrack = useMemo(() => ['adsb', 'radiosonde'].includes(transmitter?.kind) && positions
         ? buildPlaybackTrack(positions.filter((point) => point.transmitter_id === transmitter.id)) : null,
@@ -125,10 +127,13 @@ export default function TransmitterInfo({transmitter, selectedTransmitterId = nu
             <Typography id={titleId} variant="subtitle2" noWrap sx={{fontWeight: 'bold'}}>
                 {label('info.title', 'Transmitter info')}
             </Typography>
-            {selectedTransmitterId !== null && <Tooltip title={label('info.clear_selection', 'Clear transmitter selection')}>
-                <IconButton size="small" onClick={onClearSelection} sx={{p: '2px'}}
-                    aria-label={label('info.clear_selection', 'Clear transmitter selection')}><CloseIcon sx={{fontSize: 16}} /></IconButton>
-            </Tooltip>}
+            <Box sx={{display: 'flex', alignItems: 'center', gap: 0.5}}>
+                {aircraftAddress && <AircraftFolderButton key={aircraftAddress} socket={socket} icao={aircraftAddress} />}
+                {selectedTransmitterId !== null && <Tooltip title={label('info.clear_selection', 'Clear transmitter selection')}>
+                    <IconButton size="small" onClick={onClearSelection} sx={{p: '2px'}}
+                        aria-label={label('info.clear_selection', 'Clear transmitter selection')}><CloseIcon sx={{fontSize: 16}} /></IconButton>
+                </Tooltip>}
+            </Box>
         </TitleBar>
         {transmitter?.kind === 'meshtastic' ? <MeshtasticInfo key={transmitter.id} transmitter={transmitter} /> : transmitter ? <>
             <Box sx={{p: 1.25, borderBottom: 1, borderColor: 'divider', flexShrink: 0,

@@ -134,7 +134,7 @@ export default function AircraftFolderDialog({folder, socket, onClose, onDelete}
             </Paper>
         </DialogContent>
         <DialogActions disableSpacing sx={fileDialogActionsSx}>
-            <Button color="error" variant="outlined" startIcon={<DeleteIcon />} onClick={() => onDelete(detail)}>{t('adsb.delete', 'Delete aircraft captures')}</Button>
+            {onDelete && <Button color="error" variant="outlined" startIcon={<DeleteIcon />} onClick={() => onDelete(detail)}>{t('adsb.delete', 'Delete aircraft captures')}</Button>}
             <Button component="a" variant="outlined" href={detail.download_url} startIcon={<DownloadIcon />}>{t('adsb.download', 'Download captures')}</Button>
             <Button variant="outlined" onClick={onClose}>{t('adsb.close', 'Close')}</Button>
         </DialogActions>
