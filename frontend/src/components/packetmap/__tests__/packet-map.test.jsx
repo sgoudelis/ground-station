@@ -21,7 +21,7 @@ const {map, listeners, markerRenders} = vi.hoisted(() => {
         on: vi.fn((events, fn) => events.split(' ').forEach((event) => listeners.set(event, fn))),
         off: vi.fn((events) => events.split(' ').forEach((event) => listeners.delete(event))),
         touchZoomRotate: {disableRotation: vi.fn()},
-        resize: vi.fn(), fitBounds: vi.fn(), jumpTo: vi.fn(), isZooming: vi.fn(() => false),
+        resize: vi.fn(), fitBounds: vi.fn(), jumpTo: vi.fn(),
         project: vi.fn(([lng, lat]) => ({x: lng * 10, y: lat * -10})),
         zoomTo: vi.fn(), panBy: vi.fn(),
         getContainer: vi.fn(() => document.createElement('div')),
@@ -90,6 +90,7 @@ beforeEach(() => {
     localStorage.clear();
     listeners.clear();
     vi.clearAllMocks();
+    map.getZoom.mockReturnValue(8);
     // MapLibre emits these events for programmatic fits too.
     map.fitBounds.mockImplementation(() => {
         listeners.get('zoomstart')?.();
@@ -466,21 +467,11 @@ describe('Packet map viewport', () => {
         });
         expect(localStorage.getItem(mapViewStoreName)).toBe(saved);
 
-        // Zooming emits move events too, but keeps the selected target locked.
-        act(() => {
-            map.isZooming.mockReturnValue(true);
-            listeners.get('movestart')();
-            listeners.get('zoomstart')();
-            map.isZooming.mockReturnValue(false);
-            listeners.get('zoomend')();
-            listeners.get('moveend')();
-        });
-        const manualView = localStorage.getItem(mapViewStoreName);
         map.getZoom.mockReturnValueOnce(11);
         rerender(<MapViewport ready bounds={bounds} fitRequest={0}
             selectedTransmitterId="A" selectedPoint={{latitude: 41, longitude: 24}} />);
         expect(map.jumpTo).toHaveBeenLastCalledWith({center: [24, 41], zoom: 11});
-        expect(localStorage.getItem(mapViewStoreName)).toBe(manualView);
+        expect(localStorage.getItem(mapViewStoreName)).toBe(saved);
         act(() => resize());
         expect(map.jumpTo).toHaveBeenLastCalledWith({center: [24, 41], zoom: 8});
         expect(map.fitBounds).not.toHaveBeenCalled();
@@ -501,7 +492,11 @@ describe('Packet map viewport', () => {
         expect(map.fitBounds).toHaveBeenCalledExactlyOnceWith(bounds.map(([lat, lon]) => [lon, lat]), expect.any(Object));
     });
 
-    it('releases the selected target on manual pan and preserves the new view through updates and resize', () => {
+    it.each([
+        {navigation: 'pan', zoom: 8},
+        {navigation: 'zoom in', zoom: 9},
+        {navigation: 'zoom out', zoom: 7},
+    ])('releases the selected target on manual $navigation and preserves the new view through updates and resize', ({navigation, zoom}) => {
         let resize;
         vi.spyOn(globalThis, 'ResizeObserver').mockImplementation(function (callback) {
             resize = callback;
@@ -513,25 +508,34 @@ describe('Packet map viewport', () => {
             selectedTransmitterId="A" selectedPoint={{latitude: 40, longitude: 23}} />);
         expect(map.jumpTo).toHaveBeenLastCalledWith({center: [23, 40], zoom: 8});
 
-        // Both dragging and the pan buttons emit movestart without zoomstart.
-        act(() => { listeners.get('movestart')(); listeners.get('moveend')(); });
+        map.getZoom.mockReturnValue(zoom);
+        act(() => {
+            // MapLibre starts movement before zooming for wheel/button zooms.
+            listeners.get('movestart')();
+            if (navigation !== 'pan') {
+                listeners.get('zoomstart')();
+                listeners.get('zoomend')();
+            }
+            listeners.get('moveend')();
+        });
         const manualView = localStorage.getItem(mapViewStoreName);
+        expect(JSON.parse(manualView)).toEqual({center: [40.2, 24.3], zoom});
         map.jumpTo.mockClear();
         rerender(<MapViewport ready bounds={bounds} fitRequest={0}
             selectedTransmitterId="A" selectedPoint={{latitude: 41, longitude: 24}} />);
         expect(map.jumpTo).not.toHaveBeenCalled();
         expect(map.fitBounds).not.toHaveBeenCalled();
         act(() => resize());
-        expect(map.jumpTo).toHaveBeenLastCalledWith({center: {lat: 40.2, lng: 24.3}, zoom: 8});
+        expect(map.jumpTo).toHaveBeenLastCalledWith({center: {lat: 40.2, lng: 24.3}, zoom});
         expect(localStorage.getItem(mapViewStoreName)).toBe(manualView);
 
         // A new selection acquires the lock again, including previously panned targets.
         rerender(<MapViewport ready bounds={bounds} fitRequest={0}
             selectedTransmitterId="B" selectedPoint={{latitude: 42, longitude: 25}} />);
-        expect(map.jumpTo).toHaveBeenLastCalledWith({center: [25, 42], zoom: 8});
+        expect(map.jumpTo).toHaveBeenLastCalledWith({center: [25, 42], zoom});
         rerender(<MapViewport ready bounds={bounds} fitRequest={0}
             selectedTransmitterId="A" selectedPoint={{latitude: 41, longitude: 24}} />);
-        expect(map.jumpTo).toHaveBeenLastCalledWith({center: [24, 41], zoom: 8});
+        expect(map.jumpTo).toHaveBeenLastCalledWith({center: [24, 41], zoom});
     });
 });
 

@@ -81,17 +81,11 @@ export function MapViewport({bounds, ready, fitRequest, preserveViewRequest = 0,
             map.jumpTo({center: [savedView.center[1], savedView.center[0]], zoom: savedView.zoom});
             programmatic.current = false;
         }
-        let zooming = false;
-        const panStarted = (event) => {
+        const navigationStarted = (event) => {
             if (programmatic.current || event?.packetMapResize) return;
             hasUserView.current = true;
-            // MapLibre emits movestart before zoomstart. Inspect the camera's
-            // zoom state as well so wheel/button zooms keep the target lock.
-            if (!zooming && !map.isZooming()) following.current = false;
-        };
-        const zoomStarted = () => {
-            zooming = true;
-            if (!programmatic.current) hasUserView.current = true;
+            // Panning and zooming both release follow while keeping the selection.
+            following.current = false;
         };
         const persist = (event) => {
             if (!programmatic.current && !event?.packetMapResize && hasUserView.current) {
@@ -99,20 +93,16 @@ export function MapViewport({bounds, ready, fitRequest, preserveViewRequest = 0,
                 writeStored(mapViewStoreName, {center: [lat, lng], zoom: map.getZoom()});
             }
         };
-        const zoomEnded = () => {
-            zooming = false;
-            persist();
-        };
         // Movement from navigation buttons also counts as manual navigation.
-        map.on('movestart', panStarted);
-        map.on('zoomstart', zoomStarted);
+        map.on('movestart', navigationStarted);
+        map.on('zoomstart', navigationStarted);
         map.on('moveend', persist);
-        map.on('zoomend', zoomEnded);
+        map.on('zoomend', persist);
         return () => {
-            map.off('movestart', panStarted);
-            map.off('zoomstart', zoomStarted);
+            map.off('movestart', navigationStarted);
+            map.off('zoomstart', navigationStarted);
             map.off('moveend', persist);
-            map.off('zoomend', zoomEnded);
+            map.off('zoomend', persist);
         };
     }, [map, savedView]);
 
