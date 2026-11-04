@@ -11,7 +11,7 @@ import FlightIcon from '@mui/icons-material/Flight';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 import {useTranslation} from 'react-i18next';
-import MetadataField from './aircraft-metadata-field.jsx';
+import MetadataField from './file-dialog-metadata-field.jsx';
 import AircraftFlag from '../common/aircraft-flag.jsx';
 import {aircraftCountry} from '../../utils/aircraft-country.js';
 import {aircraftLabel, aircraftValue} from '../../utils/aircraft-metadata.js';

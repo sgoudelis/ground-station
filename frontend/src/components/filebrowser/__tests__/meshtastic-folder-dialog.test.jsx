@@ -1,5 +1,5 @@
 import React from 'react';
-import {act, fireEvent, render, screen, waitFor} from '@testing-library/react';
+import {act, fireEvent, render, screen, waitFor, within} from '@testing-library/react';
 import {configureStore} from '@reduxjs/toolkit';
 import {Provider} from 'react-redux';
 import {expect, test, vi} from 'vitest';
@@ -24,18 +24,19 @@ const packet = {filename: 'packet.bin', path: `meshtastic_2008e299/${runName}/pa
     url: `/decoded/meshtastic_2008e299/${runName}/packet.bin`, type: 'decoded',
     application: 'Position', payload_status: 'decoded', captured_at: folder.captured_at};
 
-function mount(failure = false) {
+function mount(failure = false, overrides = {}) {
+    const node = {...folder, ...overrides};
     const socket = {connected: true, on: vi.fn(), off: vi.fn(),
         emit: vi.fn((_event, {data}, callback) => callback(failure
             ? {success: false, error: 'Folder was removed'}
-            : {success: true, data: {...folder, page: data.page, total: data.run ? 3 : 51,
-                packets: [{...packet, filename: data.page === 2 ? 'older.bin' : 'packet.bin'}],
+            : {success: true, data: {...node, page: data.page, total: overrides.total ?? (data.run ? 3 : 51),
+                packets: overrides.packets || [{...packet, filename: data.page === 2 ? 'older.bin' : 'packet.bin'}],
                 runs: [{name: runName, packet_count: 3}],
             }})),
     };
     const onOpenPacket = vi.fn(), onDelete = vi.fn();
     render(<Provider store={configureStore({reducer: {filebrowser: reducer}})}>
-        <MeshtasticFolderDialog folder={folder} socket={socket} onClose={vi.fn()}
+        <MeshtasticFolderDialog folder={node} socket={socket} onClose={vi.fn()}
             onOpenPacket={onOpenPacket} onDelete={onDelete} />
     </Provider>);
     return {socket, onOpenPacket, onDelete};
@@ -74,4 +75,70 @@ test('paginates and filters capture runs, then refreshes when packets are saved'
 test('reports deleted or unavailable node captures', async () => {
     mount(true);
     expect(await screen.findByRole('alert')).toHaveTextContent('Folder was removed');
+});
+
+test('gives node identity a compact accessible header and preserves zero-valued device codes', async () => {
+    mount(false, {long_name: 'Thessaloniki North', short_name: 'SKG', hw_model: 0, role: 0});
+    await screen.findByText('packet.bin');
+    const dialog = within(screen.getByRole('dialog', {name: 'Thessaloniki North'}));
+    expect(dialog.getByRole('heading', {name: 'Thessaloniki North'})).toBeInTheDocument();
+    expect(dialog.getByText('51 packets')).toBeInTheDocument();
+    const overview = within(screen.getByRole('region', {name: 'Node details'}));
+    expect(overview.getByText('!2008e299')).toBeInTheDocument();
+    expect(overview.getByText('SKG')).toBeInTheDocument();
+    expect(overview.getByText('Hardware model code')).toBeInTheDocument();
+    expect(overview.getByText('Device role code')).toBeInTheDocument();
+    expect(overview.getAllByText('0')).toHaveLength(2);
+    expect(overview.getByText('First received (UTC)')).toBeInTheDocument();
+    expect(overview.getByText('Last received (UTC)')).toBeInTheDocument();
+});
+
+test('keeps telemetry measurements and packet context visible with units, false flags and unavailable readings', async () => {
+    mount(false, {latest_telemetry: {captured_at: '2026-11-03T08:10:00Z', values: {
+        source: '!2008e299', via_mqtt: false, battery_level: 0, voltage: {value: 3.75, unit: 'V'},
+        channel_utilization: {value: 12, unit: '%'}, temperature: null, broken: {value: 22, error: 'Bad reading'},
+    }, field_info: {
+        source: {label: 'Source', group: 'mesh'}, via_mqtt: {label: 'Via MQTT', group: 'mesh'},
+        battery_level: {label: 'Battery level', unit: '%', group: 'device_metrics'},
+        voltage: {label: 'Voltage', group: 'device_metrics'},
+        channel_utilization: {label: 'Channel utilization', group: 'device_metrics', calibrated: false},
+        temperature: {label: 'Temperature', group: 'environment_metrics'},
+        broken: {label: 'Sensor', group: 'environment_metrics'},
+    }}});
+    await screen.findByText('packet.bin');
+    const telemetry = within(screen.getByRole('region', {name: 'Latest telemetry packet'}));
+    expect(telemetry.getByRole('heading', {name: 'Device metrics'})).toBeVisible();
+    expect(telemetry.getByRole('heading', {name: 'Environment'})).toBeVisible();
+    expect(telemetry.getByRole('heading', {name: 'Packet context'})).toBeVisible();
+    expect(telemetry.getByText('0 %')).toBeVisible();
+    expect(telemetry.getByText('3.75 V')).toBeVisible();
+    expect(telemetry.getByText('12 (raw)')).toBeVisible();
+    expect(telemetry.getByText('No')).toBeVisible();
+    expect(telemetry.getAllByText('Unavailable')).toHaveLength(2);
+    expect(telemetry.getByText('Sensor').parentElement.querySelector('dd')).toHaveAttribute('title', 'Bad reading');
+});
+
+test('labels packet statuses without treating unsupported or unknown payloads as decoded', async () => {
+    mount(false, {packets: [
+        {...packet, filename: 'decoded.bin', path: 'decoded.bin'},
+        {...packet, filename: 'unsupported.bin', path: 'unsupported.bin', payload_status: 'unsupported'},
+        {...packet, filename: 'malformed.bin', path: 'malformed.bin', payload_status: 'malformed'},
+        {...packet, filename: 'unknown.bin', path: 'unknown.bin', payload_status: null},
+    ]});
+    await screen.findByText('decoded.bin');
+    const table = within(screen.getByRole('table', {name: 'Meshtastic packets'}));
+    expect(table.getByText('Decoded')).toBeInTheDocument();
+    expect(table.getByText('Unsupported')).toBeInTheDocument();
+    expect(table.getByText('Malformed')).toBeInTheDocument();
+    expect(table.getByText('Unknown')).toBeInTheDocument();
+    expect(table.getByRole('columnheader', {name: 'Received (UTC)'})).toBeInTheDocument();
+});
+
+test('uses the node ID when no name is recorded and handles an empty filtered run', async () => {
+    mount(false, {name: '!2008e299', long_name: '', short_name: '', packets: [], total: 0, latest_position: null});
+    expect(await screen.findByRole('dialog', {name: '!2008e299'})).toBeInTheDocument();
+    await screen.findByText('No packets in this run.');
+    const overview = within(screen.getByRole('region', {name: 'Node details'}));
+    expect(overview.queryByText('Hardware model code')).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', {name: 'Latest position'})).not.toBeInTheDocument();
 });

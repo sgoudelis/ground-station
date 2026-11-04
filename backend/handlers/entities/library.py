@@ -104,6 +104,19 @@ async def query_positions(
     return {"success": True, "data": result}
 
 
+async def flight_paths(_sio: Any, data: Optional[Dict], _logger: Any, _sid: str) -> Dict[str, Any]:
+    """Return the complete recorded path scope for one open flight dialog."""
+    request = data if isinstance(data, dict) else {}
+    item_id = request.get("id")
+    if not isinstance(item_id, str) or not item_id:
+        return {"success": False, "error": "id is required"}
+    try:
+        result = await asyncio.to_thread(get_inventory().flight_paths, item_id, request.get("run"))
+    except ValueError as exc:
+        return {"success": False, "error": str(exc)}
+    return {"success": True, "data": result}
+
+
 async def subscribe_adsb(sio, data, _logger, sid):
     enabled = (data or {}).get("enabled", True)
     if type(enabled) is not bool:
@@ -259,6 +272,7 @@ def register_handlers(registry: Any) -> None:
         {
             "filebrowser.query": (query_library, "api_call"),
             "filebrowser.positions": (query_positions, "api_call"),
+            "filebrowser.flightpaths": (flight_paths, "api_call"),
             "adsb.subscribe": (subscribe_adsb, "api_call"),
             "adsb.history": (adsb_history, "api_call"),
             "filebrowser.item": (get_library_item, "api_call"),

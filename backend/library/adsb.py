@@ -83,6 +83,7 @@ class AdsbFiles:
                             cache["latest"] = record
                         point = aircraft_position(record, f"adsb:{folder.name}/{relative}:{offset}")
                         if point:
+                            point["_run"] = row["run"]
                             # Full readsb reports belong in the log, not at every
                             # point of a potentially twelve-hour in-memory track.
                             point["_details"] = {

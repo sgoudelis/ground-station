@@ -292,10 +292,9 @@ const GridLayoutStorageCard = () => {
                     }}>
                         <Typography component="div" variant="body2" sx={{ fontSize: '0.813rem', color: 'text.primary' }}>
                             <ul style={{ margin: 0, paddingLeft: '1.5rem' }}>
-                                <li>{t('grid_layout_storage_card.earth_view_page', { defaultValue: 'Earth view page' })}</li>
-                                <li>{t('grid_layout_storage_card.target_page', { defaultValue: 'Target page' })}</li>
-                                <li>{t('grid_layout_storage_card.waterfall_page', { defaultValue: 'Waterfall page' })}</li>
-                                <li>{t('grid_layout_storage_card.celestial_page', { defaultValue: 'Celestial page' })}</li>
+                                {pageLayouts.map(({key, label}) => (
+                                    <li key={key}>{label}</li>
+                                ))}
                             </ul>
                         </Typography>
                     </Box>

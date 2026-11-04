@@ -10,6 +10,7 @@ import {callLibrary} from '../packetmap/use-packet-positions.js';
 import {useUserTimeSettings} from '../../hooks/useUserTimeSettings.jsx';
 import AircraftOverview, {AircraftOverviewHeader} from './aircraft-overview.jsx';
 import AircraftHistoryTable from './aircraft-history-table.jsx';
+import FlightPathMap from './flight-path-map.jsx';
 import {formatCaptureRunLabel} from './capture-run-label.js';
 import {
     fileDialogActionsSx,
@@ -89,6 +90,15 @@ export default function AircraftFolderDialog({folder, socket, onClose, onDelete}
         <AircraftOverviewHeader detail={detail} titleId={titleId} onClose={onClose} />
         <DialogContent sx={fileDialogContentSx}>
             <AircraftOverview detail={detail} timeSettings={timeSettings} />
+            <FlightPathMap socket={socket} folderId={folder.id} run={run} runs={detail.runs} settings={timeSettings}
+                filter={<TextField select size="small" label={t('adsb.run', 'Capture run')} value={run} sx={{width: {xs: '100%', sm: 280}, flexShrink: 0}}
+                    slotProps={{select: {displayEmpty: true}, inputLabel: {shrink: true}}}
+                    onChange={(event) => {setRun(event.target.value); setPageStart(null); setSelected(null);}}>
+                    <MenuItem value="">{t('adsb.all_runs', 'All runs')}</MenuItem>
+                    {(detail.runs || []).map((item) => <MenuItem key={item.name} value={item.name}>
+                        {formatCaptureRunLabel(item, timeSettings)}
+                    </MenuItem>)}
+                </TextField>} />
             <Paper variant="outlined" sx={fileDialogSectionSx}>
                 <Box sx={{...fileDialogSectionHeaderSx, px: {xs: 2, sm: 2.5}, bgcolor: 'background.paper',
                     flexDirection: {xs: 'column', sm: 'row'}, alignItems: {xs: 'stretch', sm: 'center'}}}>
@@ -99,14 +109,6 @@ export default function AircraftFolderDialog({folder, socket, onClose, onDelete}
                             <Typography variant="caption" color="text.secondary">{t('adsb.history_hint', 'Recorded ADS-B updates · Newest first')}</Typography>
                         </Box>
                     </Box>
-                    <TextField select size="small" label={t('adsb.run', 'Capture run')} value={run} sx={{width: {xs: '100%', sm: 280}, flexShrink: 0}}
-                        slotProps={{select: {displayEmpty: true}, inputLabel: {shrink: true}}}
-                        onChange={(event) => {setRun(event.target.value); setPageStart(null); setSelected(null);}}>
-                        <MenuItem value="">{t('adsb.all_runs', 'All runs')}</MenuItem>
-                        {(detail.runs || []).map((item) => <MenuItem key={item.name} value={item.name}>
-                            {formatCaptureRunLabel(item, timeSettings)}
-                        </MenuItem>)}
-                    </TextField>
                 </Box>
                 <Box sx={{px: {xs: 2, sm: 2.5}, py: 1, display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', columnGap: 2,
                     rowGap: 0.5, borderBottom: '1px solid', borderColor: 'divider'}}>

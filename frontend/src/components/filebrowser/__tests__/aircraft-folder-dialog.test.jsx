@@ -11,6 +11,8 @@ await i18n.use(initReactI18next).init({lng: 'en', resources: {en: {filebrowser, 
 vi.mock('../../../hooks/useUserTimeSettings.jsx', () => ({useUserTimeSettings: () => ({timezone: 'UTC'})}));
 vi.mock('../../../utils/date-time.js', () => ({formatDateTime: (date) => date}));
 
+vi.mock('../flight-path-map.jsx', () => ({default: ({filter, run}) => <section data-testid="flight-path-map" data-run={run}>{filter}</section>}));
+
 const state = (callsign, fields = {}) => ({icao: '406b90', callsign, timestamp: 1, captured_at: '2026-11-01', receiver_id: 'rx',
     aircraft: {registration: `G-${callsign}`, engine_type: 'P', military_status: 'unclassified', database: {version: 529}}, ...fields});
 
@@ -197,6 +199,7 @@ it('closes row details on paging or run filtering without changing the latest ov
     fireEvent.click(screen.getAllByRole('option')[1]);
     expect(screen.queryByRole('region', {name: /^Update received at/})).not.toBeInTheDocument();
     expect(requests[3].request.data.run).toBe('20261101T000000Z.gsadsb');
+    expect(screen.getByTestId('flight-path-map')).toHaveAttribute('data-run', '20261101T000000Z.gsadsb');
     await respond(3, {records: [state('FILTERED')], cursor: {offset: 1}, start: 0, summary: folder});
     expect(screen.getByRole('dialog', {name: 'G-LATEST'})).toBeInTheDocument();
     expect(overview.textContent).toBe(overviewBefore);

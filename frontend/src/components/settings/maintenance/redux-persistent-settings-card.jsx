@@ -100,6 +100,15 @@ const ReduxPersistentSettingsCard = () => {
         localStorage.removeItem('persist:earthViewTrack');
     };
 
+    // Keep page settings separate from widget layouts and other browser preferences.
+    const clearMapPersist = () => {
+        localStorage.removeItem('persist:packetMap');
+    };
+
+    const clearTrackingPersist = () => {
+        localStorage.removeItem('persist:targetSatTrack');
+    };
+
     const clearCelestialPersist = () => {
         localStorage.removeItem('persist:celestial');
         localStorage.removeItem('persist:celestialMonitored');
@@ -160,6 +169,52 @@ const ReduxPersistentSettingsCard = () => {
                     <Typography variant="body2" color="text.secondary" gutterBottom>
                         {t('redux_persistent_settings_card.or_clear_individual_settings', { defaultValue: 'Or clear individual settings:' })}
                     </Typography>
+                </Grid>
+
+                <Grid size={10}>
+                    {t('redux_persistent_settings_card.clear_map_settings', { defaultValue: 'Clear Map Settings' })}
+                    <Typography variant="body2" color="text.secondary">
+                        {t('redux_persistent_settings_card.resets_map_redux_settings', { defaultValue: 'Resets the time range and transmitter list filters, sorting, and page size' })}
+                    </Typography>
+                </Grid>
+                <Grid size={6}>
+                    <Button
+                        variant="outlined"
+                        color="warning"
+                        onClick={() => openIndividualConfirmDialog(
+                            t('redux_persistent_settings_card.clear_map_settings_confirmation', { defaultValue: 'Clear Map Settings?' }),
+                            t('redux_persistent_settings_card.clear_map_settings_description', { defaultValue: 'This will reset the time range and transmitter list filters, sorting, and page size on the Map page.' }),
+                            t('redux_persistent_settings_card.clear_map', { defaultValue: 'Clear Map' }),
+                            clearMapPersist,
+                        )}
+                        fullWidth
+                        size="small"
+                    >
+                        {t('redux_persistent_settings_card.clear', { defaultValue: 'Clear' })}
+                    </Button>
+                </Grid>
+
+                <Grid size={10}>
+                    {t('redux_persistent_settings_card.clear_tracking_settings', { defaultValue: 'Clear Live Tracking Settings' })}
+                    <Typography variant="body2" color="text.secondary">
+                        {t('redux_persistent_settings_card.resets_tracking_redux_settings', { defaultValue: 'Resets pass-table sorting, selected tracker, target lock, and automatic planetarium switching' })}
+                    </Typography>
+                </Grid>
+                <Grid size={6}>
+                    <Button
+                        variant="outlined"
+                        color="warning"
+                        onClick={() => openIndividualConfirmDialog(
+                            t('redux_persistent_settings_card.clear_tracking_settings_confirmation', { defaultValue: 'Clear Live Tracking Settings?' }),
+                            t('redux_persistent_settings_card.clear_tracking_settings_description', { defaultValue: 'This will reset pass-table sorting, the selected tracker, target lock, and automatic planetarium switching on the Live Tracking page.' }),
+                            t('redux_persistent_settings_card.clear_tracking', { defaultValue: 'Clear Live Tracking' }),
+                            clearTrackingPersist,
+                        )}
+                        fullWidth
+                        size="small"
+                    >
+                        {t('redux_persistent_settings_card.clear', { defaultValue: 'Clear' })}
+                    </Button>
                 </Grid>
 
                 <Grid size={10}>
@@ -378,6 +433,8 @@ const ReduxPersistentSettingsCard = () => {
                                 <li>{t('redux_persistent_settings_card.weather_settings', { defaultValue: 'Weather settings' })}</li>
                                 <li>{t('redux_persistent_settings_card.sdr_settings', { defaultValue: 'SDR settings' })}</li>
                                 <li>{t('redux_persistent_settings_card.file_browser_settings', { defaultValue: 'File browser settings' })}</li>
+                                <li>{t('redux_persistent_settings_card.map_settings', { defaultValue: 'Map settings (time range and transmitter list preferences)' })}</li>
+                                <li>{t('redux_persistent_settings_card.tracking_settings', { defaultValue: 'Live Tracking settings (pass-table sorting, selected tracker, target lock, planetarium switching)' })}</li>
                                 <li>{t('redux_persistent_settings_card.celestial_settings_map_monitored_table_display_options', { defaultValue: 'Celestial settings (map, monitored table, display options)' })}</li>
                             </ul>
                         </Typography>

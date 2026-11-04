@@ -35,6 +35,7 @@ from common.artifactdates import artifact_dates, parse_artifact_time, transcript
 from common.events import public_events
 from library.adsb import AdsbFiles
 from library.aprsfiles import scan_aprs
+from library.flightpaths import build_flight_paths
 from library.meshfiles import scan_mesh
 from library.positions import packet_positions
 from library.search import match_search, normalize_search, search_text
@@ -431,6 +432,28 @@ class LibraryInventory:
             "has_more": start + page_size < total,
             "diskUsage": self._disk_usage(),
         }
+
+    def flight_paths(self, item_id: str, run: Optional[str] = None) -> Dict[str, Any]:
+        """Read an entire folder/run track independently of history pagination."""
+        if not isinstance(item_id, str) or not item_id:
+            raise ValueError("id is required")
+        if run is not None and not isinstance(run, str):
+            raise ValueError("run must be a string")
+        if not self._ready:
+            self.rebuild()
+        with self._lock:
+            item = self._items.get(item_id)
+            if item is None:
+                raise ValueError("Library item not found")
+            if item.get("folder_kind") not in {"adsb", "radiosonde"}:
+                raise ValueError("Flight paths require an aircraft or radiosonde folder")
+            points = [
+                dict(point)
+                for point in item.get("_positions", [])
+                if not run or point["_run"] == run
+            ]
+            revision = self._revision
+        return {**build_flight_paths(points), "revision": revision}
 
     def query_positions(self, start: Any, end: Any = None) -> Dict[str, Any]:
         """Return dated geographic packets, with no upper bound in live mode."""
@@ -1177,9 +1200,10 @@ class LibraryInventory:
             run_summary["last_packet_at"] = max(run_summary["last_packet_at"], dates["captured_at"])
             relative = f"{folder.name}/{member}"
             url = f"/decoded/{quote(relative)}"
-            positions.extend(
-                packet_positions(metadata, f"decoded:{relative}", dates["captured_at"])
-            )
+            fixes = packet_positions(metadata, f"decoded:{relative}", dates["captured_at"])
+            for point in fixes:
+                point["_run"] = run
+            positions.extend(fixes)
             packets.append(
                 {
                     "type": "decoded",

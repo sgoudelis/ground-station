@@ -6,7 +6,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import {useTranslation} from 'react-i18next';
 import {AIRCRAFT_FIELDS, aircraftLabel, aircraftValue} from '../../utils/aircraft-metadata.js';
 import {formatDateTime} from '../../utils/date-time.js';
-import MetadataField from './aircraft-metadata-field.jsx';
+import MetadataField from './file-dialog-metadata-field.jsx';
 
 const gridSx = {
     display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 180px), 1fr))',
