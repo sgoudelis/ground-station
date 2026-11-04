@@ -40,6 +40,7 @@ import { useSelector } from 'react-redux';
 import { getDecoderParameters } from './vfo-marker/vfo-config.js';
 import { areDecoderParametersValid } from './decoder-parameters.js';
 import { DecoderNumberField } from './decoder-number-field.jsx';
+import LoraProfileSelect from './lora-profile-select.jsx';
 import { DecoderConfigSuggestion } from '../scheduler/decoder-config-suggestion.jsx';
 import { selectRunningRigTransmitters } from '../target/transmitter-selectors.js';
 import { useTranslation } from 'react-i18next';
@@ -291,6 +292,18 @@ const DecoderParamsDialog = ({
                         onApply={handleApplySuggestedConfig}
                         applyLabel={t('decoder_params_dialog.use_suggestion', { defaultValue: 'Use suggestion' })}
                     />
+
+                    {decoder === 'lora' && (
+                        <LoraProfileSelect
+                            vfoIndex={vfoIndex}
+                            parameters={draft.parameters}
+                            disabled={!vfoActive[vfoIndex]}
+                            onSelect={(parameters) => setDraft((current) => ({
+                                parametersEnabled: true,
+                                parameters: { ...current.parameters, ...parameters },
+                            }))}
+                        />
+                    )}
 
                     {/* Master Enable/Disable Checkbox */}
                     <Box sx={{ mb: 3, pb: 2, borderBottom: '1px solid', borderColor: 'divider', mt: isLocked && lockedTransmitter ? 0 : 0 }}>

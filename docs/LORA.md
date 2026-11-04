@@ -32,6 +32,44 @@ provide defaults; manual settings take precedence. A satellite can have multiple
 LoRa transmitters with different PHY settings. Sync word is satellite-specific;
 the generic default is 0x12. Legacy two-symbol sync arrays remain supported.
 
+## Receiver profiles
+
+The waterfall decoder parameters dialog has a grouped **LoRa profile** dropdown:
+
+- MeshCore: EU/UK Narrow, deprecated EU/UK Legacy, USA and Australia Narrow.
+- Meshtastic: Short Fast, Short Slow, Medium Fast, Medium Slow, Long Fast and Long Moderate.
+- LoRaWAN EU868: DR0–DR6, with separate uplink and downlink profiles.
+- LoRaWAN US915: uplink DR0–DR4 and downlink DR8–DR13.
+- Reticulum / RNode: an editable SF8/BW125/CR4/5 example with sync 0x12
+  and the SX126x RNode's 18-symbol minimum preamble. Reticulum networks have
+  configurable modem settings; match the local interface rather than assuming
+  this example is a network-wide default.
+- Generic LoRa: restores the decoder's default parameters.
+
+Selecting a profile enables parameter overrides in the dialog draft. **Apply**
+commits the settings; **Cancel** discards them. Editing a field displays
+**Custom** when the draft no longer matches a profile. Switching profiles resets
+all LoRa fields, including hidden implicit-header values. Suggested MeshCore
+frequencies are informational; tune the VFO separately.
+
+MeshCore profiles use sync 0x12 and current firmware preambles (32 symbols at
+SF7/8, 16 above SF8). Meshtastic uses sync 0x2B and preamble 16. LoRaWAN uses
+sync 0x34 and preamble 8; downlink profiles invert IQ. All supplied profiles use
+explicit headers and automatic LDRO. Header coding rate and CRC presence come
+from received packets. Each VFO receives one channel and data rate at a time.
+Selecting a profile does not add an application parser or decryption keys.
+
+Profile sources:
+
+- [MeshCore regional presets](https://api.meshcore.nz/api/v1/config) and
+  [preamble handling](https://github.com/meshcore-dev/MeshCore/blob/main/src/helpers/radiolib/RadioLibWrappers.h)
+- [Meshtastic radio settings](https://meshtastic.org/docs/overview/radio-settings/),
+  [sync word](https://github.com/meshtastic/firmware/blob/master/src/mesh/RadioLibInterface.h) and
+  [preamble](https://github.com/meshtastic/firmware/blob/master/src/mesh/RadioInterface.h)
+- LoRaWAN [EU868](https://www.thethingsnetwork.org/docs/lorawan/regional-parameters/eu868/) and
+  [US915](https://www.thethingsnetwork.org/docs/lorawan/regional-parameters/us915/)
+- [Reticulum RNode configuration](https://reticulum.network/manual/interfaces.html#rnode-lora-interface)
+
 ## KOSAR recording settings
 
 For the supplied NORAD 67264 recording, tune to **436.100 MHz** and use **SF8,

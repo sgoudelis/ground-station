@@ -1,6 +1,14 @@
 {
   "title": "Waterfall settings",
   "main_title": "Waterfall & Spectrum",
+  "lora_profiles": {
+    "label": "LoRa profile",
+    "custom": "Custom",
+    "help": "Load modem settings, adjust them below, then Apply. Tune the VFO to the network frequency separately.",
+    "suggested_frequency": "Suggested frequency: {{frequency}} MHz",
+    "reticulum_help": "Example SF8/BW125 settings for an SX126x RNode. Match the spreading factor, bandwidth, coding rate and preamble to your network.",
+    "lorawan_help": "Receives one channel and data rate at a time. Downlink profiles invert IQ. Explicit headers announce coding rate and CRC presence."
+  },
   "background": {
     "keep_receiving": "Keep receiving in background",
     "description": "Keep VFOs, decoders, and recordings running after pressing Stop or closing this tab. Unattended VFOs stay at their last frequency. The next user to join takes control. Uncheck this before pressing Stop to end the observation.",

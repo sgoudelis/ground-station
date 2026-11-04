@@ -96,7 +96,7 @@ export const getLoraParameters = (t = englishFallback) => ({
     },
     lora_sync_word: {
         label: t('decoder_parameters.sync_word', { defaultValue: 'Sync Word' }),
-        description: 'Satellite-specific network byte. KOSAR uses 0x34 (52).',
+        description: 'Network byte: MeshCore 0x12, Meshtastic 0x2B, LoRaWAN and KOSAR 0x34.',
         type: 'select', default: [0x12],
         options: [
             { value: [0, 0], label: 'Accept any sync word' },

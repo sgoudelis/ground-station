@@ -136,6 +136,116 @@ describe('Waterfall VFO parameter dialogs', () => {
         });
     });
 
+    it('loads Meshtastic into the draft, clears incompatible fields, and commits only on Apply', () => {
+        const onVFOPropertyChange = vi.fn();
+        renderDecoderDialog({
+            decoder: 'lora', parametersEnabled: false,
+            parameters: {
+                lora_implicit_header: true, lora_payload_length: 42, lora_has_crc: false,
+                lora_invert_iq: true, lora_ldro_mode: 1, fsk_baudrate: 4800,
+            },
+        }, onVFOPropertyChange);
+
+        // Profiles are available even while overrides are disabled; loading
+        // one enables its values without updating the running VFO.
+        chooseOption('LoRa profile', 'Meshtastic — Long Fast');
+        expect(onVFOPropertyChange).not.toHaveBeenCalled();
+        expect(screen.getByRole('switch', { name: 'Enable Parameter Overrides' })).toBeChecked();
+        expect(screen.getByRole('combobox', { name: 'Spreading Factor' })).toHaveTextContent('SF11');
+        expect(screen.getByRole('spinbutton', { name: 'Preamble Length' })).toHaveValue(16);
+        expect(screen.getByRole('switch', { name: 'Implicit Header' })).not.toBeChecked();
+        expect(screen.getByRole('switch', { name: 'Invert IQ' })).not.toBeChecked();
+        expect(screen.queryByRole('combobox', { name: 'Implicit Payload Length' })).not.toBeInTheDocument();
+
+        fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
+        expect(onVFOPropertyChange).toHaveBeenCalledExactlyOnceWith(1, {
+            parametersEnabled: true,
+            parameters: {
+                fsk_baudrate: 4800, lora_sf: 11, lora_bw: 250000, lora_cr: 1,
+                lora_sync_word: [0x2B], lora_preamble_len: 16, lora_ldro_mode: 2,
+                lora_implicit_header: false, lora_payload_length: 255,
+                lora_has_crc: true, lora_invert_iq: false,
+            },
+        });
+    });
+
+    it('uses MeshCore regional settings and shows Custom after an edit', () => {
+        const onVFOPropertyChange = vi.fn();
+        renderDecoderDialog({ decoder: 'lora', parametersEnabled: true, parameters: {} }, onVFOPropertyChange);
+
+        chooseOption('LoRa profile', 'MeshCore — EU/UK Narrow');
+        expect(screen.getByRole('spinbutton', { name: 'Preamble Length' })).toHaveValue(32);
+        expect(screen.getByRole('combobox', { name: 'Bandwidth' })).toHaveTextContent('62.5 kHz');
+        expect(screen.getByRole('combobox', { name: 'Coding Rate' })).toHaveTextContent('4/8');
+        expect(screen.getByText('Suggested frequency: 869.618 MHz')).toBeInTheDocument();
+
+        fireEvent.change(screen.getByRole('spinbutton', { name: 'Preamble Length' }), { target: { value: '24' } });
+        expect(screen.getByRole('combobox', { name: 'LoRa profile' })).toHaveTextContent('Custom');
+        expect(onVFOPropertyChange).not.toHaveBeenCalled();
+        fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
+        const updates = onVFOPropertyChange.mock.calls[0][1];
+        expect(updates.parameters.lora_preamble_len).toBe(24);
+        expect(updates).not.toHaveProperty('frequency');
+    });
+
+    it('sets LoRaWAN downlink IQ polarity and clears it when switching to uplink', () => {
+        const onVFOPropertyChange = vi.fn();
+        renderDecoderDialog({ decoder: 'lora', parametersEnabled: true, parameters: {} }, onVFOPropertyChange);
+
+        chooseOption('LoRa profile', 'LoRaWAN US915 DR8 — Downlink');
+        expect(screen.getByRole('combobox', { name: 'Spreading Factor' })).toHaveTextContent('SF12');
+        expect(screen.getByRole('combobox', { name: 'Bandwidth' })).toHaveTextContent('500 kHz');
+        expect(screen.getByRole('switch', { name: 'Invert IQ' })).toBeChecked();
+
+        chooseOption('LoRa profile', 'LoRaWAN US915 DR0 — Uplink');
+        expect(screen.getByRole('combobox', { name: 'LoRa profile' })).toHaveTextContent('LoRaWAN US915 DR0 — Uplink');
+        chooseOption('LoRa profile', 'LoRaWAN EU868 DR5 — Uplink');
+        expect(screen.getByRole('switch', { name: 'Invert IQ' })).not.toBeChecked();
+        fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
+        expect(onVFOPropertyChange.mock.calls[0][1].parameters).toEqual(expect.objectContaining({
+            lora_sf: 7, lora_bw: 125000, lora_sync_word: [0x34],
+            lora_preamble_len: 8, lora_has_crc: true, lora_invert_iq: false,
+        }));
+    });
+
+    it('offers an editable Reticulum example and discards profile changes on Cancel', () => {
+        const onVFOPropertyChange = vi.fn();
+        const onClose = vi.fn();
+        const vfo = { decoder: 'lora', parametersEnabled: false, parameters: {} };
+        const view = renderDecoderDialog(vfo, onVFOPropertyChange, onClose);
+
+        chooseOption('LoRa profile', 'Reticulum / RNode (example)');
+        expect(screen.getByText(/Example SF8\/BW125 settings for an SX126x RNode/)).toBeInTheDocument();
+        expect(screen.getByRole('spinbutton', { name: 'Preamble Length' })).toHaveValue(18);
+        chooseOption('Spreading Factor', 'SF9');
+        expect(screen.getByRole('combobox', { name: 'LoRa profile' })).toHaveTextContent('Custom');
+        fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+        expect(onClose).toHaveBeenCalledOnce();
+        expect(onVFOPropertyChange).not.toHaveBeenCalled();
+
+        view.unmount();
+        renderDecoderDialog(vfo, onVFOPropertyChange, onClose);
+        expect(screen.getByRole('spinbutton', { name: 'Preamble Length' })).toBeDisabled();
+        expect(screen.getByRole('spinbutton', { name: 'Preamble Length' })).toHaveValue(8);
+        expect(screen.getByRole('button', { name: 'Apply' })).toBeDisabled();
+    });
+
+    it('disables profile selection on inactive VFOs and only shows it for LoRa', () => {
+        const view = render(
+            <Provider store={store}>
+                <DecoderParamsDialog
+                    open onClose={vi.fn()} vfoIndex={1} vfoActive={{ 1: false }}
+                    vfoMarkers={{ 1: { decoder: 'lora', parameters: {} } }}
+                    onVFOPropertyChange={vi.fn()}
+                />
+            </Provider>
+        );
+        expect(screen.getByRole('combobox', { name: 'LoRa profile' })).toHaveAttribute('aria-disabled', 'true');
+        view.unmount();
+        renderDecoderDialog({ decoder: 'fsk', parameters: {} });
+        expect(screen.queryByRole('combobox', { name: 'LoRa profile' })).not.toBeInTheDocument();
+    });
+
     it('commits several transcription choices in one update only after Apply', () => {
         const onVFOPropertyChange = vi.fn();
         const onClose = vi.fn();
