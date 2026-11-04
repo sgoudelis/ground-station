@@ -57,7 +57,7 @@ import {
     styled
 } from "@mui/material";
 import {Account, AccountPopoverFooter, AccountPreview, SignOutButton} from "@toolpad/core";
-import {GroundStationLogoGreenBlue} from "../common/logo-dataurl.js";
+import {GroundStationLogoMeridianTiny} from "../common/logo-dataurl.js";
 import {stringAvatar} from "../common/string-avatar.js";
 import Grid from "@mui/material/Grid";
 import BorderColorIcon from '@mui/icons-material/BorderColor';
@@ -612,7 +612,7 @@ function CustomAppTitle() {
                 <Stack direction="row" alignItems="center" spacing={2}>
                     <Box display={{xs: "none", sm: "block"}}>
                         <Box display="flex" alignItems="center" gap={1}>
-                            <img src={GroundStationLogoGreenBlue} alt={t('dashboard_layout.ground_station', { defaultValue: 'Ground Station' })} width="30" height="30" />
+                            <img src={GroundStationLogoMeridianTiny} alt={t('dashboard_layout.ground_station', { defaultValue: 'Ground Station' })} width="30" height="30" />
                             <Typography variant="h6">{t('dashboard_layout.ground_station', { defaultValue: 'Ground Station' })}</Typography>
                             {/* Hide version indicator on phones and small tablets; show from ~768px and up */}
                             <Box sx={{

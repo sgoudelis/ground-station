@@ -17,7 +17,7 @@
  *
  */
 
-import {GroundStationLogoGreenBlue} from "../components/common/dataurl-icons.jsx";
+import {GroundStationLogoMeridian} from "../components/common/logo-dataurl.js";
 import { useTranslation } from 'react-i18next';
 
 // The logo is wrapped in a component so its alt text reacts to language changes
@@ -26,7 +26,7 @@ const BrandingLogo = () => {
     const { t } = useTranslation('common');
     return (
         <img
-            src={GroundStationLogoGreenBlue}
+            src={GroundStationLogoMeridian}
             alt={t('branding.ground_station', { defaultValue: 'Ground Station' })}
             style={{height: 128}}
         />

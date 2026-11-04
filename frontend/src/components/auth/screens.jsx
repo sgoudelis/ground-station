@@ -47,7 +47,7 @@ import { alpha } from '@mui/material/styles';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 
-import { GroundStationLogoGreenBlue } from '../common/dataurl-icons.jsx';
+import { GroundStationLogoMeridian } from '../common/logo-dataurl.js';
 import { useSocket } from '../common/socket.jsx';
 import { fetchLocationForUserId } from '../settings/location-slice.jsx';
 import DeferredIslandPlaceholder from '../common/deferredplaceholder.jsx';
@@ -145,7 +145,7 @@ function AuthCardHeader({ title, description }) {
         <Stack direction="row" spacing={1.5} alignItems="center">
             <Box
                 component="img"
-                src={GroundStationLogoGreenBlue}
+                src={GroundStationLogoMeridian}
                 alt={t('screens.ground_station', { defaultValue: 'Ground Station' })}
                 sx={{ width: 44, height: 44, objectFit: 'contain' }}
             />

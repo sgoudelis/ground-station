@@ -39,7 +39,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import GitHubIcon from '@mui/icons-material/GitHub';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import { useTranslation } from 'react-i18next';
-import { GroundStationLogoGreenBlue } from '../common/dataurl-icons.jsx';
+import { GroundStationLogoMeridian } from '../common/logo-dataurl.js';
 
 const AboutPage = () => {
     const theme = useTheme();
@@ -118,7 +118,7 @@ const AboutPage = () => {
                     <Grid container spacing={2} columns={12} alignItems="center">
                         <Grid size={{ xs: 12, md: 8 }}>
                             <Stack direction="row" spacing={2} alignItems="center">
-                                <img src={GroundStationLogoGreenBlue} alt={t('about.ground_station_logo', { defaultValue: 'Ground Station Logo' })} style={{ height: '56px', width: 'auto' }} />
+                                <img src={GroundStationLogoMeridian} alt={t('about.ground_station_logo', { defaultValue: 'Ground Station Logo' })} style={{ height: '56px', width: 'auto' }} />
                                 <Box>
                                     <Typography variant="h4" sx={{ fontWeight: 700 }}>
                                         {t('about.ground_station', { defaultValue: 'Ground Station' })}

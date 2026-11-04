@@ -606,7 +606,7 @@ COPY deploy/nginx/configure.sh /app/configure-nginx.sh
 RUN chmod +x /app/configure-nginx.sh
 RUN rm -f /etc/nginx/sites-enabled/default
 COPY deploy/nginx/lobby.html /app/lobby/lobby.html
-COPY frontend/public/gs-logo-green-blue.png /app/lobby/logo.png
+COPY frontend/public/gs-logo-meridian-512.png /app/lobby/logo.png
 
 # Copy the built frontend from the previous stage
 COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
