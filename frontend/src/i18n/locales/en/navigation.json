@@ -193,6 +193,89 @@
       "frame": "Packet frame",
       "additional": "Additional data"
     },
+    "squawk": {
+      "about": "About squawk {{code}}",
+      "title": "Squawk {{code}}",
+      "close": "Close squawk information",
+      "listing": "Code listing",
+      "regional_note": "Regional assignments depend on the airspace, not the aircraft’s registration. The same code can have other uses elsewhere.",
+      "unlisted": {
+        "title": "ATC-assigned or local code",
+        "description": "No special-purpose meaning is included for this code in this reference. Many codes are assigned by air traffic control to identify individual flights; local allocations may also apply."
+      },
+      "codes": {
+        "1000": {
+          "title": "Mode S aircraft identification",
+          "scope": "Mode S airspace, including the UK",
+          "description": "Used for instrument flight rules (IFR) flights identified by their downlinked aircraft ID, matched to the flight plan, rather than a unique Mode A code."
+        },
+        "1200": {
+          "title": "Visual flight rules (VFR)",
+          "scope": "United States",
+          "description": "The standard VFR code when air traffic control has not assigned another code and no other special code applies."
+        },
+        "1202": {
+          "title": "VFR glider",
+          "scope": "United States",
+          "description": "Used by gliders flying under visual flight rules instead of the standard VFR code 1200."
+        },
+        "1203": {
+          "title": "VFR formation flight",
+          "scope": "United States",
+          "description": "Used by the lead aircraft of a standard VFR formation that is not receiving air traffic control services."
+        },
+        "1255": {
+          "title": "Firefighting",
+          "scope": "United States",
+          "description": "Used by firefighting aircraft not in contact with air traffic control while travelling to, from, or within a designated firefighting area."
+        },
+        "1277": {
+          "title": "Search and rescue",
+          "scope": "United States",
+          "description": "May be assigned to VFR aircraft on authorized USAF or US Coast Guard search-and-rescue missions travelling to, from, or within the search area."
+        },
+        "2000": {
+          "title": "IFR conspicuity / no assigned code",
+          "scope": "United Kingdom",
+          "description": "Used for instrument flight rules (IFR) flights without an assigned code, or on entering UK airspace from an area where transponders were not required. It also has specified uses on the ground."
+        },
+        "4000": {
+          "title": "Military restricted-area operations",
+          "scope": "United States",
+          "description": "Used by military aircraft in restricted or warning areas when air traffic control has not assigned another code."
+        },
+        "7000": {
+          "title": "Visual flight rules (VFR) conspicuity",
+          "scope": "Europe, including the United Kingdom",
+          "description": "A common VFR code in European airspace. In the UK, it is used for VFR flights without a specific transponder code instruction from air traffic services."
+        },
+        "7500": {
+          "title": "Unlawful interference",
+          "scope": "International",
+          "description": "Signals unlawful interference with the flight, such as a hijacking."
+        },
+        "7600": {
+          "title": "Radio communication failure",
+          "scope": "International",
+          "description": "Signals a failure of radio communications."
+        },
+        "7700": {
+          "title": "General emergency",
+          "scope": "International",
+          "description": "Signals an emergency condition. The code alone does not identify the nature of the emergency."
+        },
+        "7777": {
+          "title": "Military interceptor operations",
+          "scope": "United States",
+          "description": "Reserved by the FAA for military interceptor operations. Other regions also use this code for radar test transponders."
+        },
+        "0000": {
+          "title": "Transponder malfunction",
+          "scope": "United Kingdom",
+          "description": "May be assigned when reported altitude is incorrect and altitude reporting cannot be switched off independently."
+        }
+      }
+    },
     "flight": {
       "instruments": "Flight instruments",
       "ground_speed": "Ground speed",

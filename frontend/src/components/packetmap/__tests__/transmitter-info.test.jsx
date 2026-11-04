@@ -127,6 +127,42 @@ describe('Transmitter information', () => {
         expect(container.innerHTML).not.toMatch(/NaN|Infinity/);
     });
 
+    it('explains the displayed squawk and closes outdated explanations when the code changes', () => {
+        const aircraft = {...transmitter, id: 'adsb:4d2406', kind: 'adsb', source: '4D2406'};
+        const element = (squawk) => <TransmitterInfo transmitter={{...aircraft, details: {telemetry: {squawk}}}} />;
+        const {rerender} = render(element('7700'), {wrapper});
+        fireEvent.click(screen.getByRole('button', {name: 'About squawk 7700'}));
+        const emergency = within(screen.getByRole('dialog', {name: 'Squawk 7700'}));
+        expect(emergency.getByText('General emergency')).toBeInTheDocument();
+        expect(emergency.getByText('International')).toBeInTheDocument();
+        expect(emergency.getByRole('link', {name: 'UK AIP ENR 1.6'})).toHaveAttribute('href', expect.stringContaining('nats.co.uk'));
+        expect(emergency.getByRole('link', {name: 'Code listing'})).toHaveAttribute('href', 'https://en.wikipedia.org/wiki/List_of_transponder_codes');
+
+        // A live update or playback fix must not leave the previous code's meaning open.
+        rerender(element('7000'));
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', {name: 'About squawk 7000'}));
+        const regional = within(screen.getByRole('dialog', {name: 'Squawk 7000'}));
+        expect(regional.getByText('Visual flight rules (VFR) conspicuity')).toBeInTheDocument();
+        expect(regional.getByText('Europe, including the United Kingdom')).toBeInTheDocument();
+        expect(regional.getByText(/Regional assignments depend on the airspace/)).toBeInTheDocument();
+        fireEvent.click(regional.getByRole('button', {name: 'Close squawk information'}));
+        expect(screen.getByRole('button', {name: 'About squawk 7000'})).toHaveAttribute('aria-expanded', 'false');
+
+        rerender(element('0042'));
+        fireEvent.click(screen.getByRole('button', {name: 'About squawk 0042'}));
+        const unlisted = within(screen.getByRole('dialog', {name: 'Squawk 0042'}));
+        expect(unlisted.getByText('ATC-assigned or local code')).toBeInTheDocument();
+        expect(unlisted.getByText(/No special-purpose meaning is included/)).toBeInTheDocument();
+        expect(unlisted.queryByText('General emergency')).not.toBeInTheDocument();
+
+        rerender(element(null));
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', {name: /^About squawk/})).not.toBeInTheDocument();
+        rerender(element('8888'));
+        expect(screen.queryByRole('button', {name: /^About squawk/})).not.toBeInTheDocument();
+    });
+
     it('explains reported emergencies, colors the header icon and removes cleared alerts', () => {
         const aircraft = {...transmitter, kind: 'adsb', details: {telemetry: {squawk: '7700', emergency: 'general'}}};
         const {container, rerender} = render(<TransmitterInfo transmitter={aircraft} />, {wrapper});

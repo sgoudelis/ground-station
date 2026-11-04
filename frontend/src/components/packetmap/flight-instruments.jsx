@@ -5,6 +5,7 @@ import {Box, Button, Tooltip} from '@mui/material';
 import {lighten} from '@mui/material/styles';
 import {useTranslation} from 'react-i18next';
 import {aircraftUnitsStoreName, readStored, writeStored} from './storage.js';
+import SquawkInfo from './squawk-info.jsx';
 import './flight-instruments.css';
 
 const polar = (angle, radius, cy = 74) => ({
@@ -189,7 +190,10 @@ export default function FlightInstruments({flight, locale, formatTime}) {
             </Instrument>
         </div>
         {!radiosonde && <dl className="flight-secondary">
-            <div><dt>{label('squawk', 'Squawk')}</dt><dd>{flight.squawk ?? '—'}</dd></div>
+            <div><dt>{label('squawk', 'Squawk')}</dt><dd>{flight.squawk ?? '—'}
+                {/* A changed code closes its explanation during live updates or playback. */}
+                {flight.squawk && <SquawkInfo key={flight.squawk} code={flight.squawk} />}
+            </dd></div>
             {flight.geometric !== null && (flight.onGround || flight.altitudeSource === 'barometric') && <div>
                 <dt>{label('geometric_altitude', 'Geometric altitude')}</dt>
                 <dd>{format(flight.geometric * (metric ? 1 : 1 / 0.3048))} {metric ? 'm' : 'ft'}</dd>
