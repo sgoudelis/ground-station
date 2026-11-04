@@ -12,8 +12,8 @@ const enumStates = ['none', 'general', 'lifeguard', 'minfuel', 'nordo', 'unlawfu
 const colors = {error: '#ef5350', warning: '#ffb300'};
 
 // Silent aircraft use gray even when their last report carried an emergency.
-export function aircraftColor(status, stale = false) {
-    return stale ? '#9e9e9e' : status?.color ?? '#66bb6a';
+export function aircraftColor(status, stale = false, normalColor = '#64b5f6') {
+    return stale ? '#9e9e9e' : status?.color ?? normalColor;
 }
 
 export function aircraftEmergency(report) {

@@ -2,7 +2,7 @@
 
 import React, {useId, useMemo} from 'react';
 import {Alert, Box, Button, Chip, CircularProgress, IconButton, Tooltip, Typography} from '@mui/material';
-import {alpha} from '@mui/material/styles';
+import {alpha, useTheme} from '@mui/material/styles';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import ExploreIcon from '@mui/icons-material/Explore';
 import HistoryIcon from '@mui/icons-material/History';
@@ -54,6 +54,7 @@ export default function TransmitterInfo({transmitter, selectedTransmitterId = nu
     const {t} = useTranslation('navigation');
     const {t: aircraftT} = useTranslation('common');
     const timeSettings = useUserTimeSettings();
+    const normalAircraftColor = useTheme().palette.info.main;
     const titleId = useId();
     const label = (key, fallback) => t(`packet_map.${key}`, {defaultValue: fallback});
     // Source is the ICAO address for both saved and live aircraft records.
@@ -76,8 +77,9 @@ export default function TransmitterInfo({transmitter, selectedTransmitterId = nu
     // Share the map's model selection and artwork, displayed upright without
     // its map-only heading, label or ground shadow.
     const aircraftSymbol = useMemo(() => transmitter?.kind === 'adsb'
-        ? renderAircraftSymbol(selectAircraftShape(aircraft), {angle: 0, color: aircraftColor(emergency, aircraftIsStale)}) : null,
-    [transmitter?.kind, aircraft, emergency?.color, aircraftIsStale]);
+        ? renderAircraftSymbol(selectAircraftShape(aircraft), {angle: 0,
+            color: aircraftColor(emergency, aircraftIsStale, normalAircraftColor)}) : null,
+    [transmitter?.kind, aircraft, emergency?.color, aircraftIsStale, normalAircraftColor]);
     const formatTime = (value) => formatDateTime(value, timeSettings);
     const formatNumber = (value, digits) => Number.isFinite(value)
         ? value.toLocaleString(timeSettings.locale, {maximumFractionDigits: digits}) : value;

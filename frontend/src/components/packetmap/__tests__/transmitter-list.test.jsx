@@ -224,7 +224,7 @@ it('keeps historical aircraft listed and follows fixes at the cursor instead of 
     expect(row().querySelector('path[fill]')).toHaveAttribute('fill', '#9e9e9e');
     update({rows, positions, playbackTime: received});
     expect(row()).toHaveTextContent('Receiving');
-    expect(row().querySelector('path[fill]')).toHaveAttribute('fill', '#66bb6a');
+    expect(row().querySelector('path[fill]')).toHaveAttribute('fill', '#0288d1');
     update({rows, positions, playbackTime: received + 180000});
     expect(row()).toHaveTextContent('Signal lost · 3m ago');
     update({rows, positions, playbackTime: received + 3600000});
@@ -246,7 +246,7 @@ it('preserves emergency highlights and explicit telemetry clears at the same pos
     const cleared = screen.getByRole('button', {name: '7700'});
     expect(cleared.className).not.toContain('transmitter-emergency');
     expect(cleared).not.toHaveTextContent('Squawk');
-    expect(cleared.querySelector('path[fill]')).toHaveAttribute('fill', '#66bb6a');
+    expect(cleared.querySelector('path[fill]')).toHaveAttribute('fill', '#0288d1');
 });
 
 it('keeps a bounded number of rows mounted with thousands of nodes', () => {

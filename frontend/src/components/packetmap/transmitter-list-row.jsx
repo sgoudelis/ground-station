@@ -2,7 +2,7 @@
 
 import React, {createContext, useContext, useId, useMemo} from 'react';
 import {Box, Chip, Typography} from '@mui/material';
-import {alpha} from '@mui/material/styles';
+import {alpha, useTheme} from '@mui/material/styles';
 import SensorsIcon from '@mui/icons-material/Sensors';
 import {useTranslation} from 'react-i18next';
 import {typeColor, typeLabel} from './transmitters.js';
@@ -36,8 +36,9 @@ const AircraftSymbol = React.memo(function AircraftSymbol({id, name, scale, squa
     // Only mounted aircraft icons and reception labels subscribe to ageing.
     // List models, sorting and telemetry stay stable as the cursor moves.
     const reception = useAircraftReception(id, capturedAt);
+    const theme = useTheme();
     const status = useMemo(() => aircraftEmergency({squawk, emergency}), [squawk, emergency]);
-    const color = aircraftColor(status, reception.status !== 'receiving');
+    const color = aircraftColor(status, reception.status !== 'receiving', theme.palette.info.main);
     const symbol = useMemo(() => renderAircraftSymbol({name, scale}, {angle: 315, color}), [name, scale, color]);
     return <Box component="span" aria-hidden="true" sx={iconSx} dangerouslySetInnerHTML={{__html: symbol}} />;
 });

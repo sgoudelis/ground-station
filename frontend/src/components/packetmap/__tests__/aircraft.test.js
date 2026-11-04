@@ -172,7 +172,7 @@ it('restores normal colors when cleared and keeps stale reports gray', () => {
     expect(initial.querySelector('path[fill]')).toHaveAttribute('fill', '#ffb300');
     expect(initial.querySelector('.packet-aircraft-label')).toHaveTextContent('Alert');
     const cleared = createAircraftIcon({squawk: '7000', emergency: 'none'}).createIcon(initial);
-    expect(cleared.querySelector('path[fill]')).toHaveAttribute('fill', '#66bb6a');
+    expect(cleared.querySelector('path[fill]')).toHaveAttribute('fill', '#64b5f6');
     expect(cleared.querySelector('.packet-aircraft-label')).not.toHaveTextContent('Alert');
     const stale = createAircraftIcon({squawk: '7700', stale: true}).createIcon(cleared);
     expect(stale.querySelector('path[fill]')).toHaveAttribute('fill', '#9e9e9e');

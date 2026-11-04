@@ -52,10 +52,10 @@ class AircraftIcon extends MarkerArtwork {
     }
 }
 
-export function createAircraftIcon({track = 0, name = '', icao, aircraft, shape = selectAircraftShape(aircraft), squawk, emergency, stale = false, selected = false} = {}) {
+export function createAircraftIcon({track = 0, name = '', icao, aircraft, shape = selectAircraftShape(aircraft), squawk, emergency, stale = false, selected = false, normalColor} = {}) {
     const angle = Number.isFinite(track) ? track : 0;
     const status = aircraftEmergency({squawk, emergency});
-    const color = aircraftColor(status, stale);
+    const color = aircraftColor(status, stale, normalColor);
     // Callsigns come from received messages. Escape them before using the
     // HTML icon, and keep the label outside the rotating aircraft symbol.
     const label = document.createElement('span');
