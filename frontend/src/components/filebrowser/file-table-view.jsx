@@ -703,7 +703,7 @@ export default function FileTableView({
                                         <TableCell>{t('file_table_view.name', { defaultValue: 'Name' })}</TableCell>
                                         <TableCell align="right">{t('file_table_view.size', { defaultValue: 'Size' })}</TableCell>
                                         <TableCell>{t('file_table_view.type', { defaultValue: 'Type' })}</TableCell>
-                                        <TableCell>{t('file_table_view.satellite', { defaultValue: '🛰️ Satellite' })}</TableCell>
+                                        <TableCell>{t('file_table_view.satellite', { defaultValue: 'Satellite' })}</TableCell>
                                         <TableCell>{t(`sort.${getFileBrowserDateField(sortBy)}`)}</TableCell>
                                         <TableCell align="right">{t('file_table_view.actions', { defaultValue: 'Actions' })}</TableCell>
                                     </TableRow>
