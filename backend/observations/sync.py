@@ -27,7 +27,7 @@ from common.logger import logger
 from crud.scheduledobservations import fetch_scheduled_observations
 from db import AsyncSessionLocal
 from db.models import ScheduledObservations
-from observations.constants import STATUS_MISSED, STATUS_SCHEDULED
+from observations.constants import STATUS_MISSED, STATUS_RUNNING, STATUS_SCHEDULED
 from observations.executor import ObservationExecutor
 from observations.helpers import log_execution_event, update_observation_status
 
@@ -85,10 +85,9 @@ class ObservationSchedulerSync:
 
         This method:
         1. Fetches observation from database
-        2. Removes existing APScheduler jobs for this observation
-        3. If observation is enabled and scheduled, creates new jobs:
-           - AOS job: executor.start_observation() at event_start
-           - LOS job: executor.stop_observation() at event_end
+        2. Ensures running observations retain a stop job, even when disabled
+        3. Rebuilds start/stop jobs for enabled, scheduled observations
+        4. Removes jobs for disabled or terminal observations
 
         Args:
             observation_id: The observation ID to sync
@@ -109,7 +108,10 @@ class ObservationSchedulerSync:
             # 1. Fetch observation from database
             async with AsyncSessionLocal() as session:
                 result = await fetch_scheduled_observations(session, observation_id)
-                if not result["success"] or not result["data"]:
+                if not result["success"]:
+                    # A failed read does not mean the observation was deleted.
+                    return {"success": False, "error": result.get("error")}
+                if not result["data"]:
                     logger.warning(f"Observation not found: {observation_id}")
                     # Remove jobs if they exist (observation was deleted)
                     await self._remove_observation_jobs(observation_id)
@@ -117,12 +119,20 @@ class ObservationSchedulerSync:
 
                 observation = result["data"]
 
-            # 2. Remove existing jobs first
-            await self._remove_observation_jobs(observation_id)
-
-            # 3. Check if observation should be scheduled
+            # 2. Running observations still need cleanup, regardless of enabled state.
             enabled = observation.get("enabled", True)
             status = observation.get("status", STATUS_SCHEDULED)
+            status_lower = status.lower() if isinstance(status, str) else ""
+            if status_lower == STATUS_RUNNING:
+                await self._remove_observation_jobs(observation_id, event_types=("start",))
+                stop_time = self._get_stop_time(observation)
+                now = datetime.now(timezone.utc)
+                # Recover observations whose stop job was lost and is already overdue.
+                await self._schedule_stop_job(observation_id, observation, max(stop_time, now))
+                return {"success": True, "action": "scheduled_stop"}
+
+            # 3. Rebuild jobs only for enabled, scheduled observations.
+            await self._remove_observation_jobs(observation_id)
             pass_info = observation.get("pass", {})
             event_start = pass_info.get("event_start")
             event_end = pass_info.get("event_end")
@@ -132,8 +142,6 @@ class ObservationSchedulerSync:
                 logger.debug(f"Observation {observation_id} is disabled, not scheduling")
                 return {"success": True, "action": "skipped_disabled"}
 
-            # Normalize status to lowercase for comparison
-            status_lower = status.lower() if isinstance(status, str) else ""
             if status_lower != STATUS_SCHEDULED:
                 logger.warning(
                     f"Observation {observation_id} ({observation.get('name')}) has status '{status}', not scheduling (expected '{STATUS_SCHEDULED}')"
@@ -159,19 +167,12 @@ class ObservationSchedulerSync:
                 logger.debug(f"Observation {observation_id} is in the past, not scheduling")
                 return {"success": True, "action": "skipped_past"}
 
-            # 4.5. Get task start/end times (pre-calculated and stored in observation)
+            # 4.5. Get task start time (pre-calculated and stored in observation)
             task_start_str = observation.get("task_start")
-            task_end_str = observation.get("task_end")
-
             task_start_time = (
                 datetime.fromisoformat(task_start_str.replace("Z", "+00:00"))
                 if task_start_str
                 else aos_time
-            )
-            task_end_time = (
-                datetime.fromisoformat(task_end_str.replace("Z", "+00:00"))
-                if task_end_str
-                else los_time
             )
 
             # 5. Schedule observation start job
@@ -221,42 +222,10 @@ class ObservationSchedulerSync:
                 )
 
             # 6. Schedule observation stop job
-            # If task_end differs from LOS, schedule stop at task_end time
-            # Otherwise, schedule at LOS time
             # TODO: Split this into separate task_end (decoders/recorders) and LOS (SDR/tracking) jobs
-            stop_time = task_end_time if (task_end_time and task_end_time < los_time) else los_time
-
+            stop_time = self._get_stop_time(observation)
             if stop_time > now:
-                stop_job_id = self._make_job_id(observation_id, "stop")
-                try:
-                    self.scheduler.add_job(
-                        self.executor.stop_observation,
-                        trigger=DateTrigger(run_date=stop_time),
-                        args=[observation_id],
-                        id=stop_job_id,
-                        name=f"Stop observation: {observation.get('name', observation_id)}",
-                        replace_existing=True,
-                        misfire_grace_time=300,  # 5 minute grace period
-                    )
-
-                    # Verify job was actually added
-                    job = self.scheduler.get_job(stop_job_id)
-                    if not job:
-                        raise RuntimeError(f"Stop job {stop_job_id} was not created in APScheduler")
-
-                    logger.info(
-                        f"Scheduled stop job for {observation.get('name')} at {stop_time.isoformat()}"
-                    )
-                    await log_execution_event(
-                        observation_id,
-                        f"Stop job scheduled for {stop_time.isoformat()}",
-                        "info",
-                    )
-                except Exception as e:
-                    error_msg = f"Failed to add stop job to APScheduler: {e}"
-                    logger.error(error_msg)
-                    await log_execution_event(observation_id, error_msg, "error")
-                    raise  # Re-raise to be caught by outer exception handler
+                await self._schedule_stop_job(observation_id, observation, stop_time)
 
             return {"success": True, "action": "scheduled"}
 
@@ -280,11 +249,10 @@ class ObservationSchedulerSync:
         try:
             logger.info("Starting full observation synchronization to APScheduler")
 
-            # 1. Remove all existing observation jobs
-            removed_count = await self._remove_all_observation_jobs()
-            logger.info(f"Removed {removed_count} existing observation jobs")
+            # Snapshot before reading so jobs created during synchronization are not pruned.
+            existing_job_ids = [job.id for job in self.scheduler.get_jobs()]
 
-            # 2. Fetch all observations from database
+            # 1. Read successfully before changing any existing jobs.
             async with AsyncSessionLocal() as session:
                 result = await fetch_scheduled_observations(session)
                 if not result["success"]:
@@ -296,7 +264,7 @@ class ObservationSchedulerSync:
 
             logger.info(f"Found {len(observations)} observations in database")
 
-            # 3. Check for missed observations and mark them
+            # 2. Check for missed observations and mark them
             now = datetime.now(timezone.utc)
             missed_count = 0
             for observation in observations:
@@ -319,10 +287,11 @@ class ObservationSchedulerSync:
                             await update_observation_status(self.sio, obs_id, STATUS_MISSED)
                             missed_count += 1
 
-            # 4. Sync each observation
+            # 3. Sync each observation
             stats = {
                 "total": len(observations),
                 "scheduled": 0,
+                "scheduled_stop": 0,
                 "skipped_disabled": 0,
                 "skipped_status": 0,
                 "skipped_past": 0,
@@ -345,8 +314,27 @@ class ObservationSchedulerSync:
                     stats["errors"] += 1
                     errors.append({"id": obs_id, "error": result.get("error")})
 
+            # Only prune jobs belonging to deleted observations; active stop jobs
+            # must remain scheduled throughout regeneration.
+            valid_job_ids = {
+                self._make_job_id(observation["id"], event_type)
+                for observation in observations
+                if observation.get("id")
+                for event_type in ("start", "stop")
+            }
+            removed_count = 0
+            for job_id in existing_job_ids:
+                if job_id.startswith(f"{self._job_prefix}_") and job_id not in valid_job_ids:
+                    try:
+                        self.scheduler.remove_job(job_id)
+                        removed_count += 1
+                    except Exception as e:
+                        logger.warning(f"Failed to remove orphaned job {job_id}: {e}")
+            logger.info(f"Removed {removed_count} orphaned observation jobs")
+
             logger.info(
                 f"Full synchronization complete: {stats['scheduled']} scheduled, "
+                f"{stats['scheduled_stop']} running stops scheduled, "
                 f"{stats['skipped_disabled']} disabled, {stats['skipped_status']} wrong status, "
                 f"{stats['skipped_past']} past, {stats.get('missed', 0)} marked as missed, "
                 f"{stats['errors']} errors"
@@ -383,6 +371,51 @@ class ObservationSchedulerSync:
     # HELPER METHODS
     # ============================================================================
 
+    def _get_stop_time(self, observation: Dict[str, Any]) -> datetime:
+        """Stop at task end or LOS, whichever comes first."""
+        event_end = observation.get("pass", {}).get("event_end")
+        if not event_end:
+            raise ValueError("Missing event end time")
+        los_time = datetime.fromisoformat(event_end.replace("Z", "+00:00"))
+        task_end = observation.get("task_end")
+        if task_end:
+            return min(datetime.fromisoformat(task_end.replace("Z", "+00:00")), los_time)
+        return los_time
+
+    async def _schedule_stop_job(
+        self, observation_id: str, observation: Dict[str, Any], stop_time: datetime
+    ) -> None:
+        """Retain correct stop jobs and replace outdated ones without a scheduling gap."""
+        stop_job_id = self._make_job_id(observation_id, "stop")
+        try:
+            existing_job = self.scheduler.get_job(stop_job_id)
+            if existing_job and existing_job.next_run_time == stop_time:
+                # Repeated regeneration must not accumulate duplicate scheduling logs.
+                return
+            self.scheduler.add_job(
+                self.executor.stop_observation,
+                trigger=DateTrigger(run_date=stop_time),
+                args=[observation_id],
+                id=stop_job_id,
+                name=f"Stop observation: {observation.get('name', observation_id)}",
+                replace_existing=True,
+                misfire_grace_time=300,  # 5 minute grace period
+            )
+            if not self.scheduler.get_job(stop_job_id):
+                raise RuntimeError(f"Stop job {stop_job_id} was not created in APScheduler")
+
+            logger.info(
+                f"Scheduled stop job for {observation.get('name')} at {stop_time.isoformat()}"
+            )
+            await log_execution_event(
+                observation_id, f"Stop job scheduled for {stop_time.isoformat()}", "info"
+            )
+        except Exception as e:
+            error_msg = f"Failed to add stop job to APScheduler: {e}"
+            logger.error(error_msg)
+            await log_execution_event(observation_id, error_msg, "error")
+            raise
+
     async def _clear_execution_log(self, observation_id: str) -> None:
         """
         Clear the execution log for an observation.
@@ -405,18 +438,21 @@ class ObservationSchedulerSync:
             logger.warning(f"Failed to clear execution log for {observation_id}: {e}")
             # Non-critical error, continue with scheduling
 
-    async def _remove_observation_jobs(self, observation_id: str) -> int:
+    async def _remove_observation_jobs(
+        self, observation_id: str, event_types: tuple[str, ...] = ("start", "stop")
+    ) -> int:
         """
         Remove all APScheduler jobs for a specific observation.
 
         Args:
             observation_id: The observation ID
+            event_types: Job types to remove; running observations only remove stale starts
 
         Returns:
             Number of jobs removed
         """
         count = 0
-        for event_type in ["start", "stop"]:
+        for event_type in event_types:
             job_id = self._make_job_id(observation_id, event_type)
             try:
                 self.scheduler.remove_job(job_id)
@@ -425,25 +461,6 @@ class ObservationSchedulerSync:
             except Exception:
                 # Job doesn't exist, that's fine
                 pass
-        return count
-
-    async def _remove_all_observation_jobs(self) -> int:
-        """
-        Remove all observation jobs from APScheduler.
-
-        Returns:
-            Number of jobs removed
-        """
-        count = 0
-        jobs = self.scheduler.get_jobs()
-        for job in jobs:
-            if job.id.startswith(f"{self._job_prefix}_"):
-                try:
-                    self.scheduler.remove_job(job.id)
-                    count += 1
-                    logger.debug(f"Removed job {job.id}")
-                except Exception as e:
-                    logger.warning(f"Failed to remove job {job.id}: {e}")
         return count
 
     def get_scheduled_observation_jobs(self) -> List[Dict[str, Any]]:
