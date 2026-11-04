@@ -115,9 +115,11 @@
     "batch_delete_failed": "Impossible de supprimer les éléments : {{error}}"
   },
   "purge_dialog": {
+    "item_type": "Type d’élément",
+    "all_types": "Tous",
     "button": "Purger",
     "title": "Purger les fichiers anciens",
-    "description": "Faites glisser le curseur sur une date ; tout ce qui a été utilisé pour la dernière fois avant cette date est définitivement supprimé du disque. Les forfaits d'observation et les produits décodés multi-fichiers comptent chacun comme un seul élément.",
+    "description": "Choisissez un type d’élément et faites glisser le curseur sur une date. Les éléments correspondants utilisés pour la dernière fois avant cette date seront définitivement supprimés du disque. Les ensembles d’observation et les produits décodés contenant plusieurs fichiers comptent chacun comme un seul élément.",
     "delete_before": "Supprimer avant le",
     "now": "maintenant",
     "items_files": "éléments seront supprimés ({{files}} fichiers, y compris les fichiers de métadonnées)",
@@ -130,7 +132,7 @@
     "purge": "Purger",
     "close": "Fermer",
     "confirm_title": "Purger {{count}} éléments ?",
-    "confirm_message": "Tout ce qui a été utilisé pour la dernière fois avant le {{date}} sera supprimé du disque, libérant environ {{bytes}}. Cette action est irréversible.",
+    "confirm_message": "Type d’élément : {{type}}. Les éléments correspondants utilisés pour la dernière fois avant le {{date}} seront supprimés du disque, libérant environ {{bytes}}. Cette action est irréversible.",
     "freed_so_far": "{{bytes}} libérés jusqu'ici",
     "removing": "Suppression de {{name}}...",
     "result_message": "{{count}} éléments supprimés ({{files}} fichiers, y compris les fichiers de métadonnées), {{bytes}} libérés.",

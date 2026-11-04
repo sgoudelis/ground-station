@@ -516,9 +516,11 @@
     "zoom_out_x": "缩小 X 轴"
   },
   "purge_dialog": {
+    "item_type": "项目类型",
+    "all_types": "全部",
     "button": "清理",
     "title": "清理旧文件",
-    "description": "将滑块拖到某个日期；在此之前最后使用过的所有内容都将从磁盘中永久删除。观测包和多文件解码产物各自算作一项。",
+    "description": "选择项目类型并将滑块拖到某个日期。所选类型中最后使用时间早于该日期的项目将从磁盘中永久删除。观测包和多文件解码产物各自算作一项。",
     "delete_before": "删除早于",
     "now": "现在",
     "items_files": "项将被删除（共 {{files}} 个文件，含元数据文件）",
@@ -531,7 +533,7 @@
     "purge": "清理",
     "close": "关闭",
     "confirm_title": "清理 {{count}} 项？",
-    "confirm_message": "在 {{date}} 之前最后使用过的所有内容都将从磁盘删除，大约释放 {{bytes}}。此操作无法撤销。",
+    "confirm_message": "项目类型：{{type}}。匹配该类型且最后使用时间早于 {{date}} 的项目将从磁盘删除，大约释放 {{bytes}}。此操作无法撤销。",
     "freed_so_far": "已释放 {{bytes}}",
     "removing": "正在删除 {{name}}...",
     "result_message": "已删除 {{count}} 项（共 {{files}} 个文件，含元数据文件），释放 {{bytes}}。",

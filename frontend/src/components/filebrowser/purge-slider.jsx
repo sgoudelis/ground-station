@@ -94,6 +94,7 @@ const PurgeSlider = ({
     showDates = true,
     disabled = false,
     onChange,
+    onChangeCommitted,
 }) => {
     const span = Math.max(1, max - min);
     const step = useMemo(() => Math.max(60000, Math.round(span / 720)), [span]);
@@ -270,6 +271,7 @@ const PurgeSlider = ({
                 aria-label={olderLabel}
                 getAriaValueText={() => cutoffText}
                 onChange={(_event, next) => onChange?.(min + max - Number(next))}
+                onChangeCommitted={(_event, next) => onChangeCommitted?.(min + max - Number(next))}
                 sx={{ ...sliderSx, left: asPercent(TRACK_LEFT) }}
             />
         </Box>

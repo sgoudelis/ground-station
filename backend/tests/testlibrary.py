@@ -556,6 +556,74 @@ def test_purge_preview_counts_each_group_as_a_single_item(inventory):
     assert preview["skippedInProgress"] == 0
 
 
+@pytest.mark.parametrize("item_type", ["all", *inventorymodule.PURGE_TYPE_FILTERS])
+def test_purge_type_matches_browser_filters_and_keeps_other_types(inventory, item_type):
+    root = inventory.roots.decoded
+    _write(root / "weather.satdump_lrpt" / "image.png", b"image")
+    _write(root / "radiosonde_RS41_TEST" / "run.gssonde" / "packet.bin", b"sonde")
+    _write(root / "meshtastic_deadbeef" / "run.gsmesh" / "packet.bin", b"mesh")
+    for kind in ("radiosonde", "adsb", "meshtastic"):
+        _write(root / f"legacy{kind}.bin", b"packet")
+        _write(root / f"legacy{kind}.json", json.dumps({"decoder": {"type": kind}}))
+    storage = AdsbStorage(root, "receiver")
+    storage.append("track", aircraft_record({"hex": "406b90"}, time.time() - 400 * 86400, {}))
+    storage.flush()
+    _backdate(inventory.roots.data, 400)
+    inventory.rebuild()
+
+    filters = (
+        None
+        if item_type == "all"
+        else {key: kind == item_type for kind, key in inventorymodule.PURGE_TYPE_FILTERS.items()}
+    )
+    before = {item["id"] for item in inventory.query(page_size=100)["items"]}
+    expected = inventory.query(filters=filters, page_size=100)["items"]
+    expected_ids = {item["id"] for item in expected}
+    assert expected_ids
+
+    preview = inventory.purge_preview(_cutoff(100), item_type=item_type)
+    assert preview["itemType"] == item_type
+    assert preview["items"] == len(expected_ids)
+    assert preview["files"] == sum(item["file_count"] for item in expected)
+    assert preview["bytes"] == sum(item["purge_bytes"] for item in expected)
+    assert sum(bucket["items"] for bucket in preview["categories"].values()) == len(expected_ids)
+
+    progress = []
+    result = inventory.purge(_cutoff(100), progress.append, item_type=item_type)
+    assert result["deleted"] == len(expected_ids)
+    assert result["files"] == preview["files"]
+    assert result["bytesFreed"] == preview["bytes"]
+    assert progress[-1]["total"] == len(expected_ids)
+    assert {item["id"] for item in inventory.query(page_size=100)["items"]} == before - expected_ids
+
+
+def test_purge_type_scopes_the_date_range_and_active_item_count(inventory):
+    _backdate(inventory.roots.data, 400)
+    meta = inventory.roots.recordings / "capture.sigmf-meta"
+    meta.write_text(json.dumps({"global": {"gs:recording_in_progress": True}}))
+    _backdate(inventory.roots.recordings, 700)
+    preview = inventory.purge_preview(_cutoff(100), item_type="audio")
+    assert preview["skippedInProgress"] == 0
+    assert datetime.fromisoformat(preview["oldest"]) > datetime.now(timezone.utc) - timedelta(
+        days=500
+    )
+    assert inventory.purge_preview(_cutoff(100), item_type="recording")["skippedInProgress"] == 1
+    inventory.purge(_cutoff(100), item_type="audio")
+    empty = inventory.purge_preview(_cutoff(100), item_type="audio")
+    assert empty["items"] == 0
+    assert empty["oldest"] is None and empty["newest"] is None
+
+
+@pytest.mark.parametrize("item_type", ["invalid", "", None, [], {}, True])
+def test_purge_rejects_invalid_types_without_deleting(inventory, item_type):
+    before = inventory.query()["total"]
+    with pytest.raises(ValueError, match="itemType"):
+        inventory.purge_preview(_cutoff(100), item_type=item_type)
+    with pytest.raises(ValueError, match="itemType"):
+        inventory.purge(_cutoff(100), item_type=item_type)
+    assert inventory.query()["total"] == before
+
+
 def test_purge_preview_and_purge_skip_in_progress_work(inventory):
     _backdate(inventory.roots.data, 400)
     recording_root = inventory.roots.recordings
@@ -688,6 +756,40 @@ async def test_purge_preview_command_returns_aggregates(inventory, monkeypatch):
 
     bad = await library.purge_preview_library(None, {"cutoff": "nope"}, None, "sid")
     assert bad["success"] is False
+
+
+@pytest.mark.asyncio
+async def test_purge_commands_forward_type_and_reject_unknown_scopes(inventory, monkeypatch):
+    monkeypatch.setattr(library, "get_inventory", lambda: inventory)
+    _backdate(inventory.roots.data, 400)
+    request = {"cutoff": _cutoff(100), "itemType": "audio"}
+    preview = await library.purge_preview_library(None, request, None, "sid")
+    assert preview["data"]["itemType"] == "audio"
+    assert preview["data"]["items"] == 1
+
+    class FakeSio:
+        def __init__(self):
+            self.events = []
+
+        async def emit(self, event, payload, room=None):
+            self.events.append((event, payload))
+
+    sio = FakeSio()
+    reply = await library.purge_library(sio, request, logging.getLogger(__name__), "sid")
+    assert reply["success"] is True
+    await asyncio.gather(*list(library._purge_tasks))
+    done = next(payload for event, payload in sio.events if event == "library_purge_done")
+    assert done["success"] is True and done["deleted"] == 1
+    assert inventory.query()["total"] == 5
+    assert (inventory.roots.recordings / "capture.sigmf-data").exists()
+
+    for item_type in ("invalid", None, [], {}):
+        request["itemType"] = item_type
+        preview = await library.purge_preview_library(None, request, None, "sid")
+        reply = await library.purge_library(sio, request, logging.getLogger(__name__), "sid")
+        assert preview["success"] is False and "itemType" in preview["error"]
+        assert reply["success"] is False and "itemType" in reply["error"]
+    assert not library._purge_state["running"]
 
 
 @pytest.mark.asyncio

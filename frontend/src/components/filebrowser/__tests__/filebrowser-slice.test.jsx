@@ -362,7 +362,7 @@ test('changing responsive page size restarts paging', () => {
     expect(store.getState().filebrowser.page).toBe(1);
 });
 
-test('purge preview aggregates are stored per cutoff', async () => {
+test.each(['all', 'audio', 'radiosonde', 'adsb', 'meshtastic'])('purge preview forwards type %s', async (itemType) => {
     const preview = {
         cutoff: '2026-01-01T00:00:00.000Z',
         items: 7,
@@ -377,12 +377,13 @@ test('purge preview aggregates are stored per cutoff', async () => {
         connected: true,
         emit: vi.fn((event, payload, callback) => {
             expect(payload.cmd).toBe('filebrowser.purge-preview');
+            expect(payload.data.itemType).toBe(itemType);
             callback({ success: true, data: preview });
         }),
     };
     const store = createStore();
 
-    await store.dispatch(fetchPurgePreview({ socket, cutoff: preview.cutoff })).unwrap();
+    await store.dispatch(fetchPurgePreview({ socket, cutoff: preview.cutoff, itemType })).unwrap();
 
     expect(store.getState().filebrowser.purge.preview).toEqual(preview);
     expect(store.getState().filebrowser.purge.previewLoading).toBe(false);

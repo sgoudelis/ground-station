@@ -46,7 +46,7 @@ DECODED_PATTERNS = ("*.png", "*.jpg", "*.jpeg", "*.txt", "*.bin")
 
 # Maps an inventory item to the category the purge dialog groups it under.
 # ``decoded_folder`` items with the observation marker are automated
-# observation bundles; other decoded folders are SatDump or radiosonde products.
+# observation bundles; other decoded folders are grouped captures or SatDump products.
 PURGE_CATEGORIES = (
     "observation",
     "decoded_folder",
@@ -56,6 +56,28 @@ PURGE_CATEGORIES = (
     "audio",
     "transcription",
 )
+
+# Match the File Browser's type switches, including grouped and legacy packets.
+PURGE_TYPE_FILTERS = {
+    "recording": "showRecordings",
+    "snapshot": "showSnapshots",
+    "decoded": "showDecoded",
+    "observation": "showObservations",
+    "radiosonde": "showRadiosondes",
+    "adsb": "showAircraft",
+    "meshtastic": "showMeshtastic",
+    "audio": "showAudio",
+    "transcription": "showTranscriptions",
+}
+
+
+def _purge_filters(item_type: Any) -> Optional[Dict[str, bool]]:
+    """Reject unknown scopes rather than accidentally purging every type."""
+    if not isinstance(item_type, str) or item_type not in ("all", *PURGE_TYPE_FILTERS):
+        raise ValueError("itemType must be one of: all, " + ", ".join(PURGE_TYPE_FILTERS))
+    if item_type == "all":
+        return None
+    return {key: kind == item_type for kind, key in PURGE_TYPE_FILTERS.items()}
 
 
 def _iso(timestamp: float) -> str:
@@ -658,12 +680,16 @@ class LibraryInventory:
         revision = self.rebuild() if any(result["success"] for result in results) else self.revision
         return {"results": results, "revision": revision}
 
-    def _purge_candidates(self, deadline: datetime) -> List[tuple]:
+    def _purge_candidates(
+        self, deadline: datetime, filters: Optional[Dict[str, bool]] = None
+    ) -> List[tuple]:
         """Items older than the deadline, oldest first, minus in-progress work."""
         with self._lock:
             snapshot = list(self._items.values())
         candidates: List[tuple] = []
         for item in snapshot:
+            if not self._matches(item, filters, None, None):
+                continue
             if _purge_category(item) is None:
                 continue
             if _is_in_progress(item):
@@ -675,14 +701,19 @@ class LibraryInventory:
         candidates.sort(key=lambda pair: pair[0])
         return candidates
 
-    def purge_preview(self, cutoff: str) -> Dict[str, Any]:
+    def purge_preview(self, cutoff: str, item_type: str = "all") -> Dict[str, Any]:
         """Aggregate what a purge at the cutoff would remove, without deleting."""
         deadline = _parse_cutoff(cutoff)
+        filters = _purge_filters(item_type)
         # The preview is a deletion promise, so read current filesystem state.
         self.rebuild()
         with self._lock:
-            snapshot = list(self._items.values())
-        candidates = self._purge_candidates(deadline)
+            snapshot = [
+                item
+                for item in self._items.values()
+                if _purge_category(item) and self._matches(item, filters, None, None)
+            ]
+        candidates = self._purge_candidates(deadline, filters)
         categories: Dict[str, Dict[str, int]] = {
             category: {"items": 0, "files": 0, "bytes": 0} for category in PURGE_CATEGORIES
         }
@@ -716,6 +747,7 @@ class LibraryInventory:
         ]
         return {
             "cutoff": deadline.isoformat(),
+            "itemType": item_type,
             "items": len(candidates),
             "files": total_files,
             "bytes": total_bytes,
@@ -725,7 +757,9 @@ class LibraryInventory:
             "newest": max(activities).isoformat() if activities else None,
         }
 
-    def purge(self, cutoff: str, progress_callback: Optional[Any] = None) -> Dict[str, Any]:
+    def purge(
+        self, cutoff: str, progress_callback: Optional[Any] = None, item_type: str = "all"
+    ) -> Dict[str, Any]:
         """Delete every eligible item older than the cutoff, oldest first.
 
         The candidate set is recomputed at execution time so the caller cannot
@@ -733,9 +767,10 @@ class LibraryInventory:
         compact progress dictionaries so long multi-GB sweeps can stream to the UI.
         """
         deadline = _parse_cutoff(cutoff)
+        filters = _purge_filters(item_type)
         # A recording or bundle may have become active since the last index refresh.
         self.rebuild()
-        candidates = self._purge_candidates(deadline)
+        candidates = self._purge_candidates(deadline, filters)
         total = len(candidates)
         deleted = 0
         files = 0

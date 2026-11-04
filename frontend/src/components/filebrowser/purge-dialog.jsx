@@ -27,7 +27,11 @@ import {
     DialogActions,
     DialogContent,
     DialogTitle,
+    FormControl,
+    InputLabel,
     LinearProgress,
+    MenuItem,
+    Select,
     Stack,
     Tooltip,
     Typography,
@@ -40,6 +44,7 @@ import moment from 'moment-timezone';
 import { toast } from 'react-toastify';
 import { fetchPurgePreview, startLibraryPurge, clearPurgeState } from './filebrowser-slice.jsx';
 import PurgeSlider from './purge-slider.jsx';
+import { FILE_TYPES } from './file-types.js';
 
 // Stable per-category colors shared between the stacked bar and the legend.
 const PURGE_CATEGORIES = [
@@ -67,6 +72,11 @@ const PurgeDialog = ({ open, onClose, socket }) => {
     // Cutoff lives as local epoch ms; null until the first preview reports the
     // real age span of the library.
     const [cutoff, setCutoff] = useState(null);
+    // Keep thumb movement local until release; previews use the committed cutoff.
+    const [draftCutoff, setDraftCutoff] = useState(null);
+    const adjustingCutoff = draftCutoff !== null;
+    const sliderCutoff = draftCutoff ?? cutoff;
+    const [itemType, setItemType] = useState('all');
     const [confirmOpen, setConfirmOpen] = useState(false);
     // Bumped on every socket 'connect' so an open dialog that was opened
     // while the socket was still reconnecting fetches as soon as it is live.
@@ -74,7 +84,7 @@ const PurgeDialog = ({ open, onClose, socket }) => {
     const debouncedPreview = useRef(null);
     // A result retained from a previous visit is history, not a new completion.
     const lastDone = useRef(purge.done);
-    const wasOpen = useRef(false);
+    const lastPreviewDone = useRef(purge.done);
     // Render the same slider footprint before a real library age range arrives.
     const fallbackDomain = useRef({
         min: Date.now() - 365 * 86400000,
@@ -88,26 +98,29 @@ const PurgeDialog = ({ open, onClose, socket }) => {
         return () => socket.off('connect', onConnect);
     }, [socket]);
 
-    // Fresh domain and aggregates every time the dialog opens or the socket
-    // (re)connects while it is open.
+    // Refresh the date range when opening, changing type, or reconnecting.
     useEffect(() => {
         if (!open) return undefined;
         if (socket && !socket.connected) return undefined;
         setCutoff(null);
+        setDraftCutoff(null);
         setConfirmOpen(false);
         dispatch(clearPurgeState());
-        dispatch(fetchPurgePreview({ socket, cutoff: new Date().toISOString() }));
+        dispatch(fetchPurgePreview({ socket, cutoff: new Date().toISOString(), itemType }));
         return undefined;
-    }, [open, socket, connectEpoch, dispatch]);
+    }, [open, socket, connectEpoch, itemType, dispatch]);
+
+    // Never use the previous type's totals or date range while a new preview loads.
+    const selectedPreview = (purge.preview?.itemType || 'all') === itemType ? purge.preview : null;
 
     const domain = useMemo(() => {
-        const oldestRaw = purge.preview?.oldest;
+        const oldestRaw = selectedPreview?.oldest;
         if (!oldestRaw) return null;
         const oldest = new Date(oldestRaw).getTime();
         if (!Number.isFinite(oldest)) return null;
-        const newest = purge.preview?.newest ? new Date(purge.preview.newest).getTime() : Date.now();
+        const newest = selectedPreview?.newest ? new Date(selectedPreview.newest).getTime() : Date.now();
         return { min: oldest, max: Math.max(Number.isFinite(newest) ? newest : Date.now(), Date.now()) };
-    }, [purge.preview]);
+    }, [selectedPreview]);
 
     // The oldest cutoff is the slider's rightmost edge. Use it on opening and
     // when a completed sweep changes the library's available date range.
@@ -117,24 +130,23 @@ const PurgeDialog = ({ open, onClose, socket }) => {
         }
     }, [cutoff, domain]);
 
-    // Debounced aggregate refresh while dragging; the backend query is cheap
-    // but fires on every slider pixel.
+    // Preview only a released value, even if the user pauses mid-drag.
     useEffect(() => {
-        if (!open || cutoff === null || purge.running || !socket?.connected) return undefined;
+        if (!open || cutoff === null || adjustingCutoff || purge.running || !socket?.connected) return undefined;
         if (debouncedPreview.current) clearTimeout(debouncedPreview.current);
         debouncedPreview.current = setTimeout(() => {
-            dispatch(fetchPurgePreview({ socket, cutoff: new Date(cutoff).toISOString() }));
+            dispatch(fetchPurgePreview({ socket, cutoff: new Date(cutoff).toISOString(), itemType }));
         }, 250);
         return () => {
             if (debouncedPreview.current) clearTimeout(debouncedPreview.current);
         };
-    }, [open, cutoff, purge.running, socket, dispatch]);
+    }, [open, cutoff, adjustingCutoff, itemType, purge.running, socket, dispatch]);
 
     const cutoffIso = cutoff !== null ? new Date(cutoff).toISOString() : null;
     // Ignore the bootstrap preview (cutoff = now) until the slider settles.
-    const usablePreview = !purge.previewError && purge.preview && cutoff !== null
-        && new Date(purge.preview.cutoff).getTime() === cutoff
-        ? purge.preview
+    const usablePreview = !purge.previewError && selectedPreview && cutoff !== null
+        && new Date(selectedPreview.cutoff).getTime() === cutoff
+        ? selectedPreview
         : null;
     const running = purge.running;
     const done = purge.done;
@@ -142,12 +154,12 @@ const PurgeDialog = ({ open, onClose, socket }) => {
     const previewError = purge.previewError;
     // Opening needs a domain preview followed by the selected-cutoff preview.
     // Keep the overlay mounted between those requests so it does not flash twice.
-    const busy = running || purge.previewLoading
-        || (socket?.connected && !!domain && !usablePreview && !previewError);
+    const busy = running || (!adjustingCutoff && (purge.previewLoading
+        || (socket?.connected && !!domain && !usablePreview && !previewError)));
 
     const retryPreview = () => {
         if (!socket?.connected) return;
-        dispatch(fetchPurgePreview({ socket, cutoff: cutoffIso || new Date().toISOString() }));
+        dispatch(fetchPurgePreview({ socket, cutoff: cutoffIso || new Date().toISOString(), itemType }));
     };
 
     const previewErrorBlock = (
@@ -183,25 +195,21 @@ const PurgeDialog = ({ open, onClose, socket }) => {
     // A finished sweep changes the available date range. Start a fresh preview
     // so the same open dialog can select and purge the remaining files.
     useEffect(() => {
-        if (!open) {
-            wasOpen.current = false;
-            return;
-        }
-        if (!wasOpen.current) {
-            // Opening already starts a preview; avoid scanning twice if a
-            // completion event was retained while the dialog was closed.
-            wasOpen.current = true;
-            return;
-        }
-        if (!done || !socket?.connected) return;
+        const previousDone = lastPreviewDone.current;
+        lastPreviewDone.current = done;
+        // Opening and type changes already request a preview. Only a new
+        // completion should trigger this additional refresh.
+        if (!open || !done || done === previousDone || !socket?.connected) return;
         setCutoff(null);
-        dispatch(fetchPurgePreview({ socket, cutoff: new Date().toISOString() }));
-    }, [open, done, socket, dispatch]);
+        setDraftCutoff(null);
+        dispatch(fetchPurgePreview({ socket, cutoff: new Date().toISOString(), itemType }));
+    }, [open, done, socket, itemType, dispatch]);
 
     const startPurge = async () => {
+        if (!usablePreview || busy || adjustingCutoff || totalItems === 0) return;
         setConfirmOpen(false);
         try {
-            await dispatch(startLibraryPurge({ socket, cutoff: cutoffIso })).unwrap();
+            await dispatch(startLibraryPurge({ socket, cutoff: cutoffIso, itemType })).unwrap();
         } catch (error) {
             toast.error(String(error?.message || error));
         }
@@ -212,7 +220,11 @@ const PurgeDialog = ({ open, onClose, socket }) => {
     // An empty library has no age domain but does have a real zero-valued preview.
     const summaryPreview = previewError
         ? null
-        : usablePreview || (!domain && purge.preview?.items === 0 ? purge.preview : null);
+        : usablePreview || (!domain && selectedPreview?.items === 0 ? selectedPreview : null);
+    const selectedType = FILE_TYPES.find((type) => type.itemType === itemType);
+    const typeLabel = selectedType
+        ? t(selectedType.label, selectedType.fallback)
+        : t('purge_dialog.all_types', { defaultValue: 'All' });
     const displayItems = summaryPreview?.items;
     const displayFiles = summaryPreview?.files;
     const displayBytes = summaryPreview?.bytes;
@@ -275,23 +287,45 @@ const PurgeDialog = ({ open, onClose, socket }) => {
                 <DialogContent dividers>
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                         {t('purge_dialog.description', {
-                            defaultValue: 'Drag the marker to a date; everything last used before it is permanently removed from disk. Observation bundles and multi-file decoded products each count as a single item.',
+                            defaultValue: 'Choose an item type and drag the marker to a date. Matching items last used before it are permanently removed from disk. Observation bundles and multi-file decoded products each count as a single item.',
                         })}
                     </Typography>
 
                     <Stack spacing={2}>
+                        <FormControl size="small" fullWidth disabled={running}>
+                            <InputLabel id="purge-item-type-label">
+                                {t('purge_dialog.item_type', { defaultValue: 'Item type' })}
+                            </InputLabel>
+                            <Select
+                                labelId="purge-item-type-label"
+                                value={itemType}
+                                label={t('purge_dialog.item_type', { defaultValue: 'Item type' })}
+                                onChange={(event) => setItemType(event.target.value)}
+                            >
+                                <MenuItem value="all">{t('purge_dialog.all_types', { defaultValue: 'All' })}</MenuItem>
+                                {FILE_TYPES.map((type) => (
+                                    <MenuItem key={type.itemType} value={type.itemType}>
+                                        {t(type.label, type.fallback)}
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
                         <PurgeSlider
-                            value={domain && cutoff !== null && cutoff >= domain.min && cutoff <= domain.max
-                                ? cutoff
+                            value={domain && sliderCutoff !== null && sliderCutoff >= domain.min && sliderCutoff <= domain.max
+                                ? sliderCutoff
                                 : sliderDomain.min}
                             min={sliderDomain.min}
                             max={sliderDomain.max}
                             olderLabel={t('purge_dialog.delete_before', { defaultValue: 'Delete before' })}
                             nowLabel={t('purge_dialog.now', { defaultValue: 'now' })}
-                            cutoffText={cutoff !== null ? moment(cutoff).format('D MMM YYYY HH:mm') : '--'}
+                            cutoffText={sliderCutoff !== null ? moment(sliderCutoff).format('D MMM YYYY HH:mm') : '--'}
                             showDates={!!domain}
                             disabled={!domain || running || !!previewError}
-                            onChange={setCutoff}
+                            onChange={setDraftCutoff}
+                            onChangeCommitted={(next) => {
+                                setDraftCutoff(null);
+                                setCutoff(next);
+                            }}
                         />
                         <Stack direction="row" alignItems="baseline" spacing={1} flexWrap="wrap">
                             <Typography variant="h5" color="error.main" fontWeight={700}>
@@ -420,7 +454,7 @@ const PurgeDialog = ({ open, onClose, socket }) => {
                         variant="contained"
                         color="error"
                         startIcon={<DeleteForeverIcon />}
-                        disabled={!usablePreview || totalItems === 0 || busy}
+                        disabled={!usablePreview || totalItems === 0 || busy || adjustingCutoff}
                         onClick={() => setConfirmOpen(true)}
                     >
                         {t('purge_dialog.purge', { defaultValue: 'Purge' })}
@@ -470,9 +504,10 @@ const PurgeDialog = ({ open, onClose, socket }) => {
                 <DialogContent dividers>
                     <Typography variant="body2">
                         {t('purge_dialog.confirm_message', {
+                            type: typeLabel,
                             date: cutoff !== null ? moment(cutoff).format('D MMM YYYY HH:mm') : '',
                             bytes: formatBytes(totalBytes),
-                            defaultValue: 'Everything last used before {{date}} will be deleted from disk, freeing about {{bytes}}. This cannot be undone.',
+                            defaultValue: 'Item type: {{type}}. Matching items last used before {{date}} will be deleted from disk, freeing about {{bytes}}. This cannot be undone.',
                         })}
                     </Typography>
                 </DialogContent>
@@ -480,7 +515,7 @@ const PurgeDialog = ({ open, onClose, socket }) => {
                     <Button onClick={() => setConfirmOpen(false)} color="inherit">
                         {t('common:cancel', { defaultValue: 'Cancel' })}
                     </Button>
-                    <Button variant="contained" color="error" onClick={startPurge}>
+                    <Button variant="contained" color="error" onClick={startPurge} disabled={!usablePreview || totalItems === 0 || busy || adjustingCutoff}>
                         {t('common:delete', { defaultValue: 'Delete' })}
                     </Button>
                 </DialogActions>

@@ -278,9 +278,9 @@ export const deleteLibraryItems = createAsyncThunk(
 // Aggregate what a date-based purge would remove, without deleting anything.
 export const fetchPurgePreview = createAsyncThunk(
     'filebrowser/fetchPurgePreview',
-    async ({ socket, cutoff }, { rejectWithValue }) => {
+    async ({ socket, cutoff, itemType = 'all' }, { rejectWithValue }) => {
         try {
-            return await callLibrary(socket, 'filebrowser.purge-preview', { cutoff });
+            return await callLibrary(socket, 'filebrowser.purge-preview', { cutoff, itemType });
         } catch (error) {
             return rejectWithValue(error.message || 'Failed to compute purge preview');
         }
@@ -290,9 +290,9 @@ export const fetchPurgePreview = createAsyncThunk(
 // Start a date-based purge; execution streams via library_purge_* events.
 export const startLibraryPurge = createAsyncThunk(
     'filebrowser/startLibraryPurge',
-    async ({ socket, cutoff }, { rejectWithValue }) => {
+    async ({ socket, cutoff, itemType = 'all' }, { rejectWithValue }) => {
         try {
-            return await callLibrary(socket, 'filebrowser.purge', { cutoff });
+            return await callLibrary(socket, 'filebrowser.purge', { cutoff, itemType });
         } catch (error) {
             return rejectWithValue(error.message || 'Failed to start purge');
         }

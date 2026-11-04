@@ -29,7 +29,7 @@ from typing import Any, Dict, List, Optional
 
 from common import adsblive
 from common import auth as authsvc
-from library.inventory import _parse_cutoff, get_inventory, publish_ready_artifacts
+from library.inventory import _parse_cutoff, _purge_filters, get_inventory, publish_ready_artifacts
 from library.search import normalize_search
 
 # A purge executes in a worker thread inside this server process (the
@@ -189,7 +189,9 @@ async def purge_preview_library(
     if not isinstance(cutoff, str) or not cutoff:
         return {"success": False, "error": "cutoff must be an ISO datetime string"}
     try:
-        result = await asyncio.to_thread(get_inventory().purge_preview, cutoff)
+        result = await asyncio.to_thread(
+            get_inventory().purge_preview, cutoff, request.get("itemType", "all")
+        )
     except ValueError as exc:
         return {"success": False, "error": str(exc)}
     return {"success": True, "data": result}
@@ -208,6 +210,8 @@ async def purge_library(sio: Any, data: Optional[Dict], logger: Any, _sid: str) 
         return {"success": False, "error": "cutoff must be an ISO datetime string"}
     try:
         _parse_cutoff(cutoff)
+        item_type = request.get("itemType", "all")
+        _purge_filters(item_type)
     except ValueError as exc:
         return {"success": False, "error": str(exc)}
     if _purge_state["running"]:
@@ -240,7 +244,7 @@ async def purge_library(sio: Any, data: Optional[Dict], logger: Any, _sid: str) 
 
     async def run_purge() -> None:
         try:
-            result = await asyncio.to_thread(get_inventory().purge, cutoff, on_progress)
+            result = await asyncio.to_thread(get_inventory().purge, cutoff, on_progress, item_type)
             if result["deleted"]:
                 await _emit_changed(
                     sio, result["revision"], [{"operation": "reconciled", "id": "*"}]

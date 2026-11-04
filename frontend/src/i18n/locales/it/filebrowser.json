@@ -13,9 +13,11 @@
     "completed_at": "Data di completamento"
   },
   "purge_dialog": {
+    "item_type": "Tipo di elemento",
+    "all_types": "Tutti",
     "button": "Pulisci",
     "title": "Pulizia file vecchi",
-    "description": "Trascina il marcatore su una data; tutto ciò che è stato usato l'ultima volta prima di tale data viene rimosso definitivamente dal disco. I bundle di osservazione e i prodotti decodificati multi-file contano ciascuno come un singolo elemento.",
+    "description": "Scegli un tipo di elemento e trascina il marcatore su una data. Gli elementi corrispondenti utilizzati per l’ultima volta prima di tale data vengono rimossi definitivamente dal disco. I bundle di osservazione e i prodotti decodificati con più file contano ciascuno come un singolo elemento.",
     "delete_before": "Elimina precedenti al",
     "now": "adesso",
     "items_files": "elementi verranno eliminati ({{files}} file, inclusi i file di metadati)",
@@ -28,7 +30,7 @@
     "purge": "Pulisci",
     "close": "Chiudi",
     "confirm_title": "Pulire {{count}} elementi?",
-    "confirm_message": "Tutto ciò che è stato usato l'ultima volta prima del {{date}} verrà eliminato dal disco, liberando circa {{bytes}}. L'operazione non può essere annullata.",
+    "confirm_message": "Tipo di elemento: {{type}}. Gli elementi corrispondenti utilizzati per l’ultima volta prima del {{date}} verranno eliminati dal disco, liberando circa {{bytes}}. L’operazione non può essere annullata.",
     "freed_so_far": "{{bytes}} liberati finora",
     "removing": "Eliminazione di {{name}}...",
     "result_message": "Eliminati {{count}} elementi ({{files}} file, inclusi i file di metadati), liberati {{bytes}}.",

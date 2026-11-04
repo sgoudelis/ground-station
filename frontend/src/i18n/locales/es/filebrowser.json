@@ -115,9 +115,11 @@
     "batch_delete_failed": "Error al eliminar elementos: {{error}}"
   },
   "purge_dialog": {
+    "item_type": "Tipo de elemento",
+    "all_types": "Todos",
     "button": "Purgar",
     "title": "Purgar archivos antiguos",
-    "description": "Arrastre el marcador hasta una fecha; todo lo que se usó por última vez antes de ella se elimina permanentemente del disco. Los paquetes de observación y los productos decodificados de varios archivos cuentan como un solo elemento.",
+    "description": "Seleccione un tipo de elemento y arrastre el marcador hasta una fecha. Los elementos de ese tipo utilizados por última vez antes de esa fecha se eliminarán permanentemente del disco. Los paquetes de observación y los productos decodificados de varios archivos cuentan como un solo elemento.",
     "delete_before": "Eliminar anteriores a",
     "now": "ahora",
     "items_files": "elementos se eliminarán ({{files}} archivos, incluidos los archivos de metadatos)",
@@ -130,7 +132,7 @@
     "purge": "Purgar",
     "close": "Cerrar",
     "confirm_title": "¿Purgar {{count}} elementos?",
-    "confirm_message": "Todo lo que se usó por última vez antes del {{date}} se eliminará del disco, liberando unos {{bytes}}. Esto no se puede deshacer.",
+    "confirm_message": "Tipo de elemento: {{type}}. Los elementos correspondientes utilizados por última vez antes del {{date}} se eliminarán del disco, liberando unos {{bytes}}. Esta acción no se puede deshacer.",
     "freed_so_far": "{{bytes}} liberados hasta ahora",
     "removing": "Eliminando {{name}}...",
     "result_message": "Se eliminaron {{count}} elementos ({{files}} archivos, incluidos los archivos de metadatos) y se liberaron {{bytes}}.",

@@ -115,9 +115,11 @@
     "batch_delete_failed": "Elemente konnten nicht gelöscht werden: {{error}}"
   },
   "purge_dialog": {
+    "item_type": "Elementtyp",
+    "all_types": "Alle",
     "button": "Bereinigen",
     "title": "Alte Dateien bereinigen",
-    "description": "Marker auf ein Datum ziehen; alles, was vor diesem Zeitpunkt zuletzt verwendet wurde, wird dauerhaft von der Festplatte entfernt. Beobachtungs-Bundles und mehrteilige Decode-Produkte zählen jeweils als ein Eintrag.",
+    "description": "Wählen Sie einen Elementtyp und ziehen Sie den Marker auf ein Datum. Passende Elemente, die zuletzt vor diesem Datum verwendet wurden, werden dauerhaft von der Festplatte entfernt. Beobachtungs-Bundles und mehrteilige Decode-Produkte zählen jeweils als ein Eintrag.",
     "delete_before": "Löschen vor",
     "now": "jetzt",
     "items_files": "Einträge werden gelöscht ({{files}} Dateien, einschließlich Metadatendateien)",
@@ -130,7 +132,7 @@
     "purge": "Bereinigen",
     "close": "Schließen",
     "confirm_title": "{{count}} Einträge bereinigen?",
-    "confirm_message": "Alles, was vor dem {{date}} zuletzt verwendet wurde, wird von der Festplatte gelöscht und gibt etwa {{bytes}} frei. Das lässt sich nicht rückgängig machen.",
+    "confirm_message": "Elementtyp: {{type}}. Passende Elemente, die zuletzt vor dem {{date}} verwendet wurden, werden von der Festplatte gelöscht und geben etwa {{bytes}} frei. Dies kann nicht rückgängig gemacht werden.",
     "freed_so_far": "{{bytes}} bisher freigegeben",
     "removing": "Entferne {{name}}...",
     "result_message": "{{count}} Einträge gelöscht ({{files}} Dateien, einschließlich Metadatendateien), {{bytes}} freigegeben.",

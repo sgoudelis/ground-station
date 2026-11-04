@@ -115,9 +115,11 @@
     "batch_delete_failed": "Verwijderen van items mislukt: {{error}}"
   },
   "purge_dialog": {
+    "item_type": "Itemtype",
+    "all_types": "Alle",
     "button": "Opschonen",
     "title": "Oude bestanden opschonen",
-    "description": "Sleep de marker naar een datum; alles dat vóór die datum voor het laatst is gebruikt, wordt permanent van de schijf verwijderd. Observatiebundels en meerdelige decodeerproducten tellen elk als één item.",
+    "description": "Kies een itemtype en sleep de marker naar een datum. Overeenkomende items die vóór die datum voor het laatst zijn gebruikt, worden permanent van de schijf verwijderd. Observatiebundels en meerdelige decodeerproducten tellen elk als één item.",
     "delete_before": "Verwijderen vóór",
     "now": "nu",
     "items_files": "items worden verwijderd ({{files}} bestanden, inclusief metadatabestanden)",
@@ -130,7 +132,7 @@
     "purge": "Opschonen",
     "close": "Sluiten",
     "confirm_title": "{{count}} items opschonen?",
-    "confirm_message": "Alles dat vóór {{date}} voor het laatst is gebruikt, wordt van de schijf verwijderd; ongeveer {{bytes}} komt vrij. Dit kan niet ongedaan worden gemaakt.",
+    "confirm_message": "Itemtype: {{type}}. Overeenkomende items die vóór {{date}} voor het laatst zijn gebruikt, worden van de schijf verwijderd; ongeveer {{bytes}} komt vrij. Dit kan niet ongedaan worden gemaakt.",
     "freed_so_far": "{{bytes}} tot nu toe vrijgegeven",
     "removing": "{{name}} wordt verwijderd...",
     "result_message": "{{count}} items verwijderd ({{files}} bestanden, inclusief metadatabestanden), {{bytes}} vrijgegeven.",

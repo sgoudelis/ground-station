@@ -2,18 +2,7 @@ import React, { useState } from 'react';
 import { Box, Button, Checkbox, FormControlLabel, FormGroup, Popover, Typography } from '@mui/material';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import { useTranslation } from 'react-i18next';
-
-const FILE_TYPES = [
-    { key: 'showRecordings', label: 'filters.recordings', fallback: 'Recordings' },
-    { key: 'showSnapshots', label: 'filters.snapshots', fallback: 'Snapshots' },
-    { key: 'showDecoded', label: 'filters.decoded', fallback: 'Decoded' },
-    { key: 'showObservations', label: 'filters.observations', fallback: 'Observations' },
-    { key: 'showRadiosondes', label: 'filters.weather_balloons', fallback: 'Weather balloons' },
-    { key: 'showAircraft', label: 'filters.aircraft', fallback: 'Aircraft' },
-    { key: 'showMeshtastic', label: 'filters.meshtastic_nodes', fallback: 'Meshtastic nodes' },
-    { key: 'showAudio', label: 'filters.audio', fallback: 'Audio' },
-    { key: 'showTranscriptions', label: 'filters.transcriptions', fallback: 'Transcriptions' },
-];
+import { FILE_TYPES } from './file-types.js';
 
 export default function FileTypeFilter({ filters, onToggle, onSetAll }) {
     const { t } = useTranslation('filebrowser');
