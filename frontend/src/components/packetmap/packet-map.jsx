@@ -116,25 +116,31 @@ export function MapViewport({bounds, ready, fitRequest, preserveViewRequest = 0,
         };
     }, [map, savedView]);
 
+    const handleResize = useStableEvent(() => {
+        if (!map) return;
+        const center = ready && following.current && isValidMapPosition(targetLatitude, targetLongitude)
+            ? [targetLongitude, targetLatitude] : map.getCenter();
+        programmatic.current = true;
+        map.resize();
+        if (!following.current && ready && !hasUserView.current && bounds.length) {
+            map.fitBounds(fitBounds, fitOptions);
+        } else {
+            // Preserve the camera when a grid window shrinks, without
+            // saving the resize as manual navigation.
+            map.jumpTo({center, zoom: map.getZoom()});
+        }
+        programmatic.current = false;
+    });
+
     useEffect(() => {
         if (!map) return;
-        const observer = new ResizeObserver(() => {
-            const center = ready && following.current && isValidMapPosition(targetLatitude, targetLongitude)
-                ? [targetLongitude, targetLatitude] : map.getCenter();
-            programmatic.current = true;
-            map.resize();
-            if (!following.current && ready && !hasUserView.current && bounds.length) {
-                map.fitBounds(fitBounds, fitOptions);
-            } else {
-                // Preserve the camera when a grid window shrinks, without
-                // saving the resize as manual navigation.
-                map.jumpTo({center, zoom: map.getZoom()});
-            }
-            programmatic.current = false;
-        });
+        // Keep this subscription stable as live fixes change. Re-observing the
+        // same container sends an initial notification; resize() cancels a drag.
+        // The stable handler still reads the latest bounds and followed target.
+        const observer = new ResizeObserver(handleResize);
         observer.observe(map.getContainer());
         return () => observer.disconnect();
-    }, [map, bounds, fitBounds, ready, fitOptions, targetLatitude, targetLongitude]);
+    }, [map, handleResize]);
 
     useEffect(() => {
         if (!map) return;

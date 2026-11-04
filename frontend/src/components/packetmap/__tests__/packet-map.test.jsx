@@ -304,6 +304,29 @@ it.each([
 });
 
 describe('Packet map viewport', () => {
+    it.each([null, 'A'])('keeps a mouse pan uninterrupted by live fixes while selection is %s', (selectedTransmitterId) => {
+        vi.spyOn(globalThis, 'ResizeObserver').mockImplementation(function (callback) {
+            // Browsers deliver an initial size notification whenever observe()
+            // registers a container, even if its dimensions have not changed.
+            this.observe = vi.fn(() => callback());
+            this.disconnect = vi.fn();
+        });
+        const element = (latitude) => <MapViewport ready bounds={[[latitude, 23]]} fitRequest={0}
+            selectedTransmitterId={selectedTransmitterId} selectedPoint={{latitude, longitude: 23}} />;
+        const {rerender} = render(element(40));
+        // The mouse stays held down as several live updates arrive.
+        act(() => listeners.get('movestart')());
+        map.resize.mockClear();
+        map.jumpTo.mockClear();
+        map.fitBounds.mockClear();
+        for (const latitude of [40.1, 40.2, 40.3]) rerender(element(latitude));
+        expect(map.resize).not.toHaveBeenCalled();
+        expect(map.jumpTo).not.toHaveBeenCalled();
+        expect(map.fitBounds).not.toHaveBeenCalled();
+        act(() => listeners.get('moveend')());
+        expect(JSON.parse(localStorage.getItem(mapViewStoreName))).toEqual({center: [40.2, 24.3], zoom: 8});
+    });
+
     it('waits for results, fits all, and preserves manual navigation through new results and remounts', () => {
         const {rerender, unmount} = render(<MapViewport ready={false} bounds={[[40, 23]]} fitRequest={0} />);
         expect(map.fitBounds).not.toHaveBeenCalled();
