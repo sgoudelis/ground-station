@@ -3,6 +3,8 @@
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {Alert, Box, LinearProgress} from '@mui/material';
 import {useDispatch, useSelector} from 'react-redux';
+import {useTranslation} from 'react-i18next';
+import {toast} from 'react-toastify';
 import {Responsive, useContainerWidth} from 'react-grid-layout';
 import {absoluteStrategy} from 'react-grid-layout/core';
 import 'react-grid-layout/css/styles.css';
@@ -23,11 +25,15 @@ import {createAircraftHistory} from './aircraft.js';
 import {aircraftReceptionAt} from './reception.js';
 import {setPacketMapRange} from './packet-map-slice.jsx';
 import {liveRangeAt} from './live.js';
+import {useUserTimeSettings} from '../../hooks/useUserTimeSettings.jsx';
+import {formatDateTime} from '../../utils/date-time.js';
 
 export {gridLayoutStoreName} from './storage.js';
 
 export default function PacketMapLayout() {
     const {socket} = useSocket();
+    const {t} = useTranslation('navigation');
+    const timeSettings = useUserTimeSettings();
     const dispatch = useDispatch();
     const gridEditable = useSelector((state) => Boolean(state.dashboard?.isEditing));
     const {width, containerRef, mounted} = useContainerWidth({measureBeforeMount: true});
@@ -96,9 +102,27 @@ export default function PacketMapLayout() {
     };
     const selectTransmitter = (id) => {
         setSelectedTransmitterId(id);
-        const kind = rows.find((row) => row.id === id)?.kind;
+        const transmitter = rows.find((row) => row.id === id);
+        const kind = transmitter?.kind;
         // Selecting a hidden transmitter should reveal its marker and track.
         if (hiddenTypes.includes(kind)) changeHiddenTypes(hiddenTypes.filter((value) => value !== kind));
+        if (!isLive && kind === 'adsb') {
+            // Use recorded fixes rather than the row's latest telemetry: only
+            // positions in the loaded history can reveal a marker and trail.
+            const times = positions.filter((point) => point.transmitter_id === id)
+                .map((point) => Date.parse(point.captured_at)).filter(Number.isFinite).sort((left, right) => left - right);
+            const {status} = aircraftReceptionAt(times, currentPlaybackTime);
+            if (status === 'upcoming' || status === 'expired') {
+                // Jump only on selection so manual scrubbing remains free to
+                // leave this aircraft's flight. Its endpoint reveals the trail.
+                const time = times.at(-1);
+                setPlaybackTime(time);
+                toast.info(t('packet_map.playback_moved', {
+                    defaultValue: 'Playback moved to {{time}} to show {{name}}.',
+                    time: formatDateTime(time, timeSettings), name: transmitter.name || transmitter.source || id,
+                }), {autoClose: 4000});
+            }
+        }
     };
     const [refreshError, setRefreshError] = useState('');
     const [reconciling, setReconciling] = useState(false);

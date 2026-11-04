@@ -6,6 +6,7 @@ import {createTheme, ThemeProvider} from '@mui/material/styles';
 import {beforeEach, expect, it, vi} from 'vitest';
 import i18n from 'i18next';
 import {initReactI18next} from 'react-i18next';
+import {toast} from 'react-toastify';
 import PacketMapLayout from '../main-layout.jsx';
 import {gridLayoutStoreName, hiddenTypesStoreName} from '../storage.js';
 import {defaultLayouts, LAYOUT_SCHEMA_VERSION} from '../layouts.js';
@@ -35,6 +36,7 @@ vi.mock('../../common/common.jsx', () => ({
 vi.mock('../use-packet-positions.js', async (importOriginal) => ({...await importOriginal(), default: vi.fn()}));
 vi.mock('../packet-map.jsx', () => ({default: (props) => {mapRender(props); return null;}}));
 vi.mock('../transmitter-list.jsx', () => ({default: (props) => {tableRender(props); return null;}}));
+vi.mock('react-toastify', () => ({toast: {info: vi.fn()}}));
 
 const historyRange = {start: '2026-10-31T12:00:00Z', end: '2026-11-01T12:00:00Z'};
 function createStore(range) {
@@ -231,23 +233,88 @@ it('does not resurrect selected aircraft details after the source data was remov
     }
 });
 
-it('offers a cursor jump to recorded positions when a selected historical aircraft is absent', () => {
+it.each([
+    ['before its first fix', '2026-11-01T09:00:00Z'],
+    ['after its last fix expires', historyRange.end],
+    ['in a gap between flights', '2026-11-01T10:40:00Z'],
+])('reveals a selected historical aircraft at its last recorded position %s', (_description, cursor) => {
     const first = {id: 'first', transmitter_id: 'adsb:4d2406', kind: 'adsb', name: 'EWG46A', source: '4D2406',
         latitude: 40, longitude: 23, captured_at: '2026-11-01T10:00:00Z'};
-    const last = {...first, id: 'last', latitude: 41, captured_at: '2026-11-01T10:01:00Z'};
-    fixture.positions = [first, last];
-    fixture.transmitters = [{...last, id: last.transmitter_id}];
-    render(<Provider store={createStore(historyRange)}><ThemeProvider theme={createTheme()}><PacketMapLayout /></ThemeProvider></Provider>);
+    const last = {...first, id: 'last', latitude: 41, captured_at: '2026-11-01T11:00:00Z'};
+    // History need not arrive in time order, and row telemetry may be newer
+    // than the last recorded map fix. Neither should choose the jump target.
+    fixture.positions = [last, first];
+    fixture.transmitters = [{...last, id: last.transmitter_id, captured_at: historyRange.end}];
+    const store = createStore(historyRange);
+    render(<Provider store={store}><ThemeProvider theme={createTheme()}><PacketMapLayout /></ThemeProvider></Provider>);
+    fireEvent.change(screen.getByRole('slider', {name: 'Playback time'}), {target: {value: Date.parse(cursor)}});
     act(() => tableRender.mock.lastCall[0].onSelectTransmitter(first.transmitter_id));
-    expect(screen.getByRole('status')).toHaveTextContent('No position received for 119 minutes.');
-    fireEvent.click(screen.getByRole('button', {name: 'Jump to last position'}));
+    expect(mapRender.mock.lastCall[0].selectedTransmitterId).toBe(first.transmitter_id);
     expect(mapRender.mock.lastCall[0].playbackTime).toBe(Date.parse(last.captured_at));
-    expect(screen.queryByRole('button', {name: 'Jump to last position'})).not.toBeInTheDocument();
+    expect(tableRender.mock.lastCall[0].playbackTime).toBe(Date.parse(last.captured_at));
+    expect(screen.getByRole('slider', {name: 'Playback time'})).toHaveValue(String(Date.parse(last.captured_at)));
+    expect(screen.getByRole('region', {name: 'Playback position'})).toHaveTextContent('41');
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', {name: /Jump to/})).not.toBeInTheDocument();
+    expect(store.getState().packetMap.range).toEqual(historyRange);
+    expect(usePacketPositions.mock.lastCall[1]).toEqual(historyRange);
+    expect(toast.info).toHaveBeenCalledWith(expect.stringContaining('to show EWG46A.'), {autoClose: 4000});
+
+    // Automatic jumps are selection events, not a lock on the playback slider.
     const beforeFirst = Date.parse(first.captured_at) - 1000;
     fireEvent.change(screen.getByRole('slider', {name: 'Playback time'}), {target: {value: beforeFirst}});
+    expect(mapRender.mock.lastCall[0].playbackTime).toBe(beforeFirst);
     expect(screen.getByRole('status')).toHaveTextContent('Not yet seen');
     fireEvent.click(screen.getByRole('button', {name: 'Jump to first position'}));
     expect(mapRender.mock.lastCall[0].playbackTime).toBe(Date.parse(first.captured_at));
+    expect(toast.info).toHaveBeenCalledTimes(1);
+});
+
+it.each([0, 30000, 61000, LIVE_WINDOW_MS])('keeps the cursor when selecting a historical aircraft visible at age %sms', (age) => {
+    const cursor = Date.parse(historyRange.end);
+    const point = {id: 'fix', transmitter_id: 'adsb:4d2406', kind: 'adsb', name: 'EWG46A', source: '4D2406',
+        latitude: 40, longitude: 23, captured_at: new Date(cursor - age).toISOString()};
+    fixture.positions = [point];
+    fixture.transmitters = [{...point, id: point.transmitter_id}];
+    render(<Provider store={createStore(historyRange)}><ThemeProvider theme={createTheme()}><PacketMapLayout /></ThemeProvider></Provider>);
+    act(() => tableRender.mock.lastCall[0].onSelectTransmitter(point.transmitter_id));
+    expect(mapRender.mock.lastCall[0].selectedTransmitterId).toBe(point.transmitter_id);
+    expect(mapRender.mock.lastCall[0].playbackTime).toBe(cursor);
+    expect(toast.info).not.toHaveBeenCalled();
+});
+
+it.each([
+    ['missing', []],
+    ['invalid', [{id: 'invalid', transmitter_id: 'adsb:4d2406', kind: 'adsb', captured_at: 'invalid'}]],
+])('keeps the cursor when a historical aircraft has %s recorded fixes', (_description, positions) => {
+    fixture.positions = positions;
+    fixture.transmitters = [{id: 'adsb:4d2406', kind: 'adsb', name: 'EWG46A', source: '4D2406',
+        captured_at: '2026-11-01T10:00:00Z'}];
+    render(<Provider store={createStore(historyRange)}><ThemeProvider theme={createTheme()}><PacketMapLayout /></ThemeProvider></Provider>);
+    act(() => tableRender.mock.lastCall[0].onSelectTransmitter('adsb:4d2406'));
+    expect(mapRender.mock.lastCall[0].playbackTime).toBe(Date.parse(historyRange.end));
+    expect(toast.info).not.toHaveBeenCalled();
+});
+
+it('keeps live playback running when selecting an aircraft with an older fix', () => {
+    const point = {id: 'fix', transmitter_id: 'adsb:4d2406', kind: 'adsb', name: 'EWG46A', source: '4D2406',
+        latitude: 40, longitude: 23, captured_at: new Date(Date.now() - 300000).toISOString()};
+    fixture.positions = [point];
+    fixture.transmitters = [{...point, id: point.transmitter_id}];
+    render(<Provider store={createStore()}><ThemeProvider theme={createTheme()}><PacketMapLayout /></ThemeProvider></Provider>);
+    act(() => tableRender.mock.lastCall[0].onSelectTransmitter(point.transmitter_id));
+    expect(mapRender.mock.lastCall[0].playbackTime).toBeGreaterThan(Date.parse(point.captured_at));
+    expect(screen.getByRole('button', {name: 'LIVE', exact: true})).toHaveAttribute('aria-pressed', 'true');
+    expect(toast.info).not.toHaveBeenCalled();
+});
+
+it('keeps the cursor when selecting another transmitter type in history', () => {
+    const store = createStore(historyRange);
+    render(<Provider store={store}><ThemeProvider theme={createTheme()}><PacketMapLayout /></ThemeProvider></Provider>);
+    act(() => tableRender.mock.lastCall[0].onSelectTransmitter('aprs:A'));
+    expect(mapRender.mock.lastCall[0].selectedTransmitterId).toBe('aprs:A');
+    expect(mapRender.mock.lastCall[0].playbackTime).toBe(Date.parse(historyRange.end));
+    expect(toast.info).not.toHaveBeenCalled();
 });
 
 it('scrubs the aircraft instruments, position and reported emergency together with the map', () => {

@@ -25,6 +25,7 @@
     "refresh": "Refresh",
     "reception_time": "Reception time",
     "playback_time": "Playback time",
+    "playback_moved": "Playback moved to {{time}} to show {{name}}.",
     "interpolated_position": "Interpolated position",
     "range_start": "Range start",
     "range_end": "Range end",
