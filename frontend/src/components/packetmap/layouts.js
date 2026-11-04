@@ -3,13 +3,19 @@
 import {gridLayoutStoreName, readStored} from './storage.js';
 
 // Bump when changing default geometry or islands so saved grids use the new defaults.
-export const LAYOUT_SCHEMA_VERSION = 4;
+export const LAYOUT_SCHEMA_VERSION = 5;
 export const columns = {lg: 48, md: 40, sm: 24, xs: 8, xxs: 8};
 const handles = ['s', 'sw', 'w', 'se', 'nw', 'ne', 'e'];
 const windows = ['packet-map', 'transmitter-info', 'transmitters'];
 
 export function defaultLayouts() {
     return Object.fromEntries(Object.entries(columns).map(([breakpoint, width]) => {
+        // Desktop keeps all three windows side by side at the same height.
+        if (breakpoint === 'lg') return [breakpoint, [
+            {i: 'packet-map', x: 14, y: 0, w: 24, h: 59, minW: 8, minH: 16, resizeHandles: handles},
+            {i: 'transmitter-info', x: 38, y: 0, w: 10, h: 59, minW: 6, minH: 8, resizeHandles: handles},
+            {i: 'transmitters', x: 0, y: 0, w: 14, h: 59, minW: 8, minH: 14, resizeHandles: handles},
+        ]];
         const stacked = width === 8;
         const sidebar = stacked ? width : Math.floor(width / 4);
         return [breakpoint, [

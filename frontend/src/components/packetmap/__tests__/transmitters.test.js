@@ -29,10 +29,20 @@ describe('Transmitter summaries', () => {
 });
 
 describe('Three-window layouts', () => {
-    it('puts transmitter info beside the map and the table below, stacking on phones', () => {
+    it('places the table left on desktop, below on smaller screens, and stacks on phones', () => {
         for (const [breakpoint, layout] of Object.entries(defaultLayouts())) {
             const [map, info, table] = layout;
             expect(info.i).toBe('transmitter-info');
+            if (breakpoint === 'lg') {
+                expect(table.x).toBe(0);
+                expect(map.x).toBe(table.w);
+                expect(info.x).toBe(map.x + map.w);
+                expect(info.x + info.w).toBe(columns[breakpoint]);
+                expect([table.y, map.y, info.y]).toEqual([0, 0, 0]);
+                expect(table.h).toBe(map.h);
+                expect(info.h).toBe(map.h);
+                continue;
+            }
             expect(table.w).toBe(columns[breakpoint]);
             expect(table.y).toBeGreaterThanOrEqual(map.h);
             if (map.w === columns[breakpoint]) expect(info.y).toBe(map.h);
@@ -40,7 +50,7 @@ describe('Three-window layouts', () => {
         }
     });
 
-    it.each([undefined, 1, 2, LAYOUT_SCHEMA_VERSION + 1])('resets layouts with schema version %s without losing map navigation', (version) => {
+    it.each([undefined, 1, 2, 4, LAYOUT_SCHEMA_VERSION + 1])('resets layouts with schema version %s without losing map navigation', (version) => {
         localStorage.setItem(mapViewStoreName, JSON.stringify({center: [40, 23], zoom: 8}));
         const layouts = defaultLayouts();
         layouts.lg[1] = {...layouts.lg[1], x: 32, y: 4, w: 16, h: 42};
