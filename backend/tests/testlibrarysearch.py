@@ -28,6 +28,7 @@ from handlers.entities import library
 from handlers.entities.filebrowser import delete_snapshot_file
 from library import inventory as inventorymodule
 from library.inventory import LibraryInventory
+from library.search import search_text
 from server.snapshots import save_waterfall_snapshot
 
 
@@ -92,6 +93,104 @@ def catalogue(tmp_path):
 
 def _ids(result):
     return {item["id"] for item in result["items"]}
+
+
+@pytest.fixture
+def terrestrial_catalogue(catalogue):
+    root = catalogue.roots.decoded
+    _write(
+        root / "adsb_406b90" / "run.gsadsb" / "track_receiver.jsonl",
+        json.dumps(
+            {
+                "icao": "406b90",
+                "timestamp": 1793534400,
+                "captured_at": "2026-11-01T12:00:00+00:00",
+                "callsign": "AEE123",
+                "aircraft": {
+                    "registration": "SX-DVQ",
+                    "type_code": "A320",
+                    "model": "Airbus A320-232",
+                    "operator_code": "AEE",
+                    "operator_name": "Aegean Airlines",
+                    "operator_country": "Greece",
+                    "operator_callsign": "AEGEAN",
+                    "database": {"name": "excluded-database-attribution"},
+                },
+            }
+        )
+        + "\n",
+    )
+    node = root / "meshtastic_deadbeef"
+    _write(node / "node.json", json.dumps({"long_name": "Hilltop Relay", "short_name": "HT42"}))
+    _write(node / "run.gsmesh" / "packet.bin")
+    sonde = root / "radiosonde_RS41_TEST0042" / "run.gssonde"
+    _write(sonde / "packet.bin")
+    _write(
+        sonde / "packet.json",
+        json.dumps({"parse_context": {"decoder_report": {"type": "RS41", "id": "TEST0042"}}}),
+    )
+    catalogue.rebuild()
+    return catalogue
+
+
+@pytest.mark.parametrize(
+    ("search", "folder"),
+    [
+        ("406B90", "adsb_406b90"),
+        ("aee123", "adsb_406b90"),
+        ("sx-dvq", "adsb_406b90"),
+        ("A320", "adsb_406b90"),
+        ("airbus a320-232", "adsb_406b90"),
+        ("AEE", "adsb_406b90"),
+        ("aegean airlines", "adsb_406b90"),
+        ("GREECE", "adsb_406b90"),
+        ("adsb sx-dvq airbus aegean", "adsb_406b90"),
+        ("!DEADBEEF", "meshtastic_deadbeef"),
+        ("hilltop", "meshtastic_deadbeef"),
+        ("ht42", "meshtastic_deadbeef"),
+        ("meshtastic hilltop ht42 deadbeef", "meshtastic_deadbeef"),
+        ("rs41 test0042", "radiosonde_RS41_TEST0042"),
+    ],
+)
+def test_terrestrial_identities_are_searchable_without_file_reads(
+    terrestrial_catalogue, monkeypatch, search, folder
+):
+    def unexpected_read(*_args, **_kwargs):
+        pytest.fail("Identity searches must use the cached summary")
+
+    monkeypatch.setattr(terrestrial_catalogue, "rebuild", unexpected_read)
+    monkeypatch.setattr(Path, "open", unexpected_read)
+    assert _ids(terrestrial_catalogue.query(search=search)) == {f"decoded_folder:{folder}"}
+
+
+def test_aircraft_search_refreshes_when_a_new_callsign_is_captured(terrestrial_catalogue):
+    path = next(terrestrial_catalogue.roots.decoded.glob("adsb_*/*/track_*.jsonl"))
+    record = json.loads(path.read_text())
+    record.update(callsign="AEE456", timestamp=1793534405)
+    with path.open("a") as stream:
+        stream.write(json.dumps(record) + "\n")
+    terrestrial_catalogue.update_adsb(["adsb_406b90"])
+    assert _ids(terrestrial_catalogue.query(search="aee456 sx-dvq")) == {
+        "decoded_folder:adsb_406b90"
+    }
+    assert terrestrial_catalogue.query(search="aee123")["total"] == 0
+
+
+@pytest.mark.parametrize(
+    ("search", "filter_key"), [("SX-DVQ", "showAircraft"), ("HT42", "showMeshtastic")]
+)
+def test_identity_search_respects_type_filters(terrestrial_catalogue, search, filter_key):
+    assert terrestrial_catalogue.query(search=search, filters={filter_key: False})["total"] == 0
+    assert terrestrial_catalogue.query(search=search, filters={filter_key: True})["total"] == 1
+
+
+def test_aircraft_database_metadata_is_not_searchable(terrestrial_catalogue):
+    assert terrestrial_catalogue.query(search="excluded-database-attribution")["total"] == 0
+
+
+@pytest.mark.parametrize("aircraft", [None, "legacy", [], {"model": None, "registration": True}])
+def test_missing_or_malformed_aircraft_details_do_not_break_search(aircraft):
+    assert search_text({"name": "406B90", "aircraft": aircraft}) == "406b90"
 
 
 @pytest.mark.parametrize("search", ["25544", "  iSs   zArYa  "])

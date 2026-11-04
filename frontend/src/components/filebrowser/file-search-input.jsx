@@ -51,7 +51,7 @@ export default function FileSearchInput({ value, onChange }) {
             inputRef={input}
             size="small"
             label={t('search.label', 'Search files')}
-            placeholder={t('search.placeholder', 'Search filenames, satellites, NORAD IDs…')}
+            placeholder={t('search.placeholder', 'Search files, satellites, aircraft, nodes, radiosondes…')}
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
             onKeyDown={(event) => {

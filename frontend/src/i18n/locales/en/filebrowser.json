@@ -101,7 +101,7 @@
   "filter": "Filter",
   "search": {
     "label": "Search files",
-    "placeholder": "Search filenames, satellites, NORAD IDs…",
+    "placeholder": "Search files, satellites, aircraft, nodes, radiosondes…",
     "clear": "Clear search",
     "searching": "Searching…",
     "results_one": "{{count}} result",

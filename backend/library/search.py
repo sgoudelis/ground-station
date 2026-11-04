@@ -42,6 +42,11 @@ SEARCH_FIELDS = (
     "demodulator_type",
     "source_callsign",
     "destination_callsign",
+    "icao",
+    "callsign",
+    "node_id",
+    "long_name",
+    "short_name",
     "transmitter_description",
     "transmitter_mode",
     "description",
@@ -49,6 +54,18 @@ SEARCH_FIELDS = (
     "language",
     "translate_to",
     "translation_backend",
+)
+
+# Aircraft details are nested; index only the identity and operator fields,
+# keeping database attribution and other structured metadata out of search.
+AIRCRAFT_SEARCH_FIELDS = (
+    "registration",
+    "type_code",
+    "model",
+    "operator_code",
+    "operator_name",
+    "operator_country",
+    "operator_callsign",
 )
 
 
@@ -64,11 +81,15 @@ def normalize_search(value: Any) -> str:
 
 
 def search_text(item: Dict[str, Any]) -> str:
-    """Build a cached, explicit metadata index when the catalogue is rebuilt."""
+    """Cache searchable metadata when a summary is created or refreshed."""
+    values = [item.get(field) for field in SEARCH_FIELDS]
+    aircraft = item.get("aircraft")
+    if isinstance(aircraft, dict):
+        values.extend(aircraft.get(field) for field in AIRCRAFT_SEARCH_FIELDS)
     return "\n".join(
-        str(item[field]).casefold()
-        for field in SEARCH_FIELDS
-        if isinstance(item.get(field), (str, int, float)) and not isinstance(item[field], bool)
+        str(value).casefold()
+        for value in values
+        if isinstance(value, (str, int, float)) and not isinstance(value, bool)
     )
 
 
