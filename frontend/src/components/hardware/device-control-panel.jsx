@@ -9,7 +9,6 @@ import {
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
-import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 import StopCircleOutlinedIcon from '@mui/icons-material/StopCircleOutlined';
@@ -70,14 +69,24 @@ function DeviceFeedback({message, severity, pending}) {
     </Tooltip>;
 }
 
+function DeviceDetails({message, severity}) {
+    const {t} = useTranslation('common');
+    const [dismissed, setDismissed] = useState(false);
+    if (dismissed) return null;
+
+    return <Alert severity={severity === 'success' ? 'info' : severity}
+        onClose={() => setDismissed(true)} closeText={t('close')}
+        sx={{borderRadius: 0, py: 0, overflowWrap: 'anywhere', whiteSpace: 'pre-line'}}>
+        {message}
+    </Alert>;
+}
+
 function DeviceRow({device, kind, snapshot, status, command, owner, expanded, now, error,
     onToggle, onSubmit, onManualControl, onViewOwner, onEdit, socketConnected, loaded}) {
     const {t} = useTranslation('dashboard');
     const contentId = useId();
     const menuId = useId();
-    const detailsId = useId();
     const [menuAnchor, setMenuAnchor] = useState(null);
-    const [detailsExpanded, setDetailsExpanded] = useState(false);
     const data = snapshot?.data || EMPTY_OBJECT;
     const manual = owner.type === 'manual';
     const observation = owner.type === 'observation';
@@ -146,35 +155,23 @@ function DeviceRow({device, kind, snapshot, status, command, owner, expanded, no
 
     return <Box component="section" aria-label={device.name}
         sx={{containerType: 'inline-size', border: '1px solid', borderColor: expanded ? 'primary.main' : 'divider', borderRadius: 1.25, overflow: 'hidden'}}>
-        <Stack direction="row" alignItems="center" sx={{bgcolor: expanded ? 'action.hover' : 'transparent'}}>
-            <ButtonBase onClick={onToggle} aria-expanded={expanded} aria-controls={contentId}
-                sx={{display: 'flex', flex: 1, minWidth: 0, px: 1.25, py: 1, gap: 1, textAlign: 'left',
-                    '&:hover': {bgcolor: 'action.hover'}}}>
-                <Box sx={{flex: 1, minWidth: 0}}>
-                    <Typography variant="body2" noWrap title={device.name} sx={{fontWeight: 700}}>{device.name}</Typography>
-                    <Typography variant="caption" noWrap title={`${device.host}:${device.port}`} color="text.secondary" sx={{display: 'block'}}>
-                        {device.host}:{device.port}
-                    </Typography>
-                </Box>
-                <DeviceFeedback message={message} severity={severity} pending={submitting && !unavailable} />
-                <Chip size="small" variant="outlined" color={status.color}
-                    label={t(`hardware_popover.status_${status.key}`)} sx={{height: 23, flexShrink: 0, fontSize: '0.68rem'}} />
-                <ExpandMoreIcon sx={{fontSize: 19, color: 'text.secondary', transform: expanded ? 'rotate(180deg)' : 'none'}} />
-            </ButtonBase>
-            {/* Keep details outside the header button so inspecting a warning
-                does not also expand or collapse the device controls. */}
-            {details && <Tooltip title={t('hardware_popover.status_details', {name: device.name})}>
-                <IconButton size="small" aria-controls={detailsId} sx={{mr: 0.75}}
-                    aria-label={t('hardware_popover.status_details', {name: device.name})}
-                    aria-expanded={detailsExpanded} onClick={() => setDetailsExpanded(!detailsExpanded)}>
-                    <InfoOutlinedIcon sx={{fontSize: 16}} />
-                </IconButton>
-            </Tooltip>}
-        </Stack>
-        <Collapse in={Boolean(details && detailsExpanded)} unmountOnExit>
-            <Alert id={detailsId} severity={severity === 'success' ? 'info' : severity}
-                sx={{borderRadius: 0, py: 0, overflowWrap: 'anywhere', whiteSpace: 'pre-line'}}>{details}</Alert>
-        </Collapse>
+        <ButtonBase onClick={onToggle} aria-expanded={expanded} aria-controls={contentId}
+            sx={{display: 'flex', width: '100%', minWidth: 0, px: 1.25, py: 1, gap: 1, textAlign: 'left',
+                bgcolor: expanded ? 'action.hover' : 'transparent', '&:hover': {bgcolor: 'action.hover'}}}>
+            <Box sx={{flex: 1, minWidth: 0}}>
+                <Typography variant="body2" noWrap title={device.name} sx={{fontWeight: 700}}>{device.name}</Typography>
+                <Typography variant="caption" noWrap title={`${device.host}:${device.port}`} color="text.secondary" sx={{display: 'block'}}>
+                    {device.host}:{device.port}
+                </Typography>
+            </Box>
+            <DeviceFeedback message={message} severity={severity} pending={submitting && !unavailable} />
+            <Chip size="small" variant="outlined" color={status.color}
+                label={t(`hardware_popover.status_${status.key}`)} sx={{height: 23, flexShrink: 0, fontSize: '0.68rem'}} />
+            <ExpandMoreIcon sx={{fontSize: 19, color: 'text.secondary', transform: expanded ? 'rotate(180deg)' : 'none'}} />
+        </ButtonBase>
+        {/* Only new or recurring messages reset dismissal; telemetry updates
+            must not bring back a message the operator has already closed. */}
+        {details && <DeviceDetails key={details} message={details} severity={severity} />}
         <Collapse in={expanded} unmountOnExit>
             <Box id={contentId} sx={{px: 1.25, pt: 0.5, pb: 1.25}}>
                 <Stack direction="row" spacing={0.75} alignItems="center" sx={{minHeight: 32, mb: 0.75}}>

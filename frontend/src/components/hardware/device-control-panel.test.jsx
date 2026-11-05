@@ -47,15 +47,19 @@ beforeEach(() => {vi.clearAllMocks(); socket.connected = true;});
 describe('device actions and status', () => {
     it('allows disconnecting unowned hardware with uncertain motion and keeps the warning', async () => {
         const {store, requests} = setup({snapshots: [snapshot({data: {connected: true, motion_unconfirmed: true}})]});
+        expect(screen.getByRole('alert')).toHaveTextContent('Waiting for stationary position readings');
+        fireEvent.click(within(screen.getByRole('alert')).getByRole('button', {name: 'Close'}));
+        expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+        act(() => store.dispatch(receiveDeviceSnapshot(snapshot({sequence: 2, data: {connected: true, motion_unconfirmed: true}}))));
+        expect(screen.queryByRole('alert')).not.toBeInTheDocument();
         expect(screen.getByRole('button', {name: 'Pause tracking'})).toBeEnabled();
         expect(screen.getByRole('button', {name: 'Take manual control'})).toBeDisabled();
         const disconnect = screen.getByRole('button', {name: 'Disconnect'});
         expect(disconnect).toBeEnabled();
         await act(async () => fireEvent.click(disconnect));
         expect(requests[0].data.action).toBe('disconnect');
-        act(() => store.dispatch(receiveDeviceSnapshot(snapshot({sequence: 2, data: {connected: false, motion_unconfirmed: true}}))));
-        fireEvent.click(screen.getByRole('button', {name: 'Status details for S.A.T.'}));
-        expect(screen.getByText('Disconnected; antenna motion is unconfirmed')).toBeInTheDocument();
+        act(() => store.dispatch(receiveDeviceSnapshot(snapshot({sequence: 3, data: {connected: false, motion_unconfirmed: true}}))));
+        expect(screen.getByRole('alert')).toHaveTextContent('Disconnected; antenna motion is unconfirmed');
     });
 
     it('can take control of a disconnected device held by an old tracker', async () => {
@@ -77,16 +81,20 @@ describe('device actions and status', () => {
         expect(screen.getByRole('button', {name: 'Connect'})).toBeEnabled();
     });
 
-    it('shows a rejected request and refreshes the hardware state', async () => {
-        setup({snapshots: []});
+    it.each(['rotator', 'rig'])('shows a dismissible rejected %s request and refreshes the hardware state', async (kind) => {
+        setup({kind, snapshots: []});
         socket.emit.mockImplementation((_event, request, ack) => ack(request.cmd === 'control-hardware'
             ? {success: false, error: 'Device is reserved by a scheduled observation'}
             : {success: true, data: {epoch: 'boot', server_time: Date.now() / 1000, devices: [], commands: []}}));
         await act(async () => fireEvent.click(screen.getByRole('button', {name: 'Connect'})));
         expect(screen.getByRole('status')).toHaveTextContent('Device is reserved by a scheduled observation');
-        fireEvent.click(screen.getByRole('button', {name: 'Status details for S.A.T.'}));
         expect(screen.getByRole('alert')).toHaveTextContent('Device is reserved by a scheduled observation');
         expect(socket.emit).toHaveBeenLastCalledWith('api.call', expect.objectContaining({cmd: 'get-hardware-state'}), expect.any(Function));
+        const header = within(screen.getByRole('region')).getByRole('button', {expanded: true});
+        fireEvent.click(within(screen.getByRole('alert')).getByRole('button', {name: 'Close'}));
+        expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+        expect(header).toHaveAttribute('aria-expanded', 'true');
+        expect(screen.getByRole('status')).toHaveTextContent('Device is reserved by a scheduled observation');
     });
 
     it('keeps device order and expansion stable when connections change', () => {
