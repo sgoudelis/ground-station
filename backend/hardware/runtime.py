@@ -294,12 +294,12 @@ class DeviceRuntime:
                     raise RuntimeError("Device is controlled by another owner")
                 await self.connect()
                 if self.owner != request["owner"]:
-                    if self.data["motion_unconfirmed"]:
-                        raise StopUnconfirmed("Wait for stationary position readings")
+                    # Connecting must remain available while fresh readings establish
+                    # stationarity. Position and park commands enforce the motion guard.
                     self._fence()
                     self.owner = request["owner"]
                 self.last_update = time.monotonic()
-                return dict(generation=self.generation)
+                return dict(generation=self.generation, data=self.data.copy())
             if method == "release":
                 if request.get("generation") and request["generation"] != self.generation:
                     raise RuntimeError("Device control changed before handoff")

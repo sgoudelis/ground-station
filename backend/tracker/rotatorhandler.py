@@ -589,6 +589,13 @@ class RotatorHandler:
                 )
 
                 await self.tracker.rotator_controller.connect()
+                self._stationary_position = None
+                if isinstance(self.tracker.rotator_controller, RotatorProxy):
+                    # A reconnect can succeed before the mount is stationary. Carry
+                    # that uncertainty into tracking instead of reporting a failure.
+                    self.tracker.rotator_data.update(
+                        self.tracker.rotator_controller.connection_state
+                    )
 
                 # Update rotator limits from rotator_details
                 self.update_rotator_limits()

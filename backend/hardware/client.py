@@ -56,6 +56,7 @@ class DeviceProxy:
         self.port = details["port"]
         self.generation = None
         self.connected = False
+        self.connection_state = {}
         self.disconnect_state = {}
 
     async def connect(self):
@@ -66,6 +67,7 @@ class DeviceProxy:
             details=self.details,
         )
         self.generation = result["generation"]
+        self.connection_state = result.get("data", {})
         self.connected = True
         return True
 

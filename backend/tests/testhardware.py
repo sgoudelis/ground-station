@@ -3,6 +3,7 @@
 
 import asyncio
 import json
+import queue
 import time
 from unittest.mock import AsyncMock
 
@@ -24,6 +25,7 @@ from observations.tasks import trackerhandler as observationmodule
 from observations.tasks.trackerhandler import TrackerHandler
 from tracker import instances
 from tracker.contracts import get_tracking_state_name
+from tracker.logic import SatelliteTracker
 from tracker.operations import OperationRegistry
 
 
@@ -263,11 +265,21 @@ async def test_crashed_worker_can_be_reconnected_without_inheriting_control(stat
     await service.release("rotator", "mount")
     assert worker.snapshot["owner"] is None
     assert worker.snapshot["data"]["tracking"]
-    with pytest.raises(StopUnconfirmed, match="stationary"):
-        await service.call("rotator", "mount", "acquire", owner="manual", details=details)
+    lease = await service.call("rotator", "mount", "acquire", owner="manual", details=details)
     replacement = service.devices[("rotator", "mount")]
     assert replacement.snapshot["worker_generation"] != previous_generation
-    assert replacement.snapshot["owner"] is None
+    assert replacement.snapshot["owner"] == "manual"
+    assert lease["data"]["motion_unconfirmed"] is True
+    with pytest.raises(StopUnconfirmed, match="stationary"):
+        await service.call(
+            "rotator",
+            "mount",
+            "position",
+            owner="manual",
+            generation=lease["generation"],
+            az=90,
+            el=25,
+        )
     async with asyncio.timeout(6):
         while replacement.snapshot["data"]["motion_unconfirmed"]:
             await asyncio.sleep(0.1)
@@ -383,9 +395,62 @@ async def test_unanswered_stop_preserves_motion_guard_across_owner_loss():
         await runtime.execute(request(runtime, "emergency_stop"))
     assert runtime.owner is None
     assert runtime.data["motion_unconfirmed"]
+    lease = await runtime.execute({**request(runtime, "acquire"), "owner": "manual:new"})
+    assert lease["data"]["motion_unconfirmed"] is True
+    assert runtime.owner == "manual:new"
     with pytest.raises(StopUnconfirmed):
-        await runtime.execute({**request(runtime, "acquire"), "owner": "manual:new"})
+        await runtime.execute(request(runtime, "position", az=90, el=25))
     assert controller.commands == ["S"]
+
+
+@pytest.mark.asyncio
+async def test_tracker_reconnect_succeeds_while_motion_is_unconfirmed(station):
+    service, details, commands, connections = station
+    tracker = SatelliteTracker(
+        queue.Queue(),
+        queue.Queue(),
+        tracker_id="target-1",
+        hardware_client=HardwareClient(service.register_tracker("target-1")),
+    )
+    tracker.current_rotator_id = "mount"
+    tracker.rotator_details = details
+    tracker.input_tracking_state = {"rotator_id": "mount", "rotator_state": "connected"}
+    tracker.current_rotator_state = "connected"
+    handler = tracker.rotator_handler
+    await handler.handle_rotator_state_change(None, "connected")
+    await tracker.rotator_controller.call("mode", mode="tracking")
+    tracker.input_tracking_state["rotator_state"] = "disconnected"
+    tracker.current_rotator_state = "disconnected"
+    await handler.handle_rotator_state_change("connected", "disconnected")
+    assert tracker.rotator_data["motion_unconfirmed"] is True
+    opened = len(connections)
+
+    # Reconnect immediately, before any stationary samples can arrive.
+    tracker.input_tracking_state["rotator_state"] = "connected"
+    tracker.current_rotator_state = "connected"
+    await handler.handle_rotator_state_change("disconnected", "connected")
+    assert tracker.input_tracking_state["rotator_state"] == "connected"
+    assert tracker.rotator_data["connected"] is True
+    assert tracker.rotator_data["error"] is False
+    assert tracker.rotator_data["motion_unconfirmed"] is True
+    assert tracker.rotator_data["stopped"] is False
+    assert len(connections) == opened + 2  # Ping and persistent connection.
+    with pytest.raises(StopUnconfirmed, match="stationary"):
+        await anext(tracker.rotator_controller.set_position(90, 25))
+    with pytest.raises(StopUnconfirmed, match="stationary"):
+        await tracker.rotator_controller.park()
+    assert not any(command.startswith("P ") or command == "K" for command in commands)
+
+    # Fresh samples clear the guard without another Connect request.
+    for _ in range(3):
+        await handler.update_hardware_position()
+        await asyncio.sleep(1.05)
+    assert tracker.rotator_data["motion_unconfirmed"] is False
+    assert tracker.rotator_data["connected"] is True
+    assert tracker.rotator_data["stopped"] is True
+    await anext(tracker.rotator_controller.set_position(90, 25))
+    assert "P 90 25" in commands
+    assert "S" not in commands
 
 
 @pytest.mark.asyncio
