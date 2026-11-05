@@ -40,6 +40,7 @@ import GamepadIcon from '@mui/icons-material/Gamepad';
 import {moveRotatorToPosition, setTrackerId, setTrackingStateInBackend, stopRotator} from "../target/target-slice.jsx";
 import FleetTargetRow from "../common/fleet-target-row.jsx";
 import ManualRotatorDialog from './manual-rotator-dialog.jsx';
+import DeviceControlPanel from '../hardware/device-control-panel.jsx';
 import {canStopManualRotator, getManualRotatorState} from '../target/manual-rotator-state.js';
 import {isHardwareReady, useHardwareCommand} from '../target/use-hardware-command.js';
 import {
@@ -69,6 +70,7 @@ const HardwareSettingsPopover = () => {
     const trackerCommandsById = useSelector((state) => state.targetSatTrack?.trackerCommandsById || {});
     const rotators = useSelector((state) => state.rotators?.rotators || []);
     const rigs = useSelector((state) => state.rigs?.rigs || []);
+    const deviceSnapshots = useSelector((state) => state.hardwareControl?.devices || {});
     const latestActiveTrackerIdRef = useRef(trackerId);
     const manualView = trackerViews[manualTrackerId];
     const manualInstance = trackerInstances.find((instance) => instance.tracker_id === manualTrackerId);
@@ -242,12 +244,14 @@ const HardwareSettingsPopover = () => {
     }, [trackerInstances, trackerViews, rigs, rotators]);
 
     const getRigColor = () => {
+        if (connected && Object.values(deviceSnapshots).some((row) => row.kind === 'rig' && row.data?.connected)) return 'success.main';
         if (!hasConfiguredTargets) return 'text.disabled';
         if (!connected) return 'text.disabled';
         if (fleetHardwareSummary.rig.connectedCount > 0) return 'success.main';
         return 'text.secondary';
     };
     const getRotatorColor = () => {
+        if (connected && Object.values(deviceSnapshots).some((row) => row.kind === 'rotator' && row.data?.connected)) return 'success.main';
         if (!hasConfiguredTargets) return 'text.disabled';
         if (!connected) return 'text.disabled';
         if (fleetHardwareSummary.rotator.slewingCount > 0) return 'warning.main';
@@ -256,6 +260,7 @@ const HardwareSettingsPopover = () => {
     };
 
     const getRigTooltip = () => {
+        if (!hasConfiguredTargets && rigs.length) return 'Rig controls';
         if (!hasConfiguredTargets) return t('hardware_popover.no_targets_configured', { defaultValue: 'No targets configured' });
         if (!connected) return t('hardware_popover.socket_disconnected');
         return t('hardware_popover.rig_fleet_summary', {
@@ -267,6 +272,7 @@ const HardwareSettingsPopover = () => {
     };
 
     const getRotatorTooltip = () => {
+        if (!hasConfiguredTargets && rotators.length) return 'Rotator controls';
         if (!hasConfiguredTargets) return t('hardware_popover.no_targets_configured', { defaultValue: 'No targets configured' });
         if (!connected) return t('hardware_popover.socket_disconnected');
         return t('hardware_popover.rotator_fleet_summary', {
@@ -857,7 +863,8 @@ const HardwareSettingsPopover = () => {
                 width: 380,
                 backgroundColor: 'background.paper',
             }}>
-                {renderCompactFleetPanel()}
+                <DeviceControlPanel kind={activeIcon === 'rotator' ? 'rotator' : 'rig'} />
+                {hasConfiguredTargets && renderCompactFleetPanel()}
             </Box>
         </Popover>
         {/* Keep the dialog outside the popover so closing the menu preserves it on every page. */}

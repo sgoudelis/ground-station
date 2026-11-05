@@ -28,6 +28,7 @@ from common.constants import RigStates, RotatorStates, SocketEvents, TrackerComm
 from common.events import public_events
 from common.targetkey import build_target_key, normalize_target_key
 from db import AsyncSessionLocal
+from hardware.service import hardware
 from session.tracker import session_tracker
 from tracker.context import (
     CONTEXT_FIELDS,
@@ -884,6 +885,7 @@ async def delete_tracker_instance(
     # consumer needs that lock to drain hardware snapshots while the worker flushes its
     # multiprocessing queue during shutdown.
     try:
+        await hardware.release_tracker(tracker_id)
         remove_result = await asyncio.wait_for(
             asyncio.to_thread(remove_tracker_instance, tracker_id),
             timeout=6.0,

@@ -1,0 +1,96 @@
+# Station hardware control
+
+Rotator and physical radio connections belong to station hardware workers, not
+target tracker processes. A device stays connected when its control owner changes.
+`hardware/service.py` supervises one process per instantiated physical device;
+`hardware/runtime.py` owns its controller, polling, limits, and physical motion
+guard. Tracker workers reach these processes through `hardware/client.py`.
+
+## Ownership and execution
+
+Each device has one command owner: a tracker producer incarnation, a scheduled
+observation, or station manual control. Telemetry can have many subscribers.
+Ownership generations are transient and change whenever control is revoked.
+Every producer request contains that generation, the backend epoch, and a deadline.
+Device workers check these immediately before I/O, including after queued waits.
+
+Release fences the previous owner, pauses automatic updates, and stops an active
+rotator. When Stop is needed, stationary samples must be confirmed before a new
+owner can acquire control. The TCP stream remains open. Late Disconnect from the
+old owner acknowledges detachment without closing the new owner's stream.
+Explicit Disconnect closes the physical connection.
+
+Manual takeover can release an interactive tracker. Observations reserve their
+whole device bundle during handoff and cannot be displaced by manual takeover.
+Stop is available independently of ownership and revokes queued producer writes.
+
+Satellite geometry, Doppler calculation, tracking lead, and pass-specific overlap
+planning remain with target tracking. Device workers enforce position bounds and
+retain physical motion uncertainty across ownership changes. Whole radio tuning
+transactions, including VFO selection and restoring RX, execute within one device
+lock using `hardware/rigcontrol.py`.
+
+Tracker target heartbeats renew automatic pointing only after a target has been
+resolved. A 15-second lapse pauses rig automation or physically stops rotator
+motion. Lost producer communication also releases idle tracker ownership. Closing
+a browser dialog does not cancel a submitted movement.
+
+SDR software VFO tracking continues through its existing session path. SDRs do
+not acquire physical-radio workers or retune the shared SDR center frequency.
+
+## Socket.IO contracts
+
+`get-hardware-state` returns `epoch`, `server_time`, `devices`, and recent manual
+`commands`. Configuration continues to come from `get-rotators` / `get-rigs`.
+`hardware-state` broadcasts snapshots independently of tracker telemetry. Each
+snapshot carries `kind`, `device_id`, backend `epoch`, ownership `generation`,
+`worker_generation`, `worker_started_at`, `sequence`, `observed_at`, `owner`, and
+device `data`. Owner is null or an object with `type` and `id`.
+
+Position samples additionally have `position_sequence` and
+`position_observed_at`. Movement completion requires two fresh position samples;
+repeated publications of cached positions cannot complete it.
+
+`control-hardware` accepts `kind`, `device_id`, `action`, `command_id`, `epoch`,
+`accept_before`, and the last observed `generation`. Stop can use an older
+generation. Move additionally accepts `position: {az, el}`. Actions are
+`connect`, `disconnect`, `take-control`, `release`, `stop`, and rotator-specific
+`move`, `park`, `unpark`.
+
+The acknowledgement contains `data.command`; completion uses the existing
+`tracker-command-status` event and shared operation registry. Manual records have
+a synthetic command scope `manual:<kind>:<device_id>`; this does not create a
+tracker, target slot, or satellite tracking state.
+
+`GET /api/v1/hardware` exposes independent device observations to API clients
+with `station:read`. Existing tracker-specific REST and Socket.IO views remain
+available for target consumers.
+
+## Persistence and recovery
+
+Connection intent is stored separately in `tracking_state` JSON rows named
+`hardware:<kind>:<device_id>`. These rows have independent validation and need no
+schema migration. Existing `satellite-tracking:<tracker_id>` rows continue to
+restore target selections and supported tracking/parking intent.
+
+Startup restores hardware connections before tracker ownership. Manual leases,
+ownership generations, and manual movement targets are never restored. A worker
+restart creates a new generation and preserves uncertainty about any previous
+motion. Reconnecting does not prove that the mount stopped.
+
+Before restoring target workers, startup clears conflicting saved physical-device
+assignments from all affected targets and logs the conflict. Those targets remain
+available for explicit reassignment; database iteration order never selects an
+automatic control owner. Shared SDR assignments are excluded from this check.
+
+The UI stores device observations and manual commands outside tracker view
+state. It rejects older worker generations, sequences, and backend epochs, and
+reconciles commands after reconnect. The hardware popover lists configured devices
+even with zero targets; manual movement needs only a device and manual ownership.
+
+## Verification
+
+`tests/testhardware.py` exercises IPC and real TCP traffic against local fake
+Hamlib servers, ownership fencing, preserved connections, automatic-update expiry,
+manual operation completion, and connection persistence without a sky target.
+Existing tracker Stop and operation lifecycle tests remain applicable.

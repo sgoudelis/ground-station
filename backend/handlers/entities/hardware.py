@@ -20,12 +20,14 @@ import json
 import logging
 import math
 import sys
+import time
 from contextlib import AsyncExitStack
 from typing import Any, Dict, Optional, Union
 
 import crud
 from common.constants import TrackerCommands
 from db import AsyncSessionLocal
+from hardware.control import submit_device_command
 from hardware.parameters import (
     cache_sdr_parameters,
     communicate_sdr_probe,
@@ -36,6 +38,7 @@ from hardware.parameters import (
     sdr_hardware_lock,
     sdr_parameter_lock,
 )
+from hardware.service import hardware
 from hardware.soapysdrbrowser import discovered_servers, query_server_for_sdrs
 from server import runtimestate
 from session.background import background_sessions
@@ -471,16 +474,21 @@ async def submit_rig(
         }
 
 
-async def edit_rig(
-    sio: Any, data: Optional[Dict], logger: Any, sid: str
-) -> Dict[str, Union[bool, list]]:
+async def edit_rig(sio: Any, data: Optional[Dict], logger: Any, sid: str) -> Dict[str, Any]:
     """Edit an existing rig."""
+    try:
+        hardware.validate_edit("rig", (data or {}).get("id"), data or {})
+    except ValueError as error:
+        return {"success": False, "error": str(error), "data": []}
     async with AsyncSessionLocal() as dbsession:
         logger.debug(f"Editing rig, data: {data}")
         edit_reply = await crud.hardware.edit_rig(dbsession, data or {})
 
         rigs = await crud.hardware.fetch_rigs(dbsession)
         if edit_reply.get("success") and data:
+            details = await crud.hardware.fetch_rigs(dbsession, rig_id=data.get("id"))
+            if details.get("data"):
+                await hardware.configure("rig", data.get("id"), details["data"])
             for manager in get_all_tracker_managers().values():
                 await manager.notify_hardware_changed(rig_id=data.get("id"))
         return {
@@ -489,16 +497,21 @@ async def edit_rig(
         }
 
 
-async def delete_rig(
-    sio: Any, data: Optional[Dict], logger: Any, sid: str
-) -> Dict[str, Union[bool, list]]:
+async def delete_rig(sio: Any, data: Optional[Dict], logger: Any, sid: str) -> Dict[str, Any]:
     """Delete a rig."""
+    identifiers = data if isinstance(data, (list, tuple)) else [(data or {}).get("id")]
+    try:
+        hardware.validate_delete("rig", identifiers)
+    except ValueError as error:
+        return {"success": False, "error": str(error), "data": []}
     async with AsyncSessionLocal() as dbsession:
         logger.debug(f"Delete rig, data: {data}")
         delete_reply = await crud.hardware.delete_rig(dbsession, data or {})
 
         rigs = await crud.hardware.fetch_rigs(dbsession)
         if delete_reply.get("success") and data:
+            for identifier in identifiers:
+                await hardware.configure("rig", identifier, {})
             if isinstance(data, dict):
                 for manager in get_all_tracker_managers().values():
                     await manager.notify_hardware_changed(rig_id=data.get("id"))
@@ -547,10 +560,12 @@ async def submit_rotator(
         }
 
 
-async def edit_rotator(
-    sio: Any, data: Optional[Dict], logger: Any, sid: str
-) -> Dict[str, Union[bool, list]]:
+async def edit_rotator(sio: Any, data: Optional[Dict], logger: Any, sid: str) -> Dict[str, Any]:
     """Edit an existing rotator."""
+    try:
+        hardware.validate_edit("rotator", (data or {}).get("id"), data or {})
+    except ValueError as error:
+        return {"success": False, "error": str(error), "data": []}
     async with AsyncSessionLocal() as dbsession:
         logger.debug(f"Editing rotator, data: {data}")
         # CRUD normalizes a mutable payload. Keep the handler copy intact so the
@@ -561,6 +576,9 @@ async def edit_rotator(
         rotators = await crud.hardware.fetch_rotators(dbsession)
         logger.debug(f"Rotators: {rotators}")
         if edit_reply.get("success") and data:
+            details = await crud.hardware.fetch_rotators(dbsession, rotator_id=data.get("id"))
+            if details.get("data"):
+                await hardware.configure("rotator", data.get("id"), details["data"])
             for manager in get_all_tracker_managers().values():
                 await manager.notify_hardware_changed(rotator_id=data.get("id"))
         return {
@@ -569,16 +587,21 @@ async def edit_rotator(
         }
 
 
-async def delete_rotator(
-    sio: Any, data: Optional[Dict], logger: Any, sid: str
-) -> Dict[str, Union[bool, list]]:
+async def delete_rotator(sio: Any, data: Optional[Dict], logger: Any, sid: str) -> Dict[str, Any]:
     """Delete rotators."""
+    identifiers = data if isinstance(data, (list, tuple)) else [(data or {}).get("id")]
+    try:
+        hardware.validate_delete("rotator", identifiers)
+    except ValueError as error:
+        return {"success": False, "error": str(error), "data": []}
     async with AsyncSessionLocal() as dbsession:
         logger.debug(f"Delete rotator, data: {data}")
         delete_reply = await crud.hardware.delete_rotators(dbsession, data or {})
 
         rotators = await crud.hardware.fetch_rotators(dbsession)
         if delete_reply.get("success") and data:
+            for identifier in identifiers:
+                await hardware.configure("rotator", identifier, {})
             if isinstance(data, dict):
                 for manager in get_all_tracker_managers().values():
                     await manager.notify_hardware_changed(rotator_id=data.get("id"))
@@ -1326,10 +1349,47 @@ async def get_local_airspy_devices_handler(
     }
 
 
+async def get_hardware_state(sio, data, logger, sid):
+    return {
+        "success": True,
+        "data": {
+            "epoch": operations.epoch,
+            "server_time": time.time(),
+            "devices": hardware.snapshots(),
+            "commands": [
+                row
+                for row in operations.snapshot()["commands"]
+                if row["tracker_id"].startswith("manual:")
+            ],
+        },
+    }
+
+
+async def control_hardware(sio, data, logger, sid):
+    payload = data or {}
+    kind, device_id = payload.get("kind"), str(payload.get("device_id") or "")
+    if kind not in {"rotator", "rig"} or not device_id:
+        return {"success": False, "error": "A device kind and ID are required"}
+    try:
+        async with AsyncSessionLocal() as session:
+            fetch = crud.hardware.fetch_rotators if kind == "rotator" else crud.hardware.fetch_rigs
+            reply = await fetch(session, **{f"{kind}_id": device_id})
+        if not reply.get("success") or not reply.get("data"):
+            return {"success": False, "error": "Device configuration was not found"}
+        command = await submit_device_command(
+            kind, device_id, payload.get("action"), reply["data"], payload
+        )
+        return {"success": True, "data": {"command": command}}
+    except (ValueError, RuntimeError) as error:
+        return {"success": False, "error": str(error)}
+
+
 def register_handlers(registry):
     """Register hardware handlers with the command registry."""
     registry.register_batch(
         {
+            "get-hardware-state": (get_hardware_state, "api_call"),
+            "control-hardware": (control_hardware, "api_call"),
             # Rigs
             "get-rigs": (get_rigs, "api_call"),
             "submit-rig": (submit_rig, "api_call"),

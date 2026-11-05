@@ -20,6 +20,7 @@
 /* global process */
 
 import {combineReducers, configureStore} from '@reduxjs/toolkit';
+import hardwareControlReducer from '../hardware/control-slice.js';
 import { persistStore, persistReducer } from "redux-persist";
 import storageEngine from "redux-persist/lib/storage";
 import rigsReducer from '../hardware/rig-slice.jsx';
@@ -443,6 +444,7 @@ export const store = configureStore({
         vfo: persistedVfoReducer,
         rigs: persistedRigsReducer,
         rotators: persistedRotatorsReducer,
+        hardwareControl: hardwareControlReducer,
         tleSources: persistedOrbitalSourcesReducer,
         satellites: persistedSatellitesReducer,
         satelliteGroups: persistedSatelliteGroupsReducer,

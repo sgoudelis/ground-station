@@ -77,7 +77,14 @@ class OperationRegistry:
         return copy.deepcopy(record)
 
     def accept(
-        self, tracker_id: str, changes: dict, state: dict, request: Optional[dict] = None
+        self,
+        tracker_id: str,
+        changes: dict,
+        state: dict,
+        request: Optional[dict] = None,
+        *,
+        allow_handoff: bool = False,
+        device_snapshot: Optional[dict] = None,
     ) -> dict:
         request = request or {}
         self.prune()
@@ -90,6 +97,12 @@ class OperationRegistry:
         if time.time() > request.get("accept_before", float("inf")):
             raise ValueError("Request expired before acceptance")
         action = request.get("action") or "configure"
+        if (
+            device_snapshot is not None
+            and device_snapshot.get("data", {}).get("motion_unconfirmed")
+            and requests_rotator_motion(action, changes)
+        ):
+            raise ValueError("Rotator motion is unconfirmed; wait for stationary position readings")
         scopes = command_scopes(changes, action)
         devices = {scope: state.get(f"{scope}_id") for scope in scopes if scope != "target"}
         expected = request.get("device_ids") or {}
@@ -106,6 +119,7 @@ class OperationRegistry:
         for other_id, observed in self.observed.items():
             if (
                 requests_rotator_motion(action, changes)
+                and device_snapshot is None
                 and devices.get("rotator") == observed.get("tracking_state", {}).get("rotator_id")
                 and observed.get("rotator_data", {}).get("motion_unconfirmed")
             ):
@@ -119,6 +133,7 @@ class OperationRegistry:
                     device not in (None, "", "none")
                     and observed.get("tracking_state", {}).get(f"{scope}_id") == device
                     and observed.get(f"{scope}_data", {}).get("connected")
+                    and not allow_handoff
                 ):
                     raise ValueError("Device is connected to another tracker")
         for record in list(self.records.values()):
@@ -130,7 +145,12 @@ class OperationRegistry:
             )
             if not overlaps:
                 continue
-            if is_stop and same_tracker and set(scopes).intersection(record["scopes"]):
+            if (
+                allow_handoff
+                or is_stop
+                and same_tracker
+                and set(scopes).intersection(record["scopes"])
+            ):
                 # Acceptance alone cannot cancel running hardware. Keep the
                 # earlier operation outstanding until the worker handles Stop;
                 # persistence or queueing of Stop can still fail here.

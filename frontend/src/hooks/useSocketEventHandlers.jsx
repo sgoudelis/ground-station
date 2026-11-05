@@ -48,6 +48,7 @@ import {isCommandOutstanding} from '../components/target/tracker-command-state.j
 import { setObserverSkyBodies, setTargetCelestialLivePointing } from '../components/celestial/celestial-slice.jsx';
 import { buildTargetKeyFromTrackingState } from '../components/target/celestial-target-utils.js';
 import { setTrackerInstances } from '../components/target/tracker-instances-slice.jsx';
+import {fetchHardwareState, receiveDeviceCommand, receiveDeviceSnapshot} from '../components/hardware/control-slice.js';
 import { setSynchronizing } from '../components/satellites/synchronize-slice.jsx';
 import { initializeAppData } from '../services/data-sync.js';
 import { createDispatchBatcher } from './dispatchBatch.js';
@@ -192,6 +193,7 @@ export const useSocketEventHandlers = (socket, enabled = true) => {
             if (!isCurrentSession(generation, socketId)) return;
             store.dispatch(checkForNewFiles({ socket }));
             await dispatch(fetchTrackerCommands({socket}));
+            await dispatch(fetchHardwareState({socket}));
         };
 
         const handleConnect = async () => {
@@ -367,6 +369,10 @@ export const useSocketEventHandlers = (socket, enabled = true) => {
         });
 
         socket.on("tracker-command-status", (data) => {
+            if (data.tracker_id?.startsWith('manual:')) {
+                store.dispatch(receiveDeviceCommand(data));
+                return;
+            }
             store.dispatch(setTrackerCommandStatus(data));
             if (data.snapshot) store.dispatch(setHardwareSnapshot(data.snapshot));
         });
@@ -374,10 +380,15 @@ export const useSocketEventHandlers = (socket, enabled = true) => {
         socket.on('tracker-hardware-state', (data) => {
             trackerBatch.enqueue(() => store.dispatch(setHardwareSnapshot(data)));
         });
+        socket.on('hardware-state', (data) => {
+            trackerBatch.enqueue(() => store.dispatch(receiveDeviceSnapshot(data)));
+        });
         let reconcilingCommands = false;
         const commandTimer = window.setInterval(async () => {
             if (!socket.connected || reconcilingCommands) return;
             const commands = Object.values(store.getState().targetSatTrack.trackerCommandsById || {});
+            const manualCommands = Object.values(store.getState().hardwareControl?.commands || {});
+            if (manualCommands.some(isCommandOutstanding)) store.dispatch(fetchHardwareState({socket}));
             if (!commands.some(isCommandOutstanding)) return;
             reconcilingCommands = true;
             try { await store.dispatch(fetchTrackerCommands({socket})); }
@@ -1191,6 +1202,7 @@ export const useSocketEventHandlers = (socket, enabled = true) => {
             socket.off("ui-tracker-state");
             socket.off("tracker-command-status");
             socket.off('tracker-hardware-state');
+            socket.off('hardware-state');
             window.clearInterval(commandTimer);
             socket.off("tracker-instances");
             socket.off("file_browser_state", handleFileBrowserState);

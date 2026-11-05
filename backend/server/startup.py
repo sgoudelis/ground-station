@@ -59,6 +59,8 @@ from db.models import (
     SDRs,
 )
 from handlers.entities.control import restore_full_backup_file
+from hardware.lifecycle import start_hardware
+from hardware.service import hardware
 from library.inventory import get_inventory, publish_ready_artifacts
 from observations import events as obs_events
 from observations.bundle import prune_finalized_empty_observation_bundles
@@ -270,6 +272,7 @@ async def lifespan(fastapiapp: FastAPI):
     # The command registry belongs to this process. Saved tracking state is
     # restored below, including hardware modes that should reconnect.
     operations.__dict__.update(OperationRegistry().__dict__)
+    await start_hardware(sio)
     Path(arguments.db).with_suffix(".commands.json").unlink(missing_ok=True)
     asyncio.create_task(handle_command_updates(sio))
     asyncio.create_task(handle_tracker_messages(sio))
@@ -385,6 +388,7 @@ async def lifespan(fastapiapp: FastAPI):
         await shutdown.cleanup_sdr_processes()
         stop_scheduler()
         shutdown.cleanup_everything()
+        await hardware.shutdown()
         process_manager.shutdown()
 
 
@@ -771,6 +775,18 @@ async def api_status(request: Request):
     """Return activity, active observation count, next scheduled observation, and monitored satellite count. Useful for Home Assistant polling; manual radio activity may not change this state. Requires `station:read`."""
     await _require_api_token(request, "station:read")
     return await _load_public_status()
+
+
+@app.get(
+    "/api/v1/hardware",
+    dependencies=[Depends(api_bearer_scheme)],
+    responses=json_example("hardware"),
+    summary="Get device state independently of tracker instances",
+)
+async def api_hardware(request: Request):
+    """Return device connections, control owners, and observations. Requires `station:read`."""
+    await _require_api_token(request, "station:read")
+    return {"data": hardware.snapshots(), "epoch": hardware.epoch}
 
 
 @app.get(

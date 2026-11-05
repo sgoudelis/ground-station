@@ -23,6 +23,7 @@ from common.logger import logger
 from crud import trackingstate as trackingstate_crud
 from crud import transmitters as transmitters_crud
 from db import AsyncSessionLocal
+from hardware.service import hardware
 from tracker.contracts import get_tracking_state_name
 from tracker.instances import emit_tracker_instances
 from tracker.operations import TERMINAL, operations
@@ -143,6 +144,7 @@ class TrackerHandler:
         # Disconnect first, then clear each assignment. Changing an ID in the
         # same update as its state is rejected by TrackerManager.
         if rig and self._assigned(state.get("rig_id")):
+            await hardware.release_tracker(tracker_id, "rig", state["rig_id"])
             await self._update_and_confirm(
                 tracker_id, {"rig_state": "disconnected"}, observation_id
             )
@@ -150,6 +152,7 @@ class TrackerHandler:
                 tracker_id, {"rig_id": "none", "rig_vfo": "none"}, observation_id
             )
         if rotator and self._assigned(state.get("rotator_id")):
+            await hardware.release_tracker(tracker_id, "rotator", state["rotator_id"])
             await self._update_and_confirm(
                 tracker_id, {"rotator_state": "disconnected"}, observation_id
             )
@@ -158,6 +161,16 @@ class TrackerHandler:
     async def _release_existing_hardware(
         self, observation_id: str, rotator_id: Any, rig_id: Any
     ) -> None:
+        # Standalone manual ownership has no tracker manager to disconnect.
+        # The bundle reservation already excludes new manual claims here.
+        for kind, identifier in (("rotator", rotator_id), ("rig", rig_id)):
+            worker = hardware.devices.get((kind, str(identifier)))
+            if (
+                worker
+                and hardware.owners.get(worker.snapshot.get("owner") or "", {}).get("type")
+                == "manual"
+            ):
+                await hardware.release(kind, identifier)
         rotator_owner = (
             get_assigned_tracker_for_rotator(rotator_id) if self._assigned(rotator_id) else None
         )
@@ -252,7 +265,9 @@ class TrackerHandler:
                 "message": "The selected rig transmitter has no downlink frequency for this satellite",
             }
 
-        async with _handoff_lock:
+        async with _handoff_lock, hardware.reserve(
+            [("rotator", rotator_id), ("rig", rig_id)], observation_id
+        ) as reservation:
             try:
                 await self._release_existing_hardware(observation_id, rotator_id, rig_id)
                 resolution = create_observation_tracker_slot(observation_id)
@@ -262,6 +277,7 @@ class TrackerHandler:
                         str(resolution.get("message") or "Could not create OBS slot"),
                     )
                 tracker_id = str(resolution["tracker_id"])
+                reservation["tracker_id"] = tracker_id
                 get_tracker_manager(tracker_id)
                 await self._update_and_confirm(
                     tracker_id,

@@ -223,6 +223,29 @@ class TrackerRigList(BaseModel):
     data: list[TrackerRigStatus]
 
 
+class HardwareOwner(BaseModel):
+    type: Literal["manual", "tracker", "observation"]
+    id: str
+
+
+class DeviceSnapshot(BaseModel):
+    kind: Literal["rotator", "rig"]
+    device_id: str
+    epoch: str
+    generation: str
+    worker_generation: str
+    worker_started_at: float
+    sequence: int
+    observed_at: float
+    owner: HardwareOwner | None
+    data: dict[str, Any]
+
+
+class HardwareList(BaseModel):
+    data: list[DeviceSnapshot]
+    epoch: str
+
+
 class SatelliteSummary(BaseModel):
     norad_id: int
     name: str
@@ -532,6 +555,23 @@ ARTIFACT_LIST_EXAMPLE = {
 }
 
 JSON_EXAMPLES: dict[str, dict[str, Any]] = {
+    "hardware": {
+        "epoch": "backend-epoch",
+        "data": [
+            {
+                "kind": "rotator",
+                "device_id": "rotator-1",
+                "epoch": "backend-epoch",
+                "generation": "control-generation",
+                "worker_generation": "worker-generation",
+                "worker_started_at": 0,
+                "sequence": 1,
+                "observed_at": 1,
+                "owner": None,
+                "data": {"connected": True, "az": 90, "el": 25},
+            }
+        ],
+    },
     "me": TOKEN_EXAMPLE,
     "station": STATION_EXAMPLE,
     "status": STATUS_EXAMPLE,
@@ -599,6 +639,7 @@ JSON_EXAMPLES: dict[str, dict[str, Any]] = {
 }
 
 JSON_MODELS: dict[str, type[BaseModel]] = {
+    "hardware": HardwareList,
     "me": TokenIdentity,
     "station": StationResponse,
     "status": StationStatus,
@@ -621,6 +662,7 @@ JSON_MODELS: dict[str, type[BaseModel]] = {
 }
 
 JSON_ROUTE_EXAMPLES = {
+    "/api/v1/hardware": "hardware",
     "/api/v1/me": "me",
     "/api/v1/station": "station",
     "/api/v1/status": "status",
@@ -643,6 +685,7 @@ JSON_ROUTE_EXAMPLES = {
 }
 
 JSON_SCOPES = {
+    "hardware": "station:read",
     "station": "station:read",
     "status": "station:read",
     "sdrs": "sdrs:read",

@@ -13,12 +13,14 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+from collections import Counter
+
 from sqlalchemy import select
 
 from common.constants import SocketEvents
 from common.logger import logger
 from db import AsyncSessionLocal
-from db.models import TrackingState
+from db.models import SDRs, TrackingState
 from tracker.contracts import TRACKING_STATE_NAME_PREFIX
 from tracker.runner import (
     assign_rotator_to_tracker,
@@ -53,6 +55,7 @@ async def restore_tracker_instances_from_db() -> list[str]:
         result = await dbsession.execute(stmt)
         rows = result.scalars().all()
 
+        candidate_rows = []
         for row in rows:
             tracker_id = _extract_tracker_id_from_state_name(getattr(row, "name", ""))
             if not tracker_id:
@@ -69,8 +72,36 @@ async def restore_tracker_instances_from_db() -> list[str]:
 
             value = getattr(row, "value", {}) or {}
             restore_candidates.append((tracker_id, value if isinstance(value, dict) else None))
+            candidate_rows.append(row)
 
-        if skipped_observation_tracker_ids:
+        # Inspect the complete saved fleet before starting any producer. A
+        # conflicting old assignment must not choose a winner by database order.
+        sdr_ids = {str(identifier) for identifier in (await dbsession.scalars(select(SDRs.id)))}
+        changed = False
+        for kind in ("rotator", "rig"):
+            claims = Counter(
+                str(value[f"{kind}_id"])
+                for _, value in restore_candidates
+                if value
+                and value.get(f"{kind}_id") not in (None, "", "none")
+                and not (kind == "rig" and str(value[f"{kind}_id"]) in sdr_ids)
+            )
+            conflicts = {identifier for identifier, count in claims.items() if count > 1}
+            for index, (tracker_id, value) in enumerate(restore_candidates):
+                if value is None or str(value.get(f"{kind}_id")) not in conflicts:
+                    continue
+                logger.error(
+                    "Clearing conflicting saved %s %s assignment from %s; reassign explicitly",
+                    kind,
+                    value[f"{kind}_id"],
+                    tracker_id,
+                )
+                value = {**value, f"{kind}_id": "none", f"{kind}_state": "disconnected"}
+                candidate_rows[index].value = value
+                restore_candidates[index] = (tracker_id, value)
+                changed = True
+
+        if skipped_observation_tracker_ids or changed:
             await dbsession.commit()
 
     for tracker_id, value in restore_candidates:

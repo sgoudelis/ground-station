@@ -95,6 +95,7 @@ class SatelliteTracker:
         queue_in: multiprocessing.Queue,
         stop_event=None,
         tracker_id: str = "",
+        hardware_client=None,
     ):
         """Initialize the satellite tracker with queues and configuration."""
         # Store queue references
@@ -104,6 +105,7 @@ class SatelliteTracker:
         self.queue_out = TrackerOutputQueueProxy(queue_out, self.tracker_id)
         self.queue_in = queue_in
         self.stop_event = stop_event
+        self.hardware_client = hardware_client
 
         # Configuration constants (will be updated from rotator_details)
         self.azimuth_limits = (0, 360)
@@ -1071,6 +1073,15 @@ class SatelliteTracker:
 
                 # Check position limits
                 self.rotator_handler.check_position_limits(skypoint, satellite_name)
+
+                # Only a successfully resolved target renews automatic control.
+                # A stalled/dead producer cannot keep a stale antenna target alive.
+                if (
+                    self.hardware_client
+                    and self.rotator_controller
+                    and self.current_rotator_state == "tracking"
+                ):
+                    await self.rotator_controller.call("heartbeat")
 
                 if target_type == "satellite":
                     # Select the 0_450 lane from the pass geometry before issuing

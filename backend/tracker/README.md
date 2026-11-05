@@ -1,5 +1,12 @@
 # Multi-Target / Multi-Rotator Tracker Architecture
 
+Physical I/O now runs in station-owned device processes. Trackers use IPC
+adapters; rotator pointing/pass policy and Doppler calculations remain here.
+See [station hardware control](../docs/hardware-control.md) for the current
+connection, ownership, manual-control, and handoff contracts. The historical
+diagrams below describe tracker context flow; direct worker-to-hardware arrows
+now pass through the hardware supervisor and device workers.
+
 This document analyzes the Ground Station multi-target, multi-rotator tracking architecture from backend process orchestration to UI state handling.
 
 ## Scope

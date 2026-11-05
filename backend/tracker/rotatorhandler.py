@@ -26,6 +26,7 @@ from datetime import datetime, timezone
 
 from common.constants import DictKeys, SocketEvents, TrackingEvents
 from controllers.rotator import RotatorController, StopRejected
+from hardware.client import RotatorProxy
 from tracker.context import live_satellite_data
 from tracking.passes import calculate_next_events
 
@@ -111,7 +112,8 @@ class RotatorHandler:
             try:
                 # Do not read p on the old stream: a late S reply could masquerade
                 # as position data. Recovery never replays S or a movement target.
-                await self.tracker.rotator_controller.recover_position()
+                if not isinstance(self.tracker.rotator_controller, RotatorProxy):
+                    await self.tracker.rotator_controller.recover_position()
             except Exception as recovery_error:
                 reason += f" Communication recovery failed: {recovery_error}"
                 await self.handle_rotator_error(RuntimeError(reason))
@@ -559,7 +561,10 @@ class RotatorHandler:
             self.tracker.current_rotator_id is not None
             and str(self.tracker.current_rotator_id).strip().lower() != "none"
         )
-        if has_rotator_id and self.tracker.rotator_controller is None:
+        if has_rotator_id and (
+            self.tracker.rotator_controller is None
+            or isinstance(self.tracker.rotator_controller, RotatorProxy)
+        ):
             try:
                 rotator_details = self.tracker.rotator_details
                 if not rotator_details:
@@ -574,8 +579,13 @@ class RotatorHandler:
                     }
                 )
 
-                self.tracker.rotator_controller = RotatorController(
-                    host=rotator_details["host"], port=rotator_details["port"]
+                client = getattr(self.tracker, "hardware_client", None)
+                self.tracker.rotator_controller = (
+                    RotatorProxy(client, self.tracker.current_rotator_id, rotator_details)
+                    if client
+                    else RotatorController(
+                        host=rotator_details["host"], port=rotator_details["port"]
+                    )
                 )
 
                 await self.tracker.rotator_controller.connect()
@@ -685,6 +695,8 @@ class RotatorHandler:
             self._reset_slew_state()
             self._clear_overlap_lane_state()
             await self.connect_to_rotator()
+            if isinstance(self.tracker.rotator_controller, RotatorProxy):
+                await self.tracker.rotator_controller.call("mode", mode="tracking")
             if self.tracker.rotator_controller is not None and self.tracker.rotator_data.get(
                 "connected"
             ):

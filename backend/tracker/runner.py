@@ -26,6 +26,8 @@ from typing import Any, Dict, Optional
 import setproctitle
 
 from common.arguments import arguments
+from hardware.client import HardwareClient
+from hardware.service import hardware
 from tracker.contracts import require_tracker_id
 from tracker.logic import SatelliteTracker
 from tracker.manager import TrackerManager
@@ -173,6 +175,7 @@ class TrackerSupervisor:
 
     def _build_process(self, tracker_id: str, queue_to_tracker: Queue, stop_event: MpEvent):
         normalized_id = require_tracker_id(tracker_id)
+        hardware_connection = hardware.register_tracker(normalized_id)
 
         def run_tracking_task():
             title = f"Ground Station - SatelliteTracker[{normalized_id}]"
@@ -187,6 +190,7 @@ class TrackerSupervisor:
                     queue_in=queue_to_tracker,
                     stop_event=stop_event,
                     tracker_id=normalized_id,
+                    hardware_client=HardwareClient(hardware_connection),
                 )
                 loop.run_until_complete(tracker.run())
             except Exception as e:
@@ -204,11 +208,13 @@ class TrackerSupervisor:
         existing = self.runtimes.get(normalized_id)
         if existing and existing.process.is_alive():
             return existing
+        hardware.unregister_tracker(normalized_id)
 
         queue_to_tracker: Queue = multiprocessing.Queue()
         stop_event = multiprocessing.Event()
         process = self._build_process(normalized_id, queue_to_tracker, stop_event)
         process.start()
+        hardware.tracker_started(normalized_id)
 
         runtime = TrackerRuntime(
             tracker_id=normalized_id,
@@ -327,6 +333,7 @@ class TrackerSupervisor:
         runtime = self.runtimes.get(normalized_id)
         if not runtime:
             # Keep ownership maps consistent even when runtime is already gone.
+            hardware.unregister_tracker(normalized_id)
             self._release_rotator_ownership(normalized_id)
             return True
 
@@ -356,6 +363,7 @@ class TrackerSupervisor:
         except Exception:
             pass
         self.runtimes.pop(normalized_id, None)
+        hardware.unregister_tracker(normalized_id)
         self._release_rotator_ownership(normalized_id)
         return True
 

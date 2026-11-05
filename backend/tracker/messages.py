@@ -24,6 +24,7 @@ from typing import Any, Dict
 from celestial.scene import build_observer_sky_bodies
 from common.constants import SocketEvents
 from common.events import public_events
+from hardware.service import hardware
 from tracker.context import OBSERVER_SKY_UPDATE, SATELLITE_TRACKING_CONTEXT, apply_context
 from tracker.contracts import InvalidTrackerIdError, is_target_slot_id, require_tracker_id
 from tracker.operations import operations
@@ -189,6 +190,17 @@ async def handle_tracker_messages(sockio):
                         await asyncio.sleep(0)
                         continue
                     data["tracker_id"] = tracker_id
+                    # A queued tracker snapshot cannot reclaim hardware after
+                    # its lease was transferred to a manual or scheduled owner.
+                    state = data.get("tracking_state") or {}
+                    for kind in ("rotator", "rig"):
+                        if state.get(f"{kind}_id") and not hardware.owns(
+                            tracker_id, kind, state[f"{kind}_id"]
+                        ):
+                            data.setdefault(f"{kind}_data", {}).update(
+                                connected=False, tracking=False
+                            )
+                            state[f"{kind}_state"] = "disconnected"
                     if event in {SATELLITE_TRACKING_CONTEXT, SocketEvents.SATELLITE_TRACKING}:
                         if not _snapshot_from_current_worker(tracker_id, data):
                             continue

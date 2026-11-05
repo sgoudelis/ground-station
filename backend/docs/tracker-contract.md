@@ -7,6 +7,11 @@ Status: current
 Tracking is instance-scoped. Each tracker instance has its own identity and may
 own one rotator at a time.
 
+Physical connections are station-owned and survive tracker handoffs. Device
+ownership, standalone manual control, and telemetry are defined in
+[hardware-control.md](hardware-control.md). Tracker assignments select devices;
+the hardware service grants and fences actual control.
+
 ## Core Decisions
 
 1. Tracker identity is mandatory in contracts.
