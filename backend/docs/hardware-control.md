@@ -37,6 +37,12 @@ Manual takeover can release an interactive tracker. Observations reserve their
 whole device bundle during handoff and cannot be displaced by manual takeover.
 Stop is available independently of ownership and revokes queued producer writes.
 
+Observation handoff checks station hardware owners and saved tracker selections
+alongside the rotator assignment map, including selections left after manual
+takeover. It releases the active producer before clearing old slot references.
+Delayed telemetry and command results from a released tracker cannot restore its
+connection status or tracking intent, or block the observation's new owner.
+
 Satellite geometry, Doppler calculation, tracking lead, and pass-specific overlap
 planning remain with target tracking. Device workers enforce position bounds and
 retain physical motion uncertainty across ownership changes. Whole radio tuning

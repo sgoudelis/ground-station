@@ -11,6 +11,7 @@ import pytest
 
 from common.events import EventBroker
 from db.models import TrackingState
+from hardware.service import HardwareSupervisor
 from tracker import logic
 from tracker import manager as managermodule
 from tracker import messages as messagemodule
@@ -73,20 +74,34 @@ def test_removed_tracker_telemetry_no_longer_reserves_its_device():
 
 
 @pytest.mark.asyncio
-async def test_late_hardware_snapshot_from_removed_tracker_is_dropped(monkeypatch):
+@pytest.mark.parametrize("event", ["tracker-hardware-state", "tracker-command-status"])
+async def test_late_hardware_snapshot_from_removed_tracker_is_dropped(monkeypatch, event):
     registry = OperationRegistry()
     incoming = queue.Queue()
+    snapshot = {
+        "tracker_id": "obs-finished-pass",
+        "worker_started_at": 1,
+        "worker_generation": "finished-worker",
+        "sequence": 1,
+        "tracking_state": {"rotator_id": "mount"},
+        "rotator_data": {"connected": True},
+    }
+    command = registry.accept("obs-finished-pass", {"rotator_id": "mount"}, STATE)
+    registry.forget_tracker("obs-finished-pass")
     incoming.put(
         {
-            "event": "tracker-hardware-state",
-            "data": {
-                "tracker_id": "obs-finished-pass",
-                "worker_started_at": 1,
-                "worker_generation": "finished-worker",
-                "sequence": 1,
-                "tracking_state": {"rotator_id": "mount"},
-                "rotator_data": {"connected": True},
-            },
+            "event": event,
+            "data": (
+                {
+                    "tracker_id": "obs-finished-pass",
+                    "command_id": command["command_id"],
+                    "epoch": registry.epoch,
+                    "status": "succeeded",
+                    "snapshot": snapshot,
+                }
+                if event == "tracker-command-status"
+                else snapshot
+            ),
         }
     )
     monkeypatch.setattr(messagemodule, "operations", registry)
@@ -1112,6 +1127,92 @@ async def test_command_snapshot_hardware_change_precedes_regular_snapshot(monkey
     assert rig_event[0] == "tracker.rig.state.changed"
     assert (rig_event[1]["previous"], rig_event[1]["current"]) == (None, "connected")
     assert subscription.queue.empty()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("kind", ["rotator", "rig"])
+@pytest.mark.parametrize("event", ["tracker-command-status", "tracker-hardware-state"])
+async def test_delayed_snapshot_cannot_reclaim_released_hardware(monkeypatch, kind, event):
+    registry = OperationRegistry()
+    state = {f"{kind}_id": "device", f"{kind}_state": "tracking"}
+    command = registry.accept("target-1", state, state)
+    registry.update(command["command_id"], "succeeded")
+    service = HardwareSupervisor()
+    service.devices[(kind, "device")] = SimpleNamespace(snapshot={"owner": "manual-owner"})
+    service.owners["manual-owner"] = {"type": "manual", "id": "manual-owner"}
+    snapshot = {
+        "tracker_id": "target-1",
+        "worker_started_at": 1,
+        "worker_generation": "worker-1",
+        "sequence": 1,
+        "tracking_state": dict(state),
+        f"{kind}_data": {"connected": True, "tracking": True},
+    }
+    # A completed command can still be queued when manual control releases the
+    # old tracker. Both event formats must respect the station's current owner.
+    data = (
+        {
+            "tracker_id": "target-1",
+            "command_id": command["command_id"],
+            "epoch": registry.epoch,
+            "status": "succeeded",
+            "snapshot": snapshot,
+        }
+        if event == "tracker-command-status"
+        else snapshot
+    )
+    incoming = queue.Queue()
+    incoming.put({"event": event, "data": data})
+    manager = SimpleNamespace(current_tracking_state={}, reconcile_operation=AsyncMock())
+    monkeypatch.setattr(messagemodule, "hardware", service)
+    monkeypatch.setattr(messagemodule, "operations", registry)
+    monkeypatch.setattr(messagemodule, "queue_from_tracker", incoming)
+    monkeypatch.setattr(messagemodule, "get_existing_tracker_manager", lambda _id: manager)
+    monkeypatch.setattr(messagemodule, "public_events", EventBroker())
+
+    async def stop_after_message(_delay):
+        raise asyncio.CancelledError
+
+    monkeypatch.setattr(messagemodule.asyncio, "sleep", stop_after_message)
+    with pytest.raises(asyncio.CancelledError):
+        await messagemodule.handle_tracker_messages(AsyncMock())
+
+    observed = registry.observed["target-1"]
+    assert observed[f"{kind}_data"]["connected"] is False
+    assert observed[f"{kind}_data"]["tracking"] is False
+    assert observed["tracking_state"][f"{kind}_state"] == "disconnected"
+    accepted = registry.accept("obs-next-pass", state, state)
+    assert accepted["status"] == "submitted"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("kind", ["rotator", "rig"])
+async def test_worker_correction_rechecks_released_device_owner(monkeypatch, db_session, kind):
+    registry = OperationRegistry()
+    service = HardwareSupervisor()
+    service.devices[(kind, "device")] = SimpleNamespace(snapshot={"owner": None})
+    monkeypatch.setattr(managermodule, "operations", registry)
+    monkeypatch.setattr(managermodule, "hardware", service)
+
+    @asynccontextmanager
+    async def session():
+        yield db_session
+
+    monkeypatch.setattr(managermodule, "AsyncSessionLocal", session)
+    manager = TrackerManager(tracker_id="target-1")
+    state = {f"{kind}_id": "device", f"{kind}_state": "disconnected"}
+    db_session.add(TrackingState(name=manager.tracking_state_name, value=state))
+    await db_session.commit()
+    command = registry.accept("target-1", {f"{kind}_state": "tracking"}, state)
+    snapshot = {
+        "tracking_state": {**state, f"{kind}_state": "tracking"},
+        f"{kind}_data": {"connected": True, "tracking": True},
+    }
+
+    await manager.reconcile_operation(command, snapshot)
+
+    assert (await manager.get_tracking_state())[f"{kind}_state"] == "disconnected"
+    assert snapshot[f"{kind}_data"]["connected"] is False
 
 
 @pytest.mark.asyncio

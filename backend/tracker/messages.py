@@ -190,17 +190,7 @@ async def handle_tracker_messages(sockio):
                         await asyncio.sleep(0)
                         continue
                     data["tracker_id"] = tracker_id
-                    # A queued tracker snapshot cannot reclaim hardware after
-                    # its lease was transferred to a manual or scheduled owner.
-                    state = data.get("tracking_state") or {}
-                    for kind in ("rotator", "rig"):
-                        if state.get(f"{kind}_id") and not hardware.owns(
-                            tracker_id, kind, state[f"{kind}_id"]
-                        ):
-                            data.setdefault(f"{kind}_data", {}).update(
-                                connected=False, tracking=False
-                            )
-                            state[f"{kind}_state"] = "disconnected"
+                    hardware.fence_tracker_snapshot(tracker_id, data)
                     if event in {SATELLITE_TRACKING_CONTEXT, SocketEvents.SATELLITE_TRACKING}:
                         if not _snapshot_from_current_worker(tracker_id, data):
                             continue
@@ -225,16 +215,25 @@ async def handle_tracker_messages(sockio):
                                 # desired state before observation ordering runs.
                                 if not operations.can_observe(snapshot):
                                     continue
+                                # Command results nest their hardware telemetry;
+                                # fencing only the outer event misses this path.
+                                hardware.fence_tracker_snapshot(tracker_id, snapshot)
                                 manager = get_existing_tracker_manager(tracker_id)
-                                if manager and record["status"] not in {
-                                    "succeeded",
-                                    "failed",
-                                    "cancelled",
-                                }:
-                                    await manager.reconcile_operation(record, snapshot)
-                                previous = operations.observed.get(tracker_id, {})
-                                operations.observe(snapshot)
-                                if manager is not None:
+                                if manager is None:
+                                    # Removed observation workers can also leave
+                                    # command results in the shared queue. Keep
+                                    # their journal result without live ownership.
+                                    operations.forget_tracker(tracker_id)
+                                else:
+                                    if record["status"] not in {
+                                        "succeeded",
+                                        "failed",
+                                        "cancelled",
+                                    }:
+                                        await manager.reconcile_operation(record, snapshot)
+                                    hardware.fence_tracker_snapshot(tracker_id, snapshot)
+                                    previous = operations.observed.get(tracker_id, {})
+                                    operations.observe(snapshot)
                                     _publish_hardware_changes(tracker_id, previous, snapshot)
                                     public_events.observe_rotator(tracker_id, snapshot)
                                     public_events.observe_rig(tracker_id, snapshot)
@@ -248,6 +247,8 @@ async def handle_tracker_messages(sockio):
                         continue
                     if event == "tracker-hardware-state":
                         async with operations.lock:
+                            # Ownership may have moved while awaiting the lock.
+                            hardware.fence_tracker_snapshot(tracker_id, data)
                             manager = get_existing_tracker_manager(tracker_id)
                             if manager is None:
                                 # A removed worker can leave telemetry in the shared queue.

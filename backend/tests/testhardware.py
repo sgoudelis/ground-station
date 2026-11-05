@@ -20,6 +20,8 @@ from hardware import control
 from hardware.client import HardwareClient, RigProxy, RotatorProxy
 from hardware.runtime import DeviceRuntime
 from hardware.service import HardwareSupervisor
+from observations.tasks import trackerhandler as observationmodule
+from observations.tasks.trackerhandler import TrackerHandler
 from tracker import instances
 from tracker.contracts import get_tracking_state_name
 from tracker.operations import OperationRegistry
@@ -110,6 +112,56 @@ async def test_rotator_connection_survives_transfer_and_fences_old_producer(stat
     await first.disconnect()
     assert await second.get_position() == (100, 30)
     assert service.snapshots()[0]["owner"]["id"] == "sonde-1"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("manual", [False, True])
+async def test_observation_handoff_without_assignment_map_keeps_connection(
+    station, monkeypatch, manual
+):
+    service, details, commands, connections = station
+    first = RotatorProxy(HardwareClient(service.register_tracker("target-1")), "mount", details)
+    observer = RotatorProxy(HardwareClient(service.register_tracker("obs-one")), "mount", details)
+    if manual:
+        service.owners["manual-owner"] = {"type": "manual", "id": "manual-owner"}
+        lease = await service.call(
+            "rotator", "mount", "acquire", owner="manual-owner", details=details
+        )
+        await service.call(
+            "rotator",
+            "mount",
+            "position",
+            owner="manual-owner",
+            generation=lease["generation"],
+            az=100,
+            el=30,
+        )
+    else:
+        await first.connect()
+        await anext(first.set_position(100, 30))
+        await first.call("mode", mode="tracking")
+    opened = len(connections)
+    monkeypatch.setattr(observationmodule, "hardware", service)
+    monkeypatch.setattr(observationmodule, "get_assigned_tracker_for_rotator", lambda _id: None)
+    monkeypatch.setattr(observationmodule, "get_all_tracker_managers", lambda: {})
+
+    async with service.reserve([("rotator", "mount")], "one") as reservation:
+        await TrackerHandler()._release_existing_hardware("one", "mount", None)
+        assert service.snapshots()[0]["owner"] is None
+        assert service.snapshots()[0]["data"]["connected"]
+        reservation["tracker_id"] = "obs-one"
+        await observer.connect()
+
+    assert len(connections) == opened
+    # The fake server completes a manual move immediately; active satellite
+    # tracking still requires Stop before ownership can transfer.
+    assert commands.count("S") == (0 if manual else 1)
+    assert service.snapshots()[0]["owner"]["id"] == "obs-one"
+    if not manual:
+        with pytest.raises(RuntimeError, match="control changed"):
+            await anext(first.set_position(200, 40))
+        await first.disconnect()
+    assert await observer.get_position() == (100, 30)
 
 
 @pytest.mark.asyncio

@@ -37,7 +37,7 @@ from tracker.runner import (
 from tracker.stateupdate import update_tracking_state_with_ownership
 
 # Serialize observation handoffs. Worker status messages still run while this lock
-# is held, so physical disconnections can be confirmed before ownership moves.
+# is held, so producer detachment can be confirmed before ownership moves.
 _handoff_lock = asyncio.Lock()
 COMMAND_TIMEOUT_SECONDS = 35
 
@@ -161,44 +161,67 @@ class TrackerHandler:
     async def _release_existing_hardware(
         self, observation_id: str, rotator_id: Any, rig_id: Any
     ) -> None:
-        # Standalone manual ownership has no tracker manager to disconnect.
-        # The bundle reservation already excludes new manual claims here.
-        for kind, identifier in (("rotator", rotator_id), ("rig", rig_id)):
-            worker = hardware.devices.get((kind, str(identifier)))
-            if (
-                worker
-                and hardware.owners.get(worker.snapshot.get("owner") or "", {}).get("type")
-                == "manual"
-            ):
-                await hardware.release(kind, identifier)
+        slots: Dict[str, Dict[str, bool]] = {}
         rotator_owner = (
             get_assigned_tracker_for_rotator(rotator_id) if self._assigned(rotator_id) else None
         )
         if rotator_owner:
-            if str(rotator_owner).startswith("obs-"):
-                raise TrackerHandoffError(
-                    "rotator_in_use", f"Rotator is in use by observation slot {rotator_owner}"
-                )
             # Any rig on the rotator's old slot also belongs to that interactive
             # setup; release it before transferring the rotator to OBS.
-            await self._disconnect_slot_hardware(
-                str(rotator_owner), observation_id, rotator=True, rig=True
-            )
+            slots[str(rotator_owner)] = {"rotator": True, "rig": True}
 
-        if self._assigned(rig_id):
-            # Rigs have no central assignment map. Inspect live tracker states,
-            # including disconnected assignments that still reserve a slot.
-            for tracker_id, manager in list(get_all_tracker_managers().items()):
-                state = await manager.get_tracking_state() or {}
-                if str(state.get("rig_id")) != str(rig_id):
-                    continue
-                if tracker_id.startswith("obs-"):
-                    raise TrackerHandoffError(
-                        "rig_in_use", f"Rig is in use by observation slot {tracker_id}"
-                    )
-                await self._disconnect_slot_hardware(
-                    tracker_id, observation_id, rotator=False, rig=True
+        # Manual takeover clears the rotator map but leaves the old slot's
+        # selected device ID intact. Inspect states for both kinds of hardware.
+        managers = get_all_tracker_managers()
+        for tracker_id, manager in list(managers.items()):
+            state = await manager.get_tracking_state() or {}
+            if self._assigned(rotator_id) and str(state.get("rotator_id")) == str(rotator_id):
+                flags = slots.setdefault(tracker_id, {})
+                flags["rotator"] = True
+                # An already detached rotator reference does not make this
+                # slot's independently controlled rig part of the handoff.
+                if state.get("rotator_state", "disconnected") != "disconnected":
+                    flags["rig"] = True
+            if self._assigned(rig_id) and str(state.get("rig_id")) == str(rig_id):
+                slots.setdefault(tracker_id, {})["rig"] = True
+
+        # The station owns physical connections. Its owner can exist even when
+        # the tracker assignment map is empty; check the whole bundle first.
+        for kind, identifier in (("rotator", rotator_id), ("rig", rig_id)):
+            worker = hardware.devices.get((kind, str(identifier)))
+            identity = hardware.owners.get(worker.snapshot.get("owner") or "", {}) if worker else {}
+            if identity.get("type") == "observation":
+                raise TrackerHandoffError(
+                    f"{kind}_in_use",
+                    f"{kind.title()} is in use by observation slot {identity['id']}",
                 )
+            owner_id = identity.get("id")
+            if identity.get("type") == "tracker" and owner_id in managers:
+                flags = slots.setdefault(owner_id, {})
+                flags[kind] = True
+                if kind == "rotator":
+                    flags["rig"] = True
+
+        for tracker_id, flags in slots.items():
+            if tracker_id.startswith("obs-"):
+                kind = "rotator" if flags.get("rotator") else "rig"
+                raise TrackerHandoffError(
+                    f"{kind}_in_use", f"{kind.title()} is in use by observation slot {tracker_id}"
+                )
+
+        # Fence the actual owners before clearing any stale slot references.
+        # Release keeps the transport open and confirms rotator quiescence.
+        for kind, identifier in (("rotator", rotator_id), ("rig", rig_id)):
+            worker = hardware.devices.get((kind, str(identifier)))
+            if worker and worker.snapshot.get("owner"):
+                await hardware.release(kind, identifier)
+        for tracker_id, flags in slots.items():
+            await self._disconnect_slot_hardware(
+                tracker_id,
+                observation_id,
+                rotator=flags.get("rotator", False),
+                rig=flags.get("rig", False),
+            )
 
     async def _remove_observation_tracker_instance(self, tracker_id: str) -> bool:
         try:

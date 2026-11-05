@@ -31,6 +31,7 @@ from celestial.bodycatalog import get_celestial_body
 from common.events import public_events
 from common.targetkey import normalize_target_key
 from db import AsyncSessionLocal
+from hardware.service import hardware
 from orbits import CentralBody, OrbitServiceError, build_satellite_ephemeris_payload
 from tracker.contracts import get_tracking_state_name, is_target_slot_id, require_tracker_id
 from tracker.ipc import (
@@ -854,6 +855,9 @@ class TrackerManager:
     async def reconcile_operation(self, command, snapshot):
         """Persist worker corrections without overwriting a newer operator request."""
         async with operations.lock:
+            # A release can finish while this result waits for arbitration.
+            # Recheck the device owner before persisting any worker correction.
+            hardware.fence_tracker_snapshot(self.tracker_id, snapshot)
             actual = snapshot.get("tracking_state") or {}
             patches = {}
             async with AsyncSessionLocal() as session:

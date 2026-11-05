@@ -124,6 +124,15 @@ class HardwareSupervisor:
             return True  # No runtime exists in legacy/test snapshots.
         return self.owners.get(worker.snapshot.get("owner") or "", {}).get("id") == tracker_id
 
+    def fence_tracker_snapshot(self, tracker_id, snapshot):
+        """Keep queued producer telemetry from reclaiming a transferred device."""
+        state = snapshot.get("tracking_state") or {}
+        for kind in ("rotator", "rig"):
+            device_id = state.get(f"{kind}_id")
+            if device_id and not self.owns(tracker_id, kind, device_id):
+                snapshot.setdefault(f"{kind}_data", {}).update(connected=False, tracking=False)
+                state[f"{kind}_state"] = "disconnected"
+
     def _worker(self, kind, device_id, details=None):
         key = (kind, str(device_id))
         worker = self.devices.get(key)

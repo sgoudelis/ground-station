@@ -1,10 +1,26 @@
 # Copyright (c) 2026 Efstratios Goudelis
 
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
+
 import pytest
 
+from hardware.service import HardwareSupervisor
 from observations.tasks import trackerhandler as handler_module
 from observations.tasks.trackerhandler import TrackerHandler, TrackerHandoffError
 from tracker.operations import OperationRegistry
+
+
+@pytest.fixture(autouse=True)
+def isolated_hardware(monkeypatch):
+    monkeypatch.setattr(handler_module, "hardware", HardwareSupervisor())
+    monkeypatch.setattr(handler_module, "get_all_tracker_managers", lambda: {})
+    # A missing handoff check must fail the test without starting real workers.
+    monkeypatch.setattr(
+        handler_module,
+        "create_observation_tracker_slot",
+        lambda _id: {"success": False, "error": "unexpected_slot_creation"},
+    )
 
 
 class FakeManager:
@@ -66,7 +82,10 @@ async def test_command_wait_requires_confirmed_success(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_observation_handoff_preserves_targets_and_cleans_up_hardware(monkeypatch):
+@pytest.mark.parametrize("missing_rotator_assignment", [False, True])
+async def test_observation_handoff_preserves_targets_and_cleans_up_hardware(
+    monkeypatch, missing_rotator_assignment
+):
     managers = {
         "target-1": FakeManager(
             {
@@ -113,7 +132,9 @@ async def test_observation_handoff_preserves_targets_and_cleans_up_hardware(monk
         "get_assigned_tracker_for_rotator",
         lambda rotator_id: (
             "target-1"
-            if rotator_id == "rot-1" and managers["target-1"].state.get("rotator_id") == "rot-1"
+            if not missing_rotator_assignment
+            and rotator_id == "rot-1"
+            and managers["target-1"].state.get("rotator_id") == "rot-1"
             else None
         ),
     )
@@ -200,8 +221,18 @@ async def test_failed_disconnect_does_not_create_obs_slot(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_other_observation_hardware_is_not_taken(monkeypatch):
-    monkeypatch.setattr(handler_module, "get_assigned_tracker_for_rotator", lambda _id: "obs-other")
+@pytest.mark.parametrize("missing_rotator_assignment", [False, True])
+async def test_other_observation_hardware_is_not_taken(monkeypatch, missing_rotator_assignment):
+    monkeypatch.setattr(
+        handler_module,
+        "get_assigned_tracker_for_rotator",
+        lambda _id: None if missing_rotator_assignment else "obs-other",
+    )
+    monkeypatch.setattr(
+        handler_module,
+        "get_all_tracker_managers",
+        lambda: {"obs-other": FakeManager({"rotator_id": "rot-1"})},
+    )
     result = await TrackerHandler().start_tracker_task(
         "one",
         {"norad_id": 300},
@@ -210,6 +241,55 @@ async def test_other_observation_hardware_is_not_taken(monkeypatch):
     )
     assert result["success"] is False
     assert result["error"] == "rotator_in_use"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("kind", ["rotator", "rig"])
+async def test_hardware_observation_owner_blocks_handoff_without_slot_assignment(monkeypatch, kind):
+    service = handler_module.hardware
+    service.owners["obs-owner"] = {"type": "observation", "id": "obs-other"}
+    service.devices[(kind, "device")] = SimpleNamespace(snapshot={"owner": "obs-owner"})
+    service.release = AsyncMock()
+    monkeypatch.setattr(handler_module, "get_assigned_tracker_for_rotator", lambda _id: None)
+
+    with pytest.raises(TrackerHandoffError) as error:
+        await TrackerHandler()._release_existing_hardware(
+            "one", "device" if kind == "rotator" else None, "device" if kind == "rig" else None
+        )
+    assert error.value.code == f"{kind}_in_use"
+    service.release.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_actual_owner_is_released_before_detaching_stale_slot_references(monkeypatch):
+    service = handler_module.hardware
+    service.owners["tracker-owner"] = {"type": "tracker", "id": "target-2"}
+    service.devices[("rotator", "rot-1")] = SimpleNamespace(snapshot={"owner": "tracker-owner"})
+    managers = {
+        "target-1": FakeManager({"rotator_id": "rot-1", "rotator_state": "disconnected"}),
+        "target-2": FakeManager({"rotator_id": "rot-1", "rotator_state": "tracking"}),
+    }
+    calls = []
+
+    async def release(kind, identifier):
+        calls.append((kind, identifier))
+
+    # Keep release order separate from the list of detached references.
+    detached = AsyncMock()
+
+    async def confirm_detach(_self, tracker_id, observation_id, **flags):
+        assert calls == [("rotator", "rot-1")]
+        await detached(tracker_id, observation_id, **flags)
+
+    monkeypatch.setattr(service, "release", release)
+    monkeypatch.setattr(handler_module, "get_assigned_tracker_for_rotator", lambda _id: None)
+    monkeypatch.setattr(handler_module, "get_all_tracker_managers", lambda: managers)
+    monkeypatch.setattr(TrackerHandler, "_disconnect_slot_hardware", confirm_detach)
+
+    await TrackerHandler()._release_existing_hardware("one", "rot-1", None)
+    assert [call.args[0] for call in detached.await_args_list] == ["target-1", "target-2"]
+    assert detached.await_args_list[0].kwargs == {"rotator": True, "rig": False}
+    assert detached.await_args_list[1].kwargs == {"rotator": True, "rig": True}
 
 
 @pytest.mark.asyncio
