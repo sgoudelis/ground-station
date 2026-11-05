@@ -259,6 +259,7 @@ export default function ManualRotatorDialog({
     disabled,
     command,
     canStop,
+    stopLabel,
 }) {
     const { t } = useTranslation('target');
     const [az, setAz] = React.useState('');
@@ -312,7 +313,7 @@ export default function ManualRotatorDialog({
                     sx={{ position: 'absolute', top: 8, right: 8, color: 'text.secondary' }}>
                     <CloseIcon fontSize="small" />
                 </IconButton>
-                <Typography noWrap variant="subtitle1" sx={{ fontWeight: 800, lineHeight: 1.2 }}>
+                <Typography component="span" noWrap variant="subtitle1" sx={{ display: 'block', fontWeight: 800, lineHeight: 1.2 }}>
                     {rotator?.name || 'Rotator'}
                 </Typography>
                 <Typography noWrap color="text.secondary" variant="caption" sx={{ display: 'block', fontFamily: 'monospace', mt: 0.35 }}>
@@ -370,7 +371,7 @@ export default function ManualRotatorDialog({
                 </Grid>
             </DialogContent>
             <DialogActions sx={{ p: 2 }}>
-                <Button color="error" disabled={!canStop || (stopping && command?.status !== 'unknown')} loading={stopping && command?.status !== 'unknown'} variant="contained" onClick={stop}>{t('rotator_control.stop')}</Button>
+                <Button color="error" disabled={!canStop || (stopping && command?.status !== 'unknown')} loading={stopping && command?.status !== 'unknown'} variant="contained" onClick={stop}>{stopLabel || t('rotator_control.stop')}</Button>
                 <Button disabled={disabled || !validPosition || moving || stopping} loading={moving && command?.status !== 'unknown'} variant="contained" onClick={submit}>{t('rotator_control.move')}</Button>
             </DialogActions>
         </Dialog>

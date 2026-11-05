@@ -54,6 +54,8 @@ import {
     Tab,
     Switch,
     Tooltip,
+    Alert,
+    AlertTitle,
 } from '@mui/material';
 import {
     Close as CloseIcon,
@@ -283,6 +285,7 @@ const ObservationFormDialog = ({ onExited }) => {
     const sdrParametersLoading = useSelector((state) => state.scheduler?.sdrParametersLoading || false);
     const sdrParametersError = useSelector((state) => state.scheduler?.sdrParametersError || {});
     const isSaving = useSelector((state) => state.scheduler?.isSavingObservation || false);
+    const saveError = useSelector((state) => state.scheduler?.observationError);
 
     const [activeSessionIndex, setActiveSessionIndex] = useState(0);
     const trackerInfoByRotatorId = useMemo(() => {
@@ -632,15 +635,9 @@ const ObservationFormDialog = ({ onExited }) => {
     };
 
     const handleSave = () => {
-        if (!isFormValid()) return;
-        const sessions = Array.isArray(formData.sessions) && formData.sessions.length
-            ? formData.sessions
-            : [{ sdr: formData.sdr, tasks: formData.tasks }];
-
-        const payload = {
-            ...formData,
-            sessions,
-        };
+        if (validationErrors.length || isSaving || isFormDisabled) return;
+        // Save the same active session draft that was validated.
+        const payload = observationDraft;
 
         if (selectedObservation?.id) {
             // Update existing observation (has id)
@@ -1135,59 +1132,55 @@ const ObservationFormDialog = ({ onExited }) => {
         )),
     };
 
-    const isFormValid = () => {
-        // Check if CURRENT formData.pass is valid (exists in future passes or is null)
-        const hasValidPass = !formData.pass || passes.some(p => {
-            const passStartTime = new Date(p.event_start).getTime();
-            const currentStartTime = new Date(formData.pass.event_start).getTime();
-            return Math.abs(passStartTime - currentStartTime) < 1000;
-        });
+    const getValidationErrors = () => {
+        const errors = [];
+        const addError = (key, values) => errors.push(t(`scheduler_dialogs.observation.validation.${key}`, values));
+        if (!formData.name.trim()) addError('name_required');
+        if (!formData.satellite.norad_id) addError('satellite_required');
+
+        // Missing timing cannot represent a scheduled observation.
+        const passStart = Date.parse(formData.pass?.event_start);
+        const passEnd = Date.parse(formData.pass?.event_end);
+        const hasValidPass = Number.isFinite(passStart) && Number.isFinite(passEnd)
+            && passEnd > passStart && passes.some(p => {
+                const passStartTime = new Date(p.event_start).getTime();
+                return Math.abs(passStartTime - passStart) < 1000;
+            });
+        if (!hasValidPass) addError('pass_required');
 
         // Share the dropdown's hardware check so selecting a valid pass also permits saving.
         const hasConflict = Boolean(findObservationConflict(observationDraft, observations));
-        const sessions = Array.isArray(formData.sessions) && formData.sessions.length
-            ? formData.sessions
-            : [{ sdr: formData.sdr, tasks: formData.tasks }];
+        if (hasConflict) addError('hardware_conflict');
+        const sessions = observationDraft.sessions;
         const selectedSdrIds = sessions
             .map((session) => session?.sdr?.id)
             .filter(Boolean)
             .map(String);
         const hasUniqueSdrs = new Set(selectedSdrIds).size === selectedSdrIds.length;
+        if (!hasUniqueSdrs) addError('duplicate_sdr');
         const rigTransmitterValid = !formData.rig?.id || availableTransmitters.some(
             (transmitter) => String(transmitter.id) === String(formData.rig.transmitter_id)
                 && Number(transmitter.downlink_low) > 0
         );
-        const sessionsValid = sessions.every((session) => {
+        if (!rigTransmitterValid) addError('rig_transmitter_required');
+        sessions.forEach((session, index) => {
             const sdr = session?.sdr || {};
-            return (
-                sdr.id &&
-                sdr.gain !== '' &&
-                sdr.antenna_port !== '' &&
-                validateTasksWithinBandwidth(session).valid &&
-                (session.tasks || []).every((task) => task.type !== 'decoder' ||
-                    areDecoderParametersValid(task.config.decoder_type, task.config.parameters || {}))
-            );
+            const values = { session: index + 1 };
+            if (!sdr.id || sdr.gain === '' || sdr.gain == null || !sdr.antenna_port
+                || !Number.isFinite(Number(sdr.sample_rate)) || Number(sdr.sample_rate) <= 0) {
+                addError('session_required', values);
+            }
+            if (sdr.id && sdrParametersError[sdr.id]) addError('sdr_parameters_failed', values);
+            const bandwidth = validateTasksWithinBandwidth(session);
+            if (!bandwidth.valid) errors.push(`${t('scheduler_dialogs.observation.validation.session_label', values)}: ${bandwidth.message}`);
+            if ((session.tasks || []).some((task) => task.type === 'decoder' &&
+                !areDecoderParametersValid(task.config.decoder_type, task.config.parameters || {}))) {
+                addError('decoder_parameters_invalid', values);
+            }
         });
-
-        // Debug logging
-        const validationChecks = {
-            name: formData.name.trim() !== '',
-            satellite: formData.satellite.norad_id !== '',
-            sessions: sessionsValid,
-            hasValidPass: hasValidPass,
-            hasConflict: hasConflict,
-        };
-
-        return (
-            formData.name.trim() !== '' &&
-            formData.satellite.norad_id !== '' &&
-            sessionsValid &&
-            hasUniqueSdrs &&
-            rigTransmitterValid &&
-            hasValidPass &&  // Enable only if pass is valid (or null for continuous observation)
-            !hasConflict  // Disable if pass conflicts with existing observation
-        );
+        return errors;
     };
+    const validationErrors = getValidationErrors();
 
     return (
         <Dialog
@@ -1310,9 +1303,12 @@ const ObservationFormDialog = ({ onExited }) => {
                             initialSatellite={selectedObservation?.satellite}
                             initialPass={selectedObservation?.pass}
                             observation={observationDraft}
+                            passRequired
                             onSatelliteSelect={(satellite) => {
                                 setFormData((prev) => ({
-                                    ...prev,
+                                    // Pass timing belongs to the selected satellite.
+                                    ...(prev.satellite.norad_id === satellite.norad_id
+                                        ? prev : getObservationForPass(prev, null)),
                                     rig: prev.satellite.norad_id === satellite.norad_id
                                         ? prev.rig
                                         : { ...prev.rig, transmitter_id: '' },
@@ -1337,7 +1333,7 @@ const ObservationFormDialog = ({ onExited }) => {
                                         },
                                     }));
                                 } else {
-                                    // No pass selected (continuous observation)
+                                    // Clear timing when the selection is removed.
                                     setFormData((prev) => getObservationForPass(prev, null));
                                 }
                             }}
@@ -2974,6 +2970,26 @@ const ObservationFormDialog = ({ onExited }) => {
                 </Stack>
             </DialogContent>
 
+            {/* Keep failures and blocked-save reasons visible beside the save controls. */}
+            {!isFormDisabled && (saveError || validationErrors.length > 0) && (
+                <Box sx={{ px: { xs: 2, sm: 3 }, py: 1, maxHeight: '25vh', overflowY: 'auto' }}>
+                    {saveError && (
+                        <Alert severity="error" sx={{ mb: validationErrors.length ? 1 : 0 }}>
+                            <AlertTitle>{t('scheduler_dialogs.observation.save_failed')}</AlertTitle>
+                            {saveError}
+                        </Alert>
+                    )}
+                    {validationErrors.length > 0 && (
+                        <Alert severity="warning">
+                            <AlertTitle>{t('scheduler_dialogs.observation.validation_title')}</AlertTitle>
+                            <Box component="ul" sx={{ m: 0, pl: 2 }}>
+                                {validationErrors.map((message, index) => <li key={index}>{message}</li>)}
+                            </Box>
+                        </Alert>
+                    )}
+                </Box>
+            )}
+
             <DialogActions
                 sx={{
                     containerType: 'inline-size',
@@ -3054,13 +3070,13 @@ const ObservationFormDialog = ({ onExited }) => {
                     <ResponsiveActionButton
                         onClick={handleSave}
                         variant="contained"
-                        disabled={!isFormValid() || isSaving || isFormDisabled}
+                        disabled={validationErrors.length > 0 || isSaving || isFormDisabled}
                         startIcon={isSaving ? <CircularProgress size={20} color="inherit" />
-                            : (selectedObservation ? <SaveIcon /> : <AddCircleOutlineIcon />)}
+                            : (selectedObservation?.id ? <SaveIcon /> : <AddCircleOutlineIcon />)}
                         compactQuery="@container dialog-footer (max-width: 700px)"
                         label={isSaving
                             ? t('scheduler_dialogs.shared.saving')
-                            : (selectedObservation ? t('scheduler_dialogs.shared.update_button') : t('scheduler_dialogs.shared.create_button'))}
+                            : (selectedObservation?.id ? t('scheduler_dialogs.shared.update_button') : t('scheduler_dialogs.shared.create_button'))}
                         sx={{
                             '&.Mui-disabled': {
                                 bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.800' : 'grey.400',

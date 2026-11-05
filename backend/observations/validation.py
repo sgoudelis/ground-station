@@ -15,7 +15,29 @@
 
 """Validation functions for observations and monitored satellites."""
 
+from datetime import datetime
 from typing import Any, Dict
+
+
+def validate_observation_pass(data: Dict[str, Any]) -> Dict[str, Any]:
+    """Reject missing or invalid pass timing before database writes and scheduling."""
+    pass_data = data.get("pass")
+    if not isinstance(pass_data, dict) or not all(
+        pass_data.get(field) for field in ("event_start", "event_end")
+    ):
+        return {"success": False, "error": "Select a pass before saving the observation."}
+
+    try:
+        start, end = (
+            datetime.fromisoformat(pass_data[field].replace("Z", "+00:00"))
+            for field in ("event_start", "event_end")
+        )
+        if end <= start:
+            return {"success": False, "error": "Pass end time must be after its start time."}
+    except (AttributeError, TypeError, ValueError):
+        return {"success": False, "error": "Pass start and end times must be valid ISO dates."}
+
+    return {"success": True, "error": None}
 
 
 def validate_transmitter_frequencies(data: Dict[str, Any]) -> Dict[str, Any]:

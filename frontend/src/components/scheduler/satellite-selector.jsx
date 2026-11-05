@@ -21,6 +21,7 @@ import React, { useEffect, Fragment } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
     FormControl,
+    FormHelperText,
     InputLabel,
     Select,
     MenuItem,
@@ -371,7 +372,7 @@ const SatelliteSearchAutocomplete = ({
     );
 };
 
-const PassSelector = ({ onPassSelect, initialPass, observation, disabled = false }) => {
+const PassSelector = ({ onPassSelect, initialPass, observation, required = false, disabled = false }) => {
     const { t } = useTranslation('common');
     const dispatch = useDispatch();
     const { socket } = useSocket();
@@ -531,9 +532,8 @@ const PassSelector = ({ onPassSelect, initialPass, observation, disabled = false
         return null; // Don't show pass selector if no satellite selected
     }
 
-    // Show loading only if actually loading or no passes yet, but NOT if we have passes
-    // Even if initialPass doesn't match, show the passes we have
-    const isLoading = passesLoading || (satelliteId && passes.length === 0 && !passesLoading);
+    // An empty completed result must show the no-passes message, not a spinner.
+    const isLoading = passesLoading;
 
     return (
         <Box>
@@ -557,7 +557,9 @@ const PassSelector = ({ onPassSelect, initialPass, observation, disabled = false
                     <FormControl
                         fullWidth
                         size="small"
-                        error={effectiveSelectedPassId && isPassOverlapping(passes.find(p => p.id === effectiveSelectedPassId))}
+                        required={required}
+                        error={Boolean((required && !effectiveSelectedPassId)
+                            || (effectiveSelectedPassId && isPassOverlapping(passes.find(p => p.id === effectiveSelectedPassId))))}
                         disabled={disabled}
                     >
                         <InputLabel>{t('satellite_selector.select_pass', { defaultValue: 'Select Pass' })}</InputLabel>
@@ -626,6 +628,9 @@ const PassSelector = ({ onPassSelect, initialPass, observation, disabled = false
                                 );
                             })}
                         </Select>
+                        {required && !effectiveSelectedPassId && (
+                            <FormHelperText>{t('scheduler_dialogs.observation.validation.pass_required')}</FormHelperText>
+                        )}
                     </FormControl>
                 </Box>
             )}
@@ -638,6 +643,7 @@ export const SatelliteSelector = ({
     onTransmittersLoadingChange,
     onPassSelect,
     showPassSelector = true,
+    passRequired = false,
     initialSatellite = null,
     initialPass = null,
     observation = null,
@@ -654,7 +660,7 @@ export const SatelliteSelector = ({
                 disabled={disabled}
                 initialSatellite={initialSatellite}
             />
-            {showPassSelector && <PassSelector onPassSelect={onPassSelect} initialPass={initialPass} observation={observation} disabled={disabled} />}
+            {showPassSelector && <PassSelector onPassSelect={onPassSelect} initialPass={initialPass} observation={observation} required={passRequired} disabled={disabled} />}
         </Stack>
     );
 };

@@ -70,12 +70,18 @@ function receiveSnapshot(state, snapshot) {
 
 const slice = createSlice({
     name: 'hardwareControl',
-    initialState: {epoch: null, serverOffset: 0, devices: {}, commands: {}, loaded: false},
+    initialState: {epoch: null, serverOffset: 0, devices: {}, commands: {}, loaded: false, loading: false, error: null},
     reducers: {
         receiveDeviceSnapshot: (state, {payload}) => receiveSnapshot(state, payload),
         receiveDeviceCommand: (state, {payload}) => receiveCommand(state, payload),
     },
-    extraReducers: (builder) => builder.addCase(fetchHardwareState.fulfilled, (state, {payload}) => {
+    extraReducers: (builder) => builder
+    .addCase(fetchHardwareState.pending, (state) => {state.loading = true; state.error = null;})
+    .addCase(fetchHardwareState.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error?.message || 'Hardware status unavailable';
+    })
+    .addCase(fetchHardwareState.fulfilled, (state, {payload}) => {
         if (state.epoch !== payload.epoch) {
             state.devices = {};
             for (const command of Object.values(state.commands)) {
@@ -86,6 +92,8 @@ const slice = createSlice({
         }
         state.epoch = payload.epoch;
         state.loaded = true;
+        state.loading = false;
+        state.error = null;
         state.serverOffset = payload.server_time - Date.now() / 1000;
         payload.devices.forEach((snapshot) => receiveSnapshot(state, snapshot));
         payload.commands.forEach((command) => receiveCommand(state, command));

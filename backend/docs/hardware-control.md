@@ -20,6 +20,9 @@ owner can acquire control. The TCP stream remains open. Late Disconnect from the
 old owner acknowledges detachment without closing the new owner's stream.
 Explicit Disconnect closes the physical connection.
 
+Hamlib Stop acknowledgement waits at most 5 seconds (or a shorter configured
+controller timeout). Handoff still requires fresh stationary-position samples.
+
 Disconnect revokes control and closes the socket even if Stop times out or is
 rejected. It does not open a recovery connection. Its successful result may carry
 `stop_warning` and `motion_unconfirmed`: disconnecting does not prove that the

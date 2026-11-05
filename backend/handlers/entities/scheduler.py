@@ -24,7 +24,7 @@ from db import AsyncSessionLocal
 from observations.constants import STATUS_FAILED
 from observations.events import emit_scheduled_observations_changed
 from observations.generator import generate_observations_for_monitored_satellites
-from observations.validation import validate_transmitter_frequencies
+from observations.validation import validate_observation_pass, validate_transmitter_frequencies
 
 # ============================================================================
 # SCHEDULED OBSERVATIONS
@@ -78,6 +78,11 @@ async def create_scheduled_observation(
     if not observation_id:
         logger.error("No ID provided in observation data")
         return {"success": False, "error": "Observation ID is required"}
+
+    # A selected pass is required for both database timing and scheduler jobs.
+    validation_result = validate_observation_pass(data)
+    if not validation_result["success"]:
+        return {"success": False, "error": validation_result["error"]}
 
     # Validate transmitter frequencies against SDR configuration
     validation_result = validate_transmitter_frequencies(data)
@@ -141,6 +146,11 @@ async def update_scheduled_observation(
     if not observation_id:
         logger.error("No ID provided in observation data")
         return {"success": False, "error": "Observation ID is required"}
+
+    # Validate before updating so an invalid pass cannot replace saved timing.
+    validation_result = validate_observation_pass(data)
+    if not validation_result["success"]:
+        return {"success": False, "error": validation_result["error"]}
 
     # Validate transmitter frequencies against SDR configuration
     validation_result = validate_transmitter_frequencies(data)

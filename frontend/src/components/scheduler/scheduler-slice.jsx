@@ -147,7 +147,7 @@ export const createScheduledObservation = createAsyncThunk(
   if (res.success) {
     resolve(res.data);
   } else {
-    reject(new Error('Failed to create scheduled observation'));
+    reject(new Error(res.error || 'Failed to create scheduled observation'));
   }
 });
             });
@@ -173,7 +173,7 @@ export const updateScheduledObservation = createAsyncThunk(
   if (res.success) {
     resolve(res.data);
   } else {
-    reject(new Error('Failed to update scheduled observation'));
+    reject(new Error(res.error || 'Failed to update scheduled observation'));
   }
 });
             });
@@ -508,6 +508,7 @@ const initialState = {
     monitoredSatelliteDialogOpen: false,
     monitoredSatelliteError: null,
     isSavingObservation: false,
+    observationError: null,
     isSavingMonitoredSatellite: false,
     // SDR parameters (gain values, antenna ports) fetched when SDR is selected
     sdrParameters: {},
@@ -563,6 +564,7 @@ const schedulerSlice = createSlice({
         },
         setDialogOpen: (state, action) => {
             state.dialogOpen = action.payload;
+            state.observationError = null;
         },
         setColumnVisibility: (state, action) => {
             state.columnVisibility = { ...state.columnVisibility, ...action.payload };
@@ -717,18 +719,22 @@ const schedulerSlice = createSlice({
             // Create observation
             .addCase(createScheduledObservation.pending, (state) => {
                 state.isSavingObservation = true;
+                state.observationError = null;
             })
             .addCase(createScheduledObservation.fulfilled, (state, action) => {
                 state.observations.push(action.payload);
                 state.dialogOpen = false;
                 state.isSavingObservation = false;
+                state.observationError = null;
             })
-            .addCase(createScheduledObservation.rejected, (state) => {
+            .addCase(createScheduledObservation.rejected, (state, action) => {
                 state.isSavingObservation = false;
+                state.observationError = action.payload || action.error.message;
             })
             // Update observation
             .addCase(updateScheduledObservation.pending, (state) => {
                 state.isSavingObservation = true;
+                state.observationError = null;
             })
             .addCase(updateScheduledObservation.fulfilled, (state, action) => {
                 const index = state.observations.findIndex(obs => obs.id === action.payload.id);
@@ -737,9 +743,11 @@ const schedulerSlice = createSlice({
                 }
                 state.dialogOpen = false;
                 state.isSavingObservation = false;
+                state.observationError = null;
             })
-            .addCase(updateScheduledObservation.rejected, (state) => {
+            .addCase(updateScheduledObservation.rejected, (state, action) => {
                 state.isSavingObservation = false;
+                state.observationError = action.payload || action.error.message;
             })
             // Delete observations
             .addCase(deleteScheduledObservations.fulfilled, (state, action) => {

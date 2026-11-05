@@ -164,7 +164,10 @@ class RotatorController:
             # Add newline to the command
             full_command = f"{command}\n"
 
-            async with asyncio.timeout(self.timeout):
+            # Bound unsupported Stop replies without shortening other commands
+            # or overriding a caller's explicitly shorter timeout.
+            timeout = min(self.timeout, 5.0) if command == "S" else self.timeout
+            async with asyncio.timeout(timeout):
                 self.writer.write(full_command.encode("utf-8"))
                 await self.writer.drain()
                 response = "(no wait for reply)"
