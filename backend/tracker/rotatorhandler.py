@@ -595,7 +595,27 @@ class RotatorHandler:
                     )
                 )
 
-                await self.tracker.rotator_controller.connect()
+                if isinstance(self.tracker.rotator_controller, RotatorProxy):
+                    # Handoff permission travels with the active Connect operation,
+                    # never with saved tracking intent or an automatic reconnect.
+                    pending = getattr(getattr(self.tracker, "operations", None), "pending", {})
+                    manual_handoff = next(
+                        (
+                            {**operation["manual_handoff"], "deadline": operation["deadline"]}
+                            for operation in pending.values()
+                            if operation.get("begun")
+                            and not operation.get("cancelling")
+                            and operation.get("manual_handoff")
+                            and operation["action"] == "connect"
+                            and operation["changes"].get("rotator_state") == "connected"
+                            and operation["device_ids"].get("rotator")
+                            == self.tracker.current_rotator_id
+                        ),
+                        None,
+                    )
+                    await self.tracker.rotator_controller.connect(manual_handoff=manual_handoff)
+                else:
+                    await self.tracker.rotator_controller.connect()
                 self._stationary_position = None
                 if isinstance(self.tracker.rotator_controller, RotatorProxy):
                     # A reconnect can succeed before the mount is stationary. Carry

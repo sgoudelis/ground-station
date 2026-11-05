@@ -363,11 +363,30 @@ class TrackerManager:
                 if current_value.get(key) != expected:
                     return {"success": False, "error": "State changed; refresh before retrying"}
             try:
+                manual_handoff = None
+                if (operation or {}).get("action") == "connect" and kwargs.get(
+                    "rotator_state"
+                ) == "connected":
+                    device_id = str(updated_value.get("rotator_id"))
+                    worker = hardware.devices.get(("rotator", device_id))
+                    snapshot = worker.snapshot if worker else {}
+                    owner = snapshot.get("owner")
+                    if hardware.owners.get(owner or "", {}).get(
+                        "type"
+                    ) == "manual" and snapshot.get("data", {}).get("connected"):
+                        # Only this explicit Connect may displace the observed manual
+                        # lease. Recovery and later ownership intervals cannot reuse it.
+                        manual_handoff = {
+                            "device_id": device_id,
+                            "owner": owner,
+                            "generation": snapshot["generation"],
+                        }
                 command = operations.accept(
                     self.tracker_id,
                     kwargs if operation else effective_changes,
                     updated_value,
                     operation,
+                    manual_handoff=manual_handoff,
                 )
             except ValueError as exc:
                 return {"success": False, "error": str(exc)}

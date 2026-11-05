@@ -221,6 +221,37 @@ class HardwareSupervisor:
             current = self.devices.get((kind, device_id))
             held_control = current and current.snapshot.get("owner") == owner
             if request["method"] == "acquire":
+                reservation = self.reservations.get((kind, device_id))
+                if reservation and reservation["tracker_id"] != self.owners[owner]["id"]:
+                    raise RuntimeError("Device is reserved by a scheduled observation")
+                manual_handoff = payload.pop("manual_handoff", None)
+                if manual_handoff:
+                    if (
+                        kind != "rotator"
+                        or self.owners[owner]["type"] != "tracker"
+                        or manual_handoff.get("device_id") != device_id
+                        or not current
+                        or current.snapshot.get("owner") != manual_handoff.get("owner")
+                        or current.snapshot.get("generation") != manual_handoff.get("generation")
+                        or self.owners.get(current.snapshot.get("owner") or "", {}).get("type")
+                        != "manual"
+                    ):
+                        raise RuntimeError("Device control changed before handoff")
+                    request = {
+                        **request,
+                        "deadline": min(request["deadline"], manual_handoff["deadline"]),
+                    }
+                    await self.release(
+                        kind,
+                        device_id,
+                        generation=manual_handoff["generation"],
+                        deadline=request["deadline"],
+                    )
+                    # Quiescing may wait for the mount. An observation can reserve
+                    # it during that wait and must retain priority over acquisition.
+                    reservation = self.reservations.get((kind, device_id))
+                    if reservation and reservation["tracker_id"] != self.owners[owner]["id"]:
+                        raise RuntimeError("Device is reserved by a scheduled observation")
                 if (
                     current
                     and current.snapshot.get("owner") != owner
@@ -232,9 +263,6 @@ class HardwareSupervisor:
                     # A replacement tracker process cannot inherit the previous
                     # process's token, even when its logical tracker ID is reused.
                     await self.release(kind, device_id)
-                reservation = self.reservations.get((kind, device_id))
-                if reservation and reservation["tracker_id"] != self.owners[owner]["id"]:
-                    raise RuntimeError("Device is reserved by a scheduled observation")
             result = await self.call(
                 kind,
                 device_id,
@@ -256,14 +284,18 @@ class HardwareSupervisor:
         except (BrokenPipeError, OSError):
             pass
 
-    async def release(self, kind, device_id):
+    async def release(self, kind, device_id, *, generation=None, deadline=None):
         worker = self.devices.get((kind, str(device_id)))
         if worker is None:
             return
         previous = worker.snapshot.get("owner")
         if worker.process.is_alive():
             await self.call(
-                kind, device_id, "release", generation=worker.snapshot.get("generation")
+                kind,
+                device_id,
+                "release",
+                generation=generation or worker.snapshot.get("generation"),
+                deadline=deadline,
             )
         else:
             # A dead worker cannot acknowledge release. Revoke its cached owner

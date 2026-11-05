@@ -55,12 +55,13 @@ class DeviceProxy:
         self.connection_state = {}
         self.disconnect_state = {}
 
-    async def connect(self):
+    async def connect(self, *, manual_handoff=None):
         result = await self.client.request(
             self.kind,
             self.device_id,
             "acquire",
             details=self.details,
+            **({"manual_handoff": manual_handoff} if manual_handoff else {}),
         )
         self.generation = result["generation"]
         self.connection_state = result.get("data", {})

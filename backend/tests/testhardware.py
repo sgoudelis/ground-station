@@ -6,6 +6,7 @@ import json
 import logging
 import queue
 import time
+from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock
 
 import numpy as np
@@ -26,8 +27,10 @@ from hardware.service import HardwareSupervisor
 from observations.tasks import trackerhandler as observationmodule
 from observations.tasks.trackerhandler import TrackerHandler
 from tracker import instances
+from tracker import manager as managermodule
 from tracker.contracts import get_tracking_state_name
 from tracker.logic import SatelliteTracker
+from tracker.manager import TrackerManager
 from tracker.operations import OperationRegistry
 
 
@@ -56,7 +59,8 @@ async def station():
                 if command == "p":
                     response = f"{position[0]}\n{position[1]}\n"
                 elif command.startswith("P "):
-                    position[:] = [float(value) for value in command.split()[1:]]
+                    if not details.get("_hold_moves"):
+                        position[:] = [float(value) for value in command.split()[1:]]
                     response = "RPRT 0\n"
                 elif command in {"S", "K"}:
                     response = "RPRT 0\n"
@@ -116,6 +120,241 @@ async def test_rotator_connection_survives_transfer_and_fences_old_producer(stat
     await first.disconnect()
     assert await second.get_position() == (100, 30)
     assert service.snapshots()[0]["owner"]["id"] == "sonde-1"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("activity", ["idle", "pending", "moving", "unsupported-stop"])
+async def test_explicit_tracker_connect_takes_manual_rotator_control(
+    station, monkeypatch, db_session, activity
+):
+    service, details, commands, connections = station
+    details["_hold_moves"] = activity in {"moving", "unsupported-stop"}
+    details["stop_supported"] = activity != "unsupported-stop"
+    registry = OperationRegistry()
+    monkeypatch.setattr(control, "hardware", service)
+    monkeypatch.setattr(control, "operations", registry)
+    monkeypatch.setattr(managermodule, "hardware", service)
+    monkeypatch.setattr(managermodule, "operations", registry)
+
+    @asynccontextmanager
+    async def session():
+        yield db_session
+
+    monkeypatch.setattr(managermodule, "AsyncSessionLocal", session)
+    manager = TrackerManager(tracker_id="target-1")
+    manager._sync_tracker_context = AsyncMock()
+    saved = {"rotator_id": "mount", "rotator_state": "disconnected"}
+    db_session.add(TrackingState(name=manager.tracking_state_name, value=saved))
+    await db_session.commit()
+
+    async def submit(action, **extra):
+        worker = service.devices.get(("rotator", "mount"))
+        return await control.submit_device_command(
+            "rotator",
+            "mount",
+            action,
+            details,
+            {
+                "command_id": action,
+                "epoch": registry.epoch,
+                "accept_before": time.time() + 10,
+                "generation": worker.snapshot.get("generation") if worker else None,
+                **extra,
+            },
+        )
+
+    await submit("connect")
+    async with asyncio.timeout(5):
+        while registry.records["connect"]["status"] != "succeeded":
+            await asyncio.sleep(0.01)
+    if activity != "idle":
+        await submit("move", position={"az": 90, "el": 25})
+        async with asyncio.timeout(5):
+            while "P 90 25" not in commands:
+                await asyncio.sleep(0.01)
+        assert registry.records["move"]["status"] == "started"
+
+    previous = service.devices[("rotator", "mount")].snapshot.copy()
+    opened = len(connections)
+    reply = await manager.update_tracking_state(
+        rotator_state="connected",
+        operation={"command_id": "tracker-connect", "action": "connect", "epoch": registry.epoch},
+    )
+    assert reply["success"] is True, reply
+    command = reply["command"]
+    assert command["manual_handoff"]["generation"] == previous["generation"]
+    # Acceptance cannot cancel physical work before its ownership is fenced.
+    if activity != "idle":
+        assert command["supersedes"] == ["move"]
+        assert registry.records["move"]["status"] == "started"
+
+    tracker = SatelliteTracker(
+        queue.Queue(),
+        queue.Queue(),
+        tracker_id="target-1",
+        hardware_client=HardwareClient(service.register_tracker("target-1")),
+    )
+    tracker.current_rotator_id = "mount"
+    tracker.rotator_details = details
+    tracker.input_tracking_state = {**saved, "rotator_state": "connected"}
+    tracker.operations.accept({"operation": command})
+    tracker.operations.begin_cycle()
+    await tracker.rotator_handler.handle_rotator_state_change("disconnected", "connected")
+    tracker.operations.finish_cycle()
+
+    assert tracker.rotator_data["connected"] is True
+    assert tracker.rotator_data["tracking"] is False
+    assert tracker.rotator_data["error"] is False
+    assert service.snapshots()[0]["owner"]["id"] == "target-1"
+    assert len(connections) == opened
+    assert commands.count("S") == (1 if activity == "moving" else 0)
+    results = [
+        message["data"]
+        for message in tracker.queue_out._queue_out.queue
+        if message["event"] == "tracker-command-status"
+    ]
+    assert results[-1]["status"] == "succeeded"
+    assert "tracker-connect" not in tracker.operations.pending
+    if activity != "idle":
+        async with asyncio.timeout(5):
+            while registry.records["move"]["status"] == "started":
+                await asyncio.sleep(0.01)
+        assert registry.records["move"]["status"] == "cancelled"
+    with pytest.raises(ControlReleased):
+        await service.call(
+            "rotator",
+            "mount",
+            "position",
+            owner=previous["owner"],
+            generation=previous["generation"],
+            az=200,
+            el=40,
+        )
+    assert "P 200 40" not in commands
+    assert await tracker.rotator_controller.get_position()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "changed",
+    [
+        "ordinary-connect",
+        "generation",
+        "owner",
+        "tracker-owner",
+        "requester",
+        "expired",
+        "reservation",
+        "rig",
+    ],
+)
+async def test_manual_handoff_cannot_bypass_other_ownership_guards(station, changed):
+    service, details, commands, connections = station
+    kind = "rig" if changed == "rig" else "rotator"
+    owner = "manual-owner"
+    service.owners[owner] = {"type": "manual", "id": owner}
+    lease = await service.call(kind, "mount", "acquire", owner=owner, details=details)
+    handoff = {
+        "device_id": "mount",
+        "owner": owner,
+        "generation": lease["generation"],
+        "deadline": time.time() + 10,
+    }
+    if changed == "generation":
+        handoff["generation"] = "obsolete"
+    elif changed == "owner":
+        service.owners[owner] = {"type": "observation", "id": "obs-one"}
+    elif changed == "tracker-owner":
+        service.owners[owner] = {"type": "tracker", "id": "target-2"}
+    elif changed == "expired":
+        handoff["deadline"] = time.time() - 1
+    elif changed == "reservation":
+        service.reservations[(kind, "mount")] = {"tracker_id": "obs-one"}
+    factory = RigProxy if kind == "rig" else RotatorProxy
+    requester = "obs-one" if changed == "requester" else "target-1"
+    tracker = factory(HardwareClient(service.register_tracker(requester)), "mount", details)
+    with pytest.raises(RuntimeError):
+        await tracker.connect(manual_handoff=None if changed == "ordinary-connect" else handoff)
+    assert service.devices[(kind, "mount")].snapshot["owner"] == owner
+    assert "S" not in commands
+
+
+@pytest.mark.asyncio
+async def test_observation_reservation_during_manual_handoff_blocks_tracker(station, monkeypatch):
+    service, details, commands, connections = station
+    service.owners["manual-owner"] = {"type": "manual", "id": "manual-owner"}
+    lease = await service.call("rotator", "mount", "acquire", owner="manual-owner", details=details)
+    released, resume = asyncio.Event(), asyncio.Event()
+    release = service.release
+
+    async def pause_release(*args, **kwargs):
+        await release(*args, **kwargs)
+        released.set()
+        await resume.wait()
+
+    monkeypatch.setattr(service, "release", pause_release)
+    tracker = RotatorProxy(HardwareClient(service.register_tracker("target-1")), "mount", details)
+    task = asyncio.create_task(
+        tracker.connect(
+            manual_handoff={
+                "device_id": "mount",
+                "owner": "manual-owner",
+                "generation": lease["generation"],
+                "deadline": time.time() + 10,
+            }
+        )
+    )
+    await asyncio.wait_for(released.wait(), timeout=5)
+    async with service.reserve([("rotator", "mount")], "one"):
+        resume.set()
+        with pytest.raises(RuntimeError, match="reserved"):
+            await asyncio.wait_for(task, timeout=5)
+        assert service.snapshots()[0]["owner"] is None
+        assert service.snapshots()[0]["data"]["connected"] is True
+
+
+@pytest.mark.asyncio
+async def test_queued_manual_acquire_cannot_restart_motion_after_release(station, monkeypatch):
+    service, details, commands, connections = station
+    registry = OperationRegistry()
+    monkeypatch.setattr(control, "hardware", service)
+    monkeypatch.setattr(control, "operations", registry)
+    owner = "manual:rotator:mount"
+    lease = await service.call("rotator", "mount", "acquire", owner=owner, details=details)
+    command = registry.accept(
+        owner,
+        {"rotator_id": "mount"},
+        {"rotator_id": "mount"},
+        {"action": "move", "position": {"az": 90, "el": 25}},
+    )
+    queued, resume = asyncio.Event(), asyncio.Event()
+    call = service.call
+
+    async def delayed_acquire(kind, device_id, method, **kwargs):
+        if method == "acquire":
+            queued.set()
+            await resume.wait()
+        return await call(kind, device_id, method, **kwargs)
+
+    monkeypatch.setattr(service, "call", delayed_acquire)
+    task = asyncio.create_task(
+        control.execute_device_command(
+            "rotator",
+            "mount",
+            "move",
+            details,
+            owner,
+            command,
+            lease["generation"],
+        )
+    )
+    await asyncio.wait_for(queued.wait(), timeout=5)
+    await service.release("rotator", "mount")
+    resume.set()
+    await asyncio.wait_for(task, timeout=5)
+    assert registry.records[command["command_id"]]["status"] == "cancelled"
+    assert service.snapshots()[0]["owner"] is None
+    assert "P 90 25" not in commands
 
 
 @pytest.mark.asyncio
@@ -435,6 +674,39 @@ async def test_crashed_worker_can_be_reconnected_without_inheriting_control(stat
     await service.call("rotator", "mount", "acquire", owner="manual", details=details)
     with pytest.raises(RuntimeError, match="control changed"):
         await anext(client.set_position(200, 40))
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("action", ["connect", "take-control"])
+async def test_manual_connect_recovers_a_crashed_worker(station, monkeypatch, action):
+    service, details, commands, connections = station
+    registry = OperationRegistry()
+    monkeypatch.setattr(control, "hardware", service)
+    monkeypatch.setattr(control, "operations", registry)
+    owner = "manual:rotator:mount"
+    service.owners[owner] = {"type": "manual", "id": owner}
+    await service.call("rotator", "mount", "acquire", owner=owner, details=details)
+    worker = service.devices[("rotator", "mount")]
+    worker.process.kill()
+    await asyncio.to_thread(worker.process.join, 2)
+    command = await control.submit_device_command(
+        "rotator",
+        "mount",
+        action,
+        details,
+        {
+            "command_id": action,
+            "epoch": registry.epoch,
+            "accept_before": time.time() + 10,
+            "generation": worker.snapshot["generation"],
+        },
+    )
+    async with asyncio.timeout(5):
+        while registry.records[command["command_id"]]["status"] in {"submitted", "started"}:
+            await asyncio.sleep(0.01)
+    assert registry.records[command["command_id"]]["status"] == "succeeded"
+    assert service.devices[("rotator", "mount")] is not worker
+    assert service.snapshots()[0]["data"]["connected"] is True
 
 
 @pytest.mark.asyncio

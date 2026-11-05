@@ -50,6 +50,80 @@ def test_independent_devices_keep_both_commands_and_reject_shared_device():
         request(registry, "another", tracker="target-2")
 
 
+def test_manual_handoff_supersedes_only_the_manual_owner_commands():
+    registry = OperationRegistry()
+    manual = "manual:rotator:mount"
+    request(registry, "manual-move", tracker=manual)
+    handoff = {"device_id": "mount", "owner": manual, "generation": "manual-generation"}
+    accepted = registry.accept(
+        "target-1",
+        {"rotator_state": "connected"},
+        STATE,
+        {"command_id": "connect", "action": "connect"},
+        manual_handoff=handoff,
+    )
+    assert accepted["supersedes"] == ["manual-move"]
+    assert registry.records["manual-move"]["status"] == "submitted"
+    with pytest.raises(ValueError, match="in progress"):
+        registry.accept(
+            "target-2",
+            {"rotator_state": "connected"},
+            STATE,
+            {"command_id": "other-connect", "action": "connect"},
+            manual_handoff=handoff,
+        )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "action, changes, allowed",
+    [
+        ("connect", {"rotator_state": "connected"}, True),
+        (None, {"rotator_state": "connected"}, False),
+        ("configure", {"rotator_state": "connected"}, False),
+        ("track", {"rotator_state": "tracking"}, False),
+        ("connect", {"rig_state": "connected"}, False),
+    ],
+)
+async def test_only_explicit_rotator_connect_authorizes_manual_handoff(
+    monkeypatch, db_session, action, changes, allowed
+):
+    registry = OperationRegistry()
+    monkeypatch.setattr(managermodule, "operations", registry)
+    snapshot = {
+        "owner": "manual-owner",
+        "generation": "manual-generation",
+        "data": {"connected": True},
+    }
+    service = SimpleNamespace(
+        devices={("rotator", "mount"): SimpleNamespace(snapshot=snapshot)},
+        owners={"manual-owner": {"type": "manual"}},
+    )
+    monkeypatch.setattr(managermodule, "hardware", service)
+
+    @asynccontextmanager
+    async def session():
+        yield db_session
+
+    monkeypatch.setattr(managermodule, "AsyncSessionLocal", session)
+    manager = TrackerManager(tracker_id="target-1")
+    manager._sync_tracker_context = AsyncMock()
+    db_session.add(TrackingState(name=manager.tracking_state_name, value=dict(STATE)))
+    await db_session.commit()
+    # Client-supplied handoff metadata must never grant a takeover by itself.
+    operation = {"command_id": "connect", "action": action, "manual_handoff": {"owner": "forged"}}
+    reply = await manager.update_tracking_state(operation=operation, **changes)
+    assert reply["success"] is True
+    assert ("manual_handoff" in reply["command"]) is allowed
+    if allowed:
+        assert reply["command"]["manual_handoff"] == {
+            "device_id": "mount",
+            "owner": "manual-owner",
+            "generation": "manual-generation",
+        }
+    assert "manual_handoff" not in await manager.get_tracking_state()
+
+
 def test_removed_tracker_telemetry_no_longer_reserves_its_device():
     registry = OperationRegistry()
     registry.observe(

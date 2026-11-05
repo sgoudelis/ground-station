@@ -302,6 +302,10 @@ class DeviceRuntime:
             if method == "acquire":
                 if not request.get("owner"):
                     raise ValueError("A control owner is required")
+                if request.get("generation") and request["generation"] != self.generation:
+                    # A queued manual command cannot reacquire its old lease in
+                    # the gap between release and the tracker's acquisition.
+                    self._check(request)
                 if self.owner is not None and self.owner != request["owner"]:
                     raise RuntimeError("Device is controlled by another owner")
                 await self.connect()

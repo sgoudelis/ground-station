@@ -85,6 +85,7 @@ class OperationRegistry:
         *,
         allow_handoff: bool = False,
         device_snapshot: Optional[dict] = None,
+        manual_handoff: Optional[dict] = None,
     ) -> dict:
         request = request or {}
         self.prune()
@@ -145,8 +146,12 @@ class OperationRegistry:
             )
             if not overlaps:
                 continue
+            # A tracker Connect may supersede its observed manual owner only;
+            # commands belonging to other trackers still block acceptance.
             if (
                 allow_handoff
+                or manual_handoff
+                and record["tracker_id"] == manual_handoff["owner"]
                 or is_stop
                 and same_tracker
                 and set(scopes).intersection(record["scopes"])
@@ -204,6 +209,7 @@ class OperationRegistry:
             "deadline": now + duration,
             "position": request.get("position"),
             "supersedes": supersedes,
+            **({"manual_handoff": dict(manual_handoff)} if manual_handoff else {}),
         }
         self.records[command_id] = record
         for scope in scopes:

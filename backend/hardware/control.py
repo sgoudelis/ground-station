@@ -7,6 +7,7 @@ import math
 import time
 
 from controllers.rotator import StopUnconfirmed
+from hardware.errors import ControlReleased
 from hardware.service import hardware
 from tracker.operations import operations, validate_external_request
 
@@ -153,7 +154,19 @@ async def execute_device_command(
         else:
             if action == "take-control":
                 await hardware.release(kind, device_id)
-            lease = await hardware.call(kind, device_id, "acquire", owner=owner, details=details)
+                expected_generation = worker.snapshot.get("generation") if worker else None
+            if worker and not worker.process.is_alive():
+                # A replacement worker creates a new generation. Its predecessor's
+                # lease cannot be used to connect the replacement runtime.
+                expected_generation = None
+            lease = await hardware.call(
+                kind,
+                device_id,
+                "acquire",
+                owner=owner,
+                generation=expected_generation,
+                details=details,
+            )
             generation = lease["generation"]
             if action in {"connect", "take-control"}:
                 if hardware.on_intent:
@@ -190,7 +203,7 @@ async def execute_device_command(
             else None
         )
         operations.update(command["command_id"], "succeeded", warning)
-    except ControlChanged as error:
+    except (ControlChanged, ControlReleased) as error:
         operations.update(command["command_id"], "cancelled", str(error))
     except TimeoutError as error:
         try:

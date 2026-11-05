@@ -45,6 +45,11 @@ that the mount has settled. Settings edits retain this motion guard.
 
 Manual takeover can release an interactive tracker. Observations reserve their
 whole device bundle during handoff and cannot be displaced by manual takeover.
+An explicit tracker Connect can take a connected rotator from manual control,
+superseding pending manual commands while retaining the physical connection.
+The handoff still confirms stationary motion before granting the tracker control.
+This permission applies only to the manual ownership generation seen at acceptance;
+saved tracking intent and automatic reconnects cannot displace manual control.
 Stop and explicit operator Disconnect are available independently of ownership,
 including during observations, and revoke queued producer writes. Disconnect
 does not acquire manual control. It interrupts pending device operations and
