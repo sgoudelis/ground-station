@@ -66,13 +66,15 @@ describe('observation form validation and save errors', () => {
         const { save, pendingSaves } = renderForm({ passSelected: false });
         const label = await screen.findByText('Select Pass', { selector: 'label' });
         expect(save).toBeDisabled();
-        expect(screen.getByRole('alert')).toHaveTextContent('Select an available pass');
+        expect(within(label.parentElement).getByRole('combobox')).toHaveAttribute('aria-invalid', 'true');
+        expect(screen.queryByRole('alert')).not.toBeInTheDocument();
         fireEvent.click(save);
         expect(pendingSaves).toHaveLength(0);
 
         fireEvent.mouseDown(within(label.parentElement).getByRole('combobox'));
         fireEvent.click(screen.getByRole('option'));
         await waitFor(() => expect(save).toBeEnabled());
+        expect(within(label.parentElement).getByRole('combobox')).not.toHaveAttribute('aria-invalid', 'true');
         await act(async () => fireEvent.click(save));
         expect(pendingSaves).toHaveLength(1);
         expect(pendingSaves[0].request.data.pass).toMatchObject({
@@ -88,12 +90,16 @@ describe('observation form validation and save errors', () => {
         expect(pendingSaves).toHaveLength(0);
     });
 
-    it('explains missing required inputs instead of silently disabling save', async () => {
+    it('highlights missing required inputs without a validation summary', async () => {
         const { save } = renderForm({
             overrides: { name: '  ', sessions: [{ sdr: { ...sdr, gain: null, antenna_port: '', sample_rate: 0 }, tasks: [] }] },
         });
-        await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('Enter an observation name.'));
-        expect(screen.getByRole('alert')).toHaveTextContent('SDR session 1: select an SDR, gain, antenna port, and a positive sample rate.');
+        await waitFor(() => expect(screen.getByRole('textbox', { name: /Observation Name/ })).toHaveAttribute('aria-invalid', 'true'));
+        for (const name of ['Sample Rate', 'Gain', 'Antenna Port']) {
+            const label = screen.getByText(name, { selector: 'label' });
+            expect(within(label.parentElement).getByRole('combobox')).toHaveAttribute('aria-invalid', 'true');
+        }
+        expect(screen.queryByRole('alert')).not.toBeInTheDocument();
         expect(save).toBeDisabled();
     });
 

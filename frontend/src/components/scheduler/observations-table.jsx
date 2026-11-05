@@ -93,6 +93,34 @@ const getStatusColor = (status) => {
 // Terminal observations should look visually completed in the grid.
 const isTerminalStatus = (status) => ['completed', 'failed', 'cancelled', 'missed'].includes(status);
 
+const ObservationStatusChip = React.memo(function ObservationStatusChip({ observation }) {
+    const { t } = useTranslation('common');
+    const [, setTick] = useState(0);
+    const { enabled, status } = observation;
+
+    useEffect(() => {
+        if (!enabled || status !== 'scheduled') return;
+
+        // Update the label as the start approaches, even without a server event.
+        const interval = setInterval(() => setTick((tick) => tick + 1), 1000);
+        return () => clearInterval(interval);
+    }, [enabled, status]);
+
+    const untilStart = Date.parse(observation.task_start || observation.pass?.event_start) - Date.now();
+    // This is a display hint; preserve the stored status for filters and actions.
+    const startingSoon = enabled && status === 'scheduled' && untilStart > 0 && untilStart < 120000;
+
+    return (
+        <Chip
+            label={startingSoon
+                ? t('scheduler_banner.starting_soon')
+                : t(`scheduler_tables.shared.statuses.${status}`, { defaultValue: status })}
+            color={startingSoon ? 'warning' : getStatusColor(status)}
+            size="small"
+        />
+    );
+});
+
 // Time formatter component that updates every second
 const TimeFormatter = React.memo(function TimeFormatter({ value }) {
     const [, setForceUpdate] = useState(0);
@@ -525,13 +553,9 @@ const ObservationsTable = () => {
         {
             field: 'status',
             headerName: t('scheduler_tables.shared.columns.status'),
-            width: 120,
+            width: 140,
             renderCell: (params) => (
-                <Chip
-                    label={getStatusLabel(params.value)}
-                    color={getStatusColor(params.value)}
-                    size="small"
-                />
+                <ObservationStatusChip observation={params.row} />
             ),
         },
         {

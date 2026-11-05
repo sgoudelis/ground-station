@@ -1132,6 +1132,11 @@ const ObservationFormDialog = ({ onExited }) => {
         )),
     };
 
+    const rigTransmitterValid = !formData.rig?.id || availableTransmitters.some(
+        (transmitter) => String(transmitter.id) === String(formData.rig.transmitter_id)
+            && Number(transmitter.downlink_low) > 0
+    );
+
     const getValidationErrors = () => {
         const errors = [];
         const addError = (key, values) => errors.push(t(`scheduler_dialogs.observation.validation.${key}`, values));
@@ -1158,10 +1163,6 @@ const ObservationFormDialog = ({ onExited }) => {
             .map(String);
         const hasUniqueSdrs = new Set(selectedSdrIds).size === selectedSdrIds.length;
         if (!hasUniqueSdrs) addError('duplicate_sdr');
-        const rigTransmitterValid = !formData.rig?.id || availableTransmitters.some(
-            (transmitter) => String(transmitter.id) === String(formData.rig.transmitter_id)
-                && Number(transmitter.downlink_low) > 0
-        );
         if (!rigTransmitterValid) addError('rig_transmitter_required');
         sessions.forEach((session, index) => {
             const sdr = session?.sdr || {};
@@ -1243,6 +1244,13 @@ const ObservationFormDialog = ({ onExited }) => {
                 }}
             >
                 <Stack spacing={3}>
+                    {/* Save failures have no individual input to highlight. */}
+                    {!isFormDisabled && saveError && (
+                        <Alert severity="error">
+                            <AlertTitle>{t('scheduler_dialogs.observation.save_failed')}</AlertTitle>
+                            {saveError}
+                        </Alert>
+                    )}
                     {/* Enabled Checkbox */}
                     <Box>
                         <FormControlLabel
@@ -1281,6 +1289,7 @@ const ObservationFormDialog = ({ onExited }) => {
                             fullWidth
                             size="small"
                             value={formData.name}
+                            error={!isFormDisabled && !formData.name.trim()}
                             onChange={(e) =>
                                 setFormData((prev) => ({ ...prev, name: e.target.value }))
                             }
@@ -1304,6 +1313,7 @@ const ObservationFormDialog = ({ onExited }) => {
                             initialPass={selectedObservation?.pass}
                             observation={observationDraft}
                             passRequired
+                            satelliteError={!isFormDisabled && !formData.satellite.norad_id}
                             onSatelliteSelect={(satellite) => {
                                 setFormData((prev) => ({
                                     // Pass timing belongs to the selected satellite.
@@ -1456,6 +1466,7 @@ const ObservationFormDialog = ({ onExited }) => {
                         rigs={rigs}
                         transmitters={availableTransmitters}
                         disabled={isFormDisabled}
+                        transmitterError={!isFormDisabled && !rigTransmitterValid}
                         onChange={(rig) => setFormData((prev) => ({ ...prev, rig }))}
                         t={t}
                     />
@@ -1637,7 +1648,15 @@ const ObservationFormDialog = ({ onExited }) => {
                                     </Typography>
                                 </Box>
                             )}
-                            <FormControl fullWidth size="small" required error={!!sdrParametersError[formData.sdr.id]} disabled={isFormDisabled}>
+                            <FormControl
+                                fullWidth
+                                size="small"
+                                required
+                                error={!isFormDisabled && (!formData.sdr.id
+                                    || isSdrUsedByAnotherSession(formData.sdr.id)
+                                    || !!sdrParametersError[formData.sdr.id])}
+                                disabled={isFormDisabled}
+                            >
                                 <InputLabel>{t('scheduler_dialogs.shared.sdr_label')}</InputLabel>
                                 <Select
                                     value={formData.sdr.id}
@@ -1698,7 +1717,15 @@ const ObservationFormDialog = ({ onExited }) => {
                                 </Select>
                             </FormControl>
 
-                            <FormControl fullWidth size="small" required error={!bandwidthValidation.valid} disabled={isFormDisabled || !formData.sdr.id || sdrParametersLoading}>
+                            <FormControl
+                                fullWidth
+                                size="small"
+                                required
+                                error={!isFormDisabled && (!Number.isFinite(Number(formData.sdr.sample_rate))
+                                    || Number(formData.sdr.sample_rate) <= 0
+                                    || !bandwidthValidation.valid)}
+                                disabled={isFormDisabled || !formData.sdr.id || sdrParametersLoading}
+                            >
                                 <InputLabel>{t('scheduler_dialogs.shared.sample_rate_label')}</InputLabel>
                                 <Select
                                     value={formData.sdr.sample_rate}
@@ -1743,7 +1770,15 @@ const ObservationFormDialog = ({ onExited }) => {
                             </FormControl>
 
                             <Stack direction="row" spacing={2}>
-                                <FormControl fullWidth size="small" required disabled={isFormDisabled || !formData.sdr.id || sdrParametersLoading} error={!!sdrParametersError[formData.sdr.id]} sx={{ minWidth: 0 }}>
+                                <FormControl
+                                    fullWidth
+                                    size="small"
+                                    required
+                                    disabled={isFormDisabled || !formData.sdr.id || sdrParametersLoading}
+                                    error={!isFormDisabled && (formData.sdr.gain === ''
+                                        || formData.sdr.gain == null || !!sdrParametersError[formData.sdr.id])}
+                                    sx={{ minWidth: 0 }}
+                                >
                                     <InputLabel>{t('scheduler_dialogs.shared.gain_label')}</InputLabel>
                                     <Select
                                         value={
@@ -1770,7 +1805,15 @@ const ObservationFormDialog = ({ onExited }) => {
                                     </Select>
                                 </FormControl>
 
-                                <FormControl fullWidth size="small" required disabled={isFormDisabled || !formData.sdr.id || sdrParametersLoading} error={!!sdrParametersError[formData.sdr.id]} sx={{ minWidth: 0 }}>
+                                <FormControl
+                                    fullWidth
+                                    size="small"
+                                    required
+                                    disabled={isFormDisabled || !formData.sdr.id || sdrParametersLoading}
+                                    error={!isFormDisabled && (!formData.sdr.antenna_port
+                                        || !!sdrParametersError[formData.sdr.id])}
+                                    sx={{ minWidth: 0 }}
+                                >
                                     <InputLabel>{t('scheduler_dialogs.shared.antenna_port_label')}</InputLabel>
                                     <Select
                                         value={
@@ -2969,26 +3012,6 @@ const ObservationFormDialog = ({ onExited }) => {
                     </Box>
                 </Stack>
             </DialogContent>
-
-            {/* Keep failures and blocked-save reasons visible beside the save controls. */}
-            {!isFormDisabled && (saveError || validationErrors.length > 0) && (
-                <Box sx={{ px: { xs: 2, sm: 3 }, py: 1, maxHeight: '25vh', overflowY: 'auto' }}>
-                    {saveError && (
-                        <Alert severity="error" sx={{ mb: validationErrors.length ? 1 : 0 }}>
-                            <AlertTitle>{t('scheduler_dialogs.observation.save_failed')}</AlertTitle>
-                            {saveError}
-                        </Alert>
-                    )}
-                    {validationErrors.length > 0 && (
-                        <Alert severity="warning">
-                            <AlertTitle>{t('scheduler_dialogs.observation.validation_title')}</AlertTitle>
-                            <Box component="ul" sx={{ m: 0, pl: 2 }}>
-                                {validationErrors.map((message, index) => <li key={index}>{message}</li>)}
-                            </Box>
-                        </Alert>
-                    )}
-                </Box>
-            )}
 
             <DialogActions
                 sx={{

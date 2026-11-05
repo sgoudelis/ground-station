@@ -192,6 +192,7 @@ const SatelliteSearchAutocomplete = ({
     onSatelliteSelect,
     onTransmittersLoadingChange,
     disabled = false,
+    error = false,
     initialSatellite = null,
 }) => {
     const { t } = useTranslation('common');
@@ -352,6 +353,7 @@ const SatelliteSearchAutocomplete = ({
             renderInput={(params) => (
                 <TextField
                     {...params}
+                    error={error}
                     label={t('satellite_selector.search_satellite', { defaultValue: 'Search Satellite' })}
                     variant="outlined"
                     size="small"
@@ -644,6 +646,7 @@ export const SatelliteSelector = ({
     onPassSelect,
     showPassSelector = true,
     passRequired = false,
+    satelliteError = false,
     initialSatellite = null,
     initialPass = null,
     observation = null,
@@ -658,6 +661,7 @@ export const SatelliteSelector = ({
                 onSatelliteSelect={onSatelliteSelect}
                 onTransmittersLoadingChange={onTransmittersLoadingChange}
                 disabled={disabled}
+                error={satelliteError}
                 initialSatellite={initialSatellite}
             />
             {showPassSelector && <PassSelector onPassSelect={onPassSelect} initialPass={initialPass} observation={observation} required={passRequired} disabled={disabled} />}

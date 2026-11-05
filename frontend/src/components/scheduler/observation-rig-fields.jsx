@@ -42,7 +42,7 @@ const groupTransmittersByBand = (transmitters) => {
         }));
 };
 
-export function ObservationRigFields({ rig, rigs, transmitters, disabled, onChange, t }) {
+export function ObservationRigFields({ rig, rigs, transmitters, disabled, transmitterError = false, onChange, t }) {
     const rigLabelId = useId();
     const transmitterLabelId = useId();
     const available = transmitters.filter((transmitter) => Number(transmitter.downlink_low) > 0);
@@ -93,7 +93,7 @@ export function ObservationRigFields({ rig, rigs, transmitters, disabled, onChan
                         ))}
                     </Select>
                 </FormControl>
-                <FormControl fullWidth size="small" required disabled={disabled || !rig?.id || !available.length}>
+                <FormControl fullWidth size="small" required error={transmitterError} disabled={disabled || !rig?.id || !available.length}>
                     <InputLabel id={transmitterLabelId}>{t('scheduler_dialogs.shared.observation_rig_transmitter')}</InputLabel>
                     <Select
                         labelId={transmitterLabelId}
