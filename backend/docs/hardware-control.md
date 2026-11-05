@@ -20,6 +20,11 @@ owner can acquire control. The TCP stream remains open. Late Disconnect from the
 old owner acknowledges detachment without closing the new owner's stream.
 Explicit Disconnect closes the physical connection.
 
+Late requests from an intentionally released owner detach that tracker quietly,
+without a hardware-error event or toast. Its pending device commands are cancelled
+without sending Stop or closing the new owner's connection. Failed handoffs,
+watchdog expiry, and transport failures retain normal error reporting.
+
 Hamlib Stop acknowledgement waits at most 5 seconds (or a shorter configured
 controller timeout). Handoff still requires fresh stationary-position samples.
 

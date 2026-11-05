@@ -110,7 +110,7 @@ test.describe('Rig Configuration', () => {
     const addDialog = await openRigDialog(page);
     await addDialog.getByLabel('Name').fill(rigName);
     await addDialog.getByLabel('Host').fill('127.0.0.1');
-    await addDialog.getByLabel('Port').fill('4532');
+    await addDialog.getByRole('spinbutton', { name: 'Port', exact: true }).fill('4532');
     await addDialog.getByRole('button', { name: /submit/i }).click();
     await expect(addDialog).toBeHidden();
 
@@ -143,14 +143,14 @@ test.describe('Rig Configuration', () => {
     const addDialogA = await openRigDialog(page);
     await addDialogA.getByLabel('Name').fill(rigNameA);
     await addDialogA.getByLabel('Host').fill('127.0.0.1');
-    await addDialogA.getByLabel('Port').fill('4532');
+    await addDialogA.getByRole('spinbutton', { name: 'Port', exact: true }).fill('4532');
     await addDialogA.getByRole('button', { name: /submit/i }).click();
     await expect(addDialogA).toBeHidden();
 
     const addDialogB = await openRigDialog(page);
     await addDialogB.getByLabel('Name').fill(rigNameB);
     await addDialogB.getByLabel('Host').fill('127.0.0.1');
-    await addDialogB.getByLabel('Port').fill('4532');
+    await addDialogB.getByRole('spinbutton', { name: 'Port', exact: true }).fill('4532');
     await addDialogB.getByRole('button', { name: /submit/i }).click();
     await expect(addDialogB).toBeHidden();
 
@@ -225,7 +225,8 @@ test.describe('Rotator Configuration', () => {
     const addDialog = await openRotatorDialog(page);
     await addDialog.getByLabel('Name').fill(rotatorName);
     await addDialog.getByLabel('Host').fill('127.0.0.1');
-    await addDialog.getByLabel('Port').fill('4533');
+    // A partial label match for "Port" also matches "Controller supports Stop".
+    await addDialog.getByRole('spinbutton', { name: 'Port', exact: true }).fill('4533');
     await addDialog.locator('input[name="minaz"]').fill('0');
     await addDialog.locator('input[name="maxaz"]').fill('360');
     await addDialog.locator('input[name="minel"]').fill('0');
@@ -262,7 +263,7 @@ test.describe('Rotator Configuration', () => {
     const addDialogA = await openRotatorDialog(page);
     await addDialogA.getByLabel('Name').fill(rotatorNameA);
     await addDialogA.getByLabel('Host').fill('127.0.0.1');
-    await addDialogA.getByLabel('Port').fill('4533');
+    await addDialogA.getByRole('spinbutton', { name: 'Port', exact: true }).fill('4533');
     await addDialogA.locator('input[name="minaz"]').fill('0');
     await addDialogA.locator('input[name="maxaz"]').fill('360');
     await addDialogA.locator('input[name="minel"]').fill('0');
@@ -273,7 +274,7 @@ test.describe('Rotator Configuration', () => {
     const addDialogB = await openRotatorDialog(page);
     await addDialogB.getByLabel('Name').fill(rotatorNameB);
     await addDialogB.getByLabel('Host').fill('127.0.0.1');
-    await addDialogB.getByLabel('Port').fill('4533');
+    await addDialogB.getByRole('spinbutton', { name: 'Port', exact: true }).fill('4533');
     await addDialogB.locator('input[name="minaz"]').fill('0');
     await addDialogB.locator('input[name="maxaz"]').fill('360');
     await addDialogB.locator('input[name="minel"]').fill('0');
@@ -399,7 +400,7 @@ test.describe('SDR Configuration', () => {
 
     await dialog.getByLabel('Name').fill('Bogus RTL TCP');
     await dialog.getByLabel('Host').fill('');
-    await dialog.getByLabel('Port').fill('');
+    await dialog.getByRole('spinbutton', { name: 'Port', exact: true }).fill('');
 
     await expect(dialog.getByRole('button', { name: /submit/i })).toBeDisabled();
   });

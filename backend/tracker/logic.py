@@ -28,6 +28,7 @@ from celestial.observermath import compute_observer_sky_position
 from common.arguments import arguments as args
 from common.constants import DictKeys, SocketEvents
 from common.targetkey import normalize_target_key
+from hardware.errors import ControlReleased
 from orbits import CentralBody, OrbitServiceError, get_propagation_input
 from tracker.context import (
     SATELLITE_TRACKING_CONTEXT,
@@ -273,6 +274,39 @@ class SatelliteTracker:
     def in_tracking_state(self) -> bool:
         """Check if rotator is currently in tracking state."""
         return self.current_rotator_state == "tracking"
+
+    def release_hardware_control(self, kind: str) -> None:
+        """Detach this producer without closing or commanding the transferred device."""
+        logger.info("Tracker %s released %s control", self.tracker_id, kind)
+        state = {**(self.input_tracking_state or {}), f"{kind}_state": "disconnected"}
+        self.input_tracking_state = state
+        setattr(self, f"current_{kind}_state", "disconnected")
+        setattr(self, f"{kind}_controller", None)
+        data = getattr(self, f"{kind}_data")
+        data.update(connected=False, tracking=False, stopped=False, error=False, error_message=None)
+        if kind == "rotator":
+            self.rotator_handler._reset_slew_state()
+            self.rotator_handler._clear_overlap_lane_state()
+            self.rotator_handler._stationary_position = None
+            self.manual_rotator_target = None
+            self.nudge_offset = {"az": 0, "el": 0}
+            self.rotator_position_fresh = False
+            data.update(parked=False, park_requested=False)
+        else:
+            data["tuning"] = False
+            self.rig_frequency_fresh = False
+        # Pending commands must not replay a Move/Stop against the new owner.
+        self.operations.release(kind)
+        self.queue_out.put(
+            {
+                DictKeys.EVENT: SocketEvents.SATELLITE_TRACKING,
+                DictKeys.DATA: {
+                    DictKeys.EVENTS: [],
+                    f"{kind}_data": data.copy(),
+                    DictKeys.TRACKING_STATE: state,
+                },
+            }
+        )
 
     @staticmethod
     def _normalize_target_type(tracking_state: Dict[str, Any]) -> str:
@@ -1018,7 +1052,6 @@ class SatelliteTracker:
                     await self.rotator_handler.update_hardware_position()
                     self.rotator_position_fresh = self.rotator_controller is not None
                 except Exception as e:
-                    logger.warning(f"Rotator communication failed, continuing tracking: {e}")
                     await self.rotator_handler.handle_rotator_error(e)
 
                 # Update rig frequency (allow tracking to continue if rig fails)
@@ -1026,7 +1059,6 @@ class SatelliteTracker:
                     await self.rig_handler.update_hardware_frequency()
                     self.rig_frequency_fresh = self.rig_controller is not None
                 except Exception as e:
-                    logger.warning(f"Rig communication failed, continuing tracking: {e}")
                     await self.rig_handler.handle_rig_error(e)
 
                 # Manual hardware control must work even without a sky target.
@@ -1136,6 +1168,9 @@ class SatelliteTracker:
                 if self.current_rotator_state == "tracking":
                     await self.rotator_handler.control_rotator_position(command_skypoint)
 
+            except ControlReleased as released:
+                # Handoffs can also overtake heartbeats, mode changes, and writes.
+                self.release_hardware_control(released.kind)
             except Exception as e:
                 logger.error(f"Error in satellite tracking task: {e}")
                 logger.exception(e)

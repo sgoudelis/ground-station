@@ -560,6 +560,30 @@ def test_worker_error_precedes_success_flags():
     assert events[-1]["data"]["status"] == "failed"
 
 
+def test_hardware_release_cancels_pending_move_without_stopping_the_new_owner():
+    tracker = worker()
+    controller = SimpleNamespace(stop=AsyncMock(), disconnect=AsyncMock())
+    tracker.rotator_controller = controller
+    tracker.operations.accept({"operation": request(OperationRegistry())})
+    tracker.operations.begin_cycle()
+
+    tracker.release_hardware_control("rotator")
+    tracker.operations.finish_cycle()
+
+    assert not tracker.operations.pending
+    assert tracker.manual_rotator_target is None
+    assert tracker.input_tracking_state["rotator_state"] == "disconnected"
+    assert tracker.input_tracking_state["rig_state"] == STATE["rig_state"]
+    assert tracker.rotator_data["error"] is False
+    events = list(tracker.queue_out._queue_out.queue)
+    statuses = [
+        event["data"]["status"] for event in events if event["event"] == "tracker-command-status"
+    ]
+    assert statuses == ["started", "cancelled"]
+    controller.stop.assert_not_awaited()
+    controller.disconnect.assert_not_awaited()
+
+
 @pytest.mark.asyncio
 async def test_manual_move_and_stop_execute_without_location_or_target(monkeypatch):
     monkeypatch.setattr(logic, "args", SimpleNamespace(track_interval_ms=1))

@@ -24,6 +24,7 @@ from common.constants import DictKeys, SocketEvents, TrackingEvents
 from controllers.rig import RigController
 from controllers.sdr import SDRController
 from hardware.client import RigProxy
+from hardware.errors import ControlReleased
 from hardware.rigcontrol import RigExecution
 from tracking.doppler import calculate_doppler_shift_from_range_rate
 
@@ -251,6 +252,10 @@ class RigHandler(RigExecution):
 
     async def handle_rig_error(self, error):
         """Handle rig connection errors."""
+        if isinstance(error, ControlReleased):
+            self.tracker.release_hardware_control("rig")
+            return
+        logger.warning("Rig communication failed, continuing tracking: %s", error)
         self.tracker.rig_data.update(
             {
                 "connected": False,

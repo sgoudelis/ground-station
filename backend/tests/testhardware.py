@@ -3,6 +3,7 @@
 
 import asyncio
 import json
+import logging
 import queue
 import time
 from unittest.mock import AsyncMock
@@ -19,6 +20,7 @@ from crud import hardware as hardware_crud
 from db.models import TrackingState
 from hardware import control
 from hardware.client import HardwareClient, RigProxy, RotatorProxy
+from hardware.errors import ControlReleased
 from hardware.runtime import DeviceRuntime
 from hardware.service import HardwareSupervisor
 from observations.tasks import trackerhandler as observationmodule
@@ -114,6 +116,153 @@ async def test_rotator_connection_survives_transfer_and_fences_old_producer(stat
     await first.disconnect()
     assert await second.get_position() == (100, 30)
     assert service.snapshots()[0]["owner"]["id"] == "sonde-1"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("kind", ["rotator", "rig"])
+@pytest.mark.parametrize("handoff", [True, False])
+async def test_tracker_handoff_is_silent_but_communication_failure_emits_error(
+    station, monkeypatch, caplog, kind, handoff
+):
+    service, details, commands, connections = station
+    monkeypatch.setattr(logging.getLogger("tracker-worker"), "propagate", True)
+    output = queue.Queue()
+    stopped = asyncio.Event()
+    stopped.set()  # Finish after one real tracker loop iteration.
+    tracker = SatelliteTracker(
+        output,
+        queue.Queue(),
+        stop_event=stopped,
+        tracker_id="target-1",
+        hardware_client=HardwareClient(service.register_tracker("target-1")),
+    )
+    tracker.input_tracking_state = {
+        "rotator_id": "device" if kind == "rotator" else "none",
+        "rotator_state": "connected" if kind == "rotator" else "disconnected",
+        "rig_id": "device" if kind == "rig" else "none",
+        "rig_state": "connected" if kind == "rig" else "disconnected",
+    }
+    setattr(tracker, f"current_{kind}_id", "device")
+    setattr(tracker, f"{kind}_details", details)
+    handler = tracker.rotator_handler if kind == "rotator" else tracker.rig_handler
+    await getattr(handler, f"connect_to_{kind}")()
+    opened = len(connections)
+    # Keep the existing connection so the loop exercises a late producer read.
+    monkeypatch.setattr(tracker.state_manager, "process_state_changes", AsyncMock())
+    if handoff:
+        await service.release(kind, "device")
+        factory = RotatorProxy if kind == "rotator" else RigProxy
+        observer = factory(HardwareClient(service.register_tracker("obs-one")), "device", details)
+        await observer.connect()
+    else:
+        details["_drop_reads"] = True
+
+    await asyncio.wait_for(tracker.run(), timeout=5)
+
+    messages = list(output.queue)
+    error_events = [
+        event
+        for message in messages
+        for event in message.get("data", {}).get("events", [])
+        if event["name"] in {"rotator_error", "rig_error"}
+    ]
+    assert bool(error_events) is not handoff
+    assert ("communication failed" in caplog.text) is not handoff
+    assert tracker.input_tracking_state[f"{kind}_state"] == "disconnected"
+    assert getattr(tracker, f"{kind}_controller") is None
+    if handoff:
+        snapshot = service.snapshots()[0]
+        assert snapshot["owner"]["id"] == "obs-one"
+        assert snapshot["data"]["connected"] is True
+        assert len(connections) == opened
+        assert "S" not in commands
+        assert tracker.stats["errors"] == 0
+        assert any(
+            message.get("data", {}).get(f"{kind}_data", {}).get("error") is False
+            and message.get("data", {}).get("tracking_state", {}).get(f"{kind}_state")
+            == "disconnected"
+            for message in messages
+        )
+        if kind == "rotator":
+            assert await observer.get_position() == (20, 10)
+        else:
+            assert await observer.get_frequency() == 145000000
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("kind", ["rotator", "rig"])
+async def test_late_tracking_write_after_handoff_detaches_without_error(station, kind):
+    service, details, _, _ = station
+    output = queue.Queue()
+    tracker = SatelliteTracker(
+        output,
+        queue.Queue(),
+        tracker_id="target-1",
+        hardware_client=HardwareClient(service.register_tracker("target-1")),
+    )
+    tracker.input_tracking_state = {f"{kind}_id": "device", f"{kind}_state": "tracking"}
+    setattr(tracker, f"current_{kind}_id", "device")
+    setattr(tracker, f"current_{kind}_state", "tracking")
+    setattr(tracker, f"{kind}_details", details)
+    handler = tracker.rotator_handler if kind == "rotator" else tracker.rig_handler
+    await getattr(handler, f"connect_to_{kind}")()
+    await service.release(kind, "device")
+
+    # Extended azimuth commands have a separate failure path; they must not
+    # misreport an expected handoff as an unsupported controller position.
+    with pytest.raises(ControlReleased) as caught:
+        if kind == "rotator":
+            await handler._issue_rotator_command(370, 30)
+        else:
+            await handler.control_rig_frequency()
+    assert caught.value.kind == kind
+    await getattr(handler, f"handle_{kind}_error")(caught.value)
+    assert getattr(tracker, f"{kind}_controller") is None
+    assert getattr(tracker, f"{kind}_data")["error"] is False
+    assert not any(
+        event["name"] in {"rotator_error", "rig_error"}
+        for message in output.queue
+        for event in message.get("data", {}).get("events", [])
+    )
+
+
+@pytest.mark.asyncio
+async def test_handoff_during_heartbeat_does_not_count_as_tracker_failure(monkeypatch, caplog):
+    output = queue.Queue()
+    stopped = asyncio.Event()
+    stopped.set()
+    tracker = SatelliteTracker(
+        output, queue.Queue(), stop_event=stopped, tracker_id="target-1", hardware_client=object()
+    )
+    tracker.input_tracking_state = {"rotator_id": "mount", "rotator_state": "tracking"}
+    tracker.input_location = {"latitude": 0, "longitude": 0}
+    tracker.rotator_controller = AsyncMock()
+    tracker.rotator_controller.call.side_effect = ControlReleased("Released", kind="rotator")
+    monkeypatch.setattr(logging.getLogger("tracker-worker"), "propagate", True)
+    monkeypatch.setattr(tracker.state_manager, "process_state_changes", AsyncMock())
+    monkeypatch.setattr(tracker.rotator_handler, "update_hardware_position", AsyncMock())
+    monkeypatch.setattr(
+        tracker,
+        "_resolve_target_context",
+        lambda *_: {
+            "target_type": "satellite",
+            "target_name": "Test",
+            "satellite_data": {"details": {"name": "Test"}},
+            "skypoint": (20, 10),
+        },
+    )
+
+    await asyncio.wait_for(tracker.run(), timeout=5)
+
+    assert tracker.rotator_controller is None
+    assert tracker.input_tracking_state["rotator_state"] == "disconnected"
+    assert tracker.stats["errors"] == 0
+    assert "Error in satellite tracking task" not in caplog.text
+    assert not any(
+        event["name"] == "rotator_error"
+        for message in output.queue
+        for event in message.get("data", {}).get("events", [])
+    )
 
 
 @pytest.mark.asyncio
@@ -378,9 +527,26 @@ async def test_acquire_renews_tracker_liveness_until_requests_stop(kind):
     await runtime.tick()
     assert runtime.owner is None
     assert runtime.data["connected"] is True
-    with pytest.raises(RuntimeError, match="control changed"):
+    with pytest.raises(RuntimeError, match="control changed") as caught:
         await runtime.execute(followup)
+    assert not isinstance(caught.value, ControlReleased)
     controller.stop.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_failed_handoff_does_not_silence_later_requests():
+    controller = AsyncMock()
+    controller.get_position.side_effect = ConnectionError("Controller connection failed")
+    runtime = DeviceRuntime("rotator", "mount", {}, "epoch", controller)
+    runtime.owner = "tracker:target-1:incarnation"
+    runtime.data.update(connected=True, tracking=True)
+    late_request = request(runtime, "position")
+    with pytest.raises(ConnectionError, match="connection failed"):
+        await runtime.execute(request(runtime, "release"))
+    with pytest.raises(RuntimeError, match="control changed") as caught:
+        await runtime.execute(late_request)
+    assert not isinstance(caught.value, ControlReleased)
+    assert runtime.data["error"] is True
 
 
 @pytest.mark.asyncio

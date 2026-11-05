@@ -27,6 +27,7 @@ from datetime import datetime, timezone
 from common.constants import DictKeys, SocketEvents, TrackingEvents
 from controllers.rotator import RotatorController, StopRejected
 from hardware.client import RotatorProxy
+from hardware.errors import ControlReleased
 from tracker.context import live_satellite_data
 from tracking.passes import calculate_next_events
 
@@ -104,6 +105,9 @@ class RotatorHandler:
             if not stopped:
                 raise StopRejected("Rotator rejected stop command")
             self.stop_result = ("succeeded", "Stop acknowledged; stationary position observed")
+        except ControlReleased:
+            self.tracker.release_hardware_control("rotator")
+            return
         except StopRejected as error:
             # A rejected command says nothing about the health of the connection.
             self.stop_result = ("failed", f"Tracking updates paused. {error}")
@@ -493,6 +497,9 @@ class RotatorHandler:
         except StopAsyncIteration:
             logger.info(f"Slewing to AZ={target_az}° EL={target_el}° complete")
             self._reset_slew_state()
+        except ControlReleased:
+            # Losing ownership is not an azimuth-limit or controller failure.
+            raise
         except Exception as error:
             # Explicit no-fallback behavior for overlap mode:
             # when a controller rejects extended azimuth commands, freeze tracking and emit an error.
@@ -629,6 +636,10 @@ class RotatorHandler:
 
     async def handle_rotator_error(self, error):
         """Handle rotator connection errors."""
+        if isinstance(error, ControlReleased):
+            self.tracker.release_hardware_control("rotator")
+            return
+        logger.warning("Rotator communication failed, continuing tracking: %s", error)
         self._stationary_position = None
         self.tracker.rotator_data.update(
             {
@@ -808,6 +819,8 @@ class RotatorHandler:
                 )
             else:
                 raise Exception("Failed to park rotator")
+        except ControlReleased:
+            self.tracker.release_hardware_control("rotator")
         except Exception as e:
             logger.error(f"Failed to park rotator: {e}")
             await self.handle_rotator_error(e)

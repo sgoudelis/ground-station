@@ -110,6 +110,14 @@ class WorkerOperations:
                 "previous_state": previous_state,
             }
 
+    def release(self, scope):
+        """Cancel this producer's commands without sending Stop after a handoff."""
+        for key, operation in list(self.pending.items()):
+            if scope in operation["scopes"]:
+                self.cancelled.add(key)
+                self.emit(operation, "cancelled", "Device control released")
+                del self.pending[key]
+
     def cancel(self, command_id):
         self.cancelled.add(command_id)
         operation = self.pending.get(command_id)

@@ -13,7 +13,7 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from typing import Any, Awaitable, Callable
 
-from controllers.rotator import StopRejected, StopUnconfirmed
+from hardware.errors import error_from_reply
 from hardware.worker import device_process
 
 logger = logging.getLogger("hardware-service")
@@ -208,10 +208,7 @@ class HardwareSupervisor:
         try:
             reply = await asyncio.wait_for(future, timeout=35)
             if reply.get("error"):
-                error_type = {"StopRejected": StopRejected, "StopUnconfirmed": StopUnconfirmed}.get(
-                    reply.get("error_type"), RuntimeError
-                )
-                raise error_type(reply["error"])
+                raise error_from_reply(reply, kind)
             return reply.get("result")
         finally:
             worker.pending.pop(request_id, None)

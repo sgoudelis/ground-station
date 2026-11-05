@@ -6,7 +6,7 @@ import asyncio
 import time
 import uuid
 
-from controllers.rotator import StopRejected, StopUnconfirmed
+from hardware.errors import error_from_reply
 
 
 class HardwareClient:
@@ -36,11 +36,7 @@ class HardwareClient:
                     if reply.get("request_id") != request_id:
                         continue
                     if reply.get("error"):
-                        error_type = {
-                            "StopRejected": StopRejected,
-                            "StopUnconfirmed": StopUnconfirmed,
-                        }.get(reply.get("error_type"), RuntimeError)
-                        raise error_type(reply["error"])
+                        raise error_from_reply(reply, kind)
                     return reply.get("result")
                 await asyncio.sleep(0.01)
             raise TimeoutError("Hardware service did not answer before the request deadline")

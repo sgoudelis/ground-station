@@ -6,12 +6,14 @@ import asyncio
 import math
 import time
 import uuid
+from collections import deque
 from types import SimpleNamespace
 from typing import Any
 
 from common.common import serialize_object
 from controllers.rig import RigController
 from controllers.rotator import RotatorController, StopRejected, StopUnconfirmed
+from hardware.errors import ControlReleased
 from hardware.rigcontrol import RigExecution
 
 
@@ -23,6 +25,9 @@ class DeviceRuntime:
         self.details, self.epoch = dict(details), epoch
         self.controller: Any = controller
         self.owner: str | None = None
+        # Remember deliberate releases so late requests detach quietly, even if
+        # another owner has since taken control. Faults never enter this history.
+        self.released_controls: deque[tuple[str | None, str]] = deque(maxlen=32)
         self.generation = str(uuid.uuid4())
         self.worker_generation = str(uuid.uuid4())
         self.started_at = time.time()
@@ -96,6 +101,10 @@ class DeviceRuntime:
         if owner and (
             request.get("owner") != self.owner or request.get("generation") != self.generation
         ):
+            if (request.get("owner"), request.get("generation")) in self.released_controls:
+                raise ControlReleased(
+                    "Device control changed; previous owner released control", kind=self.kind
+                )
             raise RuntimeError("Device control changed; acquire control before retrying")
         if owner:
             self.last_seen = time.monotonic()
@@ -226,6 +235,7 @@ class DeviceRuntime:
             raise StopUnconfirmed(f"Physical Stop is unconfirmed: {error}") from error
 
     async def disconnect(self):
+        previous_control = (self.owner, self.generation)
         active = any(
             self.data.get(field)
             for field in ("tracking", "slewing", "park_requested", "motion_unconfirmed")
@@ -253,6 +263,8 @@ class DeviceRuntime:
                 error=False,
                 error_message=None,
             )
+        if previous_control[0] is not None:
+            self.released_controls.append(previous_control)
         return {
             key: self.data.get(key)
             for key in ("connected", "motion_unconfirmed", "stopped", "stop_warning")
@@ -307,15 +319,23 @@ class DeviceRuntime:
                     raise RuntimeError("Device control changed before handoff")
                 # The supervisor uses release during handoff and worker death.
                 # Fence first, even if Stop later fails, so old writes stay barred.
+                previous_control = (self.owner, self.generation)
                 try:
                     await self.quiesce()
                 finally:
                     self.owner = None
+                # Only a successful handoff is an expected release. Failed Stop,
+                # transport errors, and watchdog expiry must remain real errors.
+                if previous_control[0] is not None:
+                    self.released_controls.append(previous_control)
                 return True
             if method == "emergency_stop":
+                previous_control = (self.owner, self.generation)
                 self._fence()
                 self.owner = None
                 await self.stop()
+                if previous_control[0] is not None:
+                    self.released_controls.append(previous_control)
                 return True
             if method == "disconnect" and (
                 request.get("owner") != self.owner or request.get("generation") != self.generation
