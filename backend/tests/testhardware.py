@@ -354,6 +354,36 @@ def request(runtime, method, **payload):
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("kind", ["rotator", "rig"])
+async def test_acquire_renews_tracker_liveness_until_requests_stop(kind):
+    controller = AsyncMock()
+    controller.get_position.return_value = (10, 20)
+    controller.get_frequency.return_value = 145800000
+    runtime = DeviceRuntime(kind, "device", {}, "epoch", controller)
+    # An idle device retains the old producer's timestamp across reconnects.
+    runtime.last_seen -= runtime.UPDATE_TIMEOUT + 1
+    owner = "tracker:target-1:incarnation"
+    lease = await runtime.execute({**request(runtime, "acquire"), "owner": owner})
+    followup = request(runtime, "position" if kind == "rotator" else "frequency")
+
+    # Polling can run before the tracker sends its first request after Connect.
+    await runtime.tick()
+    assert runtime.owner == owner
+    assert runtime.generation == lease["generation"]
+    expected = (10, 20) if kind == "rotator" else 145800000
+    assert await runtime.execute(followup) == expected
+
+    # Acquisition renews the lease without disabling lost-producer detection.
+    runtime.last_seen -= runtime.UPDATE_TIMEOUT + 1
+    await runtime.tick()
+    assert runtime.owner is None
+    assert runtime.data["connected"] is True
+    with pytest.raises(RuntimeError, match="control changed"):
+        await runtime.execute(followup)
+    controller.stop.assert_not_awaited()
+
+
+@pytest.mark.asyncio
 async def test_expired_motion_is_rejected_before_hardware_io():
     controller = FakeController()
     runtime = DeviceRuntime("rotator", "mount", {}, "epoch", controller)

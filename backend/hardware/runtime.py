@@ -298,7 +298,9 @@ class DeviceRuntime:
                     # stationarity. Position and park commands enforce the motion guard.
                     self._fence()
                     self.owner = request["owner"]
-                self.last_update = time.monotonic()
+                # Acquisition proves the producer is alive. Give it a fresh timeout
+                # before the watchdog can run ahead of its first position/tune request.
+                self.last_update = self.last_seen = time.monotonic()
                 return dict(generation=self.generation, data=self.data.copy())
             if method == "release":
                 if request.get("generation") and request["generation"] != self.generation:
