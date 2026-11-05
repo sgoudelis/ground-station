@@ -844,8 +844,7 @@ const TargetSelectorBar = React.memo(function TargetSelectorBar() {
         }) || 'No target';
         const targetIdentifier = getTrackingTargetIdentifier(effectiveTrackingState) || 'none';
         const rotatorId = view?.selectedRotator || instance?.rotator_id || effectiveTrackingState?.rotator_id || 'none';
-        // Observation hardware belongs to the temporary OBS slot while it runs.
-        // Use the instance snapshot because local selections can lag a handoff.
+        // Associate upcoming observations with the mount selected by this slot.
         const normalizedTabRotatorId = normalizeAssignedResourceId(instance?.rotator_id);
         const rigId = view?.selectedRadioRig || instance?.rig_id || effectiveTrackingState?.rig_id || 'none';
         const rotatorName = String(rotatorId) === 'none'
@@ -869,8 +868,14 @@ const TargetSelectorBar = React.memo(function TargetSelectorBar() {
         const linkedObservations = schedulerObservations
             .filter((obs) => obs?.enabled)
             .filter((obs) => {
-                // Observation ownership should follow tracker/rotator assignment only.
-                // Matching by NORAD can incorrectly mark multiple same-satellite target tabs.
+                // RUNNING is announced before hardware handoff finishes. The old
+                // slot can still reference this mount, but only the OBS slot owns
+                // the observation's stripes, retarget lock, and abort action.
+                if (obs?.status === 'running') {
+                    return resolveObservationTrackerId(obs) === String(instanceTrackerId);
+                }
+                // Future observations can be associated with a selected mount.
+                // Matching by NORAD would link unrelated same-satellite tabs.
                 const obsRotatorId = normalizeAssignedResourceId(obs?.rotator?.id || obs?.rotator_id);
                 if (obsRotatorId) {
                     return obsRotatorId === normalizedTabRotatorId;

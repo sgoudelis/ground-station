@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { configureStore } from '@reduxjs/toolkit';
 import { Provider } from 'react-redux';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -135,5 +135,68 @@ describe('Add New Target satellite search', () => {
         unmount();
         advance();
         expect(searchCalls()).toHaveLength(0);
+    });
+});
+
+describe('observation tracker tabs', () => {
+    beforeEach(() => {
+        socket.emit.mockReset().mockImplementation((_event, _request, acknowledge) => {
+            acknowledge?.({ success: true, data: [] });
+        });
+    });
+
+    it('keeps an interactive tab unstriped while its rotator transfers to the observation', async () => {
+        const target = {
+            tracker_id: 'target-1', rotator_id: 'mount',
+            tracking_state: { target_name: 'Interactive target', norad_id: 43786 },
+        };
+        const observation = {
+            id: 'obs-pass', enabled: true, status: 'scheduled', rotator: { id: 'mount' },
+        };
+        const state = {
+            targetSatTrack: { trackingState: target.tracking_state, trackerId: 'target-1', trackerViews: {} },
+            trackerInstances: { instances: [target] },
+            scheduler: { observations: [observation] },
+            rigs: { rigs: [] }, rotators: { rotators: [] }, celestialMonitored: { monitored: [] },
+        };
+        const store = configureStore({ reducer: (current = state, action) => (
+            action.type === 'test/update' ? { ...current, ...action.payload } : current
+        ) });
+        render(<Provider store={store}><TargetSelectorBar /></Provider>);
+        const targetTab = () => screen.getByRole('tab', { name: /^Target 1 \|/ });
+        const isStriped = (tab) => getComputedStyle(tab).backgroundImage.includes('repeating-linear-gradient');
+        expect(isStriped(targetTab())).toBe(false);
+
+        // The scheduler announces RUNNING before the old rotator selection clears.
+        act(() => store.dispatch({ type: 'test/update', payload: {
+            scheduler: { observations: [{ ...observation, status: 'running' }] },
+        } }));
+        expect(isStriped(targetTab())).toBe(false);
+
+        // The old target's delete action must not offer to abort the observation.
+        fireEvent.click(within(targetTab()).getByRole('button', { name: 'Delete Interactive target target' }));
+        expect(screen.getByRole('dialog')).toHaveTextContent('Delete Target');
+        fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancel' }));
+        await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+
+        // Both snapshots can still reference the mount when the OBS tab appears.
+        const observer = {
+            tracker_id: 'obs-pass', rotator_id: 'mount',
+            tracking_state: { target_name: 'Observation target', norad_id: 43786 },
+        };
+        act(() => store.dispatch({ type: 'test/update', payload: {
+            trackerInstances: { instances: [target, observer] },
+        } }));
+        expect(isStriped(targetTab())).toBe(false);
+        expect(isStriped(screen.getByRole('tab', { name: /Observation tracker/ }))).toBe(true);
+
+        act(() => store.dispatch({ type: 'test/update', payload: {
+            trackerInstances: { instances: [{ ...target, rotator_id: 'none' }, observer] },
+        } }));
+        expect(isStriped(targetTab())).toBe(false);
+        expect(isStriped(screen.getByRole('tab', { name: /Observation tracker/ }))).toBe(true);
+
+        fireEvent.click(screen.getByRole('button', { name: 'Delete Observation target target' }));
+        expect(screen.getByRole('dialog')).toHaveTextContent('Stop Observation');
     });
 });
