@@ -31,6 +31,55 @@ export function isFileBrowserDateApproximate(item, sortBy) {
         && (!item.captured_at || item.captured_at_source === 'filesystem');
 }
 
+export function getFileBrowserSource(item) {
+    const joinIdentity = (...parts) => [...new Set(parts.filter(Boolean))].join(' · ');
+    if (item.folder_kind === 'adsb') {
+        return joinIdentity(item.aircraft?.registration, item.callsign, item.icao?.toUpperCase());
+    }
+    if (item.folder_kind === 'meshtastic') {
+        return joinIdentity(item.long_name || item.short_name, item.node_id);
+    }
+    if (item.folder_kind === 'radiosonde') {
+        return item.serial || '';
+    }
+    // Callsigns describe terrestrial stations too; older APRS payloads sometimes
+    // put the callsign in satellite_name, so prefer the explicit source identity.
+    if (item.source_callsign) return item.source_callsign;
+    const norad = item.satellite_norad_id || item.metadata?.target_satellite_norad_id;
+    const satellite = item.satellite_name || item.metadata?.target_satellite_name;
+    const isAprs = String(item.decoder_type || item.folder_kind || '').toLowerCase() === 'aprs';
+    if (isAprs && !norad) return '';
+    return satellite || (norad ? `NORAD ${norad}` : '');
+}
+
+export function getFileBrowserSummary(item, t) {
+    const countLabel = (key, count) => t(`file_table_view.${key}`, {count: count ?? 0});
+    if (item.type === 'decoded_folder') {
+        if (['aprs', 'meshtastic', 'radiosonde', 'adsb'].includes(item.folder_kind)) {
+            return [
+                countLabel(item.folder_kind === 'adsb' ? 'updates' : 'packets', item.packet_count),
+                countLabel(item.folder_kind === 'radiosonde' ? 'flights' : 'runs', item.run_count),
+            ].join(' · ');
+        }
+        return item.folder_kind === 'observation'
+            ? countLabel('files', item.artifact_count)
+            : countLabel('images', item.image_count);
+    }
+    if (item.type === 'recording' && item.duration) return item.duration;
+    const seconds = item.duration_seconds ?? item.metadata?.duration_seconds;
+    if (seconds != null && Number.isFinite(Number(seconds)) && Number(seconds) >= 0) {
+        const total = Math.floor(Number(seconds));
+        const hours = Math.floor(total / 3600);
+        const minutes = Math.floor((total % 3600) / 60);
+        const remainder = String(total % 60).padStart(2, '0');
+        return hours
+            ? `${hours}:${String(minutes).padStart(2, '0')}:${remainder}`
+            : `${minutes}:${remainder}`;
+    }
+    if (item.width && item.height) return `${item.width} × ${item.height}`;
+    return '';
+}
+
 export function buildFileBrowserDisplayItem(item, formatDurationFn) {
     const isRecording = item.type === 'recording';
     const duration = isRecording && item.metadata?.start_time

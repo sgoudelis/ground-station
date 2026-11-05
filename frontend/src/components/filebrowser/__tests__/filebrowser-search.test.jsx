@@ -22,7 +22,8 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import { configureStore } from '@reduxjs/toolkit';
 import { Provider } from 'react-redux';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
-import { afterEach, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, expect, test, vi } from 'vitest';
+import { mockViewport } from '../../../test/viewport.js';
 import '../../../i18n/config.js';
 import FileBrowserMain from '../filebrowser-main.jsx';
 import filebrowserReducer, { setSortBy, setViewMode } from '../filebrowser-slice.jsx';
@@ -43,6 +44,7 @@ vi.mock('../processing-dialog.jsx', () => ({ default: () => null }));
 vi.mock('../purge-dialog.jsx', () => ({ default: () => null }));
 
 afterEach(() => vi.useRealTimers());
+beforeEach(() => mockViewport(1280));
 
 const parent = {
     id: 'observation:pass.gsobs', type: 'decoded_folder', folder_kind: 'observation',
