@@ -2,10 +2,11 @@ import React from 'react';
 import { configureStore } from '@reduxjs/toolkit';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { Provider } from 'react-redux';
+import { MemoryRouter } from 'react-router';
 import { beforeEach, expect, test, vi } from 'vitest';
 import '../../../i18n/config.js';
 import BackgroundStreamControl from '../background-stream-control.jsx';
-import BackgroundObservationsPopover from '../../dashboard/background-observations-popover.jsx';
+import ObservationsPopover from '../../dashboard/observations-popover.jsx';
 import waterfallReducer from '../waterfall-slice.jsx';
 import vfoReducer from '../vfo-marker/vfo-slice.jsx';
 import decodersReducer from '../../decoders/decoders-slice.jsx';
@@ -21,6 +22,13 @@ beforeEach(() => {
     socket.timeout.mockReturnValue(socket);
 });
 
+function Controls() {
+    const [anchor, setAnchor] = React.useState(null);
+    return <><BackgroundStreamControl />
+        <ObservationsPopover anchorEl={anchor} onOpen={(event) => setAnchor(event.currentTarget)}
+            onClose={() => setAnchor(null)} /></>;
+}
+
 function show(overrides = {}, sessions = {}) {
     const store = configureStore({
         reducer: { waterfall: waterfallReducer, vfo: vfoReducer, decoders: decodersReducer, sessions: sessionsReducer },
@@ -29,7 +37,7 @@ function show(overrides = {}, sessions = {}) {
             sessions: { ...sessionsReducer(undefined, { type: '@@INIT' }), runtimeSnapshot: { data: { sessions } } },
         },
     });
-    render(<Provider store={store}><BackgroundStreamControl /><BackgroundObservationsPopover /></Provider>);
+    render(<Provider store={store}><MemoryRouter><Controls /></MemoryRouter></Provider>);
     return store;
 }
 
@@ -37,7 +45,7 @@ test('enables background receiving only after the backend acknowledges it', asyn
     let acknowledge;
     socket.emitWithAck.mockReturnValue(new Promise((resolve) => { acknowledge = resolve; }));
     const store = show();
-    expect(screen.queryByRole('button', { name: /Background observations/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Observations' })).not.toBeInTheDocument();
     const control = screen.getByRole('switch', { name: /Keep receiving in background/i });
     fireEvent.click(control);
     expect(control).not.toBeChecked();
@@ -70,7 +78,7 @@ test('viewers see fixed VFOs and can explicitly adopt an unattended observation'
             vfos: { 1: { active: true, center_freq: 145_810_000, decoder: 'fsk' } } },
     });
     expect(screen.getByRole('switch')).toBeDisabled();
-    fireEvent.click(screen.getByRole('button', { name: /Background observations/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Observations' }));
     expect(screen.getByText('VFO 1: 145.810000 MHz · fsk')).toBeInTheDocument();
     await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Take control' })));
     expect(socket.emit.mock.calls[0][1].cmd).toBe('sdr.claim-sdr');
@@ -83,11 +91,12 @@ test('a connected controller is shown without a takeover button', () => {
     const store = show({ isStreaming: false, selectedSDRId: 'other-radio' }, {
         original: { sdr_id: 'radio', background: { enabled: true, controller_connected: true } },
     });
-    fireEvent.click(screen.getByRole('button', { name: /Background observations/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Observations' }));
     expect(screen.getByText('Controller connected')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Take control' })).not.toBeInTheDocument();
     act(() => store.dispatch(setRuntimeSnapshot({ sessions: {}, sdrs: {} })));
-    expect(screen.queryByRole('button', { name: /Background observations/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Observations', hidden: true })).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: 'Observations' })).not.toBeInTheDocument();
 });
 
 test('preserves JOIN status against an old runtime snapshot and prunes it on a fresh snapshot', async () => {

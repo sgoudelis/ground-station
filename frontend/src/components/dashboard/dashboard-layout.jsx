@@ -30,6 +30,7 @@ import {
     Avatar,
     Backdrop,
     Button,
+    ButtonBase,
     Box,
     Checkbox,
     Chip,
@@ -91,7 +92,7 @@ const PerformanceMetricsDialog = React.lazy(() => import("../performance/perform
 import SchedulerDialogHost from "../scheduler/scheduler-dialog-host.jsx";
 import BackgroundTasksPopover from "../tasks/tasks-popover.jsx";
 import VfoStatusPopover from "./vfostatus.jsx";
-import BackgroundObservationsPopover from "./background-observations-popover.jsx";
+import ObservationsPopover from "./observations-popover.jsx";
 const LocationPage = React.lazy(() => import("../settings/location-form.jsx"));
 import DeferredIslandPlaceholder from "../common/deferredplaceholder.jsx";
 import { useDelayedUnmount } from "../../hooks/useDelayedUnmount.js";
@@ -239,7 +240,7 @@ DashboardEditor.propTypes = {
     isExpanded: PropTypes.bool.isRequired,
 };
 
-function ToolbarActions() {
+function ToolbarActions({ observationsAnchor, observationsButtonRef, onOpenObservations, onCloseObservations }) {
     const showLocationSetupDialog = useSelector((state) => state.dashboard.showLocationSetupDialog);
 
     return (
@@ -265,7 +266,8 @@ function ToolbarActions() {
                 <SatelliteInfoPopover />
                 <HardwareSettingsPopover />
                 <VfoStatusPopover />
-                <BackgroundObservationsPopover />
+                <ObservationsPopover anchorEl={observationsAnchor} buttonRef={observationsButtonRef}
+                    onOpen={onOpenObservations} onClose={onCloseObservations} />
                 <BackgroundTasksPopover />
                 <WakeLockStatus />
                 <TimeDisplay />
@@ -277,14 +279,14 @@ function ToolbarActions() {
 
 const MemoToolbarActions = React.memo(ToolbarActions);
 
-function ActiveObservationIndicator() {
+function ActiveObservationIndicator({ onOpen, observationsOpen }) {
     const { t } = useTranslation('dashboard');
     const observations = useSelector((state) => state.scheduler?.observations || []);
     const { timezone, locale } = useUserTimeSettings();
     const [nowMs, setNowMs] = React.useState(() => Date.now());
 
     const runningObservations = React.useMemo(
-        () => observations.filter((obs) => obs.status === 'running' && obs.enabled),
+        () => observations.filter((obs) => obs.status === 'running'),
         [observations]
     );
 
@@ -335,8 +337,13 @@ function ActiveObservationIndicator() {
     };
 
     return (
-        <Box
+        <ButtonBase
+            onClick={onOpen}
+            aria-haspopup="dialog"
+            aria-expanded={observationsOpen}
+            aria-controls={observationsOpen ? 'observations-popover' : undefined}
             sx={{
+                pointerEvents: 'auto',
                 display: 'none',
                 '@media (min-width:1400px)': {
                     display: 'flex',
@@ -437,7 +444,7 @@ function ActiveObservationIndicator() {
                     {t('dashboard_layout.peak', { defaultValue: '• peak' })} {peakAltitude.toFixed(0)}°
                 </Typography>
             )}
-        </Box>
+        </ButtonBase>
     );
 }
 
@@ -454,7 +461,7 @@ function UpcomingObservationIndicator() {
 
     const { runningCount, nextObservation, timeUntilStartMs } = React.useMemo(() => {
         const now = new Date(nowMs);
-        const running = observations.filter((obs) => obs.status === 'running' && obs.enabled);
+        const running = observations.filter((obs) => obs.status === 'running');
         const upcoming = observations
             .filter((obs) => {
                 if (!obs.enabled || obs.status !== 'scheduled') return false;
@@ -930,6 +937,12 @@ export default function Layout() {
     const [open, setOpen] = React.useState(false);
     const [mobileOpen, setMobileOpen] = React.useState(false);
     const [userMenuAnchorEl, setUserMenuAnchorEl] = React.useState(null);
+    // The running summary and toolbar icon open the same popover.
+    const [observationsAnchor, setObservationsAnchor] = React.useState(null);
+    const observationsButtonRef = React.useRef(null);
+    // Anchor to the toolbar icon while observations are active.
+    const handleOpenObservations = React.useCallback(() => setObservationsAnchor(observationsButtonRef.current), []);
+    const handleCloseObservations = React.useCallback(() => setObservationsAnchor(null), []);
     const [logoutDialogOpen, setLogoutDialogOpen] = React.useState(false);
     const [skipLogoutConfirmChecked, setSkipLogoutConfirmChecked] = React.useState(false);
     const authUser = useSelector((state) => state.auth?.user || null);
@@ -1503,10 +1516,11 @@ export default function Layout() {
                             pointerEvents: 'none',
                         }}
                     >
-                        <ActiveObservationIndicator />
+                        <ActiveObservationIndicator onOpen={handleOpenObservations} observationsOpen={Boolean(observationsAnchor)} />
                         <UpcomingObservationIndicator />
                     </Box>
-                    <MemoToolbarActions />
+                    <MemoToolbarActions observationsAnchor={observationsAnchor} observationsButtonRef={observationsButtonRef}
+                        onOpenObservations={handleOpenObservations} onCloseObservations={handleCloseObservations} />
                 </Toolbar>
             </CustomAppBar>
 

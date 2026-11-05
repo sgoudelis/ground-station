@@ -29,6 +29,28 @@
     "audio_level": "Audio level",
     "buffer": "Audio buffer"
   },
+  "observations": {
+    "title": "Observations",
+    "active_count_one": "{{count}} active observation",
+    "active_count_other": "{{count}} active observations",
+    "no_active": "No active observations",
+    "automated": "Automated",
+    "manual_background": "Manual background",
+    "running": "Running",
+    "ending_soon": "Ending soon",
+    "time_remaining": "{{duration}} remaining",
+    "unknown_satellite": "Unknown satellite",
+    "receiver": "Receiver {{number}}",
+    "tasks": "Tasks: {{tasks}}",
+    "decoder": "{{name}} decoder",
+    "task_audio_recording": "Audio recording",
+    "task_iq_recording": "IQ recording",
+    "task_transcription": "Transcription",
+    "view_observation": "View observation",
+    "next_scheduled": "Next scheduled",
+    "starts_at": "Starts {{time}}",
+    "open_scheduler": "Open scheduler"
+  },
   "connection": {
     "connection_failed": "Connection Failed",
     "network_error": "Network error",

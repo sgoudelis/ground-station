@@ -160,6 +160,28 @@
   "common": {
     "cancel": "取消"
   },
+  "observations": {
+    "title": "观测",
+    "active_count_one": "{{count}} 个活跃观测",
+    "active_count_other": "{{count}} 个活跃观测",
+    "no_active": "没有活跃观测",
+    "automated": "自动观测",
+    "manual_background": "手动后台观测",
+    "running": "运行中",
+    "ending_soon": "即将结束",
+    "time_remaining": "剩余 {{duration}}",
+    "unknown_satellite": "未知卫星",
+    "receiver": "接收机 {{number}}",
+    "tasks": "任务：{{tasks}}",
+    "decoder": "{{name}} 解码器",
+    "task_audio_recording": "音频录制",
+    "task_iq_recording": "IQ 录制",
+    "task_transcription": "语音转写",
+    "view_observation": "查看观测",
+    "next_scheduled": "下一次计划观测",
+    "starts_at": "开始时间：{{time}}",
+    "open_scheduler": "打开调度器"
+  },
   "vfo_status": {
     "tooltip": "VFO 状态和控制",
     "title": "VFO 状态",
