@@ -16,9 +16,12 @@ if [ "${#http_port}" -gt 5 ] || [ "$http_port" -gt 65535 ] ||
     invalid_port
 fi
 
-# The template contains only a validated numeric token, so custom host ports do not
-# require keeping a second, persistent Nginx configuration in the data volume.
-if ! sed "s/@GS_HTTP_PORT@/$http_port/g" \
+# Render ANSI escapes here because Nginx does not decode shell-style escape codes.
+# Colors stay in literal log-format text so request variables keep their safe escaping.
+log_escape="$(printf '\033')"
+
+# Both replacements are controlled values; no persistent config is needed in the data volume.
+if ! sed -e "s/@GS_HTTP_PORT@/$http_port/g" -e "s/@GS_LOG_ESC@/$log_escape/g" \
     /app/ground-station.conf.template > /etc/nginx/conf.d/ground-station.conf; then
     echo "ERROR: Failed to render Nginx configuration"
     exit 1

@@ -4,6 +4,13 @@ The container runs a small Nginx proxy on port 7000 by default to serve its star
 With host networking, set `GS_HTTP_PORT` in `docker run` to change that public port;
 the backend remains on `127.0.0.1:7001`. Adjust the upstream below if you change
 the public port.
+
+Container access logs use the backend's timestamp and severity layout with ANSI colors:
+cyan client addresses, blue requests, magenta response sizes, and gray referrer/user-agent
+metadata. HTTP status codes are bold green for 2xx, cyan for 1xx/3xx, yellow for 4xx,
+and red for 5xx. Client errors use `WARNING` and server errors use `ERROR`; other
+responses use `INFO`.
+
 This example adds TLS in front of that public port. The Python backend listens only on
 `127.0.0.1:7001` inside the container.
 
