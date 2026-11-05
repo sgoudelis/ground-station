@@ -160,9 +160,9 @@
   "common": {
     "cancel": "取消"
   },
-  "vfo_audio": {
-    "tooltip": "VFO 音频控制",
-    "title": "VFO 音频",
+  "vfo_status": {
+    "tooltip": "VFO 状态和控制",
+    "title": "VFO 状态",
     "no_active_vfos": "没有活动的 VFO",
     "vfo": "VFO {{number}}",
     "receiving": "正在接收音频",

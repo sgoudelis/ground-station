@@ -1,5 +1,5 @@
 /**
- * Compact VFO audio controls for the application toolbar.
+ * Compact VFO status and controls for the application toolbar.
  *
  * These controls deliberately use the VFO slice and AudioProvider that power
  * the waterfall accordion, keeping both surfaces synchronized.
@@ -8,6 +8,7 @@
 import * as React from 'react';
 import { Badge, Box, Divider, IconButton, Popover, Slider, Stack, Tooltip, Typography } from '@mui/material';
 import { alpha } from '@mui/material/styles';
+import TuneIcon from '@mui/icons-material/Tune';
 import VolumeOffIcon from '@mui/icons-material/VolumeOff';
 import VolumeUpIcon from '@mui/icons-material/VolumeUp';
 import VolumeMuteIcon from '@mui/icons-material/VolumeMute';
@@ -86,7 +87,7 @@ function useVfoAudioMetrics(vfoNumber, enabled) {
     return metrics;
 }
 
-function VfoAudioRow({ decoderInfo, isPopoverOpen, muted, streaming, squelchOpen, vfo, vfoColor, vfoNumber }) {
+function VfoStatusRow({ decoderInfo, isPopoverOpen, muted, streaming, squelchOpen, vfo, vfoColor, vfoNumber }) {
     const dispatch = useDispatch();
     const { t } = useTranslation('dashboard');
     const { setVfoMute } = useAudio();
@@ -96,10 +97,10 @@ function VfoAudioRow({ decoderInfo, isPopoverOpen, muted, streaming, squelchOpen
     const volume = clamp(Number(vfo?.volume ?? 50), 0, 100);
     const audioStatus = resolveVfoAudioStatus({ isStreaming: streaming, isMuted: muted, isSquelchOpen: squelchOpen });
     const audioStatusLabel = {
-        [VFO_AUDIO_STATUS.NO_AUDIO]: t('vfo_audio.status_no_audio'),
-        [VFO_AUDIO_STATUS.MUTED]: t('vfo_audio.status_muted'),
-        [VFO_AUDIO_STATUS.SQUELCHED]: t('vfo_audio.status_squelched'),
-        [VFO_AUDIO_STATUS.PLAYING]: t('vfo_audio.status_unmuted'),
+        [VFO_AUDIO_STATUS.NO_AUDIO]: t('vfo_status.status_no_audio'),
+        [VFO_AUDIO_STATUS.MUTED]: t('vfo_status.status_muted'),
+        [VFO_AUDIO_STATUS.SQUELCHED]: t('vfo_status.status_squelched'),
+        [VFO_AUDIO_STATUS.PLAYING]: t('vfo_status.status_unmuted'),
     }[audioStatus];
     const formattedFrequency = Number.isFinite(vfo?.frequency)
         ? humanizeFrequency(vfo.frequency, 3)
@@ -129,7 +130,7 @@ function VfoAudioRow({ decoderInfo, isPopoverOpen, muted, streaming, squelchOpen
             <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
                 <Stack direction="row" alignItems="center" spacing={0.5} sx={{ flex: 1, minWidth: 0 }}>
                     <Typography variant="subtitle2" sx={{ fontWeight: 600, lineHeight: 1.2, flexShrink: 0 }}>
-                        {t('vfo_audio.vfo', { number: vfoNumber })}
+                        {t('vfo_status.vfo', { number: vfoNumber })}
                     </Typography>
                     <Typography variant="caption" color="text.secondary" aria-hidden="true" sx={{ flexShrink: 0 }}>•</Typography>
                     <Typography
@@ -159,9 +160,9 @@ function VfoAudioRow({ decoderInfo, isPopoverOpen, muted, streaming, squelchOpen
                 </Stack>
                 <Stack direction="row" spacing={0.25} sx={{ flexShrink: 0 }}>
                     <VFOAudioRecorderButton vfoNumber={vfoNumber} compact />
-                    <Tooltip title={muted ? t('vfo_audio.unmute') : t('vfo_audio.mute')}>
+                    <Tooltip title={muted ? t('vfo_status.unmute') : t('vfo_status.mute')}>
                         <IconButton
-                            aria-label={muted ? t('vfo_audio.unmute') : t('vfo_audio.mute')}
+                            aria-label={muted ? t('vfo_status.unmute') : t('vfo_status.mute')}
                             onClick={handleMuteToggle}
                             size="small"
                             sx={{ color: VFO_AUDIO_STATUS_COLORS[audioStatus] }}
@@ -183,7 +184,7 @@ function VfoAudioRow({ decoderInfo, isPopoverOpen, muted, streaming, squelchOpen
             <Box sx={{ mt: 0.5 }}>
                 <Stack direction="row" alignItems="baseline" justifyContent="space-between">
                     <Typography variant="caption" color="text.secondary">
-                        {t('vfo_audio.volume')}
+                        {t('vfo_status.volume')}
                     </Typography>
                     <Stack direction="row" spacing={0.75}>
                         <Typography variant="caption" sx={{ fontFamily: 'monospace', fontVariantNumeric: 'tabular-nums' }}>
@@ -223,7 +224,7 @@ function VfoAudioRow({ decoderInfo, isPopoverOpen, muted, streaming, squelchOpen
                         }}
                     />
                     <Slider
-                        aria-label={t('vfo_audio.volume_for', { number: vfoNumber })}
+                        aria-label={t('vfo_status.volume_for', { number: vfoNumber })}
                         value={volume}
                         min={0}
                         max={100}
@@ -243,7 +244,7 @@ function VfoAudioRow({ decoderInfo, isPopoverOpen, muted, streaming, squelchOpen
     );
 }
 
-function VfoAudioPopover() {
+function VfoStatusPopover() {
     const { t } = useTranslation('dashboard');
     const { setVfoMute } = useAudio();
     const { vfoSquelchOpen } = useVfoSquelchState();
@@ -262,27 +263,6 @@ function VfoAudioPopover() {
     ), [vfoActive]);
     const areAllActiveVfosMuted = activeVfoNumbers.length > 0
         && activeVfoNumbers.every((vfoNumber) => Boolean(vfoMuted[vfoNumber]));
-    const audioStatus = React.useMemo(() => {
-        const statuses = activeVfoNumbers.map((vfoNumber) => resolveVfoAudioStatus({
-            isStreaming: streamingVFOs.includes(vfoNumber),
-            isMuted: Boolean(vfoMuted[vfoNumber]),
-            isSquelchOpen: vfoSquelchOpen[vfoNumber],
-        }));
-
-        if (statuses.includes(VFO_AUDIO_STATUS.PLAYING)) return VFO_AUDIO_STATUS.PLAYING;
-        if (statuses.includes(VFO_AUDIO_STATUS.MUTED)) return VFO_AUDIO_STATUS.MUTED;
-        if (statuses.includes(VFO_AUDIO_STATUS.SQUELCHED)) return VFO_AUDIO_STATUS.SQUELCHED;
-        return VFO_AUDIO_STATUS.NO_AUDIO;
-    }, [activeVfoNumbers, streamingVFOs, vfoMuted, vfoSquelchOpen]);
-
-    // The toolbar summarizes the strongest active audio state, using the
-    // same color and glyph vocabulary as the waterfall marker and VFO tabs.
-    const audioIndicator = React.useMemo(() => {
-        return {
-            color: VFO_AUDIO_STATUS_COLORS[audioStatus],
-            icon: getAudioStatusIcon(audioStatus),
-        };
-    }, [audioStatus]);
     const open = Boolean(anchorEl);
 
     const handleOpen = (event) => setAnchorEl(event.currentTarget);
@@ -295,16 +275,17 @@ function VfoAudioPopover() {
 
     return (
         <>
-            <Tooltip title={t('vfo_audio.tooltip')}>
+            <Tooltip title={t('vfo_status.tooltip')}>
                 <IconButton
-                    aria-label={t('vfo_audio.tooltip')}
-                    aria-controls={open ? 'vfo-audio-popover' : undefined}
+                    aria-label={t('vfo_status.tooltip')}
+                    aria-controls={open ? 'vfo-status-popover' : undefined}
                     aria-haspopup="true"
                     onClick={handleOpen}
                     size="small"
                     sx={{
                         width: 40,
-                        color: audioIndicator.color,
+                        // Any active VFO counts, including those used only for decoding.
+                        color: activeVfoNumbers.length > 0 ? 'primary.main' : 'text.secondary',
                         '&:hover': { backgroundColor: 'overlay.light' },
                     }}
                 >
@@ -327,12 +308,12 @@ function VfoAudioPopover() {
                             },
                         }}
                     >
-                        {audioIndicator.icon}
+                        <TuneIcon />
                     </Badge>
                 </IconButton>
             </Tooltip>
             <Popover
-                id="vfo-audio-popover"
+                id="vfo-status-popover"
                 open={open}
                 anchorEl={anchorEl}
                 onClose={handleClose}
@@ -354,12 +335,12 @@ function VfoAudioPopover() {
             >
                 <Box sx={{ px: 1.5, py: 0.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                        {t('vfo_audio.title')}
+                        {t('vfo_status.title')}
                     </Typography>
                     {activeVfoNumbers.length > 0 && (
-                        <Tooltip title={areAllActiveVfosMuted ? t('vfo_audio.unmute_all') : t('vfo_audio.mute_all')}>
+                        <Tooltip title={areAllActiveVfosMuted ? t('vfo_status.unmute_all') : t('vfo_status.mute_all')}>
                             <IconButton
-                                aria-label={areAllActiveVfosMuted ? t('vfo_audio.unmute_all') : t('vfo_audio.mute_all')}
+                                aria-label={areAllActiveVfosMuted ? t('vfo_status.unmute_all') : t('vfo_status.mute_all')}
                                 onClick={handleMuteAllToggle}
                                 size="small"
                                 sx={{ color: areAllActiveVfosMuted ? 'warning.main' : 'text.secondary' }}
@@ -372,12 +353,12 @@ function VfoAudioPopover() {
                 <Divider />
                 {activeVfoNumbers.length === 0 ? (
                     <Typography variant="body2" color="text.secondary" sx={{ px: 1.5, py: 2 }}>
-                        {t('vfo_audio.no_active_vfos')}
+                        {t('vfo_status.no_active_vfos')}
                     </Typography>
                 ) : (
                     <Stack divider={<Divider flexItem />}>
                         {activeVfoNumbers.map((vfoNumber) => (
-                            <VfoAudioRow
+                            <VfoStatusRow
                                 key={vfoNumber}
                                 decoderInfo={currentSessionId
                                     ? activeDecoders[`${currentSessionId}_vfo${vfoNumber}`] || null
@@ -398,4 +379,4 @@ function VfoAudioPopover() {
     );
 }
 
-export default React.memo(VfoAudioPopover);
+export default React.memo(VfoStatusPopover);

@@ -9,9 +9,9 @@
     "done_editing": "Done editing",
     "edit_layout": "Edit layout"
   },
-  "vfo_audio": {
-    "tooltip": "VFO audio controls",
-    "title": "VFO audio",
+  "vfo_status": {
+    "tooltip": "VFO status and controls",
+    "title": "VFO status",
     "no_active_vfos": "No active VFOs",
     "vfo": "VFO {{number}}",
     "receiving": "Receiving audio",

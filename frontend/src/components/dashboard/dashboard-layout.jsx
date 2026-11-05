@@ -90,7 +90,7 @@ import ApplicationFooter from "./application-footer.jsx";
 const PerformanceMetricsDialog = React.lazy(() => import("../performance/performance-metrics-dialog.jsx"));
 import SchedulerDialogHost from "../scheduler/scheduler-dialog-host.jsx";
 import BackgroundTasksPopover from "../tasks/tasks-popover.jsx";
-import VfoAudioPopover from "./vfoaudio.jsx";
+import VfoStatusPopover from "./vfostatus.jsx";
 import BackgroundObservationsPopover from "./background-observations-popover.jsx";
 const LocationPage = React.lazy(() => import("../settings/location-form.jsx"));
 import DeferredIslandPlaceholder from "../common/deferredplaceholder.jsx";
@@ -264,7 +264,7 @@ function ToolbarActions() {
                 {!showLocationSetupDialog && <LocationWarningPopover />}
                 <SatelliteInfoPopover />
                 <HardwareSettingsPopover />
-                <VfoAudioPopover />
+                <VfoStatusPopover />
                 <BackgroundObservationsPopover />
                 <BackgroundTasksPopover />
                 <WakeLockStatus />
