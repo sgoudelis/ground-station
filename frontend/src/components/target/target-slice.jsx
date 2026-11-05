@@ -890,7 +890,6 @@ const targetSatTrackSlice = createSlice({
         selectedVFO1: "uplink",
         selectedVFO2: "downlink",
         openMapSettingsDialog: false,
-        openPassesTableSettingsDialog: false,
         passesTableColumnVisibility: {
             status: true,
             event_start: true,
@@ -1460,9 +1459,6 @@ const targetSatTrackSlice = createSlice({
         setOpenMapSettingsDialog(state, action) {
             state.openMapSettingsDialog = action.payload;
         },
-        setOpenPassesTableSettingsDialog(state, action) {
-            state.openPassesTableSettingsDialog = action.payload;
-        },
         setPassesTableColumnVisibility(state, action) {
             state.passesTableColumnVisibility = action.payload;
         },
@@ -1975,7 +1971,6 @@ export const {
     setVFO1,
     setVFO2,
     setOpenMapSettingsDialog,
-    setOpenPassesTableSettingsDialog,
     setPassesTableColumnVisibility,
     setPassesTablePageSize,
     setPassesTableSortModel,

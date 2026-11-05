@@ -193,13 +193,16 @@ describe('device popovers', () => {
         const owner = type ? {type, id: type === 'observation' ? 'obs-pass' : 'target-2'} : null;
         const {open, requests} = setup({kind, owner});
         await open();
-        fireEvent.click(within(screen.getByRole('region', {name: 'Station mount'})).getByRole('button', {expanded: true}));
+        const header = within(screen.getByRole('region', {name: 'Station mount'})).getByRole('button', {expanded: true});
+        fireEvent.click(header);
+        await waitFor(() => expect(screen.queryByRole('status')).not.toBeInTheDocument());
         const disconnect = screen.getByRole('button', {name: 'Disconnect'});
         expect(disconnect).toBeEnabled();
         await act(async () => fireEvent.click(disconnect));
         expect(requests[0].data).toMatchObject({kind, device_id: 'mount', action: 'disconnect', generation: 'lease'});
-        expect(screen.getByRole('status')).toHaveTextContent('Disconnecting…');
         expect(disconnect).toBeDisabled();
+        fireEvent.click(header);
+        expect(screen.getByRole('status')).toHaveTextContent('Disconnecting…');
     });
 
     it('allows Disconnect to interrupt an outstanding Move', async () => {

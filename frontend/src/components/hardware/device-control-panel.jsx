@@ -22,6 +22,9 @@ import {
 const finite = (value) => value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value));
 const degrees = (value) => finite(value) ? `${Number(value).toFixed(1)}°` : '—';
 const frequency = (value) => finite(value) && Number(value) > 0 ? `${(Number(value) / 1e6).toFixed(6)} MHz` : '—';
+// Device telemetry and command results can wrap the same connection error
+// differently. Remove that shared context before comparing their details.
+const detailText = (value) => String(value).trim().replace(/^Error connecting to (?:rotator|rig):\s*/i, '');
 
 function useNow() {
     const [now, setNow] = useState(Date.now);
@@ -57,7 +60,7 @@ function DeviceAction({reason, children, ...props}) {
 function DeviceFeedback({message, severity, pending}) {
     return <Tooltip title={message}>
         <Stack component="span" direction="row" spacing={0.5} alignItems="center"
-            sx={{minWidth: 0, maxWidth: 110}}>
+            sx={{minWidth: 0, maxWidth: '100%'}}>
             {pending ? <CircularProgress size={13} /> : severity === 'success'
                 ? <CheckCircleOutlineIcon sx={{fontSize: 15, color: 'success.main'}} />
                 : <ErrorOutlineIcon sx={{fontSize: 15, color: severity === 'error' ? 'error.main' : 'warning.main'}} />}
@@ -111,20 +114,24 @@ function DeviceRow({device, kind, snapshot, status, command, owner, expanded, no
             release: 'releasing', stop: kind === 'rig' ? 'pausing' : 'stopping', move: 'moving',
             park: 'parking', unpark: 'unparking'})[command?.action] || 'applying';
     const feedback = submitting ? t(`hardware_popover.${progressKey}`)
-        : t(`hardware_popover.command_${command?.status}`);
+        : t(`hardware_popover.${command?.status === 'failed' && command.action === 'connect'
+            ? 'connection_failed' : `command_${command?.status}`}`);
     const motionWarning = data.motion_unconfirmed
         ? t(`hardware_popover.${data.connected ? 'waiting_stationary' : 'disconnected_motion_unconfirmed'}`) : '';
     const hardwareError = error || (data.error ? data.error_message || t('hardware_popover.communication_failed') : '');
-    const commandFeedback = feedbackVisible ? `${feedback}${command.reason ? ` — ${command.reason}` : ''}` : '';
     const unavailable = !socketConnected ? t('hardware_popover.station_offline')
         : !loaded || !status.known ? t(`hardware_popover.status_${status.key}`) : '';
-    const message = unavailable || (submitting && commandFeedback) || hardwareError || motionWarning
-        || data.stop_warning || commandFeedback || t('hardware_popover.ready');
+    // Keep the summary short; the dismissible alert is the only full explanation.
+    const message = unavailable || (submitting && feedback)
+        || (hardwareError && (command?.status === 'failed' ? feedback : t('hardware_popover.device_error')))
+        || (motionWarning && t('hardware_popover.motion_unconfirmed'))
+        || (data.stop_warning && t('hardware_popover.attention_required'))
+        || (feedbackVisible && feedback) || t('hardware_popover.ready');
     const severity = unavailable ? 'warning' : submitting ? 'info' : hardwareError || command?.status === 'failed'
         ? 'error' : motionWarning || data.stop_warning || ['unknown', 'cancelled'].includes(command?.status)
             ? 'warning' : 'success';
     const details = [...new Set([hardwareError, motionWarning, data.stop_warning,
-        feedbackVisible && command.reason].filter(Boolean))].join('\n');
+        feedbackVisible && command.reason].filter(Boolean).map(detailText))].join('\n');
 
     const commandReason = unavailable || (busy ? t('hardware_popover.command_in_progress') : '');
     const connectReason = commandReason || (data.connected ? t('hardware_popover.already_connected')
@@ -164,7 +171,6 @@ function DeviceRow({device, kind, snapshot, status, command, owner, expanded, no
                     {device.host}:{device.port}
                 </Typography>
             </Box>
-            <DeviceFeedback message={message} severity={severity} pending={submitting && !unavailable} />
             <Chip size="small" variant="outlined" color={status.color}
                 label={t(`hardware_popover.status_${status.key}`)} sx={{height: 23, flexShrink: 0, fontSize: '0.68rem'}} />
             <ExpandMoreIcon sx={{fontSize: 19, color: 'text.secondary', transform: expanded ? 'rotate(180deg)' : 'none'}} />
@@ -174,6 +180,10 @@ function DeviceRow({device, kind, snapshot, status, command, owner, expanded, no
         {details && <DeviceDetails key={details} message={details} severity={severity} />}
         <Collapse in={expanded} unmountOnExit>
             <Box id={contentId} sx={{px: 1.25, pt: 0.5, pb: 1.25}}>
+                {/* A detailed alert replaces the summary, so each issue uses one row. */}
+                {!details && <Box sx={{display: 'flex', alignItems: 'center', minHeight: 24, mb: 0.5}}>
+                    <DeviceFeedback message={message} severity={severity} pending={submitting && !unavailable} />
+                </Box>}
                 <Stack direction="row" spacing={0.75} alignItems="center" sx={{minHeight: 32, mb: 0.75}}>
                     <Typography variant="caption" color="text.secondary">{t('hardware_popover.control_label')}</Typography>
                     <Typography variant="body2" noWrap sx={{flex: 1, minWidth: 0, fontWeight: 600}}
@@ -233,7 +243,7 @@ function DeviceRow({device, kind, snapshot, status, command, owner, expanded, no
             '& > :last-child': {gridColumn: '1 / -1'},
             '@container (min-width: 340px)': {gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
                 '& > :last-child': {gridColumn: 'auto'}}}}>
-            <DeviceAction reason={connectReason} onClick={() => onSubmit('connect')}>{t('hardware_popover.connect')}</DeviceAction>
+            <DeviceAction reason={connectReason} color="success" onClick={() => onSubmit('connect')}>{t('hardware_popover.connect')}</DeviceAction>
             <DeviceAction reason={disconnectReason} color="error" onClick={() => onSubmit('disconnect')}>
                 {t('hardware_popover.disconnect')}
             </DeviceAction>

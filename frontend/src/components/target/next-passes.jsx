@@ -37,7 +37,6 @@ import RowContextMenu from "../earthview/rowcontextmenu.jsx";
 import { useTranslation } from 'react-i18next';
 import { enUS, elGR } from '@mui/x-data-grid/locales';
 import RefreshIcon from '@mui/icons-material/Refresh';
-import SettingsIcon from '@mui/icons-material/Settings';
 import RadioButtonCheckedIcon from '@mui/icons-material/RadioButtonChecked';
 import AccessTimeFilledIcon from '@mui/icons-material/AccessTimeFilled';
 import DoneAllIcon from '@mui/icons-material/DoneAll';
@@ -50,10 +49,9 @@ import {
     setPassesTableColumnVisibility,
     setPassesTablePageSize,
     setPassesTableSortModel,
-    setOpenPassesTableSettingsDialog
 } from './target-slice.jsx';
 import {calculateElevationCurvesForPasses} from '../../utils/elevation-curve-calculator.js';
-import TargetPassesTableSettingsDialog from './target-passes-table-settings-dialog.jsx';
+import GridTableToolbar from '../common/grid-table-toolbar.jsx';
 import { useUserTimeSettings } from '../../hooks/useUserTimeSettings.jsx';
 import CelestialPasses from '../celestial/celestial-passes.jsx';
 import { fetchTargetCelestialScene } from '../celestial/celestial-slice.jsx';
@@ -421,6 +419,7 @@ const PassTypesCell = React.memo(function PassTypesCell({tags, t}) {
 
 
 const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({
+    toolbarContainer,
     satellitePasses,
     passesLoading,
     columnVisibility,
@@ -609,24 +608,6 @@ const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({
         },
     ];
 
-    const effectiveColumnVisibility = useMemo(() => {
-        const base = {
-            status: true,
-            ...columnVisibility,
-        };
-        if (!isCompactView) return base;
-        return {
-            ...base,
-            pass_tags: false,
-            event_end: false,
-            distance_at_start: false,
-            distance_at_end: false,
-            distance_at_peak: false,
-            is_geostationary: false,
-            is_geosynchronous: false,
-        };
-    }, [columnVisibility, isCompactView]);
-
     const getPassesRowStyles = useCallback((param) => {
         if (param.row) {
             const now = new Date(nowMsRef.current);
@@ -665,10 +646,13 @@ const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({
 
     return (
         <StyledDataGrid
+            showToolbar
+            slots={{ toolbar: GridTableToolbar }}
             apiRef={apiRef}
             fullWidth={true}
             loading={passesLoading}
             slotProps={{
+                toolbar: { container: toolbarContainer },
                 loadingOverlay: {
                     variant: 'linear-progress',
                     noRowsVariant: 'linear-progress',
@@ -701,7 +685,7 @@ const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({
             density={"compact"}
             rows={satellitePasses}
             pageSizeOptions={[5, 10, 15, 20]}
-            columnVisibilityModel={effectiveColumnVisibility}
+            columnVisibilityModel={columnVisibility}
             onColumnVisibilityModelChange={onColumnVisibilityChange}
             sortModel={sortModel}
             onSortModelChange={onSortModelChange}
@@ -722,6 +706,7 @@ const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({
     );
 }, (prevProps, nextProps) => {
     return (
+        prevProps.toolbarContainer === nextProps.toolbarContainer &&
         prevProps.satellitePasses === nextProps.satellitePasses &&
         prevProps.passesLoading === nextProps.passesLoading &&
         prevProps.columnVisibility === nextProps.columnVisibility &&
@@ -749,6 +734,7 @@ const NextPassesIsland = React.memo(function NextPassesIsland() {
     const monitoredRows = useSelector((state) => state.celestialMonitored?.monitored || []);
     const [containerHeight, setContainerHeight] = useState(0);
     const containerRef = useRef(null);
+    const [toolbarContainer, setToolbarContainer] = useState(null);
     const {
         passesLoading,
         satellitePasses,
@@ -759,7 +745,6 @@ const NextPassesIsland = React.memo(function NextPassesIsland() {
         passesTableColumnVisibility,
         passesTablePageSize,
         passesTableSortModel,
-        openPassesTableSettingsDialog
     } = useSelector(state => state.targetSatTrack);
     const hasTargets = trackerInstances.length > 0;
     const { location } = useSelector(state => state.location);
@@ -1062,14 +1047,6 @@ const NextPassesIsland = React.memo(function NextPassesIsland() {
     const handleSortModelChange = useCallback((newSortModel) => {
         dispatch(setPassesTableSortModel(newSortModel));
     }, [dispatch]);
-
-    const handleOpenSettings = () => {
-        dispatch(setOpenPassesTableSettingsDialog(true));
-    };
-
-    const handleCloseSettings = () => {
-        dispatch(setOpenPassesTableSettingsDialog(false));
-    };
 
     const copyTextToClipboard = useCallback(async (text) => {
         if (navigator?.clipboard?.writeText) {
@@ -1405,17 +1382,7 @@ const NextPassesIsland = React.memo(function NextPassesIsland() {
                                 </Button>
                             </span>
                         </Tooltip>
-                        <Tooltip title={t('passes_table_settings.title')}>
-                            <span>
-                                <IconButton
-                                    size="small"
-                                    onClick={handleOpenSettings}
-                                    sx={titleIconButtonSx}
-                                >
-                                    <SettingsIcon fontSize="small" />
-                                </IconButton>
-                            </span>
-                        </Tooltip>
+                        <Box ref={setToolbarContainer} />
                         <Tooltip title={t('next_passes.refresh_passes_force_recalculate', { defaultValue: 'Refresh passes (force recalculate)' })}>
                             <span>
                                 <IconButton
@@ -1473,6 +1440,7 @@ const NextPassesIsland = React.memo(function NextPassesIsland() {
                     )}
                     {hasTargets && (
                         <MemoizedStyledDataGrid
+                            toolbarContainer={toolbarContainer}
                             satellitePasses={filteredPasses}
                             passesLoading={passesLoading}
                             columnVisibility={passesTableColumnVisibility}
@@ -1500,10 +1468,6 @@ const NextPassesIsland = React.memo(function NextPassesIsland() {
                 title={passContextMenu?.row?.name || `NORAD ${passContextMenu?.row?.norad_id ?? '-'}`}
                 noradId={passContextMenu?.row?.norad_id}
                 items={passContextMenuItems}
-            />
-            <TargetPassesTableSettingsDialog
-                open={openPassesTableSettingsDialog}
-                onClose={handleCloseSettings}
             />
             {rotatorSelectionDialog}
             <SatelliteEditDialog

@@ -33,7 +33,7 @@ function setup({snapshots = [snapshot()], config = [mount], receivedAt, loaded =
         if (request.cmd === 'get-hardware-state') return ack({success: true, data: payload});
         requests.push(request);
         ack({success: true, data: {command: {
-            ...request.data, tracker_id: 'manual:rotator:mount', device_ids: {rotator: request.data.device_id},
+            ...request.data, tracker_id: `manual:${kind}:mount`, device_ids: {[kind]: request.data.device_id},
             status: 'submitted', revision: 1, submitted_at: Date.now() / 1000,
         }}});
     });
@@ -70,15 +70,46 @@ describe('device actions and status', () => {
         expect(requests[0].data).toMatchObject({action: 'take-control', device_id: 'mount', generation: 'lease'});
     });
 
-    it('shows server command failures inline for the affected device', async () => {
-        const {store, requests} = setup({snapshots: []});
+    it.each(['rotator', 'rig'].flatMap((kind) => [false, true].map((wrapped) => ({kind, wrapped}))))(
+        'shows one $kind connection error when the command reason is wrapped: $wrapped', async ({kind, wrapped}) => {
+        const {store, requests} = setup({kind, snapshots: []});
+        const reason = `${kind === 'rotator' ? 'Rotator' : 'Rig'} did not respond to ping`;
+        const hardwareError = `Error connecting to ${kind}: ${reason}`;
         await act(async () => fireEvent.click(screen.getByRole('button', {name: 'Connect'})));
         expect(screen.getByRole('status')).toHaveTextContent('Connecting…');
         expect(screen.getByRole('button', {name: 'Connect'})).toBeDisabled();
-        act(() => store.dispatch(receiveDeviceCommand({command_id: requests[0].data.command_id,
-            status: 'failed', revision: 2, reason: 'Connection refused'})));
-        expect(screen.getByRole('status')).toHaveTextContent('Command failed — Connection refused');
+        act(() => {
+            store.dispatch(receiveDeviceSnapshot(snapshot({kind, data: {
+                connected: false, error: true, error_message: hardwareError,
+            }})));
+            store.dispatch(receiveDeviceCommand({command_id: requests[0].data.command_id,
+                status: 'failed', revision: 2, reason: wrapped ? hardwareError : reason}));
+        });
+        expect(screen.queryByRole('status')).not.toBeInTheDocument();
+        expect(screen.queryByText('Connection failed')).not.toBeInTheDocument();
+        expect(screen.getByRole('alert').textContent).toBe(reason);
+        expect(screen.getAllByText(reason, {exact: true})).toHaveLength(1);
         expect(screen.getByRole('button', {name: 'Connect'})).toBeEnabled();
+        fireEvent.click(within(screen.getByRole('alert')).getByRole('button', {name: 'Close'}));
+        expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+        expect(screen.queryByRole('status')).not.toBeInTheDocument();
+        expect(screen.queryByText('Connection failed')).not.toBeInTheDocument();
+    });
+
+    it('preserves different device and command errors in the alert', async () => {
+        const {store, requests} = setup({snapshots: []});
+        await act(async () => fireEvent.click(screen.getByRole('button', {name: 'Connect'})));
+        act(() => {
+            store.dispatch(receiveDeviceSnapshot(snapshot({data: {
+                connected: false, error: true, error_message: 'Controller connection lost',
+            }})));
+            store.dispatch(receiveDeviceCommand({command_id: requests[0].data.command_id,
+                status: 'failed', revision: 2, reason: 'Device is reserved by a scheduled observation'}));
+        });
+        expect(screen.queryByRole('status')).not.toBeInTheDocument();
+        expect(screen.getByRole('alert').textContent).toBe(
+            'Controller connection lost\nDevice is reserved by a scheduled observation',
+        );
     });
 
     it.each(['rotator', 'rig'])('shows a dismissible rejected %s request and refreshes the hardware state', async (kind) => {
@@ -87,14 +118,14 @@ describe('device actions and status', () => {
             ? {success: false, error: 'Device is reserved by a scheduled observation'}
             : {success: true, data: {epoch: 'boot', server_time: Date.now() / 1000, devices: [], commands: []}}));
         await act(async () => fireEvent.click(screen.getByRole('button', {name: 'Connect'})));
-        expect(screen.getByRole('status')).toHaveTextContent('Device is reserved by a scheduled observation');
+        expect(screen.queryByRole('status')).not.toBeInTheDocument();
         expect(screen.getByRole('alert')).toHaveTextContent('Device is reserved by a scheduled observation');
         expect(socket.emit).toHaveBeenLastCalledWith('api.call', expect.objectContaining({cmd: 'get-hardware-state'}), expect.any(Function));
         const header = within(screen.getByRole('region')).getByRole('button', {expanded: true});
         fireEvent.click(within(screen.getByRole('alert')).getByRole('button', {name: 'Close'}));
         expect(screen.queryByRole('alert')).not.toBeInTheDocument();
         expect(header).toHaveAttribute('aria-expanded', 'true');
-        expect(screen.getByRole('status')).toHaveTextContent('Device is reserved by a scheduled observation');
+        expect(screen.queryByRole('status')).not.toBeInTheDocument();
     });
 
     it('keeps device order and expansion stable when connections change', () => {
@@ -181,18 +212,25 @@ describe('device actions and status', () => {
         expect(requests).toEqual([]);
     });
 
-    it('places persistent command feedback above ownership and telemetry', () => {
-        const {store} = setup();
+    it.each(['rotator', 'rig'])('places %s command feedback first in the collapsible body', async (kind) => {
+        const {store} = setup({kind, snapshots: [snapshot({kind})]});
+        const header = within(screen.getByRole('region')).getByRole('button', {expanded: true});
         const status = screen.getByRole('status');
+        expect(within(header).queryByRole('status')).not.toBeInTheDocument();
+        expect(within(document.getElementById(header.getAttribute('aria-controls'))).getByRole('status')).toBe(status);
         expect(status).toHaveTextContent('Ready');
         expect(status.compareDocumentPosition(screen.getByText('Control:')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-        act(() => store.dispatch(receiveDeviceCommand({tracker_id: 'manual:rotator:mount', command_id: 'pending',
-            device_ids: {rotator: 'mount'}, action: 'connect', status: 'started', revision: 1,
+        act(() => store.dispatch(receiveDeviceCommand({tracker_id: `manual:${kind}:mount`, command_id: 'pending',
+            device_ids: {[kind]: 'mount'}, action: 'connect', status: 'started', revision: 1,
         })));
         expect(screen.getByRole('status')).toBe(status);
         expect(status).toHaveTextContent('Connecting…');
         expect(screen.getByRole('button', {name: 'Disconnect'})).toBeEnabled();
         expect(screen.getByRole('button', {name: 'Pause tracking'})).toBeEnabled();
+        fireEvent.click(header);
+        await waitFor(() => expect(screen.queryByRole('status')).not.toBeInTheDocument());
+        fireEvent.click(header);
+        expect(screen.getByRole('status')).toHaveTextContent('Connecting…');
     });
 
     it('keeps both parking choices visible as the rotator parks', () => {
