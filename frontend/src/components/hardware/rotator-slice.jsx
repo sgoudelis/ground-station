@@ -128,6 +128,7 @@ const defaultRotator = {
     aztolerance: 2.0,
     eltolerance: 2.0,
     tracking_lead_seconds: 2.0,
+    stop_supported: true,
 };
 
 const rotatorsSlice = createSlice({

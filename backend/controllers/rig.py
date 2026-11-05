@@ -88,26 +88,29 @@ class RigController:
             except Exception:
                 self.logger.warning("Error sending quit command to rig")
 
-            # Close the connection
-            self.writer.close()
-            try:
-                await asyncio.wait_for(self.writer.wait_closed(), timeout=1.0)
-            except asyncio.TimeoutError:
-                self.logger.warning("Timeout waiting for connection to close")
-
-            self.connected = False
-            self.reader = None
-            self.writer = None
-            self.supports_split_tx_cmd = False
-            self.supports_vfo_opt = False
-            self.supports_explicit_vfo_cmd = False
-            self.supports_ptt_query = False
+            await self.close()
             self.logger.info("Disconnected from rig")
             return True
 
         except Exception as e:
             self.logger.error(f"Error disconnecting from rig: {e}")
             return False
+
+    async def close(self):
+        """Discard a transport without sending commands on an uncertain stream."""
+        writer = self.writer
+        self.connected = False
+        self.reader = self.writer = None
+        self.supports_split_tx_cmd = False
+        self.supports_vfo_opt = False
+        self.supports_explicit_vfo_cmd = False
+        self.supports_ptt_query = False
+        if writer is not None:
+            writer.close()
+            try:
+                await asyncio.wait_for(writer.wait_closed(), timeout=1.0)
+            except (OSError, asyncio.TimeoutError):
+                pass
 
     @asynccontextmanager
     async def _create_connection(self):

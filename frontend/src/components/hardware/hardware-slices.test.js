@@ -47,8 +47,14 @@ describe('hardware slices', () => {
 
         expect(DEFAULT_ROTATOR.port).toBe(4533);
         expect(DEFAULT_ROTATOR.tracking_lead_seconds).toBe(2);
+        expect(DEFAULT_ROTATOR.stop_supported).toBe(true);
         expect(state.formValues.port).toBe(4533);
         expect(state.formValues.tracking_lead_seconds).toBe(2);
+        expect(state.formValues.stop_supported).toBe(true);
+    });
+
+    it('preserves a disabled Stop capability when preparing configuration', () => {
+        expect(prepareRotatorPayload({...DEFAULT_ROTATOR, stop_supported: false}).stop_supported).toBe(false);
     });
 
     it('normalizes and validates the persisted rotator tracking lead', () => {

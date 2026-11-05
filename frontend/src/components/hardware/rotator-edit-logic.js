@@ -13,6 +13,7 @@ export const DEFAULT_ROTATOR = {
     aztolerance: 2.0,
     eltolerance: 2.0,
     tracking_lead_seconds: 2.0,
+    stop_supported: true,
 };
 
 export function isEmptyRotatorValue(value) {
@@ -53,6 +54,7 @@ export function prepareRotatorPayload(formValues) {
         aztolerance: Number(formValues.aztolerance),
         eltolerance: Number(formValues.eltolerance),
         tracking_lead_seconds: Number(formValues.tracking_lead_seconds),
+        stop_supported: formValues.stop_supported ?? true,
     };
 }
 

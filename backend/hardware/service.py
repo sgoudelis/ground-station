@@ -312,9 +312,12 @@ class HardwareSupervisor:
         worker = self.devices.get((kind, str(device_id)))
         if worker is None:
             return
-        if not worker.snapshot.get("data", {}).get("connected"):
-            # A disconnected runtime has no transport to preserve. Retire it so
-            # endpoint changes can create the next connection with fresh settings.
+        if details and not worker.process.is_alive():
+            worker.details = dict(details)
+            return
+        if not details:
+            # Deletion retires the runtime. Ordinary edits keep its motion guard,
+            # including edits made after an unconfirmed Stop and Disconnect.
             worker.connection.send({"method": "shutdown"})
             await asyncio.to_thread(worker.process.join, 2)
             if worker.process.is_alive():

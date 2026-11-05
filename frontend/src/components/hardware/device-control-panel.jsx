@@ -60,12 +60,13 @@ export default function DeviceControlPanel({kind}) {
                     </Stack>
                     <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
                         {!data.connected && (!snapshot?.owner || manual) && <Button size="small" disabled={!ready || busy} onClick={() => submit(id, 'connect')}>Connect</Button>}
+                        {(data.connected || data.error) && (manual || !snapshot?.owner) && <Button size="small" disabled={!ready || busy}
+                            onClick={() => submit(id, 'disconnect')}>Disconnect</Button>}
                         {!manual && (data.connected || snapshot?.owner) && <Button size="small" disabled={!ready || busy || observation || data.connected && data.motion_unconfirmed}
                             onClick={() => submit(id, 'take-control')}>Take manual control</Button>}
                         {data.connected && <>
                             {manual && <>
                                 <Button size="small" disabled={!ready || busy} onClick={() => submit(id, 'release')}>Release control</Button>
-                                <Button size="small" disabled={!ready || busy} onClick={() => submit(id, 'disconnect')}>Disconnect</Button>
                                 {kind === 'rotator' && <>
                                     <Button size="small" disabled={!ready || busy || data.motion_unconfirmed || data.parked}
                                         onClick={() => setManualId(id)}>Manual movement</Button>
@@ -74,10 +75,13 @@ export default function DeviceControlPanel({kind}) {
                                 </>}
                             </>}
                             <Button size="small" color="warning" disabled={!socket?.connected || command?.action === 'stop' && busy}
-                                onClick={() => submit(id, 'stop')}>Stop</Button>
+                                onClick={() => submit(id, 'stop')}>{device.stop_supported === false ? 'Pause tracking' : 'Stop'}</Button>
                         </>}
                     </Stack>
-                    {data.motion_unconfirmed && <Typography variant="caption" color="warning.main">Waiting for stationary position readings</Typography>}
+                    {data.motion_unconfirmed && <Typography variant="caption" color="warning.main">
+                        {data.connected ? 'Waiting for stationary position readings' : 'Disconnected; antenna motion is unconfirmed'}
+                    </Typography>}
+                    {data.stop_warning && <Typography variant="caption" color="warning.main">{data.stop_warning}</Typography>}
                     {data.error && <Alert severity="error">{data.error_message || 'Device communication failed'}</Alert>}
                     {command && <Typography variant="caption" color={['failed', 'unknown'].includes(command.status) ? 'error.main' : 'text.secondary'}>
                         {command.action}: {command.status}{command.reason ? ` — ${command.reason}` : ''}

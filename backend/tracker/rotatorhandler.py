@@ -731,6 +731,11 @@ class RotatorHandler:
             )
             try:
                 await self.tracker.rotator_controller.disconnect()
+                if isinstance(self.tracker.rotator_controller, RotatorProxy):
+                    self.tracker.rotator_data.update(
+                        self.tracker.rotator_controller.disconnect_state
+                    )
+                    self.tracker.rotator_data.update(error=False, error_message=None)
                 self.tracker.rotator_data["connected"] = False
                 self.tracker.queue_out.put(
                     {

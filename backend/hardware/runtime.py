@@ -45,6 +45,8 @@ class DeviceRuntime:
             parked=False,
             motion_unconfirmed=bool(details.get("_motion_unconfirmed")),
             error=False,
+            stop_supported=details.get("stop_supported", True),
+            stop_warning=None,
         )
         self.rig_context = SimpleNamespace(
             rig_controller=None,
@@ -76,7 +78,7 @@ class DeviceRuntime:
         if self.data["connected"] and not self.data["error"]:
             return
         if self.controller and self.data["error"]:
-            await self.controller.disconnect()
+            await self.controller.close()
             self.controller = None
         if self.controller is None:
             factory = RotatorController if self.kind == "rotator" else RigController
@@ -124,6 +126,29 @@ class DeviceRuntime:
     async def poll(self):
         if not self.data["connected"]:
             return
+        try:
+            await self._poll()
+        except Exception as error:
+            await self.transport_failed(error)
+            raise
+
+    async def transport_failed(self, error):
+        # A failed read leaves protocol framing uncertain. Discard the stream
+        # once, fence producer writes, and require an explicit reconnect.
+        uncertain = self.kind == "rotator" and any(
+            self.data.get(field)
+            for field in ("tracking", "slewing", "park_requested", "motion_unconfirmed")
+        )
+        self._fence()
+        self.owner = None
+        self._stationary = None
+        self.data.update(connected=False, error=True, error_message=str(error))
+        if uncertain:
+            self.data.update(motion_unconfirmed=True, stopped=False)
+        if self.controller:
+            await self.controller.close()
+
+    async def _poll(self):
         if self.kind == "rig":
             self.data["frequency"] = await self.controller.get_frequency()
             return
@@ -168,25 +193,73 @@ class DeviceRuntime:
             if self.park_target:
                 self.data["parked"] = self.arrival_hits >= 2
 
-    async def stop(self):
+    async def stop(self, *, recover=True):
         self.motion_revision += 1
         self.target = None
         self._stationary = None
         self.data.update(
-            tracking=False, slewing=False, stopped=False, parked=False, motion_unconfirmed=True
+            tracking=False,
+            slewing=False,
+            stopped=False,
+            parked=False,
+            park_requested=False,
+            motion_unconfirmed=True,
+            stop_warning=None,
         )
+        if not self.details.get("stop_supported", True):
+            self.data["stop_warning"] = "Controller Stop is unsupported; tracking updates paused"
+            raise StopUnconfirmed(self.data["stop_warning"])
         try:
             if not await self.controller.stop():
                 raise StopRejected("Rotator rejected Stop")
-        except StopRejected:
+        except StopRejected as error:
+            self.data["stop_warning"] = str(error)
             raise
         except Exception as error:
+            self.data["stop_warning"] = f"Physical Stop is unconfirmed: {error}"
             # Never read position on a stream with an unanswered Stop reply.
-            try:
-                await self.controller.recover_position()
-            except Exception:
-                self.data.update(connected=False, error=True)
+            # Explicit Disconnect must not reopen the connection for recovery.
+            if recover:
+                try:
+                    await self.controller.recover_position()
+                    self.data["connected"] = True
+                except Exception as recovery_error:
+                    await self.transport_failed(recovery_error)
             raise StopUnconfirmed(f"Physical Stop is unconfirmed: {error}") from error
+
+    async def disconnect(self):
+        active = any(
+            self.data.get(field)
+            for field in ("tracking", "slewing", "park_requested", "motion_unconfirmed")
+        )
+        self._fence()
+        try:
+            if self.kind == "rotator" and self.data["connected"] and active:
+                try:
+                    await self.stop(recover=False)
+                except (StopRejected, StopUnconfirmed):
+                    # Socket closure succeeds independently of physical Stop.
+                    # Preserve its warning and uncertainty for the next connect.
+                    pass
+        finally:
+            try:
+                if self.controller:
+                    await self.controller.close()
+            finally:
+                self.owner = None
+                self.data.update(
+                    connected=False,
+                    tracking=False,
+                    slewing=False,
+                    parked=False,
+                    park_requested=False,
+                    error=False,
+                    error_message=None,
+                )
+        return {
+            key: self.data.get(key)
+            for key in ("connected", "motion_unconfirmed", "stopped", "stop_warning")
+        }
 
     async def quiesce(self):
         was_active = (
@@ -198,7 +271,13 @@ class DeviceRuntime:
             and self.data["connected"]
             and (was_active or self.data["motion_unconfirmed"])
         ):
-            await self.stop()
+            try:
+                await self.stop()
+            except (StopRejected, StopUnconfirmed):
+                # Handoff may proceed once fresh telemetry proves stationarity,
+                # including controllers whose firmware cannot execute Stop.
+                if not self.data["connected"]:
+                    raise
             deadline = time.monotonic() + 10
             while self.data["motion_unconfirmed"] and time.monotonic() < deadline:
                 await self.poll()
@@ -251,7 +330,14 @@ class DeviceRuntime:
                 self.data["tracking"] = True
                 return True
             if method == "configure":
-                self.details.update(payload["settings"])
+                settings = payload["settings"]
+                if not self.data["connected"] and any(
+                    self.details.get(key) != settings.get(key, self.details.get(key))
+                    for key in ("host", "port")
+                ):
+                    self.controller = None
+                self.details.update(settings)
+                self.data["stop_supported"] = self.details.get("stop_supported", True)
                 self.rig_context.rig_details = self.details
                 return True
             if method == "mode":
@@ -261,12 +347,7 @@ class DeviceRuntime:
                 self.last_update = time.monotonic()
                 return True
             if method == "disconnect":
-                await self.quiesce()
-                await self.controller.disconnect()
-                self.owner = None
-                self.data.update(connected=False)
-                self._fence()
-                return True
+                return await self.disconnect()
             if not self.data["connected"]:
                 raise RuntimeError("Device is disconnected")
             if method == "frequency":

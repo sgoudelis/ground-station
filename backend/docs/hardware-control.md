@@ -20,6 +20,19 @@ owner can acquire control. The TCP stream remains open. Late Disconnect from the
 old owner acknowledges detachment without closing the new owner's stream.
 Explicit Disconnect closes the physical connection.
 
+Disconnect revokes control and closes the socket even if Stop times out or is
+rejected. It does not open a recovery connection. Its successful result may carry
+`stop_warning` and `motion_unconfirmed`: disconnecting does not prove that the
+antenna stopped. A failed position/frequency read closes the broken transport,
+marks the device disconnected, and stops polling until an explicit reconnect.
+No automatic reconnect is scheduled after a deliberate Disconnect.
+
+Rotator settings include **Controller supports Stop** (`stop_supported`, default
+true). Disable this for firmware such as S.A.T. versions that ignore Hamlib `S`.
+The worker then pauses automatic commands without sending `S`, preserving motion
+uncertainty. A handoff can proceed only after fresh stationary readings confirm
+that the mount has settled. Settings edits retain this motion guard.
+
 Manual takeover can release an interactive tracker. Observations reserve their
 whole device bundle during handoff and cannot be displaced by manual takeover.
 Stop is available independently of ownership and revokes queued producer writes.

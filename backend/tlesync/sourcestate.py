@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
-from typing import Optional
+from typing import Optional, cast
 from uuid import UUID
 
 from db.models import OrbitalSources, OrbitalSourceSyncState
@@ -25,7 +25,9 @@ def all_enabled_sources_are_rate_limited(
 
 async def get_source_sync_state(session, source_id: UUID) -> Optional[OrbitalSourceSyncState]:
     """Load a source state without creating one for untouched sources."""
-    return await session.get(OrbitalSourceSyncState, source_id)
+    return cast(
+        Optional[OrbitalSourceSyncState], await session.get(OrbitalSourceSyncState, source_id)
+    )
 
 
 def is_celestrak_rate_limited(state: Optional[OrbitalSourceSyncState]) -> bool:

@@ -12,6 +12,35 @@ from alembic import command
 from db import migrations
 
 
+def test_stop_capability_migration_defaults_existing_rotators_to_supported(monkeypatch, tmp_path):
+    db_path = tmp_path / "stop-capability.db"
+    monkeypatch.setenv("GS_DB", str(db_path))
+    monkeypatch.setenv("ALEMBIC_CONTEXT", "1")
+    config = migrations.get_alembic_config()
+    command.upgrade(config, "d4e6f8a1b3c5")
+    with sqlite3.connect(db_path) as connection:
+        connection.execute(
+            """
+            INSERT INTO rotators
+                (id, name, host, port, minaz, maxaz, azimuth_mode, minel, maxel,
+                 aztolerance, eltolerance, tracking_lead_seconds, added, updated)
+            VALUES
+                (?, 'Existing rotator', 'localhost', 4533, 0, 360, '0_360', 0, 90,
+                 2.0, 2.0, 2.0, '2026-11-05', '2026-11-05')
+        """,
+            (uuid.uuid4().hex,),
+        )
+    command.upgrade(config, "head")
+    with sqlite3.connect(db_path) as connection:
+        assert connection.execute("SELECT stop_supported FROM rotators").fetchone() == (1,)
+    command.downgrade(config, "d4e6f8a1b3c5")
+    with sqlite3.connect(db_path) as connection:
+        assert connection.execute("SELECT name FROM rotators").fetchone() == ("Existing rotator",)
+        assert "stop_supported" not in {
+            row[1] for row in connection.execute("PRAGMA table_info(rotators)")
+        }
+
+
 def test_backup_rotation_keeps_latest_five(tmp_path):
     db_path = tmp_path / "gs.db"
     db_path.write_bytes(b"db")

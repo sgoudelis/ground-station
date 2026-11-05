@@ -15,6 +15,31 @@ const {socket} = vi.hoisted(() => ({socket: {connected: true, emit: vi.fn(), on:
 vi.mock('../common/socket.jsx', () => ({useSocket: () => ({socket})}));
 
 describe('hardware without targets', () => {
+    it('allows disconnecting unowned hardware with uncertain motion and keeps the warning', async () => {
+        socket.emit.mockImplementation((_event, request, ack) => ack({success: true, data: {command: {
+            ...request.data, tracker_id: 'manual:rotator:mount', device_ids: {rotator: 'mount'},
+            status: 'submitted', revision: 1, submitted_at: Date.now() / 1000,
+        }}}));
+        const store = configureStore({reducer: {
+            hardwareControl: hardware,
+            rotators: () => ({rotators: [{id: 'mount', name: 'S.A.T.', stop_supported: false}]}),
+        }});
+        const snapshot = {
+            kind: 'rotator', device_id: 'mount', epoch: 'boot', generation: 'lease',
+            worker_generation: 'worker', worker_started_at: 1, sequence: 1, owner: null,
+            data: {connected: true, motion_unconfirmed: true},
+        };
+        store.dispatch(fetchHardwareState.fulfilled({epoch: 'boot', server_time: Date.now() / 1000, commands: [], devices: [snapshot]}));
+        render(<Provider store={store}><ThemeProvider theme={setupTheme()}><DeviceControlPanel kind="rotator" /></ThemeProvider></Provider>);
+        expect(screen.getByRole('button', {name: 'Pause tracking'})).toBeEnabled();
+        const disconnect = screen.getByRole('button', {name: 'Disconnect'});
+        expect(disconnect).toBeEnabled();
+        await act(async () => fireEvent.click(disconnect));
+        expect(socket.emit).toHaveBeenLastCalledWith('api.call', expect.objectContaining({data: expect.objectContaining({action: 'disconnect'})}), expect.any(Function));
+        act(() => store.dispatch(receiveDeviceSnapshot({...snapshot, sequence: 2, data: {connected: false, motion_unconfirmed: true}})));
+        expect(screen.getByText('Disconnected; antenna motion is unconfirmed')).toBeInTheDocument();
+    });
+
     it('can take control of a disconnected device held by an old tracker', async () => {
         socket.emit.mockImplementation((_event, request, ack) => ack({success: true, data: {command: {
             ...request.data, tracker_id: 'manual:rotator:mount', device_ids: {rotator: 'mount'},

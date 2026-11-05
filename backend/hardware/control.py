@@ -120,6 +120,25 @@ async def execute_device_command(
                 await hardware.release(kind, device_id)
         elif action == "release":
             await hardware.release(kind, device_id)
+        elif action == "disconnect":
+            # Disconnect must also work while reconnect is barred by uncertain
+            # motion. Never acquire/reopen the device just to close it.
+            if worker:
+                current_owner = worker.snapshot.get("owner")
+                if current_owner not in (None, owner):
+                    raise ControlChanged("Device control changed before disconnect")
+                if worker.process.is_alive():
+                    await hardware.call(
+                        kind,
+                        device_id,
+                        "disconnect",
+                        owner=current_owner,
+                        generation=expected_generation,
+                    )
+                else:
+                    await hardware.release(kind, device_id)
+            if hardware.on_intent:
+                await hardware.on_intent(kind, device_id, False)
         else:
             if action == "take-control":
                 await hardware.release(kind, device_id)
@@ -128,12 +147,6 @@ async def execute_device_command(
             if action in {"connect", "take-control"}:
                 if hardware.on_intent:
                     await hardware.on_intent(kind, device_id, True)
-            elif action == "disconnect":
-                await hardware.call(
-                    kind, device_id, "disconnect", owner=owner, generation=generation
-                )
-                if hardware.on_intent:
-                    await hardware.on_intent(kind, device_id, False)
             elif action == "unpark":
                 await hardware.call(
                     kind, device_id, "mode", owner=owner, generation=generation, mode="stopped"
@@ -160,7 +173,12 @@ async def execute_device_command(
                     await wait_position(kind, device_id, generation, command, target)
         for superseded in command.get("supersedes", []):
             operations.update(superseded, "cancelled", "Device control transferred or stopped")
-        operations.update(command["command_id"], "succeeded")
+        warning = (
+            worker.snapshot.get("data", {}).get("stop_warning")
+            if worker and action == "disconnect"
+            else None
+        )
+        operations.update(command["command_id"], "succeeded", warning)
     except ControlChanged as error:
         operations.update(command["command_id"], "cancelled", str(error))
     except TimeoutError as error:

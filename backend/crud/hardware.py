@@ -142,6 +142,9 @@ async def add_rotator(session: AsyncSession, data: dict) -> dict:
         tracking_lead_seconds = _normalize_tracking_lead_seconds(
             data.get("tracking_lead_seconds", DEFAULT_TRACKING_LEAD_SECONDS)
         )
+        stop_supported = data.get("stop_supported", True)
+        if not isinstance(stop_supported, bool):
+            raise ValueError("stop_supported must be a boolean")
 
         new_id = uuid.uuid4()
         now = datetime.now(timezone.utc)
@@ -162,6 +165,7 @@ async def add_rotator(session: AsyncSession, data: dict) -> dict:
                 aztolerance=data.get("aztolerance", 2.0),
                 eltolerance=data.get("eltolerance", 2.0),
                 tracking_lead_seconds=tracking_lead_seconds,
+                stop_supported=stop_supported,
                 added=now,
                 updated=now,
             )
@@ -205,6 +209,8 @@ async def edit_rotator(session: AsyncSession, data: dict) -> dict:
             data["tracking_lead_seconds"] = _normalize_tracking_lead_seconds(
                 data["tracking_lead_seconds"]
             )
+        if "stop_supported" in data and not isinstance(data["stop_supported"], bool):
+            raise ValueError("stop_supported must be a boolean")
 
         data.pop("updated", None)
         data.pop("added", None)

@@ -358,6 +358,7 @@ class Rotators(Base):
     aztolerance = Column(Float, nullable=False, default=2.0)
     eltolerance = Column(Float, nullable=False, default=2.0)
     tracking_lead_seconds = Column(Float, nullable=False, default=2.0)
+    stop_supported = Column(Boolean, nullable=False, default=True, server_default="1")
     added = Column(AwareDateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
     updated = Column(
         AwareDateTime,

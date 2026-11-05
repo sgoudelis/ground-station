@@ -56,6 +56,7 @@ class DeviceProxy:
         self.port = details["port"]
         self.generation = None
         self.connected = False
+        self.disconnect_state = {}
 
     async def connect(self):
         result = await self.client.request(
@@ -80,7 +81,8 @@ class DeviceProxy:
     async def disconnect(self):
         result = await self.call("disconnect")
         self.connected = False
-        return result
+        self.disconnect_state = result if isinstance(result, dict) else {}
+        return True
 
 
 class RotatorProxy(DeviceProxy):

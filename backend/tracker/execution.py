@@ -290,6 +290,8 @@ class WorkerOperations:
                 )
                 if stop_result:
                     reason = stop_result[1]
+                if operation["changes"].get("rotator_state") == "disconnected":
+                    reason = self.tracker.rotator_data.get("stop_warning") or reason
                 self.emit(operation, "succeeded", reason)
                 del self.pending[key]
 

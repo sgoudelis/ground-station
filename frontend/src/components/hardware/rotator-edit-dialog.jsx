@@ -69,6 +69,14 @@ export default function RotatorEditDialog({
                     <TextField name="name" label={t("rotator.name")} fullWidth size="small" onChange={onChange} value={formValues.name} error={Boolean(validationErrors.name)} required />
                     <TextField name="host" label={t("rotator.host")} fullWidth size="small" onChange={onChange} value={formValues.host} error={Boolean(validationErrors.host)} required />
                     <TextField name="port" label={t("rotator.port")} type="number" fullWidth size="small" onChange={onChange} value={formValues.port} error={Boolean(validationErrors.port)} required />
+                    <FormControlLabel
+                        control={<Checkbox checked={formValues.stop_supported ?? true}
+                            onChange={(event) => onPatchValues({stop_supported: event.target.checked})} />}
+                        label={t("rotator.stop_supported", {defaultValue: "Controller supports Stop"})}
+                    />
+                    {formValues.stop_supported === false && <Alert severity="warning">
+                        {t("rotator.stop_unsupported_help", {defaultValue: "Use this for controllers that ignore Stop. Pausing tracking prevents new commands, but an ongoing antenna movement may continue."})}
+                    </Alert>}
                     <TextField
                         name="azimuth_mode"
                         label={t("rotator.azimuth_range")}
