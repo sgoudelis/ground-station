@@ -12,6 +12,8 @@ import {fetchHardwareState} from '../hardware/control-slice.js';
 import {EMPTY_LIST, EMPTY_OBJECT, summarizeDevices} from '../hardware/device-control-state.js';
 import {setTrackerId} from '../target/target-slice.jsx';
 import {setDialogOpen, setSelectedObservation} from '../scheduler/scheduler-slice.jsx';
+import RotatorQuickEditDialog from './rotator-quick-edit-dialog.jsx';
+import RigQuickEditDialog from './rig-quick-edit-dialog.jsx';
 
 function HardwareSettingsPopover() {
     const {socket} = useSocket();
@@ -21,6 +23,7 @@ function HardwareSettingsPopover() {
     const [anchorEl, setAnchorEl] = useState(null);
     const [kind, setKind] = useState('rotator');
     const [manualId, setManualId] = useState(null);
+    const [editedDevice, setEditedDevice] = useState(null);
     const [now, setNow] = useState(Date.now);
     const rotators = useSelector((state) => state.rotators?.rotators) || EMPTY_LIST;
     const rigs = useSelector((state) => state.rigs?.rigs) || EMPTY_LIST;
@@ -96,12 +99,18 @@ function HardwareSettingsPopover() {
             <Box id="hardware-popover" role="dialog" aria-label={t(`hardware_popover.${kind}_controls`)}
                 sx={{width: 420, maxWidth: 'calc(100vw - 24px)', bgcolor: 'background.paper'}}>
                 <DeviceControlPanel key={kind} kind={kind} onManage={manage} onViewOwner={viewOwner}
+                    onEdit={(device) => {setEditedDevice({kind, device}); close();}}
                     onManualControl={(id) => {setManualId(id); close();}} />
             </Box>
         </Popover>
         {/* The movement dialog survives the popover's exit and stays on the
             current page. Opening it never changes the active target. */}
         <DeviceManualRotatorDialog deviceId={manualId} onClose={() => setManualId(null)} />
+        {/* Editing survives the popover closing and keeps the current page open. */}
+        {editedDevice?.kind === 'rotator' && <RotatorQuickEditDialog open
+            rotator={editedDevice.device} onClose={() => setEditedDevice(null)} />}
+        {editedDevice?.kind === 'rig' && <RigQuickEditDialog open
+            rig={editedDevice.device} onClose={() => setEditedDevice(null)} />}
     </>;
 }
 

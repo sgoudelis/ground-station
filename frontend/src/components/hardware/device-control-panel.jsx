@@ -7,7 +7,9 @@ import {
     IconButton, Menu, MenuItem, Stack, Tooltip, Typography,
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import MoreHorizIcon from '@mui/icons-material/MoreHoriz';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 import StopCircleOutlinedIcon from '@mui/icons-material/StopCircleOutlined';
@@ -33,18 +35,49 @@ function useNow() {
 
 function TelemetryValue({label, value}) {
     return <Box sx={{minWidth: 0}}>
-        <Typography variant="caption" color="text.secondary" sx={{display: 'block'}}>{label}</Typography>
-        <Typography variant="body2" sx={{fontFamily: 'monospace', fontVariantNumeric: 'tabular-nums', fontWeight: 600}}>
+        <Typography variant="caption" noWrap color="text.secondary" sx={{display: 'block'}}>{label}</Typography>
+        <Typography variant="body2" noWrap title={value} sx={{fontFamily: 'monospace', fontVariantNumeric: 'tabular-nums', fontWeight: 600}}>
             {value}
         </Typography>
     </Box>;
 }
 
+// Keep unavailable actions in place and explain their prerequisites on hover/focus.
+function DeviceAction({reason, children, ...props}) {
+    const [showReason, setShowReason] = useState(false);
+    return <Tooltip title={reason || ''} describeChild open={Boolean(reason && showReason)}
+        onOpen={() => setShowReason(true)} onClose={() => setShowReason(false)}>
+        <Box component="span" sx={{display: 'flex', minWidth: 0}} tabIndex={reason ? 0 : undefined}
+            onFocus={() => setShowReason(true)} onBlur={() => setShowReason(false)}>
+            <Button fullWidth size="small" variant="outlined" disabled={Boolean(reason)}
+                sx={{minWidth: 0, minHeight: 34, px: 1, lineHeight: 1.3}} {...props}>{children}</Button>
+        </Box>
+    </Tooltip>;
+}
+
+function DeviceFeedback({message, severity, pending}) {
+    return <Tooltip title={message}>
+        <Stack component="span" direction="row" spacing={0.5} alignItems="center"
+            sx={{minWidth: 0, maxWidth: 110}}>
+            {pending ? <CircularProgress size={13} /> : severity === 'success'
+                ? <CheckCircleOutlineIcon sx={{fontSize: 15, color: 'success.main'}} />
+                : <ErrorOutlineIcon sx={{fontSize: 15, color: severity === 'error' ? 'error.main' : 'warning.main'}} />}
+            <Typography component="span" role="status" aria-live="polite" variant="caption" noWrap
+                sx={{minWidth: 0, color: severity === 'success' ? 'text.secondary' : `${severity}.main`}}>
+                {message}
+            </Typography>
+        </Stack>
+    </Tooltip>;
+}
+
 function DeviceRow({device, kind, snapshot, status, command, owner, expanded, now, error,
-    onToggle, onSubmit, onManualControl, onViewOwner, onManage, socketConnected, loaded}) {
+    onToggle, onSubmit, onManualControl, onViewOwner, onEdit, socketConnected, loaded}) {
     const {t} = useTranslation('dashboard');
     const contentId = useId();
+    const menuId = useId();
+    const detailsId = useId();
     const [menuAnchor, setMenuAnchor] = useState(null);
+    const [detailsExpanded, setDetailsExpanded] = useState(false);
     const data = snapshot?.data || EMPTY_OBJECT;
     const manual = owner.type === 'manual';
     const observation = owner.type === 'observation';
@@ -70,121 +103,164 @@ function DeviceRow({device, kind, snapshot, status, command, owner, expanded, no
             park: 'parking', unpark: 'unparking'})[command?.action] || 'applying';
     const feedback = submitting ? t(`hardware_popover.${progressKey}`)
         : t(`hardware_popover.command_${command?.status}`);
+    const motionWarning = data.motion_unconfirmed
+        ? t(`hardware_popover.${data.connected ? 'waiting_stationary' : 'disconnected_motion_unconfirmed'}`) : '';
+    const hardwareError = error || (data.error ? data.error_message || t('hardware_popover.communication_failed') : '');
+    const commandFeedback = feedbackVisible ? `${feedback}${command.reason ? ` — ${command.reason}` : ''}` : '';
+    const unavailable = !socketConnected ? t('hardware_popover.station_offline')
+        : !loaded || !status.known ? t(`hardware_popover.status_${status.key}`) : '';
+    const message = unavailable || (submitting && commandFeedback) || hardwareError || motionWarning
+        || data.stop_warning || commandFeedback || t('hardware_popover.ready');
+    const severity = unavailable ? 'warning' : submitting ? 'info' : hardwareError || command?.status === 'failed'
+        ? 'error' : motionWarning || data.stop_warning || ['unknown', 'cancelled'].includes(command?.status)
+            ? 'warning' : 'success';
+    const details = [...new Set([hardwareError, motionWarning, data.stop_warning,
+        feedbackVisible && command.reason].filter(Boolean))].join('\n');
 
-    let primary = null;
-    if (!data.connected && (!owned || manual)) {
-        primary = {label: t('hardware_popover.connect'), action: 'connect'};
-    } else if (observation) {
-        primary = {label: t('hardware_popover.view_observation'), owner: true};
-    } else if (!manual && (data.connected || owned)) {
-        primary = {label: t('hardware_popover.take_manual_control'), action: 'take-control',
-            blocked: data.connected && data.motion_unconfirmed};
-    } else if (manual && data.connected) {
-        primary = kind === 'rotator'
-            ? {label: t('hardware_popover.manual_movement'), movement: true, blocked: data.motion_unconfirmed || data.parked || data.tracking}
-            : {label: t('hardware_popover.release_control'), action: 'release'};
-    }
+    const commandReason = unavailable || (busy ? t('hardware_popover.command_in_progress') : '');
+    const connectReason = commandReason || (data.connected ? t('hardware_popover.already_connected')
+        : owned && !manual ? t('hardware_popover.manual_control_required') : '');
+    const takeControlReason = commandReason || (observation ? t('hardware_popover.controlled_by_observation')
+        : manual ? t('hardware_popover.already_manual_control')
+            : !data.connected && !owned ? t('hardware_popover.connect_first')
+                : data.connected && data.motion_unconfirmed ? motionWarning : '');
+    const releaseReason = commandReason || (!manual ? t('hardware_popover.manual_control_required') : '');
+    const movementReason = commandReason || (!data.connected ? t('hardware_popover.connect_first')
+        : !manual ? t('hardware_popover.manual_control_required') : motionWarning);
+    const moveReason = movementReason || (data.parked ? t('hardware_popover.unpark_first')
+        : data.tracking ? t('hardware_popover.pause_first') : '');
+    // Operator Stop/Disconnect remain available during other commands and with
+    // stale telemetry, including when an observation owns the device.
+    const operatorReason = !socketConnected ? t('hardware_popover.station_offline')
+        : !loaded ? t(`hardware_popover.status_${status.key}`) : '';
+    const stopReason = operatorReason || (!data.connected ? t('hardware_popover.connect_first')
+        : command?.action === 'stop' && busy ? t('hardware_popover.command_in_progress') : '');
+    const disconnectReason = operatorReason || (!canDisconnect ? t('hardware_popover.already_disconnected')
+        : command?.action === 'disconnect' && busy ? t('hardware_popover.command_in_progress') : '');
+    const openOwnerLabel = t(`hardware_popover.${observation ? 'view_observation' : 'open_target'}`);
     const menuAction = (action) => {
         setMenuAnchor(null);
         onSubmit(action);
     };
+    const actionGrid = {display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 0.75};
 
     return <Box component="section" aria-label={device.name}
-        sx={{border: '1px solid', borderColor: expanded ? 'primary.main' : 'divider', borderRadius: 1.25, overflow: 'hidden'}}>
-        <ButtonBase onClick={onToggle} aria-expanded={expanded} aria-controls={contentId}
-            sx={{display: 'flex', width: '100%', px: 1.25, py: 1.1, gap: 1, textAlign: 'left',
-                bgcolor: expanded ? 'action.hover' : 'transparent', '&:hover': {bgcolor: 'action.hover'}}}>
-            <Box sx={{flex: 1, minWidth: 0}}>
-                <Typography variant="body2" noWrap sx={{fontWeight: 700}}>{device.name}</Typography>
-                <Typography variant="caption" noWrap color="text.secondary" sx={{display: 'block'}}>
-                    {status.known ? ownerLabel : t('hardware_popover.status_unavailable')}
-                </Typography>
-            </Box>
-            <Chip size="small" variant="outlined" color={status.color}
-                label={t(`hardware_popover.status_${status.key}`)} sx={{height: 23, fontSize: '0.68rem'}} />
-            <ExpandMoreIcon sx={{fontSize: 19, color: 'text.secondary', transform: expanded ? 'rotate(180deg)' : 'none'}} />
-        </ButtonBase>
-        <Collapse in={expanded} unmountOnExit>
-            <Box id={contentId} sx={{px: 1.25, pt: 1, pb: 0.5}}>
-                <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1} sx={{mb: 1}}>
-                    <Typography variant="caption" color="text.secondary" sx={{overflowWrap: 'anywhere'}}>
+        sx={{containerType: 'inline-size', border: '1px solid', borderColor: expanded ? 'primary.main' : 'divider', borderRadius: 1.25, overflow: 'hidden'}}>
+        <Stack direction="row" alignItems="center" sx={{bgcolor: expanded ? 'action.hover' : 'transparent'}}>
+            <ButtonBase onClick={onToggle} aria-expanded={expanded} aria-controls={contentId}
+                sx={{display: 'flex', flex: 1, minWidth: 0, px: 1.25, py: 1, gap: 1, textAlign: 'left',
+                    '&:hover': {bgcolor: 'action.hover'}}}>
+                <Box sx={{flex: 1, minWidth: 0}}>
+                    <Typography variant="body2" noWrap title={device.name} sx={{fontWeight: 700}}>{device.name}</Typography>
+                    <Typography variant="caption" noWrap title={`${device.host}:${device.port}`} color="text.secondary" sx={{display: 'block'}}>
                         {device.host}:{device.port}
                     </Typography>
-                    {status.known && data.connected && <Chip size="small" variant="outlined"
-                        color={data.motion_unconfirmed ? 'warning' : 'default'}
-                        label={t(`hardware_popover.${activityKey}`)} sx={{height: 21, fontSize: '0.65rem'}} />}
-                </Stack>
-                {owned && !manual && <Box sx={{mb: 1}}>
-                    <Typography variant="caption" color="text.secondary" sx={{display: 'block'}}>
-                        {t(`hardware_popover.${observation ? 'controlled_by_observation' : 'controlled_by_target'}`)}
-                    </Typography>
-                    <Typography variant="body2" sx={{fontWeight: 600, overflowWrap: 'anywhere'}}>{ownerName}</Typography>
-                    {!observation && onViewOwner && <Button size="small" endIcon={<OpenInNewIcon />}
-                        onClick={() => onViewOwner(owner)} sx={{px: 0, minWidth: 0}}>{t('hardware_popover.open_target')}</Button>}
-                </Box>}
-                <Box sx={{display: 'grid', gridTemplateColumns: kind === 'rotator' ? '1fr 1fr' : '1fr', gap: 1.25, mb: 0.5}}>
-                    {kind === 'rotator' ? <>
-                        <TelemetryValue label={t('hardware_popover.azimuth')} value={status.known && data.connected ? degrees(data.az) : '—'} />
-                        <TelemetryValue label={t('hardware_popover.elevation')} value={status.known && data.connected ? degrees(data.el) : '—'} />
-                    </> : <>
-                        <TelemetryValue label={t('hardware_popover.frequency')} value={status.known && data.connected ? frequency(data.frequency) : '—'} />
-                        {status.known && data.connected && (finite(data.vfo1?.frequency) || finite(data.vfo2?.frequency)) &&
-                            <Box sx={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1}}>
-                                {finite(data.vfo1?.frequency) && <TelemetryValue label={t('hardware_popover.vfo_1_frequency', {defaultValue: 'VFO 1'})} value={frequency(data.vfo1.frequency)} />}
-                                {finite(data.vfo2?.frequency) && <TelemetryValue label={t('hardware_popover.vfo_2_frequency', {defaultValue: 'VFO 2'})} value={frequency(data.vfo2.frequency)} />}
-                            </Box>}
-                    </>}
                 </Box>
-            </Box>
-        </Collapse>
-        {(expanded || canDisconnect) && <Stack direction="row" alignItems="center" spacing={0.5}
-            sx={{px: 1.25, py: 1, flexWrap: 'nowrap', '& .MuiButton-root': {minWidth: 0, px: 1, whiteSpace: 'nowrap'}}}>
-            {expanded && primary && <Button size="small" variant={primary.movement || primary.action === 'connect' ? 'contained' : 'outlined'}
-                title={primary.label} sx={{overflow: 'hidden'}}
-                disabled={primary.owner ? !onViewOwner : !ready || busy || Boolean(primary.blocked)}
-                onClick={() => primary.owner ? onViewOwner(owner) : primary.movement ? onManualControl(String(device.id)) : onSubmit(primary.action)}>
-                <Box component="span" sx={{overflow: 'hidden', textOverflow: 'ellipsis'}}>{primary.label}</Box>
-            </Button>}
-            <Box sx={{flex: 1, minWidth: 0}} />
-            {data.connected && <Button size="small" color="warning" variant="outlined" sx={{flexShrink: 0}}
-                startIcon={<StopCircleOutlinedIcon sx={{fontSize: '16px !important'}} />}
-                disabled={!socketConnected || !loaded || command?.action === 'stop' && busy}
-                onClick={() => onSubmit('stop')}>{stopLabel}</Button>}
-            {/* An operator can disconnect any owner, including an observation,
-                and can interrupt pending movement without taking manual control. */}
-            <Button size="small" color="error" variant="outlined" sx={{flexShrink: 0}}
-                disabled={!socketConnected || !loaded || !canDisconnect || command?.action === 'disconnect' && busy}
-                onClick={() => onSubmit('disconnect')}>{t('hardware_popover.disconnect')}</Button>
-            {expanded && <Tooltip title={t('hardware_popover.more_actions', {name: device.name})}>
-                <IconButton size="small" sx={{flexShrink: 0}} aria-label={t('hardware_popover.more_actions', {name: device.name})}
-                    aria-haspopup="menu" aria-expanded={Boolean(menuAnchor)} onClick={(event) => setMenuAnchor(event.currentTarget)}>
-                    <MoreHorizIcon fontSize="small" />
+                <DeviceFeedback message={message} severity={severity} pending={submitting && !unavailable} />
+                <Chip size="small" variant="outlined" color={status.color}
+                    label={t(`hardware_popover.status_${status.key}`)} sx={{height: 23, flexShrink: 0, fontSize: '0.68rem'}} />
+                <ExpandMoreIcon sx={{fontSize: 19, color: 'text.secondary', transform: expanded ? 'rotate(180deg)' : 'none'}} />
+            </ButtonBase>
+            {/* Keep details outside the header button so inspecting a warning
+                does not also expand or collapse the device controls. */}
+            {details && <Tooltip title={t('hardware_popover.status_details', {name: device.name})}>
+                <IconButton size="small" aria-controls={detailsId} sx={{mr: 0.75}}
+                    aria-label={t('hardware_popover.status_details', {name: device.name})}
+                    aria-expanded={detailsExpanded} onClick={() => setDetailsExpanded(!detailsExpanded)}>
+                    <InfoOutlinedIcon sx={{fontSize: 16}} />
                 </IconButton>
             </Tooltip>}
-        </Stack>}
-        <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={() => setMenuAnchor(null)}>
-            {manual && data.connected && kind === 'rotator' && <MenuItem disabled={!ready || busy || data.motion_unconfirmed}
-                onClick={() => menuAction(data.parked ? 'unpark' : 'park')}>{t(`hardware_popover.${data.parked ? 'unpark' : 'park'}`)}</MenuItem>}
-            {manual && data.connected && kind === 'rotator' && <MenuItem disabled={!ready || busy}
-                onClick={() => menuAction('release')}>{t('hardware_popover.release_control')}</MenuItem>}
-            <MenuItem disabled={!onManage} onClick={() => {setMenuAnchor(null); onManage();}}>{t('hardware_popover.device_settings')}</MenuItem>
+        </Stack>
+        <Collapse in={Boolean(details && detailsExpanded)} unmountOnExit>
+            <Alert id={detailsId} severity={severity === 'success' ? 'info' : severity}
+                sx={{borderRadius: 0, py: 0, overflowWrap: 'anywhere', whiteSpace: 'pre-line'}}>{details}</Alert>
+        </Collapse>
+        <Collapse in={expanded} unmountOnExit>
+            <Box id={contentId} sx={{px: 1.25, pt: 0.5, pb: 1.25}}>
+                <Stack direction="row" spacing={0.75} alignItems="center" sx={{minHeight: 32, mb: 0.75}}>
+                    <Typography variant="caption" color="text.secondary">{t('hardware_popover.control_label')}</Typography>
+                    <Typography variant="body2" noWrap sx={{flex: 1, minWidth: 0, fontWeight: 600}}
+                        title={ready ? ownerLabel : t('hardware_popover.status_unavailable')}>
+                        {ready ? ownerLabel : '—'}
+                    </Typography>
+                    <Tooltip title={openOwnerLabel}>
+                        <span><IconButton size="small" aria-label={openOwnerLabel}
+                            disabled={!ready || !owned || manual || !onViewOwner} onClick={() => onViewOwner(owner)}>
+                            <OpenInNewIcon sx={{fontSize: 16}} />
+                        </IconButton></span>
+                    </Tooltip>
+                    <Tooltip title={t('hardware_popover.device_settings')}>
+                        <span><IconButton size="small" disabled={!onEdit} aria-label={t('hardware_popover.device_settings')}
+                            onClick={() => onEdit(device)}><SettingsOutlinedIcon sx={{fontSize: 18}} /></IconButton></span>
+                    </Tooltip>
+                </Stack>
+                <Box sx={{display: 'grid', gridTemplateColumns: kind === 'rotator' ? '1fr 1fr 1fr' : '2fr 1fr', gap: 1.25, mb: 1.25}}>
+                    {kind === 'rotator' ? <>
+                        <TelemetryValue label={t('hardware_popover.azimuth')} value={ready && data.connected ? degrees(data.az) : '—'} />
+                        <TelemetryValue label={t('hardware_popover.elevation')} value={ready && data.connected ? degrees(data.el) : '—'} />
+                    </> : <TelemetryValue label={t('hardware_popover.frequency')}
+                        value={ready && data.connected ? frequency(data.frequency) : '—'} />}
+                    <TelemetryValue label={t('hardware_popover.activity')}
+                        value={ready && data.connected ? t(`hardware_popover.${activityKey}`) : '—'} />
+                </Box>
+                {kind === 'rig' && <Box sx={{display: 'grid', gridTemplateColumns: '1fr', gap: 1.25, mb: 1.25,
+                    '@container (min-width: 340px)': {gridTemplateColumns: '1fr 1fr'}}}>
+                    {/* Keep VFO slots reserved while samples arrive or disappear. */}
+                    <TelemetryValue label={t('hardware_popover.vfo_1_frequency')}
+                        value={ready && data.connected ? frequency(data.vfo1?.frequency) : '—'} />
+                    <TelemetryValue label={t('hardware_popover.vfo_2_frequency')}
+                        value={ready && data.connected ? frequency(data.vfo2?.frequency) : '—'} />
+                </Box>}
+                <Box sx={actionGrid}>
+                    <DeviceAction reason={takeControlReason} onClick={() => onSubmit('take-control')}>
+                        {t('hardware_popover.take_manual_control')}
+                    </DeviceAction>
+                    <DeviceAction reason={releaseReason} onClick={() => onSubmit('release')}>
+                        {t('hardware_popover.release_control')}
+                    </DeviceAction>
+                </Box>
+                {kind === 'rotator' && <Box sx={{...actionGrid, mt: 0.75}}>
+                    <DeviceAction reason={moveReason} variant="contained" onClick={() => onManualControl(String(device.id))}>
+                        {t('hardware_popover.manual_movement')}
+                    </DeviceAction>
+                    <DeviceAction aria-label={t('hardware_popover.parking_actions', {name: device.name})}
+                        aria-haspopup="menu" aria-controls={menuAnchor ? menuId : undefined}
+                        aria-expanded={Boolean(menuAnchor)} endIcon={<ExpandMoreIcon />}
+                        onClick={(event) => setMenuAnchor(event.currentTarget)}>{t('hardware_popover.parking_actions_label')}</DeviceAction>
+                </Box>}
+            </Box>
+        </Collapse>
+        <Divider />
+        {/* Connection actions never trade places when a request completes. */}
+        <Box sx={{display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 0.75, p: 1.25,
+            '& > :last-child': {gridColumn: '1 / -1'},
+            '@container (min-width: 340px)': {gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+                '& > :last-child': {gridColumn: 'auto'}}}}>
+            <DeviceAction reason={connectReason} onClick={() => onSubmit('connect')}>{t('hardware_popover.connect')}</DeviceAction>
+            <DeviceAction reason={disconnectReason} color="error" onClick={() => onSubmit('disconnect')}>
+                {t('hardware_popover.disconnect')}
+            </DeviceAction>
+            <DeviceAction reason={stopReason} color="warning" startIcon={<StopCircleOutlinedIcon sx={{fontSize: '16px !important'}} />}
+                onClick={() => onSubmit('stop')}>{stopLabel}</DeviceAction>
+        </Box>
+        <Menu id={menuId} anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={() => setMenuAnchor(null)}>
+            {['park', 'unpark'].map((action) => {
+                const reason = movementReason || (action === 'park' && data.parked ? t('hardware_popover.already_parked')
+                    : action === 'unpark' && !data.parked ? t('hardware_popover.not_parked') : '');
+                // Direct MenuItem children preserve arrow-key navigation. Show
+                // disabled prerequisites inline so they are easy to discover.
+                return <MenuItem key={action} disabled={Boolean(reason)} aria-label={t(`hardware_popover.${action}`)}
+                    onClick={() => menuAction(action)} sx={{display: 'block', maxWidth: 300}}>
+                    <Typography variant="body2">{t(`hardware_popover.${action}`)}</Typography>
+                    {reason && <Typography variant="caption" component="span"
+                        sx={{display: 'block', whiteSpace: 'normal'}}>{reason}</Typography>}
+                </MenuItem>;
+            })}
         </Menu>
-        {data.motion_unconfirmed && <Alert severity="warning" sx={{borderRadius: 0, py: 0}}>
-            {t(`hardware_popover.${data.connected ? 'waiting_stationary' : 'disconnected_motion_unconfirmed'}`)}
-        </Alert>}
-        {data.stop_warning && <Typography variant="caption" color="warning.main" sx={{display: 'block', px: 1.25, pb: 0.75, overflowWrap: 'anywhere'}}>{data.stop_warning}</Typography>}
-        {(error || data.error) && <Alert severity="error" sx={{borderRadius: 0, py: 0}}>
-            {error || data.error_message || t('hardware_popover.communication_failed')}
-        </Alert>}
-        {feedbackVisible && <Stack role="status" direction="row" spacing={0.75} alignItems="center" sx={{px: 1.25, pb: 1}}>
-            {submitting && <CircularProgress size={12} />}
-            <Typography variant="caption" color={['failed', 'unknown'].includes(command.status) ? 'warning.main' : 'text.secondary'}
-                sx={{overflowWrap: 'anywhere'}}>{feedback}{command.reason ? ` — ${command.reason}` : ''}</Typography>
-        </Stack>}
     </Box>;
 }
 
-export default function DeviceControlPanel({kind, onManage, onViewOwner, onManualControl}) {
+export default function DeviceControlPanel({kind, onManage, onViewOwner, onManualControl, onEdit}) {
     const dispatch = useDispatch();
     const {socket} = useSocket();
     const {t} = useTranslation('dashboard');
@@ -247,7 +323,7 @@ export default function DeviceControlPanel({kind, onManage, onViewOwner, onManua
                         socketConnected={socket?.connected} loaded={control.loaded} expanded={expandedId === id}
                         onToggle={() => setExpandedId((previous) => previous === id ? null : id)}
                         onSubmit={(action) => submit(id, action)} onManualControl={onManualControl || setManualId}
-                        onViewOwner={onViewOwner} onManage={onManage} />;
+                        onViewOwner={onViewOwner} onEdit={onEdit} />;
                 })}
             </Stack>
         </Box>

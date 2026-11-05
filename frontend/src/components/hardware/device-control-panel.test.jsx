@@ -2,7 +2,7 @@ import React from 'react';
 import {configureStore} from '@reduxjs/toolkit';
 import {Provider} from 'react-redux';
 import {ThemeProvider} from '@mui/material/styles';
-import {act, fireEvent, render, screen, within} from '@testing-library/react';
+import {act, fireEvent, render, screen, waitFor, within} from '@testing-library/react';
 import {beforeEach, describe, expect, it, vi} from 'vitest';
 import '../../i18n/config.js';
 import {setupTheme} from '../../theme.js';
@@ -18,7 +18,7 @@ const snapshot = (extra = {}) => ({
     worker_generation: 'worker', worker_started_at: 1, sequence: 1, owner: null,
     data: {connected: true, az: 120, el: 25}, ...extra,
 });
-function setup({snapshots = [snapshot()], config = [mount], receivedAt, loaded = true, loadError = null} = {}) {
+function setup({snapshots = [snapshot()], config = [mount], receivedAt, loaded = true, loadError = null, kind = 'rotator'} = {}) {
     const payload = {epoch: 'boot', server_time: Date.now() / 1000, commands: [], devices: snapshots};
     let state = hardware(undefined, fetchHardwareState.fulfilled(payload));
     if (receivedAt !== undefined) state = {...state, devices: Object.fromEntries(
@@ -26,7 +26,7 @@ function setup({snapshots = [snapshot()], config = [mount], receivedAt, loaded =
     )};
     state = {...state, loaded, error: loadError};
     const store = configureStore({reducer: {
-        hardwareControl: hardware, rotators: () => ({rotators: config}),
+        hardwareControl: hardware, rotators: () => ({rotators: config}), rigs: () => ({rigs: config}),
     }, preloadedState: {hardwareControl: state}});
     const requests = [];
     socket.emit.mockImplementation((_event, request, ack) => {
@@ -37,10 +37,10 @@ function setup({snapshots = [snapshot()], config = [mount], receivedAt, loaded =
             status: 'submitted', revision: 1, submitted_at: Date.now() / 1000,
         }}});
     });
-    render(<Provider store={store}><ThemeProvider theme={setupTheme()}><DeviceControlPanel kind="rotator" /></ThemeProvider></Provider>);
+    render(<Provider store={store}><ThemeProvider theme={setupTheme()}><DeviceControlPanel kind={kind} /></ThemeProvider></Provider>);
     return {store, requests};
 }
-const openMenu = () => fireEvent.click(screen.getByRole('button', {name: 'More actions for S.A.T.'}));
+const openMenu = () => fireEvent.click(screen.getByRole('button', {name: 'Parking actions for S.A.T.'}));
 
 beforeEach(() => {vi.clearAllMocks(); socket.connected = true;});
 
@@ -54,13 +54,14 @@ describe('device actions and status', () => {
         await act(async () => fireEvent.click(disconnect));
         expect(requests[0].data.action).toBe('disconnect');
         act(() => store.dispatch(receiveDeviceSnapshot(snapshot({sequence: 2, data: {connected: false, motion_unconfirmed: true}}))));
+        fireEvent.click(screen.getByRole('button', {name: 'Status details for S.A.T.'}));
         expect(screen.getByText('Disconnected; antenna motion is unconfirmed')).toBeInTheDocument();
     });
 
     it('can take control of a disconnected device held by an old tracker', async () => {
         const {requests} = setup({snapshots: [snapshot({owner: {type: 'tracker', id: 'target-1'},
             data: {connected: false, error: true, motion_unconfirmed: true}})]});
-        expect(screen.queryByRole('button', {name: 'Connect'})).not.toBeInTheDocument();
+        expect(screen.getByRole('button', {name: 'Connect'})).toBeDisabled();
         await act(async () => fireEvent.click(screen.getByRole('button', {name: 'Take manual control'})));
         expect(requests[0].data).toMatchObject({action: 'take-control', device_id: 'mount', generation: 'lease'});
     });
@@ -82,6 +83,8 @@ describe('device actions and status', () => {
             ? {success: false, error: 'Device is reserved by a scheduled observation'}
             : {success: true, data: {epoch: 'boot', server_time: Date.now() / 1000, devices: [], commands: []}}));
         await act(async () => fireEvent.click(screen.getByRole('button', {name: 'Connect'})));
+        expect(screen.getByRole('status')).toHaveTextContent('Device is reserved by a scheduled observation');
+        fireEvent.click(screen.getByRole('button', {name: 'Status details for S.A.T.'}));
         expect(screen.getByRole('alert')).toHaveTextContent('Device is reserved by a scheduled observation');
         expect(socket.emit).toHaveBeenLastCalledWith('api.call', expect.objectContaining({cmd: 'get-hardware-state'}), expect.any(Function));
     });
@@ -119,14 +122,15 @@ describe('device actions and status', () => {
         ['parked', {parked: true}], ['uncertain motion', {motion_unconfirmed: true}], ['tracking', {tracking: true}],
     ])('disables manual movement for %s', (_label, data) => {
         setup({snapshots: [snapshot({owner: {type: 'manual', id: 'manual:rotator:mount'}, data: {connected: true, ...data}})]});
-        expect(screen.getByRole('button', {name: 'Manual'})).toBeDisabled();
+        expect(screen.getByRole('button', {name: 'Manual movement…'})).toBeDisabled();
         expect(screen.getByRole('button', {name: 'Pause tracking'})).toBeEnabled();
     });
 
     it('offers park and release only for manually owned hardware', async () => {
         const {requests} = setup({snapshots: [snapshot({owner: {type: 'manual', id: 'manual:rotator:mount'}})]});
+        expect(screen.getByRole('button', {name: 'Release control'})).toBeEnabled();
         openMenu();
-        expect(screen.getByRole('menuitem', {name: 'Release control'})).toBeInTheDocument();
+        expect(screen.getByRole('menuitem', {name: 'Unpark'})).toHaveAttribute('aria-disabled', 'true');
         await act(async () => fireEvent.click(screen.getByRole('menuitem', {name: 'Park'})));
         expect(requests[0].data.action).toBe('park');
     });
@@ -135,5 +139,73 @@ describe('device actions and status', () => {
         setup({config: [], snapshots: []});
         expect(screen.getByText('No rotators configured')).toBeInTheDocument();
         expect(screen.queryByRole('region')).not.toBeInTheDocument();
+    });
+
+    it.each(['rotator', 'rig'])('keeps %s action positions through connection and ownership changes', async (kind) => {
+        const {store, requests} = setup({kind, config: [{...mount, stop_supported: true}],
+            snapshots: [snapshot({kind, data: {connected: false}})]});
+        const stopLabel = kind === 'rotator' ? 'Stop' : 'Pause tracking';
+        const labels = ['Take manual control', 'Release control', 'Connect', 'Disconnect', stopLabel,
+            ...(kind === 'rotator' ? ['Manual movement…', 'Parking actions for S.A.T.'] : [])];
+        const buttons = labels.map((name) => screen.getByRole('button', {name}));
+        expect(screen.getByRole('button', {name: 'Connect'})).toBeEnabled();
+        expect(screen.getByRole('button', {name: 'Disconnect'})).toBeDisabled();
+        expect(screen.getByRole('button', {name: stopLabel})).toBeDisabled();
+        for (const [sequence, type] of [[2, 'manual'], [3, 'tracker'], [4, 'observation']]) {
+            act(() => store.dispatch(receiveDeviceSnapshot(snapshot({kind, sequence,
+                owner: {type, id: `${type}-owner`}, data: {connected: true},
+            }))));
+            expect(labels.map((name) => screen.getByRole('button', {name}))).toEqual(buttons);
+            expect(screen.getByRole('button', {name: 'Connect'})).toBeDisabled();
+            expect(screen.getByRole('button', {name: 'Disconnect'})).toBeEnabled();
+            expect(screen.getByRole('button', {name: stopLabel})).toBeEnabled();
+            expect(screen.getByRole('button', {name: 'Take manual control'}).disabled).toBe(type !== 'tracker');
+            expect(screen.getByRole('button', {name: 'Release control'}).disabled).toBe(type !== 'manual');
+        }
+        act(() => store.dispatch(receiveDeviceSnapshot(snapshot({kind, sequence: 5, data: {connected: false}}))));
+        expect(labels.map((name) => screen.getByRole('button', {name}))).toEqual(buttons);
+        expect(screen.getByRole('button', {name: 'Connect'})).toBeEnabled();
+        fireEvent.click(within(screen.getByRole('region')).getByRole('button', {expanded: true}));
+        await waitFor(() => expect(screen.queryByRole('button', {name: 'Take manual control'})).not.toBeInTheDocument());
+        expect(screen.getByRole('button', {name: 'Connect'})).toBeEnabled();
+        expect(screen.getByRole('button', {name: 'Disconnect'})).toBeDisabled();
+        expect(screen.getByRole('button', {name: stopLabel})).toBeDisabled();
+        expect(requests).toEqual([]);
+    });
+
+    it('places persistent command feedback above ownership and telemetry', () => {
+        const {store} = setup();
+        const status = screen.getByRole('status');
+        expect(status).toHaveTextContent('Ready');
+        expect(status.compareDocumentPosition(screen.getByText('Control:')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+        act(() => store.dispatch(receiveDeviceCommand({tracker_id: 'manual:rotator:mount', command_id: 'pending',
+            device_ids: {rotator: 'mount'}, action: 'connect', status: 'started', revision: 1,
+        })));
+        expect(screen.getByRole('status')).toBe(status);
+        expect(status).toHaveTextContent('Connecting…');
+        expect(screen.getByRole('button', {name: 'Disconnect'})).toBeEnabled();
+        expect(screen.getByRole('button', {name: 'Pause tracking'})).toBeEnabled();
+    });
+
+    it('keeps both parking choices visible as the rotator parks', () => {
+        const {store} = setup({snapshots: [snapshot({owner: {type: 'manual', id: 'manual:rotator:mount'}})]});
+        openMenu();
+        expect(screen.getByRole('menuitem', {name: 'Park'})).toHaveFocus();
+        expect(screen.getByRole('menuitem', {name: 'Park'})).not.toHaveAttribute('aria-disabled', 'true');
+        expect(screen.getByRole('menuitem', {name: 'Unpark'})).toHaveAttribute('aria-disabled', 'true');
+        act(() => store.dispatch(receiveDeviceSnapshot(snapshot({sequence: 2,
+            owner: {type: 'manual', id: 'manual:rotator:mount'}, data: {connected: true, parked: true},
+        }))));
+        expect(screen.getByRole('menuitem', {name: 'Park'})).toHaveAttribute('aria-disabled', 'true');
+        expect(screen.getByRole('menuitem', {name: 'Unpark'})).not.toHaveAttribute('aria-disabled', 'true');
+    });
+
+    it('explains unavailable actions on keyboard focus', async () => {
+        setup({snapshots: [snapshot({owner: {type: 'tracker', id: 'target-1'}})]});
+        const move = screen.getByRole('button', {name: 'Manual movement…'});
+        expect(move).toBeDisabled();
+        fireEvent.keyDown(document, {key: 'Tab'});
+        act(() => move.parentElement.focus());
+        expect(await screen.findByRole('tooltip')).toHaveTextContent('Take manual control first');
     });
 });
