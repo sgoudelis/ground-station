@@ -34,11 +34,14 @@ from sqlalchemy import (
     String,
     TypeDecorator,
     UniqueConstraint,
+    Uuid,
     text,
 )
-from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import DeclarativeMeta
+
+# Uuid uses CHAR(32) on SQLite: a native UUID column has numeric affinity
+# and can silently convert digits-only UUIDs into imprecise floating-point values.
 
 # Creates a base class for declarative models using SQLAlchemy.
 Base: DeclarativeMeta = declarative_base()
@@ -194,7 +197,7 @@ class SatelliteOrbits(Base):
     tle2 = Column(String, nullable=True)
     omm_payload = Column(JSON, nullable=True)
     source_id = Column(
-        UUID(as_uuid=True), ForeignKey("orbital_sources.id"), nullable=True, index=True
+        Uuid(as_uuid=True), ForeignKey("orbital_sources.id"), nullable=True, index=True
     )
     source_object_id = Column(String, nullable=True)
     source_updated_at = Column(AwareDateTime, nullable=True)
@@ -302,7 +305,7 @@ class Transmitters(Base):
 
 class Rigs(Base):
     __tablename__ = "rigs"
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
+    id = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
     name = Column(String, nullable=False)
     host = Column(String, nullable=False)
     port = Column(Integer, nullable=False)
@@ -323,7 +326,7 @@ class Rigs(Base):
 
 class SDRs(Base):
     __tablename__ = "sdrs"
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
+    id = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
     name = Column(String, nullable=False)
     serial = Column(String, nullable=True)
     host = Column(String, nullable=True)
@@ -344,7 +347,7 @@ class SDRs(Base):
 
 class Rotators(Base):
     __tablename__ = "rotators"
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
+    id = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
     name = Column(String, nullable=False)
     host = Column(String, nullable=False)
     port = Column(Integer, nullable=False)
@@ -370,7 +373,7 @@ class Rotators(Base):
 
 class Locations(Base):
     __tablename__ = "locations"
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
+    id = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
     name = Column(String, nullable=False)
     callsign = Column(String, nullable=True)
     station_type = Column(String, nullable=False, default="stationary", server_default="stationary")
@@ -389,8 +392,8 @@ class Locations(Base):
 
 class Preferences(Base):
     __tablename__ = "preferences"
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=True)
+    id = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
+    user_id = Column(Uuid(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=True)
     scope = Column(
         String,
         nullable=False,
@@ -447,12 +450,12 @@ class Preferences(Base):
 
 class OrbitalSources(Base):
     __tablename__ = "orbital_sources"
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
+    id = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
     name = Column(String, nullable=False)
     identifier = Column(String, nullable=False)
     url = Column(String, nullable=False)
     format = Column(String, nullable=False, default="3le")
-    group_id = Column(UUID(as_uuid=True), ForeignKey("groups.id"), nullable=True, index=True)
+    group_id = Column(Uuid(as_uuid=True), ForeignKey("groups.id"), nullable=True, index=True)
     norad_ids = Column(JSON, nullable=True)
     query_mode = Column(String, nullable=False, default="url", server_default="url")
     provider = Column(String, nullable=False, default="generic_http", server_default="generic_http")
@@ -497,7 +500,7 @@ class OrbitalSourceSyncState(Base):
 
     __tablename__ = "orbital_source_sync_states"
     source_id = Column(
-        UUID(as_uuid=True),
+        Uuid(as_uuid=True),
         ForeignKey("orbital_sources.id", ondelete="CASCADE"),
         primary_key=True,
         nullable=False,
@@ -522,7 +525,7 @@ TLESources = OrbitalSources
 
 class Groups(Base):
     __tablename__ = "groups"
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
+    id = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
     name = Column(String, nullable=False)
     identifier = Column(String, nullable=True)
     type = Column(Enum(SatelliteGroupType), nullable=False, default=SatelliteGroupType.USER)
@@ -538,7 +541,7 @@ class Groups(Base):
 
 class TrackingState(Base):
     __tablename__ = "tracking_state"
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
+    id = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
     name = Column(String, index=True, unique=True)
     value = Column(JSON, index=True)
     added = Column(AwareDateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
@@ -552,7 +555,7 @@ class TrackingState(Base):
 
 class Cameras(Base):
     __tablename__ = "cameras"
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
+    id = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
     name = Column(String, nullable=False)
     url = Column(String, nullable=True)
     type = Column(Enum(CameraType), nullable=False)
@@ -718,9 +721,9 @@ class MonitoredSatellites(Base):
     )
 
     # Hardware FKs (for referential integrity & "what's using this hardware?")
-    sdr_id = Column(UUID(as_uuid=True), ForeignKey("sdrs.id"), nullable=True)
-    rotator_id = Column(UUID(as_uuid=True), ForeignKey("rotators.id"), nullable=True)
-    rig_id = Column(UUID(as_uuid=True), ForeignKey("rigs.id"), nullable=True)
+    sdr_id = Column(Uuid(as_uuid=True), ForeignKey("sdrs.id"), nullable=True)
+    rotator_id = Column(Uuid(as_uuid=True), ForeignKey("rotators.id"), nullable=True)
+    rig_id = Column(Uuid(as_uuid=True), ForeignKey("rigs.id"), nullable=True)
 
     # Grouped config as JSON (flexible, maps to frontend structure)
     satellite_config = Column(JSON, nullable=False)  # {"name": "ISS (ZARYA)", "group_id": "..."}
@@ -771,9 +774,9 @@ class ScheduledObservations(Base):
     )  # When tasks actually end (usually same as event_end)
 
     # Hardware FKs
-    sdr_id = Column(UUID(as_uuid=True), ForeignKey("sdrs.id"), nullable=True)
-    rotator_id = Column(UUID(as_uuid=True), ForeignKey("rotators.id"), nullable=True)
-    rig_id = Column(UUID(as_uuid=True), ForeignKey("rigs.id"), nullable=True)
+    sdr_id = Column(Uuid(as_uuid=True), ForeignKey("sdrs.id"), nullable=True)
+    rotator_id = Column(Uuid(as_uuid=True), ForeignKey("rotators.id"), nullable=True)
+    rig_id = Column(Uuid(as_uuid=True), ForeignKey("rigs.id"), nullable=True)
 
     # Grouped config as JSON
     satellite_config = Column(JSON, nullable=False)  # {"name": "ISS (ZARYA)", "group_id": "..."}
@@ -817,7 +820,7 @@ class ScheduledObservations(Base):
 class Users(Base):
     __tablename__ = "users"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
+    id = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
     username = Column(String, nullable=False)
     username_norm = Column(String, nullable=False, unique=True, index=True)
     password_hash = Column(String, nullable=False)
@@ -829,10 +832,10 @@ class Users(Base):
     failed_login_count = Column(Integer, nullable=False, default=0, server_default="0")
     locked_until = Column(AwareDateTime, nullable=True)
     created_by_user_id = Column(
-        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+        Uuid(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
     updated_by_user_id = Column(
-        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+        Uuid(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
     created_at = Column(AwareDateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(
@@ -853,9 +856,9 @@ class Users(Base):
 class AuthSessions(Base):
     __tablename__ = "auth_sessions"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
+    id = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
     user_id = Column(
-        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+        Uuid(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
     token_hash = Column(String, nullable=False, unique=True, index=True)
     expires_at = Column(AwareDateTime, nullable=False, index=True)
@@ -878,9 +881,9 @@ class ApiTokens(Base):
 
     __tablename__ = "api_tokens"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
+    id = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
     user_id = Column(
-        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+        Uuid(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
     name = Column(String(80), nullable=False)
     token_hash = Column(String(64), nullable=False, unique=True, index=True)

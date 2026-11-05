@@ -318,6 +318,61 @@ async def test_batch_source_deletion_only_protects_members_of_sources_that_remai
 
 
 @pytest.mark.unit
+@pytest.mark.parametrize(
+    "retained_id",
+    [
+        uuid.UUID("12345678-1234-4234-8234-123456789012"),
+        uuid.UUID("12345678-1234-4234-8234-123456789e12"),
+        uuid.UUID("00000000-0000-4000-8000-000000000001"),
+    ],
+)
+async def test_source_deletion_preserves_groups_with_numeric_looking_uuids(
+    source_catalog, retained_id
+):
+    session, source_id = source_catalog
+    group = Groups(
+        id=retained_id,
+        name="Stations",
+        identifier="stations",
+        type=SatelliteGroupType.SYSTEM,
+        satellite_ids=[TARGET_ID, OTHER_ID],
+    )
+    session.add(group)
+    await session.flush()
+    session.add(
+        OrbitalSources(
+            id=retained_id,
+            name="Stations",
+            identifier="stations",
+            url="https://example.com/stations.csv",
+            group_id=retained_id,
+        )
+    )
+    await session.commit()
+    # Force UUID decoding from SQLite instead of using cached Python objects.
+    session.expunge_all()
+
+    result = await delete_satellite_tle_sources(session, [str(source_id)])
+
+    assert result["success"] is True
+    assert result["deletion_summary"][0]["satellites_deleted"] == 0
+    assert await _catalog_snapshot(session) == {
+        "satellites": [OTHER_ID, TARGET_ID],
+        "orbits": [
+            (OTHER_ID, "earth"),
+            (TARGET_ID, "earth"),
+            (TARGET_ID, "mars"),
+            (TARGET_ID, "moon"),
+        ],
+        "transmitters": ["other-transmitter", "target-transmitter"],
+        "groups": [("stations", [TARGET_ID, OTHER_ID])],
+    }
+    assert await session.scalar(select(Groups.id)) == retained_id
+    source = await session.scalar(select(OrbitalSources))
+    assert source.id == source.group_id == retained_id
+
+
+@pytest.mark.unit
 async def test_batch_source_deletion_rolls_back_all_selected_sources_on_failure(
     source_catalog, monkeypatch
 ):
