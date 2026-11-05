@@ -333,6 +333,26 @@ class DeviceRuntime:
                 if previous_control[0] is not None:
                     self.released_controls.append(previous_control)
                 return True
+            if method == "pause":
+                self._check(request)
+                if not self.data["connected"]:
+                    raise RuntimeError("Device is disconnected")
+                previous_control = (self.owner, self.generation)
+                active = any(
+                    self.data.get(field)
+                    for field in ("tracking", "slewing", "park_requested", "motion_unconfirmed")
+                )
+                self._fence()
+                self.owner = None
+                self.data.update(parked=False, park_requested=False)
+                if self.kind == "rotator" and active:
+                    # Pausing updates cannot halt the last physical movement.
+                    # Require fresh stationary samples before allowing new motion.
+                    self._stationary = None
+                    self.data.update(motion_unconfirmed=True, stopped=False)
+                if previous_control[0] is not None:
+                    self.released_controls.append(previous_control)
+                return True
             if method == "emergency_stop":
                 previous_control = (self.owner, self.generation)
                 self._fence()

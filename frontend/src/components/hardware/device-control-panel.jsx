@@ -10,6 +10,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+import PauseCircleOutlineIcon from '@mui/icons-material/PauseCircleOutline';
 import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 import StopCircleOutlinedIcon from '@mui/icons-material/StopCircleOutlined';
 import {useSocket} from '../common/socket.jsx';
@@ -45,9 +46,9 @@ function TelemetryValue({label, value}) {
 }
 
 // Keep unavailable actions in place and explain their prerequisites on hover/focus.
-function DeviceAction({reason, children, ...props}) {
+function DeviceAction({reason, hint, children, ...props}) {
     const [showReason, setShowReason] = useState(false);
-    return <Tooltip title={reason || ''} describeChild open={Boolean(reason && showReason)}
+    return <Tooltip title={reason || hint || ''} describeChild open={Boolean((reason || hint) && showReason)}
         onOpen={() => setShowReason(true)} onClose={() => setShowReason(false)}>
         <Box component="span" sx={{display: 'flex', minWidth: 0}} tabIndex={reason ? 0 : undefined}
             onFocus={() => setShowReason(true)} onBlur={() => setShowReason(false)}>
@@ -98,7 +99,6 @@ function DeviceRow({device, kind, snapshot, status, command, owner, expanded, no
     const canDisconnect = Boolean(data.connected || data.error || owned || busy);
     const ready = socketConnected && loaded && status.known;
     const stopUnsupported = kind === 'rotator' && device.stop_supported === false;
-    const stopLabel = t(`hardware_popover.${stopUnsupported || kind === 'rig' ? 'pause_tracking' : 'stop'}`);
     const activityKey = data.motion_unconfirmed ? 'motion_unconfirmed' : data.parked ? 'parked'
         : data.slewing ? 'slewing' : data.tracking ? 'tracking' : 'idle';
     const ownerName = owner.name || (observation ? t('hardware_popover.observation')
@@ -109,10 +109,9 @@ function DeviceRow({device, kind, snapshot, status, command, owner, expanded, no
     const submitting = ['sending', 'submitted', 'started'].includes(command?.status);
     const feedbackVisible = command && (submitting || ['failed', 'unknown', 'cancelled'].includes(command.status)
         || command.status === 'succeeded' && now - command.updated_at * 1000 < 3000);
-    const progressKey = command?.action === 'stop' && stopUnsupported ? 'pausing'
-        : ({connect: 'connecting', disconnect: 'disconnecting', 'take-control': 'transferring',
-            release: 'releasing', stop: kind === 'rig' ? 'pausing' : 'stopping', move: 'moving',
-            park: 'parking', unpark: 'unparking'})[command?.action] || 'applying';
+    const progressKey = ({connect: 'connecting', disconnect: 'disconnecting', 'take-control': 'transferring',
+        release: 'releasing', pause: 'pausing', stop: kind === 'rig' ? 'pausing' : 'stopping', move: 'moving',
+        park: 'parking', unpark: 'unparking'})[command?.action] || 'applying';
     const feedback = submitting ? t(`hardware_popover.${progressKey}`)
         : t(`hardware_popover.${command?.status === 'failed' && command.action === 'connect'
             ? 'connection_failed' : `command_${command?.status}`}`);
@@ -145,11 +144,14 @@ function DeviceRow({device, kind, snapshot, status, command, owner, expanded, no
         : !manual ? t('hardware_popover.manual_control_required') : motionWarning);
     const moveReason = movementReason || (data.parked ? t('hardware_popover.unpark_first')
         : data.tracking ? t('hardware_popover.pause_first') : '');
-    // Operator Stop/Disconnect remain available during other commands and with
+    // Operator Pause/Stop/Disconnect remain available during other commands and with
     // stale telemetry, including when an observation owns the device.
     const operatorReason = !socketConnected ? t('hardware_popover.station_offline')
         : !loaded ? t(`hardware_popover.status_${status.key}`) : '';
-    const stopReason = operatorReason || (!data.connected ? t('hardware_popover.connect_first')
+    const pauseReason = operatorReason || (!data.connected ? t('hardware_popover.connect_first')
+        : command?.action === 'pause' && busy ? t('hardware_popover.command_in_progress') : '');
+    const stopReason = operatorReason || (stopUnsupported ? t('hardware_popover.stop_unsupported')
+        : !data.connected ? t('hardware_popover.connect_first')
         : command?.action === 'stop' && busy ? t('hardware_popover.command_in_progress') : '');
     const disconnectReason = operatorReason || (!canDisconnect ? t('hardware_popover.already_disconnected')
         : command?.action === 'disconnect' && busy ? t('hardware_popover.command_in_progress') : '');
@@ -240,15 +242,20 @@ function DeviceRow({device, kind, snapshot, status, command, owner, expanded, no
         <Divider />
         {/* Connection actions never trade places when a request completes. */}
         <Box sx={{display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 0.75, p: 1.25,
-            '& > :last-child': {gridColumn: '1 / -1'},
-            '@container (min-width: 340px)': {gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+            '& > :last-child': {gridColumn: kind === 'rig' ? '1 / -1' : 'auto'},
+            [`@container (min-width: ${kind === 'rotator' ? 380 : 340}px)`]: {gridTemplateColumns: kind === 'rotator'
+                ? '1fr 1.3fr 1fr 1fr' : 'repeat(3, minmax(0, 1fr))',
                 '& > :last-child': {gridColumn: 'auto'}}}}>
             <DeviceAction reason={connectReason} color="success" onClick={() => onSubmit('connect')}>{t('hardware_popover.connect')}</DeviceAction>
             <DeviceAction reason={disconnectReason} color="error" onClick={() => onSubmit('disconnect')}>
                 {t('hardware_popover.disconnect')}
             </DeviceAction>
-            <DeviceAction reason={stopReason} color="warning" startIcon={<StopCircleOutlinedIcon sx={{fontSize: '16px !important'}} />}
-                onClick={() => onSubmit('stop')}>{stopLabel}</DeviceAction>
+            <DeviceAction reason={pauseReason} hint={t(`hardware_popover.${kind === 'rotator' ? 'pause_rotator_hint' : 'pause_rig_hint'}`)}
+                color="warning" startIcon={<PauseCircleOutlineIcon sx={{fontSize: '16px !important'}} />}
+                onClick={() => onSubmit('pause')}>{t('hardware_popover.pause_tracking')}</DeviceAction>
+            {kind === 'rotator' && <DeviceAction reason={stopReason} color="warning"
+                hint={t('hardware_popover.stop_hint')} startIcon={<StopCircleOutlinedIcon sx={{fontSize: '16px !important'}} />}
+                onClick={() => onSubmit('stop')}>{t('hardware_popover.stop')}</DeviceAction>}
         </Box>
         <Menu id={menuId} anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={() => setMenuAnchor(null)}>
             {['park', 'unpark'].map((action) => {
@@ -355,7 +362,8 @@ export function DeviceManualRotatorDialog({deviceId, onClose}) {
     const data = snapshot?.data || EMPTY_OBJECT;
     const command = latestDeviceCommand(control.commands, 'rotator', deviceId);
     const status = deviceStatus(snapshot, control.loaded, socket?.connected, now, control.error);
-    const stopLabel = selected?.stop_supported === false ? t('hardware_popover.pause_tracking') : undefined;
+    const pauseOnly = selected?.stop_supported === false;
+    const stopLabel = pauseOnly ? t('hardware_popover.pause_tracking') : undefined;
     const submit = (action, position) => dispatch(sendDeviceCommand({socket, kind: 'rotator', deviceId, action, position})).unwrap();
 
     return <ManualRotatorDialog open={Boolean(selected)} onClose={onClose} rotator={selected}
@@ -367,5 +375,5 @@ export function DeviceManualRotatorDialog({deviceId, onClose}) {
         minEl={selected?.minel ?? 0} maxEl={selected?.maxel ?? 90}
         disabled={status.key !== 'connected' || snapshot?.owner?.type !== 'manual' || Boolean(data.motion_unconfirmed) || Boolean(data.parked) || Boolean(data.tracking)}
         command={command} canStop={socket?.connected && control.loaded && data.connected} stopLabel={stopLabel}
-        onMove={(az, el) => submit('move', {az, el})} onStop={() => submit('stop')} />;
+        onMove={(az, el) => submit('move', {az, el})} onStop={() => submit(pauseOnly ? 'pause' : 'stop')} />;
 }

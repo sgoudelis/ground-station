@@ -28,6 +28,13 @@ watchdog expiry, and transport failures retain normal error reporting.
 Hamlib Stop acknowledgement waits at most 5 seconds (or a shorter configured
 controller timeout). Handoff still requires fresh stationary-position samples.
 
+Pause revokes control and fences queued automatic updates while preserving the
+connection. It sends no physical Stop command. An active rotator retains motion
+uncertainty until fresh stationary samples confirm that its last movement has
+finished. The rotator popover keeps separate Pause and Stop buttons in the action
+row; physical Stop is disabled when the controller does not support it. Rig Pause
+suspends automatic frequency updates.
+
 Disconnect revokes control, pauses automatic updates, and closes the socket
 without sending Hamlib `S` or opening a recovery connection. An active rotator
 retains `motion_unconfirmed` and a `stop_warning`: the antenna may continue its
@@ -50,11 +57,12 @@ superseding pending manual commands while retaining the physical connection.
 The handoff still confirms stationary motion before granting the tracker control.
 This permission applies only to the manual ownership generation seen at acceptance;
 saved tracking intent and automatic reconnects cannot displace manual control.
-Stop and explicit operator Disconnect are available independently of ownership,
-including during observations, and revoke queued producer writes. Disconnect
-does not acquire manual control. It interrupts pending device operations and
-updates the former target's connection state before reporting completion. Its
-generation check prevents a delayed request from closing a new owner's socket.
+Pause, Stop, and explicit operator Disconnect are available independently of
+ownership, including during observations, and revoke queued producer writes.
+Pause and Disconnect do not acquire manual control. They interrupt pending device
+operations and update the former target's connection state before reporting
+completion. Their generation checks prevent delayed requests from disrupting a
+new owner.
 
 Observation handoff checks station hardware owners and saved tracker selections
 alongside the rotator assignment map, including selections left after manual
@@ -92,7 +100,7 @@ repeated publications of cached positions cannot complete it.
 `control-hardware` accepts `kind`, `device_id`, `action`, `command_id`, `epoch`,
 `accept_before`, and the last observed `generation`. Stop can use an older
 generation. Move additionally accepts `position: {az, el}`. Actions are
-`connect`, `disconnect`, `take-control`, `release`, `stop`, and rotator-specific
+`connect`, `disconnect`, `take-control`, `release`, `pause`, `stop`, and rotator-specific
 `move`, `park`, `unpark`.
 
 The acknowledgement contains `data.command`; completion uses the existing

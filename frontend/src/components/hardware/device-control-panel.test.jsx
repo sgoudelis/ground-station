@@ -52,7 +52,7 @@ describe('device actions and status', () => {
         expect(screen.queryByRole('alert')).not.toBeInTheDocument();
         act(() => store.dispatch(receiveDeviceSnapshot(snapshot({sequence: 2, data: {connected: true, motion_unconfirmed: true}}))));
         expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-        expect(screen.getByRole('button', {name: 'Pause tracking'})).toBeEnabled();
+        expect(screen.getByRole('button', {name: 'Pause'})).toBeEnabled();
         expect(screen.getByRole('button', {name: 'Take manual control'})).toBeDisabled();
         const disconnect = screen.getByRole('button', {name: 'Disconnect'});
         expect(disconnect).toBeEnabled();
@@ -139,11 +139,11 @@ describe('device actions and status', () => {
         expect(within(screen.getByRole('region', {name: 'S.A.T.'})).getByRole('button', {expanded: true})).toBeInTheDocument();
     });
 
-    it('withholds stale telemetry and ordinary commands while allowing Stop', () => {
+    it('withholds stale telemetry and ordinary commands while allowing Pause and Disconnect', () => {
         setup({receivedAt: Date.now() - 16000});
         expect(screen.queryByText('120.0°')).not.toBeInTheDocument();
         expect(screen.getByRole('button', {name: 'Take manual control'})).toBeDisabled();
-        expect(screen.getByRole('button', {name: 'Pause tracking'})).toBeEnabled();
+        expect(screen.getByRole('button', {name: 'Pause'})).toBeEnabled();
         expect(screen.getByRole('button', {name: 'Disconnect'})).toBeEnabled();
     });
 
@@ -162,7 +162,7 @@ describe('device actions and status', () => {
     ])('disables manual movement for %s', (_label, data) => {
         setup({snapshots: [snapshot({owner: {type: 'manual', id: 'manual:rotator:mount'}, data: {connected: true, ...data}})]});
         expect(screen.getByRole('button', {name: 'Manual movement…'})).toBeDisabled();
-        expect(screen.getByRole('button', {name: 'Pause tracking'})).toBeEnabled();
+        expect(screen.getByRole('button', {name: 'Pause'})).toBeEnabled();
     });
 
     it('offers park and release only for manually owned hardware', async () => {
@@ -183,13 +183,13 @@ describe('device actions and status', () => {
     it.each(['rotator', 'rig'])('keeps %s action positions through connection and ownership changes', async (kind) => {
         const {store, requests} = setup({kind, config: [{...mount, stop_supported: true}],
             snapshots: [snapshot({kind, data: {connected: false}})]});
-        const stopLabel = kind === 'rotator' ? 'Stop' : 'Pause tracking';
-        const labels = ['Take manual control', 'Release control', 'Connect', 'Disconnect', stopLabel,
-            ...(kind === 'rotator' ? ['Manual movement…', 'Parking actions for S.A.T.'] : [])];
+        const labels = ['Take manual control', 'Release control', 'Connect', 'Disconnect', 'Pause',
+            ...(kind === 'rotator' ? ['Stop', 'Manual movement…', 'Parking actions for S.A.T.'] : [])];
+        const operatorLabels = ['Pause', ...(kind === 'rotator' ? ['Stop'] : [])];
         const buttons = labels.map((name) => screen.getByRole('button', {name}));
         expect(screen.getByRole('button', {name: 'Connect'})).toBeEnabled();
         expect(screen.getByRole('button', {name: 'Disconnect'})).toBeDisabled();
-        expect(screen.getByRole('button', {name: stopLabel})).toBeDisabled();
+        operatorLabels.forEach((name) => expect(screen.getByRole('button', {name})).toBeDisabled());
         for (const [sequence, type] of [[2, 'manual'], [3, 'tracker'], [4, 'observation']]) {
             act(() => store.dispatch(receiveDeviceSnapshot(snapshot({kind, sequence,
                 owner: {type, id: `${type}-owner`}, data: {connected: true},
@@ -197,7 +197,7 @@ describe('device actions and status', () => {
             expect(labels.map((name) => screen.getByRole('button', {name}))).toEqual(buttons);
             expect(screen.getByRole('button', {name: 'Connect'})).toBeDisabled();
             expect(screen.getByRole('button', {name: 'Disconnect'})).toBeEnabled();
-            expect(screen.getByRole('button', {name: stopLabel})).toBeEnabled();
+            operatorLabels.forEach((name) => expect(screen.getByRole('button', {name})).toBeEnabled());
             expect(screen.getByRole('button', {name: 'Take manual control'}).disabled).toBe(type !== 'tracker');
             expect(screen.getByRole('button', {name: 'Release control'}).disabled).toBe(type !== 'manual');
         }
@@ -208,7 +208,7 @@ describe('device actions and status', () => {
         await waitFor(() => expect(screen.queryByRole('button', {name: 'Take manual control'})).not.toBeInTheDocument());
         expect(screen.getByRole('button', {name: 'Connect'})).toBeEnabled();
         expect(screen.getByRole('button', {name: 'Disconnect'})).toBeDisabled();
-        expect(screen.getByRole('button', {name: stopLabel})).toBeDisabled();
+        operatorLabels.forEach((name) => expect(screen.getByRole('button', {name})).toBeDisabled());
         expect(requests).toEqual([]);
     });
 
@@ -226,7 +226,7 @@ describe('device actions and status', () => {
         expect(screen.getByRole('status')).toBe(status);
         expect(status).toHaveTextContent('Connecting…');
         expect(screen.getByRole('button', {name: 'Disconnect'})).toBeEnabled();
-        expect(screen.getByRole('button', {name: 'Pause tracking'})).toBeEnabled();
+        expect(screen.getByRole('button', {name: 'Pause'})).toBeEnabled();
         fireEvent.click(header);
         await waitFor(() => expect(screen.queryByRole('status')).not.toBeInTheDocument());
         fireEvent.click(header);

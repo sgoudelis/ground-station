@@ -19,7 +19,7 @@ class ControlChanged(RuntimeError):
 async def submit_device_command(kind, device_id, action, details, request):
     if kind not in {"rotator", "rig"}:
         raise ValueError("Unknown device kind")
-    actions = {"connect", "disconnect", "take-control", "release", "stop"}
+    actions = {"connect", "disconnect", "take-control", "release", "pause", "stop"}
     if kind == "rotator":
         actions.update({"move", "park", "unpark"})
     if action not in actions:
@@ -44,9 +44,17 @@ async def submit_device_command(kind, device_id, action, details, request):
             raise ValueError("Unpark the rotator before moving it")
     previous_owner = snapshot.get("owner")
     previous_identity = hardware.owners.get(previous_owner or "", {})
-    if previous_identity.get("type") == "observation" and action not in {"stop", "disconnect"}:
+    if previous_identity.get("type") == "observation" and action not in {
+        "pause",
+        "stop",
+        "disconnect",
+    }:
         raise ValueError("Device is controlled by a scheduled observation")
-    if hardware.reservations.get((kind, device_id)) and action not in {"stop", "disconnect"}:
+    if hardware.reservations.get((kind, device_id)) and action not in {
+        "pause",
+        "stop",
+        "disconnect",
+    }:
         raise ValueError("Device is reserved by a scheduled observation")
     if (
         previous_owner
@@ -54,6 +62,7 @@ async def submit_device_command(kind, device_id, action, details, request):
         and action
         not in {
             "take-control",
+            "pause",
             "stop",
             "disconnect",
         }
@@ -63,14 +72,14 @@ async def submit_device_command(kind, device_id, action, details, request):
         existing = operations.existing(request.get("command_id"), owner)
         if existing:
             return existing
-        # Operator Stop/Disconnect may interrupt any producer. Acceptance alone
+        # Operator Pause/Stop/Disconnect may interrupt any producer. Acceptance alone
         # cannot cancel its work; wait for the worker to fence old writes.
         command = operations.accept(
             owner,
             {f"{kind}_id": device_id},
             {f"{kind}_id": device_id},
             {**request, "action": action},
-            allow_handoff=action in {"take-control", "stop", "disconnect"},
+            allow_handoff=action in {"take-control", "pause", "stop", "disconnect"},
             device_snapshot=snapshot,
         )
     hardware.spawn(
@@ -115,7 +124,9 @@ async def execute_device_command(
     try:
         worker = hardware.devices.get((kind, device_id))
         if action != "stop":
-            if action != "disconnect" and hardware.reservations.get((kind, device_id)):
+            if action not in {"pause", "disconnect"} and hardware.reservations.get(
+                (kind, device_id)
+            ):
                 raise ControlChanged("A scheduled observation reserved this device")
             if worker and worker.snapshot.get("generation") != expected_generation:
                 raise ControlChanged("Device control changed before execution")
@@ -128,6 +139,21 @@ async def execute_device_command(
                 await wait_position(kind, device_id, generation, command)
             else:
                 await hardware.release(kind, device_id)
+        elif action == "pause":
+            if worker is None or not worker.snapshot.get("data", {}).get("connected"):
+                raise ValueError("Device is disconnected")
+            current_owner = worker.snapshot.get("owner")
+            # Pause fences the producer without release's physical Stop or a
+            # handoff. Keep the existing transport open for position polling.
+            await hardware.call(
+                kind,
+                device_id,
+                "pause",
+                owner=current_owner,
+                generation=expected_generation,
+            )
+            if current_owner and hardware.on_release:
+                await hardware.on_release(current_owner, kind, device_id)
         elif action == "release":
             await hardware.release(kind, device_id)
         elif action == "disconnect":

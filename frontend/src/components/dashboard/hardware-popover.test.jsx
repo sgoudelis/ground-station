@@ -80,8 +80,11 @@ describe('device popovers', () => {
         expect(screen.queryByText('ISS')).not.toBeInTheDocument();
     });
 
-    it('opens manual movement over the current page and sends device-scoped Move and Stop', async () => {
-        const {store, requests, open} = setup();
+    it.each([
+        {stopSupported: true, stopAction: 'stop', stopLabel: 'Stop'},
+        {stopSupported: false, stopAction: 'pause', stopLabel: 'Pause'},
+    ])('opens manual movement over the current page and sends Move and $stopLabel', async ({stopSupported, stopAction, stopLabel}) => {
+        const {store, requests, open} = setup({stopSupported});
         await open();
         fireEvent.click(screen.getByRole('button', {name: 'Manual movement…'}));
         await waitFor(() => expect(screen.queryByRole('dialog', {name: 'Rotator controls'})).not.toBeInTheDocument());
@@ -95,8 +98,10 @@ describe('device popovers', () => {
         }});
         expect(requests[0].data.tracker_id).toBeUndefined();
         expect(within(dialog).getByRole('button', {name: /^move$/i})).toBeDisabled();
-        await act(async () => fireEvent.click(within(dialog).getByRole('button', {name: /^stop$/i})));
-        expect(requests[1].data.action).toBe('stop');
+        const stopButton = within(dialog).getByRole('button', {name: new RegExp(`^${stopLabel}$`, 'i')});
+        await act(async () => fireEvent.click(stopButton));
+        expect(requests[1].data.action).toBe(stopAction);
+        expect(stopButton).toBeDisabled();
         expect(store.getState().targetSatTrack.trackerId).toBe('target-1');
         expect(screen.getByTestId('current-page')).toHaveTextContent('/hardware');
         fireEvent.click(within(dialog).getByRole('button', {name: /close/i}));
@@ -169,14 +174,14 @@ describe('device popovers', () => {
         expect(screen.getByTestId('current-page')).toHaveTextContent(`/admin/system/hardware/${kind === 'rotator' ? 'rotators' : 'rigs'}`);
     });
 
-    it('shows rig frequencies and Pause tracking', async () => {
+    it('shows rig frequencies and Pause', async () => {
         const {open} = setup({kind: 'rig', owner: {type: 'tracker', id: 'target-2'}, data: {
             frequency: 145800000, vfo1: {frequency: 435000000}, vfo2: {frequency: 145800000}, tracking: true,
         }});
         await open();
         expect(screen.getByText('435.000000 MHz')).toBeInTheDocument();
         expect(screen.getAllByText('145.800000 MHz')).toHaveLength(2);
-        expect(screen.getByRole('button', {name: 'Pause tracking'})).toBeEnabled();
+        expect(screen.getByRole('button', {name: 'Pause'})).toBeEnabled();
     });
 
     it('keeps Stop visible on a collapsed device row', async () => {
@@ -218,11 +223,35 @@ describe('device popovers', () => {
         expect(requests[0].data.action).toBe('disconnect');
     });
 
-    it('labels unsupported physical Stop as Pause tracking', async () => {
+    it('keeps unsupported physical Stop visible beside Pause', async () => {
         const {open} = setup({stopSupported: false});
         await open();
-        expect(screen.getByRole('button', {name: 'Pause tracking'})).toBeEnabled();
-        expect(screen.queryByRole('button', {name: 'Stop'})).not.toBeInTheDocument();
+        expect(screen.getByRole('button', {name: 'Pause'})).toBeEnabled();
+        const stop = screen.getByRole('button', {name: 'Stop'});
+        expect(stop).toBeDisabled();
+        fireEvent.focus(stop.parentElement);
+        expect(await screen.findByRole('tooltip')).toHaveTextContent('This controller does not support physical Stop');
+    });
+
+    it.each(['rotator', 'rig'])('pauses %s tracking from the collapsed action row', async (kind) => {
+        const {open, requests} = setup({kind, data: {tracking: true}});
+        await open();
+        const header = within(screen.getByRole('region')).getByRole('button', {expanded: true});
+        fireEvent.click(header);
+        await waitFor(() => expect(screen.queryByRole('status')).not.toBeInTheDocument());
+        await act(async () => fireEvent.click(screen.getByRole('button', {name: 'Pause'})));
+        expect(requests[0].data).toMatchObject({kind, action: 'pause', generation: 'lease'});
+        expect(screen.getByRole('button', {name: 'Pause'})).toBeDisabled();
+        if (kind === 'rotator') {
+            // Physical Stop can interrupt Pause, just as it can interrupt Move.
+            expect(screen.getByRole('button', {name: 'Stop'})).toBeEnabled();
+            await act(async () => fireEvent.click(screen.getByRole('button', {name: 'Stop'})));
+            expect(requests[1].data.action).toBe('stop');
+        } else {
+            expect(screen.queryByRole('button', {name: 'Stop'})).not.toBeInTheDocument();
+            fireEvent.click(header);
+            expect(screen.getByRole('status')).toHaveTextContent('Pausing tracking…');
+        }
     });
 
     it('allows inspecting hardware while offline and disables commands', async () => {

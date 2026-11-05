@@ -265,8 +265,8 @@ export default function ManualRotatorDialog({
     const [az, setAz] = React.useState('');
     const [el, setEl] = React.useState('');
     const busy = isCommandOutstanding(command);
-    const moving = busy && command.action !== 'stop';
-    const stopping = busy && command.action === 'stop';
+    const moving = busy && !['pause', 'stop'].includes(command.action);
+    const stopping = busy && ['pause', 'stop'].includes(command.action);
     const statusPalette = command?.status === 'failed' ? 'error'
         : command?.status === 'unknown' && (!command.reconciled || command.action === 'stop') ? 'warning' : busy ? 'info' : null;
     const statusColor = statusPalette

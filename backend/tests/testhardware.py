@@ -948,6 +948,66 @@ async def test_disconnect_closes_tcp_without_sending_stop_or_reopening(station):
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("stop_supported", [True, False])
+@pytest.mark.parametrize(
+    "activity", [None, "tracking", "slewing", "park_requested", "motion_unconfirmed"]
+)
+async def test_pause_fences_updates_without_stopping_or_closing(stop_supported, activity):
+    controller = FakeController()
+    runtime = DeviceRuntime(
+        "rotator", "mount", {"stop_supported": stop_supported}, "epoch", controller
+    )
+    runtime.owner = "tracker:one:incarnation"
+    runtime.data.update(connected=True, stopped=activity is None)
+    if activity:
+        runtime.data[activity] = True
+    queued = request(runtime, "position", az=100, el=20)
+    generation = runtime.generation
+
+    await runtime.execute(request(runtime, "pause"))
+
+    assert runtime.owner is None
+    assert runtime.generation != generation
+    assert runtime.data["connected"] is True
+    assert runtime.data["tracking"] is False
+    assert runtime.data["park_requested"] is False
+    assert runtime.data["motion_unconfirmed"] is (activity is not None)
+    assert runtime.data["stopped"] is (activity is None)
+    assert controller.commands == []
+    with pytest.raises(ControlReleased):
+        await runtime.execute(queued)
+    if activity:
+        await runtime.execute({**request(runtime, "acquire"), "owner": "manual:rotator:mount"})
+        with pytest.raises(StopUnconfirmed, match="stationary"):
+            await runtime.execute(request(runtime, "position", az=100, el=20))
+        await runtime.poll()
+        runtime._stationary_since -= 2
+        await runtime.poll()
+        await runtime.poll()
+        assert runtime.data["motion_unconfirmed"] is False
+        assert runtime.data["stopped"] is True
+        assert controller.commands == []
+
+
+@pytest.mark.asyncio
+async def test_delayed_pause_cannot_revoke_a_new_owner():
+    controller = FakeController()
+    runtime = DeviceRuntime("rotator", "mount", {}, "epoch", controller)
+    runtime.owner = "tracker:old:incarnation"
+    runtime.data.update(connected=True, tracking=True)
+    stale = request(runtime, "pause")
+    runtime._fence()
+    runtime.owner = "tracker:new:incarnation"
+    runtime.data["tracking"] = True
+    with pytest.raises(RuntimeError, match="control changed"):
+        await runtime.execute(stale)
+    assert runtime.owner == "tracker:new:incarnation"
+    assert runtime.data["tracking"] is True
+    assert runtime.data["connected"] is True
+    assert controller.commands == []
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize(
     "activity", ["tracking", "slewing", "park_requested", "motion_unconfirmed"]
 )
@@ -1261,8 +1321,8 @@ async def test_observation_reserves_entire_bundle_and_rejects_other_producers(st
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("action", ["stop", "disconnect"])
-async def test_operator_stop_or_disconnect_cancels_pending_move(station, monkeypatch, action):
+@pytest.mark.parametrize("action", ["pause", "stop", "disconnect"])
+async def test_operator_interrupt_cancels_pending_move(station, monkeypatch, action):
     service, details, commands, connections = station
     registry = OperationRegistry()
     monkeypatch.setattr(control, "hardware", service)
@@ -1301,15 +1361,16 @@ async def test_operator_stop_or_disconnect_cancels_pending_move(station, monkeyp
     assert registry.records[action]["status"] == "succeeded", registry.records[action]
     assert registry.records["move"]["status"] == "cancelled"
     assert commands.count("S") == (1 if action == "stop" else 0)
-    assert service.snapshots()[0]["data"]["connected"] is (action == "stop")
+    assert service.snapshots()[0]["data"]["connected"] is (action != "disconnect")
     assert len(connections) == opened
 
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("kind", ["rotator", "rig"])
 @pytest.mark.parametrize("tracker_id", ["target-1", "obs-one"])
-async def test_operator_disconnect_closes_producer_connection_during_reservation(
-    station, monkeypatch, kind, tracker_id
+@pytest.mark.parametrize("action", ["pause", "disconnect"])
+async def test_operator_interrupt_detaches_producer_during_reservation(
+    station, monkeypatch, kind, tracker_id, action
 ):
     service, details, commands, connections = station
     registry = OperationRegistry()
@@ -1321,30 +1382,33 @@ async def test_operator_disconnect_closes_producer_connection_during_reservation
     client = factory(HardwareClient(service.register_tracker(tracker_id)), "device", details)
     await client.connect()
     await client.call("heartbeat")
+    service.on_intent.reset_mock()
     worker = service.devices[(kind, "device")]
     original_owner = worker.snapshot["owner"]
     opened = len(connections)
     async with service.reserve([(kind, "device")], "one"):
         request = {
-            "command_id": "operator-disconnect",
+            "command_id": f"operator-{action}",
             "epoch": registry.epoch,
             "accept_before": time.time() + 10,
             "generation": worker.snapshot["generation"],
         }
-        # Manual takeover remains barred; Disconnect is the explicit override.
+        # Manual takeover remains barred; Pause/Disconnect explicitly override it.
         with pytest.raises(ValueError, match="scheduled observation"):
             await control.submit_device_command(kind, "device", "take-control", details, request)
-        command = await control.submit_device_command(
-            kind, "device", "disconnect", details, request
-        )
+        command = await control.submit_device_command(kind, "device", action, details, request)
         async with asyncio.timeout(5):
             while registry.records[command["command_id"]]["status"] in {"submitted", "started"}:
                 await asyncio.sleep(0.01)
         assert registry.records[command["command_id"]]["status"] == "succeeded"
-        assert worker.snapshot["data"]["connected"] is False
+        assert worker.snapshot["data"]["connected"] is (action == "pause")
+        assert worker.snapshot["data"]["tracking"] is False
         assert worker.snapshot["owner"] is None
         service.on_release.assert_any_await(original_owner, kind, "device")
-        service.on_intent.assert_awaited_with(kind, "device", False)
+        if action == "disconnect":
+            service.on_intent.assert_awaited_with(kind, "device", False)
+        else:
+            service.on_intent.assert_not_awaited()
         with pytest.raises(RuntimeError, match="control changed"):
             await client.call("heartbeat")
         assert "S" not in commands
