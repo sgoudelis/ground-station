@@ -88,11 +88,11 @@ except ImportError:
 os.environ.setdefault("GR_BUFFER_TYPE", "vmcirc_mmap_tmpfile")
 
 from gnuradio import blocks, gr  # noqa: E402
-from satellites.components.demodulators.bpsk_demodulator import bpsk_demodulator  # noqa: E402
 from scipy import signal  # noqa: E402
 
 from constants import FramingType  # noqa: E402
 from demodulators.basedecoderprocess import BaseDecoderProcess  # noqa: E402
+from demodulators.bpskdemodulator import create_bpsk_demodulator  # noqa: E402
 from demodulators.deframerfactory import create_bpsk_deframer  # noqa: E402
 from telemetry.parser import TelemetryParser  # noqa: E402
 
@@ -356,13 +356,10 @@ class BPSKFlowgraph(gr.top_block):
             # Create BPSK demodulator
             # The FLL (Frequency Lock Loop) handles any residual frequency offset
             # after our frequency translation, so we set f_offset=0 and let it auto-track
-            demod = bpsk_demodulator(
+            demod = create_bpsk_demodulator(
                 baudrate=self.baudrate,
                 samp_rate=self.sample_rate,
-                iq=True,
-                f_offset=0,  # Let FLL auto-track with 250 Hz bandwidth
                 differential=self.differential,
-                manchester=False,
                 options=options,
             )
 
