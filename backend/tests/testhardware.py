@@ -13,7 +13,7 @@ import socketio
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from controllers.rotator import RotatorController, StopRejected, StopUnconfirmed
+from controllers.rotator import RotatorController, StopUnconfirmed
 from crud import hardware as hardware_crud
 from db.models import TrackingState
 from hardware import control
@@ -327,16 +327,17 @@ async def test_unanswered_stop_preserves_motion_guard_across_owner_loss():
 
 
 @pytest.mark.asyncio
-async def test_disconnect_closes_tcp_when_stop_has_no_reply_without_reopening(station):
+async def test_disconnect_closes_tcp_without_sending_stop_or_reopening(station):
     _, details, commands, connections = station
     details["_ignore_stop"] = True
-    controller = RotatorController(host=details["host"], port=details["port"], timeout=0.05)
+    controller = RotatorController(host=details["host"], port=details["port"], timeout=5)
     runtime = DeviceRuntime("rotator", "mount", details, "epoch", controller)
     await runtime.execute({**request(runtime, "acquire"), "owner": "tracker:one:incarnation"})
     runtime.data["tracking"] = True
     opened = len(connections)
     old_generation = runtime.generation
-    result = await runtime.execute(request(runtime, "disconnect"))
+    # A controller that ignores S must not delay an explicit disconnect.
+    result = await asyncio.wait_for(runtime.execute(request(runtime, "disconnect")), timeout=0.5)
     assert result["connected"] is False
     assert result["motion_unconfirmed"] is True
     assert result["stopped"] is False
@@ -344,7 +345,7 @@ async def test_disconnect_closes_tcp_when_stop_has_no_reply_without_reopening(st
     assert runtime.owner is None
     assert runtime.generation != old_generation
     assert controller.writer is None
-    assert commands.count("S") == 1
+    assert "S" not in commands
     assert len(connections) == opened
     reads = commands.count("p")
     await runtime.tick()
@@ -352,20 +353,55 @@ async def test_disconnect_closes_tcp_when_stop_has_no_reply_without_reopening(st
 
 
 @pytest.mark.asyncio
-async def test_disconnect_also_closes_when_controller_rejects_stop():
-    class Rejected(FakeController):
+@pytest.mark.parametrize(
+    "activity", ["tracking", "slewing", "park_requested", "motion_unconfirmed"]
+)
+async def test_disconnect_never_calls_controller_stop(activity):
+    class NoStop(FakeController):
         async def stop(self):
-            self.commands.append("S")
-            raise StopRejected("Unsupported")
+            raise AssertionError("Disconnect must not issue Stop")
 
-    controller = Rejected()
+    controller = NoStop()
     runtime = DeviceRuntime("rotator", "mount", {}, "epoch", controller)
     runtime.owner = "tracker:one:incarnation"
-    runtime.data.update(connected=True, tracking=True)
+    runtime.data.update(connected=True, **{activity: True})
     result = await runtime.execute(request(runtime, "disconnect"))
     assert result["connected"] is False
     assert result["motion_unconfirmed"] is True
-    assert controller.commands == ["S", "close"]
+    assert controller.commands == ["close"]
+
+
+@pytest.mark.asyncio
+async def test_idle_disconnect_preserves_confirmed_stationary_state():
+    controller = FakeController()
+    runtime = DeviceRuntime("rotator", "mount", {}, "epoch", controller)
+    runtime.owner = "manual:rotator:mount"
+    runtime.data.update(connected=True, stopped=True)
+    result = await runtime.execute(request(runtime, "disconnect"))
+    assert result == {
+        "connected": False,
+        "motion_unconfirmed": False,
+        "stopped": True,
+        "stop_warning": None,
+    }
+    assert runtime.owner is None
+    assert controller.commands == ["close"]
+
+
+@pytest.mark.asyncio
+async def test_delayed_operator_disconnect_reports_changed_control_without_closing():
+    controller = FakeController()
+    runtime = DeviceRuntime("rotator", "mount", {}, "epoch", controller)
+    runtime.owner = "tracker:old:incarnation"
+    runtime.data["connected"] = True
+    stale = request(runtime, "disconnect", operator=True)
+    runtime._fence()
+    runtime.owner = "tracker:new:incarnation"
+    with pytest.raises(RuntimeError, match="control changed before disconnect"):
+        await runtime.execute(stale)
+    assert runtime.data["connected"] is True
+    assert runtime.owner == "tracker:new:incarnation"
+    assert controller.commands == []
 
 
 @pytest.mark.asyncio
@@ -408,9 +444,12 @@ async def test_handoff_with_unsupported_stop_waits_for_stationarity_and_keeps_tc
 
 
 @pytest.mark.asyncio
-async def test_tracker_disconnect_reports_uncertainty_and_clears_connection_intent(station):
+@pytest.mark.parametrize("stop_supported", [True, False])
+async def test_tracker_disconnect_reports_uncertainty_and_clears_connection_intent(
+    station, stop_supported
+):
     service, details, commands, connections = station
-    details["stop_supported"] = False
+    details["stop_supported"] = stop_supported
     service.on_intent = AsyncMock()
     client = RotatorProxy(HardwareClient(service.register_tracker("target-1")), "mount", details)
     await client.connect()
@@ -419,7 +458,7 @@ async def test_tracker_disconnect_reports_uncertainty_and_clears_connection_inte
     assert await client.disconnect()
     assert client.disconnect_state["motion_unconfirmed"] is True
     assert client.disconnect_state["stopped"] is False
-    assert "unsupported" in client.disconnect_state["stop_warning"]
+    assert "without issuing Stop" in client.disconnect_state["stop_warning"]
     assert service.snapshots()[0]["owner"] is None
     assert service.snapshots()[0]["data"]["connected"] is False
     service.on_intent.assert_awaited_with("rotator", "mount", False)
@@ -627,7 +666,8 @@ async def test_observation_reserves_entire_bundle_and_rejects_other_producers(st
 
 
 @pytest.mark.asyncio
-async def test_manual_stop_cancels_pending_move_and_preserves_connection(station, monkeypatch):
+@pytest.mark.parametrize("action", ["stop", "disconnect"])
+async def test_operator_stop_or_disconnect_cancels_pending_move(station, monkeypatch, action):
     service, details, commands, connections = station
     registry = OperationRegistry()
     monkeypatch.setattr(control, "hardware", service)
@@ -661,10 +701,56 @@ async def test_manual_stop_cancels_pending_move_and_preserves_connection(station
     async with asyncio.timeout(5):
         while "P 90 25" not in commands:
             await asyncio.sleep(0.01)
-    await submit("stop")
-    await wait_status("stop", {"succeeded", "failed", "unknown"})
-    assert registry.records["stop"]["status"] == "succeeded", registry.records["stop"]
+    await submit(action)
+    await wait_status(action, {"succeeded", "failed", "unknown"})
+    assert registry.records[action]["status"] == "succeeded", registry.records[action]
     assert registry.records["move"]["status"] == "cancelled"
-    assert commands.count("S") == 1
-    assert service.snapshots()[0]["data"]["connected"]
+    assert commands.count("S") == (1 if action == "stop" else 0)
+    assert service.snapshots()[0]["data"]["connected"] is (action == "stop")
     assert len(connections) == opened
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("kind", ["rotator", "rig"])
+@pytest.mark.parametrize("tracker_id", ["target-1", "obs-one"])
+async def test_operator_disconnect_closes_producer_connection_during_reservation(
+    station, monkeypatch, kind, tracker_id
+):
+    service, details, commands, connections = station
+    registry = OperationRegistry()
+    monkeypatch.setattr(control, "hardware", service)
+    monkeypatch.setattr(control, "operations", registry)
+    service.on_release = AsyncMock()
+    service.on_intent = AsyncMock()
+    factory = RotatorProxy if kind == "rotator" else RigProxy
+    client = factory(HardwareClient(service.register_tracker(tracker_id)), "device", details)
+    await client.connect()
+    await client.call("heartbeat")
+    worker = service.devices[(kind, "device")]
+    original_owner = worker.snapshot["owner"]
+    opened = len(connections)
+    async with service.reserve([(kind, "device")], "one"):
+        request = {
+            "command_id": "operator-disconnect",
+            "epoch": registry.epoch,
+            "accept_before": time.time() + 10,
+            "generation": worker.snapshot["generation"],
+        }
+        # Manual takeover remains barred; Disconnect is the explicit override.
+        with pytest.raises(ValueError, match="scheduled observation"):
+            await control.submit_device_command(kind, "device", "take-control", details, request)
+        command = await control.submit_device_command(
+            kind, "device", "disconnect", details, request
+        )
+        async with asyncio.timeout(5):
+            while registry.records[command["command_id"]]["status"] in {"submitted", "started"}:
+                await asyncio.sleep(0.01)
+        assert registry.records[command["command_id"]]["status"] == "succeeded"
+        assert worker.snapshot["data"]["connected"] is False
+        assert worker.snapshot["owner"] is None
+        service.on_release.assert_any_await(original_owner, kind, "device")
+        service.on_intent.assert_awaited_with(kind, "device", False)
+        with pytest.raises(RuntimeError, match="control changed"):
+            await client.call("heartbeat")
+        assert "S" not in commands
+        assert len(connections) == opened

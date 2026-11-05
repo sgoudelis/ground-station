@@ -43,24 +43,33 @@ async def submit_device_command(kind, device_id, action, details, request):
             raise ValueError("Unpark the rotator before moving it")
     previous_owner = snapshot.get("owner")
     previous_identity = hardware.owners.get(previous_owner or "", {})
-    if previous_identity.get("type") == "observation" and action != "stop":
+    if previous_identity.get("type") == "observation" and action not in {"stop", "disconnect"}:
         raise ValueError("Device is controlled by a scheduled observation")
-    if hardware.reservations.get((kind, device_id)) and action != "stop":
+    if hardware.reservations.get((kind, device_id)) and action not in {"stop", "disconnect"}:
         raise ValueError("Device is reserved by a scheduled observation")
-    if previous_owner and previous_owner != owner and action not in {"take-control", "stop"}:
+    if (
+        previous_owner
+        and previous_owner != owner
+        and action
+        not in {
+            "take-control",
+            "stop",
+            "disconnect",
+        }
+    ):
         raise ValueError("Take manual control before commanding this device")
     async with operations.lock:
         existing = operations.existing(request.get("command_id"), owner)
         if existing:
             return existing
-        # A trusted handoff may preempt another producer, but completion is
-        # recorded only after the device confirms quiescence and fencing.
+        # Operator Stop/Disconnect may interrupt any producer. Acceptance alone
+        # cannot cancel its work; wait for the worker to fence old writes.
         command = operations.accept(
             owner,
             {f"{kind}_id": device_id},
             {f"{kind}_id": device_id},
             {**request, "action": action},
-            allow_handoff=action in {"take-control", "stop"},
+            allow_handoff=action in {"take-control", "stop", "disconnect"},
             device_snapshot=snapshot,
         )
     hardware.spawn(
@@ -105,7 +114,7 @@ async def execute_device_command(
     try:
         worker = hardware.devices.get((kind, device_id))
         if action != "stop":
-            if hardware.reservations.get((kind, device_id)):
+            if action != "disconnect" and hardware.reservations.get((kind, device_id)):
                 raise ControlChanged("A scheduled observation reserved this device")
             if worker and worker.snapshot.get("generation") != expected_generation:
                 raise ControlChanged("Device control changed before execution")
@@ -121,12 +130,11 @@ async def execute_device_command(
         elif action == "release":
             await hardware.release(kind, device_id)
         elif action == "disconnect":
-            # Disconnect must also work while reconnect is barred by uncertain
-            # motion. Never acquire/reopen the device just to close it.
+            # Disconnect is an operator override, including during observations.
+            # Close the existing owner directly; acquisition/release would add a
+            # handoff and could reopen a device whose motion is unconfirmed.
             if worker:
                 current_owner = worker.snapshot.get("owner")
-                if current_owner not in (None, owner):
-                    raise ControlChanged("Device control changed before disconnect")
                 if worker.process.is_alive():
                     await hardware.call(
                         kind,
@@ -134,7 +142,10 @@ async def execute_device_command(
                         "disconnect",
                         owner=current_owner,
                         generation=expected_generation,
+                        operator=True,
                     )
+                    if current_owner and hardware.on_release:
+                        await hardware.on_release(current_owner, kind, device_id)
                 else:
                     await hardware.release(kind, device_id)
             if hardware.on_intent:

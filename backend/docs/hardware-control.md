@@ -23,11 +23,13 @@ Explicit Disconnect closes the physical connection.
 Hamlib Stop acknowledgement waits at most 5 seconds (or a shorter configured
 controller timeout). Handoff still requires fresh stationary-position samples.
 
-Disconnect revokes control and closes the socket even if Stop times out or is
-rejected. It does not open a recovery connection. Its successful result may carry
-`stop_warning` and `motion_unconfirmed`: disconnecting does not prove that the
-antenna stopped. A failed position/frequency read closes the broken transport,
-marks the device disconnected, and stops polling until an explicit reconnect.
+Disconnect revokes control, pauses automatic updates, and closes the socket
+without sending Hamlib `S` or opening a recovery connection. An active rotator
+retains `motion_unconfirmed` and a `stop_warning`: the antenna may continue its
+last movement after disconnecting. Explicit Stop and handoff still use the
+configured Stop capability and motion checks. A failed position/frequency read
+closes the broken transport, marks the device disconnected, and stops polling
+until an explicit reconnect.
 No automatic reconnect is scheduled after a deliberate Disconnect.
 
 Rotator settings include **Controller supports Stop** (`stop_supported`, default
@@ -38,7 +40,11 @@ that the mount has settled. Settings edits retain this motion guard.
 
 Manual takeover can release an interactive tracker. Observations reserve their
 whole device bundle during handoff and cannot be displaced by manual takeover.
-Stop is available independently of ownership and revokes queued producer writes.
+Stop and explicit operator Disconnect are available independently of ownership,
+including during observations, and revoke queued producer writes. Disconnect
+does not acquire manual control. It interrupts pending device operations and
+updates the former target's connection state before reporting completion. Its
+generation check prevents a delayed request from closing a new owner's socket.
 
 Observation handoff checks station hardware owners and saved tracker selections
 alongside the rotator assignment map, including selections left after manual

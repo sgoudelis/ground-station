@@ -49,9 +49,8 @@ describe('device actions and status', () => {
         const {store, requests} = setup({snapshots: [snapshot({data: {connected: true, motion_unconfirmed: true}})]});
         expect(screen.getByRole('button', {name: 'Pause tracking'})).toBeEnabled();
         expect(screen.getByRole('button', {name: 'Take manual control'})).toBeDisabled();
-        openMenu();
-        const disconnect = screen.getByRole('menuitem', {name: 'Disconnect'});
-        expect(disconnect).not.toHaveAttribute('aria-disabled', 'true');
+        const disconnect = screen.getByRole('button', {name: 'Disconnect'});
+        expect(disconnect).toBeEnabled();
         await act(async () => fireEvent.click(disconnect));
         expect(requests[0].data.action).toBe('disconnect');
         act(() => store.dispatch(receiveDeviceSnapshot(snapshot({sequence: 2, data: {connected: false, motion_unconfirmed: true}}))));
@@ -103,6 +102,7 @@ describe('device actions and status', () => {
         expect(screen.queryByText('120.0°')).not.toBeInTheDocument();
         expect(screen.getByRole('button', {name: 'Take manual control'})).toBeDisabled();
         expect(screen.getByRole('button', {name: 'Pause tracking'})).toBeEnabled();
+        expect(screen.getByRole('button', {name: 'Disconnect'})).toBeEnabled();
     });
 
     it('retries failed initial status loading', async () => {
@@ -119,7 +119,7 @@ describe('device actions and status', () => {
         ['parked', {parked: true}], ['uncertain motion', {motion_unconfirmed: true}], ['tracking', {tracking: true}],
     ])('disables manual movement for %s', (_label, data) => {
         setup({snapshots: [snapshot({owner: {type: 'manual', id: 'manual:rotator:mount'}, data: {connected: true, ...data}})]});
-        expect(screen.getByRole('button', {name: 'Manual movement'})).toBeDisabled();
+        expect(screen.getByRole('button', {name: 'Manual'})).toBeDisabled();
         expect(screen.getByRole('button', {name: 'Pause tracking'})).toBeEnabled();
     });
 

@@ -50,6 +50,7 @@ function DeviceRow({device, kind, snapshot, status, command, owner, expanded, no
     const observation = owner.type === 'observation';
     const owned = Boolean(owner.type);
     const busy = isDeviceCommandActive(command);
+    const canDisconnect = Boolean(data.connected || data.error || owned || busy);
     const ready = socketConnected && loaded && status.known;
     const stopUnsupported = kind === 'rotator' && device.stop_supported === false;
     const stopLabel = t(`hardware_popover.${stopUnsupported || kind === 'rig' ? 'pause_tracking' : 'stop'}`);
@@ -136,20 +137,26 @@ function DeviceRow({device, kind, snapshot, status, command, owner, expanded, no
                 </Box>
             </Box>
         </Collapse>
-        {(expanded || data.connected) && <Stack direction="row" alignItems="center" spacing={0.75}
-            sx={{px: 1.25, py: 1, flexWrap: 'wrap', rowGap: 0.75}}>
+        {(expanded || canDisconnect) && <Stack direction="row" alignItems="center" spacing={0.5}
+            sx={{px: 1.25, py: 1, flexWrap: 'nowrap', '& .MuiButton-root': {minWidth: 0, px: 1, whiteSpace: 'nowrap'}}}>
             {expanded && primary && <Button size="small" variant={primary.movement || primary.action === 'connect' ? 'contained' : 'outlined'}
+                title={primary.label} sx={{overflow: 'hidden'}}
                 disabled={primary.owner ? !onViewOwner : !ready || busy || Boolean(primary.blocked)}
                 onClick={() => primary.owner ? onViewOwner(owner) : primary.movement ? onManualControl(String(device.id)) : onSubmit(primary.action)}>
-                {primary.label}
+                <Box component="span" sx={{overflow: 'hidden', textOverflow: 'ellipsis'}}>{primary.label}</Box>
             </Button>}
-            <Box sx={{flex: 1}} />
-            {data.connected && <Button size="small" color="warning" variant="outlined"
+            <Box sx={{flex: 1, minWidth: 0}} />
+            {data.connected && <Button size="small" color="warning" variant="outlined" sx={{flexShrink: 0}}
                 startIcon={<StopCircleOutlinedIcon sx={{fontSize: '16px !important'}} />}
                 disabled={!socketConnected || !loaded || command?.action === 'stop' && busy}
                 onClick={() => onSubmit('stop')}>{stopLabel}</Button>}
+            {/* An operator can disconnect any owner, including an observation,
+                and can interrupt pending movement without taking manual control. */}
+            <Button size="small" color="error" variant="outlined" sx={{flexShrink: 0}}
+                disabled={!socketConnected || !loaded || !canDisconnect || command?.action === 'disconnect' && busy}
+                onClick={() => onSubmit('disconnect')}>{t('hardware_popover.disconnect')}</Button>
             {expanded && <Tooltip title={t('hardware_popover.more_actions', {name: device.name})}>
-                <IconButton size="small" aria-label={t('hardware_popover.more_actions', {name: device.name})}
+                <IconButton size="small" sx={{flexShrink: 0}} aria-label={t('hardware_popover.more_actions', {name: device.name})}
                     aria-haspopup="menu" aria-expanded={Boolean(menuAnchor)} onClick={(event) => setMenuAnchor(event.currentTarget)}>
                     <MoreHorizIcon fontSize="small" />
                 </IconButton>
@@ -160,8 +167,6 @@ function DeviceRow({device, kind, snapshot, status, command, owner, expanded, no
                 onClick={() => menuAction(data.parked ? 'unpark' : 'park')}>{t(`hardware_popover.${data.parked ? 'unpark' : 'park'}`)}</MenuItem>}
             {manual && data.connected && kind === 'rotator' && <MenuItem disabled={!ready || busy}
                 onClick={() => menuAction('release')}>{t('hardware_popover.release_control')}</MenuItem>}
-            {(data.connected || data.error) && (!owned || manual) && <MenuItem disabled={!ready || busy}
-                onClick={() => menuAction('disconnect')}>{t('hardware_popover.disconnect')}</MenuItem>}
             <MenuItem disabled={!onManage} onClick={() => {setMenuAnchor(null); onManage();}}>{t('hardware_popover.device_settings')}</MenuItem>
         </Menu>
         {data.motion_unconfirmed && <Alert severity="warning" sx={{borderRadius: 0, py: 0}}>

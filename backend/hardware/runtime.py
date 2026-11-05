@@ -193,7 +193,7 @@ class DeviceRuntime:
             if self.park_target:
                 self.data["parked"] = self.arrival_hits >= 2
 
-    async def stop(self, *, recover=True):
+    async def stop(self):
         self.motion_revision += 1
         self.target = None
         self._stationary = None
@@ -218,13 +218,11 @@ class DeviceRuntime:
         except Exception as error:
             self.data["stop_warning"] = f"Physical Stop is unconfirmed: {error}"
             # Never read position on a stream with an unanswered Stop reply.
-            # Explicit Disconnect must not reopen the connection for recovery.
-            if recover:
-                try:
-                    await self.controller.recover_position()
-                    self.data["connected"] = True
-                except Exception as recovery_error:
-                    await self.transport_failed(recovery_error)
+            try:
+                await self.controller.recover_position()
+                self.data["connected"] = True
+            except Exception as recovery_error:
+                await self.transport_failed(recovery_error)
             raise StopUnconfirmed(f"Physical Stop is unconfirmed: {error}") from error
 
     async def disconnect(self):
@@ -233,29 +231,28 @@ class DeviceRuntime:
             for field in ("tracking", "slewing", "park_requested", "motion_unconfirmed")
         )
         self._fence()
+        if self.kind == "rotator" and active:
+            # Closing the transport does not stop the mount's last movement.
+            # Keep new motion barred until fresh readings confirm stationarity.
+            self._stationary = None
+            self.data.update(motion_unconfirmed=True, stopped=False)
+            self.data["stop_warning"] = self.data.get("stop_warning") or (
+                "Disconnected without issuing Stop; antenna motion is unconfirmed"
+            )
         try:
-            if self.kind == "rotator" and self.data["connected"] and active:
-                try:
-                    await self.stop(recover=False)
-                except (StopRejected, StopUnconfirmed):
-                    # Socket closure succeeds independently of physical Stop.
-                    # Preserve its warning and uncertainty for the next connect.
-                    pass
+            if self.controller:
+                await self.controller.close()
         finally:
-            try:
-                if self.controller:
-                    await self.controller.close()
-            finally:
-                self.owner = None
-                self.data.update(
-                    connected=False,
-                    tracking=False,
-                    slewing=False,
-                    parked=False,
-                    park_requested=False,
-                    error=False,
-                    error_message=None,
-                )
+            self.owner = None
+            self.data.update(
+                connected=False,
+                tracking=False,
+                slewing=False,
+                parked=False,
+                park_requested=False,
+                error=False,
+                error_message=None,
+            )
         return {
             key: self.data.get(key)
             for key in ("connected", "motion_unconfirmed", "stopped", "stop_warning")
@@ -321,6 +318,10 @@ class DeviceRuntime:
             if method == "disconnect" and (
                 request.get("owner") != self.owner or request.get("generation") != self.generation
             ):
+                if payload.get("operator"):
+                    # Operator requests must report a race instead of claiming
+                    # success while a new owner's socket remains connected.
+                    raise RuntimeError("Device control changed before disconnect")
                 # The old producer may acknowledge detachment after a handoff.
                 # It must never close the new owner's persistent connection.
                 return True

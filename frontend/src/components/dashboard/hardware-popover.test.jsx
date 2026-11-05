@@ -83,7 +83,7 @@ describe('device popovers', () => {
     it('opens manual movement over the current page and sends device-scoped Move and Stop', async () => {
         const {store, requests, open} = setup();
         await open();
-        fireEvent.click(screen.getByRole('button', {name: 'Manual movement'}));
+        fireEvent.click(screen.getByRole('button', {name: 'Manual'}));
         await waitFor(() => expect(screen.queryByRole('dialog', {name: 'Rotator controls'})).not.toBeInTheDocument());
         const dialog = screen.getByRole('dialog');
         const azimuth = within(dialog).getByRole('slider', {name: /azimuth dial/i});
@@ -113,7 +113,7 @@ describe('device popovers', () => {
             store.dispatch(receiveDeviceCommand({command_id: requests[0].data.command_id, status: 'succeeded', revision: 2}));
             store.dispatch(receiveDeviceSnapshot({...snapshot, owner: {type: 'manual', id: 'manual:rotator:mount'}}));
         });
-        expect(screen.getByRole('button', {name: 'Manual movement'})).toBeEnabled();
+        expect(screen.getByRole('button', {name: 'Manual'})).toBeEnabled();
         expect(store.getState().targetSatTrack.trackerId).toBe('target-1');
     });
 
@@ -135,7 +135,7 @@ describe('device popovers', () => {
         await open();
         expect(screen.getByRole('region', {name: 'Station mount'})).toHaveTextContent('NOAA 19');
         expect(screen.queryByRole('button', {name: 'Take manual control'})).not.toBeInTheDocument();
-        expect(screen.queryByRole('button', {name: 'Manual movement'})).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', {name: 'Manual'})).not.toBeInTheDocument();
         expect(screen.getByRole('button', {name: 'Stop'})).toBeEnabled();
         fireEvent.click(screen.getByRole('button', {name: 'View observation'}));
         expect(store.getState().scheduler.selectedObservation.id).toBe('obs-pass');
@@ -164,9 +164,36 @@ describe('device popovers', () => {
         const {open, requests} = setup();
         await open();
         fireEvent.click(within(screen.getByRole('region', {name: 'Station mount'})).getByRole('button', {expanded: true}));
-        expect(screen.queryByRole('button', {name: 'Manual movement'})).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', {name: 'Manual'})).not.toBeInTheDocument();
         await act(async () => fireEvent.click(screen.getByRole('button', {name: 'Stop'})));
         expect(requests[0].data.action).toBe('stop');
+    });
+
+    it.each(['rotator', 'rig'].flatMap((kind) => [null, 'manual', 'tracker', 'observation']
+        .map((type) => ({kind, type}))))('disconnects a $kind owned by $type from a collapsed row', async ({kind, type}) => {
+        const owner = type ? {type, id: type === 'observation' ? 'obs-pass' : 'target-2'} : null;
+        const {open, requests} = setup({kind, owner});
+        await open();
+        fireEvent.click(within(screen.getByRole('region', {name: 'Station mount'})).getByRole('button', {expanded: true}));
+        const disconnect = screen.getByRole('button', {name: 'Disconnect'});
+        expect(disconnect).toBeEnabled();
+        await act(async () => fireEvent.click(disconnect));
+        expect(requests[0].data).toMatchObject({kind, device_id: 'mount', action: 'disconnect', generation: 'lease'});
+        expect(screen.getByRole('status')).toHaveTextContent('Disconnecting…');
+        expect(disconnect).toBeDisabled();
+    });
+
+    it('allows Disconnect to interrupt an outstanding Move', async () => {
+        const {open, store, requests} = setup();
+        await open();
+        act(() => store.dispatch(receiveDeviceCommand({
+            tracker_id: 'manual:rotator:mount', command_id: 'pending-move',
+            device_ids: {rotator: 'mount'}, action: 'move', status: 'started',
+            submitted_at: Date.now() / 1000, revision: 1,
+        })));
+        expect(screen.getByRole('button', {name: 'Manual'})).toBeDisabled();
+        await act(async () => fireEvent.click(screen.getByRole('button', {name: 'Disconnect'})));
+        expect(requests[0].data.action).toBe('disconnect');
     });
 
     it('labels unsupported physical Stop as Pause tracking', async () => {
@@ -181,8 +208,9 @@ describe('device popovers', () => {
         const {open} = setup();
         await open();
         expect(screen.getByText('Connection to station lost')).toBeInTheDocument();
-        expect(screen.getByRole('button', {name: 'Manual movement'})).toBeDisabled();
+        expect(screen.getByRole('button', {name: 'Manual'})).toBeDisabled();
         expect(screen.getByRole('button', {name: 'Stop'})).toBeDisabled();
+        expect(screen.getByRole('button', {name: 'Disconnect'})).toBeDisabled();
         expect(screen.queryByText('410.0°')).not.toBeInTheDocument();
         expect(socket.emit).not.toHaveBeenCalled();
     });
@@ -190,7 +218,7 @@ describe('device popovers', () => {
     it('disables an open movement dialog when device ownership changes', async () => {
         const {open, store, snapshot} = setup();
         await open();
-        fireEvent.click(screen.getByRole('button', {name: 'Manual movement'}));
+        fireEvent.click(screen.getByRole('button', {name: 'Manual'}));
         await waitFor(() => expect(screen.queryByRole('dialog', {name: 'Rotator controls'})).not.toBeInTheDocument());
         act(() => store.dispatch(receiveDeviceSnapshot({...snapshot, sequence: 2,
             owner: {type: 'observation', id: 'obs-new'}, data: {...snapshot.data, tracking: true},
