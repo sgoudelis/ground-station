@@ -165,6 +165,68 @@ async def test_observation_handoff_without_assignment_map_keeps_connection(
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("park", [False, True])
+async def test_observation_cleanup_disconnects_without_stop(station, monkeypatch, park):
+    service, details, commands, connections = station
+    # Match controllers that leave S unanswered: cleanup must not wait for its timeout.
+    details["_ignore_stop"] = True
+    client = RotatorProxy(HardwareClient(service.register_tracker("obs-one")), "mount", details)
+    service.on_intent = AsyncMock()
+    await client.connect()
+    await anext(client.set_position(100, 30))
+    await client.call("mode", mode="tracking")
+    opened = len(connections)
+    old_generation = client.generation
+    state = {"rotator_id": "mount", "rotator_state": "tracking", "rig_id": "none"}
+    manager = AsyncMock()
+    manager.get_tracking_state.return_value = state
+    removed = []
+
+    async def confirmed(_self, _tracker_id, value, _observation_id):
+        # Stand in for the tracker consuming state updates; all hardware calls
+        # still travel through real IPC to the TCP controller.
+        if value.get("rotator_state") == "parked":
+            await client.park()
+        elif value.get("rotator_state") == "disconnected":
+            await client.disconnect()
+        if value.get("rotator_id") == "none":
+            assert service.snapshots()[0]["data"]["connected"] is False
+        state.update(value)
+
+    async def remove(_self, tracker_id):
+        removed.append(tracker_id)
+        return True
+
+    monkeypatch.setattr(observationmodule, "hardware", service)
+    monkeypatch.setattr(observationmodule, "get_tracker_manager", lambda _id: manager)
+    monkeypatch.setattr(TrackerHandler, "_update_and_confirm", confirmed)
+    monkeypatch.setattr(TrackerHandler, "_remove_observation_tracker_instance", remove)
+
+    assert await asyncio.wait_for(
+        TrackerHandler().stop_tracker_task(
+            "one", {"park_after_observation": park}, {"tracker_id": "obs-one"}
+        ),
+        timeout=2,
+    )
+
+    snapshot = service.snapshots()[0]
+    assert snapshot["data"]["connected"] is False
+    assert snapshot["data"]["motion_unconfirmed"] is True
+    assert snapshot["owner"] is None
+    assert snapshot["generation"] != old_generation
+    assert state["rotator_state"] == "disconnected"
+    assert state["rotator_id"] == "none"
+    assert removed == ["obs-one"]
+    assert "S" not in commands
+    assert commands.count("K") == int(park)
+    assert len(connections) == opened
+    service.on_intent.assert_awaited_with("rotator", "mount", False)
+    # Disconnect invalidates queued commands from the old observation producer.
+    with pytest.raises(RuntimeError, match="control changed"):
+        await client.call("heartbeat")
+
+
+@pytest.mark.asyncio
 async def test_numpy_tracking_coordinates_produce_json_safe_hardware_telemetry(station):
     service, details, _, _ = station
     client = RotatorProxy(HardwareClient(service.register_tracker("target-1")), "mount", details)

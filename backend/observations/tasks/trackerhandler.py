@@ -152,7 +152,8 @@ class TrackerHandler:
                 tracker_id, {"rig_id": "none", "rig_vfo": "none"}, observation_id
             )
         if rotator and self._assigned(state.get("rotator_id")):
-            await hardware.release_tracker(tracker_id, "rotator", state["rotator_id"])
+            # Disconnect directly so the final move or park can finish without S.
+            # Ownership handoffs already quiesce hardware in _release_existing_hardware.
             await self._update_and_confirm(
                 tracker_id, {"rotator_state": "disconnected"}, observation_id
             )
