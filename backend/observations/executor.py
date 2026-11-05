@@ -18,6 +18,7 @@
 import asyncio
 import json
 import traceback
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Optional, cast
 
@@ -520,8 +521,23 @@ class ObservationExecutor:
             rotator_config = observation.get("rotator", {}) or {}
             rig_config = observation.get("rig", {}) or {}
             satellite = observation.get("satellite", {})
+            # Use the same task-end/LOS boundary as the scheduled stop job so a
+            # slow rotator cannot keep startup waiting beyond the observation.
+            stop_times = [
+                datetime.fromisoformat(value.replace("Z", "+00:00")).timestamp()
+                for value in (
+                    observation.get("pass", {}).get("event_end"),
+                    observation.get("task_end"),
+                )
+                if value
+            ]
             tracker_start_result = await self.tracker_handler.start_tracker_task(
-                observation_id, satellite, rotator_config, combined_tasks, rig_config
+                observation_id,
+                satellite,
+                rotator_config,
+                combined_tasks,
+                rig_config,
+                handoff_deadline=min(stop_times) if stop_times else None,
             )
             if not tracker_start_result.get("success"):
                 tracker_error = tracker_start_result.get("error", "tracker_start_failed")

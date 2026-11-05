@@ -13,6 +13,7 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from typing import Any, Awaitable, Callable
 
+from controllers.rotator import StopUnconfirmed
 from hardware.errors import error_from_reply
 from hardware.worker import device_process
 
@@ -284,19 +285,69 @@ class HardwareSupervisor:
         except (BrokenPipeError, OSError):
             pass
 
-    async def release(self, kind, device_id, *, generation=None, deadline=None):
+    async def _wait_stationary(self, kind, device_id, worker, generation, timeout):
+        deadline = time.monotonic() + timeout
+        while True:
+            snapshot = worker.snapshot
+            data = snapshot.get("data", {})
+            if (
+                self.devices.get((kind, str(device_id))) is not worker
+                or not worker.process.is_alive()
+                or snapshot.get("generation") != generation
+                or snapshot.get("owner")
+            ):
+                raise RuntimeError("Device control changed while waiting for stationary motion")
+            if not data.get("connected") or data.get("error"):
+                raise RuntimeError(
+                    data.get("error_message") or "Device disconnected during handoff"
+                )
+            if not data.get("motion_unconfirmed"):
+                return
+            if time.monotonic() >= deadline:
+                raise StopUnconfirmed(
+                    f"Rotator is still moving or unsettled after {timeout:g}s; "
+                    "stationary motion could not be confirmed"
+                )
+            await asyncio.sleep(0.1)
+
+    async def release(
+        self, kind, device_id, *, generation=None, deadline=None, stationary_timeout=None
+    ):
         worker = self.devices.get((kind, str(device_id)))
         if worker is None:
             return
         previous = worker.snapshot.get("owner")
         if worker.process.is_alive():
+            # A mount without Stop must finish its last slew. Pause fences the old
+            # producer immediately; wait outside the device lock so telemetry and
+            # operator Pause/Stop/Disconnect remain available throughout the slew.
+            wait_for_slew = (
+                kind == "rotator"
+                and stationary_timeout is not None
+                and not worker.details.get("stop_supported", True)
+            )
             await self.call(
                 kind,
                 device_id,
-                "release",
+                "pause" if wait_for_slew else "release",
+                owner=previous,
                 generation=generation or worker.snapshot.get("generation"),
                 deadline=deadline,
             )
+            if wait_for_slew:
+                timeout = (
+                    stationary_timeout
+                    if deadline is None
+                    else min(stationary_timeout, max(0, deadline - time.time()))
+                )
+                logger.info(
+                    "Waiting up to %.1fs for rotator %s to settle; controller Stop is unsupported",
+                    timeout,
+                    device_id,
+                )
+                await self._wait_stationary(
+                    kind, device_id, worker, worker.snapshot.get("generation"), timeout
+                )
         else:
             # A dead worker cannot acknowledge release. Revoke its cached owner
             # so takeover can reconnect, retaining all evidence of possible motion.

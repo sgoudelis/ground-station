@@ -50,6 +50,14 @@ The worker then pauses automatic commands without sending `S`, preserving motion
 uncertainty. A handoff can proceed only after fresh stationary readings confirm
 that the mount has settled. Settings edits retain this motion guard.
 
+Scheduled observations allow up to 120 seconds (bounded by task end or LOS) for an
+unsupported-Stop rotator to finish its existing slew. The previous producer is
+paused immediately and the observation retains its device reservation while
+waiting for fresh stationary readings. This wait runs outside the device lock,
+so telemetry and operator
+Pause/Stop/Disconnect remain responsive. A disconnect, worker failure, or another
+control change aborts the handoff; continuing motion still fails at the deadline.
+
 Manual takeover can release an interactive tracker. Observations reserve their
 whole device bundle during handoff and cannot be displaced by manual takeover.
 An explicit tracker Connect can take a connected rotator from manual control,

@@ -40,6 +40,7 @@ from tracker.stateupdate import update_tracking_state_with_ownership
 # is held, so producer detachment can be confirmed before ownership moves.
 _handoff_lock = asyncio.Lock()
 COMMAND_TIMEOUT_SECONDS = 35
+ROTATOR_SETTLE_TIMEOUT_SECONDS = 120
 
 
 class TrackerHandoffError(Exception):
@@ -160,7 +161,12 @@ class TrackerHandler:
             await self._update_and_confirm(tracker_id, {"rotator_id": "none"}, observation_id)
 
     async def _release_existing_hardware(
-        self, observation_id: str, rotator_id: Any, rig_id: Any
+        self,
+        observation_id: str,
+        rotator_id: Any,
+        rig_id: Any,
+        *,
+        deadline: Optional[float] = None,
     ) -> None:
         slots: Dict[str, Dict[str, bool]] = {}
         rotator_owner = (
@@ -214,8 +220,19 @@ class TrackerHandler:
         # Release keeps the transport open and confirms rotator quiescence.
         for kind, identifier in (("rotator", rotator_id), ("rig", rig_id)):
             worker = hardware.devices.get((kind, str(identifier)))
-            if worker and worker.snapshot.get("owner"):
-                await hardware.release(kind, identifier)
+            if worker and (
+                worker.snapshot.get("owner")
+                or kind == "rotator"
+                and worker.snapshot.get("data", {}).get("motion_unconfirmed")
+            ):
+                await hardware.release(
+                    kind,
+                    identifier,
+                    deadline=deadline,
+                    stationary_timeout=(
+                        ROTATOR_SETTLE_TIMEOUT_SECONDS if kind == "rotator" else None
+                    ),
+                )
         for tracker_id, flags in slots.items():
             await self._disconnect_slot_hardware(
                 tracker_id,
@@ -257,6 +274,8 @@ class TrackerHandler:
         rotator_config: Dict[str, Any],
         tasks: List[Dict[str, Any]],
         rig_config: Optional[Dict[str, Any]] = None,
+        *,
+        handoff_deadline: Optional[float] = None,
     ) -> Dict[str, Any]:
         """Release interactive hardware, then create and configure a new OBS slot."""
         rig_config = rig_config or {}
@@ -293,7 +312,15 @@ class TrackerHandler:
             [("rotator", rotator_id), ("rig", rig_id)], observation_id
         ) as reservation:
             try:
-                await self._release_existing_hardware(observation_id, rotator_id, rig_id)
+                await self._release_existing_hardware(
+                    observation_id, rotator_id, rig_id, deadline=handoff_deadline
+                )
+                # A long slew must not create an OBS slot after its stop job ran.
+                if handoff_deadline is not None and time.time() >= handoff_deadline:
+                    raise TrackerHandoffError(
+                        "hardware_handoff_timeout",
+                        "Observation ended before hardware handoff finished",
+                    )
                 resolution = create_observation_tracker_slot(observation_id)
                 if not resolution.get("success"):
                     raise TrackerHandoffError(

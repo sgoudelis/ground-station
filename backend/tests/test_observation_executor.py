@@ -4,6 +4,7 @@ import importlib
 import json
 import sys
 import types
+from datetime import datetime
 
 import pytest
 
@@ -132,6 +133,10 @@ async def test_start_observation_starts_tracker_before_session_tasks(monkeypatch
         return True
 
     async def _mock_start_tracker(*_args, **_kwargs):
+        assert (
+            _kwargs["handoff_deadline"]
+            == datetime.fromisoformat(observation["pass"]["event_end"]).timestamp()
+        )
         events.append("tracker")
         return {
             "success": True,

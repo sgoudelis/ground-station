@@ -1,5 +1,6 @@
 # Copyright (c) 2026 Efstratios Goudelis
 
+import time
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
@@ -271,7 +272,8 @@ async def test_actual_owner_is_released_before_detaching_stale_slot_references(m
     }
     calls = []
 
-    async def release(kind, identifier):
+    async def release(kind, identifier, *, deadline=None, stationary_timeout=None):
+        assert stationary_timeout == handler_module.ROTATOR_SETTLE_TIMEOUT_SECONDS
         calls.append((kind, identifier))
 
     # Keep release order separate from the list of detached references.
@@ -290,6 +292,15 @@ async def test_actual_owner_is_released_before_detaching_stale_slot_references(m
     assert [call.args[0] for call in detached.await_args_list] == ["target-1", "target-2"]
     assert detached.await_args_list[0].kwargs == {"rotator": True, "rig": False}
     assert detached.await_args_list[1].kwargs == {"rotator": True, "rig": True}
+
+
+@pytest.mark.asyncio
+async def test_observation_does_not_create_slot_after_handoff_deadline():
+    result = await TrackerHandler().start_tracker_task(
+        "one", {"norad_id": 300}, {}, [], handoff_deadline=time.time() - 1
+    )
+    assert result["success"] is False
+    assert result["error"] == "hardware_handoff_timeout"
 
 
 @pytest.mark.asyncio

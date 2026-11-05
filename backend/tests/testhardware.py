@@ -57,6 +57,10 @@ async def station():
                 if command == "q":
                     break
                 if command == "p":
+                    # Keep reporting physical motion even after producer updates
+                    # have paused, as a controller without Stop does during a slew.
+                    if time.monotonic() < details.get("_moving_until", 0):
+                        position[0] += 1
                     response = f"{position[0]}\n{position[1]}\n"
                 elif command.startswith("P "):
                     if not details.get("_hold_moves"):
@@ -1096,6 +1100,170 @@ async def test_handoff_with_unsupported_stop_waits_for_stationarity_and_keeps_tc
     assert "S" not in commands
     assert len(connections) == opened
     assert service.snapshots()[0]["data"]["motion_unconfirmed"] is False
+
+
+@pytest.mark.asyncio
+async def test_observation_waits_for_slew_longer_than_ten_seconds(station, monkeypatch):
+    service, details, commands, connections = station
+    details["stop_supported"] = False
+    first = RotatorProxy(HardwareClient(service.register_tracker("target-1")), "mount", details)
+    observer = RotatorProxy(HardwareClient(service.register_tracker("obs-one")), "mount", details)
+    await first.connect()
+    await first.call("mode", mode="tracking")
+    opened = len(connections)
+    details["_moving_until"] = time.monotonic() + 11
+    monkeypatch.setattr(observationmodule, "hardware", service)
+    monkeypatch.setattr(observationmodule, "get_assigned_tracker_for_rotator", lambda _id: None)
+    monkeypatch.setattr(observationmodule, "get_all_tracker_managers", lambda: {})
+
+    async with service.reserve([("rotator", "mount")], "one") as reservation:
+        handoff = asyncio.create_task(
+            TrackerHandler()._release_existing_hardware("one", "mount", None)
+        )
+        async with asyncio.timeout(3):
+            while not service.snapshots()[0]["data"]["motion_unconfirmed"]:
+                await asyncio.sleep(0.01)
+        # Old requests detach promptly while the mount keeps moving; the device
+        # worker must not spend the entire slew holding its IPC execution lock.
+        with pytest.raises(ControlReleased):
+            await asyncio.wait_for(anext(first.set_position(200, 40)), timeout=1)
+        assert not handoff.done()
+        assert service.snapshots()[0]["owner"] is None
+        assert ("rotator", "mount") in service.reservations
+        await asyncio.wait_for(handoff, timeout=18)
+        assert service.snapshots()[0]["data"]["motion_unconfirmed"] is False
+        reservation["tracker_id"] = "obs-one"
+        await observer.connect()
+        await anext(observer.set_position(100, 30))
+
+    assert "S" not in commands
+    assert "P 200 40" not in commands
+    assert "P 100 30" in commands
+    assert len(connections) == opened
+    assert service.snapshots()[0]["owner"]["id"] == "obs-one"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("operator_action", ["pause", "disconnect"])
+async def test_waiting_handoff_remains_interruptible(station, operator_action):
+    service, details, commands, _ = station
+    details["stop_supported"] = False
+    first = RotatorProxy(HardwareClient(service.register_tracker("target-1")), "mount", details)
+    await first.connect()
+    await first.call("mode", mode="tracking")
+    details["_moving_until"] = time.monotonic() + 30
+    handoff = asyncio.create_task(service.release("rotator", "mount", stationary_timeout=30))
+    try:
+        async with asyncio.timeout(3):
+            while not service.snapshots()[0]["data"]["motion_unconfirmed"]:
+                await asyncio.sleep(0.01)
+        worker = service.devices[("rotator", "mount")]
+        await asyncio.wait_for(
+            service.call(
+                "rotator",
+                "mount",
+                operator_action,
+                owner=None,
+                generation=worker.snapshot["generation"],
+                operator=True,
+            ),
+            timeout=1,
+        )
+        with pytest.raises(RuntimeError, match="control changed"):
+            await asyncio.wait_for(handoff, timeout=1)
+        assert service.snapshots()[0]["owner"] is None
+        assert "S" not in commands
+    finally:
+        handoff.cancel()
+        await asyncio.gather(handoff, return_exceptions=True)
+        details["_moving_until"] = 0
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("request_deadline", [False, True])
+async def test_slew_handoff_timeout_preserves_motion_guard(station, request_deadline):
+    service, details, commands, _ = station
+    details["stop_supported"] = False
+    first = RotatorProxy(HardwareClient(service.register_tracker("target-1")), "mount", details)
+    await first.connect()
+    await first.call("mode", mode="tracking")
+    details["_moving_until"] = time.monotonic() + 30
+    with pytest.raises(StopUnconfirmed, match="still moving or unsettled"):
+        await asyncio.wait_for(
+            service.release(
+                "rotator",
+                "mount",
+                stationary_timeout=30 if request_deadline else 0.2,
+                deadline=time.time() + 0.5 if request_deadline else None,
+            ),
+            timeout=2,
+        )
+    worker = service.devices[("rotator", "mount")]
+    assert worker.snapshot["owner"] is None
+    assert worker.snapshot["data"]["motion_unconfirmed"] is True
+    lease = await service.call("rotator", "mount", "acquire", owner="observer", details=details)
+    with pytest.raises(StopUnconfirmed, match="stationary"):
+        await service.call(
+            "rotator",
+            "mount",
+            "position",
+            owner="observer",
+            generation=lease["generation"],
+            az=100,
+            el=30,
+        )
+    assert "S" not in commands
+    assert "P 100 30" not in commands
+    details["_moving_until"] = 0
+
+
+@pytest.mark.asyncio
+async def test_observation_waits_for_already_paused_rotator(station, monkeypatch):
+    service, details, _, _ = station
+    details["stop_supported"] = False
+    first = RotatorProxy(HardwareClient(service.register_tracker("target-1")), "mount", details)
+    await first.connect()
+    await first.call("mode", mode="tracking")
+    await first.call("pause")
+    assert service.snapshots()[0]["owner"] is None
+    details["_moving_until"] = time.monotonic() + 30
+    monkeypatch.setattr(observationmodule, "hardware", service)
+    monkeypatch.setattr(observationmodule, "get_assigned_tracker_for_rotator", lambda _id: None)
+    monkeypatch.setattr(observationmodule, "get_all_tracker_managers", lambda: {})
+    monkeypatch.setattr(observationmodule, "ROTATOR_SETTLE_TIMEOUT_SECONDS", 0.2)
+
+    with pytest.raises(StopUnconfirmed, match="still moving or unsettled"):
+        await TrackerHandler()._release_existing_hardware("one", "mount", None)
+    assert service.snapshots()[0]["data"]["motion_unconfirmed"] is True
+    details["_moving_until"] = 0
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("failure", ["worker-exit", "position-read"])
+async def test_waiting_handoff_fails_when_hardware_is_lost(station, failure):
+    service, details, _, _ = station
+    details["stop_supported"] = False
+    first = RotatorProxy(HardwareClient(service.register_tracker("target-1")), "mount", details)
+    await first.connect()
+    await first.call("mode", mode="tracking")
+    details["_moving_until"] = time.monotonic() + 30
+    handoff = asyncio.create_task(service.release("rotator", "mount", stationary_timeout=30))
+    try:
+        async with asyncio.timeout(3):
+            while not service.snapshots()[0]["data"]["motion_unconfirmed"]:
+                await asyncio.sleep(0.01)
+        if failure == "worker-exit":
+            worker = service.devices[("rotator", "mount")]
+            worker.process.kill()
+            await asyncio.to_thread(worker.process.join, 1)
+        else:
+            details["_drop_reads"] = True
+        with pytest.raises(RuntimeError):
+            await asyncio.wait_for(handoff, timeout=3)
+    finally:
+        handoff.cancel()
+        await asyncio.gather(handoff, return_exceptions=True)
+        details["_moving_until"] = 0
 
 
 @pytest.mark.asyncio
