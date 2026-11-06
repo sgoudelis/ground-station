@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional, cast
 
 from common.logger import logger
+from common.satdump import resolve_satdump_output_dir, validate_satdump_pipeline
 from common.sdrconfig import SDRConfig
 from crud import trackingstate
 from crud.hardware import fetch_sdr
@@ -61,14 +62,6 @@ from tasks.registry import get_task
 from tracker.contracts import get_tracking_state_name
 from tracker.runner import get_assigned_tracker_for_rotator
 from vfos.state import INTERNAL_VFO_NUMBER, VFOManager
-
-KNOWN_SATDUMP_PIPELINES = {
-    "meteor_m2-x_lrpt",
-    "meteor_m2-x_lrpt_80k",
-    "meteor_hrpt",
-    "elektro_lrit",
-    "elektro_hrit",
-}
 
 RESTART_INTERRUPTION_REASON = "Backend restarted while observation was running"
 SHUTDOWN_INTERRUPTION_REASON = "Backend shutdown interrupted observation"
@@ -1239,16 +1232,12 @@ class ObservationExecutor:
             if not task_config.get("enable_post_processing"):
                 continue
 
-            pipeline = task_config.get("post_process_pipeline")
-            if not pipeline:
-                logger.warning(
-                    f"No SatDump pipeline configured for IQ task {task_index} in {observation_id}"
-                )
+            # Saved observations can predate validation at the command boundary.
+            try:
+                pipeline = validate_satdump_pipeline(task_config.get("post_process_pipeline"))
+            except ValueError as exc:
+                logger.warning(f"Skipping SatDump IQ task {task_index} in {observation_id}: {exc}")
                 continue
-            if pipeline not in KNOWN_SATDUMP_PIPELINES:
-                logger.warning(
-                    f"SatDump pipeline '{pipeline}' is not in the known list; continuing anyway"
-                )
 
             recording_entry = task_info.get(task_index)
             recording_path = recording_entry.get("recording_path") if recording_entry else None
@@ -1262,7 +1251,11 @@ class ObservationExecutor:
             metadata = self._load_sigmf_metadata(recording_path)
             samplerate = self._resolve_samplerate(metadata, sdr_config, task_config)
             baseband_format = self._resolve_baseband_format(metadata)
-            output_dir = self._build_satdump_output_dir(recording_path, pipeline)
+            try:
+                output_dir = self._build_satdump_output_dir(recording_path, pipeline)
+            except ValueError as exc:
+                logger.warning(f"Skipping SatDump IQ task {task_index} in {observation_id}: {exc}")
+                continue
             recording_name = Path(recording_path).name
             # Saved observations without this setting should preserve failed IQ captures.
             retain_input_on_failure = task_config.get("retain_iq_on_satdump_failure") is not False
@@ -1330,6 +1323,8 @@ class ObservationExecutor:
         return "f32"
 
     def _build_satdump_output_dir(self, recording_path: str, pipeline: str) -> str:
+        pipeline = validate_satdump_pipeline(pipeline)
         recording_base = Path(recording_path).name
         backend_dir = Path(__file__).resolve().parents[1]
-        return str(backend_dir / "data" / "decoded" / f"{recording_base}.satdump_{pipeline}")
+        output_dir = backend_dir / "data" / "decoded" / f"{recording_base}.satdump_{pipeline}"
+        return str(resolve_satdump_output_dir(output_dir, backend_dir))

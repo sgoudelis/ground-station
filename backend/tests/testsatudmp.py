@@ -58,7 +58,10 @@ def test_satdump_deletes_iq_only_when_policy_allows(
     meta_file = recording_base.with_suffix(".sigmf-meta")
     data_file.write_bytes(b"iq")
     meta_file.write_text("{}")
-    output_dir = tmp_path / "decoded"
+    monkeypatch.setattr(
+        satdumpprocessor, "__file__", str(tmp_path / "tasks" / "satdumpprocessor.py")
+    )
+    output_dir = tmp_path / "data" / "decoded" / "capture"
 
     class FakeProcess:
         def __init__(self):

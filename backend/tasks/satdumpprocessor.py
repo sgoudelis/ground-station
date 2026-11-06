@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Optional
 
 from common.decoded_thumbnails import generate_decoded_thumbnail
+from common.satdump import resolve_satdump_output_dir, validate_satdump_pipeline
 
 
 class GracefulKiller:
@@ -320,19 +321,17 @@ def satdump_process_recording(
     Returns:
         Dict with processing results
     """
+    backend_dir = Path(__file__).parent.parent
+    # Validate before mkdir, subprocess execution, or any failure cleanup can run.
+    satellite = validate_satdump_pipeline(satellite)
+    output_path = resolve_satdump_output_dir(output_dir, backend_dir)
     killer = GracefulKiller()
 
     # Resolve paths relative to backend/data directory
-    backend_dir = Path(__file__).parent.parent
-
     recording_file = Path(recording_path)
     # Check if path starts with /recordings/ or /decoded/ (relative app paths)
     if not recording_file.exists():
         recording_file = backend_dir / "data" / recording_path.lstrip("/")
-
-    output_path = Path(output_dir)
-    if not output_path.is_absolute() or str(output_path).startswith("/decoded"):
-        output_path = backend_dir / "data" / output_dir.lstrip("/")
 
     # Validate inputs
     if not recording_file.exists():

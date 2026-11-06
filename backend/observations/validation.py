@@ -19,6 +19,30 @@ import math
 from datetime import datetime
 from typing import Any, Dict
 
+from common.satdump import validate_satdump_pipeline
+
+
+def validate_satdump_postprocessing(data: Dict[str, Any]) -> Dict[str, Any]:
+    """Reject unsafe IQ post-processing settings before saving observations/templates."""
+    for session in data.get("sessions", []) or []:
+        if not isinstance(session, dict):
+            continue
+        for task in session.get("tasks", []) or []:
+            if not isinstance(task, dict) or task.get("type") != "iq_recording":
+                continue
+            config = task.get("config", {}) or {}
+            if not isinstance(config, dict):
+                return {"success": False, "error": "Invalid SatDump task configuration."}
+            pipeline = config.get("post_process_pipeline")
+            if pipeline in (None, "") and not config.get("enable_post_processing"):
+                continue
+            try:
+                validate_satdump_pipeline(pipeline)
+            except ValueError as exc:
+                return {"success": False, "error": str(exc)}
+
+    return {"success": True, "error": None}
+
 
 def validate_observation_pass(data: Dict[str, Any]) -> Dict[str, Any]:
     """Reject missing or invalid pass timing before database writes and scheduling."""

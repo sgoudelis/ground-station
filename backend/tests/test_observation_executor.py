@@ -453,6 +453,54 @@ async def test_satdump_receives_failure_retention_setting(monkeypatch, tmp_path,
     assert calls[0]["kwargs"]["delete_input_after"] is True
 
 
+@pytest.mark.unit
+@pytest.mark.asyncio
+@pytest.mark.parametrize("pipeline", ["../../../../escape", "unknown_pipeline", None, [], {}])
+async def test_saved_unsafe_satdump_pipeline_never_starts_worker(monkeypatch, tmp_path, pipeline):
+    executor_module = _load_executor_module(monkeypatch)
+    executor = _new_executor(executor_module)
+    executor._iq_recording_info = {
+        "obs-1": {"session-1": {1: {"recording_path": str(tmp_path / "capture")}}}
+    }
+    start_task = AsyncMock()
+    monkeypatch.setattr(
+        executor_module.runtimestate,
+        "background_task_manager",
+        types.SimpleNamespace(start_task=start_task),
+    )
+
+    await executor._start_satdump_postprocessing(
+        "obs-1",
+        "session-1",
+        [
+            {
+                "type": "iq_recording",
+                "config": {"enable_post_processing": True, "post_process_pipeline": pipeline},
+            }
+        ],
+        {},
+    )
+
+    start_task.assert_not_awaited()
+    assert "obs-1" not in executor._iq_recording_info
+
+
+@pytest.mark.unit
+def test_satdump_output_builder_rejects_symlink_escape(monkeypatch, tmp_path):
+    executor_module = _load_executor_module(monkeypatch)
+    monkeypatch.setattr(executor_module, "__file__", str(tmp_path / "observations" / "executor.py"))
+    executor = _new_executor(executor_module)
+    decoded_root = tmp_path / "data" / "decoded"
+    decoded_root.mkdir(parents=True)
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    output = decoded_root / "capture.satdump_meteor_m2-x_lrpt"
+    output.symlink_to(outside, target_is_directory=True)
+
+    with pytest.raises(ValueError, match="SatDump output directory"):
+        executor._build_satdump_output_dir("capture", "meteor_m2-x_lrpt")
+
+
 @pytest.mark.asyncio
 async def test_start_observation_fails_fast_when_tracker_start_fails(monkeypatch, tmp_path):
     executor_module = _load_executor_module(monkeypatch)
