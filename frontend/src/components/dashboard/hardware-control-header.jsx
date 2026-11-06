@@ -20,7 +20,7 @@ export default function HardwareControlHeader({kind, device, emptyLabel, status,
                 sx={{minWidth: 0, maxWidth: '30%'}} showIcon />
             <Box sx={{display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0}}>
                 <HardwareStatusIndicator kind={kind} status={connectionStatus} compact={showActivity} />
-                {showActivity && <HardwareStatusIndicator kind={kind} status={activityStatus} />}
+                {showActivity && <HardwareStatusIndicator kind={kind} status={activityStatus} compact />}
             </Box>
             <Typography variant="caption" color="text.secondary" sx={{fontSize: '0.62rem', fontVariantNumeric: 'tabular-nums', flexShrink: 0}}
                 title={t('hardware_status.last_update', {defaultValue: 'Time since last hardware update'})}>
