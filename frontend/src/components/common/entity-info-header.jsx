@@ -44,7 +44,7 @@ const EntityInfoHeader = ({
     const identifierLabel = targetType === 'satellite' ? `NORAD ${identifier || '—'}` : (identifier || '—');
     const metadata = `${typeLabel} · ${identifierLabel}`;
     const healthMeta = Object.hasOwn(healthPresentation, health) ? healthPresentation[health] : null;
-    const showHealthBadge = showHealth && targetType === 'satellite';
+    const showHealthBadge = showHealth && targetType === 'satellite' && Boolean(healthMeta);
     const hasStatusRow = showHealthBadge || Boolean(error);
     const FallbackIcon = targetType === 'body' ? PublicIcon : (targetType === 'mission' ? RocketLaunchIcon : SatelliteAltIcon);
     const actions = [
@@ -127,9 +127,9 @@ const EntityInfoHeader = ({
                 <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0.75, mt: 1 }}>
                     {showHealthBadge && (
                         <EntityStatusBadge
-                            label={healthMeta ? t(`satellite_status.${healthMeta.key}`) : t('entity_header.health_unknown')}
-                            color={healthMeta?.color}
-                            icon={healthMeta?.icon || InfoOutlinedIcon}
+                            label={t(`satellite_status.${healthMeta.key}`)}
+                            color={healthMeta.color}
+                            icon={healthMeta.icon}
                         />
                     )}
                     {/* Keep data errors separate from satellite health. */}
