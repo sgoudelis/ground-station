@@ -64,15 +64,11 @@ class GracefulKiller:
             self.active_task = None
 
 
-def soapysdr_discovery_task(
-    mode: str = "single", refresh_interval: int = 120, _progress_queue: Optional[Queue] = None
-):
+def soapysdr_discovery_task(_progress_queue: Optional[Queue] = None):
     """
-    Discover SoapySDR servers and their connected devices.
+    Run one discovery pass requested from the SDR hardware page.
 
     Args:
-        mode: Discovery mode - "single" for one-time discovery, "monitor" for continuous monitoring
-        refresh_interval: Seconds between refreshes in monitor mode (default: 120)
         _progress_queue: Queue for sending progress updates (injected by manager)
 
     Returns:
@@ -95,21 +91,6 @@ def soapysdr_discovery_task(
                     "progress": 0,
                 }
             )
-            _progress_queue.put(
-                {
-                    "type": "output",
-                    "output": f"Mode: {mode}",
-                    "stream": "stdout",
-                }
-            )
-            if mode == "monitor":
-                _progress_queue.put(
-                    {
-                        "type": "output",
-                        "output": f"Refresh interval: {refresh_interval} seconds",
-                        "stream": "stdout",
-                    }
-                )
 
         # Run the async discovery in a new event loop (since we're in a separate process)
         loop = asyncio.new_event_loop()
@@ -218,135 +199,32 @@ def soapysdr_discovery_task(
                                 }
                             )
 
-            # If single mode, we're done
-            if mode == "single":
-                if _progress_queue:
-                    _progress_queue.put(
-                        {
-                            "type": "output",
-                            "output": "Single discovery completed",
-                            "stream": "stdout",
-                            "progress": 100,
-                        }
-                    )
-
-                # Serialize discovered servers for return
-                serialized_servers = {}
-                for name, server_info in discovered_servers.items():
-                    serialized_servers[name] = {
-                        "ip": server_info.get("ip"),
-                        "port": server_info.get("port"),
-                        "name": server_info.get("name"),
-                        "status": server_info.get("status"),
-                        "sdrs": server_info.get("sdrs", []),
-                    }
-
-                return {
-                    "status": "completed",
-                    "mode": "single",
-                    "server_count": server_count,
-                    "active_count": active_count,
-                    "servers": serialized_servers,
-                }
-
-            # Monitor mode: continuously refresh
-            refresh_count = 0
-            while not killer.kill_now:
-                if _progress_queue:
-                    _progress_queue.put(
-                        {
-                            "type": "output",
-                            "output": f"Waiting {refresh_interval} seconds before next refresh...",
-                            "stream": "stdout",
-                            "progress": 60 + (refresh_count % 10) * 4,
-                        }
-                    )
-
-                # Sleep with interruption checking
-                for _ in range(refresh_interval):
-                    if killer.kill_now:
-                        break
-                    asyncio.run(asyncio.sleep(1))
-
-                if killer.kill_now:
-                    break
-
-                refresh_count += 1
-                if _progress_queue:
-                    _progress_queue.put(
-                        {
-                            "type": "output",
-                            "output": f"Refresh #{refresh_count}: Updating connected SDRs...",
-                            "stream": "stdout",
-                        }
-                    )
-
-                # Refresh SDR list
-                killer.run(loop, refresh_connected_sdrs())
-
-                # Report refresh results
-                active_servers = get_active_servers_with_sdrs()
-                active_count = len(active_servers)
-                active_sdr_count = sum(
-                    len(server_info.get("sdrs", []))
-                    for server_info in active_servers.values()
-                    if isinstance(server_info.get("sdrs", []), list)
-                )
-
-                # Serialize discovered servers for transmission to main process
-                serialized_servers = {}
-                for name, server_info in discovered_servers.items():
-                    serialized_servers[name] = {
-                        "ip": server_info.get("ip"),
-                        "port": server_info.get("port"),
-                        "name": server_info.get("name"),
-                        "mDNS_name": server_info.get("mDNS_name"),
-                        "status": server_info.get("status"),
-                        "sdrs": server_info.get("sdrs", []),
-                        "addresses": server_info.get("addresses", []),
-                        "last_updated": _serialize_timestamp(server_info.get("last_updated", 0)),
-                    }
-
-                if _progress_queue:
-                    _progress_queue.put(
-                        {
-                            "type": "output",
-                            "output": (
-                                f"Refresh #{refresh_count} complete: "
-                                f"{active_sdr_count} SDR(s) active"
-                            ),
-                            "stream": "stdout",
-                        }
-                    )
-
-                    # Send discovery data to main process
-                    _progress_queue.put(
-                        {
-                            "type": "discovery_update",
-                            "servers": serialized_servers,
-                            "server_count": len(discovered_servers),
-                            "active_count": active_count,
-                            "sdr_count": active_sdr_count,
-                            "refresh_count": refresh_count,
-                        }
-                    )
-
-            # Interrupted in monitor mode
             if _progress_queue:
                 _progress_queue.put(
                     {
                         "type": "output",
-                        "output": f"Monitoring stopped after {refresh_count} refresh(es)",
+                        "output": "Single discovery completed",
                         "stream": "stdout",
+                        "progress": 100,
                     }
                 )
 
+            # Serialize discovered servers for return
+            serialized_servers = {}
+            for name, server_info in discovered_servers.items():
+                serialized_servers[name] = {
+                    "ip": server_info.get("ip"),
+                    "port": server_info.get("port"),
+                    "name": server_info.get("name"),
+                    "status": server_info.get("status"),
+                    "sdrs": server_info.get("sdrs", []),
+                }
+
             return {
-                "status": "interrupted",
-                "mode": "monitor",
-                "refresh_count": refresh_count,
-                "final_server_count": len(discovered_servers),
-                "final_active_count": len(get_active_servers_with_sdrs()),
+                "status": "completed",
+                "server_count": server_count,
+                "active_count": active_count,
+                "servers": serialized_servers,
             }
 
         finally:

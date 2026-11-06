@@ -91,14 +91,6 @@ const SETTINGS_GROUP_DEFS = [
         fieldKeys: ['track_interval_ms', 'max_tracker_targets'],
     },
     {
-        key: 'discovery',
-        titleKey: 'app_settings.group_discovery',
-        titleDefault: 'SDR Discovery',
-        descriptionKey: 'app_settings.group_discovery_help',
-        descriptionDefault: 'SoapySDR discovery startup and monitor behavior.',
-        fieldKeys: ['enable_soapy_discovery', 'runonce_soapy_discovery'],
-    },
-    {
         key: 'transcription',
         titleKey: 'app_settings.group_transcription',
         titleDefault: 'Transcription',

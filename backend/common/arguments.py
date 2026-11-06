@@ -70,18 +70,6 @@ parser.add_argument(
     default=None,
     help="Maximum number of active target-N tracker slots",
 )
-parser.add_argument(
-    "--enable-soapy-discovery",
-    type=lambda x: str(x).lower() in ("true", "1", "t"),
-    default=None,
-    help="Enable periodic SoapySDR server discovery",
-)
-parser.add_argument(
-    "--runonce-soapy-discovery",
-    type=lambda x: str(x).lower() in ("true", "1", "t"),
-    default=None,
-    help="Run the SoapySDR server discovery once on startup",
-)
 
 # Export resolved config context for runtime configuration handlers/UI.
 resolved_app_config_path: Path
@@ -103,8 +91,6 @@ if os.environ.get("ALEMBIC_CONTEXT"):
         log_config="data/configs/log_config.yaml",
         track_interval_ms=2000,
         max_tracker_targets=10,
-        enable_soapy_discovery=False,
-        runonce_soapy_discovery=False,
         parakeet_url=DEFAULT_APP_CONFIG["parakeet_url"],
         libretranslate_url=DEFAULT_APP_CONFIG["libretranslate_url"],
         orbital_sync_satellite_metadata_urls=["http://db.satnogs.org/api/satellites/?format=json"],
@@ -129,8 +115,6 @@ else:
             "log_config": _raw_args.log_config,
             "track_interval_ms": _raw_args.track_interval_ms,
             "max_tracker_targets": _raw_args.max_tracker_targets,
-            "enable_soapy_discovery": _raw_args.enable_soapy_discovery,
-            "runonce_soapy_discovery": _raw_args.runonce_soapy_discovery,
         }.items()
         if value is not None
     }
@@ -173,8 +157,6 @@ else:
             cli_track_interval_ms if cli_track_interval_ms is not None else file_track_interval_ms
         ),
         max_tracker_targets=_pick(_raw_args.max_tracker_targets, "max_tracker_targets"),
-        enable_soapy_discovery=_pick(_raw_args.enable_soapy_discovery, "enable_soapy_discovery"),
-        runonce_soapy_discovery=_pick(_raw_args.runonce_soapy_discovery, "runonce_soapy_discovery"),
         parakeet_url=_file_config.get("parakeet_url"),
         libretranslate_url=_file_config.get("libretranslate_url"),
         orbital_sync_satellite_metadata_urls=orbital_sync_satellite_metadata_urls,

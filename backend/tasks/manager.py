@@ -69,7 +69,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 from common.logger import logger
 from db import AsyncSessionLocal
 from handlers.entities.filebrowser import emit_file_browser_state
-from hardware.soapysdrbrowser import update_discovered_servers
+from hardware.soapysdrbrowser import DISCOVERY_SEARCH_SECONDS, update_discovered_servers
 from server.schedulerstate import get_orbital_sync_next_run_time
 from tasks.waterfallgenerator import generate_waterfall_task
 from tlesync.persist import is_terminal_orbital_sync_state, save_orbital_sync_state
@@ -319,16 +319,13 @@ class BackgroundTaskManager:
             )
 
             if _is_soapysdr_task(name, func.__name__):
-                # Keep discovery lifecycle events available for setup-mode UI
-                # where the full runtime socket hook is not active yet.
+                # Publish discovery lifecycle events for hardware-page notifications.
                 await self.sio.emit(
                     "soapysdr:discovery_started",
                     {
                         "task_id": task_id,
                         "name": name,
-                        "mode": kwargs.get("mode", "single"),
-                        "refresh_interval": kwargs.get("refresh_interval"),
-                        "duration": kwargs.get("refresh_interval", 0),
+                        "duration": DISCOVERY_SEARCH_SECONDS,
                     },
                 )
 

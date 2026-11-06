@@ -161,7 +161,7 @@ export const fetchSoapySDRServers = createAsyncThunk(
 
 export const startSoapySDRDiscovery = createAsyncThunk(
     'sdrs/startSoapySDRDiscovery',
-    async ({ socket, mode = 'single', refresh_interval = 120 }, { rejectWithValue }) => {
+    async ({ socket }, { rejectWithValue }) => {
         try {
             return await new Promise((resolve, reject) => {
                 socket.emit("api.call", {
@@ -169,10 +169,7 @@ export const startSoapySDRDiscovery = createAsyncThunk(
   data: {
     task_name: 'soapysdr_discovery',
     args: [],
-    kwargs: {
-      mode,
-      refresh_interval
-    },
+    kwargs: {},
     name: 'SoapySDR Discovery'
   }
 }, res => {

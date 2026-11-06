@@ -103,7 +103,7 @@ single web interface.
 
 *Comprehensive SDR device management interface supporting RTL-SDR, SoapySDR, and UHD/USRP radios with remote capability*
 
-SoapySDR discovery is manual by default. In **Hardware → SDRs**, use **Discover SoapySDR Servers**
+SoapySDR discovery runs only from **Hardware → SDRs**. Use **Discover SoapySDR Servers**
 to list remote servers and devices, then **Probe selected SDR** to read a radio's capabilities and
 antenna ports. Both controls are also available in the add/edit dialog; probing uses the current
 form values without saving them. A streaming radio returns its cached capabilities.
@@ -112,10 +112,8 @@ dialog, enter its hostname/IP and port (default **55132**), and click **Query se
 Select a returned SDR to probe its capabilities automatically. Manually queried results
 remain available through discovery refreshes, and saved connections do not require mDNS.
 
-Upgrades disable the old default startup scan once. Automatic enumeration can be explicitly
-re-enabled with `--runonce-soapy-discovery true` or `--enable-soapy-discovery true`; these scans
-list remote devices without opening them for capability probing. First-time setup leaves SDR
-discovery and configuration to **Hardware → SDRs**.
+Discovery lists remote devices without opening them for capability probing. First-time setup
+leaves SDR discovery and configuration to **Hardware → SDRs**.
 
 ---
 

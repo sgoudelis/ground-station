@@ -140,22 +140,6 @@ FIELDS: Tuple[AppSettingField, ...] = (
         cli_flag="--max-tracker-targets",
     ),
     AppSettingField(
-        key="enable_soapy_discovery",
-        value_type="boolean",
-        default=DEFAULT_APP_CONFIG["enable_soapy_discovery"],
-        description="Enable continuous SoapySDR discovery monitor task.",
-        apply_mode="restart_required",
-        cli_flag="--enable-soapy-discovery",
-    ),
-    AppSettingField(
-        key="runonce_soapy_discovery",
-        value_type="boolean",
-        default=DEFAULT_APP_CONFIG["runonce_soapy_discovery"],
-        description="Run one SoapySDR discovery pass during startup.",
-        apply_mode="restart_required",
-        cli_flag="--runonce-soapy-discovery",
-    ),
-    AppSettingField(
         key="parakeet_url",
         value_type="string",
         default=DEFAULT_APP_CONFIG["parakeet_url"],

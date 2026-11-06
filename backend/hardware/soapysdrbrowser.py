@@ -35,6 +35,7 @@ from zeroconf.asyncio import AsyncServiceBrowser, AsyncZeroconf
 
 # Configure logger
 logger = logging.getLogger("soapysdr-browser")
+DISCOVERY_SEARCH_SECONDS = 15
 
 # Store discovered servers here with a dictionary for each server containing all properties
 discovered_servers: Dict[str, Dict[str, Union[str, List[Any], int, float]]] = {}
@@ -379,9 +380,8 @@ async def discover_soapy_servers():
     )
 
     try:
-        search_duration = 15
-        logger.info(f"Searching for {search_duration} seconds...")
-        await asyncio.sleep(search_duration)
+        logger.info(f"Searching for {DISCOVERY_SEARCH_SECONDS} seconds...")
+        await asyncio.sleep(DISCOVERY_SEARCH_SECONDS)
 
         if discovered_servers:
             logger.debug("Found the following potential SoapyRemote servers:")
@@ -474,18 +474,3 @@ def get_active_servers_with_sdrs():
             active_servers[name] = server_info
 
     return active_servers
-
-
-# When you want to run this function:
-# asyncio.run(discover_soapy_servers())
-
-
-# To periodically refresh the SDR list:
-async def monitor_soapy_servers(refresh_interval=60):
-    """Continuously monitor SoapyRemote servers and their connected SDRs."""
-    await discover_soapy_servers()
-
-    while True:
-        logger.info(f"Waiting {refresh_interval} seconds before refreshing SDR list...")
-        await asyncio.sleep(refresh_interval)
-        await refresh_connected_sdrs()

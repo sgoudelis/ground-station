@@ -99,7 +99,6 @@ from server.spapaths import is_static_asset_request, resolve_static_asset_path
 from server.systeminfo import start_system_info_emitter
 from server.version import get_version_base
 from tasks.manager import BackgroundTaskManager
-from tasks.registry import get_task
 from tlesync.persist import load_orbital_sync_state
 from tlesync.state import sync_state_manager
 from tracker.instances import emit_tracker_instances, restore_tracker_instances_from_db
@@ -161,29 +160,6 @@ async def _reconcile_library_periodically() -> None:
         raise
     except Exception:
         logger.exception("Filesystem library reconciliation stopped unexpectedly")
-
-
-async def start_soapy_discovery(background_task_manager: BackgroundTaskManager) -> None:
-    """Only explicitly enabled discovery runs at startup; monitor includes its first scan."""
-    # SoapySDR discovery (runs as background tasks)
-    if arguments.runonce_soapy_discovery and not arguments.enable_soapy_discovery:
-        # Single discovery at startup
-        logger.info("Starting one-time SoapySDR discovery at startup...")
-
-        discovery_func = get_task("soapysdr_discovery")
-        await background_task_manager.start_task(
-            func=discovery_func, kwargs={"mode": "single"}, name="SoapySDR Discovery (startup)"
-        )
-    if arguments.enable_soapy_discovery:
-        # Continuous monitoring mode
-        logger.info("Starting continuous SoapySDR discovery monitoring...")
-
-        discovery_func = get_task("soapysdr_discovery")
-        await background_task_manager.start_task(
-            func=discovery_func,
-            kwargs={"mode": "monitor", "refresh_interval": 120},
-            name="SoapySDR Discovery (monitor)",
-        )
 
 
 @asynccontextmanager
@@ -278,8 +254,6 @@ async def lifespan(fastapiapp: FastAPI):
     asyncio.create_task(handle_tracker_messages(sio))
     await restore_tracker_instances_from_db()
     await emit_tracker_instances(sio)
-
-    await start_soapy_discovery(background_task_manager)
 
     # Schedule initial sync if needed.
     # During first-time setup we defer this background sync so the setup wizard

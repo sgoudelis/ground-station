@@ -156,7 +156,7 @@ it.each([false, true])('starts discovery on remote type selection unless a scan 
     expect(within(dialog).getByRole('combobox', {name: 'SDR Type'})).toHaveAttribute('aria-disabled', 'true');
     expect(within(dialog).getByRole('combobox', {name: 'SDR Device'})).toBeVisible();
     if (!running) {
-        expect(discoveries[0].request.data).toMatchObject({task_name: 'soapysdr_discovery', kwargs: {mode: 'single'}});
+        expect(discoveries[0].request.data).toMatchObject({task_name: 'soapysdr_discovery', kwargs: {}});
         await act(async () => {
             store.dispatch(taskStarted(scan));
             discoveries[0].reply({success: true, task_id: 'scan'});

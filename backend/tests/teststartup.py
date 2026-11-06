@@ -62,30 +62,3 @@ async def test_database_restore_streams_upload_to_temporary_file(monkeypatch):
     assert observed["content"] == "CREATE TABLE example (id INTEGER);"
     assert observed["drop_tables"] is False
     assert not observed["path"].exists()
-
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize(
-    "runonce,monitor,expected_mode",
-    [
-        (False, False, None),
-        (True, False, "single"),
-        (False, True, "monitor"),
-        (True, True, "monitor"),
-    ],
-)
-async def test_startup_discovery_requires_opt_in_and_starts_only_one_task(
-    monkeypatch, runonce, monitor, expected_mode
-):
-    from types import SimpleNamespace
-    from unittest.mock import AsyncMock
-
-    manager = SimpleNamespace(start_task=AsyncMock())
-    monkeypatch.setattr(startup.arguments, "runonce_soapy_discovery", runonce)
-    monkeypatch.setattr(startup.arguments, "enable_soapy_discovery", monitor)
-    await startup.start_soapy_discovery(manager)
-    if expected_mode is None:
-        manager.start_task.assert_not_awaited()
-    else:
-        manager.start_task.assert_awaited_once()
-        assert manager.start_task.call_args.kwargs["kwargs"]["mode"] == expected_mode

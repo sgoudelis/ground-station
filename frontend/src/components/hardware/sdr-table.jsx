@@ -77,7 +77,6 @@ import {toRowSelectionModel, toSelectedIds} from '../../utils/datagrid-selection
 import SelectionActionBar from './selection-action-bar.jsx';
 import SoapyProbeControls from './soapy-probe-controls.jsx';
 import SoapyServersPanel from './soapy-servers-panel.jsx';
-import AddIcon from '@mui/icons-material/Add';
 
 // SDR type field configurations with default values
 const sdrTypeFields = {
@@ -1995,23 +1994,12 @@ export default function SDRsPage() {
                 flexDirection: 'column',
             }}
         >
-            <Stack direction={{xs: 'column', sm: 'row'}} spacing={1.5}
-                   sx={{mb: 2, alignItems: {sm: 'center'}, justifyContent: 'space-between'}}>
-                <Box>
-                    <Typography variant="h6" component="h1" sx={{fontWeight: 700}}>
-                        {t('sdr.configured_sdrs')}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">{t('sdr.configured_sdrs_help')}</Typography>
-                </Box>
-                <Button variant="contained" startIcon={<AddIcon/>} disabled={loading}
-                        onClick={() => {
-                            dispatch(resetFormValues());
-                            dispatch(setSelectedSdrDevice(''));
-                            dispatch(setOpenAddDialog(true));
-                        }}>
-                    {t('sdr.add_sdr')}
-                </Button>
-            </Stack>
+            <Box sx={{mb: 2}}>
+                <Typography variant="h6" component="h1" sx={{fontWeight: 700}}>
+                    {t('sdr.configured_sdrs')}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">{t('sdr.configured_sdrs_help')}</Typography>
+            </Box>
             <Box component="form" sx={{ mt: 0 }}>
                 <Box sx={{width: '100%'}}>
                     <DataGrid
@@ -2076,7 +2064,18 @@ export default function SDRsPage() {
                         selectedCount={selected.length}
                         onClearSelection={() => setSelected([])}
                         primaryActions={
-                            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+                            <>
+                                <Button
+                                    variant="contained"
+                                    onClick={() => {
+                                        dispatch(resetFormValues());
+                                        dispatch(setSelectedSdrDevice(''));
+                                        dispatch(setOpenAddDialog(true));
+                                    }}
+                                    disabled={loading}
+                                >
+                                    {t('sdr.add')}
+                                </Button>
                                 <Button
                                     variant="contained"
                                     disabled={selected.length !== 1 || loading}
@@ -2104,7 +2103,7 @@ export default function SDRsPage() {
                                 >
                                     {t('sdr.delete')}
                                 </Button>
-                            </Stack>
+                            </>
                         }
                     />
                     <SoapyServersPanel
