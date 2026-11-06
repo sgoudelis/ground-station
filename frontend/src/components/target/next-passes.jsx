@@ -732,8 +732,6 @@ const NextPassesIsland = React.memo(function NextPassesIsland() {
     const trackingState = useSelector((state) => state.targetSatTrack?.trackingState || {});
     const satelliteDetails = useSelector((state) => state.targetSatTrack?.satelliteData?.details || {});
     const monitoredRows = useSelector((state) => state.celestialMonitored?.monitored || []);
-    const [containerHeight, setContainerHeight] = useState(0);
-    const containerRef = useRef(null);
     const [toolbarContainer, setToolbarContainer] = useState(null);
     const {
         passesLoading,
@@ -769,8 +767,6 @@ const NextPassesIsland = React.memo(function NextPassesIsland() {
             celestialRows: targetScene?.celestialTracks?.celestial || [],
         });
     }, [monitoredRows, satelliteDetails, targetScene?.celestialTracks?.celestial, trackingState]);
-    const minHeight = 200;
-    const maxHeight = 400;
     const hasLoadedFromStorageRef = useRef(false);
     const isLoadingRef = useRef(false);
     const curveCalcInFlightRef = useRef(false);
@@ -1022,19 +1018,6 @@ const NextPassesIsland = React.memo(function NextPassesIsland() {
         satelliteData?.details?.orbit_payload,
         satellitePasses,
     ]);
-
-    useEffect(() => {
-        const target = containerRef.current;
-        const observer = new ResizeObserver((entries) => {
-            setContainerHeight(entries[0].contentRect.height);
-        });
-        if (target) {
-            observer.observe(target);
-        }
-        return () => {
-            observer.disconnect();
-        };
-    }, [containerRef]);
 
     const handleColumnVisibilityChange = (newModel) => {
         dispatch(setPassesTableColumnVisibility(newModel));
@@ -1308,9 +1291,11 @@ const NextPassesIsland = React.memo(function NextPassesIsland() {
 
     return (
         <>
+            {/* Let the table fill the island below its header, including after target switches. */}
+            <Box sx={{height: '100%', display: 'flex', flexDirection: 'column', minHeight: 0, minWidth: 0}}>
             <TitleBar
                 className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}
-                sx={islandTitleBarCompactSx}
+                sx={{...islandTitleBarCompactSx, flexShrink: 0}}
             >
                 <Box sx={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', height: '100%'}}>
                     <Box sx={{display: 'flex', alignItems: 'center', flex: 1, minWidth: 0, pr: 1}}>
@@ -1399,13 +1384,13 @@ const NextPassesIsland = React.memo(function NextPassesIsland() {
                     )}
                 </Box>
             </TitleBar>
-            <div style={{ position: 'relative', display: 'block', height: '100%' }} ref={containerRef}>
-                <div style={{
-                    padding:'0rem 0rem 0rem 0rem',
+                <Box sx={{
                     display: 'flex',
                     flexDirection: 'column',
-                    height: containerHeight - 25,
-                    minHeight,
+                    flex: 1,
+                    minHeight: 0,
+                    minWidth: 0,
+                    overflow: 'hidden',
                 }}>
                     {!hasTargets && (
                         <Box
@@ -1454,8 +1439,8 @@ const NextPassesIsland = React.memo(function NextPassesIsland() {
                             onRowContextMenu={handlePassRowContextMenu}
                         />
                     )}
-                </div>
-            </div>
+                </Box>
+            </Box>
             <RowContextMenu
                 open={Boolean(passContextMenu)}
                 onClose={handleClosePassContextMenu}

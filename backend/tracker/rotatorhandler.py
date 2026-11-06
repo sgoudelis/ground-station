@@ -101,10 +101,21 @@ class RotatorHandler:
             error=False,
         )
         try:
-            stopped = await self.tracker.rotator_controller.stop()
-            if not stopped:
-                raise StopRejected("Rotator rejected stop command")
-            self.stop_result = ("succeeded", "Stop acknowledged; stationary position observed")
+            if not isinstance(
+                self.tracker.rotator_controller, RotatorProxy
+            ) and not self.tracker.rotator_details.get("stop_supported", True):
+                # Direct controllers bypass the station worker's capability check.
+                # Pause locally without sending S or treating it as a broken stream.
+                reason = "Controller Stop is unsupported; tracking updates paused"
+                self.tracker.rotator_data["stop_warning"] = reason
+                self.stop_result = ("unknown", reason)
+            else:
+                # Proxies must still reach the worker to fence its queued target;
+                # the worker checks its current definition before any physical S.
+                stopped = await self.tracker.rotator_controller.stop()
+                if not stopped:
+                    raise StopRejected("Rotator rejected stop command")
+                self.stop_result = ("succeeded", "Stop acknowledged; stationary position observed")
         except ControlReleased:
             self.tracker.release_hardware_control("rotator")
             return

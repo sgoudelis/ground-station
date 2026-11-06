@@ -732,6 +732,43 @@ async def test_park_waits_for_arrival_and_stop_calls_controller():
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("stop_supported", [True, False])
+async def test_expiring_disconnect_keeps_disconnect_intent_without_sending_stop(stop_supported):
+    tracker = worker()
+    tracker.rotator_details = {"stop_supported": stop_supported}
+    controller = SimpleNamespace(
+        host="localhost", port=4533, stop=AsyncMock(), disconnect=AsyncMock(return_value=True)
+    )
+    tracker.rotator_controller = controller
+    operation = request(
+        OperationRegistry(),
+        "disconnect",
+        action="configure",
+        changes={"rotator_state": "disconnected"},
+    )
+    tracker.operations.accept(
+        {
+            "operation": operation,
+            "messages": [
+                {
+                    "type": "set_tracking_state",
+                    "payload": {**STATE, "rotator_state": "disconnected"},
+                }
+            ],
+        }
+    )
+    tracker.operations.begin_cycle()
+    tracker.operations.pending["disconnect"]["deadline"] = time.time() - 1
+    tracker.operations.begin_cycle()
+
+    assert tracker.input_tracking_state["rotator_state"] == "disconnected"
+    assert not tracker.operations.pending
+    await tracker.rotator_handler.handle_rotator_state_change("tracking", "disconnected")
+    controller.disconnect.assert_awaited_once()
+    controller.stop.assert_not_awaited()
+
+
+@pytest.mark.asyncio
 async def test_expiring_running_move_waits_for_physical_stop():
     tracker = worker()
     tracker.rotator_controller = SimpleNamespace(stop=AsyncMock(return_value=True))

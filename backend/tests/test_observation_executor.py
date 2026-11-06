@@ -434,6 +434,28 @@ async def test_stop_observation_task_passes_tracker_context_and_clears_it(monkey
 
 
 @pytest.mark.asyncio
+async def test_failed_tracker_removal_retains_context_and_reports_cleanup_failure(monkeypatch):
+    executor_module = _load_executor_module(monkeypatch)
+    executor = _new_executor(executor_module)
+    context = {"tracker_id": "obs-one", "ephemeral": True}
+    executor._tracker_context_by_observation["one"] = context
+    stopped_sessions = []
+
+    async def stop_tracker(*_args, **_kwargs):
+        return False
+
+    async def stop_session(_observation_id, session_key, *_args):
+        stopped_sessions.append(session_key)
+
+    monkeypatch.setattr(executor.tracker_handler, "stop_tracker_task", stop_tracker)
+    monkeypatch.setattr(executor, "_stop_observation_session", stop_session)
+    with pytest.raises(RuntimeError, match="OBS tracker cleanup could not be completed"):
+        await executor._stop_observation_task("one", _build_observation())
+    assert executor._tracker_context_by_observation["one"] == context
+    assert stopped_sessions == ["sdr-1"]
+
+
+@pytest.mark.asyncio
 async def test_remove_scheduled_stop_job_uses_initialized_scheduler(monkeypatch):
     removed_jobs = []
     scheduler = types.SimpleNamespace(remove_job=removed_jobs.append)

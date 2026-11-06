@@ -772,9 +772,10 @@ class ObservationExecutor:
                 if not retained_bundle:
                     logger.info("Removed empty observation bundle at LOS: %s", bundle_dir.name)
 
-            logger.info(
-                f"Observation {observation['name']} ({observation_id}) stopped successfully"
-            )
+            if not stop_errors:
+                logger.info(
+                    f"Observation {observation['name']} ({observation_id}) stopped successfully"
+                )
             return {"success": len(stop_errors) == 0, "errors": stop_errors}
 
         except Exception as e:
@@ -1083,7 +1084,7 @@ class ObservationExecutor:
             )
             if not tracker_stop_ok:
                 raise RuntimeError(
-                    "OBS hardware disconnect could not be confirmed; OBS slot retained"
+                    "OBS tracker cleanup could not be completed; context retained for retry"
                 )
 
         except Exception as e:

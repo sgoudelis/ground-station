@@ -58,6 +58,12 @@ so telemetry and operator
 Pause/Stop/Disconnect remain responsive. A disconnect, worker failure, or another
 control change aborts the handoff; continuing motion still fails at the deadline.
 
+At observation end, optional parking is followed by a direct Disconnect. Closing
+the connection does not send Stop or require stationary readings. A Disconnect
+deadline must not trigger a physical Stop. Temporary tracker removal follows
+disconnection; cleanup failures retain the tracker context for retry without
+claiming that the hardware failed to disconnect.
+
 Manual takeover can release an interactive tracker. Observations reserve their
 whole device bundle during handoff and cannot be displaced by manual takeover.
 An explicit tracker Connect can take a connected rotator from manual control,

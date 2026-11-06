@@ -59,15 +59,21 @@ class HardwareSupervisor:
         # open would hide child exit and accumulate descriptors on each restart.
         for owner, connection in list(self.client_ends.items()):
             if self.owners[owner]["id"] == tracker_id:
-                connection.close()
-                self.client_ends.pop(owner)
+                self._close_tracker_connection(self.client_ends, owner)
 
     def unregister_tracker(self, tracker_id):
         self.tracker_started(tracker_id)
         for owner, connection in list(self.clients.items()):
             if self.owners[owner]["id"] == tracker_id:
-                connection.close()
-                self.clients.pop(owner)
+                self._close_tracker_connection(self.clients, owner)
+
+    @staticmethod
+    def _close_tracker_connection(connections, owner):
+        # EOF monitoring and threaded OBS removal can retire the same pipe.
+        # Claim it before close() releases the GIL; only the winner closes the FD.
+        connection = connections.pop(owner, None)
+        if connection is not None:
+            connection.close()
 
     def start(self):
         if self.task is None or self.task.done():
@@ -433,8 +439,7 @@ class HardwareSupervisor:
                     while connection.poll():
                         self.spawn(self.route(owner, connection, connection.recv()))
                 except (EOFError, OSError):
-                    connection.close()
-                    self.clients.pop(owner, None)
+                    self._close_tracker_connection(self.clients, owner)
             for (kind, device_id), worker in list(self.devices.items()):
                 try:
                     while worker.connection.poll():
@@ -487,10 +492,10 @@ class HardwareSupervisor:
         for task in self.tasks:
             task.cancel()
         await asyncio.gather(*self.tasks, return_exceptions=True)
-        for connection in self.clients.values():
-            connection.close()
-        for connection in self.client_ends.values():
-            connection.close()
+        for owner in list(self.clients):
+            self._close_tracker_connection(self.clients, owner)
+        for owner in list(self.client_ends):
+            self._close_tracker_connection(self.client_ends, owner)
         self.devices.clear()
         self.clients.clear()
         self.client_ends.clear()

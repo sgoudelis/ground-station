@@ -179,6 +179,36 @@ async def test_unconfirmed_stop_recovers_on_a_new_stream_without_replaying_motio
 
 
 @pytest.mark.asyncio
+async def test_unsupported_direct_stop_pauses_and_disconnects_without_s_or_recovery():
+    async with controller_peer() as (controller, commands):
+        tracker = worker(controller)
+        tracker.rotator_details = {"stop_supported": False}
+        tracker.manual_rotator_target = {"az": 200, "el": 50}
+        tracker.nudge_offset = {"az": 2, "el": 0}
+        await controller.get_position()
+        connection_count = len({connection for connection, _line in commands})
+
+        await stop(tracker)
+
+        assert result(tracker)["status"] == "unknown"
+        assert "unsupported" in result(tracker)["reason"]
+        assert tracker.manual_rotator_target is None
+        assert tracker.nudge_offset == {"az": 0, "el": 0}
+        assert tracker.rotator_data["tracking"] is False
+        assert tracker.rotator_data["motion_unconfirmed"] is True
+        assert tracker.rotator_data["stopped"] is False
+        assert tracker.rotator_data["error"] is False
+        assert not tracker.operations.pending
+        assert await controller.get_position() == (123, 45)
+        assert len({connection for connection, _line in commands}) == connection_count
+
+        await tracker.rotator_handler.handle_rotator_state_change("stopped", "disconnected")
+        assert tracker.rotator_controller is None
+        assert tracker.rotator_data["connected"] is False
+        assert not any(line == b"S\n" for _connection, line in commands)
+
+
+@pytest.mark.asyncio
 async def test_rejected_stop_keeps_connection_and_can_be_retried():
     async with controller_peer(b"RPRT -4\n") as (controller, commands):
         tracker = worker(controller)

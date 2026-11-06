@@ -138,7 +138,11 @@ class WorkerOperations:
                 reconciled=True,
             )
             return
-        if operation.get("begun") and "rotator" in operation["scopes"]:
+        if (
+            operation.get("begun")
+            and "rotator" in operation["scopes"]
+            and operation["changes"].get("rotator_state") != "disconnected"
+        ):
             # Keep the operation outstanding until the physical Stop has run.
             # An early terminal event could otherwise unlock a new Move that
             # the old Stop would immediately discard.
@@ -149,6 +153,8 @@ class WorkerOperations:
             self.tracker.prev_rotator_state = None
             self.tracker.manual_rotator_target = None
             return
+        # A Disconnect must never turn into Stop when its deadline expires.
+        # Keep the requested disconnect state so cleanup can still close the socket.
         if not operation.get("begun"):
             for field, value in operation["changes"].items():
                 if self.tracker.input_tracking_state.get(field) == value:

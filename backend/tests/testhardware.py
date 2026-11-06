@@ -5,8 +5,10 @@ import asyncio
 import json
 import logging
 import queue
+import threading
 import time
 from contextlib import asynccontextmanager
+from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import numpy as np
@@ -1470,6 +1472,123 @@ def test_tracker_pipe_registration_is_removed_when_a_producer_stops():
     assert parent.closed
     assert not service.clients
     assert not service.client_ends
+
+
+@pytest.mark.asyncio
+async def test_threaded_obs_removal_and_eof_monitor_close_tracker_pipe_once(monkeypatch):
+    service = HardwareSupervisor()
+    service.register_tracker("obs-one")
+    parent = next(iter(service.clients.values()))
+    close_started = threading.Event()
+    finish_close = threading.Event()
+    original_close = parent.close
+    close_calls = []
+
+    def delayed_close():
+        close_calls.append(True)
+        if len(close_calls) > 1:
+            raise OSError(9, "Bad file descriptor")
+        close_started.set()
+        # Model Connection.close releasing the GIL before clearing its handle.
+        if not finish_close.wait(3):
+            raise TimeoutError("Threaded close was not released")
+        original_close()
+
+    monkeypatch.setattr(parent, "close", delayed_close)
+    removal = asyncio.create_task(asyncio.to_thread(service.unregister_tracker, "obs-one"))
+    try:
+        assert await asyncio.to_thread(close_started.wait, 2)
+        # Closing the child above made EOF readable. Let supervision encounter it
+        # while tracker removal is still closing the same parent endpoint.
+        service.start()
+        await asyncio.sleep(0.05)
+        finish_close.set()
+        await removal
+        assert close_calls == [True]
+        assert not service.task.done()
+        assert not service.clients
+        assert not service.client_ends
+    finally:
+        finish_close.set()
+        await asyncio.gather(removal, return_exceptions=True)
+        await service.shutdown()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("stop_supported", [True, False])
+@pytest.mark.parametrize("park_after", [True, False])
+async def test_observation_cleanup_disconnects_without_stop(
+    station, monkeypatch, stop_supported, park_after
+):
+    service, details, commands, connections = station
+    details.update(stop_supported=stop_supported, _ignore_stop=True)
+    registry = OperationRegistry()
+    tracker = SatelliteTracker(
+        queue.Queue(),
+        queue.Queue(),
+        tracker_id="obs-one",
+        hardware_client=HardwareClient(service.register_tracker("obs-one")),
+    )
+    tracker.rotator_details = details
+    tracker.current_rotator_id = "mount"
+    tracker.input_tracking_state = {"rotator_id": "mount", "rotator_state": "tracking"}
+    await tracker.rotator_handler.handle_rotator_state_change("disconnected", "tracking")
+    opened = len(connections)
+
+    async def state():
+        return dict(tracker.input_tracking_state)
+
+    async def update(tracker_id, value, requester_sid=None, operation=None):
+        # Exercise the normal command confirmation with an in-process tracker;
+        # its proxy still uses the real station IPC worker and TCP controller.
+        command = registry.accept(
+            tracker_id, value, {**tracker.input_tracking_state, **value}, operation
+        )
+        previous = tracker.input_tracking_state["rotator_state"]
+        tracker.operations.accept(
+            {
+                "operation": command,
+                "messages": [{"type": "set_tracking_state", "payload": {**await state(), **value}}],
+            }
+        )
+        tracker.operations.begin_cycle()
+        if "rotator_state" in value:
+            tracker.current_rotator_state = value["rotator_state"]
+            await tracker.rotator_handler.handle_rotator_state_change(
+                previous, value["rotator_state"]
+            )
+        tracker.operations.finish_cycle()
+        while not tracker.queue_out._queue_out.empty():
+            message = tracker.queue_out._queue_out.get_nowait()
+            if message.get("event") == "tracker-command-status":
+                data = message["data"]
+                registry.update(data["command_id"], data["status"], data.get("reason"))
+        return {"success": True, "result": {"command_id": command["command_id"]}}
+
+    handler = TrackerHandler()
+    remove = AsyncMock(return_value=True)
+    monkeypatch.setattr(observationmodule, "hardware", service)
+    monkeypatch.setattr(observationmodule, "operations", registry)
+    monkeypatch.setattr(
+        observationmodule,
+        "get_tracker_manager",
+        lambda _: SimpleNamespace(get_tracking_state=state),
+    )
+    monkeypatch.setattr(observationmodule, "update_tracking_state_with_ownership", update)
+    monkeypatch.setattr(handler, "_remove_observation_tracker_instance", remove)
+
+    assert await asyncio.wait_for(
+        handler.stop_tracker_task(
+            "one", {"park_after_observation": park_after}, {"tracker_id": "obs-one"}
+        ),
+        timeout=2,
+    )
+    remove.assert_awaited_once_with("obs-one")
+    assert tracker.input_tracking_state["rotator_id"] == "none"
+    assert service.snapshots()[0]["data"]["connected"] is False
+    assert ("K" in commands) is park_after
+    assert "S" not in commands
+    assert len(connections) == opened
 
 
 @pytest.mark.asyncio
