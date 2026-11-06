@@ -50,10 +50,10 @@ Source imagery for satellite icon assets under `full/` in this folder.
     - `128/19548.png`, `128/21639.png`
     - `256/19548.png`, `256/21639.png`
 
-- `full/22563.png`, `full/22787.png`, `full/23467.png`, `full/25967.png`, `full/28117.png` (GPS Block II / IIR icon source image)
-  - Source URL: https://commons.wikimedia.org/wiki/File:GPS-24_satellite.png (direct file: https://upload.wikimedia.org/wikipedia/commons/4/42/GPS-24_satellite.png)
-  - Description: GPS-24 (Block II) Navstar navigation satellite, NASA Goddard public-domain photo
-  - Processing note: white background removed via edge-connected extraction, foreground tight-trimmed and center-fitted, then exported as transparent icon presets for the UFO/Navstar IDs listed above.
+- `full/22563.png`, `full/22787.png`, `full/23467.png`, `full/25967.png`, `full/28117.png` (UHF Follow-On satellite icon source images, replaced 2026-11-06)
+  - Source URLs: https://space.skyrocket.de/img_sat/ufo-b1.jpg (Block 1, used for UFO 1/2), https://space.skyrocket.de/img_sat/ufo-b2.jpg (Block 2, UFO 4), https://space.skyrocket.de/img_sat/ufo-b3.jpg (Block 3, UFO 10), https://space.skyrocket.de/img_sat/ufo-b4.jpg (Block 4, UFO 11); pages: https://space.skyrocket.de/doc_sdat/ufo-1.htm, /ufo-4.htm, /ufo-8.htm, /ufo-11.htm
+  - Description: U.S. Navy UHF Follow-On (UFO) military communications satellites (Hughes/Boeing HS-601 bus, large white UHF helical reflector); these NORAD IDs are UHF comsats, NOT GPS/Navstar. Renders are Boeing Space & Communications artwork via Gunter's Space Page (used under the same practice as the other skyrocket-sourced icons in this set).
+  - Processing note: starfield background dropped via edge-connected dark flood (deep-blue wing cells preserved with a low flood threshold), dark textured debris below the bus removed with a targeted luminance mask, foreground tight-trimmed and capped at 256, then exported as transparent icon presets (`64/`, `128/`, `256/`). The previous icons for these IDs were a GPS constellation diagram mislabelled as GPS-24 Block II art.
 
 - `full/26407.png`, `full/27663.png`, `full/28190.png`, `full/28474.png`, `full/28874.png`, `full/29486.png`, `full/29601.png`, `full/32260.png`, `full/32384.png`, `full/32711.png`, `full/35752.png` (GPS Block IIR/IIRM icon source image)
   - Source URL: https://commons.wikimedia.org/wiki/File:GPS-IIRM.jpg (public domain; replaced 2026-11-06 the earlier GPS-24 Block II art used for 32711, which did not depict this block)
