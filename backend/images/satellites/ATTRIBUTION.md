@@ -25,9 +25,9 @@ Source imagery for satellite icon assets under `full/` in this folder.
     - `256/7530.png`
 
 - `full/43700.png` (Es'hail 2 icon source image)
-  - Source URL: https://www.rfhamdesign.com/images/eshail-2_03_1038.jpg
-  - Description: Es'hail 2 / QO-100 geostationary satellite
-  - Processing note: black-space background removed via edge-connected near-black extraction, Earth/watermark excluded, foreground tight-trimmed and center-fitted, then exported as transparent icon presets:
+  - Source URL: https://www.aerospace-technology.com/projects/eshail-2-communication-satellite (official Es'hailSat / Mitsubishi Electric orbit render, image credit Mitsubishi Electric Corporation)
+  - Description: Es'hail 2 / QO-100 geostationary satellite (Mitsubishi DS2000 bus) orbit render, full spacecraft over starfield
+  - Processing note: replaced 2026-11-06 (previous sources extracted incomplete: horizon cut lost the lower array, glow-keyed floods left atmospheric-glow blobs). Solar arrays keyed by saturated blue, bus/rims by bright non-warm luminance, golden nebula glow dropped as warm-bright background, dark antenna dishes and bus side kept via explicit shapes; star specks dropped by component size, enclosed panel gaps and dish interiors hole-filled, flare remnants cut manually; master capped at 256x256, then exported as transparent icon presets:
     - `64/43700.png`
     - `128/43700.png`
     - `256/43700.png`
