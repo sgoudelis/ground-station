@@ -1994,12 +1994,6 @@ export default function SDRsPage() {
                 flexDirection: 'column',
             }}
         >
-            <Box sx={{mb: 2}}>
-                <Typography variant="h6" component="h1" sx={{fontWeight: 700}}>
-                    {t('sdr.configured_sdrs')}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">{t('sdr.configured_sdrs_help')}</Typography>
-            </Box>
             <Box component="form" sx={{ mt: 0 }}>
                 <Box sx={{width: '100%'}}>
                     <DataGrid
