@@ -5,7 +5,7 @@ from unittest.mock import Mock
 import pytest
 
 from handlers.entities import scheduler
-from observations.validation import validate_observation_pass
+from observations.validation import validate_observation_pass, validate_transmitter_frequencies
 
 pytestmark = pytest.mark.unit
 
@@ -57,3 +57,45 @@ def test_valid_pass_is_accepted(offset):
             }
         }
     ) == {"success": True, "error": None}
+
+
+@pytest.mark.parametrize("task_type", ["decoder", "audio_recording", "transcription"])
+@pytest.mark.parametrize(
+    ("bandwidth", "accepted"),
+    [(200000, False), (1536000, True), ("auto", True), ("driver", True), (None, True)],
+)
+def test_task_frequency_respects_manual_if_filter(task_type, bandwidth, accepted):
+    result = validate_transmitter_frequencies(
+        {
+            "sessions": [
+                {
+                    "sdr": {
+                        "center_frequency": 145000000,
+                        "sample_rate": 2048000,
+                        "sdr_settings": {"bandwidth": bandwidth},
+                    },
+                    "tasks": [{"type": task_type, "config": {"frequency": 145600000}}],
+                }
+            ]
+        }
+    )
+    assert result["success"] is accepted
+
+
+@pytest.mark.parametrize("bandwidth", [0, -1, float("nan"), float("inf")])
+def test_invalid_manual_if_filter_is_rejected(bandwidth):
+    result = validate_transmitter_frequencies(
+        {
+            "sessions": [
+                {
+                    "sdr": {
+                        "center_frequency": 145000000,
+                        "sample_rate": 2048000,
+                        "sdr_settings": {"bandwidth": bandwidth},
+                    },
+                    "tasks": [],
+                }
+            ]
+        }
+    )
+    assert result["success"] is False

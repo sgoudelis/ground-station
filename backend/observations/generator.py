@@ -231,6 +231,9 @@ async def generate_observations_for_monitored_satellites(
                 }
             monitored_sats = result["data"] or []
 
+        # Targeted generation must respect the same enabled flag as background generation.
+        monitored_sats = [mon_sat for mon_sat in monitored_sats if mon_sat.get("enabled", True)]
+
         if not monitored_sats:
             return {
                 "success": True,

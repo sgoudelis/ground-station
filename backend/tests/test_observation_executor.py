@@ -5,6 +5,7 @@ import json
 import sys
 import types
 from datetime import datetime
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -89,6 +90,174 @@ def _load_executor_module(monkeypatch):
 
     module = importlib.import_module("observations.executor")
     return importlib.reload(module)
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "settings",
+    [
+        None,
+        {
+            "gains": {"RFGR": 4, "IFGR": 35},
+            "bandwidth": 1536000,
+            "clockSource": "external",
+            "timeSource": "internal",
+            "bitpack": True,
+        },
+    ],
+)
+async def test_scheduled_session_forwards_device_settings_and_agc(monkeypatch, settings):
+    executor_module = _load_executor_module(monkeypatch)
+    monkeypatch.setattr(executor_module, "AsyncSessionLocal", lambda: _DummyAsyncSessionContext())
+    monkeypatch.setattr(
+        executor_module,
+        "fetch_sdr",
+        AsyncMock(
+            return_value={"success": True, "data": {"id": "sdr-1", "type": "soapysdrremote"}}
+        ),
+    )
+    register = AsyncMock(return_value="internal:obs-1:radio")
+    monkeypatch.setattr(executor_module.session_service, "register_internal_observation", register)
+    observation = _build_observation()
+    session = {
+        "sdr": {
+            "id": "sdr-1",
+            "sample_rate": 2048000,
+            "gain": 0,
+            "tuner_agc": True,
+            "soapy_agc": True,
+            "rtl_agc": True,
+            **({"sdr_settings": settings} if settings is not None else {}),
+        },
+        "tasks": [],
+    }
+
+    await _new_executor(executor_module)._execute_observation_session(
+        "obs-1", "radio", observation, session
+    )
+
+    config = register.await_args.kwargs["sdr_config"]
+    assert config["sdr_settings"] == (settings or {})
+    assert config["sample_rate"] == 2048000
+    assert config["gain"] == 0
+    assert config["tuner_agc"] is True
+    assert config["soapy_agc"] is True
+    assert config["rtl_agc"] is True
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+@pytest.mark.parametrize("outcome", ["failure", "exception", "success"])
+@pytest.mark.parametrize(
+    ("task_type", "handler_name", "method_name"),
+    [
+        ("decoder", "decoder_handler", "start_decoder_task"),
+        ("iq_recording", "recorder_handler", "start_iq_recording_task"),
+        ("audio_recording", "recorder_handler", "start_audio_recording_task"),
+        ("transcription", "transcription_handler", "start_transcription_task"),
+    ],
+)
+async def test_task_failures_only_log_events_and_allow_remaining_tasks(
+    monkeypatch, task_type, handler_name, method_name, outcome
+):
+    executor_module = _load_executor_module(monkeypatch)
+    monkeypatch.setattr(executor_module, "AsyncSessionLocal", lambda: _DummyAsyncSessionContext())
+    monkeypatch.setattr(
+        executor_module,
+        "fetch_sdr",
+        AsyncMock(return_value={"success": True, "data": {"id": "sdr-1"}}),
+    )
+    monkeypatch.setattr(
+        executor_module.session_service,
+        "register_internal_observation",
+        AsyncMock(return_value="internal:obs-1:radio"),
+    )
+    log_event = AsyncMock()
+    update_status = AsyncMock()
+    monkeypatch.setattr(executor_module, "log_execution_event", log_event)
+    monkeypatch.setattr(executor_module, "update_observation_status", update_status)
+    executor = _new_executor(executor_module)
+    next_task = AsyncMock(return_value=True)
+    monkeypatch.setattr(executor.decoder_handler, "start_decoder_task", next_task)
+    success_result = "/tmp/audit-recording" if task_type == "iq_recording" else True
+    result = {
+        "failure": None if task_type == "iq_recording" else False,
+        "exception": RuntimeError("Task worker unavailable"),
+        "success": success_result,
+    }[outcome]
+    start_task = AsyncMock(side_effect=[result, True] if task_type == "decoder" else [result])
+    monkeypatch.setattr(getattr(executor, handler_name), method_name, start_task)
+    session = {
+        "sdr": {"id": "sdr-1"},
+        "tasks": [
+            {"type": task_type, "config": {}},
+            {"type": "decoder", "config": {"decoder_type": "aprs"}},
+        ],
+    }
+
+    await executor._execute_observation_session("obs-1", "radio", _build_observation(), session)
+
+    decoder_start = executor.decoder_handler.start_decoder_task
+    assert decoder_start.await_count == (2 if task_type == "decoder" else 1)
+    assert decoder_start.await_args.args[4]["decoder_type"] == "aprs"
+    update_status.assert_not_awaited()
+    if outcome == "success":
+        log_event.assert_not_awaited()
+    else:
+        log_event.assert_awaited_once()
+        observation_id, message, level = log_event.await_args.args
+        assert observation_id == "obs-1"
+        assert f"Failed to start {task_type} task 1 in SDR session radio" in message
+        assert ("VFO 1" in message) == (task_type != "iq_recording")
+        assert level == "error"
+        if outcome == "exception":
+            assert "Task worker unavailable" in message
+    recordings = executor._iq_recording_info.get("obs-1", {}).get("radio", {})
+    assert bool(recordings) == (task_type == "iq_recording" and outcome == "success")
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_vfo_limit_is_logged_and_does_not_skip_iq_recording(monkeypatch):
+    executor_module = _load_executor_module(monkeypatch)
+    monkeypatch.setattr(executor_module, "INTERNAL_VFO_NUMBER", 1)
+    monkeypatch.setattr(executor_module, "AsyncSessionLocal", lambda: _DummyAsyncSessionContext())
+    monkeypatch.setattr(
+        executor_module,
+        "fetch_sdr",
+        AsyncMock(return_value={"success": True, "data": {"id": "sdr-1"}}),
+    )
+    monkeypatch.setattr(
+        executor_module.session_service,
+        "register_internal_observation",
+        AsyncMock(return_value="internal:obs-1:radio"),
+    )
+    log_event = AsyncMock()
+    monkeypatch.setattr(executor_module, "log_execution_event", log_event)
+    executor = _new_executor(executor_module)
+    decoder = AsyncMock(return_value=True)
+    recorder = AsyncMock(return_value="/tmp/audit-recording")
+    monkeypatch.setattr(executor.decoder_handler, "start_decoder_task", decoder)
+    monkeypatch.setattr(executor.recorder_handler, "start_iq_recording_task", recorder)
+    session = {
+        "sdr": {"id": "sdr-1"},
+        "tasks": [
+            {"type": "decoder", "config": {}},
+            {"type": "decoder", "config": {}},
+            {"type": "iq_recording", "config": {}},
+        ],
+    }
+
+    await executor._execute_observation_session("obs-1", "radio", _build_observation(), session)
+
+    decoder.assert_awaited_once()
+    recorder.assert_awaited_once()
+    log_event.assert_awaited_once_with(
+        "obs-1",
+        "Skipped decoder task 2 in SDR session radio: maximum of 1 VFOs reached",
+        "warning",
+    )
 
 
 @pytest.mark.asyncio

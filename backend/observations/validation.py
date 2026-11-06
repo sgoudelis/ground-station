@@ -15,6 +15,7 @@
 
 """Validation functions for observations and monitored satellites."""
 
+import math
 from datetime import datetime
 from typing import Any, Dict
 
@@ -71,15 +72,22 @@ def validate_transmitter_frequencies(data: Dict[str, Any]) -> Dict[str, Any]:
         if not center_frequency or not sample_rate:
             continue
 
-        # Calculate the frequency range the SDR can receive
-        nyquist_bandwidth = sample_rate / 2
+        # A manual IF filter can cover less than the sampled span. Driver/Auto
+        # readback is only available when the worker opens the device.
+        filter_width = (sdr_config.get("sdr_settings") or {}).get("bandwidth")
+        capture_bandwidth = sample_rate
+        if isinstance(filter_width, (int, float)) and not isinstance(filter_width, bool):
+            if not math.isfinite(filter_width) or filter_width <= 0:
+                return {"success": False, "error": "IF bandwidth must be positive."}
+            capture_bandwidth = min(sample_rate, filter_width)
+        nyquist_bandwidth = capture_bandwidth / 2
         min_freq = center_frequency - nyquist_bandwidth
         max_freq = center_frequency + nyquist_bandwidth
 
         tasks = session.get("tasks", []) or []
         for task_index, task in enumerate(tasks):
             task_type = task.get("type")
-            if task_type != "decoder":
+            if task_type not in {"decoder", "audio_recording", "transcription"}:
                 continue
 
             task_config = task.get("config", {})

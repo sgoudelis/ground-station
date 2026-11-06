@@ -67,6 +67,12 @@
       "spyverter": "SpyVerter (+120MHz)"
     }
   },
+  "settings_sdr": {
+    "not_configured": "[not configured]",
+    "clock_source": "Clock Source",
+    "time_source": "Time Source",
+    "bit_packing": "Bit Packing"
+  },
   "sdr": {
     "title": "SDR",
     "sdr_label": "SDR",
@@ -93,6 +99,7 @@
     "if_bandwidth_applied": "Applied: {{value}}",
     "if_bandwidth_limited": "covers part of the sampled span",
     "if_bandwidth_unavailable": "unavailable at this rate",
+    "if_bandwidth_tasks_outside": "The IF filter does not cover all task frequencies. Widen it or change the center frequency.",
     "no_rate_selected": "[no rate selected]",
     "sample_rate_required": "Select sample rate before starting stream",
     "antenna": "Antenna",

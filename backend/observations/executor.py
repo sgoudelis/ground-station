@@ -931,6 +931,8 @@ class ObservationExecutor:
                 fft_window=sdr_config_dict.get("fft_window", "hamming"),
                 fft_averaging=sdr_config_dict.get("fft_averaging", 1),
                 serial_number=(sdr_device.get("serial") or sdr_device.get("serial_number") or 0),
+                # Preserve the same device-specific controls used for live reception.
+                sdr_settings=sdr_config_dict.get("sdr_settings") or {},
             ).to_dict()
 
             # 2. Register internal observation session (creates session, starts SDR)
@@ -959,75 +961,101 @@ class ObservationExecutor:
             for task_index, task in enumerate(tasks, start=1):
                 task_type = task.get("type")
                 task_config = task.get("config", {})
+                vfo_number = None
 
                 if task_type in {"decoder", "audio_recording", "transcription"}:
                     # Assign VFO number for this task (1-VFO_NUMBER)
                     if vfo_counter > INTERNAL_VFO_NUMBER:
-                        logger.warning(
-                            f"Maximum of {INTERNAL_VFO_NUMBER} VFOs supported, skipping additional tasks in observation {observation_id}"
+                        await log_execution_event(
+                            observation_id,
+                            f"Skipped {task_type} task {task_index} in SDR session {session_key}: "
+                            f"maximum of {INTERNAL_VFO_NUMBER} VFOs reached",
+                            "warning",
                         )
                         continue
                     vfo_number = vfo_counter
                     vfo_counter += 1  # Increment for next VFO task
                     task_config["vfo_number"] = vfo_number
 
-                if task_type == "decoder":
-                    vfo_number = task_config.get("vfo_number")
+                # Task failures belong in the observation log; they must not prevent
+                # independent tasks in this session from starting or fail the observation.
+                task_error = None
+                try:
+                    if task_type == "decoder":
+                        task_started = await self.decoder_handler.start_decoder_task(
+                            observation_id,
+                            session_id,
+                            sdr_id,
+                            sdr_config,
+                            task_config,
+                            task_config["vfo_number"],
+                            bundle_dir,
+                        )
 
-                    await self.decoder_handler.start_decoder_task(
+                    elif task_type == "iq_recording":
+                        recorder_id = f"{session_id}:iq:{task_index}"
+                        recording_path = await self.recorder_handler.start_iq_recording_task(
+                            observation_id,
+                            session_id,
+                            sdr_id,
+                            satellite,
+                            task_config,
+                            recorder_id=recorder_id,
+                            bundle_dir=bundle_dir,
+                        )
+                        task_started = bool(recording_path)
+                        if recording_path:
+                            self._iq_recording_info.setdefault(observation_id, {}).setdefault(
+                                session_key, {}
+                            )[task_index] = {
+                                "recording_path": recording_path,
+                                "task_config": task_config,
+                            }
+
+                    elif task_type == "audio_recording":
+                        task_started = await self.recorder_handler.start_audio_recording_task(
+                            observation_id,
+                            session_id,
+                            sdr_id,
+                            sdr_config,
+                            satellite,
+                            task_config,
+                            bundle_dir,
+                        )
+
+                    elif task_type == "transcription":
+                        task_started = await self.transcription_handler.start_transcription_task(
+                            observation_id,
+                            session_id,
+                            sdr_id,
+                            sdr_config,
+                            satellite,
+                            task_config,
+                            bundle_dir,
+                        )
+                    else:
+                        continue
+                except Exception as error:
+                    task_started = False
+                    task_error = str(error)
+                    logger.exception(
+                        "Error starting %s task %s for observation %s",
+                        task_type,
+                        task_index,
                         observation_id,
-                        session_id,
-                        sdr_id,
-                        sdr_config,
-                        task_config,
-                        vfo_number,
-                        bundle_dir,
                     )
 
-                elif task_type == "iq_recording":
-                    recorder_id = f"{session_id}:iq:{task_index}"
-                    recording_path = await self.recorder_handler.start_iq_recording_task(
+                if not task_started:
+                    context = f", VFO {vfo_number}" if vfo_number is not None else ""
+                    detail = f": {task_error}" if task_error else ""
+                    await log_execution_event(
                         observation_id,
-                        session_id,
-                        sdr_id,
-                        satellite,
-                        task_config,
-                        recorder_id=recorder_id,
-                        bundle_dir=bundle_dir,
-                    )
-                    if recording_path:
-                        self._iq_recording_info.setdefault(observation_id, {}).setdefault(
-                            session_key, {}
-                        )[task_index] = {
-                            "recording_path": recording_path,
-                            "task_config": task_config,
-                        }
-
-                elif task_type == "audio_recording":
-                    vfo_number = task_config.get("vfo_number")
-                    await self.recorder_handler.start_audio_recording_task(
-                        observation_id,
-                        session_id,
-                        sdr_id,
-                        sdr_config,
-                        satellite,
-                        task_config,
-                        bundle_dir,
+                        f"Failed to start {task_type} task {task_index} "
+                        f"in SDR session {session_key}{context}{detail}",
+                        "error",
                     )
 
-                elif task_type == "transcription":
-                    vfo_number = task_config.get("vfo_number")
-                    await self.transcription_handler.start_transcription_task(
-                        observation_id,
-                        session_id,
-                        sdr_id,
-                        sdr_config,
-                        satellite,
-                        task_config,
-                        bundle_dir,
-                    )
-
-            logger.info(f"Observation {observation_id} session {session_key} started successfully")
+            logger.info(f"Observation {observation_id} session {session_key} started")
 
         except Exception as e:
             logger.error(f"Failed to start observation {observation_id}: {e}")

@@ -51,7 +51,6 @@ import {
     ListItemText,
     Tabs,
     Tab,
-    Switch,
     Tooltip,
 } from '@mui/material';
 import { Close as CloseIcon, Delete as DeleteIcon, ExpandMore as ExpandMoreIcon, ErrorOutline as ErrorOutlineIcon, Memory as MemoryIcon, RadioButtonUnchecked as RadioButtonUncheckedIcon, CheckCircle as EnableIcon, Cancel as DisableIcon } from '@mui/icons-material';
@@ -82,6 +81,9 @@ import { getSatdumpPipelines, getDecoderParameters, getDecoderDefaultParameters,
 import { DecoderNumberField } from '../waterfall/decoder-number-field.jsx';
 import { DecoderConfigSuggestion } from './decoder-config-suggestion.jsx';
 import { ObservationRigFields } from './observation-rig-fields.jsx';
+import SdrSessionFields from './sdr-session-fields.jsx';
+import { calculateSdrCenterFrequency, createEmptySdrSession, validateSdrTaskBandwidth } from './session-utils.js';
+import { formatSdrRate as formatSampleRate } from '../common/sdr-parameters.js';
 
 const DECODER_TYPES = [
     { value: 'none', labelKey: 'decoder_type_none' },
@@ -117,21 +119,7 @@ const MODULATION_TYPES = [
 ];
 
 const BAND_ORDER = ['hf', 'vhf', 'uhf', 'l_band', 's_band', 'c_band', 'x_band', 'other'];
-
-const SAMPLE_RATES = [
-    { value: 500000, label: '500 kHz' },
-    { value: 1000000, label: '1 MHz' },
-    { value: 2000000, label: '2 MHz' },
-    { value: 2400000, label: '2.4 MHz' },
-    { value: 3000000, label: '3 MHz' },
-    { value: 4000000, label: '4 MHz' },
-    { value: 5000000, label: '5 MHz' },
-    { value: 6000000, label: '6 MHz' },
-    { value: 8000000, label: '8 MHz' },
-    { value: 10000000, label: '10 MHz' },
-    { value: 12000000, label: '12 MHz' },
-    { value: 16000000, label: '16 MHz' },
-];
+const createEmptySession = () => createEmptySdrSession(1000000);
 
 const TRANSCRIPTION_LANGUAGE_OPTIONS = [
     { value: 'en', icon: '🇬🇧', labelKey: 'language_english' },
@@ -169,28 +157,6 @@ const TRANSCRIPTION_PROVIDER_OPTIONS = [
     { value: 'parakeet', labelKey: 'provider_parakeet' },
 ];
 
-const createEmptySession = () => ({
-    sdr: {
-        id: '',
-        name: '',
-        sample_rate: 1000000,
-        gain: '',
-        antenna_port: '',
-        center_frequency: 0,
-        auto_center_frequency: true,
-        bias_t: false,
-    },
-    tasks: [],
-});
-
-const formatSampleRate = (rate) => {
-    if (!rate) return '';
-    if (rate >= 1000000) {
-        const decimals = rate % 1000000 === 0 ? 0 : 1;
-        return `${(rate / 1000000).toFixed(decimals)} MHz`;
-    }
-    return `${(rate / 1000).toFixed(0)} kHz`;
-};
 
 const getDecimationOptions = (sampleRate) => {
     if (!sampleRate || sampleRate <= 0) return [1];
@@ -313,33 +279,10 @@ export default function MonitoredSatelliteDialog({ onExited }) {
     const [pendingRemoveSessionIndex, setPendingRemoveSessionIndex] = useState(null);
     const [openRemoveSessionConfirm, setOpenRemoveSessionConfirm] = useState(false);
     const sdrParamsForSelected = formData.sdr.id ? sdrParameters?.[formData.sdr.id] : null;
-    const biasTSupported = Boolean(sdrParamsForSelected?.has_bias_t || sdrParamsForSelected?.capabilities?.bias_t?.supported);
     const selectedSdrRecord = useMemo(
         () => sdrs.find((sdr) => String(sdr?.id) === String(formData.sdr.id)),
         [sdrs, formData.sdr.id]
     );
-    const selectedSdrRxAntennaLabels = useMemo(() => {
-        const rawLabels = selectedSdrRecord?.antenna_labels;
-        const rxLabels =
-            rawLabels && typeof rawLabels === 'object' && rawLabels.rx && typeof rawLabels.rx === 'object'
-                ? rawLabels.rx
-                : {};
-
-        const normalized = {};
-        Object.entries(rxLabels).forEach(([portName, userLabel]) => {
-            const key = String(portName || '').trim();
-            const value = String(userLabel || '').trim();
-            if (!key || !value) return;
-            normalized[key] = value;
-        });
-        return normalized;
-    }, [selectedSdrRecord]);
-    const formatAntennaPortOptionLabel = (port) => {
-        const key = String(port || '').trim();
-        if (!key) return String(port || '');
-        const userLabel = selectedSdrRxAntennaLabels[key];
-        return userLabel ? `${userLabel} (${key})` : key;
-    };
 
     const selectedSatellite = groupOfSats.find(sat => sat.norad_id === selectedSatelliteId);
     const availableTransmitters = selectedSatellite?.transmitters || [];
@@ -401,47 +344,11 @@ export default function MonitoredSatelliteDialog({ onExited }) {
 
     // Calculate center frequency when tasks or sample rate changes (only if auto mode enabled)
     useEffect(() => {
-        // Only auto-calculate if auto mode is enabled
-        if (!formData.sdr.auto_center_frequency) return;
-
-        const sampleRate = formData.sdr.sample_rate;
-        if (!sampleRate) return;
-
-        // Collect all transmitter frequencies from tasks
-        const frequencies = [];
-        formData.tasks.forEach((task) => {
-            if (task.config.transmitter_id) {
-                const transmitter = availableTransmitters.find(t => t.id === task.config.transmitter_id);
-                if (transmitter && transmitter.downlink_low) {
-                    frequencies.push(transmitter.downlink_low);
-                }
-            }
-        });
-
-        if (frequencies.length === 0) {
-            setFormData((prev) => {
-                if (prev.sdr.center_frequency !== 0) {
-                    return {
-                        ...prev,
-                        sdr: {
-                            ...prev.sdr,
-                            center_frequency: 0,
-                        },
-                    };
-                }
-                return prev;
-            });
-            return;
-        }
-
-        // Calculate center frequency avoiding DC spike
-        const minFreq = Math.min(...frequencies);
-        const maxFreq = Math.max(...frequencies);
-        const naiveCenter = (minFreq + maxFreq) / 2;
-
-        // Offset by 1/4 of sample rate to avoid DC spike at center
-        const dcOffset = sampleRate / 4;
-        const centerFreq = Math.round(naiveCenter + dcOffset);
+        if (!formData.sdr.auto_center_frequency || !formData.sdr.sample_rate) return;
+        const centerFreq = calculateSdrCenterFrequency(
+            { sdr: formData.sdr, tasks: formData.tasks },
+            availableTransmitters, selectedSdrRecord, sdrParamsForSelected,
+        );
 
         setFormData((prev) => {
             if (prev.sdr.center_frequency !== centerFreq) {
@@ -455,7 +362,7 @@ export default function MonitoredSatelliteDialog({ onExited }) {
             }
             return prev;
         });
-    }, [formData.tasks, formData.sdr.sample_rate, formData.sdr.auto_center_frequency, availableTransmitters]);
+    }, [formData.tasks, formData.sdr.sample_rate, formData.sdr.sdr_settings?.bandwidth, formData.sdr.auto_center_frequency, availableTransmitters, selectedSdrRecord, sdrParamsForSelected]);
 
     useEffect(() => {
         setFormData((prev) => {
@@ -943,65 +850,8 @@ export default function MonitoredSatelliteDialog({ onExited }) {
         return '';
     };
 
-    const validateTasksWithinBandwidth = (session) => {
-        const sampleRate = session?.sdr?.sample_rate;
-        const sessionTasks = session?.tasks || [];
-        if (!sampleRate) return { valid: true, message: '', details: [] };
-
-        // Collect all transmitter frequencies from tasks
-        const frequencies = [];
-        const details = [];
-
-        sessionTasks.forEach((task, index) => {
-            if (task.config.transmitter_id) {
-                const transmitter = availableTransmitters.find(t => t.id === task.config.transmitter_id);
-                if (transmitter && transmitter.downlink_low) {
-                    const bandwidth = transmitter.downlink_high && transmitter.downlink_low
-                        ? transmitter.downlink_high - transmitter.downlink_low
-                        : 0;
-
-                    frequencies.push({
-                        freq: transmitter.downlink_low,
-                        bandwidth: bandwidth,
-                        transmitter: transmitter
-                    });
-
-                    details.push({
-                        taskIndex: index,
-                        name: transmitter.description || t('unknown'),
-                        freq: transmitter.downlink_low,
-                        bandwidth: bandwidth
-                    });
-                }
-            }
-        });
-
-        if (frequencies.length === 0) {
-            return { valid: true, message: '', details: [] };
-        }
-
-        // Find min and max frequencies including their bandwidths
-        const minFreq = Math.min(...frequencies.map(f => f.freq - f.bandwidth / 2));
-        const maxFreq = Math.max(...frequencies.map(f => f.freq + f.bandwidth / 2));
-        const requiredBandwidth = maxFreq - minFreq;
-
-        const valid = requiredBandwidth <= sampleRate;
-
-        return {
-            valid,
-            message: valid
-                ? ''
-                : t('scheduler_dialogs.shared.bandwidth_validation_error', {
-                    required: (requiredBandwidth / 1000000).toFixed(2),
-                    sampleRate: (sampleRate / 1000000).toFixed(2),
-                }),
-            requiredBandwidth,
-            sampleRate,
-            minFreq,
-            maxFreq,
-            details
-        };
-    };
+    const validateTasksWithinBandwidth = (session) =>
+        validateSdrTaskBandwidth(session, availableTransmitters, sdrs, sdrParameters, t);
 
     const bandwidthValidation = validateTasksWithinBandwidth({
         sdr: formData.sdr,
@@ -1077,16 +927,19 @@ export default function MonitoredSatelliteDialog({ onExited }) {
             definitionSaved = true;
             // Retain the saved ID so a generation failure can be retried without creating a duplicate.
             dispatch(setSelectedMonitoredSatellite(savedSatellite));
-            setPendingAction('generate');
-            await new Promise((resolve, reject) => {
-                socket.emit('api.call', {
-                    cmd: 'regenerate-observations',
-                    data: { monitored_satellite_id: savedSatellite.id, dry_run: false },
-                }, (response) => {
-                    if (response.success) resolve(response.data);
-                    else reject(new Error(response.error || t('scheduler_dialogs.monitored.generation_failed')));
+            // Disabled definitions can be saved for later without scheduling any passes.
+            if (savedSatellite.enabled) {
+                setPendingAction('generate');
+                await new Promise((resolve, reject) => {
+                    socket.emit('api.call', {
+                        cmd: 'regenerate-observations',
+                        data: { monitored_satellite_id: savedSatellite.id, dry_run: false },
+                    }, (response) => {
+                        if (response.success) resolve(response.data);
+                        else reject(new Error(response.error || t('scheduler_dialogs.monitored.generation_failed')));
+                    });
                 });
-            });
+            }
             dispatch(setMonitoredSatelliteDialogOpen(false));
         } catch (error) {
             const message = error.message || String(error);
@@ -1584,195 +1437,26 @@ export default function MonitoredSatelliteDialog({ onExited }) {
                                     </Typography>
                                 </Box>
                             )}
-                            <FormControl fullWidth size="small" required error={!!sdrParametersError[formData.sdr.id]}>
-                                <InputLabel>{t('scheduler_dialogs.shared.sdr_label')}</InputLabel>
-                                <Select
-                                    value={formData.sdr.id}
-                                    onChange={(e) => {
-                                        const selectedSdrId = e.target.value;
-                                        // Disabled menu items should not emit changes, but keep this
-                                        // guard so duplicate SDRs cannot enter state programmatically.
-                                        if (isSdrUsedByAnotherSession(selectedSdrId)) return;
-                                        const selectedSdr = sdrs.find(
-                                            (s) => String(s.id) === String(selectedSdrId)
-                                        );
-                                        setFormData((prev) => ({
-                                            ...prev,
-                                            sdr: {
-                                                ...prev.sdr,
-                                                id: selectedSdrId,
-                                                name: selectedSdr?.name || '',
-                                                gain: '',
-                                                antenna_port: '',
-                                            },
-                                        }));
-                                    }}
-                                    label={t('scheduler_dialogs.shared.sdr_label')}
-                                >
-                                    {sdrs.filter(sdr => sdr.id !== 'sigmf-playback').map((sdr) => {
-                                        const isUsedByAnotherSession = isSdrUsedByAnotherSession(sdr.id);
-                                        return (
-                                            <MenuItem
-                                                key={sdr.id}
-                                                value={sdr.id}
-                                                disabled={isUsedByAnotherSession}
-                                            >
-                                                <Box sx={{ width: '100%', minWidth: 0 }}>
-                                                    <Stack direction="row" spacing={1} alignItems="center">
-                                                        <MemoryIcon sx={{ fontSize: 18, color: 'text.secondary', flexShrink: 0 }} />
-                                                        <Typography variant="body2">
-                                                            {sdr.name} ({sdr.type})
-                                                        </Typography>
-                                                        {isUsedByAnotherSession && (
-                                                            <Chip
-                                                                label={t('scheduler_dialogs.shared.sdr_in_use_by_another_session')}
-                                                                size="small"
-                                                                variant="outlined"
-                                                                sx={{ ml: 'auto', flexShrink: 0 }}
-                                                            />
-                                                        )}
-                                                    </Stack>
-                                                    <Typography variant="caption" color="text.secondary">
-                                                        {[
-                                                            sdr.driver ? `Driver: ${sdr.driver}` : null,
-                                                            sdr.serial ? `Serial: ${sdr.serial}` : null,
-                                                        ].filter(Boolean).join(' • ') || t('scheduler_dialogs.shared.no_additional_details')}
-                                                    </Typography>
-                                                </Box>
-                                            </MenuItem>
-                                        );
-                                    })}
-                                </Select>
-                            </FormControl>
-
-                            <FormControl fullWidth size="small" required error={!bandwidthValidation.valid} disabled={!formData.sdr.id || sdrParametersLoading}>
-                                <InputLabel>{t('scheduler_dialogs.shared.sample_rate_label')}</InputLabel>
-                                <Select
-                                    value={formData.sdr.sample_rate}
-                                    onChange={(e) => {
-                                        setFormData((prev) => ({
-                                            ...prev,
-                                            sdr: {
-                                                ...prev.sdr,
-                                                sample_rate: e.target.value,
-                                            },
-                                        }));
-                                    }}
-                                    label={t('scheduler_dialogs.shared.sample_rate_label')}
-                                >
-                                    {(sdrParameters[formData.sdr.id]?.sample_rate_values || SAMPLE_RATES.map(r => r.value)).map((rate) => {
-                                        const rateValue = typeof rate === 'number' ? rate : rate.value;
-                                        const rateLabel = rateValue >= 1000000
-                                            ? `${(rateValue / 1000000).toFixed(rateValue % 1000000 === 0 ? 0 : 1)} MHz`
-                                            : `${(rateValue / 1000).toFixed(0)} kHz`;
-                                        return (
-                                            <MenuItem key={rateValue} value={rateValue}>
-                                                {rateLabel}
-                                            </MenuItem>
-                                        );
-                                    })}
-                                </Select>
-                                {!bandwidthValidation.valid && bandwidthValidation.details.length > 0 && (
-                                    <Box sx={{ mt: 0.5 }}>
-                                        <Typography variant="caption" color="error">
-                                            {bandwidthValidation.message}
-                                        </Typography>
-                                        <Typography variant="caption" display="block" sx={{ fontFamily: 'monospace', mt: 0.5 }}>
-                                            ({(bandwidthValidation.maxFreq / 1000000).toFixed(3)} {t('monitored_satellite_dialog.mhz', { defaultValue: 'MHz -' })} {(bandwidthValidation.minFreq / 1000000).toFixed(3)} {t('monitored_satellite_dialog.mhz_2', { defaultValue: 'MHz =' })} {(bandwidthValidation.requiredBandwidth / 1000000).toFixed(2)} {t('monitored_satellite_dialog.mhz_3', { defaultValue: 'MHz)' })}
-                                        </Typography>
-                                    </Box>
-                                )}
-                                {bandwidthValidation.valid && bandwidthValidation.requiredBandwidth > 0 && (
-                                    <Typography variant="caption" color="success.main" sx={{ mt: 0.5 }}>
-                                        {t('scheduler_dialogs.shared.all_tasks_fit_within_bandwidth')}
-                                    </Typography>
-                                )}
-                            </FormControl>
-
-                            <Stack direction="row" spacing={2}>
-                                <FormControl fullWidth size="small" required disabled={!formData.sdr.id || sdrParametersLoading} error={!!sdrParametersError[formData.sdr.id]} sx={{ minWidth: 0 }}>
-                                    <InputLabel>{t('scheduler_dialogs.shared.gain_label')}</InputLabel>
-                                    <Select
-                                        value={
-                                            formData.sdr.id && sdrParameters[formData.sdr.id]?.gain_values?.includes(formData.sdr.gain)
-                                                ? formData.sdr.gain
-                                                : ''
-                                        }
-                                        onChange={(e) => {
-                                            setFormData((prev) => ({
-                                                ...prev,
-                                                sdr: {
-                                                    ...prev.sdr,
-                                                    gain: e.target.value,
-                                                },
-                                            }));
-                                        }}
-                                        label={t('scheduler_dialogs.shared.gain_label')}
-                                    >
-                                        {sdrParameters[formData.sdr.id]?.gain_values?.map((gain) => (
-                                            <MenuItem key={gain} value={gain}>
-                                                {gain} dB
-                                            </MenuItem>
-                                        )) || []}
-                                    </Select>
-                                </FormControl>
-
-                                <FormControl fullWidth size="small" required disabled={!formData.sdr.id || sdrParametersLoading} error={!!sdrParametersError[formData.sdr.id]} sx={{ minWidth: 0 }}>
-                                    <InputLabel>{t('scheduler_dialogs.shared.antenna_port_label')}</InputLabel>
-                                    <Select
-                                        value={
-                                            formData.sdr.id && sdrParameters[formData.sdr.id]?.antennas?.rx?.includes(formData.sdr.antenna_port)
-                                                ? formData.sdr.antenna_port
-                                                : ''
-                                        }
-                                        onChange={(e) => {
-                                            setFormData((prev) => ({
-                                                ...prev,
-                                                sdr: {
-                                                    ...prev.sdr,
-                                                    antenna_port: e.target.value,
-                                                },
-                                            }));
-                                        }}
-                                        label={t('scheduler_dialogs.shared.antenna_port_label')}
-                                    >
-                                        {sdrParameters[formData.sdr.id]?.antennas?.rx?.map((port) => (
-                                            <MenuItem key={port} value={port}>
-                                                {formatAntennaPortOptionLabel(port)}
-                                            </MenuItem>
-                                        )) || []}
-                                    </Select>
-                                </FormControl>
-                            </Stack>
-
-                            {biasTSupported && (
-                                <FormControlLabel
-                                    control={
-                                        <Switch
-                                            checked={Boolean(formData.sdr.bias_t)}
-                                            onChange={(e) =>
-                                                setFormData((prev) => ({
-                                                    ...prev,
-                                                    sdr: {
-                                                        ...prev.sdr,
-                                                        bias_t: e.target.checked,
-                                                    },
-                                                }))
-                                            }
-                                            disabled={!formData.sdr.id || sdrParametersLoading}
-                                            size="small"
-                                        />
-                                    }
-                                    label={
-                                        <Box>
-                                            <Typography variant="body2">{t('scheduler_dialogs.shared.enable_bias_t')}</Typography>
-                                            <Typography variant="caption" color="text.secondary">
-                                                {t('scheduler_dialogs.shared.enable_bias_t_help')}
-                                            </Typography>
-                                        </Box>
-                                    }
-                                />
-                            )}
+                            <SdrSessionFields
+                                sdr={formData.sdr}
+                                sdrs={sdrs}
+                                parameters={sdrParamsForSelected}
+                                loading={sdrParametersLoading}
+                                error={sdrParametersError[formData.sdr.id]}
+                                disabled={false}
+                                isSdrUsedByAnotherSession={isSdrUsedByAnotherSession}
+                                onChange={(patch) => setFormData((prev) => ({
+                                    ...prev, sdr: { ...prev.sdr, ...patch },
+                                }))}
+                                onRefresh={() => dispatch(fetchSDRParameters({ socket, sdrId: formData.sdr.id }))}
+                                validationErrors={{
+                                    sdr: !formData.sdr.id,
+                                    gain: formData.sdr.gain === '' || formData.sdr.gain == null || !!sdrParametersError[formData.sdr.id],
+                                    antenna: !formData.sdr.antenna_port || !!sdrParametersError[formData.sdr.id],
+                                    sampleRate: !Number.isFinite(Number(formData.sdr.sample_rate)) || Number(formData.sdr.sample_rate) <= 0 || !bandwidthValidation.valid,
+                                }}
+                                bandwidthValidation={bandwidthValidation}
+                            />
 
                             <Box>
                                 <FormControlLabel
@@ -2957,13 +2641,14 @@ export default function MonitoredSatelliteDialog({ onExited }) {
                         onClick={handleSubmit}
                         disabled={!socket || !isFormValid() || isBusy}
                         startIcon={(isSaving || pendingAction === 'save' || pendingAction === 'generate')
-                            ? <CircularProgress size={20} color="inherit" /> : <EventRepeatIcon />}
+                            ? <CircularProgress size={20} color="inherit" />
+                            : (formData.enabled ? <EventRepeatIcon /> : <SaveIcon />)}
                         compactQuery="@container dialog-footer (max-width: 700px)"
                         label={pendingAction === 'generate'
                             ? t('scheduler_dialogs.monitored.generating')
                             : (isSaving || pendingAction === 'save'
                                 ? t('scheduler_dialogs.shared.saving')
-                                : t('scheduler_dialogs.monitored.save_and_generate'))}
+                                : (formData.enabled ? t('scheduler_dialogs.monitored.save_and_generate') : t('save')))}
                         sx={{
                             '&.Mui-disabled': {
                                 bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.800' : 'grey.400',

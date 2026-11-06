@@ -164,6 +164,41 @@ describe('monitored satellite dialog', () => {
         expect(store.getState().scheduler.monitoredSatellites[0].lookahead_hours).toBe(48);
     });
 
+    it.each(['new', 'disabled', 'disable-on-save'])('saves a %s definition without requesting generation when disabled', async (mode) => {
+        const selectedSatellite = { ...structuredClone(satellite), enabled: mode !== 'disabled' };
+        const store = renderDialog(mode !== 'new', selectedSatellite);
+        if (mode === 'new') {
+            fireEvent.click(screen.getByRole('button', { name: 'Choose satellite' }));
+            selectOption('SDR', /Test SDR/);
+            await waitFor(() => expect(store.getState().scheduler.sdrParametersLoading).toBe(false));
+            selectOption('Gain', '10 dB');
+            selectOption('Antenna Port', 'RX');
+        }
+        if (mode !== 'disabled') {
+            fireEvent.click(screen.getByRole('checkbox', { name: /^Enabled/ }));
+        }
+        fireEvent.change(screen.getByRole('spinbutton', { name: 'Lookahead Window (hours)' }), { target: { value: '48' } });
+        const save = await screen.findByRole('button', { name: 'Save' });
+        await waitFor(() => expect(save).toBeEnabled());
+
+        fireEvent.click(save);
+
+        expect(requests).toHaveLength(1);
+        expect(requests[0]).toMatchObject({
+            cmd: mode === 'new' ? 'create-monitored-satellite' : 'update-monitored-satellite',
+            data: { enabled: false, lookahead_hours: 48 },
+        });
+        expect(screen.getByRole('button', { name: 'Saving...' })).toBeDisabled();
+        await acknowledge(requests[0]);
+
+        expect(requests).toHaveLength(1);
+        expect(store.getState().scheduler.monitoredSatelliteDialogOpen).toBe(false);
+        expect(store.getState().scheduler.monitoredSatellites).toHaveLength(1);
+        expect(store.getState().scheduler.monitoredSatellites[0]).toMatchObject({
+            enabled: false, lookahead_hours: 48,
+        });
+    }, 15000);
+
     it('does not generate after a failed save and allows another save', async () => {
         const store = renderDialog();
         await waitFor(() => expect(screen.getByRole('button', { name: 'Save and Generate' })).toBeEnabled());

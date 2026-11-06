@@ -8,6 +8,7 @@
 """Unit tests for monitored celestial and satellite CRUD helpers."""
 
 import uuid
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -33,6 +34,7 @@ from crud.monitoredsatellites import (
 )
 from crud.scheduledobservations import add_scheduled_observation
 from db.models import Satellites
+from observations import generator
 
 
 async def _add_satellite(db_session, norad_id):
@@ -199,6 +201,79 @@ class TestMonitoredCelestialCrud:
 
 @pytest.mark.asyncio
 class TestMonitoredSatellitesCrud:
+    @pytest.mark.parametrize("dry_run", [False, True])
+    @pytest.mark.parametrize("editing", [False, True])
+    async def test_disabled_definition_saves_without_generating_observations(
+        self, db_session, monkeypatch, dry_run, editing
+    ):
+        await _add_satellite(db_session, 42004)
+        data = _monitored_satellite_data(42004, enabled=editing)
+        added = await add_monitored_satellite(db_session, data)
+        if editing:
+            data["enabled"] = False
+            data["lookahead_hours"] = 72
+            saved = await edit_monitored_satellite(db_session, data)
+        else:
+            saved = added
+        cleanup = AsyncMock(return_value=0)
+        generate = AsyncMock()
+        locations = AsyncMock()
+        monkeypatch.setattr(generator, "cleanup_old_observations", cleanup)
+        monkeypatch.setattr(generator, "_generate_observations_for_satellite", generate)
+        monkeypatch.setattr(generator.crud_locations, "fetch_all_locations", locations)
+
+        result = await generator.generate_observations_for_monitored_satellites(
+            db_session, saved["data"]["id"], dry_run=dry_run
+        )
+
+        assert saved["success"] is True
+        assert saved["data"]["enabled"] is False
+        assert result["success"] is True
+        assert result["data"] == {
+            "generated": 0,
+            "updated": 0,
+            "skipped": 0,
+            "satellites_processed": 0,
+        }
+        generate.assert_not_awaited()
+        locations.assert_not_awaited()
+        assert (await fetch_generated_observations_for_satellite(db_session, data["id"]))[
+            "data"
+        ] == []
+        fetched = await fetch_monitored_satellites(db_session, data["id"])
+        assert fetched["data"]["enabled"] is False
+        if editing:
+            assert fetched["data"]["lookahead_hours"] == 72
+
+    @pytest.mark.parametrize("targeted", [False, True])
+    async def test_enabled_definitions_still_generate(self, db_session, monkeypatch, targeted):
+        await _add_satellite(db_session, 42005)
+        await _add_satellite(db_session, 42006)
+        added = await add_monitored_satellite(db_session, _monitored_satellite_data(42005))
+        await add_monitored_satellite(db_session, _monitored_satellite_data(42006, enabled=False))
+        generate = AsyncMock(return_value={"generated": 2, "updated": 1, "skipped": 0})
+        monkeypatch.setattr(generator, "cleanup_old_observations", AsyncMock(return_value=0))
+        monkeypatch.setattr(generator, "_generate_observations_for_satellite", generate)
+        monkeypatch.setattr(
+            generator.crud_locations,
+            "fetch_all_locations",
+            AsyncMock(return_value={"success": True, "data": [{"lat": 38, "lon": 23}]}),
+        )
+
+        result = await generator.generate_observations_for_monitored_satellites(
+            db_session, added["data"]["id"] if targeted else None
+        )
+
+        assert result["success"] is True
+        assert result["data"] == {
+            "generated": 2,
+            "updated": 1,
+            "skipped": 0,
+            "satellites_processed": 1,
+        }
+        generate.assert_awaited_once()
+        assert generate.await_args.args[1]["id"] == added["data"]["id"]
+
     async def test_add_fetch_toggle_and_edit_configuration(self, db_session):
         await _add_satellite(db_session, 42001)
         data = _monitored_satellite_data(42001)
