@@ -3,31 +3,6 @@
  * Keep state derivation rules centralized so UI surfaces stay consistent.
  */
 
-export const NONE_ID_VALUES = ['', 'none', null, undefined];
-
-export const ROTATOR_LED_STATUS = {
-    NONE: 'none',
-    DISCONNECTED: 'disconnected',
-    PARKED: 'parked',
-    OUT_OF_BOUNDS: 'outofbounds',
-    MIN_ELEVATION: 'minelevation',
-    SLEWING: 'slewing',
-    TRACKING: 'tracking',
-    STOPPED: 'stopped',
-    CONNECTED: 'connected',
-    UNKNOWN: 'unknown',
-    MOTION_UNCONFIRMED: 'motion_unconfirmed',
-};
-
-export const RIG_LED_STATUS = {
-    NONE: 'none',
-    DISCONNECTED: 'disconnected',
-    TRACKING: 'tracking',
-    STOPPED: 'stopped',
-    CONNECTED: 'connected',
-    UNKNOWN: 'unknown',
-};
-
 export const hasAssignedHardwareId = (value) => {
     const normalized = String(value ?? '').trim().toLowerCase();
     return !['', 'none', 'null', 'undefined'].includes(normalized);
@@ -44,96 +19,81 @@ export const resolveAssignedHardwareId = (...candidates) => {
     return 'none';
 };
 
-export const resolveRotatorLedStatus = ({ rotatorId, rotatorData = {}, trackingState = {} }) => {
-    if (NONE_ID_VALUES.includes(rotatorId)) return ROTATOR_LED_STATUS.NONE;
-    if (rotatorData?.connected === false || trackingState?.rotator_state === 'disconnected') return ROTATOR_LED_STATUS.DISCONNECTED;
-    if (rotatorData?.motion_unconfirmed) return ROTATOR_LED_STATUS.MOTION_UNCONFIRMED;
-    if (rotatorData?.parked === true || trackingState?.rotator_state === 'parked') return ROTATOR_LED_STATUS.PARKED;
-    if (rotatorData?.outofbounds === true) return ROTATOR_LED_STATUS.OUT_OF_BOUNDS;
-    if (rotatorData?.minelevation === true) return ROTATOR_LED_STATUS.MIN_ELEVATION;
-    if (rotatorData?.slewing === true) return ROTATOR_LED_STATUS.SLEWING;
-    if (rotatorData?.tracking === true || trackingState?.rotator_state === 'tracking') return ROTATOR_LED_STATUS.TRACKING;
-    if (rotatorData?.stopped === true || trackingState?.rotator_state === 'stopped') return ROTATOR_LED_STATUS.STOPPED;
-    if (rotatorData?.connected === true || trackingState?.rotator_state === 'connected') return ROTATOR_LED_STATUS.CONNECTED;
-    return ROTATOR_LED_STATUS.UNKNOWN;
+// A command describes intent. Explicit telemetry flags always take precedence
+// over the requested tracking state, including false flags after Pause/Stop.
+const observedFlag = (data, flag, requested) => typeof data[flag] === 'boolean' ? data[flag] : requested;
+
+export const resolveRotatorLedStatus = ({ rotatorId, rotatorData: data = {}, trackingState = {} }) => {
+    if (!hasAssignedHardwareId(rotatorId)) return 'none';
+    if (data.error) return 'error';
+    // Losing the transport does not confirm that the antenna stopped moving.
+    if (data.motion_unconfirmed) return 'motion_unconfirmed';
+    if (!observedFlag(data, 'connected', trackingState.rotator_state !== 'disconnected')) return 'disconnected';
+    if (observedFlag(data, 'parked', trackingState.rotator_state === 'parked')) return 'parked';
+    if (data.minelevation) return 'minelevation';
+    if (data.outofbounds) return 'outofbounds';
+    if (data.park_requested) return 'parking';
+    if (data.slewing) return 'slewing';
+    if (observedFlag(data, 'tracking', trackingState.rotator_state === 'tracking')) return 'tracking';
+    if (data.stopped) return 'stopped';
+    if (trackingState.rotator_state === 'stopped') return 'paused';
+    if (data.connected === true || trackingState.rotator_state === 'connected') return 'connected';
+    return 'unknown';
 };
 
-export const resolveRigLedStatus = ({ rigId, rigData = {}, trackingState = {} }) => {
-    if (NONE_ID_VALUES.includes(rigId)) return RIG_LED_STATUS.NONE;
-    if (rigData?.connected === false || trackingState?.rig_state === 'disconnected') return RIG_LED_STATUS.DISCONNECTED;
-    if (rigData?.tracking === true || trackingState?.rig_state === 'tracking') return RIG_LED_STATUS.TRACKING;
-    if (rigData?.stopped === true || trackingState?.rig_state === 'stopped') return RIG_LED_STATUS.STOPPED;
-    if (rigData?.connected === true || trackingState?.rig_state === 'connected') return RIG_LED_STATUS.CONNECTED;
-    return RIG_LED_STATUS.UNKNOWN;
+export const resolveRigLedStatus = ({ rigId, rigData: data = {}, trackingState = {} }) => {
+    if (!hasAssignedHardwareId(rigId)) return 'none';
+    if (data.error) return 'error';
+    if (!observedFlag(data, 'connected', trackingState.rig_state !== 'disconnected')) return 'disconnected';
+    if (observedFlag(data, 'tracking', trackingState.rig_state === 'tracking')) return 'tracking';
+    if (data.stopped || trackingState.rig_state === 'stopped') return 'stopped';
+    if (data.connected === true || trackingState.rig_state === 'connected') return 'connected';
+    return 'unknown';
 };
 
-export const shouldFallbackToRigStatus = (rotatorStatus, rigStatus) => {
-    return (
-        (rotatorStatus === ROTATOR_LED_STATUS.NONE || rotatorStatus === ROTATOR_LED_STATUS.DISCONNECTED)
-        && ![RIG_LED_STATUS.NONE, RIG_LED_STATUS.UNKNOWN, RIG_LED_STATUS.DISCONNECTED].includes(rigStatus)
-    );
+export const isHardwareTelemetryFresh = (view, connected, now = Date.now(), connectedAt = 0) => (
+    Boolean(connected && view?.hardwareObservedAt)
+    && Number.isFinite(view.hardwareReceivedAt)
+    && view.hardwareReceivedAt >= connectedAt
+    && now >= view.hardwareReceivedAt
+    && now - view.hardwareReceivedAt < 15000
+);
+
+export const resolveHardwareStatus = ({kind, deviceId, data = {}, trackingState = {}, available = true}) => {
+    if (!hasAssignedHardwareId(deviceId)) return 'none';
+    if (!available) return 'unknown';
+    // A fresh tracker envelope can still omit one device's telemetry. Requested
+    // state alone is insufficient to show that device as connected or tracking.
+    if (typeof data.connected !== 'boolean' && !data.error
+        && !(kind === 'rotator' && data.motion_unconfirmed)) return 'unknown';
+    return kind === 'rotator'
+        ? resolveRotatorLedStatus({rotatorId: deviceId, rotatorData: data, trackingState})
+        : resolveRigLedStatus({rigId: deviceId, rigData: data, trackingState});
 };
 
-export const resolveTabHardwareLedStatus = ({ rotatorId, rigId, rotatorData = {}, rigData = {}, trackingState = {} }) => {
-    const rotatorStatus = resolveRotatorLedStatus({ rotatorId, rotatorData, trackingState });
-    const rigStatus = resolveRigLedStatus({ rigId, rigData, trackingState });
-
-    if (shouldFallbackToRigStatus(rotatorStatus, rigStatus)) {
-        return {
-            source: 'rig',
-            status: rigStatus,
-            usedRigFallback: true,
-            rotatorStatus,
-            rigStatus,
-        };
-    }
-
-    if (rotatorStatus !== ROTATOR_LED_STATUS.NONE && rotatorStatus !== ROTATOR_LED_STATUS.UNKNOWN) {
-        return {
-            source: 'rotator',
-            status: rotatorStatus,
-            usedRigFallback: false,
-            rotatorStatus,
-            rigStatus,
-        };
-    }
-
-    return {
-        source: 'rig',
-        status: rigStatus,
-        usedRigFallback: false,
-        rotatorStatus,
-        rigStatus,
-    };
-};
-
-// Warning/attention semantics for dashboard badge counters:
-// - disconnected is neutral
-// - stopped is neutral
-export const isRotatorWarningStatus = (status) => {
-    return [
-        ROTATOR_LED_STATUS.OUT_OF_BOUNDS,
-        ROTATOR_LED_STATUS.MIN_ELEVATION,
-        ROTATOR_LED_STATUS.PARKED,
-        ROTATOR_LED_STATUS.MOTION_UNCONFIRMED,
-    ].includes(status);
-};
-
-export const isRigWarningStatus = (_status) => {
-    return false;
+export const resolveHardwareConnectionStatus = ({deviceId, data = {}, available = true}) => {
+    if (!hasAssignedHardwareId(deviceId)) return 'none';
+    if (!available) return 'unknown';
+    if (data.connected === true) return 'connected';
+    if (data.error) return 'error';
+    return data.connected === false ? 'disconnected' : 'unknown';
 };
 
 const NAVIGATION_STATUS_PRIORITY = {
-    motion_unconfirmed: 0,
+    error: -2,
+    motion_unconfirmed: -1,
+    unknown: 0,
     outofbounds: 1,
     minelevation: 2,
+    loading: 3,
+    parking: 3,
     slewing: 3,
     tracking: 4,
     parked: 5,
     stopped: 6,
+    paused: 6,
     connected: 7,
     disconnected: 8,
-    unknown: 9,
 };
 
 export const orderNavigationStatuses = (statuses) => [...statuses].sort(
@@ -152,29 +112,23 @@ export const selectTrackingNavigationStatus = (state, now = Date.now()) => {
     instances.forEach((instance) => {
         const view = views[instance?.tracker_id] || {};
         const trackingState = view.trackingState || instance?.tracking_state || {};
-        const fresh = online && Boolean(view.hardwareObservedAt)
-            && Number.isFinite(view.hardwareReceivedAt)
-            && view.hardwareReceivedAt >= connectedAt
-            && now - view.hardwareReceivedAt >= 0
-            && now - view.hardwareReceivedAt < 15000;
+        const fresh = isHardwareTelemetryFresh(view, online, now, connectedAt);
 
         [
             {
                 type: 'rotator',
                 id: resolveAssignedHardwareId(view.selectedRotator, trackingState.rotator_id, instance?.rotator_id),
                 data: view.rotatorData,
-                resolve: resolveRotatorLedStatus,
             },
             {
                 type: 'rig',
                 id: resolveAssignedHardwareId(view.selectedRadioRig, trackingState.rig_id, instance?.rig_id),
                 data: view.rigData,
-                resolve: resolveRigLedStatus,
             },
-        ].forEach(({ type, id, data, resolve }) => {
+        ].forEach(({ type, id, data }) => {
             if (!hasAssignedHardwareId(id)) return;
-            const status = fresh ? resolve({ [`${type}Id`]: id, [`${type}Data`]: data,
-                trackingState: view.confirmedTrackingState || trackingState }) : 'unknown';
+            const status = resolveHardwareStatus({kind: type, deviceId: id, data, available: fresh,
+                trackingState: view.confirmedTrackingState || {}});
             const key = String(id);
             const previous = byType[type].get(key);
             // One device can appear in several tracker slots; use its newest live report.

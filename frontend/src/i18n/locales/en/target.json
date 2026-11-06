@@ -126,7 +126,8 @@
     "connect": "CONNECT",
     "disconnect": "DISCONNECT",
     "track_radio": "TRACK RADIO",
-    "stop": "STOP"
+    "stop": "STOP",
+    "pause_tracking": "Pause tracking"
   },
   "rotator_control": {
     "title": "Rotator control",

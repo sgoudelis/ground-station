@@ -22,8 +22,18 @@ import { getThemeConfig } from './themes/theme-configs.js';
 
 function buildSemanticPalette(config) {
     const isDark = config.mode === 'dark';
+    // Operational meaning stays recognizable even in themes with an amber or
+    // gray primary/info palette. Use tinted surfaces with matching foregrounds.
+    const operational = Object.fromEntries(Object.entries(isDark ? {
+        active: '#68d99d', busy: '#80bfff', attention: '#ffcc66', fault: '#ff8591', inactive: '#b0b8c4',
+    } : {
+        active: '#237b45', busy: '#155eab', attention: '#8a5700', fault: '#b42335', inactive: '#536171',
+    }).map(([role, main]) => [role, {
+        main, background: alpha(main, isDark ? 0.12 : 0.07), border: alpha(main, isDark ? 0.38 : 0.3),
+    }]));
 
     return {
+        operational,
         surface: {
             sunken: isDark ? '#0c0d0e' : '#e9edf3',
             default: config.background.paper,

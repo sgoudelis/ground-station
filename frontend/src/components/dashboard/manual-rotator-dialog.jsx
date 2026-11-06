@@ -21,6 +21,7 @@ import {
 } from '@mui/material';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import ArrowDropUpIcon from '@mui/icons-material/ArrowDropUp';
+import HardwareStatusIndicator from '../common/hardware-status-indicator.jsx';
 import CloseIcon from '@mui/icons-material/Close';
 
 const DIAL_SIZE = 184;
@@ -164,8 +165,8 @@ function AzimuthDial({ value, currentValue, min, max, disabled, onChange }) {
                 <line x1={DIAL_CENTER} y1={DIAL_CENTER} x2={DIAL_CENTER - AZIMUTH_ARC_RADIUS} y2={DIAL_CENTER} stroke="currentColor" strokeWidth="1" strokeDasharray="2 4" opacity="0.35" />
                 {currentPointerX !== null && <line x1={DIAL_CENTER} y1={DIAL_CENTER} x2={currentPointerX} y2={currentPointerY} stroke="currentColor" strokeWidth="2" strokeDasharray="4 4" opacity="0.55" />}
                 {currentRatio !== null && <rect x={DIAL_CENTER - 1} y={DIAL_CENTER - AZIMUTH_ARC_RADIUS - ARC_WIDTH / 2} width="2" height={ARC_WIDTH} fill="#fff" transform={`rotate(${currentRatio * 360} ${DIAL_CENTER} ${DIAL_CENTER})`} />}
-                <line x1={DIAL_CENTER} y1={DIAL_CENTER} x2={pointerX} y2={pointerY} stroke="#f44336" strokeWidth="5" strokeLinecap="round" />
-                <circle cx={DIAL_CENTER} cy={DIAL_CENTER} r="7" fill="#f44336" />
+                <line x1={DIAL_CENTER} y1={DIAL_CENTER} x2={pointerX} y2={pointerY} stroke="var(--mui-palette-operational-busy-main, currentColor)" strokeWidth="5" strokeLinecap="round" />
+                <circle cx={DIAL_CENTER} cy={DIAL_CENTER} r="7" fill="var(--mui-palette-operational-busy-main, currentColor)" />
                 <text x={DIAL_CENTER} y="9" textAnchor="middle" dominantBaseline="middle" fill="currentColor" fontSize="11">N</text>
                 <text x="175" y={DIAL_CENTER} textAnchor="middle" dominantBaseline="middle" fill="currentColor" fontSize="11">E</text>
                 <text x={DIAL_CENTER} y="175" textAnchor="middle" dominantBaseline="middle" fill="currentColor" fontSize="11">S</text>
@@ -230,8 +231,8 @@ function ElevationDial({ value, currentValue, min, max, disabled, onChange }) {
                 <line x1={ELEVATION_CENTER_X} y1={ELEVATION_CENTER_Y} x2={ELEVATION_CENTER_X} y2={ELEVATION_CENTER_Y - ELEVATION_RADIUS} stroke="currentColor" strokeWidth="1" strokeDasharray="2 4" opacity="0.35" />
                 {currentPointerX !== null && <line x1={ELEVATION_CENTER_X} y1={ELEVATION_CENTER_Y} x2={currentPointerX} y2={currentPointerY} stroke="currentColor" strokeWidth="2" strokeDasharray="4 4" opacity="0.55" />}
                 {currentTheta !== null && <rect x={ELEVATION_CENTER_X + ELEVATION_RADIUS - ARC_WIDTH / 2} y={ELEVATION_CENTER_Y - 1} width={ARC_WIDTH} height="2" fill="#fff" transform={`rotate(${-currentTheta * 180 / Math.PI} ${ELEVATION_CENTER_X} ${ELEVATION_CENTER_Y})`} />}
-                <line x1={ELEVATION_CENTER_X} y1={ELEVATION_CENTER_Y} x2={pointerX} y2={pointerY} stroke="#f44336" strokeWidth="5" strokeLinecap="round" />
-                <circle cx={ELEVATION_CENTER_X} cy={ELEVATION_CENTER_Y} r="7" fill="#f44336" />
+                <line x1={ELEVATION_CENTER_X} y1={ELEVATION_CENTER_Y} x2={pointerX} y2={pointerY} stroke="var(--mui-palette-operational-busy-main, currentColor)" strokeWidth="5" strokeLinecap="round" />
+                <circle cx={ELEVATION_CENTER_X} cy={ELEVATION_CENTER_Y} r="7" fill="var(--mui-palette-operational-busy-main, currentColor)" />
                 <text x="140" y="152" textAnchor="middle" dominantBaseline="middle" fill="currentColor" fontSize="11">{formatDegrees(min)}°</text>
                 <text x="108" y="76" textAnchor="middle" dominantBaseline="middle" fill="currentColor" fontSize="11">{formatDegrees((min + max) / 2)}°</text>
                 <text x="35" y="45" textAnchor="middle" dominantBaseline="middle" fill="currentColor" fontSize="11">{formatDegrees(max)}°</text>
@@ -267,11 +268,6 @@ export default function ManualRotatorDialog({
     const busy = isCommandOutstanding(command);
     const moving = busy && !['pause', 'stop'].includes(command.action);
     const stopping = busy && ['pause', 'stop'].includes(command.action);
-    const statusPalette = command?.status === 'failed' ? 'error'
-        : command?.status === 'unknown' && (!command.reconciled || command.action === 'stop') ? 'warning' : busy ? 'info' : null;
-    const statusColor = statusPalette
-        ? (theme) => theme.palette.getContrastText(theme.palette[statusPalette].light)
-        : rotatorStatus?.fgColor || 'text.secondary';
     const wasOpen = React.useRef(false);
 
     React.useEffect(() => {
@@ -321,26 +317,11 @@ export default function ManualRotatorDialog({
                 </Typography>
             </DialogTitle>
             <DialogContent dividers sx={{ px: 1 }}>
-                <Paper
-                    elevation={1}
-                    sx={{
-                        height: 30,
-                        px: 1,
-                        mb: 1.5,
-                        bgcolor: statusPalette ? `${statusPalette}.light` : rotatorStatus?.bgColor || 'action.disabledBackground',
-                        color: statusColor,
-                        borderRadius: 1,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: 0.75,
-                    }}
-                >
-                    {isCommandSpinning(command) && <CircularProgress size={14} color="inherit"
-                        aria-label={t('manual_rotator_dialog.applying_rotator_command', { defaultValue: 'Applying rotator command' })} sx={{flexShrink: 0}} />}
-                    <TrackerCommandHeaderStatus command={command} hardwareStatus={rotatorStatus?.value || 'Unavailable'}
-                        sx={{minWidth: 0, color: statusColor, fontSize: '0.875rem', fontFamily: 'monospace', fontWeight: 800}} />
-                </Paper>
+                <Box sx={{mb: 1.5, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.75}}>
+                    <HardwareStatusIndicator kind="rotator" status={rotatorStatus?.key || 'unknown'} />
+                    <TrackerCommandHeaderStatus command={command} hardwareStatus="" showIcon
+                        sx={{fontSize: '0.75rem', minWidth: 0, maxWidth: '100%'}} />
+                </Box>
                 <Grid container spacing={2}>
                     <Grid size={{ xs: 6, sm: 6 }}>
                         <CoordinateStepper

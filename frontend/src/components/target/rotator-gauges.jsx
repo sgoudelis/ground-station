@@ -53,17 +53,17 @@ function GaugePointer() {
                 </filter>
             </defs>
 
-            {/* Apply the filter to both circle and path */}
+            {/* Measured position is neutral; red is reserved for restricted zones. */}
             <circle
                 cx={cx}
                 cy={cy}
                 r={5}
-                fill="#f44336"
+                fill="currentColor"
                 filter="url(#gauge-pointer-shadow)"
             />
             <path
                 d={`M ${cx} ${cy} L ${target.x} ${target.y}`}
-                stroke="#f44336"
+                stroke="currentColor"
                 strokeWidth={3}
                 filter="url(#gauge-pointer-shadow)"
             />

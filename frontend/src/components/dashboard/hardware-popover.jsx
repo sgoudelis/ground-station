@@ -1,8 +1,8 @@
 /** Copyright (c) 2026 Efstratios Goudelis, GPL-3.0-or-later */
 import React, {useEffect, useState} from 'react';
-import {Badge, Box, IconButton, Popover, Stack, Tooltip} from '@mui/material';
-import RadioIcon from '@mui/icons-material/Radio';
-import {SatelliteIcon} from 'hugeicons-react';
+import {Box, IconButton, Popover, Stack, Tooltip} from '@mui/material';
+import {resolveHardwarePresentation} from '../common/hardware-status-presentation.jsx';
+import HardwareStatusIndicator, {HardwareDeviceIcon} from '../common/hardware-status-indicator.jsx';
 import {useDispatch, useSelector} from 'react-redux';
 import {useNavigate} from 'react-router-dom';
 import {useTranslation} from 'react-i18next';
@@ -63,28 +63,27 @@ function HardwareSettingsPopover() {
                 // Counts reflect physical device telemetry, including manual and
                 // unowned connections. Target selections never imply a connection.
                 const summary = summarizeDevices(devices.map((row) => ({...row, kind: deviceKind})),
-                    control, socket?.connected, now);
+                    control, socket?.connected, Math.max(now, Date.now()));
                 const label = t(`hardware_popover.${deviceKind}_controls`);
-                const color = !socket?.connected ? 'text.disabled' : summary.attention || summary.slewing
-                    ? 'warning.main' : summary.connected ? 'success.main' : 'text.secondary';
                 return <Tooltip key={deviceKind} title={socket?.connected
-                    ? t('hardware_popover.fleet_summary', {label, connected: summary.connected, count: devices.length})
+                    ? <Box>
+                        <Box>{t('hardware_popover.fleet_summary', {label, connected: summary.connected, count: devices.length})}</Box>
+                        {Object.entries(summary.counts).map(([status, count]) => <Box key={status}>
+                            {resolveHardwarePresentation({source: deviceKind, status, t}).label} ×{count}
+                        </Box>)}
+                    </Box>
                     : t('hardware_popover.station_offline')}>
                     <IconButton aria-label={label} aria-haspopup="dialog"
                         aria-expanded={open && kind === deviceKind}
                         aria-controls={open && kind === deviceKind ? 'hardware-popover' : undefined}
-                        size="small" sx={{width: 40, color}}
+                        size="small" sx={{width: 40, color: 'text.secondary'}}
                         onClick={(event) => {setKind(deviceKind); setAnchorEl(event.currentTarget);}}>
-                        <Badge badgeContent={summary.connected} invisible={!summary.connected} max={99}
-                            anchorOrigin={{vertical: 'top', horizontal: 'right'}}
-                            sx={{'& .MuiBadge-badge': {
-                                minWidth: 14, height: 14, px: 0.4, bgcolor: 'background.paper',
-                                color: 'text.secondary', border: '1px solid', borderColor: 'divider',
-                                fontSize: '0.55rem', fontWeight: 700,
-                            }}}>
-                            {deviceKind === 'rotator' ? <SatelliteIcon style={{width: 22, height: 22}} />
-                                : <RadioIcon sx={{fontSize: 22}} />}
-                        </Badge>
+                        <Box sx={{position: 'relative', display: 'inline-flex'}}>
+                            <HardwareDeviceIcon kind={deviceKind} sx={{width: 22, height: 22, fontSize: 22}} />
+                            {devices.length > 0 && <HardwareStatusIndicator kind={deviceKind} status={summary.status} compact
+                                sx={{position: 'absolute', top: -7, right: -9, height: 15, minWidth: 15, px: 0,
+                                    borderRadius: '50%', '& .MuiSvgIcon-root': {fontSize: 11}}} />}
+                        </Box>
                     </IconButton>
                 </Tooltip>;
             })}

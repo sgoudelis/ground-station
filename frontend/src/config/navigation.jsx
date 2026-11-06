@@ -31,187 +31,22 @@ import LocationOnIcon from '@mui/icons-material/LocationOn';
 import GroupIcon from '@mui/icons-material/Group';
 import i18n from '../i18n/config.js';
 import { CelestialSolarIcon, TleIcon } from '../components/common/custom-icons.jsx';
-import { Box, CircularProgress } from '@mui/material';
+import StatusOverlay from '../components/common/status-overlay.jsx';
+import { Box } from '@mui/material';
 import SyncIcon from '@mui/icons-material/Sync';
-import PlayArrowIcon from '@mui/icons-material/PlayArrow';
-import FiberNewIcon from '@mui/icons-material/FiberNew';
-import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
-import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import EventNoteIcon from '@mui/icons-material/EventNote';
 import { useSelector } from 'react-redux';
 import { useLocation } from 'react-router-dom';
 import { TrackingIconWithStatus, TrackingStatusTooltip } from './tracking-navigation.jsx';
 
-// Helper component to wrap icons with overlay indicators
-const IconWithOverlay = ({ children, showOverlay = false, overlayType = 'spinner', showLeftOverlay = false, leftOverlayType = null }) => {
-    return (
-        <Box sx={{ position: 'relative', display: 'inline-flex' }}>
-            {children}
-            {/* Left overlay (e.g., recording indicator) */}
-            {showLeftOverlay && leftOverlayType && (
-                <Box
-                    sx={{
-                        position: 'absolute',
-                        top: -4,
-                        left: -4,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                    }}
-                >
-                    {leftOverlayType === 'recording' && (
-                        <Box
-                            sx={{
-                                backgroundColor: 'rgba(244, 67, 54, 0.3) !important',
-                                borderRadius: '50%',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                padding: '3px',
-                            }}
-                        >
-                            <FiberManualRecordIcon
-                                sx={{
-                                    fontSize: 10,
-                                    color: '#F44336 !important',
-                                    fill: '#F44336 !important',
-                                    animation: 'pulse 1.5s ease-in-out infinite',
-                                    '@keyframes pulse': {
-                                        '0%, 100%': { opacity: 1 },
-                                        '50%': { opacity: 0.4 },
-                                    }
-                                }}
-                            />
-                        </Box>
-                    )}
-                </Box>
-            )}
-            {/* Right overlay (e.g., streaming, sync indicators) */}
-            {showOverlay && (
-                <Box
-                    sx={{
-                        position: 'absolute',
-                        top: -4,
-                        right: -4,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                    }}
-                >
-                    {overlayType === 'spinner' ? (
-                        <Box
-                            sx={{
-                                backgroundColor: 'rgba(33, 150, 243, 0.3) !important',
-                                borderRadius: '50%',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                padding: '2px',
-                            }}
-                        >
-                            <CircularProgress
-                                size={12}
-                                thickness={6}
-                                sx={{
-                                    color: '#2196F3 !important',
-                                    '& .MuiCircularProgress-circle': {
-                                        stroke: '#2196F3 !important',
-                                    }
-                                }}
-                            />
-                        </Box>
-                    ) : overlayType === 'sync' ? (
-                        <Box
-                            sx={{
-                                backgroundColor: 'rgba(255, 152, 0, 0.3) !important',
-                                borderRadius: '50%',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                padding: '2px',
-                            }}
-                        >
-                            <SyncIcon
-                                sx={{
-                                    fontSize: 12,
-                                    color: '#FF9800 !important',
-                                    fill: '#FF9800 !important',
-                                    animation: 'spin 1s linear infinite',
-                                    '@keyframes spin': {
-                                        '0%': { transform: 'rotate(0deg)' },
-                                        '100%': { transform: 'rotate(360deg)' },
-                                    }
-                                }}
-                            />
-                        </Box>
-                    ) : overlayType === 'play' ? (
-                        <Box
-                            sx={{
-                                backgroundColor: 'rgba(76, 175, 80, 0.3) !important',
-                                borderRadius: '50%',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                padding: '2px',
-                            }}
-                        >
-                            <PlayArrowIcon
-                                sx={{
-                                    fontSize: 12,
-                                    color: '#4CAF50 !important',
-                                    fill: '#4CAF50 !important',
-                                }}
-                            />
-                        </Box>
-                    ) : overlayType === 'new' ? (
-                        <Box
-                            sx={{
-                                backgroundColor: 'rgba(244, 67, 54, 0.3) !important',
-                                borderRadius: '50%',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                padding: '3px',
-                            }}
-                        >
-                            <FiberManualRecordIcon
-                                sx={{
-                                    fontSize: 10,
-                                    color: '#F44336 !important',
-                                    fill: '#F44336 !important',
-                                }}
-                            />
-                        </Box>
-                    ) : overlayType === 'error' ? (
-                        <Box
-                            sx={{
-                                backgroundColor: 'rgba(244, 67, 54, 0.3) !important',
-                                borderRadius: '50%',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                padding: '3px',
-                            }}
-                        >
-                            <FiberManualRecordIcon
-                                sx={{
-                                    fontSize: 10,
-                                    color: '#F44336 !important',
-                                    fill: '#F44336 !important',
-                                    animation: 'pulse 1.5s ease-in-out infinite',
-                                    '@keyframes pulse': {
-                                        '0%, 100%': { opacity: 1 },
-                                        '50%': { opacity: 0.4 },
-                                    }
-                                }}
-                            />
-                        </Box>
-                    ) : null}
-                </Box>
-            )}
-        </Box>
-    );
-};
+// Navigation keeps its base icon; overlays carry the shared operational language.
+const IconWithOverlay = ({children, showOverlay = false, overlayType = 'spinner', showLeftOverlay = false, leftOverlayType = null}) => (
+    <Box sx={{position: 'relative', display: 'inline-flex'}}>
+        {children}
+        {showLeftOverlay && <StatusOverlay type={leftOverlayType} side="left" />}
+        {showOverlay && <StatusOverlay type={overlayType} />}
+    </Box>
+);
 
 // Wrapper component for WavesIcon that reads Redux state
 const WaterfallIconWithStatus = () => {

@@ -612,5 +612,39 @@
     "attribution_license": "available under the",
     "database_version": "Version",
     "snapshot": "Snapshot"
+  },
+  "hardware_status": {
+    "rotator": "Rotator",
+    "rig": "Rig",
+    "states": {
+      "none": "No device",
+      "disconnected": "Disconnected",
+      "connected": "Connected",
+      "tracking": "Tracking",
+      "slewing": "Slewing",
+      "parking": "Parking…",
+      "loading": "Loading…",
+      "stopped": "Stopped",
+      "paused": "Paused",
+      "idle": "Idle",
+      "parked": "Parked",
+      "outofbounds": "Tracking inhibited",
+      "minelevation": "Below minimum elevation",
+      "motion_unconfirmed": "Motion unconfirmed",
+      "unknown": "Status unavailable",
+      "unavailable": "Status unavailable",
+      "error": "Device fault"
+    },
+    "no_rotator": "No rotator selected",
+    "no_rig": "No rig selected",
+    "last_update": "Time since last hardware update"
+  },
+  "status_overlay": {
+    "spinner": "Loading",
+    "sync": "Synchronizing",
+    "play": "Running",
+    "recording": "Recording",
+    "new": "New files",
+    "error": "Error"
   }
 }

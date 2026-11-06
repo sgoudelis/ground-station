@@ -107,8 +107,8 @@ describe('tracking navigation status', () => {
         const { container } = render(<Provider store={store}>{tracking.icon}{tracking.tooltip}</Provider>);
         expect(container.querySelector('[data-testid="tracking-rotator-status"]')).toHaveAttribute('data-status', 'slewing');
         expect(container.querySelector('[data-testid="tracking-rig-status"]')).toHaveAttribute('data-status', 'tracking');
-        expect(container).toHaveTextContent('Rotator slewing');
-        expect(container).toHaveTextContent('Rig tracking');
+        expect(container).toHaveTextContent('Rotator: Slewing');
+        expect(container).toHaveTextContent('Rig: Tracking');
     });
 });
 

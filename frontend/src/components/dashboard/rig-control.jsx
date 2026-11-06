@@ -45,10 +45,15 @@ import LCDFrequencyDisplay from "../common/lcd-frequency-display.jsx";
 import SettingsIcon from '@mui/icons-material/Settings';
 import { RIG_STATES } from '../target/tracking-constants.js';
 import RigQuickEditDialog from "./rig-quick-edit-dialog.jsx";
-import { resolveRigLedStatus, RIG_LED_STATUS } from "../common/hardware-status.js";
 
 
 import {useHardwareCommand} from '../target/use-hardware-command.js';
+import {hardwareControlActionsSx, operationalButtonSx} from '../common/hardware-status-presentation.jsx';
+import {resolveHardwareStatus, resolveHardwareConnectionStatus} from '../common/hardware-status.js';
+import LinkIcon from '@mui/icons-material/Link';
+import LinkOffIcon from '@mui/icons-material/LinkOff';
+import GpsFixedIcon from '@mui/icons-material/GpsFixed';
+import PauseIcon from '@mui/icons-material/Pause';
 import HardwareControlHeader from './hardware-control-header.jsx';
 
 const RigControl = React.memo(function RigControl({ trackerId: trackerIdOverride = "" }) {
@@ -70,6 +75,7 @@ const RigControl = React.memo(function RigControl({ trackerId: trackerIdOverride
         trackerViews,
         trackerId: activeTrackerId,
     } = useSelector((state) => state.targetSatTrack);
+    const connectedAt = useSelector((state) => state.dashboard?.connectedAt || 0);
     const scopedTrackerId = trackerIdOverride || activeTrackerId || "";
     const scopedTrackerView = React.useMemo(
         () => (scopedTrackerId ? trackerViews?.[scopedTrackerId] || null : null),
@@ -87,7 +93,7 @@ const RigControl = React.memo(function RigControl({ trackerId: trackerIdOverride
     const {command: activeRigCommand, busy: isRigCommandBusy, isPending,
         connected: isSocketConnected, ready: hardwareReady, lastUpdateAge} = useHardwareCommand({
         socket, view: scopedTrackerView, commands: trackerCommandsById, trackerId: scopedTrackerId,
-        scope: 'rig', deviceId: effectiveSelectedRadioRig,
+        scope: 'rig', deviceId: effectiveSelectedRadioRig, connectedAt,
     });
     const isConnectRigActionPending = isPending(RIG_STATES.CONNECTED);
     const isDisconnectRigActionPending = isPending(RIG_STATES.DISCONNECTED);
@@ -140,48 +146,13 @@ const RigControl = React.memo(function RigControl({ trackerId: trackerIdOverride
         return usage;
     }, [trackerInstances]);
 
-    const resolvedRigLedStatus = React.useMemo(() => {
-        return resolveRigLedStatus({
-            rigId: effectiveSelectedRadioRigValue,
-            rigData: effectiveRigData,
-            trackingState: effectiveTrackingState,
-        });
-    }, [effectiveSelectedRadioRigValue, effectiveRigData, effectiveTrackingState]);
-
-    const rigStatusChip = React.useMemo(() => {
-        if (!isSocketConnected) {
-            return { label: t('common.disconnected', { ns: 'common', defaultValue: 'Disconnected' }), color: 'default' };
-        }
-        switch (resolvedRigLedStatus) {
-            case RIG_LED_STATUS.TRACKING:
-                return { label: 'Tracking', color: 'success' };
-            case RIG_LED_STATUS.STOPPED:
-                return { label: 'Stopped', color: 'info' };
-            case RIG_LED_STATUS.CONNECTED:
-                return { label: t('rig_control.connected', { defaultValue: 'Connected' }), color: 'success' };
-            case RIG_LED_STATUS.NONE:
-            case RIG_LED_STATUS.DISCONNECTED:
-            case RIG_LED_STATUS.UNKNOWN:
-            default:
-                return { label: t('common.disconnected', { ns: 'common', defaultValue: 'Disconnected' }), color: 'default' };
-        }
-    }, [isSocketConnected, resolvedRigLedStatus, t]);
-    const rigStatusLedColor = React.useMemo(() => {
-        if (!isSocketConnected) return 'action.disabled';
-        switch (resolvedRigLedStatus) {
-            case RIG_LED_STATUS.TRACKING:
-                return 'success.main';
-            case RIG_LED_STATUS.STOPPED:
-                return 'info.main';
-            case RIG_LED_STATUS.CONNECTED:
-                return 'success.main';
-            case RIG_LED_STATUS.NONE:
-            case RIG_LED_STATUS.DISCONNECTED:
-            case RIG_LED_STATUS.UNKNOWN:
-            default:
-                return 'action.disabled';
-        }
-    }, [isSocketConnected, resolvedRigLedStatus]);
+    const hardwareStatus = resolveHardwareStatus({
+        kind: 'rig', deviceId: effectiveSelectedRadioRigValue, data: effectiveRigData,
+        trackingState: scopedTrackerView?.confirmedTrackingState || {}, available: hardwareReady,
+    });
+    const connectionStatus = resolveHardwareConnectionStatus({
+        deviceId: effectiveSelectedRadioRigValue, data: effectiveRigData, available: hardwareReady,
+    });
 
     const resolvedTargetType = React.useMemo(() => {
         const explicitTargetType = String(effectiveTrackingState?.target_type || '').trim().toLowerCase();
@@ -320,11 +291,11 @@ const RigControl = React.memo(function RigControl({ trackerId: trackerIdOverride
                 {t('rig_control.title', { defaultValue: 'Radio Rig Control' })}
             </TitleBar>
 
-            <Grid container spacing={{ xs: 0, md: 0 }} columns={{ xs: 12, sm: 12, md: 12 }}>
-                <HardwareControlHeader device={selectedRigDevice} emptyLabel="No rig selected"
-                    connected={isSocketConnected} status={rigStatusChip.label} ledColor={rigStatusLedColor}
-                    tone={resolvedRigLedStatus === RIG_LED_STATUS.TRACKING ? 'success' : [RIG_LED_STATUS.STOPPED, RIG_LED_STATUS.CONNECTED].includes(resolvedRigLedStatus) ? 'info' : null} command={activeRigCommand}
-                    stale={!hardwareReady && hasTargets} lastUpdateAge={lastUpdateAge} />
+            <Grid container spacing={{ xs: 0, md: 0 }} columns={{ xs: 12, sm: 12, md: 12 }} sx={hardwareControlActionsSx}>
+                <HardwareControlHeader kind="rig" device={selectedRigDevice}
+                    emptyLabel={t('hardware_status.no_rig', {ns: 'common', defaultValue: 'No rig selected'})}
+                    status={hardwareStatus} connectionStatus={connectionStatus} command={activeRigCommand}
+                    lastUpdateAge={lastUpdateAge} />
 
                 {/* 1. Rig Selection */}
                 <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0.5rem 0.5rem 0rem 0.5rem'}}>
@@ -694,8 +665,8 @@ const RigControl = React.memo(function RigControl({ trackerId: trackerIdOverride
                                     <Button
                                         disabled={connectRigDisabled}
                                         fullWidth={true}
-                                        variant="contained"
-                                        color="success"
+                                        variant="outlined"
+                                        color="primary" startIcon={<LinkIcon />}
                                         style={{height: '44px'}}
                                         loading={isConnectRigActionPending}
                                         onClick={() => {
@@ -713,8 +684,8 @@ const RigControl = React.memo(function RigControl({ trackerId: trackerIdOverride
                                     <Button
                                         disabled={disconnectRigDisabled}
                                         fullWidth={true}
-                                        variant="contained"
-                                        color="error"
+                                        variant="outlined"
+                                        color="inherit" startIcon={<LinkOffIcon />}
                                         style={{height: '44px'}}
                                         loading={isDisconnectRigActionPending}
                                         onClick={() => {
@@ -741,7 +712,7 @@ const RigControl = React.memo(function RigControl({ trackerId: trackerIdOverride
                                         fullWidth={true}
                                         disabled={trackRigDisabled}
                                         variant="contained"
-                                        color="success"
+                                        color="success" startIcon={<GpsFixedIcon />} sx={operationalButtonSx('active')}
                                         style={{height: '56px'}}
                                         loading={isTrackRigActionPending}
                                         onClick={()=>{handleTrackingStart()}}
@@ -757,13 +728,13 @@ const RigControl = React.memo(function RigControl({ trackerId: trackerIdOverride
                                     <Button
                                         fullWidth={true}
                                         disabled={stopRigDisabled}
-                                        variant="contained"
-                                        color="error"
+                                        variant="outlined"
+                                        color="inherit" startIcon={<PauseIcon />}
                                         style={{height: '56px'}}
                                         loading={isStopRigActionPending}
                                         onClick={() => {handleTrackingStop()}}
                                     >
-                                        {t('rig_control.stop')}
+                                        {t('rig_control.pause_tracking', {defaultValue: 'Pause tracking'})}
                                     </Button>
                                 </span>
                             </Tooltip>

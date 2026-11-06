@@ -59,7 +59,9 @@ import SatelliteSearchAutocomplete from "./satellite-search.jsx";
 import { useTargetRotatorSelectionDialog } from "./use-target-rotator-selection-dialog.jsx";
 import { deleteTrackerInstance } from "./tracker-instances-slice.jsx";
 import { cancelRunningObservation } from "../scheduler/scheduler-slice.jsx";
-import { resolveTabHardwareLedStatus } from "../common/hardware-status.js";
+import {isHardwareTelemetryFresh, resolveAssignedHardwareId, resolveHardwareStatus} from "../common/hardware-status.js";
+import HardwareStatusIndicator from '../common/hardware-status-indicator.jsx';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import { resolveTabLedPresentation } from "../common/hardware-status-presentation.jsx";
 import { fetchMonitoredCelestial } from "../celestial/monitored-slice.jsx";
 import { resolveTargetDisplayName } from './celestial-target-utils.js';
@@ -157,6 +159,14 @@ const TargetSelectorBar = React.memo(function TargetSelectorBar() {
     const rotatorRows = useSelector((state) => state.rotators?.rotators || []);
     const monitoredCelestialRows = useSelector((state) => state.celestialMonitored?.monitored || []);
 
+    const stationConnected = useSelector((state) => Boolean(state.dashboard?.connected));
+    const connectedAt = useSelector((state) => state.dashboard?.connectedAt || 0);
+    const [statusNow, setStatusNow] = useState(Date.now);
+    useEffect(() => {
+        // Expire quiet reports too; switching tabs must not revive cached green states.
+        const timer = window.setInterval(() => setStatusNow(Date.now()), 1000);
+        return () => window.clearInterval(timer);
+    }, []);
     const trackerViews = useSelector((state) => state.targetSatTrack?.trackerViews || {});
     const { requestRotatorForTarget, dialog: rotatorSelectionDialog } = useTargetRotatorSelectionDialog();
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -843,28 +853,23 @@ const TargetSelectorBar = React.memo(function TargetSelectorBar() {
             monitoredRows: monitoredCelestialRows,
         }) || 'No target';
         const targetIdentifier = getTrackingTargetIdentifier(effectiveTrackingState) || 'none';
-        const rotatorId = view?.selectedRotator || instance?.rotator_id || effectiveTrackingState?.rotator_id || 'none';
+        const rotatorId = resolveAssignedHardwareId(view.selectedRotator, effectiveTrackingState.rotator_id, instance?.rotator_id);
         // Associate upcoming observations with the mount selected by this slot.
         const normalizedTabRotatorId = normalizeAssignedResourceId(instance?.rotator_id);
-        const rigId = view?.selectedRadioRig || instance?.rig_id || effectiveTrackingState?.rig_id || 'none';
+        const rigId = resolveAssignedHardwareId(view.selectedRadioRig, effectiveTrackingState.rig_id, instance?.rig_id);
         const rotatorName = String(rotatorId) === 'none'
             ? 'No rotator'
             : (rotatorRows.find((row) => String(row.id) === String(rotatorId))?.name || String(rotatorId));
         const isTracking = Boolean(rigData?.tracking || rotatorData?.tracking);
         const satAz = Number.isFinite(view?.satelliteData?.position?.az) ? view.satelliteData.position.az : null;
         const satEl = Number.isFinite(view?.satelliteData?.position?.el) ? view.satelliteData.position.el : null;
-        const tabHardwareLedStatus = resolveTabHardwareLedStatus({
-            rotatorId,
-            rigId,
-            rotatorData,
-            rigData,
-            trackingState: effectiveTrackingState,
-        });
-        const tabHardwareLed = {
-            source: tabHardwareLedStatus.source,
-            status: tabHardwareLedStatus.status,
-            ...resolveTabLedPresentation({ ...tabHardwareLedStatus, t }),
-        };
+        const available = isHardwareTelemetryFresh(view, stationConnected, Date.now(), connectedAt);
+        const confirmedState = view.confirmedTrackingState || {};
+        const rotatorStatus = resolveHardwareStatus({kind: 'rotator', deviceId: rotatorId,
+            data: rotatorData, trackingState: confirmedState, available});
+        const rigStatus = resolveHardwareStatus({kind: 'rig', deviceId: rigId,
+            data: rigData, trackingState: confirmedState, available});
+        const rigName = rigRows.find((row) => String(row.id) === String(rigId))?.name || '';
         const linkedObservations = schedulerObservations
             .filter((obs) => obs?.enabled)
             .filter((obs) => {
@@ -899,7 +904,7 @@ const TargetSelectorBar = React.memo(function TargetSelectorBar() {
             rigId,
             rotatorName,
             isTracking,
-            tabHardwareLed,
+            rotatorStatus, rigStatus, rigName,
             satAz,
             satEl,
             runningObsCount: runningObs.length,
@@ -908,7 +913,7 @@ const TargetSelectorBar = React.memo(function TargetSelectorBar() {
             hasScheduledObservation: upcomingObs.length > 0,
             linkedObservations,
         };
-    }), [tabTrackerInstances, trackerViews, schedulerObservations, rotatorRows, monitoredCelestialRows]);
+    }), [tabTrackerInstances, trackerViews, schedulerObservations, rotatorRows, rigRows, monitoredCelestialRows, stationConnected, connectedAt, statusNow]);
 
     const tabValue = targetOptions.some((option) => option.trackerId === trackerId)
         ? trackerId
@@ -1732,9 +1737,10 @@ const TargetSelectorBar = React.memo(function TargetSelectorBar() {
                                     color: 'text.secondary',
                                     fontWeight: 600,
                                     '&.Mui-selected': {
-                                        color: 'primary.contrastText',
-                                        backgroundColor: 'primary.main',
-                                        borderColor: 'primary.dark',
+                                        color: 'text.primary',
+                                        backgroundColor: 'action.selected',
+                                        borderColor: 'divider',
+                                        boxShadow: 'inset 0 -3px 0 var(--mui-palette-primary-main)',
                                     }
                                 },
                             }}
@@ -1762,12 +1768,12 @@ const TargetSelectorBar = React.memo(function TargetSelectorBar() {
                                     `${option.targetName}`,
                                     targetIdTooltip,
                                     `Rotator ${option.rotatorName}`,
-                                    `HW ${option.tabHardwareLed?.label || 'Unknown'}`,
+                                    resolveTabLedPresentation({source: 'rotator', status: option.rotatorStatus, t}).label,
+                                    `${option.rigName ? `${option.rigName} · ` : ''}${resolveTabLedPresentation({source: 'rig', status: option.rigStatus, t}).label}`,
                                 ];
                                 if (option.runningObsCount > 0) {
                                     tooltipLines.push(`Obs running: ${option.runningObsCount}`);
                                 }
-                                const TabHardwareLedIcon = option.tabHardwareLed?.Icon;
                                 return (
                                     <Tab
                                         key={option.trackerId}
@@ -1778,31 +1784,14 @@ const TargetSelectorBar = React.memo(function TargetSelectorBar() {
                                                 arrow
                                             >
                                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.7, maxWidth: 230 }}>
-                                                    <Box
-                                                        sx={{
-                                                            width: 18,
-                                                            height: 18,
-                                                            borderRadius: '50%',
-                                                            bgcolor: option.tabHardwareLed?.bgColor || 'action.disabled',
-                                                            border: '1px solid',
-                                                            borderColor: option.tabHardwareLed?.borderColor || 'action.disabledBackground',
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center',
-                                                            flexShrink: 0,
-                                                        }}
-                                                    >
-                                                        {TabHardwareLedIcon ? (
-                                                            <TabHardwareLedIcon
-                                                                sx={{
-                                                                    fontSize: '0.78rem',
-                                                                    color: option.tabHardwareLed?.iconColor || 'common.white',
-                                                                }}
-                                                            />
-                                                        ) : null}
+                                                    <Box sx={{display: 'flex', flexDirection: 'column', gap: 0.3}}>
+                                                        <HardwareStatusIndicator kind="rotator" status={option.rotatorStatus} compact showDevice />
+                                                        <HardwareStatusIndicator kind="rig" status={option.rigStatus} compact showDevice />
                                                     </Box>
                                                     <Typography variant="caption" sx={{ fontWeight: 900, fontSize: '1.2rem', lineHeight: 1 }}>
                                                         {trackerLabel}
+                                                        {option.hasActiveObservation && <PlayArrowIcon aria-label="Observation running"
+                                                            sx={{fontSize: 14, ml: 0.35, color: 'operational.active.main'}} />}
                                                     </Typography>
                                                     <Box sx={{ minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', maxWidth: 190 }}>
                                                         <Typography
@@ -1852,14 +1841,7 @@ const TargetSelectorBar = React.memo(function TargetSelectorBar() {
                                                 </Box>
                                             </Tooltip>
                                         }
-                                        sx={{
-                                            ...(option.hasActiveObservation ? {
-                                                backgroundImage: 'repeating-linear-gradient(135deg, rgba(255, 193, 7, 0.22) 0px, rgba(255, 193, 7, 0.22) 7px, rgba(255, 87, 34, 0.2) 7px, rgba(255, 87, 34, 0.2) 14px)',
-                                                '&.Mui-selected': {
-                                                    backgroundImage: 'repeating-linear-gradient(135deg, rgba(255, 193, 7, 0.22) 0px, rgba(255, 193, 7, 0.22) 7px, rgba(255, 87, 34, 0.2) 7px, rgba(255, 87, 34, 0.2) 14px)',
-                                                },
-                                            } : {}),
-                                        }}
+                                        data-observation-running={option.hasActiveObservation || undefined}
                                     />
                                 );
                             })}

@@ -50,6 +50,15 @@ import {
 
 import {useHardwareCommand} from '../target/use-hardware-command.js';
 import {canStopManualRotator, getManualRotatorState} from '../target/manual-rotator-state.js';
+import HardwareStatusIndicator from '../common/hardware-status-indicator.jsx';
+import {hardwareControlActionsSx, operationalButtonSx} from '../common/hardware-status-presentation.jsx';
+import {resolveHardwareStatus, resolveHardwareConnectionStatus} from '../common/hardware-status.js';
+import LinkIcon from '@mui/icons-material/Link';
+import LinkOffIcon from '@mui/icons-material/LinkOff';
+import GpsFixedIcon from '@mui/icons-material/GpsFixed';
+import StopIcon from '@mui/icons-material/Stop';
+import LocalParkingIcon from '@mui/icons-material/LocalParking';
+import OpenWithIcon from '@mui/icons-material/OpenWith';
 import HardwareControlHeader from './hardware-control-header.jsx';
 import ErrorDialog from '../common/error-dialog.jsx';
 
@@ -134,6 +143,7 @@ const RotatorControl = React.memo(function RotatorControl({ trackerId: trackerId
     const celestialState = useSelector((state) => state.celestial || {});
 
     const { rotators } = useSelector((state) => state.rotators);
+    const connectedAt = useSelector((state) => state.dashboard?.connectedAt || 0);
     const scopedTrackerId = trackerIdOverride || activeTrackerId || "";
     const scopedTrackerView = React.useMemo(
         () => (scopedTrackerId ? trackerViews?.[scopedTrackerId] || null : null),
@@ -150,7 +160,7 @@ const RotatorControl = React.memo(function RotatorControl({ trackerId: trackerId
     const {command: activeRotatorCommand, busy: isRotatorCommandBusy, isPending,
         connected: isSocketConnected, ready: hardwareReady, now, lastUpdateAge} = useHardwareCommand({
         socket, view: scopedTrackerView, commands: trackerCommandsById, trackerId: scopedTrackerId,
-        scope: 'rotator', deviceId: effectiveSelectedRotator,
+        scope: 'rotator', deviceId: effectiveSelectedRotator, connectedAt,
     });
     const isConnectActionPending = isPending(ROTATOR_STATES.CONNECTED);
     const isDisconnectActionPending = isPending(ROTATOR_STATES.DISCONNECTED);
@@ -192,33 +202,13 @@ const RotatorControl = React.memo(function RotatorControl({ trackerId: trackerId
         return usage;
     }, [trackerInstances]);
 
-    const rotatorStatusChip = React.useMemo(() => {
-        if (!isSocketConnected) return { label: 'Offline', color: 'default' };
-        if (!effectiveRotatorData?.connected) {
-            return {
-                label: t('common.disconnected', { ns: 'common', defaultValue: 'Disconnected' }),
-                color: 'default'
-            };
-        }
-        if (motionUnconfirmed) return { label: t('rotator_control.motion_unconfirmed', { defaultValue: 'Motion unconfirmed' }), color: 'warning' };
-        // Tracking stays active during a slew; show the current motion first.
-        if (effectiveRotatorData?.slewing) return { label: 'Slewing', color: 'warning' };
-        if (effectiveRotatorData?.tracking) return { label: 'Tracking', color: 'success' };
-        if (effectiveRotatorData?.park_requested) return { label: t('rotator_control.park_command_sent', { defaultValue: 'Park command sent' }), color: 'warning' };
-        if (effectiveRotatorData?.parked) return { label: 'Parked', color: 'warning' };
-        if (effectiveRotatorData?.stopped) return { label: 'Stopped', color: 'warning' };
-        return { label: 'Connected', color: 'success' };
-    }, [isSocketConnected, motionUnconfirmed, effectiveRotatorData?.connected, effectiveRotatorData?.tracking, effectiveRotatorData?.slewing, effectiveRotatorData?.park_requested, effectiveRotatorData?.parked, effectiveRotatorData?.stopped, t]);
-    const rotatorStatusLedColor = React.useMemo(() => {
-        if (!isSocketConnected) return 'action.disabled';
-        if (!effectiveRotatorData?.connected) return 'action.disabled';
-        if (motionUnconfirmed) return 'warning.main';
-        if (effectiveRotatorData?.slewing) return 'warning.main';
-        if (effectiveRotatorData?.tracking) return 'success.main';
-        if (effectiveRotatorData?.parked) return 'warning.main';
-        if (effectiveRotatorData?.stopped) return 'info.main';
-        return 'success.main';
-    }, [isSocketConnected, motionUnconfirmed, effectiveRotatorData?.connected, effectiveRotatorData?.tracking, effectiveRotatorData?.slewing, effectiveRotatorData?.parked, effectiveRotatorData?.stopped]);
+    const hardwareStatus = resolveHardwareStatus({
+        kind: 'rotator', deviceId: effectiveSelectedRotatorValue, data: effectiveRotatorData,
+        trackingState: scopedTrackerView?.confirmedTrackingState || {}, available: hardwareReady,
+    });
+    const connectionStatus = resolveHardwareConnectionStatus({
+        deviceId: effectiveSelectedRotatorValue, data: effectiveRotatorData, available: hardwareReady,
+    });
 
     const effectiveTargetPassKey = React.useMemo(
         () => buildTargetKeyFromTrackingState(effectiveTrackingState) || buildSatellitePassKey(effectiveSatelliteId),
@@ -315,7 +305,6 @@ const RotatorControl = React.memo(function RotatorControl({ trackerId: trackerId
         confirmedTrackingState,
         hardwareReady,
     });
-    const rotatorLiveStatus = manualControl.rotatorStatus;
 
     const submitRotatorState = (rotatorState) => {
         const changes = {rotator_state: rotatorState};
@@ -400,11 +389,11 @@ const RotatorControl = React.memo(function RotatorControl({ trackerId: trackerId
             <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>
                 {t('rotator_control.title', { defaultValue: 'Rotator Control' })}
             </TitleBar>
-            <Grid container spacing={{ xs: 0, md: 0 }} columns={{ xs: 12, sm: 12, md: 12 }}>
-                <HardwareControlHeader device={selectedRotatorDevice} emptyLabel="No rotator selected"
-                    connected={isSocketConnected} status={rotatorStatusChip.label} ledColor={rotatorStatusLedColor}
-                    tone={motionUnconfirmed || effectiveRotatorData?.slewing ? 'warning' : effectiveRotatorData?.tracking ? 'success' : effectiveRotatorData?.parked ? 'warning' : effectiveRotatorData?.connected ? 'info' : null} command={activeRotatorCommand}
-                    stale={!hardwareReady && hasTargets} lastUpdateAge={lastUpdateAge} />
+            <Grid container spacing={{ xs: 0, md: 0 }} columns={{ xs: 12, sm: 12, md: 12 }} sx={hardwareControlActionsSx}>
+                <HardwareControlHeader kind="rotator" device={selectedRotatorDevice}
+                    emptyLabel={t('hardware_status.no_rotator', {ns: 'common', defaultValue: 'No rotator selected'})}
+                    status={hardwareStatus} connectionStatus={connectionStatus} command={activeRotatorCommand}
+                    lastUpdateAge={lastUpdateAge} />
 
                 <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0.5rem 0.5rem 0rem 0.5rem'}}>
                     <Grid container direction="row" spacing={1} sx={{ alignItems: 'flex-end' }}>
@@ -636,31 +625,8 @@ const RotatorControl = React.memo(function RotatorControl({ trackerId: trackerId
                                     </Typography>
                                 </> : <Typography variant="body2" sx={{fontFamily: "Monospace, monospace"}}>—</Typography>}
                             </Paper>
-                            <Paper
-                                elevation={1}
-                                sx={{
-                                    height: '30px',
-                                    padding: '2px 0px',
-                                    backgroundColor: rotatorLiveStatus.bgColor,
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    borderRadius: '4px',
-                                    minWidth: '180px',
-                                    width: '100%',
-                                }}
-                            >
-                                <Typography
-                                    variant="body2"
-                                    sx={{
-                                        fontFamily: "Monospace, monospace",
-                                        fontWeight: "bold",
-                                        color: rotatorLiveStatus.fgColor,
-                                    }}
-                                >
-                                    {rotatorLiveStatus.value}
-                                </Typography>
-                            </Paper>
+                            <HardwareStatusIndicator kind="rotator" status={hardwareStatus}
+                                sx={{width: '100%', height: 30, fontFamily: 'monospace'}} />
                         </Grid>
 
                     </Grid>
@@ -678,8 +644,8 @@ const RotatorControl = React.memo(function RotatorControl({ trackerId: trackerId
                                         loading={isConnectActionPending}
                                         disabled={connectDisabled}
                                         fullWidth={true}
-                                        variant="contained"
-                                        color="success"
+                                        variant="outlined"
+                                        color="primary" startIcon={<LinkIcon />}
                                         style={{height: '47px'}}
                                         onClick={() => {
                                             connectRotator()
@@ -697,8 +663,8 @@ const RotatorControl = React.memo(function RotatorControl({ trackerId: trackerId
                                         loading={isDisconnectActionPending}
                                         disabled={disconnectDisabled}
                                         fullWidth={true}
-                                        variant="contained"
-                                        color="error"
+                                        variant="outlined"
+                                        color="inherit" startIcon={<LinkOffIcon />}
                                         style={{height: '47px'}}
                                         onClick={() => {
                                              disconnectRotator()
@@ -716,8 +682,8 @@ const RotatorControl = React.memo(function RotatorControl({ trackerId: trackerId
                                         loading={isParkActionPending}
                                         disabled={parkDisabled}
                                         fullWidth={true}
-                                        variant="contained"
-                                        color="warning"
+                                        variant="outlined"
+                                        color="inherit" startIcon={<LocalParkingIcon />}
                                         style={{height: '47px'}}
                                         onClick={() => {
                                             parkRotator()
@@ -744,7 +710,7 @@ const RotatorControl = React.memo(function RotatorControl({ trackerId: trackerId
                                         loading={isTrackActionPending}
                                         disabled={trackDisabled}
                                         variant="contained"
-                                        color="success"
+                                        color="success" startIcon={<GpsFixedIcon />} sx={operationalButtonSx('active')}
                                         style={{height: '60px'}}
                                         onClick={()=>{handleTrackingStart()}}
                                     >
@@ -761,7 +727,7 @@ const RotatorControl = React.memo(function RotatorControl({ trackerId: trackerId
                                         loading={isStopActionPending}
                                         disabled={stopDisabled}
                                         variant="contained"
-                                        color="error"
+                                        color="error" startIcon={<StopIcon />} sx={operationalButtonSx('fault')}
                                         style={{height: '60px'}}
                                         onClick={() => {handleTrackingStop()}}
                                     >
@@ -776,7 +742,7 @@ const RotatorControl = React.memo(function RotatorControl({ trackerId: trackerId
                                     <Button
                                         disabled={manualControl.disabled}
                                         fullWidth={true}
-                                        variant="outlined"
+                                        variant="contained" startIcon={<OpenWithIcon />}
                                         style={{height: '60px'}}
                                         sx={{fontWeight: 700}}
                                         onClick={() => setOpenManualControlDialog(true)}
@@ -801,6 +767,7 @@ const RotatorControl = React.memo(function RotatorControl({ trackerId: trackerId
                 onStop={handleManualStop}
                 rotator={selectedRotatorDevice || null}
                 {...manualControl}
+                rotatorStatus={{key: hardwareStatus}}
                 command={activeRotatorCommand}
                 canStop={!stopDisabled}
             />

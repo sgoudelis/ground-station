@@ -72,7 +72,7 @@ describe('rig control submissions', () => {
         expect(requests[0].request.data.value).toEqual({rig_id: 'staged-radio', rig_state: 'connected'});
         expect(screen.getByRole('button', {name: 'rig_control.connect'})).toBeDisabled();
         expect(screen.getByRole('status')).toHaveTextContent('Sending…');
-        expect(screen.getByRole('button', {name: 'rig_control.stop'})).toBeEnabled();
+        expect(screen.getByRole('button', {name: 'Pause tracking'})).toBeEnabled();
         await act(async () => requests[0].ack(null, {success: true, data: {}}));
     });
 });

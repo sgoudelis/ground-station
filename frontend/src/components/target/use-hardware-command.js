@@ -1,11 +1,13 @@
 import {useEffect, useMemo, useState} from 'react';
 import {isCommandActionPending, isCommandOutstanding, selectTrackerCommand} from './tracker-command-state.js';
 
-export function isHardwareReady(view, connected, now = Date.now()) {
-    return connected && Boolean(view?.hardwareObservedAt) && now - view.hardwareReceivedAt < 15000;
+import {isHardwareTelemetryFresh} from '../common/hardware-status.js';
+
+export function isHardwareReady(view, connected, now = Date.now(), connectedAt = 0) {
+    return isHardwareTelemetryFresh(view, connected, now, connectedAt);
 }
 
-export function useHardwareCommand({socket, view, commands, trackerId, scope, deviceId}) {
+export function useHardwareCommand({socket, view, commands, trackerId, scope, deviceId, connectedAt = 0}) {
     const [connected, setConnected] = useState(Boolean(socket?.connected));
     const [now, setNow] = useState(Date.now());
     useEffect(() => {
@@ -33,7 +35,7 @@ export function useHardwareCommand({socket, view, commands, trackerId, scope, de
         isPending: state => isCommandActionPending(command, scope, state),
         connected,
         now,
-        ready: isHardwareReady(view, connected, now),
-        lastUpdateAge: Math.max(0, Math.floor((now - (view?.hardwareReceivedAt || now)) / 1000)),
+        ready: isHardwareReady(view, connected, Date.now(), connectedAt),
+        lastUpdateAge: Math.max(0, Math.floor((Date.now() - (view?.hardwareReceivedAt || Date.now())) / 1000)),
     };
 }

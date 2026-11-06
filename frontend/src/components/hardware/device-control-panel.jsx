@@ -3,16 +3,23 @@ import React, {useEffect, useId, useState} from 'react';
 import {useDispatch, useSelector} from 'react-redux';
 import {useTranslation} from 'react-i18next';
 import {
-    Alert, Box, Button, ButtonBase, Chip, CircularProgress, Collapse, Divider,
+    Alert, Box, Button, ButtonBase, CircularProgress, Collapse, Divider,
     IconButton, Menu, MenuItem, Stack, Tooltip, Typography,
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
-import PauseCircleOutlineIcon from '@mui/icons-material/PauseCircleOutline';
+import PauseIcon from '@mui/icons-material/Pause';
+import LinkIcon from '@mui/icons-material/Link';
+import LinkOffIcon from '@mui/icons-material/LinkOff';
+import OpenWithIcon from '@mui/icons-material/OpenWith';
+import LocalParkingIcon from '@mui/icons-material/LocalParking';
 import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
-import StopCircleOutlinedIcon from '@mui/icons-material/StopCircleOutlined';
+import StopIcon from '@mui/icons-material/Stop';
+import HardwareStatusIndicator, {HardwareDeviceIcon} from '../common/hardware-status-indicator.jsx';
+import {resolveHardwareStatus, resolveHardwareConnectionStatus} from '../common/hardware-status.js';
+import {operationalButtonSx, resolveHardwarePresentation} from '../common/hardware-status-presentation.jsx';
 import {useSocket} from '../common/socket.jsx';
 import ManualRotatorDialog from '../dashboard/manual-rotator-dialog.jsx';
 import {deviceKey, fetchHardwareState, isDeviceCommandActive, sendDeviceCommand} from './control-slice.js';
@@ -33,7 +40,7 @@ function useNow() {
         const timer = setInterval(() => setNow(Date.now()), 1000);
         return () => clearInterval(timer);
     }, []);
-    return now;
+    return Math.max(now, Date.now());
 }
 
 function TelemetryValue({label, value}) {
@@ -46,14 +53,14 @@ function TelemetryValue({label, value}) {
 }
 
 // Keep unavailable actions in place and explain their prerequisites on hover/focus.
-function DeviceAction({reason, hint, children, ...props}) {
+function DeviceAction({reason, hint, children, sx, ...props}) {
     const [showReason, setShowReason] = useState(false);
     return <Tooltip title={reason || hint || ''} describeChild open={Boolean((reason || hint) && showReason)}
         onOpen={() => setShowReason(true)} onClose={() => setShowReason(false)}>
         <Box component="span" sx={{display: 'flex', minWidth: 0}} tabIndex={reason ? 0 : undefined}
             onFocus={() => setShowReason(true)} onBlur={() => setShowReason(false)}>
             <Button fullWidth size="small" variant="outlined" disabled={Boolean(reason)}
-                sx={{minWidth: 0, minHeight: 34, px: 1, lineHeight: 1.3}} {...props}>{children}</Button>
+                sx={[{minWidth: 0, minHeight: 34, px: 1, lineHeight: 1.3}, ...(Array.isArray(sx) ? sx : [sx])]} {...props}>{children}</Button>
         </Box>
     </Tooltip>;
 }
@@ -62,11 +69,11 @@ function DeviceFeedback({message, severity, pending}) {
     return <Tooltip title={message}>
         <Stack component="span" direction="row" spacing={0.5} alignItems="center"
             sx={{minWidth: 0, maxWidth: '100%'}}>
-            {pending ? <CircularProgress size={13} /> : severity === 'success'
-                ? <CheckCircleOutlineIcon sx={{fontSize: 15, color: 'success.main'}} />
-                : <ErrorOutlineIcon sx={{fontSize: 15, color: severity === 'error' ? 'error.main' : 'warning.main'}} />}
+            {pending ? <CircularProgress size={13} sx={{color: 'operational.busy.main'}} /> : severity === 'success'
+                ? <CheckCircleOutlineIcon sx={{fontSize: 15, color: 'operational.active.main'}} />
+                : <ErrorOutlineIcon sx={{fontSize: 15, color: severity === 'error' ? 'operational.fault.main' : 'operational.attention.main'}} />}
             <Typography component="span" role="status" aria-live="polite" variant="caption" noWrap
-                sx={{minWidth: 0, color: severity === 'success' ? 'text.secondary' : `${severity}.main`}}>
+                sx={{minWidth: 0, color: severity === 'success' ? 'text.secondary' : `operational.${({error: 'fault', warning: 'attention', info: 'busy'})[severity]}.main`}}>
                 {message}
             </Typography>
         </Stack>
@@ -78,9 +85,13 @@ function DeviceDetails({message, severity}) {
     const [dismissed, setDismissed] = useState(false);
     if (dismissed) return null;
 
+    const tone = ({success: 'busy', info: 'busy', warning: 'attention', error: 'fault'})[severity];
     return <Alert severity={severity === 'success' ? 'info' : severity}
         onClose={() => setDismissed(true)} closeText={t('close')}
-        sx={{borderRadius: 0, py: 0, overflowWrap: 'anywhere', whiteSpace: 'pre-line'}}>
+        sx={{borderRadius: 0, py: 0, overflowWrap: 'anywhere', whiteSpace: 'pre-line',
+            bgcolor: `operational.${tone}.background`, color: `operational.${tone}.main`,
+            '& .MuiAlert-icon': {color: 'inherit'},
+        }}>
         {message}
     </Alert>;
 }
@@ -99,8 +110,12 @@ function DeviceRow({device, kind, snapshot, status, command, owner, expanded, no
     const canDisconnect = Boolean(data.connected || data.error || owned || busy);
     const ready = socketConnected && loaded && status.known;
     const stopUnsupported = kind === 'rotator' && device.stop_supported === false;
-    const activityKey = data.motion_unconfirmed ? 'motion_unconfirmed' : data.parked ? 'parked'
-        : data.slewing ? 'slewing' : data.tracking ? 'tracking' : 'idle';
+    const connectionStatus = status.key === 'loading' ? 'loading' : resolveHardwareConnectionStatus({
+        deviceId: device.id, data: {connected: false, ...data}, available: status.known,
+    });
+    const hardwareStatus = resolveHardwareStatus({kind, deviceId: device.id, data, available: status.known});
+    const activityStatus = hardwareStatus === 'connected' ? 'idle' : hardwareStatus;
+    const activityLabel = resolveHardwarePresentation({source: kind, status: activityStatus, t}).label;
     const ownerName = owner.name || (observation ? t('hardware_popover.observation')
         : t('hardware_popover.target', {number: owner.number || ''}).trim());
     const ownerLabel = owned ? manual ? t('hardware_popover.manual_control')
@@ -173,8 +188,12 @@ function DeviceRow({device, kind, snapshot, status, command, owner, expanded, no
                     {device.host}:{device.port}
                 </Typography>
             </Box>
-            <Chip size="small" variant="outlined" color={status.color}
-                label={t(`hardware_popover.status_${status.key}`)} sx={{height: 23, flexShrink: 0, fontSize: '0.68rem'}} />
+            <Stack spacing={0.4} alignItems="flex-end">
+                <HardwareStatusIndicator kind={kind} status={connectionStatus} />
+                {data.connected && status.known && <HardwareStatusIndicator kind={kind} status={activityStatus} />}
+                {!data.connected && status.known && hardwareStatus === 'motion_unconfirmed' &&
+                    <HardwareStatusIndicator kind={kind} status={hardwareStatus} />}
+            </Stack>
             <ExpandMoreIcon sx={{fontSize: 19, color: 'text.secondary', transform: expanded ? 'rotate(180deg)' : 'none'}} />
         </ButtonBase>
         {/* Only new or recurring messages reset dismissal; telemetry updates
@@ -210,7 +229,7 @@ function DeviceRow({device, kind, snapshot, status, command, owner, expanded, no
                     </> : <TelemetryValue label={t('hardware_popover.frequency')}
                         value={ready && data.connected ? frequency(data.frequency) : '—'} />}
                     <TelemetryValue label={t('hardware_popover.activity')}
-                        value={ready && data.connected ? t(`hardware_popover.${activityKey}`) : '—'} />
+                        value={ready && data.connected ? activityLabel : '—'} />
                 </Box>
                 {kind === 'rig' && <Box sx={{display: 'grid', gridTemplateColumns: '1fr', gap: 1.25, mb: 1.25,
                     '@container (min-width: 340px)': {gridTemplateColumns: '1fr 1fr'}}}>
@@ -229,32 +248,33 @@ function DeviceRow({device, kind, snapshot, status, command, owner, expanded, no
                     </DeviceAction>
                 </Box>
                 {kind === 'rotator' && <Box sx={{...actionGrid, mt: 0.75}}>
-                    <DeviceAction reason={moveReason} variant="contained" onClick={() => onManualControl(String(device.id))}>
+                    <DeviceAction reason={moveReason} variant="contained" startIcon={<OpenWithIcon />} onClick={() => onManualControl(String(device.id))}>
                         {t('hardware_popover.manual_movement')}
                     </DeviceAction>
                     <DeviceAction aria-label={t('hardware_popover.parking_actions', {name: device.name})}
                         aria-haspopup="menu" aria-controls={menuAnchor ? menuId : undefined}
-                        aria-expanded={Boolean(menuAnchor)} endIcon={<ExpandMoreIcon />}
+                        aria-expanded={Boolean(menuAnchor)} startIcon={<LocalParkingIcon />} endIcon={<ExpandMoreIcon />}
                         onClick={(event) => setMenuAnchor(event.currentTarget)}>{t('hardware_popover.parking_actions_label')}</DeviceAction>
                 </Box>}
             </Box>
         </Collapse>
         <Divider />
-        {/* Connection actions never trade places when a request completes. */}
+        {/* Keep actions in fixed positions. Four icon+label buttons need a
+            wider container than the popover, so narrow panels use two rows. */}
         <Box sx={{display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 0.75, p: 1.25,
             '& > :last-child': {gridColumn: kind === 'rig' ? '1 / -1' : 'auto'},
-            [`@container (min-width: ${kind === 'rotator' ? 380 : 340}px)`]: {gridTemplateColumns: kind === 'rotator'
+            [`@container (min-width: ${kind === 'rotator' ? 540 : 340}px)`]: {gridTemplateColumns: kind === 'rotator'
                 ? '1fr 1.3fr 1fr 1fr' : 'repeat(3, minmax(0, 1fr))',
                 '& > :last-child': {gridColumn: 'auto'}}}}>
-            <DeviceAction reason={connectReason} color="success" onClick={() => onSubmit('connect')}>{t('hardware_popover.connect')}</DeviceAction>
-            <DeviceAction reason={disconnectReason} color="error" onClick={() => onSubmit('disconnect')}>
+            <DeviceAction reason={connectReason} startIcon={<LinkIcon />} onClick={() => onSubmit('connect')}>{t('hardware_popover.connect')}</DeviceAction>
+            <DeviceAction reason={disconnectReason} color="inherit" startIcon={<LinkOffIcon />} onClick={() => onSubmit('disconnect')}>
                 {t('hardware_popover.disconnect')}
             </DeviceAction>
             <DeviceAction reason={pauseReason} hint={t(`hardware_popover.${kind === 'rotator' ? 'pause_rotator_hint' : 'pause_rig_hint'}`)}
-                color="warning" startIcon={<PauseCircleOutlineIcon sx={{fontSize: '16px !important'}} />}
+                color="inherit" startIcon={<PauseIcon sx={{fontSize: '16px !important'}} />}
                 onClick={() => onSubmit('pause')}>{t('hardware_popover.pause_tracking')}</DeviceAction>
-            {kind === 'rotator' && <DeviceAction reason={stopReason} color="warning"
-                hint={t('hardware_popover.stop_hint')} startIcon={<StopCircleOutlinedIcon sx={{fontSize: '16px !important'}} />}
+            {kind === 'rotator' && <DeviceAction reason={stopReason} color="error" variant="contained" sx={operationalButtonSx('fault')}
+                hint={t('hardware_popover.stop_hint')} startIcon={<StopIcon sx={{fontSize: '16px !important'}} />}
                 onClick={() => onSubmit('stop')}>{t('hardware_popover.stop')}</DeviceAction>}
         </Box>
         <Menu id={menuId} anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={() => setMenuAnchor(null)}>
@@ -312,7 +332,7 @@ export default function DeviceControlPanel({kind, onManage, onViewOwner, onManua
 
     return <Box sx={{display: 'flex', flexDirection: 'column', maxHeight: 'min(680px, calc(100dvh - 100px))'}}>
         <Stack direction="row" alignItems="baseline" justifyContent="space-between" sx={{px: 1.5, py: 1.25}}>
-            <Typography variant="subtitle2" sx={{fontWeight: 700}}>{t(`hardware_popover.${kind === 'rotator' ? 'rotators' : 'rigs'}`)}</Typography>
+            <Typography variant="subtitle2" sx={{fontWeight: 700, display: 'flex', alignItems: 'center', gap: 0.75}}><HardwareDeviceIcon kind={kind} />{t(`hardware_popover.${kind === 'rotator' ? 'rotators' : 'rigs'}`)}</Typography>
             <Typography variant="caption" color="text.secondary">{t('hardware_popover.connected_count', {count: summary.connected})}</Typography>
         </Stack>
         <Divider />
@@ -367,8 +387,7 @@ export function DeviceManualRotatorDialog({deviceId, onClose}) {
     const submit = (action, position) => dispatch(sendDeviceCommand({socket, kind: 'rotator', deviceId, action, position})).unwrap();
 
     return <ManualRotatorDialog open={Boolean(selected)} onClose={onClose} rotator={selected}
-        rotatorStatus={{value: data.motion_unconfirmed ? t('hardware_popover.motion_unconfirmed')
-            : data.slewing ? t('hardware_popover.slewing') : t(`hardware_popover.status_${status.key}`)}}
+        rotatorStatus={{key: resolveHardwareStatus({kind: 'rotator', deviceId, data, available: status.known})}}
         currentAz={selected?.azimuth_mode === '0_450' && finite(data.az) ? ((Number(data.az) % 360) + 360) % 360 : data.az}
         currentEl={data.el} minAz={selected?.minaz ?? 0}
         maxAz={selected?.azimuth_mode === '0_450' ? Math.min(selected?.maxaz ?? 360, 360) : selected?.maxaz ?? 360}

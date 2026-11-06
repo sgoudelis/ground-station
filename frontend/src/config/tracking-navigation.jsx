@@ -22,6 +22,7 @@ import GpsFixedIcon from '@mui/icons-material/GpsFixed';
 import { useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { orderNavigationStatuses, selectTrackingNavigationStatus } from '../components/common/hardware-status.js';
+import HardwareStatusIndicator from '../components/common/hardware-status-indicator.jsx';
 import { resolveTabLedPresentation } from '../components/common/hardware-status-presentation.jsx';
 
 const EMPTY_INSTANCES = [];
@@ -47,50 +48,23 @@ const useTrackingNavigationStatus = () => {
     }, Date.now()), [instances, trackerViews, connected, connectedAt, now]);
 };
 
-const StatusBadge = ({ type, summary, t }) => {
+const StatusBadge = ({ type, summary }) => {
     if (!summary.assignedCount) return null;
-    const { Icon, bgColor, borderColor, iconColor } = resolveTabLedPresentation({
-        source: type,
-        status: summary.status,
-        t,
-    });
-
-    return (
-        <Box
-            aria-hidden="true"
-            data-testid={`tracking-${type}-status`}
-            data-status={summary.status}
-            sx={{
-                position: 'absolute',
-                [type === 'rotator' ? 'top' : 'bottom']: -4,
-                right: -4,
-                width: 13,
-                height: 13,
-                borderRadius: '50%',
-                bgcolor: bgColor,
-                border: '1px solid',
-                borderColor,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                pointerEvents: 'none',
-                zIndex: 1,
-            }}
-        >
-            {Icon && <Icon sx={{ fontSize: 9, color: iconColor }} />}
-        </Box>
-    );
+    return <HardwareStatusIndicator kind={type} status={summary.status} compact
+        data-testid={`tracking-${type}-status`}
+        sx={{position: 'absolute', [type === 'rotator' ? 'top' : 'bottom']: -5, right: -7,
+            width: 14, minWidth: 14, height: 14, px: 0, borderRadius: '50%', zIndex: 1,
+            '& .MuiSvgIcon-root': {fontSize: 10}}} />;
 };
 
 export const TrackingIconWithStatus = () => {
-    const { t } = useTranslation('target');
     const summary = useTrackingNavigationStatus();
 
     return (
         <Box sx={{ position: 'relative', display: 'inline-flex' }}>
             <GpsFixedIcon aria-hidden="true" />
-            <StatusBadge type="rotator" summary={summary.rotator} t={t} />
-            <StatusBadge type="rig" summary={summary.rig} t={t} />
+            <StatusBadge type="rotator" summary={summary.rotator} />
+            <StatusBadge type="rig" summary={summary.rig} />
         </Box>
     );
 };

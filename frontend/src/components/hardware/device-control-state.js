@@ -1,32 +1,35 @@
 /** Copyright (c) 2026 Efstratios Goudelis, GPL-3.0-or-later */
+import {orderNavigationStatuses, resolveHardwareStatus} from '../common/hardware-status.js';
 import {deviceKey} from './control-slice.js';
 
 export const EMPTY_LIST = Object.freeze([]);
 export const EMPTY_OBJECT = Object.freeze({});
 
 export function deviceStatus(snapshot, loaded, connected, now, loadError = false) {
-    if (!connected) return {key: 'unavailable', color: 'default', known: false};
-    if (!loaded && loadError) return {key: 'unavailable', color: 'warning', known: false};
-    if (!loaded) return {key: 'loading', color: 'default', known: false};
-    if (snapshot && (!Number.isFinite(snapshot.receivedAt) || now - snapshot.receivedAt >= 15000)) {
-        return {key: 'unavailable', color: 'warning', known: false};
+    if (!connected) return {key: 'unavailable', known: false};
+    if (!loaded && loadError) return {key: 'unavailable', known: false};
+    if (!loaded) return {key: 'loading', known: false};
+    if (snapshot && (!Number.isFinite(snapshot.receivedAt) || now < snapshot.receivedAt || now - snapshot.receivedAt >= 15000)) {
+        return {key: 'unavailable', known: false};
     }
-    if (snapshot?.data?.error) return {key: 'error', color: 'error', known: true};
+    if (snapshot?.data?.error) return {key: 'error', known: true};
     return snapshot?.data?.connected
-        ? {key: 'connected', color: 'success', known: true}
-        : {key: 'disconnected', color: 'default', known: true};
+        ? {key: 'connected', known: true}
+        : {key: 'disconnected', known: true};
 }
 
 export function summarizeDevices(config, control, connected, now) {
     return config.reduce((result, device) => {
         const snapshot = control.devices?.[deviceKey(device.kind, device.id)];
         const status = deviceStatus(snapshot, control.loaded, connected, now, control.error);
-        if (status.key === 'connected') result.connected += 1;
-        if (status.color === 'error' || status.color === 'warning'
-            || status.known && snapshot?.data?.motion_unconfirmed) result.attention += 1;
-        if (status.key === 'connected' && snapshot.data.slewing) result.slewing += 1;
+        if (status.known && snapshot?.data?.connected) result.connected += 1;
+        const hardwareStatus = status.key === 'loading' ? 'loading' : resolveHardwareStatus({
+            kind: device.kind, deviceId: device.id, data: {connected: false, ...snapshot?.data}, available: status.known,
+        });
+        result.counts[hardwareStatus] = (result.counts[hardwareStatus] || 0) + 1;
+        result.status = orderNavigationStatuses(Object.keys(result.counts))[0];
         return result;
-    }, {connected: 0, attention: 0, slewing: 0});
+    }, {connected: 0, counts: {}, status: 'none'});
 }
 
 export function latestDeviceCommand(commands, kind, id) {

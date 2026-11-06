@@ -16,150 +16,74 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-import CloseIcon from '@mui/icons-material/Close';
-import LocationSearchingIcon from '@mui/icons-material/LocationSearching';
+import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
+import LinkIcon from '@mui/icons-material/Link';
+import LinkOffIcon from '@mui/icons-material/LinkOff';
+import GpsFixedIcon from '@mui/icons-material/GpsFixed';
+import RotateRightIcon from '@mui/icons-material/RotateRight';
 import PauseIcon from '@mui/icons-material/Pause';
-import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import StopIcon from '@mui/icons-material/Stop';
 import LocalParkingIcon from '@mui/icons-material/LocalParking';
-import WarningIcon from '@mui/icons-material/Warning';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
+import BlockIcon from '@mui/icons-material/Block';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
+import AutorenewIcon from '@mui/icons-material/Autorenew';
 
-// The LED label table lives at module level, where the `useTranslation` hook cannot
-// be called, so the active `t` function is supplied by the caller.
-export const resolveTabLedPresentation = ({ source, status, usedRigFallback, t }) => {
-    const bySource = {
-        rotator: {
-            none: {
-                label: t('target_selector_bar.no_rotator', { defaultValue: 'No rotator' }),
-                bgColor: 'action.disabled',
-                borderColor: 'action.disabledBackground',
-                Icon: null,
-                iconColor: 'text.disabled',
-            },
-            disconnected: {
-                label: t('target_selector_bar.rotator_disconnected', { defaultValue: 'Rotator disconnected' }),
-                // Neutral gray: disconnected is not an error state.
-                bgColor: 'action.disabled',
-                borderColor: 'action.disabledBackground',
-                Icon: CloseIcon,
-                iconColor: 'text.disabled',
-            },
-            parked: {
-                label: t('target_selector_bar.rotator_parked', { defaultValue: 'Rotator parked' }),
-                bgColor: 'warning.main',
-                borderColor: 'warning.dark',
-                Icon: LocalParkingIcon,
-                iconColor: 'common.white',
-            },
-            outofbounds: {
-                label: t('target_selector_bar.rotator_out_of_bounds', { defaultValue: 'Rotator out of bounds' }),
-                bgColor: 'secondary.main',
-                borderColor: 'secondary.dark',
-                Icon: WarningIcon,
-                iconColor: 'common.white',
-            },
-            minelevation: {
-                label: t('target_selector_bar.below_minimum_elevation', { defaultValue: 'Below minimum elevation' }),
-                bgColor: 'error.light',
-                borderColor: 'error.main',
-                Icon: ArrowDownwardIcon,
-                iconColor: 'common.white',
-            },
-            slewing: {
-                label: t('target_selector_bar.rotator_slewing', { defaultValue: 'Rotator slewing' }),
-                bgColor: 'warning.main',
-                borderColor: 'warning.dark',
-                Icon: PlayArrowIcon,
-                iconColor: 'common.white',
-            },
-            tracking: {
-                label: t('target_selector_bar.rotator_tracking', { defaultValue: 'Rotator tracking' }),
-                bgColor: 'success.light',
-                borderColor: 'success.main',
-                Icon: LocationSearchingIcon,
-                iconColor: 'common.white',
-            },
-            stopped: {
-                label: t('target_selector_bar.rotator_stopped', { defaultValue: 'Rotator stopped' }),
-                // Neutral informational state (not warning/error).
-                bgColor: 'info.light',
-                borderColor: 'info.main',
-                Icon: PauseIcon,
-                iconColor: 'common.white',
-            },
-            motion_unconfirmed: {
-                label: t('target_selector_bar.rotator_motion_unconfirmed', { defaultValue: 'Rotator motion unconfirmed' }),
-                bgColor: 'warning.main',
-                borderColor: 'warning.dark',
-                Icon: WarningIcon,
-                iconColor: 'common.white',
-            },
-            connected: {
-                label: t('target_selector_bar.rotator_connected', { defaultValue: 'Rotator connected' }),
-                bgColor: 'success.dark',
-                borderColor: 'success.main',
-                Icon: null,
-                iconColor: 'common.white',
-            },
-            unknown: {
-                label: t('target_selector_bar.rotator_status_unknown', { defaultValue: 'Rotator status unknown' }),
-                bgColor: 'action.disabled',
-                borderColor: 'action.disabledBackground',
-                Icon: null,
-                iconColor: 'text.disabled',
-            },
-        },
-        rig: {
-            none: {
-                label: t('target_selector_bar.no_rig', { defaultValue: 'No rig' }),
-                bgColor: 'action.disabled',
-                borderColor: 'action.disabledBackground',
-                Icon: null,
-                iconColor: 'text.disabled',
-            },
-            disconnected: {
-                label: t('target_selector_bar.rig_disconnected', { defaultValue: 'Rig disconnected' }),
-                bgColor: 'action.disabled',
-                borderColor: 'action.disabledBackground',
-                Icon: CloseIcon,
-                iconColor: 'text.disabled',
-            },
-            tracking: {
-                label: t('target_selector_bar.rig_tracking', { defaultValue: 'Rig tracking' }),
-                bgColor: 'success.light',
-                borderColor: 'success.main',
-                Icon: LocationSearchingIcon,
-                iconColor: 'common.white',
-            },
-            stopped: {
-                label: t('target_selector_bar.rig_stopped', { defaultValue: 'Rig stopped' }),
-                bgColor: 'info.light',
-                borderColor: 'info.main',
-                Icon: PauseIcon,
-                iconColor: 'common.white',
-            },
-            connected: {
-                label: t('target_selector_bar.rig_connected', { defaultValue: 'Rig connected' }),
-                bgColor: 'success.dark',
-                borderColor: 'success.main',
-                Icon: null,
-                iconColor: 'common.white',
-            },
-            unknown: {
-                label: t('target_selector_bar.rig_status_unknown', { defaultValue: 'Rig status unknown' }),
-                bgColor: 'action.disabled',
-                borderColor: 'action.disabledBackground',
-                Icon: null,
-                iconColor: 'text.disabled',
-            },
-        },
-    };
+// One vocabulary for all hardware surfaces. Colors describe operational meaning;
+// glyphs distinguish states that share that meaning (e.g. connected/tracking).
+const STATES = {
+    none: {tone: 'inactive', Icon: RadioButtonUncheckedIcon, label: 'No device'},
+    disconnected: {tone: 'inactive', Icon: LinkOffIcon, label: 'Disconnected'},
+    connected: {tone: 'active', Icon: LinkIcon, label: 'Connected'},
+    tracking: {tone: 'active', Icon: GpsFixedIcon, label: 'Tracking'},
+    slewing: {tone: 'busy', Icon: RotateRightIcon, label: 'Slewing'},
+    parking: {tone: 'busy', Icon: AutorenewIcon, label: 'Parking…', spinning: true},
+    loading: {tone: 'busy', Icon: AutorenewIcon, label: 'Loading…', spinning: true},
+    stopped: {tone: 'inactive', Icon: StopIcon, label: 'Stopped'},
+    paused: {tone: 'inactive', Icon: PauseIcon, label: 'Paused'},
+    idle: {tone: 'inactive', Icon: RadioButtonUncheckedIcon, label: 'Idle'},
+    parked: {tone: 'inactive', Icon: LocalParkingIcon, label: 'Parked'},
+    outofbounds: {tone: 'attention', Icon: BlockIcon, label: 'Tracking inhibited'},
+    minelevation: {tone: 'attention', Icon: ArrowDownwardIcon, label: 'Below minimum elevation'},
+    motion_unconfirmed: {tone: 'attention', Icon: WarningAmberIcon, label: 'Motion unconfirmed'},
+    unknown: {tone: 'attention', Icon: HelpOutlineIcon, label: 'Status unavailable'},
+    unavailable: {tone: 'attention', Icon: HelpOutlineIcon, label: 'Status unavailable'},
+    error: {tone: 'fault', Icon: ErrorOutlineIcon, label: 'Device fault'},
+};
 
-    const fallback = bySource[source]?.unknown || bySource.rig.unknown;
-    const resolved = bySource[source]?.[status] || fallback;
+export const resolveHardwarePresentation = ({source, status, t}) => {
+    const effectiveStatus = source === 'rig' && status === 'stopped' ? 'paused' : status;
+    const state = STATES[effectiveStatus] || STATES.unknown;
+    const label = t('hardware_status.states.' + effectiveStatus, {ns: 'common', defaultValue: state.label});
+    const sourceLabel = t('hardware_status.' + source, {
+        ns: 'common', defaultValue: source === 'rotator' ? 'Rotator' : 'Rig',
+    });
     return {
-        ...resolved,
-        label: usedRigFallback ? `${resolved.label} (rig fallback)` : resolved.label,
-        fallbackSource: source,
+        ...state, label, fullLabel: `${sourceLabel}: ${label}`,
+        bgColor: `operational.${state.tone}.background`,
+        borderColor: `operational.${state.tone}.border`,
+        iconColor: `operational.${state.tone}.main`,
     };
+};
+
+// Retain the source-qualified labels used by navigation summaries.
+export const resolveTabLedPresentation = (options) => {
+    const presentation = resolveHardwarePresentation(options);
+    return {...presentation, label: presentation.fullLabel};
+};
+
+export const operationalButtonSx = (tone) => (theme) => ({
+    bgcolor: `operational.${tone}.main`,
+    color: theme.palette.getContrastText(theme.palette.operational[tone].main),
+    '&:hover': {bgcolor: `operational.${tone}.main`, filter: 'brightness(0.9)'},
+    '&.Mui-disabled': {bgcolor: 'action.disabledBackground', color: 'action.disabled'},
+});
+
+// Match compact popover actions and keep icon+label buttons inside narrow islands.
+export const hardwareControlActionsSx = {
+    '& .MuiButton-root': {fontSize: '0.75rem', px: 1},
+    '& .MuiButton-startIcon': {mr: 0.5, ml: 0},
+    '& .MuiButton-startIcon > *': {fontSize: 18},
 };

@@ -145,7 +145,7 @@ describe('observation tracker tabs', () => {
         });
     });
 
-    it('keeps an interactive tab unstriped while its rotator transfers to the observation', async () => {
+    it('marks only the observation tab as running while the rotator transfers', async () => {
         const target = {
             tracker_id: 'target-1', rotator_id: 'mount',
             tracking_state: { target_name: 'Interactive target', norad_id: 43786 },
@@ -164,14 +164,14 @@ describe('observation tracker tabs', () => {
         ) });
         render(<Provider store={store}><TargetSelectorBar /></Provider>);
         const targetTab = () => screen.getByRole('tab', { name: /^Target 1 \|/ });
-        const isStriped = (tab) => getComputedStyle(tab).backgroundImage.includes('repeating-linear-gradient');
-        expect(isStriped(targetTab())).toBe(false);
+        const isRunning = (tab) => tab.getAttribute('data-observation-running') === 'true';
+        expect(isRunning(targetTab())).toBe(false);
 
         // The scheduler announces RUNNING before the old rotator selection clears.
         act(() => store.dispatch({ type: 'test/update', payload: {
             scheduler: { observations: [{ ...observation, status: 'running' }] },
         } }));
-        expect(isStriped(targetTab())).toBe(false);
+        expect(isRunning(targetTab())).toBe(false);
 
         // The old target's delete action must not offer to abort the observation.
         fireEvent.click(within(targetTab()).getByRole('button', { name: 'Delete Interactive target target' }));
@@ -187,16 +187,47 @@ describe('observation tracker tabs', () => {
         act(() => store.dispatch({ type: 'test/update', payload: {
             trackerInstances: { instances: [target, observer] },
         } }));
-        expect(isStriped(targetTab())).toBe(false);
-        expect(isStriped(screen.getByRole('tab', { name: /Observation tracker/ }))).toBe(true);
+        expect(isRunning(targetTab())).toBe(false);
+        expect(isRunning(screen.getByRole('tab', { name: /Observation tracker/ }))).toBe(true);
 
         act(() => store.dispatch({ type: 'test/update', payload: {
             trackerInstances: { instances: [{ ...target, rotator_id: 'none' }, observer] },
         } }));
-        expect(isStriped(targetTab())).toBe(false);
-        expect(isStriped(screen.getByRole('tab', { name: /Observation tracker/ }))).toBe(true);
+        expect(isRunning(targetTab())).toBe(false);
+        expect(isRunning(screen.getByRole('tab', { name: /Observation tracker/ }))).toBe(true);
 
         fireEvent.click(screen.getByRole('button', { name: 'Delete Observation target target' }));
         expect(screen.getByRole('dialog')).toHaveTextContent('Stop Observation');
+    });
+});
+
+describe('independent hardware tab indicators', () => {
+    afterEach(() => vi.useRealTimers());
+
+    it('keeps a disconnected rotator visible beside a tracking rig and expires both reports', () => {
+        vi.useFakeTimers();
+        const view = {
+            hardwareObservedAt: Date.now(), hardwareReceivedAt: Date.now(),
+            selectedRotator: 'mount', selectedRadioRig: 'radio',
+            rotatorData: {connected: false}, rigData: {connected: true, tracking: true},
+        };
+        const initial = {
+            dashboard: {connected: true},
+            targetSatTrack: {trackerId: 'target-1', trackerViews: {'target-1': view}},
+            trackerInstances: {instances: [{tracker_id: 'target-1', tracking_state: {norad_id: 25544}}]},
+            scheduler: {observations: []}, rigs: {rigs: []}, rotators: {rotators: []},
+        };
+        const store = configureStore({reducer: (state = initial, action) => action.type === 'test/report'
+            ? {...state, targetSatTrack: {...state.targetSatTrack, trackerViews: {'target-1': action.payload}}} : state});
+        render(<Provider store={store}><TargetSelectorBar /></Provider>);
+        expect(screen.getByLabelText('Rotator: Disconnected')).toHaveAttribute('data-status', 'disconnected');
+        expect(screen.getByLabelText('Rig: Tracking')).toHaveAttribute('data-status', 'tracking');
+        act(() => vi.advanceTimersByTime(16000));
+        expect(screen.getByLabelText('Rotator: Status unavailable')).toHaveAttribute('data-tone', 'attention');
+        expect(screen.getByLabelText('Rig: Status unavailable')).toHaveAttribute('data-tone', 'attention');
+        // A report received between timer ticks is immediately usable.
+        act(() => vi.advanceTimersByTime(50));
+        act(() => store.dispatch({type: 'test/report', payload: {...view, hardwareReceivedAt: Date.now()}}));
+        expect(screen.getByLabelText('Rig: Tracking')).toHaveAttribute('data-tone', 'active');
     });
 });
