@@ -1,7 +1,7 @@
 /** Copyright (c) 2026 Efstratios Goudelis — GPL-3.0-or-later */
 
 import React, {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
-import {Box, Button, Checkbox, InputAdornment, LinearProgress, Menu, MenuItem, Pagination, TextField, Typography} from '@mui/material';
+import {Box, Checkbox, IconButton, InputAdornment, LinearProgress, Menu, MenuItem, Pagination, TextField, Tooltip, Typography} from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import {List} from 'react-window';
@@ -168,12 +168,6 @@ export default function TransmitterList({rows, loading, hiddenTypes = emptyTypes
                         input: {startAdornment: <InputAdornment position="start"><SearchIcon sx={{fontSize: 16}} /></InputAdornment>}}}
                     sx={{width: 235, '@container (max-width: 650px)': {width: 135},
                         '& .MuiInputBase-root': {height: 28, fontSize: '0.75rem'}}} />
-                <Button size="small" startIcon={<FilterListIcon sx={{fontSize: '16px !important'}} />}
-                    aria-label={t('packet_map.types', 'Transmitter types')} aria-haspopup="menu"
-                    aria-expanded={Boolean(typeAnchor)} onClick={(event) => setTypeAnchor(event.currentTarget)}
-                    sx={{minWidth: 0, fontSize: '0.72rem', px: 0.75, color: excludedTypes.length ? 'primary.main' : 'text.secondary'}}>
-                    {t('packet_map.list.types', 'Types')}{excludedTypes.length > 0 ? ` (${kinds.filter((kind) => !excludedTypes.includes(kind)).length})` : ''}
-                </Button>
                 <TextField select size="small" value={sort} onChange={(event) => changeSettings({sort: event.target.value})}
                     slotProps={{select: {SelectDisplayProps: {'aria-label': t('packet_map.list.sort', 'Sort transmitters')}}}}
                     sx={{width: 158, '@container (max-width: 650px)': {width: 130},
@@ -182,6 +176,13 @@ export default function TransmitterList({rows, loading, hiddenTypes = emptyTypes
                         {t(`packet_map.list.sort_${key}`, sortLabels[key])}
                     </MenuItem>)}
                 </TextField>
+                <Tooltip title={t('packet_map.types', 'Transmitter types')}>
+                    <IconButton size="small" aria-label={t('packet_map.types', 'Transmitter types')} aria-haspopup="menu"
+                        aria-expanded={Boolean(typeAnchor)} onClick={(event) => setTypeAnchor(event.currentTarget)}
+                        sx={{ml: 'auto', flexShrink: 0, color: excludedTypes.length ? 'primary.main' : 'text.secondary'}}>
+                        <FilterListIcon sx={{fontSize: 16}} />
+                    </IconButton>
+                </Tooltip>
             </Box>
         </TitleBar>
         <Menu anchorEl={typeAnchor} open={Boolean(typeAnchor)} onClose={() => setTypeAnchor(null)}>
