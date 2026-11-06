@@ -6,8 +6,8 @@ import parachute from './icons/parachute.png';
 import './radiosonde-marker.css';
 
 const minimumClimbRate = 0.3;
-const balloonSize = 58.32;
-const parachuteSize = 64.8;
+const balloonSize = 52.488;
+const parachuteSize = 58.32;
 const minimumLift = 4;
 const liftRange = 18;
 

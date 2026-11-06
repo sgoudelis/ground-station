@@ -37,11 +37,11 @@ describe('Radiosonde shadow anchoring', () => {
     it('anchors both flight symbols at the shadow and opens popups above the raised icon', () => {
         const ascending = createRadiosondeIcon({phase: 'ascending', altitude: 0, name: 'S'});
         const descending = createRadiosondeIcon({phase: 'descending', altitude: 35000, name: 'S'});
-        expect(ascending.options.iconSize).toEqual([58.32, 58.32]);
-        expect(ascending.options.iconSize[0]).toBeCloseTo(64.8 * 0.9);
-        expect(ascending.options.iconAnchor).toEqual([29.16, 29.16]);
-        expect(descending.options.iconSize).toEqual([64.8, 64.8]);
-        expect(descending.options.iconAnchor).toEqual([32.4, 32.4]);
+        expect(ascending.options.iconSize).toEqual([52.488, 52.488]);
+        expect(ascending.options.iconSize[0]).toBeCloseTo(descending.options.iconSize[0] * 0.9);
+        expect(ascending.options.iconAnchor).toEqual([26.244, 26.244]);
+        expect(descending.options.iconSize).toEqual([58.32, 58.32]);
+        expect(descending.options.iconAnchor).toEqual([29.16, 29.16]);
         expect(ascending.options.shadowAnchor).toEqual(ascending.options.iconAnchor);
         expect(descending.options.popupAnchor[1]).toBeLessThan(ascending.options.popupAnchor[1]);
         expect(descending.options.html).not.toBe(ascending.options.html);
@@ -57,7 +57,7 @@ describe('Radiosonde shadow anchoring', () => {
         const ascending = createRadiosondeIcon({...options, selected: true});
         const marker = ascending.createIcon(initial);
         expect(marker).toBe(initial);
-        expect(marker.querySelector('.packet-radiosonde-crosshair')).toHaveAttribute('viewBox', '0 0 82.32 82.32');
+        expect(marker.querySelector('.packet-radiosonde-crosshair')).toHaveAttribute('viewBox', '0 0 76.488 76.488');
         expect(marker.querySelector('.packet-radiosonde-selected')).not.toBeNull();
         // The frame must not inherit the image's stale filters or ground-shadow styling.
         expect(marker.querySelector('.packet-radiosonde-symbol svg')).toBeNull();
@@ -66,7 +66,7 @@ describe('Radiosonde shadow anchoring', () => {
         descending.createIcon(marker);
         expect(marker).toHaveClass('packet-marker-stale');
         expect(marker.querySelectorAll('.packet-radiosonde-crosshair')).toHaveLength(1);
-        expect(marker.querySelector('.packet-radiosonde-crosshair')).toHaveAttribute('viewBox', '0 0 88.8 88.8');
+        expect(marker.querySelector('.packet-radiosonde-crosshair')).toHaveAttribute('viewBox', '0 0 82.32 82.32');
         expect(marker.querySelector('img').src).toContain('parachute.png');
         createRadiosondeIcon(options).createIcon(marker);
         expect(marker.querySelector('.packet-radiosonde-crosshair')).toBeNull();
