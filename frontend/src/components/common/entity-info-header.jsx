@@ -41,7 +41,7 @@ const EntityInfoHeader = ({
 }) => {
     const { t } = useTranslation('common');
     const typeLabel = t(`entity_header.types.${targetType}`);
-    const identifierLabel = targetType === 'satellite' ? `NORAD ${identifier || '—'}` : (identifier || '—');
+    const identifierLabel = identifier || '—';
     const metadata = `${typeLabel} · ${identifierLabel}`;
     const healthMeta = Object.hasOwn(healthPresentation, health) ? healthPresentation[health] : null;
     const showHealthBadge = showHealth && targetType === 'satellite' && Boolean(healthMeta);
