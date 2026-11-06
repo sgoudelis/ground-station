@@ -61,7 +61,6 @@ import { deleteTrackerInstance } from "./tracker-instances-slice.jsx";
 import { cancelRunningObservation } from "../scheduler/scheduler-slice.jsx";
 import {isHardwareTelemetryFresh, resolveAssignedHardwareId, resolveHardwareStatus} from "../common/hardware-status.js";
 import HardwareStatusIndicator from '../common/hardware-status-indicator.jsx';
-import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import { resolveTabLedPresentation } from "../common/hardware-status-presentation.jsx";
 import { fetchMonitoredCelestial } from "../celestial/monitored-slice.jsx";
 import { resolveTargetDisplayName } from './celestial-target-utils.js';
@@ -1741,7 +1740,10 @@ const TargetSelectorBar = React.memo(function TargetSelectorBar() {
                                         backgroundColor: 'action.selected',
                                         borderColor: 'divider',
                                         boxShadow: 'inset 0 -3px 0 var(--mui-palette-primary-main)',
-                                    }
+                                    },
+                                    '&[data-observation-running="true"]': {
+                                        backgroundImage: 'repeating-linear-gradient(135deg, rgba(255, 193, 7, 0.22) 0px, rgba(255, 193, 7, 0.22) 7px, rgba(255, 87, 34, 0.2) 7px, rgba(255, 87, 34, 0.2) 14px)',
+                                    },
                                 },
                             }}
                         >
@@ -1790,8 +1792,6 @@ const TargetSelectorBar = React.memo(function TargetSelectorBar() {
                                                     </Box>
                                                     <Typography variant="caption" sx={{ fontWeight: 900, fontSize: '1.2rem', lineHeight: 1 }}>
                                                         {trackerLabel}
-                                                        {option.hasActiveObservation && <PlayArrowIcon aria-label="Observation running"
-                                                            sx={{fontSize: 14, ml: 0.35, color: 'operational.active.main'}} />}
                                                     </Typography>
                                                     <Box sx={{ minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', maxWidth: 190 }}>
                                                         <Typography
