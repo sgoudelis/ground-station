@@ -1,4 +1,20 @@
 {
+  "entity_header": {
+    "types": {
+      "satellite": "卫星",
+      "mission": "任务",
+      "body": "天体"
+    },
+    "edit_details": "编辑详情",
+    "edit_transmitters": "编辑发射机",
+    "above_horizon": "地平线以上",
+    "below_horizon": "地平线以下",
+    "visibility_unknown": "可见性未知",
+    "health_unknown": "状态未知",
+    "pass_ends_in": "过境将在 {{countdown}} 后结束",
+    "next_pass_in": "下次过境还有 {{countdown}}",
+    "no_upcoming_pass": "暂无即将到来的过境"
+  },
   "app_name": "地面站",
   "loading": "正在加载...",
   "error": "错误",

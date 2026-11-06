@@ -1,4 +1,20 @@
 {
+  "entity_header": {
+    "types": {
+      "satellite": "Satelliet",
+      "mission": "Missie",
+      "body": "Hemellichaam"
+    },
+    "edit_details": "Details bewerken",
+    "edit_transmitters": "Zenders bewerken",
+    "above_horizon": "Boven de horizon",
+    "below_horizon": "Onder de horizon",
+    "visibility_unknown": "Zichtbaarheid onbekend",
+    "health_unknown": "Status onbekend",
+    "pass_ends_in": "Passage eindigt over {{countdown}}",
+    "next_pass_in": "Volgende passage over {{countdown}}",
+    "no_upcoming_pass": "Geen komende passage"
+  },
   "app_name": "Grondstation",
   "loading": "Laden...",
   "error": "Fout",

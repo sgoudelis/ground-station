@@ -39,7 +39,6 @@ import {
     Chip,
     Button,
     Tooltip,
-    IconButton,
     Dialog,
     DialogActions,
     DialogContent,
@@ -59,7 +58,7 @@ import BusinessIcon from '@mui/icons-material/Business';
 import RadioIcon from '@mui/icons-material/Radio';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import EditIcon from '@mui/icons-material/Edit';
-import RadioButtonCheckedIcon from '@mui/icons-material/RadioButtonChecked';
+import CellTowerIcon from '@mui/icons-material/CellTower';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import Grid from "@mui/material/Grid";
 import React from "react";
@@ -67,10 +66,14 @@ import TransmittersDialog from "../satellites/transmitters-dialog.jsx";
 import SatelliteEditDialog from "../satellites/satellite-edit-dialog.jsx";
 import {fetchSatellite} from "./target-slice.jsx";
 import {useSocket} from "../common/socket.jsx";
-import TargetIcon from "../celestial/target-icon.jsx";
-import SatelliteIcon from "../celestial/satellite-icon.jsx";
+import EntityInfoHeader from "../common/entity-info-header.jsx";
+import EntityVisibility from '../common/entity-visibility.jsx';
+import { useCelestialPropertiesDialog } from '../celestial/use-celestial-properties-dialog.jsx';
+import { fetchTargetCelestialScene } from '../celestial/celestial-slice.jsx';
 import { targetIdentifierSelector, targetTypeSelector, trackingStateSelector } from "./state-selectors.jsx";
 import {
+    buildTargetCelestialPayload,
+    buildTargetKeyFromCelestialRow,
     buildTargetKeyFromTrackingState,
     buildTargetSceneRequestKey,
     normalizeTargetType as normalizeTrackingTargetType,
@@ -185,6 +188,7 @@ const formatCountdownDiff = (diffMs) => {
 
 const TargetInfoIsland = () => {
     const { t } = useTranslation('target');
+    const { t: tCommon } = useTranslation('common');
     const { t: tSat } = useTranslation('satellites');
     const dispatch = useDispatch();
     const { socket } = useSocket();
@@ -259,8 +263,36 @@ const TargetInfoIsland = () => {
             (row) => String(row?.targetKey || row?.target_key || '').trim() === nonSatelliteTargetKey,
         ) || null;
     }, [isSatelliteTarget, monitoredRows, nonSatelliteTargetKey]);
+    const {
+        openDialog: openPropertiesDialog,
+        canEdit: canEditProperties,
+        label: propertiesEditLabel,
+        dialog: propertiesDialog,
+    } = useCelestialPropertiesDialog({
+        target: monitoredTarget,
+        onSaved: async (updatedTarget) => {
+            // Refresh this target's scene without retargeting the active tracker on identifier edits.
+            if (buildTargetKeyFromCelestialRow(updatedTarget) !== nonSatelliteTargetKey) return;
+            const payload = buildTargetCelestialPayload({
+                trackingState,
+                targetName: updatedTarget.displayName,
+                nextPassesHours,
+            });
+            if (!payload) return;
+            const result = await dispatch(fetchTargetCelestialScene({
+                socket,
+                payload,
+                requestKey: nonSatelliteSceneRequestKey,
+            }));
+            // Another island may already be fetching the same shared scene.
+            if (fetchTargetCelestialScene.rejected.match(result) && !result.meta.condition) {
+                throw result.payload || result.error;
+            }
+        },
+    });
     const nonSatelliteTargetName = String(
-        resolveTargetDisplayName({
+        monitoredTarget?.displayName
+        || resolveTargetDisplayName({
             trackingState,
             satelliteDetails: hasCurrentNonSatelliteTelemetry ? (satelliteData?.details || {}) : {},
             monitoredRows,
@@ -290,7 +322,7 @@ const TargetInfoIsland = () => {
         ? Number(satelliteData?.position?.az)
         : NaN;
     const nonSatelliteElevation = hasCurrentNonSatelliteTelemetry
-        ? Number(satelliteData?.position?.el)
+        ? Number(satelliteData?.position?.el ?? NaN)
         : NaN;
     const nonSatelliteVisible = Number.isFinite(nonSatelliteElevation)
         ? nonSatelliteElevation > 0
@@ -323,44 +355,9 @@ const TargetInfoIsland = () => {
     const satelliteVelocityKmS = Number(satelliteData?.position?.vel);
     const satelliteAltitudeMi = Number.isFinite(satelliteAltitudeMeters) ? satelliteAltitudeMeters / 1609.34 : NaN;
     const satelliteVelocityMiS = Number.isFinite(satelliteVelocityKmS) ? satelliteVelocityKmS * KM_TO_MI : NaN;
-    const satelliteElevation = Number(satelliteData?.position?.el);
+    const satelliteElevation = Number(satelliteData?.position?.el ?? NaN);
     const satelliteAzimuth = Number(satelliteData?.position?.az);
     const satelliteVisible = Number.isFinite(satelliteElevation) ? satelliteElevation > 0 : null;
-    const satelliteVisibilityLabel = satelliteVisible === true
-        ? 'Visible'
-        : (satelliteVisible === false ? 'Below Horizon' : 'Unknown');
-    const nonSatelliteStatusMeta = React.useMemo(() => {
-        if (nonSatelliteError) {
-            return {
-                chipColor: 'error',
-                chipLabel: 'Error',
-                dotColor: 'error.main',
-                gradient: (theme) => `linear-gradient(135deg, ${theme.palette.error.main}26 0%, ${theme.palette.error.main}0D 100%)`,
-            };
-        }
-        if (nonSatelliteVisible === true) {
-            return {
-                chipColor: 'success',
-                chipLabel: 'Visible',
-                dotColor: 'success.main',
-                gradient: (theme) => `linear-gradient(135deg, ${theme.palette.success.main}26 0%, ${theme.palette.success.main}0D 100%)`,
-            };
-        }
-        if (nonSatelliteVisible === false) {
-            return {
-                chipColor: 'default',
-                chipLabel: 'Below Horizon',
-                dotColor: 'warning.main',
-                gradient: (theme) => `linear-gradient(135deg, ${theme.palette.warning.main}26 0%, ${theme.palette.warning.main}0D 100%)`,
-            };
-        }
-        return {
-            chipColor: 'default',
-            chipLabel: 'Unknown',
-            dotColor: 'text.secondary',
-            gradient: (theme) => `linear-gradient(135deg, ${theme.palette.overlay.light} 0%, ${theme.palette.overlay.main} 100%)`,
-        };
-    }, [nonSatelliteError, nonSatelliteVisible]);
     // Celestial passes are keyed by mission/body target_key instead of NORAD id.
     const nonSatellitePassInfo = React.useMemo(() => {
         if (isSatelliteTarget || !nonSatelliteTargetKey || celestialPassRows.length === 0) {
@@ -568,6 +565,7 @@ const TargetInfoIsland = () => {
     return (
         <Box sx={{
             height: '100%',
+            minHeight: 0,
             display: 'flex',
             flexDirection: 'column',
             bgcolor: 'background.paper',
@@ -577,19 +575,12 @@ const TargetInfoIsland = () => {
             {/* Header */}
             <TitleBar
                 className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}
-                sx={islandTitleBarSx}
+                sx={{ ...islandTitleBarSx, flexShrink: 0 }}
             >
                 <Box sx={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%'}}>
                     <Box sx={{display: 'flex', alignItems: 'center'}}>
                         <Typography variant="subtitle2" sx={{fontWeight: 'bold'}}>
                             {t('target_info_island.target_info', { defaultValue: 'Target Info' })}
-                        </Typography>
-                    </Box>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Typography variant="caption" sx={{color: 'text.secondary'}}>
-                            {isSatelliteTarget
-                                ? `ID: ${satelliteData && satelliteData['details'] ? satelliteData['details']['norad_id'] : ''}`
-                                : `Type: ${targetType}`}
                         </Typography>
                     </Box>
                 </Box>
@@ -634,138 +625,25 @@ const TargetInfoIsland = () => {
 
             {hasSatelliteSelection && (
             <>
-            {/* Satellite Status Header - Sticky */}
-            <Box sx={{
-                p: 1,
-                background: satelliteData && satelliteData['details'] ?
-                    (() => {
-                        const status = satelliteData['details']['status'];
-                        switch(status) {
-                            case 'alive': return (theme) => `linear-gradient(135deg, ${theme.palette.success.main}26 0%, ${theme.palette.success.main}0D 100%)`;
-                            case 'dead': return (theme) => `linear-gradient(135deg, ${theme.palette.error.main}26 0%, ${theme.palette.error.main}0D 100%)`;
-                            case 're-entered': return (theme) => `linear-gradient(135deg, ${theme.palette.warning.main}26 0%, ${theme.palette.warning.main}0D 100%)`;
-                            default: return (theme) => `linear-gradient(135deg, ${theme.palette.overlay.light} 0%, ${theme.palette.overlay.main} 100%)`;
-                        }
-                    })() : (theme) => `linear-gradient(135deg, ${theme.palette.overlay.light} 0%, ${theme.palette.overlay.main} 100%)`,
-                borderBottom: '1px solid',
-                borderColor: 'border.main'
-            }}>
-                <Box
-                    sx={{
-                        display: 'grid',
-                        gridTemplateColumns: 'minmax(0, 1fr) 72px',
-                        gridTemplateRows: 'auto auto',
-                        columnGap: 1,
-                        rowGap: 0.75,
-                        alignItems: 'center',
-                    }}
-                >
-                    <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
-                        <Box sx={{
-                            width: 10,
-                            height: 10,
-                            borderRadius: '50%',
-                            mr: 1,
-                            flexShrink: 0,
-                            bgcolor: satelliteData && satelliteData['details'] && satelliteData['details']['status'] === 'alive' ? 'success.main' : 'error.main',
-                            boxShadow: (theme) => `0 0 8px ${satelliteData && satelliteData['details'] && satelliteData['details']['status'] === 'alive' ? theme.palette.success.main : theme.palette.error.main}`
-                        }} />
-                        <Box sx={{ minWidth: 0, flex: 1 }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0 }}>
-                                <Typography
-                                    variant="subtitle1"
-                                    noWrap
-                                    sx={{ fontWeight: 700, letterSpacing: '0.3px', minWidth: 0 }}
-                                >
-                                    {satelliteData && satelliteData['details']
-                                        ? `${satelliteData['details']['name']}${satelliteData['details']['name_other'] ? ` • ${satelliteData['details']['name_other']}` : ''}`
-                                        : "NO DATA"}
-                                </Typography>
-                                <Tooltip title={t('target_info_island.edit_details', { defaultValue: 'Edit Details' })}>
-                                    <span>
-                                        <IconButton
-                                            size="small"
-                                            onClick={() => setSatelliteEditDialogOpen(true)}
-                                            disabled={!selectedNoradId}
-                                        >
-                                            <EditIcon fontSize="small" />
-                                        </IconButton>
-                                    </span>
-                                </Tooltip>
-                                <Tooltip title={t('target_info_island.edit_transmitters', { defaultValue: 'Edit Transmitters' })}>
-                                    <span>
-                                        <IconButton
-                                            size="small"
-                                            onClick={() => setTransmittersDialogOpen(true)}
-                                            disabled={!selectedNoradId}
-                                        >
-                                            <RadioButtonCheckedIcon fontSize="small" />
-                                        </IconButton>
-                                    </span>
-                                </Tooltip>
-                            </Box>
-                        </Box>
-                    </Box>
+            <EntityInfoHeader
+                name={selectedSatelliteName}
+                alias={satelliteData?.details?.name_other}
+                targetType="satellite"
+                identifier={selectedNoradId}
+                health={satelliteData?.details?.status}
+                onEdit={() => setSatelliteEditDialogOpen(true)}
+                onEditTransmitters={() => setTransmittersDialogOpen(true)}
+                disabled={!selectedNoradId}
+                loading={!satelliteData?.details}
+            />
 
-                    <Box
-                        sx={{
-                            gridRow: '1 / span 2',
-                            gridColumn: 2,
-                            alignSelf: 'stretch',
-                            justifySelf: 'stretch',
-                            width: '100%',
-                            height: '100%',
-                            minHeight: 52,
-                            position: 'relative',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            flexShrink: 0,
-                        }}
-                    >
-                        <SatelliteIcon
-                            satelliteId={selectedNoradId}
-                            size="100%"
-                            alt={selectedSatelliteName || 'Satellite'}
-                            sx={{ position: 'absolute', inset: 0, margin: 'auto', width: '100%', height: '100%', objectFit: 'contain' }}
-                        />
-                    </Box>
-
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0, overflow: 'hidden' }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', px: 0.5, py: 0.3, bgcolor: 'overlay.main', borderRadius: 0.5, minWidth: 0 }}>
-                            {satelliteVisible === true ? (
-                                <CheckCircleIcon sx={{ fontSize: 11, mr: 0.4, color: 'success.main' }} />
-                            ) : satelliteVisible === false ? (
-                                <CancelIcon sx={{ fontSize: 11, mr: 0.4, color: 'warning.main' }} />
-                            ) : (
-                                <InfoOutlinedIcon sx={{ fontSize: 11, mr: 0.4, color: 'text.secondary' }} />
-                            )}
-                            <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.68rem' }} noWrap>
-                                {satelliteVisibilityLabel}
-                            </Typography>
-                        </Box>
-                        <Box sx={{ display: 'flex', alignItems: 'center', px: 0.5, py: 0.3, bgcolor: 'overlay.main', borderRadius: 0.5, minWidth: 0, flex: 1 }}>
-                            <AccessTimeIcon sx={{ fontSize: 11, mr: 0.4, color: 'text.secondary' }} />
-                            <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.68rem' }} noWrap>
-                                {satellitePassInfo && satelliteCountdown
-                                    ? (satellitePassInfo.type === 'active' ? `Pass ends in ${satelliteCountdown}` : `Next pass in ${satelliteCountdown}`)
-                                    : 'No upcoming pass'}
-                            </Typography>
-                        </Box>
-                        {hasOperator && (
-                            <Box sx={{ display: 'flex', alignItems: 'center', px: 0.5, py: 0.3, bgcolor: 'overlay.main', borderRadius: 0.5, minWidth: 0 }}>
-                                <BusinessIcon sx={{ fontSize: 11, mr: 0.4, color: 'text.secondary' }} />
-                                <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.68rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                    {satelliteData['details']['operator']}
-                                </Typography>
-                            </Box>
-                        )}
-                    </Box>
-                </Box>
-            </Box>
-
-            {/* Main Content */}
             <Box sx={{ pr: 1.5, pl: 1.5, pt: 1.5, pb: 1, flex: 1, overflow: 'auto' }}>
+                <EntityVisibility
+                    visible={satelliteVisible}
+                    supportingText={satellitePassInfo && satelliteCountdown
+                        ? tCommon(satellitePassInfo.type === 'active' ? 'entity_header.pass_ends_in' : 'entity_header.next_pass_in', { countdown: satelliteCountdown })
+                        : tCommon('entity_header.no_upcoming_pass')}
+                />
                 {/* Real-time Position Data - Priority Section */}
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                     <ExploreIcon sx={{ fontSize: 14, mr: 0.75, color: 'primary.main' }} />
@@ -1124,6 +1002,11 @@ const TargetInfoIsland = () => {
                         borderRadius: 1
                     }}>
                         <Grid container spacing={1}>
+                            {hasOperator && (
+                                <Grid size={12}>
+                                    <DataPoint icon={BusinessIcon} label={t('satellite_info.labels.operator', { defaultValue: 'Operator' })} value={satelliteData.details.operator} />
+                                </Grid>
+                            )}
                             <Grid size={12}>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
                                     <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.65rem', textTransform: 'uppercase' }}>
@@ -1318,7 +1201,7 @@ const TargetInfoIsland = () => {
                         <Button
                             variant="text"
                             size="small"
-                            startIcon={<RadioButtonCheckedIcon sx={{ fontSize: 14 }} />}
+                            startIcon={<CellTowerIcon sx={{ fontSize: 14 }} />}
                             onClick={() => setTransmittersDialogOpen(true)}
                             disabled={!selectedNoradId}
                             sx={{
@@ -1368,110 +1251,27 @@ const TargetInfoIsland = () => {
                 </>
             ) : (
                 <>
-                    <Box sx={{
-                        p: 1,
-                        background: nonSatelliteStatusMeta.gradient,
-                        borderBottom: '1px solid',
-                        borderColor: 'border.main',
-                    }}>
-                        <Box sx={{ display: 'flex', alignItems: 'stretch', gap: 0.5 }}>
-                            <Box sx={{ flex: 1, minWidth: 0 }}>
-                                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.75 }}>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: 0 }}>
-                                        <Box sx={{
-                                            width: 10,
-                                            height: 10,
-                                            borderRadius: '50%',
-                                            mr: 1,
-                                            flexShrink: 0,
-                                            bgcolor: nonSatelliteStatusMeta.dotColor,
-                                            boxShadow: (theme) => `0 0 8px ${theme.palette[nonSatelliteStatusMeta.chipColor]?.main || theme.palette.text.secondary}`,
-                                        }} />
-                                        <Box sx={{ minWidth: 0, flex: 1 }}>
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
-                                                <Typography variant="subtitle1" noWrap sx={{ fontWeight: 700, letterSpacing: '0.3px' }}>
-                                                    {nonSatelliteTargetName || '-'}
-                                                    <Typography
-                                                        component="span"
-                                                        variant="caption"
-                                                        sx={{ ml: 0.75, color: 'text.secondary', fontWeight: 500, fontSize: '0.7rem' }}
-                                                    >
-                                                        {targetType === 'mission'
-                                                            ? (nonSatelliteIdentifier || '-')
-                                                            : `Body ID · ${nonSatelliteIdentifier || '-'}`}
-                                                    </Typography>
-                                                </Typography>
-                                                <Tooltip title={t('target_info_island.edit_transmitters', { defaultValue: 'Edit Transmitters' })}>
-                                                    <span>
-                                                        <IconButton
-                                                            size="small"
-                                                            onClick={() => setTransmittersDialogOpen(true)}
-                                                            disabled={!hasNonSatelliteTargetKey}
-                                                        >
-                                                            <RadioButtonCheckedIcon fontSize="small" />
-                                                        </IconButton>
-                                                    </span>
-                                                </Tooltip>
-                                            </Box>
-                                        </Box>
-                                    </Box>
-                                </Box>
-
-                                <Grid container spacing={0.5}>
-                                    <Grid size={4}>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', px: 0.5, py: 0.3, bgcolor: 'overlay.main', borderRadius: 0.5 }}>
-                                            {nonSatelliteVisible === true ? (
-                                                <CheckCircleIcon sx={{ fontSize: 11, mr: 0.4, color: 'success.main' }} />
-                                            ) : nonSatelliteError ? (
-                                                <CancelIcon sx={{ fontSize: 11, mr: 0.4, color: 'error.main' }} />
-                                            ) : nonSatelliteVisible === false ? (
-                                                <CancelIcon sx={{ fontSize: 11, mr: 0.4, color: 'warning.main' }} />
-                                            ) : (
-                                                <InfoOutlinedIcon sx={{ fontSize: 11, mr: 0.4, color: 'text.secondary' }} />
-                                            )}
-                                            <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.68rem' }} noWrap>
-                                                {nonSatelliteStatusMeta.chipLabel}
-                                            </Typography>
-                                        </Box>
-                                    </Grid>
-                                    <Grid size={8}>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', px: 0.5, py: 0.3, bgcolor: 'overlay.main', borderRadius: 0.5 }}>
-                                            <AccessTimeIcon sx={{ fontSize: 11, mr: 0.4, color: 'text.secondary' }} />
-                                            <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.68rem' }} noWrap>
-                                                {nonSatellitePassInfo && nonSatelliteCountdown
-                                                    ? (nonSatellitePassInfo.type === 'active' ? `Pass ends in ${nonSatelliteCountdown}` : `Next pass in ${nonSatelliteCountdown}`)
-                                                    : 'No upcoming pass'}
-                                            </Typography>
-                                        </Box>
-                                    </Grid>
-                                </Grid>
-                            </Box>
-                            <Box
-                                sx={{
-                                    width: 64,
-                                    minWidth: 64,
-                                    borderRadius: 0.5,
-                                    bgcolor: 'overlay.main',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    position: 'relative',
-                                }}
-                            >
-                                <Box sx={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                    <TargetIcon
-                                        targetType={targetType}
-                                        bodyId={nonSatelliteIdentifier}
-                                        size={44}
-                                        alt={nonSatelliteTargetName || 'Target'}
-                                        showMoonPhase={targetType === 'body'}
-                                    />
-                                </Box>
-                            </Box>
-                        </Box>
-                    </Box>
+                    <EntityInfoHeader
+                        name={nonSatelliteTargetName}
+                        targetType={targetType}
+                        identifier={nonSatelliteIdentifier}
+                        iconIdentifier={targetType === 'mission' ? (trackingState?.command || nonSatelliteIdentifier) : nonSatelliteIdentifier}
+                        color={monitoredTarget ? monitoredTarget.color : nonSatelliteTrack?.color}
+                        error={nonSatelliteError}
+                        onEdit={openPropertiesDialog}
+                        editLabel={propertiesEditLabel}
+                        editDisabled={!canEditProperties}
+                        onEditTransmitters={() => setTransmittersDialogOpen(true)}
+                        disabled={!hasNonSatelliteTargetKey}
+                    />
 
                     <Box sx={{ pr: 1.5, pl: 1.5, pt: 1.5, pb: 1, flex: 1, overflow: 'auto' }}>
+                        <EntityVisibility
+                            visible={nonSatelliteVisible}
+                            supportingText={nonSatellitePassInfo && nonSatelliteCountdown
+                                ? tCommon(nonSatellitePassInfo.type === 'active' ? 'entity_header.pass_ends_in' : 'entity_header.next_pass_in', { countdown: nonSatelliteCountdown })
+                                : tCommon('entity_header.no_upcoming_pass')}
+                        />
                         {!nonSatelliteHasRealtime ? (
                             <Typography variant="caption" sx={{ color: 'warning.main', display: 'block', mb: 1.25 }}>
                                 {t('target_info_island.waiting_for_updated_mission_body_telemetry', { defaultValue: 'Waiting for updated mission/body telemetry.' })}
@@ -1739,6 +1539,7 @@ const TargetInfoIsland = () => {
                     </Box>
                 </>
             )}
+            {propertiesDialog}
             <Dialog
                 open={citationDialogOpen}
                 onClose={() => setCitationDialogOpen(false)}

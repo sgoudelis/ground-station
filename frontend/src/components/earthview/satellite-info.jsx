@@ -5,18 +5,13 @@ import {
     fetchSatelliteData,
     setSatelliteData,
 } from './earthview-slice.jsx';
-import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
 import ExploreIcon from '@mui/icons-material/Explore';
 import HeightIcon from '@mui/icons-material/Height';
 import SpeedIcon from '@mui/icons-material/Speed';
-import UpdateIcon from '@mui/icons-material/Update';
-import SatelliteIcon from '@mui/icons-material/Satellite';
 import ArrowUpwardRoundedIcon from '@mui/icons-material/ArrowUpwardRounded';
 import ArrowDownwardRoundedIcon from '@mui/icons-material/ArrowDownwardRounded';
 import MyLocationIcon from '@mui/icons-material/MyLocation';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
-import EditIcon from '@mui/icons-material/Edit';
-import RadioButtonCheckedIcon from '@mui/icons-material/RadioButtonChecked';
 import { getModulationDisplay } from '../../constants/modulations';
 import {
     Box,
@@ -25,15 +20,12 @@ import {
     Button,
     CircularProgress,
     Divider,
-    IconButton,
-    Tooltip
+    IconButton
 } from '@mui/material';
 import {
     betterDateTimes,
-    betterStatusValue,
     getClassNamesBasedOnGridEditing,
     humanizeAltitude,
-    humanizeDate,
     humanizeLatitude,
     humanizeLongitude,
     humanizeVelocity,
@@ -50,6 +42,8 @@ import { useTranslation } from 'react-i18next';
 import { SatelliteInfoDialog } from '../satellites/satellite-info-page.jsx';
 import SatelliteEditDialog from "../satellites/satellite-edit-dialog.jsx";
 import TransmittersDialog from "../satellites/transmitters-dialog.jsx";
+import EntityInfoHeader from '../common/entity-info-header.jsx';
+import EntityVisibility from '../common/entity-visibility.jsx';
 import { useSatelliteTargetAction } from '../target/use-satellite-target-action.jsx';
 // ElevationDisplay removed per request; display raw value instead
 
@@ -73,6 +67,8 @@ const EarthViewSatelliteInfoCard = () => {
     } = useSelector((state) => state.earthViewTrack);
     const selectedNoradId = satelliteData?.details?.norad_id || selectedSatelliteId || null;
     const selectedSatelliteName = satelliteData?.details?.name || '';
+    const elevation = selectedSatellitePositions?.[selectedSatelliteId]?.el ?? satelliteData?.position?.el;
+    const visible = elevation != null && Number.isFinite(Number(elevation)) ? Number(elevation) > 0 : null;
     const transmitters = satelliteData?.transmitters || [];
     const satelliteDialogData = {
         ...(satelliteData?.details || {}),
@@ -237,6 +233,7 @@ const EarthViewSatelliteInfoCard = () => {
         {rotatorSelectionDialog}
         <Box sx={{
             height: '100%',
+            minHeight: 0,
             display: 'flex',
             flexDirection: 'column',
             bgcolor: "background.paper",
@@ -245,7 +242,7 @@ const EarthViewSatelliteInfoCard = () => {
             {/* Header */}
             <TitleBar
                 className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}
-                sx={islandTitleBarSx}
+                sx={{ ...islandTitleBarSx, flexShrink: 0 }}
             >
                 <Box sx={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%'}}>
                     <Box sx={{display: 'flex', alignItems: 'center'}}>
@@ -253,11 +250,24 @@ const EarthViewSatelliteInfoCard = () => {
                             {t('satellite_info.title')}
                         </Typography>
                     </Box>
-                    <Typography variant="caption" sx={{color: 'text.secondary'}}>
-                        {t('satellite_info.id', { defaultValue: 'ID:' })} {!loading && satelliteData && satelliteData['details'] ? satelliteData['details']['norad_id'] : ''}
-                    </Typography>
                 </Box>
             </TitleBar>
+
+            {selectedSatelliteId && (
+                <EntityInfoHeader
+                    name={selectedSatelliteName}
+                    alias={satelliteData?.details?.name_other}
+                    targetType="satellite"
+                    identifier={selectedNoradId}
+                    health={satelliteData?.details?.status}
+                    showHealth={false}
+                    error={error}
+                    onEdit={() => setSatelliteEditDialogOpen(true)}
+                    onEditTransmitters={() => setTransmittersDialogOpen(true)}
+                    disabled={!selectedNoradId}
+                    loading={loading}
+                />
+            )}
 
             {!selectedSatelliteId ? (
                 <Box sx={{
@@ -286,100 +296,9 @@ const EarthViewSatelliteInfoCard = () => {
                 </Box>
             ) : (
                 <>
-                    {/* Satellite Name & Status */}
-                    <Box sx={{
-                        p: 1,
-                        background: satelliteData && satelliteData['details'] ?
-                            (() => {
-                                const status = satelliteData['details']['status'];
-                                switch(status) {
-                                    case 'alive': return (theme) => `linear-gradient(135deg, ${theme.palette.success.main}26 0%, ${theme.palette.success.main}0D 100%)`;
-                                    case 'dead': return (theme) => `linear-gradient(135deg, ${theme.palette.error.main}26 0%, ${theme.palette.error.main}0D 100%)`;
-                                    case 're-entered': return (theme) => `linear-gradient(135deg, ${theme.palette.warning.main}26 0%, ${theme.palette.warning.main}0D 100%)`;
-                                    default: return 'overlay.light';
-                                }
-                            })() : 'overlay.light',
-                        borderBottom: "1px solid",
-                        borderColor: "divider"
-                    }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                            <Box sx={{
-                                width: 10,
-                                height: 10,
-                                borderRadius: '50%',
-                                mr: 1.5,
-                                bgcolor: satelliteData && satelliteData['details'] ? 
-                                    (() => {
-                                        const status = satelliteData['details']['status'];
-                                        switch(status) {
-                                            case 'alive': return 'success.main';
-                                            case 'dead': return 'error.main';
-                                            case 're-entered': return 'warning.main';
-                                            default: return 'info.main';
-                                        }
-                                    })() : 'info.main',
-                                boxShadow: satelliteData && satelliteData['details'] ?
-                                    (() => {
-                                        const status = satelliteData['details']['status'];
-                                        switch(status) {
-                                            case 'alive': return (theme) => `0 0 8px ${theme.palette.success.main}40`;
-                                            case 'dead': return (theme) => `0 0 8px ${theme.palette.error.main}40`;
-                                            case 're-entered': return (theme) => `0 0 8px ${theme.palette.warning.main}40`;
-                                            default: return (theme) => `0 0 8px ${theme.palette.info.main}40`;
-                                        }
-                                    })() : (theme) => `0 0 8px ${theme.palette.info.main}40`
-                            }}/>
-                            <Box sx={{ flex: 1, minWidth: 0 }}>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0 }}>
-                                    <Typography variant="subtitle1" noWrap sx={{ fontWeight: 'bold', minWidth: 0 }}>
-                                        {satelliteData && satelliteData['details'] ? satelliteData['details']['name'] : "- - - - - - - - - - -"}
-                                    </Typography>
-                                    <Tooltip title={t('satellite_info.edit_details', { defaultValue: 'Edit Details' })}>
-                                        <span>
-                                            <IconButton
-                                                size="small"
-                                                onClick={() => setSatelliteEditDialogOpen(true)}
-                                                disabled={!selectedNoradId}
-                                            >
-                                                <EditIcon fontSize="small" />
-                                            </IconButton>
-                                        </span>
-                                    </Tooltip>
-                                    <Tooltip title={t('satellite_info.edit_transmitters', { defaultValue: 'Edit Transmitters' })}>
-                                        <span>
-                                            <IconButton
-                                                size="small"
-                                                onClick={() => setTransmittersDialogOpen(true)}
-                                                disabled={!selectedNoradId}
-                                            >
-                                                <RadioButtonCheckedIcon fontSize="small" />
-                                            </IconButton>
-                                        </span>
-                                    </Tooltip>
-                                </Box>
-                                {satelliteData && satelliteData['details'] && satelliteData['details']['name_other'] && (
-                                    <Typography variant="caption" sx={{ color: 'text.disabled', fontSize: '0.65rem', display: 'block', mt: -0.5 }}>
-                                        {satelliteData['details']['name_other']}
-                                    </Typography>
-                                )}
-                            </Box>
-                            {satelliteData && satelliteData['details'] && betterStatusValue(satelliteData['details']['status'])}
-                        </Box>
-
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                            <Typography variant="caption" sx={{ color: 'text.secondary', display: 'flex', alignItems: 'center' }}>
-                                <RocketLaunchIcon sx={{ fontSize: 12, mr: 0.5 }} />
-                                {t('satellite_info.norad', { defaultValue: 'NORAD:' })} {satelliteData && satelliteData['details'] ? satelliteData['details']['norad_id'] : ''}
-                            </Typography>
-                            <Typography variant="caption" sx={{ color: 'text.secondary', display: 'flex', alignItems: 'center' }}>
-                                <UpdateIcon sx={{ fontSize: 12, mr: 0.5 }} />
-                                {satelliteData && satelliteData['details'] ? humanizeDate(satelliteData['details']['updated']) : ''}
-                            </Typography>
-                        </Box>
-                    </Box>
-
                     {/* Main Content */}
                     <Box sx={{ pr: 2, pl: 2, pt: 1, flex: 1, overflow: 'auto' }}>
+                        <EntityVisibility visible={visible} bodyPaddingX={2} bodyPaddingTop={1} />
 
                         {/* Position Data */}
                         <Section title={t('satellite_info.position_data')} icon={ExploreIcon}>

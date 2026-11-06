@@ -1143,6 +1143,12 @@ const CelestialMainLayout = () => {
                     monitoredRows={monitoredState?.monitored || []}
                     gridEditable={isEditing}
                     loading={Boolean(celestialState.tracksLoading)}
+                    onTargetUpdated={(row) => {
+                        const key = buildTargetKeyFromCelestialRow(row);
+                        if (!key || key === selectedInfoTargetKey) return;
+                        setFocusTargetKey(key);
+                        setFocusTargetSignal((value) => value + 1);
+                    }}
                 />
             ) : <DeferredIslandPlaceholder />}
         </StyledIslandParentNoScrollbar>,

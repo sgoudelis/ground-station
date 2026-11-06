@@ -1,4 +1,20 @@
 {
+  "entity_header": {
+    "types": {
+      "satellite": "Δορυφορος",
+      "mission": "Αποστολη",
+      "body": "Ουρανιο σωμα"
+    },
+    "edit_details": "Επεξεργασια στοιχείων",
+    "edit_transmitters": "Επεξεργασια πομπών",
+    "above_horizon": "Πανω από τον ορίζοντα",
+    "below_horizon": "Κατω από τον ορίζοντα",
+    "visibility_unknown": "Αγνωστη ορατότητα",
+    "health_unknown": "Αγνωστη κατάσταση",
+    "pass_ends_in": "Η διέλευση λήγει σε {{countdown}}",
+    "next_pass_in": "Επομενη διέλευση σε {{countdown}}",
+    "no_upcoming_pass": "Δεν υπάρχει επερχόμενη διέλευση"
+  },
   "app_name": "Σταθμος Εδαφους",
   "loading": "Φορτωση...",
   "error": "Σφαλμα",

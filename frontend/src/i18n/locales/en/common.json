@@ -1,4 +1,20 @@
 {
+  "entity_header": {
+    "types": {
+      "satellite": "Satellite",
+      "mission": "Mission",
+      "body": "Body"
+    },
+    "edit_details": "Edit Details",
+    "edit_transmitters": "Edit Transmitters",
+    "above_horizon": "Above horizon",
+    "below_horizon": "Below horizon",
+    "visibility_unknown": "Visibility unknown",
+    "health_unknown": "Health unknown",
+    "pass_ends_in": "Pass ends in {{countdown}}",
+    "next_pass_in": "Next pass in {{countdown}}",
+    "no_upcoming_pass": "No upcoming pass"
+  },
   "app_name": "Ground Station",
   "loading": "Loading...",
   "error": "Error",

@@ -1,4 +1,20 @@
 {
+  "entity_header": {
+    "types": {
+      "satellite": "Satellit",
+      "mission": "Mission",
+      "body": "Himmelskörper"
+    },
+    "edit_details": "Details bearbeiten",
+    "edit_transmitters": "Sender bearbeiten",
+    "above_horizon": "Über dem Horizont",
+    "below_horizon": "Unter dem Horizont",
+    "visibility_unknown": "Sichtbarkeit unbekannt",
+    "health_unknown": "Zustand unbekannt",
+    "pass_ends_in": "Überflug endet in {{countdown}}",
+    "next_pass_in": "Nächster Überflug in {{countdown}}",
+    "no_upcoming_pass": "Kein bevorstehender Überflug"
+  },
   "app_name": "Bodenstation",
   "loading": "Laden...",
   "error": "Fehler",

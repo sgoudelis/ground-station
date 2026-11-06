@@ -17,6 +17,7 @@ const BodyIcon = ({
     size = 24,
     alt = 'body icon',
     sx = {},
+    fallback = null,
     showMoonPhase = false,
 }) => {
     const path = resolveBodyIconPath(bodyId, size);
@@ -34,7 +35,7 @@ const BodyIcon = ({
         setLoaded(false);
     }, [path]);
 
-    if (!path || failed) return null;
+    if (!path || failed) return fallback;
 
     return (
         <Box

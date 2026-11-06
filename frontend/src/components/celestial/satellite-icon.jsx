@@ -11,6 +11,7 @@ const SatelliteIcon = ({
     size = 24,
     alt = 'satellite icon',
     sx = {},
+    fallback = null,
 }) => {
     const resolvedId = satelliteId || noradId;
     const primaryPath = resolveSatelliteIconPath(resolvedId, size);
@@ -74,7 +75,7 @@ const SatelliteIcon = ({
         };
     }, [primaryPath, fallbackPath]);
 
-    if (!showImage && !loading) return null;
+    if (!showImage && !loading) return fallback;
 
     return (
         <Box

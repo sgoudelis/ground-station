@@ -1,12 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Box, Button, CircularProgress, Divider, IconButton, Tooltip, Typography } from '@mui/material';
-import { alpha } from '@mui/material/styles';
-import VisibilityIcon from '@mui/icons-material/Visibility';
-import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
-import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
-import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
-import RadioButtonCheckedIcon from '@mui/icons-material/RadioButtonChecked';
+import { Box, Button, CircularProgress, Divider, Typography } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { getClassNamesBasedOnGridEditing, islandTitleBarSx, TitleBar } from '../common/common.jsx';
 import { useSocket } from '../common/socket.jsx';
@@ -14,12 +8,14 @@ import { useUserTimeSettings } from '../../hooks/useUserTimeSettings.jsx';
 import { setRotator, setTrackerId, setTrackingStateInBackend } from '../target/target-slice.jsx';
 import { useTargetRotatorSelectionDialog } from '../target/use-target-rotator-selection-dialog.jsx';
 import { toast } from '../../utils/toast-with-timestamp.jsx';
-import TargetIcon from './target-icon.jsx';
 import {
     replaceCelestialTargetKey,
     resolveTargetDisplayName,
 } from '../target/celestial-target-utils.js';
+import EntityInfoHeader from '../common/entity-info-header.jsx';
+import EntityVisibility from '../common/entity-visibility.jsx';
 import TransmittersDialog from '../satellites/transmitters-dialog.jsx';
+import { useCelestialPropertiesDialog } from './use-celestial-properties-dialog.jsx';
 
 const AU_IN_KM = 149597870.7;
 const SECONDS_PER_DAY = 86400;
@@ -155,6 +151,7 @@ const CelestialInfoIsland = ({
     monitoredRows = [],
     gridEditable = false,
     loading = false,
+    onTargetUpdated,
 }) => {
     const dispatch = useDispatch();
     const { socket } = useSocket();
@@ -189,6 +186,12 @@ const CelestialInfoIsland = ({
 
     const selectedTrack = normalizedTargetKey ? trackByTargetKey[normalizedTargetKey] || null : null;
     const selectedMonitored = normalizedTargetKey ? monitoredByTargetKey[normalizedTargetKey] || null : null;
+    const {
+        openDialog: openPropertiesDialog,
+        canEdit: canEditProperties,
+        label: propertiesEditLabel,
+        dialog: propertiesDialog,
+    } = useCelestialPropertiesDialog({ target: selectedMonitored, onTargetUpdated });
 
     const selectedPasses = useMemo(
         () =>
@@ -253,7 +256,7 @@ const CelestialInfoIsland = ({
     const currentlyTrackedTargetKey = buildTrackingTargetKey(trackingState || {});
     const isCurrentlyTargeted = Boolean(normalizedTargetKey) && currentlyTrackedTargetKey === normalizedTargetKey;
 
-    const elevationDeg = Number(selectedTrack?.sky_position?.el_deg);
+    const elevationDeg = toMetricNumber(selectedTrack?.sky_position?.el_deg);
     const azimuthDeg = Number(selectedTrack?.sky_position?.az_deg);
     const explicitVisible = selectedTrack?.visibility?.visible;
     const visible = typeof explicitVisible === 'boolean' ? explicitVisible : (Number.isFinite(elevationDeg) ? elevationDeg > 0 : null);
@@ -275,39 +278,6 @@ const CelestialInfoIsland = ({
     const relativeMotion = ['approaching', 'receding', 'steady'].includes(earthRelative.motion)
         ? tCelestial(`info.motion.${earthRelative.motion}`)
         : '-';
-
-    const statusIndicator = (() => {
-        if (selectedTrack?.error) {
-            return {
-                icon: ErrorOutlineIcon,
-                label: tCelestial('common.error'),
-                color: 'error.main',
-                paletteKey: 'error',
-            };
-        }
-        if (visible === true) {
-            return {
-                icon: VisibilityIcon,
-                label: tCelestial('info.status.visible'),
-                color: 'success.main',
-                paletteKey: 'success',
-            };
-        }
-        if (visible === false) {
-            return {
-                icon: VisibilityOffIcon,
-                label: tCelestial('info.status.below_horizon'),
-                color: 'info.main',
-                paletteKey: 'info',
-            };
-        }
-        return {
-            icon: HelpOutlineIcon,
-            label: tCelestial('common.unknown'),
-            color: 'text.secondary',
-            paletteKey: 'text',
-        };
-    })();
 
     const handleSetTrackingOnBackend = async () => {
         if (!socket || !isTargetable) {
@@ -400,7 +370,7 @@ const CelestialInfoIsland = ({
             <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
                 <TitleBar
                     className={getClassNamesBasedOnGridEditing(gridEditable, ['window-title-bar'])}
-                    sx={islandTitleBarSx}
+                    sx={{ ...islandTitleBarSx, flexShrink: 0 }}
                 >
                     <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
                         <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
@@ -410,6 +380,21 @@ const CelestialInfoIsland = ({
                 </TitleBar>
 
                 <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+                    {normalizedTargetKey && (
+                        <EntityInfoHeader
+                            name={targetName}
+                            targetType={targetType || 'body'}
+                            identifier={targetIdentifier}
+                            color={selectedColor}
+                            error={selectedTrack?.error}
+                            onEdit={openPropertiesDialog}
+                            editLabel={propertiesEditLabel}
+                            editDisabled={!canEditProperties}
+                            onEditTransmitters={() => setTransmittersDialogOpen(true)}
+                            disabled={!normalizedTargetKey}
+                            loading={isCardLoading}
+                        />
+                    )}
                     {!normalizedTargetKey ? (
                         <Box sx={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', px: 2, py: 1.5 }}>
                             <Typography variant="body2" sx={{ color: 'text.secondary', fontStyle: 'italic', textAlign: 'center' }}>
@@ -418,8 +403,8 @@ const CelestialInfoIsland = ({
                         </Box>
                     ) : loading && !selectedTrack ? (
                         <Box sx={{
-                            height: '100%',
-                            minHeight: '100%',
+                            flex: 1,
+                            minHeight: 0,
                             display: 'flex',
                             flexDirection: 'column',
                             justifyContent: 'center',
@@ -432,88 +417,8 @@ const CelestialInfoIsland = ({
                         </Box>
                     ) : (
                         <>
-                            <Box
-                                sx={{
-                                    flexShrink: 0,
-                                    px: 1.5,
-                                    py: 1.25,
-                                    borderBottom: '1px solid',
-                                    borderColor: 'divider',
-                                    bgcolor: 'background.paper',
-                                    backgroundImage: selectedColor
-                                        ? (theme) => (
-                                            `linear-gradient(135deg, ${
-                                                alpha(selectedColor, theme.palette.mode === 'dark' ? 0.26 : 0.18)
-                                            } 0%, ${
-                                                alpha(selectedColor, theme.palette.mode === 'dark' ? 0.08 : 0.05)
-                                            } 100%)`
-                                        )
-                                        : 'none',
-                                }}
-                            >
-                                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
-                                    <Box sx={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: 1 }}>
-                                        <TargetIcon
-                                            targetType={targetType}
-                                            bodyId={targetIdentifier}
-                                            size={44}
-                                            alt={targetName || tCelestial('common.body')}
-                                            showMoonPhase={targetType === 'body'}
-                                        />
-                                        <Box sx={{ minWidth: 0 }}>
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
-                                                <Typography variant="subtitle1" sx={{ fontWeight: 700, lineHeight: 1.15 }}>
-                                                    {targetName || '-'}
-                                                </Typography>
-                                                <Tooltip title={tCelestial('info.edit_transmitters')}>
-                                                    <span>
-                                                        <IconButton
-                                                            size="small"
-                                                            onClick={() => setTransmittersDialogOpen(true)}
-                                                            disabled={!normalizedTargetKey || isCardLoading}
-                                                        >
-                                                            <RadioButtonCheckedIcon fontSize="small" />
-                                                        </IconButton>
-                                                    </span>
-                                                </Tooltip>
-                                            </Box>
-                                            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                                                {targetType === 'body' ? tCelestial('common.body') : tCelestial('common.mission')} · {targetIdentifier}
-                                            </Typography>
-                                        </Box>
-                                    </Box>
-                                    <Tooltip title={statusIndicator.label}>
-                                        <Box
-                                            aria-label={statusIndicator.label}
-                                            sx={{
-                                                width: 30,
-                                                height: 30,
-                                                borderRadius: '50%',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                color: statusIndicator.color,
-                                                bgcolor: (theme) => alpha(
-                                                    statusIndicator.paletteKey === 'text'
-                                                        ? theme.palette.text.primary
-                                                        : theme.palette[statusIndicator.paletteKey].main,
-                                                    0.1,
-                                                ),
-                                                border: '1px solid',
-                                                borderColor: 'divider',
-                                                flexShrink: 0,
-                                            }}
-                                        >
-                                            <Box
-                                                component={statusIndicator.icon}
-                                                sx={{ fontSize: '1.05rem' }}
-                                            />
-                                        </Box>
-                                    </Tooltip>
-                                </Box>
-                            </Box>
-
                             <Box sx={{ p: 1.5, flex: 1, minHeight: 0, overflow: 'auto' }}>
+                                <EntityVisibility visible={visible} />
                                 <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 1.25 }}>
                                     <MetricPair
                                         label={tCelestial('info.metrics.target_type')}
@@ -663,6 +568,7 @@ const CelestialInfoIsland = ({
                     </Button>
                 </Box>
             </Box>
+            {propertiesDialog}
             <TransmittersDialog
                 open={transmittersDialogOpen}
                 onClose={() => setTransmittersDialogOpen(false)}

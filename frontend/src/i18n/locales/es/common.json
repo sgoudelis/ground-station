@@ -1,4 +1,20 @@
 {
+  "entity_header": {
+    "types": {
+      "satellite": "Satélite",
+      "mission": "Misión",
+      "body": "Cuerpo celeste"
+    },
+    "edit_details": "Editar detalles",
+    "edit_transmitters": "Editar transmisores",
+    "above_horizon": "Sobre el horizonte",
+    "below_horizon": "Bajo el horizonte",
+    "visibility_unknown": "Visibilidad desconocida",
+    "health_unknown": "Estado desconocido",
+    "pass_ends_in": "El paso termina en {{countdown}}",
+    "next_pass_in": "Próximo paso en {{countdown}}",
+    "no_upcoming_pass": "No hay pasos próximos"
+  },
   "app_name": "Estación Terrestre",
   "loading": "Cargando...",
   "error": "Error",

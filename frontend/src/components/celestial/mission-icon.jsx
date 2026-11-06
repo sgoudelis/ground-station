@@ -7,6 +7,7 @@ const MissionIcon = ({
     size = 24,
     alt = 'mission icon',
     sx = {},
+    fallback = null,
 }) => {
     const path = resolveMissionIconPath(missionKey, size);
     const numericSize = Number(size);
@@ -22,7 +23,7 @@ const MissionIcon = ({
         setLoaded(false);
     }, [path]);
 
-    if (!path || failed) return null;
+    if (!path || failed) return fallback;
 
     return (
         <Box

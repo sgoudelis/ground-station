@@ -9,6 +9,7 @@ const TargetIcon = ({
     size = 24,
     alt = 'target icon',
     sx = {},
+    fallback = null,
     showMoonPhase = false,
 }) => {
     const normalizedTargetType = String(targetType || '').toLowerCase();
@@ -20,6 +21,7 @@ const TargetIcon = ({
                 size={size}
                 alt={alt}
                 sx={sx}
+                fallback={fallback}
                 showMoonPhase={showMoonPhase}
             />
         );
@@ -32,6 +34,7 @@ const TargetIcon = ({
                 size={size}
                 alt={alt}
                 sx={sx}
+                fallback={fallback}
             />
         );
     }
@@ -43,11 +46,12 @@ const TargetIcon = ({
                 size={size}
                 alt={alt}
                 sx={sx}
+                fallback={fallback}
             />
         );
     }
 
-    return null;
+    return fallback;
 };
 
 export default React.memo(TargetIcon);

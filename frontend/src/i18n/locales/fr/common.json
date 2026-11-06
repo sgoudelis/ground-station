@@ -1,4 +1,20 @@
 {
+  "entity_header": {
+    "types": {
+      "satellite": "Satellite",
+      "mission": "Mission",
+      "body": "Corps céleste"
+    },
+    "edit_details": "Modifier les détails",
+    "edit_transmitters": "Modifier les émetteurs",
+    "above_horizon": "Au-dessus de l’horizon",
+    "below_horizon": "Sous l’horizon",
+    "visibility_unknown": "Visibilité inconnue",
+    "health_unknown": "État inconnu",
+    "pass_ends_in": "Fin du passage dans {{countdown}}",
+    "next_pass_in": "Prochain passage dans {{countdown}}",
+    "no_upcoming_pass": "Aucun passage à venir"
+  },
   "app_name": "Station au Sol",
   "loading": "Chargement...",
   "error": "Erreur",
