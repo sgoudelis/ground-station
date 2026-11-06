@@ -366,6 +366,24 @@ describe('manual dialog', () => {
         rotator: {name: 'Mount'}, currentAz: 10, currentEl: 20, minAz: 0, maxAz: 360, minEl: 0, maxEl: 90,
         disabled: false, canStop: true};
 
+    it('uses one status row for movement and returns to the current hardware state', () => {
+        const {rerender} = render(<ManualRotatorDialog {...props} rotatorStatus={{key: 'slewing'}}
+            command={{action: 'move', status: 'started'}} />);
+
+        expect(screen.getAllByRole('status')).toHaveLength(1);
+        expect(screen.getByRole('status')).toHaveTextContent(/^Moving…$/);
+        expect(screen.queryByText('Slewing')).not.toBeInTheDocument();
+        expect(screen.getByRole('status')).toHaveAttribute('title', expect.stringContaining('Hardware: Slewing'));
+
+        rerender(<ManualRotatorDialog {...props} rotatorStatus={{key: 'stopped'}}
+            command={{action: 'move', status: 'succeeded', updatedAt: Date.now() - 4000}} />);
+
+        expect(screen.getAllByRole('status')).toHaveLength(1);
+        expect(screen.getByRole('status')).toHaveTextContent(/^Stopped$/);
+        expect(screen.getByTestId('StopIcon')).toBeInTheDocument();
+        expect(screen.queryByText('Moving…')).not.toBeInTheDocument();
+    });
+
     it('allows retrying an unconfirmed Stop while movement remains locked', () => {
         const onStop = vi.fn();
         render(<ManualRotatorDialog {...props} disabled onStop={onStop}

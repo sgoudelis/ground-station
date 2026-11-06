@@ -13,15 +13,15 @@ import {
     DialogActions,
     DialogContent,
     DialogTitle,
-    CircularProgress,
     Grid,
     IconButton,
-    Paper,
     Typography,
 } from '@mui/material';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import ArrowDropUpIcon from '@mui/icons-material/ArrowDropUp';
-import HardwareStatusIndicator from '../common/hardware-status-indicator.jsx';
+import {resolveHardwarePresentation} from '../common/hardware-status-presentation.jsx';
+import {isCommandOutstanding} from '../target/tracker-command-state.js';
+import {TrackerCommandHeaderStatus} from '../target/tracker-command-feedback.jsx';
 import CloseIcon from '@mui/icons-material/Close';
 
 const DIAL_SIZE = 184;
@@ -241,9 +241,6 @@ function ElevationDial({ value, currentValue, min, max, disabled, onChange }) {
     );
 }
 
-import {isCommandOutstanding, isCommandSpinning} from '../target/tracker-command-state.js';
-import {TrackerCommandHeaderStatus} from '../target/tracker-command-feedback.jsx';
-
 export default function ManualRotatorDialog({
     open,
     onClose,
@@ -268,6 +265,7 @@ export default function ManualRotatorDialog({
     const busy = isCommandOutstanding(command);
     const moving = busy && !['pause', 'stop'].includes(command.action);
     const stopping = busy && ['pause', 'stop'].includes(command.action);
+    const hardwareStatus = resolveHardwarePresentation({source: 'rotator', status: rotatorStatus?.key || 'unknown', t});
     const wasOpen = React.useRef(false);
 
     React.useEffect(() => {
@@ -317,11 +315,13 @@ export default function ManualRotatorDialog({
                 </Typography>
             </DialogTitle>
             <DialogContent dividers sx={{ px: 1 }}>
-                <Box sx={{mb: 1.5, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.75}}>
-                    <HardwareStatusIndicator kind="rotator" status={rotatorStatus?.key || 'unknown'} />
-                    <TrackerCommandHeaderStatus command={command} hardwareStatus="" showIcon
-                        sx={{fontSize: '0.75rem', minWidth: 0, maxWidth: '100%'}} />
-                </Box>
+                {/* Command progress replaces the hardware label in one stable row. */}
+                <TrackerCommandHeaderStatus command={command} hardwareStatus={hardwareStatus.label}
+                    hardwareIcon={hardwareStatus.Icon} showIcon
+                    sx={{mx: 1, mb: 1.75, px: 1.25, py: 0.75, minHeight: 34, minWidth: 0,
+                        border: '1px solid', borderColor: 'divider', borderRadius: 1.25, bgcolor: 'action.hover',
+                        fontSize: '0.8rem', fontWeight: 600, lineHeight: 1.4, gap: 0.75,
+                        '& .MuiSvgIcon-root': {fontSize: 16}}} />
                 <Grid container spacing={2}>
                     <Grid size={{ xs: 6, sm: 6 }}>
                         <CoordinateStepper

@@ -8,7 +8,7 @@ import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 
 const COMPLETION_DISPLAY_MS = 3000;
 
-export function TrackerCommandHeaderStatus({kind = 'rotator', command, hardwareStatus, stale = false, sx = {}, showIcon = false}) {
+export function TrackerCommandHeaderStatus({kind = 'rotator', command, hardwareStatus, hardwareIcon, stale = false, sx = {}, showIcon = false}) {
     const [, refresh] = React.useReducer(value => value + 1, 0);
     const completedAt = command?.updatedAt ?? (command?.updated_at * 1000);
     const completionDeadline = completedAt + COMPLETION_DISPLAY_MS;
@@ -49,7 +49,9 @@ export function TrackerCommandHeaderStatus({kind = 'rotator', command, hardwareS
 
     if (!label) return null;
     const spinning = isCommandSpinning(command);
+    // When command feedback expires, restore the hardware state's own icon too.
     const Icon = spinning ? AutorenewIcon
+        : label === hardwareLabel && hardwareIcon ? hardwareIcon
         : command?.status === 'succeeded' ? CheckCircleOutlineIcon : ErrorOutlineIcon;
 
     // Reuse the existing status line. Long errors stay accessible without

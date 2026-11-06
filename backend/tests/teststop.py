@@ -209,6 +209,37 @@ async def test_unsupported_direct_stop_pauses_and_disconnects_without_s_or_recov
 
 
 @pytest.mark.asyncio
+async def test_direct_stop_warning_clears_only_when_tracking_resumes(monkeypatch):
+    clock = [0.0]
+    monkeypatch.setattr(
+        handlermodule, "time", SimpleNamespace(time=time.time, monotonic=lambda: clock[0])
+    )
+    async with controller_peer() as (controller, commands):
+        tracker = worker(controller)
+        tracker.rotator_details = {"stop_supported": False}
+        handler = tracker.rotator_handler
+        await stop(tracker)
+        warning = tracker.rotator_data["stop_warning"]
+        assert "tracking updates paused" in warning
+
+        # A rejected tracking transition must not dismiss the warning.
+        await handler.handle_rotator_state_change("stopped", "tracking")
+        assert tracker.rotator_data["tracking"] is False
+        assert tracker.rotator_data["stop_warning"] == warning
+        for second in (0, 1, 2):
+            clock[0] = second
+            await handler.update_hardware_position()
+        assert tracker.rotator_data["motion_unconfirmed"] is False
+        assert tracker.rotator_data["stop_warning"] == warning
+
+        await handler.handle_rotator_state_change("stopped", "tracking")
+
+        assert tracker.rotator_data["tracking"] is True
+        assert tracker.rotator_data["stop_warning"] is None
+        assert not any(line == b"S\n" for _connection, line in commands)
+
+
+@pytest.mark.asyncio
 async def test_rejected_stop_keeps_connection_and_can_be_retried():
     async with controller_peer(b"RPRT -4\n") as (controller, commands):
         tracker = worker(controller)

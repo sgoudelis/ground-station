@@ -374,7 +374,8 @@ class DeviceRuntime:
             self._check(request)
             if method == "heartbeat":
                 self.last_update = time.monotonic()
-                self.data["tracking"] = True
+                # A resolved target can resume tracking without a mode change.
+                self.data.update(tracking=True, stop_warning=None)
                 return True
             if method == "configure":
                 settings = payload["settings"]
@@ -391,6 +392,9 @@ class DeviceRuntime:
                 self.data.update(
                     tracking=payload["mode"] == "tracking", parked=False, park_requested=False
                 )
+                if self.data["tracking"]:
+                    # The previous Stop warning describes a pause that has ended.
+                    self.data["stop_warning"] = None
                 self.last_update = time.monotonic()
                 return True
             if method == "disconnect":

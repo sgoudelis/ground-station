@@ -750,6 +750,8 @@ class RotatorHandler:
                 "connected"
             ):
                 self.tracker.rotator_data["tracking"] = True
+                # Clear the paused-state warning only after tracking resumes.
+                self.tracker.rotator_data["stop_warning"] = None
                 self.tracker.rotator_data["stopped"] = False
                 self.tracker.rotator_data["parked"] = False
         elif new == "stopped":

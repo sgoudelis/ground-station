@@ -996,6 +996,33 @@ async def test_pause_fences_updates_without_stopping_or_closing(stop_supported, 
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("method,payload", [("mode", {"mode": "tracking"}), ("heartbeat", {})])
+async def test_resuming_tracking_clears_stop_warning_without_clearing_motion_guard(method, payload):
+    controller = FakeController()
+    runtime = DeviceRuntime("rotator", "mount", {"stop_supported": False}, "epoch", controller)
+    runtime.owner = "tracker:one:incarnation"
+    runtime.data.update(connected=True, tracking=True)
+    with pytest.raises(StopUnconfirmed, match="tracking updates paused"):
+        await runtime.execute(request(runtime, "stop"))
+    warning = runtime.data["stop_warning"]
+
+    # A non-tracking mode must retain the warning about paused updates.
+    await runtime.execute(request(runtime, "mode", mode="stopped"))
+    assert runtime.data["tracking"] is False
+    assert runtime.data["stop_warning"] == warning
+
+    await runtime.execute(request(runtime, method, **payload))
+
+    assert runtime.data["tracking"] is True
+    assert runtime.snapshot()["data"]["stop_warning"] is None
+    assert runtime.data["stop_supported"] is False
+    assert runtime.data["motion_unconfirmed"] is True
+    with pytest.raises(StopUnconfirmed, match="stationary"):
+        await runtime.execute(request(runtime, "position", az=100, el=20))
+    assert controller.commands == []
+
+
+@pytest.mark.asyncio
 async def test_delayed_pause_cannot_revoke_a_new_owner():
     controller = FakeController()
     runtime = DeviceRuntime("rotator", "mount", {}, "epoch", controller)
