@@ -50,10 +50,25 @@ Source imagery for satellite icon assets under `full/` in this folder.
     - `128/19548.png`, `128/21639.png`
     - `256/19548.png`, `256/21639.png`
 
-- `full/22563.png`, `full/22787.png`, `full/23467.png`, `full/25967.png`, `full/28117.png`, `full/32711.png` (GPS Block II / IIR icon source image)
+- `full/22563.png`, `full/22787.png`, `full/23467.png`, `full/25967.png`, `full/28117.png` (GPS Block II / IIR icon source image)
   - Source URL: https://commons.wikimedia.org/wiki/File:GPS-24_satellite.png (direct file: https://upload.wikimedia.org/wikipedia/commons/4/42/GPS-24_satellite.png)
   - Description: GPS-24 (Block II) Navstar navigation satellite, NASA Goddard public-domain photo
   - Processing note: white background removed via edge-connected extraction, foreground tight-trimmed and center-fitted, then exported as transparent icon presets for the UFO/Navstar IDs listed above.
+
+- `full/26407.png`, `full/27663.png`, `full/28190.png`, `full/28474.png`, `full/28874.png`, `full/29486.png`, `full/29601.png`, `full/32260.png`, `full/32384.png`, `full/32711.png`, `full/35752.png` (GPS Block IIR/IIRM icon source image)
+  - Source URL: https://commons.wikimedia.org/wiki/File:GPS-IIRM.jpg (public domain; replaced 2026-11-06 the earlier GPS-24 Block II art used for 32711, which did not depict this block)
+  - Description: GPS Block IIRM Navstar satellite (Lockheed Martin bus, gold foil, UHF cross antennas)
+  - Processing note: starfield dropped via edge-connected dark flood, Earth limb corner excluded by wedge mask with atmospheric haze band removed, star specks dropped via component filtering, foreground tight-trimmed and capped at 256, then exported as transparent icon presets (`64/`, `128/`, `256/`) for all Block IIR/IIRM IDs listed above.
+
+- `full/36585.png`, `full/38833.png`, `full/39166.png`, `full/39533.png`, `full/39741.png`, `full/40105.png`, `full/40294.png`, `full/40534.png`, `full/40730.png`, `full/41019.png`, `full/41328.png` (GPS Block IIF icon source image)
+  - Source URL: https://commons.wikimedia.org/wiki/File:GPS_Satellite_NASA_art-iif.jpg (public domain, NASA artwork)
+  - Description: GPS Block IIF Navstar satellite (Boeing/MDA bus) over Earth limb
+  - Processing note: starfield dropped via edge-connected dark flood, Earth excluded via limb-curve mask, haze traces under the wingtip removed geometrically, foreground tight-trimmed and capped at 256, then exported as transparent icon presets (`64/`, `128/`, `256/`) for all Block IIF IDs listed above.
+
+- `full/43873.png`, `full/44506.png`, `full/45854.png`, `full/46826.png`, `full/48859.png`, `full/55268.png`, `full/62339.png`, `full/64202.png`, `full/67588.png`, `full/68791.png` (GPS Block III icon source image)
+  - Source URL: https://commons.wikimedia.org/wiki/File:GPS_Block_IIIA.jpg (public domain, USAF/Lockheed Martin render)
+  - Description: GPS Block III/IIIF Navstar satellite (Lockheed LM bus) over starfield
+  - Processing note: starfield dropped via edge-connected dark flood with flat Earth-strip cut, foreground tight-trimmed and capped at 256, then exported as transparent icon presets (`64/`, `128/`, `256/`) for all Block III IDs listed above.
 
 - `full/23839.png` (Inmarsat 3-F1 icon source image)
   - Source URL: https://space.skyrocket.de/img_sat/inmarsat-3__1.jpg
