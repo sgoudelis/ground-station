@@ -4,6 +4,7 @@ import { useTheme } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
 import { useUserTimeSettings } from '../../hooks/useUserTimeSettings.jsx';
 import { buildTargetKeyFromCelestialRow } from '../target/celestial-target-utils.js';
+import { createTargetLabel, drawTargetCrosshair, drawTargetLabel, isTargetOnScreen } from './target-marker.js';
 
 const PLANET_COLORS = {
     mercury: '#c2b280',
@@ -73,9 +74,6 @@ const ASSET_BASE_URL = import.meta.env.BASE_URL || '/';
 const NORMALIZED_ASSET_BASE_URL = ASSET_BASE_URL.endsWith('/') ? ASSET_BASE_URL : `${ASSET_BASE_URL}/`;
 const STARFIELD_CATALOG_URL = `${NORMALIZED_ASSET_BASE_URL}assets/astronomy/stars-bright-v1.json`;
 const IMPERIAL_DISTANCE_REGIONS = new Set(['US', 'LR', 'MM']);
-const TARGET_SLOT_BADGE_SCALE = 0.81;
-const TARGET_SLOT_BADGE_HORIZONTAL_PADDING_PX = 2.5;
-const TARGET_SLOT_BADGE_FONT_HEIGHT_RATIO = 0.8;
 const DEFAULT_DISPLAY_OPTIONS = {
     showGrid: true,
     showPlanets: true,
@@ -756,6 +754,7 @@ const SolarSystemCanvas = ({
     const { locale } = useUserTimeSettings();
     const containerRef = useRef(null);
     const canvasRef = useRef(null);
+    const timestampRef = useRef(null);
     const pendingDrawFrameRef = useRef(null);
     const drawSceneRef = useRef(null);
     const wheelCommitTimeoutRef = useRef(null);
@@ -1176,6 +1175,16 @@ const SolarSystemCanvas = ({
         };
 
         const placedLabelBoxes = [];
+        // The timestamp is a DOM overlay, so canvas labels must reserve its space explicitly.
+        if (effectiveDisplayOptions.showTimestamp && timestampRef.current) {
+            const timestampRect = timestampRef.current.getBoundingClientRect();
+            placedLabelBoxes.push({
+                x: timestampRect.left - rect.left,
+                y: timestampRect.top - rect.top,
+                w: timestampRect.width,
+                h: timestampRect.height,
+            });
+        }
         const LABEL_FONT = '11px monospace';
         const LABEL_LINE_HEIGHT = 10;
         const LABEL_ROW_STEP = 8;
@@ -1735,8 +1744,8 @@ const SolarSystemCanvas = ({
                     const labelAnchorX = id === 'sun' ? sx + 12 : sx;
                     const bodyTargetSlotNumber = resolveTargetSlotNumber(bodyTargetKey);
                     const hasBodyTargetSlotNumber = Number.isFinite(bodyTargetSlotNumber) && bodyTargetSlotNumber > 0;
-                    // The final target-slot layer renders its own framed name beside
-                    // the badge. Avoid drawing the planet label underneath it.
+                    // The final target layer renders the badge and name in one tooltip.
+                    // Avoid drawing the planet label underneath it.
                     if (
                         effectiveDisplayOptions.showTrackedObjects
                         && hasBodyTargetSlotNumber
@@ -1821,8 +1830,22 @@ const SolarSystemCanvas = ({
 
         });
 
+        // Draw target guides below markers and labels, matching the Earth map.
+        if (effectiveDisplayOptions.showTrackedObjects) {
+            tracked.forEach((body) => {
+                if (!hasFiniteXYZ(body.position_xyz_au)) return;
+                if (!Number.isFinite(resolveTargetSlotNumber(resolveTargetKey(body)))) return;
+                const [sx, sy] = toScreen(body.position_xyz_au);
+                drawTargetCrosshair(ctx, sx, sy, width, height, theme.palette.error.main);
+                if (isTargetOnScreen(sx, sy, width, height)) {
+                    // Reserve every frame before placing labels, including hidden names.
+                    placedLabelBoxes.push({ x: sx - 15, y: sy - 15, w: 30, h: 30 });
+                }
+            });
+        }
+
         // Tracked object markers from Horizons.
-        const pendingTargetSlotBadges = [];
+        const pendingTargetLabels = [];
         const pendingSelectedMarkerLabels = [];
         if (effectiveDisplayOptions.showTrackedObjects) {
             tracked.forEach((body) => {
@@ -1833,8 +1856,6 @@ const SolarSystemCanvas = ({
                 const trackedHexColor = resolveTrackedColor(body, body.stale ? '#EF476F' : '#06D6A0');
                 const targetSlotNumber = resolveTargetSlotNumber(targetKey);
                 const hasTargetSlotNumber = Number.isFinite(targetSlotNumber) && targetSlotNumber > 0;
-                const targetSlotLabel = hasTargetSlotNumber ? `T${Math.round(targetSlotNumber)}` : '';
-                const targetSlotBadgePalette = theme.palette.badge?.targetSlot || {};
                 const shouldShowObjectName = shouldShowObjectLabel({
                     isSelected,
                     hasSelection: hasTrackedSelection,
@@ -1843,96 +1864,29 @@ const SolarSystemCanvas = ({
                 });
 
                 ctx.fillStyle = isDimmed ? hexToRgba(trackedHexColor, 0.28) : trackedHexColor;
-                let markerSize = isSelected ? 8 : 6;
-                let targetSlotBadgeSpec = null;
-                // Keep the target-slot badge in the Solar System canvas slightly more compact.
-                const targetBadgeHeight = (isSelected ? 17 : 15) * TARGET_SLOT_BADGE_SCALE;
-                const targetBadgeHorizontalPadding = TARGET_SLOT_BADGE_HORIZONTAL_PADDING_PX
-                    * TARGET_SLOT_BADGE_SCALE;
-                const targetLabelRenderFontSize = Math.max(
-                    Math.round(11 * TARGET_SLOT_BADGE_SCALE),
-                    Math.round(targetBadgeHeight * TARGET_SLOT_BADGE_FONT_HEIGHT_RATIO)
-                );
-                const targetLabelFontFamily = theme.typography?.fontFamily || 'Arial';
-                if (hasTargetSlotNumber) {
-                    ctx.save();
-                    ctx.font = `900 ${targetLabelRenderFontSize}px ${targetLabelFontFamily}`;
-                    const textWidth = Math.ceil(Math.max(6, ctx.measureText(targetSlotLabel).width));
-                    ctx.restore();
-                    const badgeWidth = Math.max(
-                        Math.round(targetBadgeHeight * 1.05),
-                        textWidth + (targetBadgeHorizontalPadding * 2)
-                    );
-                    const nameLabel = String(
-                        body.name || body.command || body.body_id || targetKey || 'object',
-                    );
-                    const nameGap = 3;
-                    const namePaddingX = 5;
-                    const nameHeight = targetBadgeHeight;
-                    ctx.save();
-                    ctx.font = LABEL_FONT;
-                    const nameTextWidth = Math.ceil(Math.max(4, ctx.measureText(nameLabel).width));
-                    ctx.restore();
-                    const nameWidth = nameTextWidth + (namePaddingX * 2);
-                    const badgeLeft = sx - (badgeWidth / 2);
-                    const badgeTop = sy - (targetBadgeHeight / 2);
-                    const nameLeft = badgeLeft + badgeWidth + nameGap;
-                    const nameTop = sy - (nameHeight / 2);
-                    targetSlotBadgeSpec = {
-                        sx,
-                        sy,
-                        badgeLeft,
-                        badgeTop,
-                        badgeWidth,
-                        targetBadgeHeight,
-                        badgeRadius: 3 * TARGET_SLOT_BADGE_SCALE,
-                        targetSlotLabel,
-                        targetSlotBadgePalette,
-                        isDimmed,
-                        showName: shouldShowObjectName,
-                        targetLabelRenderFontSize,
-                        targetLabelFontFamily,
-                        nameLabel,
-                        nameGap,
-                        namePaddingX,
-                        nameHeight,
-                        nameLeft,
-                        nameTop,
-                        nameWidth,
-                        nameColor: isSelected
-                            ? theme.palette.text.primary
-                            : theme.palette.text.secondary,
-                    };
-                    markerSize = Math.max(
-                        markerSize,
-                        badgeWidth + (2 * TARGET_SLOT_BADGE_SCALE),
-                        targetBadgeHeight + (2 * TARGET_SLOT_BADGE_SCALE)
-                    );
+                const markerSize = isSelected ? 8 : 6;
+                // The object stays at the crosshair center; T# belongs inside the tooltip.
+                ctx.fillRect(sx - markerSize / 2, sy - markerSize / 2, markerSize, markerSize);
+                if (isSelected && !hasTargetSlotNumber) {
+                    ctx.strokeStyle = hexToRgba('#ffffff', theme.palette.mode === 'dark' ? 0.9 : 0.75);
+                    ctx.lineWidth = 1.25;
+                    ctx.strokeRect(sx - markerSize / 2 - 1, sy - markerSize / 2 - 1, markerSize + 2, markerSize + 2);
                 }
-                // Keep the classic square marker only for non-slot targets.
-                // When we have a target slot badge (T#), render just the badge itself.
-                if (!hasTargetSlotNumber) {
-                    ctx.fillRect(sx - markerSize / 2, sy - markerSize / 2, markerSize, markerSize);
-                    if (isSelected) {
-                        ctx.strokeStyle = hexToRgba('#ffffff', theme.palette.mode === 'dark' ? 0.9 : 0.75);
-                        ctx.lineWidth = 1.25;
-                        ctx.strokeRect(sx - markerSize / 2 - 1, sy - markerSize / 2 - 1, markerSize + 2, markerSize + 2);
+                if (hasTargetSlotNumber && isTargetOnScreen(sx, sy, width, height)) {
+                    if (shouldShowObjectName) {
+                        const label = createTargetLabel(ctx, {
+                            x: sx,
+                            y: sy,
+                            width,
+                            height,
+                            name: body.name || body.command || body.body_id || targetKey || 'object',
+                            targetNumber: targetSlotNumber,
+                            fontFamily: theme.typography?.fontFamily || 'Arial',
+                            occupiedBoxes: placedLabelBoxes,
+                        });
+                        pendingTargetLabels.push(label);
+                        placedLabelBoxes.push(label);
                     }
-                }
-                if (targetSlotBadgeSpec) {
-                    pendingTargetSlotBadges.push(targetSlotBadgeSpec);
-                    // Reserve only the visible part of the badge so hidden
-                    // unfocused names do not displace endpoint callouts.
-                    placedLabelBoxes.push({
-                        x: targetSlotBadgeSpec.badgeLeft,
-                        y: Math.min(targetSlotBadgeSpec.badgeTop, targetSlotBadgeSpec.nameTop),
-                        w: targetSlotBadgeSpec.showName
-                            ? targetSlotBadgeSpec.badgeWidth
-                                + targetSlotBadgeSpec.nameGap
-                                + targetSlotBadgeSpec.nameWidth
-                            : targetSlotBadgeSpec.badgeWidth,
-                        h: Math.max(targetSlotBadgeSpec.targetBadgeHeight, targetSlotBadgeSpec.nameHeight),
-                    });
                 }
 
                 if (
@@ -1982,7 +1936,7 @@ const SolarSystemCanvas = ({
                 }
 
                 if (shouldShowObjectName) {
-                    // Target-slot names are rendered together with their badge below.
+                    // Target-slot names are rendered in the red tooltip below.
                     if (hasTargetSlotNumber) return;
                     // Selected marker names are rendered as an attached label below.
                     if (isSelected) return;
@@ -2231,53 +2185,8 @@ const SolarSystemCanvas = ({
             ctx.restore();
         });
 
-        // Render target-slot badges and their names together so the topmost badge
-        // cannot cover the label text.
-        pendingTargetSlotBadges.forEach((badge) => {
-            ctx.save();
-            ctx.font = `900 ${badge.targetLabelRenderFontSize}px ${badge.targetLabelFontFamily}`;
-            ctx.beginPath();
-            ctx.roundRect(
-                badge.badgeLeft,
-                badge.badgeTop,
-                badge.badgeWidth,
-                badge.targetBadgeHeight,
-                badge.badgeRadius
-            );
-            ctx.fillStyle = badge.targetSlotBadgePalette.background || theme.palette.warning.main;
-            ctx.globalAlpha = badge.isDimmed ? 0.7 : 1.0;
-            ctx.shadowColor = badge.targetSlotBadgePalette.shadow || 'rgba(0, 0, 0, 0.2)';
-            ctx.shadowBlur = 3;
-            ctx.shadowOffsetX = 0;
-            ctx.shadowOffsetY = 1;
-            ctx.fill();
-
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillStyle = badge.targetSlotBadgePalette.text || theme.palette.common.black;
-            ctx.globalAlpha = badge.isDimmed ? 0.9 : 1.0;
-            ctx.fillText(badge.targetSlotLabel, badge.sx, badge.sy + 0.35);
-
-            if (badge.showName) {
-                ctx.font = LABEL_FONT;
-                ctx.beginPath();
-                ctx.roundRect(badge.nameLeft, badge.nameTop, badge.nameWidth, badge.nameHeight, 3);
-                ctx.globalAlpha = badge.isDimmed ? 0.55 : 0.86;
-                ctx.fillStyle = theme.palette.background.paper;
-                ctx.fill();
-                ctx.globalAlpha = badge.isDimmed ? 0.35 : 0.62;
-                ctx.strokeStyle = theme.palette.divider;
-                ctx.lineWidth = 1;
-                ctx.stroke();
-
-                ctx.textAlign = 'left';
-                ctx.textBaseline = 'middle';
-                ctx.globalAlpha = badge.isDimmed ? 0.55 : 0.96;
-                ctx.fillStyle = badge.nameColor;
-                ctx.fillText(badge.nameLabel, badge.nameLeft + badge.namePaddingX, badge.sy + 0.35);
-            }
-            ctx.restore();
-        });
+        // Target tooltips stay above trajectories and endpoint callouts.
+        pendingTargetLabels.forEach((label) => drawTargetLabel(ctx, label, theme));
     }, [
         asteroidResonanceGaps,
         asteroidZones,
@@ -2291,10 +2200,7 @@ const SolarSystemCanvas = ({
         targetNumberByTargetKey,
         hasTrackedSelection,
         isSingleTrackedMode,
-        theme.palette.background.default,
-        theme.palette.mode,
-        theme.palette.text.primary,
-        theme.palette.text.secondary,
+        theme,
         formatDistanceLabel,
         formatPathDistanceLabel,
         t,
@@ -2739,6 +2645,7 @@ const SolarSystemCanvas = ({
             </Box>
             {effectiveDisplayOptions.showTimestamp ? (
                 <Typography
+                    ref={timestampRef}
                     variant="caption"
                     sx={{
                         position: 'absolute',
