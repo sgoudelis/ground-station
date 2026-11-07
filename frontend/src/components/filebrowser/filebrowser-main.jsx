@@ -720,6 +720,16 @@ export default function FileBrowserMain() {
     };
 
     const handleObservationArtifact = async (artifact) => {
+        if (artifact.type === 'decoded_folder') {
+            setObservationFolderDialogOpen(false);
+            setReturnToObservationFolder(true);
+            if (artifact.pipeline === 'meteor_hrpt') {
+                handleViewMeteorHrptFolder(artifact);
+            } else {
+                handleViewMeteorM2xLrptFolder(artifact);
+            }
+            return;
+        }
         // Grouped IQ captures already arrive as complete recording payloads, so
         // they open the standalone Recording Details dialog as-is.
         if (artifact.type === 'recording') {
@@ -836,6 +846,14 @@ export default function FileBrowserMain() {
 
     const handleCloseDetails = () => {
         setDetailsOpen(false);
+        if (returnToObservationFolder) {
+            setReturnToObservationFolder(false);
+            setObservationFolderDialogOpen(true);
+        }
+    };
+
+    const handleCloseMeteorProduct = (setOpen) => {
+        setOpen(false);
         if (returnToObservationFolder) {
             setReturnToObservationFolder(false);
             setObservationFolderDialogOpen(true);
@@ -2626,14 +2644,14 @@ export default function FileBrowserMain() {
             {/* METEOR M2-X LRPT Folder Dialog */}
             <MeteorM2xLrptFolderDialog
                 open={meteorM2xLrptFolderDialogOpen}
-                onClose={() => setMeteorM2xLrptFolderDialogOpen(false)}
+                onClose={() => handleCloseMeteorProduct(setMeteorM2xLrptFolderDialogOpen)}
                 folder={meteorM2xLrptFolder}
             />
 
             {/* METEOR HRPT Folder Dialog */}
             <MeteorHrptFolderDialog
                 open={meteorHrptFolderDialogOpen}
-                onClose={() => setMeteorHrptFolderDialogOpen(false)}
+                onClose={() => handleCloseMeteorProduct(setMeteorHrptFolderDialogOpen)}
                 folder={meteorHrptFolder}
             />
 

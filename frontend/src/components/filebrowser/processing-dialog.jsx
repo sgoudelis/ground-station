@@ -194,7 +194,7 @@ export default function ProcessingDialog({ open, onClose, recording }) {
 
     const recordingBaseName = getRecordingBaseName(recording?.name);
     const expectedRecordingPath = recordingBaseName
-        ? `/recordings/${recordingBaseName}.sigmf-data`
+        ? recording.download_urls?.data || `/recordings/${recordingBaseName}.sigmf-data`
         : '';
 
     const matchingTask = useMemo(() => {
@@ -237,10 +237,12 @@ export default function ProcessingDialog({ open, onClose, recording }) {
             const baseName = getRecordingBaseName(recording.name);
 
             // Build recording path - use .sigmf-data file (the actual IQ data)
-            const recordingPath = `/recordings/${baseName}.sigmf-data`;
+            const recordingPath = recording.download_urls?.data || `/recordings/${baseName}.sigmf-data`;
 
             // Generate output directory matching SatDump naming convention
             // Format: SATELLITE_TIMESTAMP.satdump_PIPELINE
+            // User-triggered processing always stays in the shared decoded
+            // library, including recordings opened from an observation bundle.
             const outputDir = `/decoded/${baseName}.satdump_${selectedPipeline}`;
 
             // Prepare task arguments

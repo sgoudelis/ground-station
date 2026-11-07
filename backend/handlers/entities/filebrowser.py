@@ -41,6 +41,7 @@ from common.thumbnails import (
     get_image_thumbnail_url,
 )
 from library.inventory import get_inventory, publish_ready_artifacts
+from library.satdump import observation_products, product_owner
 from telemetry.reparse import resolve_packet_path
 
 # Existing producers still use ``file_browser_state`` to announce storage
@@ -465,6 +466,10 @@ def delete_observation_bundle(observations_dir: Path, foldername: str, logger) -
     if not bundle_dir.exists() or not bundle_dir.is_dir():
         return False
     try:
+        manifest = json.loads((bundle_dir / "manifest.json").read_text())
+        if manifest.get("in_progress"):
+            logger.warning("Observation is still acquiring or processing data: %s", foldername)
+            return False
         shutil.rmtree(bundle_dir)
         logger.info(f"Deleted observation bundle: {foldername}")
         return True
@@ -584,6 +589,8 @@ def build_observation_bundle_item(bundle_dir: Path) -> Dict[str, Any]:
         # Generated preview caches are an implementation detail of the viewers.
         if THUMBNAIL_DIRECTORY in relative_path.parent.parts:
             continue
+        if file_path.name == "thumbnail.jpg" and product_owner(relative_path):
+            continue
         artifact_kind = kind_by_directory.get(relative_path.parts[0], "file")
         url = f"/observations/{quote(bundle_dir.name)}/{quote(relative_path.as_posix())}"
         file_size = file_path.stat().st_size
@@ -597,6 +604,7 @@ def build_observation_bundle_item(bundle_dir: Path) -> Dict[str, Any]:
             # Set when the file is already represented by a grouped recording
             # card, so the dialog does not list it a second time on its own.
             "recording_name": recording_owner_by_path.get(relative_path.as_posix()),
+            "product_path": product_owner(relative_path),
         }
         artifacts.append(artifact)
         total_size += file_size
@@ -616,6 +624,7 @@ def build_observation_bundle_item(bundle_dir: Path) -> Dict[str, Any]:
         if image["path"].startswith("recordings/")
         and image["name"].endswith("_waterfall_thumb.png")
     ]
+    products = observation_products(bundle_dir)
     return {
         # Reuse the established folder-card/table presentation, while folder_kind
         # selects the generic observation dialog instead of a SatDump dialog.
@@ -632,7 +641,10 @@ def build_observation_bundle_item(bundle_dir: Path) -> Dict[str, Any]:
         "thumbnail_url": (
             waterfall_thumbnails[0]["url"]
             if waterfall_thumbnails
-            else images[0]["url"] if images else None
+            else next(
+                (product["thumbnail_url"] for product in products if product["thumbnail_url"]), None
+            )
+            or (images[0]["url"] if images else None)
         ),
         "satellite_name": satellite.get("name", "Unknown"),
         "satellite_id": satellite.get("norad_id"),
@@ -644,6 +656,8 @@ def build_observation_bundle_item(bundle_dir: Path) -> Dict[str, Any]:
         # One entry per IQ capture, ready for the standalone Recording Details
         # dialog without the frontend having to re-fetch SigMF metadata.
         "recordings": bundle_recordings,
+        "decoded_products": products,
+        "processing_status": manifest.get("processing_status"),
         # Keep the lifecycle state easy for cards and tables to consume without
         # every frontend caller needing to inspect the complete manifest.
         "observation_status": manifest.get("status", "unknown"),

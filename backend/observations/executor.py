@@ -295,14 +295,8 @@ class ObservationExecutor:
 
     @staticmethod
     def _requires_observation_bundle(sessions: list[Dict[str, Any]]) -> bool:
-        """Return whether this observation can leave an artifact in its bundle.
-
-        SatDump-only IQ captures that delete their source after processing use the
-        shared recordings and decoded locations. SatDump owns their final output,
-        so creating a bundle for the temporary IQ files would leave an empty
-        observation folder after the background task removes them.
-        """
-        bundled_task_types = {"decoder", "audio_recording", "transcription"}
+        """Include derived products even when their source IQ is disposable."""
+        bundled_task_types = {"decoder", "audio_recording", "transcription", "iq_recording"}
 
         for session in sessions:
             tasks = session.get("tasks", []) if isinstance(session, dict) else []
@@ -314,17 +308,6 @@ class ObservationExecutor:
                 task_type = task.get("type")
                 if task_type in bundled_task_types:
                     return True
-
-                if task_type == "iq_recording":
-                    task_config = task.get("config", {}) or {}
-                    source_is_disposable = (
-                        task_config.get("enable_post_processing")
-                        and task_config.get("post_process_pipeline")
-                        and task_config.get("delete_after_post_processing")
-                    )
-                    if not source_is_disposable:
-                        return True
-                    continue
 
                 if task_type:
                     # Unknown task types may write artifacts, so default to the
@@ -571,9 +554,8 @@ class ObservationExecutor:
             }
             self._tracker_context_by_observation[observation_id] = tracker_context
 
-            # SatDump-only disposable IQ captures retain the established shared
-            # decoded-folder workflow. All other artifact-producing observations
-            # receive a physical bundle after tracker setup succeeds.
+            # Derived SatDump products belong to the same bundle as live artifacts,
+            # including passes whose IQ input is removed after decoding.
             if self._requires_observation_bundle(sessions):
                 bundle_dir = create_observation_bundle(
                     observation_id, satellite, Path(__file__).parents[1]
@@ -591,7 +573,7 @@ class ObservationExecutor:
                 await self._publish_bundle_change("observation-bundle-created", observation_id)
             else:
                 logger.info(
-                    "Observation %s has only disposable SatDump IQ captures; skipping bundle creation",
+                    "Observation %s has no artifact-producing tasks; skipping bundle creation",
                     observation_id,
                 )
 
@@ -1252,7 +1234,8 @@ class ObservationExecutor:
             samplerate = self._resolve_samplerate(metadata, sdr_config, task_config)
             baseband_format = self._resolve_baseband_format(metadata)
             try:
-                output_dir = self._build_satdump_output_dir(recording_path, pipeline)
+                bundle_dir = self._bundle_dirs.get(observation_id)
+                output_dir = self._build_satdump_output_dir(recording_path, pipeline, bundle_dir)
             except ValueError as exc:
                 logger.warning(f"Skipping SatDump IQ task {task_index} in {observation_id}: {exc}")
                 continue
@@ -1272,6 +1255,7 @@ class ObservationExecutor:
                             "delete_after_post_processing", False
                         ),
                         "retain_input_on_failure": retain_input_on_failure,
+                        **({"observation_bundle": str(bundle_dir)} if bundle_dir else {}),
                     },
                     name=f"SatDump: {recording_name} ({pipeline})",
                 )
@@ -1322,9 +1306,12 @@ class ObservationExecutor:
             return "i8"
         return "f32"
 
-    def _build_satdump_output_dir(self, recording_path: str, pipeline: str) -> str:
+    def _build_satdump_output_dir(
+        self, recording_path: str, pipeline: str, bundle_dir: Optional[Path] = None
+    ) -> str:
         pipeline = validate_satdump_pipeline(pipeline)
         recording_base = Path(recording_path).name
         backend_dir = Path(__file__).resolve().parents[1]
-        output_dir = backend_dir / "data" / "decoded" / f"{recording_base}.satdump_{pipeline}"
-        return str(resolve_satdump_output_dir(output_dir, backend_dir))
+        decoded_dir = bundle_dir / "decoded" if bundle_dir else backend_dir / "data" / "decoded"
+        output_dir = decoded_dir / f"{recording_base}.satdump_{pipeline}"
+        return str(resolve_satdump_output_dir(output_dir, backend_dir, bundle_dir))

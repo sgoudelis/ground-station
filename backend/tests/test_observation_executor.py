@@ -335,7 +335,7 @@ async def test_start_observation_starts_tracker_before_session_tasks(monkeypatch
 
 
 @pytest.mark.asyncio
-async def test_start_observation_skips_bundle_for_disposable_satdump_iq_only(monkeypatch, tmp_path):
+async def test_start_observation_bundles_disposable_satdump_products(monkeypatch, tmp_path):
     executor_module = _load_executor_module(monkeypatch)
     observation = _build_observation()
     observation["sessions"][0]["tasks"] = [
@@ -358,17 +358,15 @@ async def test_start_observation_skips_bundle_for_disposable_satdump_iq_only(mon
     async def _mock_execute_session(*_args, **_kwargs):
         return None
 
-    def _unexpected_bundle(*_args, **_kwargs):
-        raise AssertionError("disposable SatDump-only observation must not create a bundle")
-
     monkeypatch.setattr(executor.tracker_handler, "start_tracker_task", _mock_start_tracker)
     monkeypatch.setattr(executor, "_execute_observation_session", _mock_execute_session)
-    monkeypatch.setattr(executor_module, "create_observation_bundle", _unexpected_bundle)
 
     result = await executor.start_observation("obs-1")
 
     assert result["success"] is True
-    assert "obs-1" not in executor._bundle_dirs
+    assert executor._bundle_dirs["obs-1"].is_dir()
+    manifest = json.loads((executor._bundle_dirs["obs-1"] / "manifest.json").read_text())
+    assert manifest["observation_id"] == "obs-1"
 
 
 def test_requires_observation_bundle_for_retained_or_mixed_artifacts(monkeypatch):
@@ -387,7 +385,7 @@ def test_requires_observation_bundle_for_retained_or_mixed_artifacts(monkeypatch
         executor_module.ObservationExecutor._requires_observation_bundle(
             [{"tasks": [disposable_iq]}]
         )
-        is False
+        is True
     )
     assert (
         executor_module.ObservationExecutor._requires_observation_bundle(
@@ -451,6 +449,47 @@ async def test_satdump_receives_failure_retention_setting(monkeypatch, tmp_path,
     assert len(calls) == 1
     assert calls[0]["kwargs"]["retain_input_on_failure"] is (retain_setting is not False)
     assert calls[0]["kwargs"]["delete_input_after"] is True
+
+
+@pytest.mark.unit
+async def test_automated_satdump_routes_each_capture_to_its_observation(monkeypatch, tmp_path):
+    executor_module = _load_executor_module(monkeypatch)
+    monkeypatch.setattr(executor_module, "__file__", str(tmp_path / "observations" / "executor.py"))
+    executor = _new_executor(executor_module)
+    bundle = create_observation_bundle("obs-1", {"name": "METEOR"}, tmp_path)
+    executor._bundle_dirs["obs-1"] = bundle
+    executor._iq_recording_info = {
+        "obs-1": {
+            "radio": {
+                index: {"recording_path": str(bundle / "recordings" / f"capture{index}")}
+                for index in (1, 2)
+            }
+        }
+    }
+    start = AsyncMock(side_effect=["job-1", "job-2"])
+    monkeypatch.setattr(
+        executor_module.runtimestate,
+        "background_task_manager",
+        types.SimpleNamespace(start_task=start),
+    )
+    tasks = [
+        {
+            "type": "iq_recording",
+            "config": {
+                "enable_post_processing": True,
+                "post_process_pipeline": "meteor_hrpt",
+                "delete_after_post_processing": True,
+            },
+        }
+        for _ in range(2)
+    ]
+    await executor._start_satdump_postprocessing("obs-1", "radio", tasks, {"sample_rate": 1000000})
+    for index, call in enumerate(start.await_args_list, start=1):
+        assert call.kwargs["args"][1] == str(
+            bundle / "decoded" / f"capture{index}.satdump_meteor_hrpt"
+        )
+        assert call.kwargs["kwargs"]["observation_bundle"] == str(bundle)
+    assert "obs-1" not in executor._iq_recording_info
 
 
 @pytest.mark.unit

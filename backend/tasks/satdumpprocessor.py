@@ -16,7 +16,11 @@ from pathlib import Path
 from typing import Optional
 
 from common.decoded_thumbnails import generate_decoded_thumbnail
-from common.satdump import resolve_satdump_output_dir, validate_satdump_pipeline
+from common.satdump import (
+    resolve_satdump_bundle,
+    resolve_satdump_output_dir,
+    validate_satdump_pipeline,
+)
 
 
 class GracefulKiller:
@@ -302,6 +306,7 @@ def satdump_process_recording(
     finish_processing: bool = True,
     delete_input_after: bool = False,
     retain_input_on_failure: bool = True,
+    observation_bundle: Optional[str] = None,
     _progress_queue: Optional[Queue] = None,
 ):
     """
@@ -316,6 +321,7 @@ def satdump_process_recording(
         finish_processing: Whether to run product generation after decoding
         delete_input_after: Delete SigMF input after processing
         retain_input_on_failure: Keep SigMF input when decoding fails
+        observation_bundle: Explicit owner for automated processing only
         _progress_queue: Queue for sending progress updates
 
     Returns:
@@ -324,7 +330,7 @@ def satdump_process_recording(
     backend_dir = Path(__file__).parent.parent
     # Validate before mkdir, subprocess execution, or any failure cleanup can run.
     satellite = validate_satdump_pipeline(satellite)
-    output_path = resolve_satdump_output_dir(output_dir, backend_dir)
+    output_path = resolve_satdump_output_dir(output_dir, backend_dir, observation_bundle)
     killer = GracefulKiller()
 
     # Resolve paths relative to backend/data directory
@@ -332,6 +338,11 @@ def satdump_process_recording(
     # Check if path starts with /recordings/ or /decoded/ (relative app paths)
     if not recording_file.exists():
         recording_file = backend_dir / "data" / recording_path.lstrip("/")
+    if observation_bundle:
+        # Automated workers may only delete input owned by their own bundle.
+        recording_file = recording_file.resolve()
+        bundle = resolve_satdump_bundle(observation_bundle, backend_dir)
+        recording_file.relative_to(bundle / "recordings")
 
     # Validate inputs
     if not recording_file.exists():

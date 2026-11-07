@@ -38,6 +38,7 @@ from library.aprsfiles import scan_aprs
 from library.flightpaths import build_flight_paths
 from library.meshfiles import scan_mesh
 from library.positions import packet_positions
+from library.satdump import observation_products, product_owner
 from library.search import match_search, normalize_search, search_text
 from library.sondefiles import sonde_identity
 
@@ -1386,6 +1387,8 @@ class LibraryInventory:
             thumbnail = next(
                 (path for path in (folder / "recordings").glob("*_waterfall_thumb.png")), None
             )
+            if thumbnail is None:
+                thumbnail = next((folder / "decoded").glob("*.satdump_*/thumbnail.jpg"), None)
             # Count and size only files the dialog presents as artifacts;
             # manifests, metadata, and thumbnails are implementation metadata.
             # This traversal already powers the artifact count, so including
@@ -1415,13 +1418,18 @@ class LibraryInventory:
                 if (
                     path == manifest_path
                     or path.suffix.lower() == ".json"
+                    or (path.name == "thumbnail.jpg" and product_owner(path.relative_to(folder)))
                     or "thumbnails" in path.relative_to(folder).parent.parts
                 ):
                     continue
                 artifact_count += 1
                 total_size += file_stat.st_size
                 relative = path.relative_to(folder)
-                if relative.parts[0] == "decoded" and path.suffix.lower() == ".bin":
+                if (
+                    relative.parts[0] == "decoded"
+                    and path.suffix.lower() == ".bin"
+                    and not product_owner(relative)
+                ):
                     # Bundle dates describe the observation, not each packet.
                     # Cache compact positions using each packet's reception time.
                     metadata = _read_json(path.with_suffix(".json"))
@@ -1458,7 +1466,7 @@ class LibraryInventory:
                     "thumbnail_url": (
                         _versioned_image_url(
                             thumbnail,
-                            f"/observations/{quote(folder.name)}/recordings/{quote(thumbnail.name)}",
+                            f"/observations/{quote(folder.name)}/{quote(thumbnail.relative_to(folder).as_posix())}",
                         )
                         if thumbnail
                         else None
@@ -1467,6 +1475,7 @@ class LibraryInventory:
                     "satellite_id": satellite.get("norad_id"),
                     "satellite_norad_id": satellite.get("norad_id"),
                     "observation_status": manifest.get("status", "unknown"),
+                    "processing_status": manifest.get("processing_status"),
                     "observation_in_progress": bool(manifest.get("in_progress", False)),
                     "artifact_count": artifact_count,
                     "_member_names": member_names,
@@ -1571,6 +1580,8 @@ class LibraryInventory:
             relative = path.relative_to(folder)
             if "thumbnails" in relative.parent.parts:
                 continue
+            if path.name == "thumbnail.jpg" and product_owner(relative):
+                continue
             stat = path.stat()
             relative_path = relative.as_posix()
             generated_thumbnail = path.parent / "thumbnails" / f"{path.stem}.jpg"
@@ -1588,6 +1599,7 @@ class LibraryInventory:
                 "kind": relative.parts[0] if relative.parts else "file",
                 "file_type": path.suffix.lower(),
                 "recording_name": recording_owner_by_path.get(relative_path),
+                "product_path": product_owner(relative),
             }
             if path.suffix.lower() in IMAGE_EXTENSIONS and generated_thumbnail.is_file():
                 thumbnail_relative = generated_thumbnail.relative_to(folder).as_posix()
@@ -1643,6 +1655,7 @@ class LibraryInventory:
                 "image_count": len(images),
                 "recordings": recordings,
                 "recording_count": len(recordings),
+                "decoded_products": observation_products(folder),
                 "metadata": _read_json(manifest_path),
             }
         )
@@ -1672,6 +1685,10 @@ class LibraryInventory:
             raise OSError("Refusing to delete a path outside the library") from exc
         if not path.exists():
             raise OSError("Item not found")
+        if item.get("folder_kind") == "observation" and _read_json(path / "manifest.json").get(
+            "in_progress"
+        ):
+            raise OSError("Observation is still acquiring or processing data")
         if item_type == "recording":
             base = path.with_suffix("")
             for associated in (

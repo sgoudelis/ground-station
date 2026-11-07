@@ -114,6 +114,26 @@ const folder = {
 };
 
 describe('ObservationFolderDialog', () => {
+    it('opens a grouped Meteor dataset without duplicating its member images or intermediates', async () => {
+        const product = {
+            type: 'decoded_folder', name: 'capture.satdump_meteor_hrpt',
+            path: 'decoded/capture.satdump_meteor_hrpt', pipeline: 'meteor_hrpt',
+            image_count: 1, size: 1024, thumbnail_url: '/observations/METEOR.gsobs/decoded/product/thumbnail.jpg',
+        };
+        const members = [
+            { name: 'meteor.png', path: `${product.path}/meteor.png`, file_type: '.png', product_path: product.path },
+            { name: 'meteor.cadu', path: `${product.path}/meteor.cadu`, file_type: '.cadu', product_path: product.path },
+        ];
+        const onOpenArtifact = vi.fn();
+        renderWithProviders(<ObservationFolderDialog open folder={{
+            ...folder, recordings: [], images: [members[0]], artifacts: members, decoded_products: [product],
+        }} onOpenArtifact={onOpenArtifact} />);
+        expect(screen.queryByText('meteor.png')).not.toBeInTheDocument();
+        expect(screen.queryByText('meteor.cadu')).not.toBeInTheDocument();
+        await userEvent.click(screen.getByText('meteor_hrpt'));
+        expect(onOpenArtifact).toHaveBeenCalledExactlyOnceWith(product);
+    });
+
     it('shows telemetry badges on decoded binary rows and preserves opening the viewer', async () => {
         const socket = { connected: true, emit: vi.fn() };
         socket.timeout = vi.fn(() => socket);

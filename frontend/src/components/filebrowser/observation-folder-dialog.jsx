@@ -152,6 +152,7 @@ export default function ObservationFolderDialog({
 
     const artifacts = folder.artifacts || [];
     const recordings = folder.recordings || [];
+    const decodedProducts = folder.decoded_products || [];
     const declaredSize = Number(folder.size);
     // Compact observation cards deliberately avoid walking every file and use
     // size: 0. The detail payload already carries every visible artifact size,
@@ -201,9 +202,9 @@ export default function ObservationFolderDialog({
     // An IQ capture owns several files (SigMF pair, waterfall, thumbnail). The
     // backend tags them with the owning recording so each capture appears once,
     // as a single card, instead of once per file.
-    const images = (folder.images || []).filter((image) => !image.recording_name);
+    const images = (folder.images || []).filter((image) => !image.recording_name && !image.product_path);
     const nonImageArtifacts = artifacts.filter(
-        (artifact) => !artifact.recording_name && !IMAGE_FILE_TYPES.includes(artifact.file_type)
+        (artifact) => !artifact.recording_name && !artifact.product_path && !IMAGE_FILE_TYPES.includes(artifact.file_type)
     );
     const artifactSections = [
         { id: 'decoded', title: t('observation_folder_dialog.decoded_data', { defaultValue: 'Decoded data' }), artifacts: nonImageArtifacts.filter((artifact) => artifact.kind === 'decoded') },
@@ -217,7 +218,7 @@ export default function ObservationFolderDialog({
             ),
         },
     ].filter((section) => section.artifacts.length > 0);
-    const hasArtifacts = recordings.length > 0 || images.length > 0 || artifactSections.length > 0;
+    const hasArtifacts = decodedProducts.length > 0 || recordings.length > 0 || images.length > 0 || artifactSections.length > 0;
     const openArtifact = (artifact) => {
         if (onOpenArtifact) {
             onOpenArtifact(artifact);
@@ -251,7 +252,9 @@ export default function ObservationFolderDialog({
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0, minWidth: 0 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'nowrap', overflow: 'hidden', maxWidth: { xs: '35vw', sm: 'none' } }}>
                             {folder.observation_in_progress && (
-                                <Chip label={t('observation_folder_dialog.in_progress', { defaultValue: 'In progress' })} size="small" color="warning" />
+                                <Chip label={metadata.processing_status === 'running'
+                                    ? t('observation_folder_dialog.processing', { defaultValue: 'Processing' })
+                                    : t('observation_folder_dialog.in_progress', { defaultValue: 'In progress' })} size="small" color="warning" />
                             )}
                             {recordings.length > 0 && (
                                 <Chip
@@ -451,6 +454,32 @@ export default function ObservationFolderDialog({
                         <Divider sx={{ mb: 2 }} />
                     </>
                 )}
+                {decodedProducts.length > 0 && (
+                    <>
+                        <Typography variant="subtitle2" sx={{ mb: 1.25 }}>{t('observation_folder_dialog.decoded_products', { defaultValue: 'Decoded products' })}</Typography>
+                        <Grid container spacing={1.5} sx={{ mb: 3 }}>
+                            {decodedProducts.map((product) => (
+                                <Grid item xs={12} sm={6} md={4} key={product.path}>
+                                    <Paper
+                                        elevation={0}
+                                        onClick={() => openArtifact(product)}
+                                        sx={{ cursor: 'pointer', border: 1, borderColor: 'divider', borderRadius: 2, overflow: 'hidden', '&:hover': { borderColor: 'primary.main' } }}
+                                    >
+                                        {product.thumbnail_url && <Box component="img" src={product.thumbnail_url} alt={product.name} loading="lazy" sx={{ display: 'block', width: '100%', height: 164, objectFit: 'contain', bgcolor: 'grey.900' }} />}
+                                        <Box sx={{ p: 1.25 }}>
+                                            <Typography variant="body2" noWrap fontWeight={600}>{product.pipeline}</Typography>
+                                            <Typography variant="caption" color="text.secondary">{t('observation_folder_dialog.product_summary', { defaultValue: '{{count}} images · {{size}}', count: product.image_count, size: formatBytes(product.size) })}</Typography>
+                                        </Box>
+                                    </Paper>
+                                </Grid>
+                            ))}
+                        </Grid>
+                        <Divider sx={{ mb: 2 }} />
+                    </>
+                )}
+                {metadata.processing_status === 'failed' && (
+                    <Typography color="warning.main" sx={{ mb: 2 }}>{t('observation_folder_dialog.processing_failed', { defaultValue: 'Post-processing failed or was interrupted. Retained files are available below.' })}</Typography>
+                )}
                 {images.length > 0 && (
                     <>
                         <Typography variant="subtitle2" sx={{ mb: 1.25 }}>{t('observation_folder_dialog.image_products', { defaultValue: 'Image products' })}</Typography>
@@ -508,7 +537,7 @@ export default function ObservationFolderDialog({
                 {!hasArtifacts && <Typography color="text.secondary">{t('observation_folder_dialog.no_files_were_produced_by_this_observation', { defaultValue: 'No files were produced by this observation.' })}</Typography>}
             </DialogContent>
             <DialogActions disableSpacing sx={fileDialogActionsSx}>
-                <Button onClick={onDelete} color="error" variant="outlined" startIcon={<DeleteIcon />} disabled={!onDelete}>
+                <Button onClick={onDelete} color="error" variant="outlined" startIcon={<DeleteIcon />} disabled={!onDelete || folder.observation_in_progress || metadata.in_progress}>
                     {t('observation_folder_dialog.delete', { defaultValue: 'Delete' })}
                 </Button>
                 <Button onClick={onClose} variant="outlined">{t('observation_folder_dialog.close', { defaultValue: 'Close' })}</Button>

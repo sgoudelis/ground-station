@@ -34,8 +34,8 @@ vi.mock('../recording-dialog.jsx', () => ({ default: () => null }));
 vi.mock('../telemetry-viewer-dialog.jsx', () => ({ default: () => null }));
 vi.mock('../audio-dialog.jsx', () => ({ default: () => null }));
 vi.mock('../transcription-dialog.jsx', () => ({ default: () => null }));
-vi.mock('../meteor-m2x-lrpt-folder-dialog.jsx', () => ({ default: () => null }));
-vi.mock('../meteor-hrpt-folder-dialog.jsx', () => ({ default: () => null }));
+vi.mock('../meteor-m2x-lrpt-folder-dialog.jsx', () => ({ default: ({ open, onClose }) => open ? <div role="dialog" aria-label="Meteor LRPT"><button onClick={onClose}>Close Meteor</button></div> : null }));
+vi.mock('../meteor-hrpt-folder-dialog.jsx', () => ({ default: ({ open, onClose }) => open ? <div role="dialog" aria-label="Meteor HRPT"><button onClick={onClose}>Close Meteor</button></div> : null }));
 vi.mock('../processing-dialog.jsx', () => ({ default: () => null }));
 vi.mock('../purge-dialog.jsx', () => ({ default: () => null }));
 vi.mock('../../satellites/satellite-info-page.jsx', () => ({ SatelliteInfoDialog: () => null }));
@@ -111,6 +111,21 @@ afterEach(() => {
 });
 
 describe('shared image viewer entry points', () => {
+    it.each([['meteor_hrpt', 'Meteor HRPT'], ['meteor_m2-x_lrpt', 'Meteor LRPT']])(
+        'opens nested %s products and returns to their observation', async (pipeline, title) => {
+            renderLibrary({ ...folder, images: [], artifacts: [], decoded_products: [{
+                type: 'decoded_folder', name: 'Meteor product', path: `decoded/capture.satdump_${pipeline}`,
+                pipeline, image_count: 1, size: 123,
+            }] });
+            fireEvent.click(screen.getByText(folder.name));
+            fireEvent.click(await screen.findByText(pipeline));
+            const product = await screen.findByRole('dialog', { name: title });
+            fireEvent.click(within(product).getByRole('button', { name: 'Close Meteor' }));
+            await waitFor(() => expect(screen.queryByRole('dialog', { name: title })).not.toBeInTheDocument());
+            expect(screen.getByText(pipeline)).toBeInTheDocument();
+        },
+    );
+
     it('opens an observation SSTV image with metadata and returns to the folder on close', async () => {
         const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => metadata });
         vi.stubGlobal('fetch', fetchMock);

@@ -2,12 +2,15 @@ import json
 
 from observations.bundle import (
     ARTIFACT_DIRECTORIES,
+    add_bundle_processing_task,
     add_bundle_session,
     create_observation_bundle,
     finalize_interrupted_observation_bundles,
     finalize_observation_bundle,
+    finish_bundle_processing_task,
     observation_snapshot,
     prune_finalized_empty_observation_bundles,
+    recover_interrupted_bundle_processing,
 )
 
 
@@ -125,3 +128,58 @@ def test_prune_finalized_empty_observation_bundles_preserves_active_and_artifact
     assert not finalized_empty.exists()
     assert active_empty.exists()
     assert finalized_with_artifact.exists()
+
+
+def test_processing_protects_empty_bundle_until_every_worker_finishes(tmp_path):
+    bundle = create_observation_bundle("obs-processing", {}, tmp_path)
+    for index in (1, 2):
+        add_bundle_processing_task(
+            bundle,
+            str(index),
+            str(bundle / "recordings" / f"capture{index}.sigmf-data"),
+            str(bundle / "decoded" / f"capture{index}.satdump_meteor_hrpt"),
+            "meteor_hrpt",
+        )
+    assert finalize_observation_bundle(bundle, "completed") is True
+    assert prune_finalized_empty_observation_bundles(tmp_path) == 0
+    finish_bundle_processing_task(bundle, "1", "completed")
+    assert json.loads((bundle / "manifest.json").read_text())["in_progress"] is True
+    finish_bundle_processing_task(bundle, "2", "failed")
+    assert not bundle.exists()
+
+
+def test_processing_failure_keeps_retained_iq_and_acquisition_outcome(tmp_path):
+    bundle = create_observation_bundle("obs-processing", {}, tmp_path)
+    recording = bundle / "recordings" / "capture.sigmf-data"
+    recording.write_bytes(b"iq")
+    add_bundle_processing_task(
+        bundle, "job", str(recording), str(bundle / "decoded" / "product"), "meteor_hrpt"
+    )
+    finalize_observation_bundle(bundle, "completed")
+    finish_bundle_processing_task(bundle, "job", "failed", "No decoded images")
+    manifest = json.loads((bundle / "manifest.json").read_text())
+    assert manifest["status"] == "completed"
+    assert manifest["processing_status"] == "failed"
+    assert manifest["in_progress"] is False
+    assert manifest["processing_tasks"][0]["error"] == "No decoded images"
+    assert recording.exists()
+
+
+def test_restart_reconciles_processing_after_scheduler_acquisition_completed(tmp_path):
+    bundle = create_observation_bundle("obs-processing", {}, tmp_path)
+    (bundle / "decoded" / "image.png").write_bytes(b"image")
+    add_bundle_processing_task(
+        bundle,
+        "job",
+        str(bundle / "recordings" / "capture.sigmf-data"),
+        str(bundle / "decoded" / "product"),
+        "meteor_hrpt",
+    )
+    finalize_observation_bundle(bundle, "completed")
+    assert recover_interrupted_bundle_processing(tmp_path) == 1
+    manifest = json.loads((bundle / "manifest.json").read_text())
+    assert manifest["status"] == "completed"
+    assert manifest["in_progress"] is False
+    assert manifest["processing_status"] == "failed"
+    assert "restarted" in manifest["processing_tasks"][0]["error"]
+    assert recover_interrupted_bundle_processing(tmp_path) == 0

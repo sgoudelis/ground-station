@@ -6,6 +6,7 @@ import pytest
 
 from common.satdump import SATDUMP_PIPELINES, resolve_satdump_output_dir, validate_satdump_pipeline
 from handlers.entities import scheduler
+from observations.bundle import create_observation_bundle
 from observations.validation import validate_satdump_postprocessing
 from tasks import satdumpprocessor
 
@@ -171,3 +172,29 @@ def test_existing_symlinked_parent_is_rejected(tmp_path):
         resolve_satdump_output_dir(link / "new-output", tmp_path)
 
     assert not (outside / "new-output").exists()
+
+
+@pytest.mark.parametrize(
+    "destination", ["bundle", "decoded-root", "recordings", "other-bundle", "symlink"]
+)
+def test_automated_output_is_limited_to_owning_bundle_decoded_subdirectory(tmp_path, destination):
+    bundle = create_observation_bundle("obs-1", {}, tmp_path)
+    other = create_observation_bundle("obs-2", {}, tmp_path)
+    outputs = {
+        "bundle": bundle,
+        "decoded-root": bundle / "decoded",
+        "recordings": bundle / "recordings" / "product",
+        "other-bundle": other / "decoded" / "product",
+        "symlink": bundle / "decoded" / "linked",
+    }
+    if destination == "symlink":
+        outputs[destination].symlink_to(other / "decoded", target_is_directory=True)
+    with pytest.raises(ValueError, match="SatDump output directory"):
+        resolve_satdump_output_dir(outputs[destination], tmp_path, bundle)
+    assert (
+        resolve_satdump_output_dir(bundle / "decoded" / "product", tmp_path, bundle)
+        == bundle / "decoded" / "product"
+    )
+    # UI jobs cannot opt into observation storage merely by choosing its path.
+    with pytest.raises(ValueError, match="SatDump output directory"):
+        resolve_satdump_output_dir(bundle / "decoded" / "product", tmp_path)

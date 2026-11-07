@@ -138,7 +138,7 @@ export default function MeteorM2xLrptFolderDialog({ open, onClose, folder }) {
     ].filter(cat => cat.isMetadata || (cat.images && cat.images.length > 0));
 
     const handleDownloadFolder = () => {
-        const downloadUrl = `/api/decoded/${encodeURIComponent(folder.foldername)}/download`;
+        const downloadUrl = folder.download_url || `/api/decoded/${encodeURIComponent(folder.foldername)}/download`;
         window.open(downloadUrl, '_blank');
     };
 

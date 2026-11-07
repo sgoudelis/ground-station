@@ -67,9 +67,11 @@ from queue import Empty
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from common.logger import logger
+from common.satdump import resolve_satdump_bundle, resolve_satdump_output_dir
 from db import AsyncSessionLocal
 from handlers.entities.filebrowser import emit_file_browser_state
 from hardware.soapysdrbrowser import DISCOVERY_SEARCH_SECONDS, update_discovered_servers
+from observations.bundle import add_bundle_processing_task, finish_bundle_processing_task
 from server.schedulerstate import get_orbital_sync_next_run_time
 from tasks.waterfallgenerator import generate_waterfall_task
 from tlesync.persist import is_terminal_orbital_sync_state, save_orbital_sync_state
@@ -123,6 +125,8 @@ class TaskInfo:
     reported_status: Optional[TaskStatus] = None
     result_received_at: Optional[float] = None
     stop_requested: bool = False
+    observation_bundle: Optional[Path] = None
+    bundle_finalized: bool = False
     termination_lock: asyncio.Lock = field(default_factory=asyncio.Lock, repr=False)
 
 
@@ -214,6 +218,7 @@ class BackgroundTaskManager:
         kwargs: Optional[Dict[str, Any]] = None,
         name: Optional[str] = None,
         task_id: Optional[str] = None,
+        observation_bundle: Optional[str] = None,
     ) -> str:
         """
         Start a new background task.
@@ -224,6 +229,7 @@ class BackgroundTaskManager:
             kwargs: Keyword arguments for the function
             name: Human-readable task name (defaults to function name)
             task_id: Optional task ID (generated if not provided)
+            observation_bundle: Owner of an observation's follow-up waterfall
 
         Returns:
             Task ID string
@@ -280,7 +286,25 @@ class BackgroundTaskManager:
 
         logger.info(f"Starting background task '{name}' (ID: {task_id}): {func.__name__}")
 
+        bundle_dir = None
+        process = None
         try:
+            bundle_owner = observation_bundle or kwargs.get("observation_bundle")
+            if bundle_owner:
+                backend_dir = Path(__file__).resolve().parents[1]
+                bundle_dir = resolve_satdump_bundle(bundle_owner, backend_dir)
+                source = Path(args[0]).resolve()
+                source.relative_to(bundle_dir / "recordings")
+                if func.__name__ == "satdump_process_recording":
+                    output = resolve_satdump_output_dir(args[1], backend_dir, bundle_dir)
+                    pipeline = args[2]
+                elif func is generate_waterfall_task:
+                    output = source.with_suffix(".png")
+                    pipeline = "waterfall"
+                else:
+                    raise ValueError("Unsupported observation processing task")
+                add_bundle_processing_task(bundle_dir, task_id, str(source), str(output), pipeline)
+
             # Create inter-process queue for communication
             queue: mp.Queue = mp.Queue()
 
@@ -301,6 +325,7 @@ class BackgroundTaskManager:
                 process=process,
                 pid=process.pid,
                 queue=queue,
+                observation_bundle=bundle_dir,
             )
 
             self.tasks[task_id] = task_info
@@ -342,12 +367,37 @@ class BackgroundTaskManager:
             return task_id
 
         except Exception as e:
+            # A notification failure after launch must not release protection
+            # while a worker can still write into the bundle.
+            if bundle_dir and process is not None and process.is_alive() and task_id in self.tasks:
+                await self._terminate_process(self.tasks[task_id], WORKER_TERMINATE_TIMEOUT_SECONDS)
+            if bundle_dir and (process is None or not process.is_alive()):
+                finish_bundle_processing_task(bundle_dir, task_id, "failed", str(e))
             logger.error(f"Failed to start background task '{name}': {e}")
             await self.sio.emit(
                 "background_task:error",
                 {"task_id": task_id, "name": name, "error": str(e)},
             )
             raise RuntimeError(f"Failed to start task: {e}")
+
+    async def _finish_bundle_processing(self, task_info: TaskInfo) -> None:
+        """Publish terminal storage state only after the worker has exited."""
+        if not task_info.observation_bundle or task_info.bundle_finalized:
+            return
+        if task_info.process and task_info.process.is_alive():
+            return
+        finish_bundle_processing_task(
+            task_info.observation_bundle,
+            task_info.task_id,
+            task_info.status.value,
+            "\n".join(task_info.error_lines[-5:]) or None,
+        )
+        task_info.bundle_finalized = True
+        await emit_file_browser_state(
+            self.sio,
+            {"action": "observation-bundle-finalized", "task_id": task_info.task_id},
+            logger,
+        )
 
     async def _monitor_task(self, task_id: str):
         """
@@ -536,6 +586,11 @@ class BackgroundTaskManager:
                             func=generate_waterfall_task,
                             args=(str(recording_base),),
                             name=f"Waterfall: {recording_base.name}",
+                            observation_bundle=(
+                                str(task_info.observation_bundle)
+                                if task_info.observation_bundle
+                                else None
+                            ),
                         )
                         logger.info(
                             "Started waterfall task %s for retained SatDump IQ %s",
@@ -545,6 +600,10 @@ class BackgroundTaskManager:
                 except Exception:
                     logger.exception("Failed to start waterfall for retained SatDump IQ")
 
+            # Register any retained-input waterfall first, so protection transfers
+            # to that job without briefly exposing the bundle as finished.
+            await self._finish_bundle_processing(task_info)
+
         except asyncio.CancelledError:
             logger.info(f"Monitoring cancelled for task '{task_info.name}'")
             raise
@@ -552,6 +611,7 @@ class BackgroundTaskManager:
             logger.error(f"Error monitoring task '{task_info.name}': {e}")
             task_info.status = TaskStatus.FAILED
             task_info.end_time = time.time()
+            await self._finish_bundle_processing(task_info)
             await self.sio.emit(
                 "background_task:error",
                 {"task_id": task_id, "name": task_info.name, "error": str(e)},
@@ -865,6 +925,7 @@ class BackgroundTaskManager:
             task_info.status = TaskStatus.STOPPED
             task_info.end_time = time.time()
             task_info.return_code = process.exitcode
+            await self._finish_bundle_processing(task_info)
 
             if _is_orbital_sync_task(task_info.name, task_info.func_name):
                 stopped_message = "Orbital data synchronization stopped by user"
@@ -1033,6 +1094,11 @@ class BackgroundTaskManager:
                     survivors.append(task_info.task_id)
                     continue
                 task_info.process.join(timeout=0)
+            # Shutdown can cancel a monitor after its worker exits but before
+            # it consumes the terminal message. Persist that interruption too.
+            if task_info.observation_bundle and not task_info.bundle_finalized:
+                task_info.status = TaskStatus.STOPPED
+                await self._finish_bundle_processing(task_info)
             if task_info.queue:
                 task_info.queue.close()
 

@@ -6,6 +6,7 @@ from types import SimpleNamespace
 
 import pytest
 
+from observations.bundle import create_observation_bundle
 from tasks import satdumpprocessor
 from tasks.manager import BackgroundTaskManager, TaskInfo, TaskStatus
 from tasks.satdumpprocessor import (
@@ -50,10 +51,12 @@ def test_satdump_cache_excludes_omm_only_six_digit_satellites(tmp_path):
         (True, 1, True, True),
     ],
 )
+@pytest.mark.parametrize("automated", [False, True])
 def test_satdump_deletes_iq_only_when_policy_allows(
-    monkeypatch, tmp_path, has_images, return_code, retain_on_failure, expected_deleted
+    monkeypatch, tmp_path, has_images, return_code, retain_on_failure, expected_deleted, automated
 ):
-    recording_base = tmp_path / "capture"
+    bundle = create_observation_bundle("obs-1", {}, tmp_path) if automated else None
+    recording_base = (bundle / "recordings" if bundle else tmp_path) / "capture"
     data_file = recording_base.with_suffix(".sigmf-data")
     meta_file = recording_base.with_suffix(".sigmf-meta")
     data_file.write_bytes(b"iq")
@@ -61,7 +64,7 @@ def test_satdump_deletes_iq_only_when_policy_allows(
     monkeypatch.setattr(
         satdumpprocessor, "__file__", str(tmp_path / "tasks" / "satdumpprocessor.py")
     )
-    output_dir = tmp_path / "data" / "decoded" / "capture"
+    output_dir = (bundle / "decoded" if bundle else tmp_path / "data" / "decoded") / "capture"
 
     class FakeProcess:
         def __init__(self):
@@ -95,6 +98,7 @@ def test_satdump_deletes_iq_only_when_policy_allows(
             baseband_format="f32",
             delete_input_after=True,
             retain_input_on_failure=retain_on_failure,
+            observation_bundle=str(bundle) if bundle else None,
         )
 
     if has_images and return_code in (0, 1):

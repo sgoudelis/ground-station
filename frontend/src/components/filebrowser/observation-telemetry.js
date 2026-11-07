@@ -65,6 +65,7 @@ export function useObservationTelemetry({ open, folder, socket, revision = 0 }) 
 
         const pending = (folder.artifacts || []).filter((artifact) => artifact.kind === 'decoded'
             && artifact.file_type === '.bin' && artifact.url && !artifact.recording_name
+            && !artifact.product_path
             && !currentCache.statuses[artifact.url]);
         let cancelled = false;
         let next = 0;

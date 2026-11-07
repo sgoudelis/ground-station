@@ -25,6 +25,7 @@ from common.filenames import sanitize_filename_component
 
 BUNDLE_SUFFIX = ".gsobs"
 ARTIFACT_DIRECTORIES = ("recordings", "audio", "decoded", "transcriptions", "snapshots")
+TERMINAL_STATUSES = {"completed", "completed_with_warnings", "failed", "cancelled"}
 
 
 def observation_snapshot(observation: Dict[str, Any]) -> Dict[str, Any]:
@@ -87,7 +88,7 @@ def create_observation_bundle(
         (bundle_dir / directory).mkdir(exist_ok=True)
 
     manifest = {
-        "schema_version": 2,
+        "schema_version": 3,
         "observation_id": observation_id,
         "satellite": {
             "name": satellite.get("name"),
@@ -115,7 +116,11 @@ def write_bundle_manifest(bundle_dir: Path, values: Dict[str, Any]) -> None:
         except (OSError, json.JSONDecodeError):
             manifest = {}
     manifest.update(values)
-    manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
+    # Only the main process writes manifests. Replace atomically so concurrent
+    # catalogue reads never see half-written lifecycle state.
+    temporary_path = manifest_path.with_suffix(".json.tmp")
+    temporary_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
+    temporary_path.replace(manifest_path)
 
 
 def add_bundle_session(bundle_dir: Path, session_id: str, session_key: str) -> None:
@@ -129,7 +134,80 @@ def add_bundle_session(bundle_dir: Path, session_id: str, session_key: str) -> N
     entry = {"session_id": session_id, "session_key": session_key}
     if entry not in sessions:
         sessions.append(entry)
-    manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
+    write_bundle_manifest(bundle_dir, {"sessions": sessions})
+
+
+def add_bundle_processing_task(
+    bundle_dir: Path, task_id: str, recording: str, output: str, pipeline: str
+) -> None:
+    """Register a worker before launch so LOS cleanup cannot remove its owner."""
+    manifest = json.loads((bundle_dir / "manifest.json").read_text())
+    jobs = manifest.get("processing_tasks", [])
+    jobs.append(
+        {
+            "task_id": task_id,
+            "source": Path(recording).relative_to(bundle_dir).as_posix(),
+            "output": Path(output).relative_to(bundle_dir).as_posix(),
+            "pipeline": pipeline,
+            "status": "running",
+            "started_at": datetime.now(timezone.utc).isoformat(),
+        }
+    )
+    write_bundle_manifest(
+        bundle_dir,
+        {"processing_tasks": jobs, "processing_status": "running", "in_progress": True},
+    )
+
+
+def finish_bundle_processing_task(
+    bundle_dir: Path, task_id: str, status: str, error: str | None = None
+) -> None:
+    """Record worker exit without changing the acquisition's scheduler outcome."""
+    if not bundle_dir.is_dir():
+        return
+    manifest = json.loads((bundle_dir / "manifest.json").read_text())
+    jobs = manifest.get("processing_tasks", [])
+    for job in jobs:
+        if job.get("task_id") == task_id:
+            job.update({"status": status, "finished_at": datetime.now(timezone.utc).isoformat()})
+            if error:
+                job["error"] = error
+            break
+    else:
+        return
+
+    statuses = {job.get("status") for job in jobs}
+    processing_status = (
+        "running"
+        if "running" in statuses
+        else "failed" if statuses - {"completed"} else "completed"
+    )
+    write_bundle_manifest(
+        bundle_dir, {"processing_tasks": jobs, "processing_status": processing_status}
+    )
+    # A worker may finish before LOS has finished releasing the other sessions.
+    # Only the acquisition finalizer may establish that the bundle can be pruned.
+    if manifest.get("status") in TERMINAL_STATUSES:
+        finalize_observation_bundle(bundle_dir, manifest["status"])
+
+
+def recover_interrupted_bundle_processing(backend_dir: Path) -> int:
+    """Reconcile durable jobs whose owning worker disappeared on backend restart."""
+    recovered = 0
+    for bundle_dir in (backend_dir / "data" / "observations").glob(f"*{BUNDLE_SUFFIX}"):
+        try:
+            manifest = json.loads((bundle_dir / "manifest.json").read_text())
+        except (OSError, json.JSONDecodeError):
+            continue
+        if not isinstance(manifest, dict):
+            continue
+        for job in manifest.get("processing_tasks", []):
+            if job.get("status") == "running":
+                finish_bundle_processing_task(
+                    bundle_dir, job["task_id"], "failed", "Backend restarted during processing"
+                )
+                recovered += 1
+    return recovered
 
 
 def bundle_has_artifacts(bundle_dir: Path) -> bool:
@@ -163,9 +241,12 @@ def finalize_observation_bundle(bundle_dir: Path, status: str) -> bool:
 
     values = {
         "status": status,
-        "in_progress": False,
-        "finalized_at": datetime.now(timezone.utc).isoformat(),
+        "in_progress": any(
+            job.get("status") == "running" for job in manifest.get("processing_tasks", [])
+        ),
     }
+    if not values["in_progress"]:
+        values["finalized_at"] = datetime.now(timezone.utc).isoformat()
     if snapshot is not None:
         values["scheduled_observation"] = snapshot
 
@@ -173,7 +254,7 @@ def finalize_observation_bundle(bundle_dir: Path, status: str) -> bool:
         bundle_dir,
         values,
     )
-    if bundle_has_artifacts(bundle_dir):
+    if values["in_progress"] or bundle_has_artifacts(bundle_dir):
         return True
 
     shutil.rmtree(bundle_dir)
@@ -223,7 +304,6 @@ def prune_finalized_empty_observation_bundles(backend_dir: Path) -> int:
     if not observations_dir.exists():
         return 0
 
-    terminal_statuses = {"completed", "completed_with_warnings", "failed", "cancelled"}
     removed_count = 0
     for bundle_dir in observations_dir.glob(f"*{BUNDLE_SUFFIX}"):
         manifest_path = bundle_dir / "manifest.json"
@@ -233,7 +313,9 @@ def prune_finalized_empty_observation_bundles(backend_dir: Path) -> int:
             # An unreadable manifest is not enough evidence that this bundle is stale.
             continue
 
-        if not isinstance(manifest, dict) or manifest.get("status") not in terminal_statuses:
+        if not isinstance(manifest, dict) or manifest.get("status") not in TERMINAL_STATUSES:
+            continue
+        if manifest.get("in_progress"):
             continue
         if bundle_has_artifacts(bundle_dir):
             continue

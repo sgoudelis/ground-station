@@ -63,7 +63,10 @@ from hardware.lifecycle import start_hardware
 from hardware.service import hardware
 from library.inventory import get_inventory, publish_ready_artifacts
 from observations import events as obs_events
-from observations.bundle import prune_finalized_empty_observation_bundles
+from observations.bundle import (
+    prune_finalized_empty_observation_bundles,
+    recover_interrupted_bundle_processing,
+)
 from observations.events import emit_scheduled_observations_changed as _emit
 from observations.events import set_socketio_instance
 from observations.executor import (
@@ -171,9 +174,10 @@ async def lifespan(fastapiapp: FastAPI):
     # In an async context, prefer get_running_loop() (get_event_loop() is deprecated when no loop set)
     event_loop = asyncio.get_running_loop()
 
-    # A previous process can finish SatDump after LOS has retained its bundle,
-    # leaving only the manifest once the disposable IQ input is removed.
+    # Processing may outlive LOS. Reconcile those jobs before pruning bundles
+    # whose disposable inputs and failed output have both been removed.
     try:
+        recover_interrupted_bundle_processing(Path(__file__).parents[1])
         removed_bundles = prune_finalized_empty_observation_bundles(Path(__file__).parents[1])
         if removed_bundles:
             logger.info(
@@ -1701,17 +1705,36 @@ async def download_decoded_folder(
     include_in_schema=False,
 )
 async def download_observation_bundle(
-    foldername: str, request: Request, background_tasks: BackgroundTasks
+    foldername: str,
+    request: Request,
+    background_tasks: BackgroundTasks,
+    product: Optional[str] = None,
 ):
     """Package a `.gsobs` automated-observation bundle into a ZIP download. Requires a browser session."""
     await _require_request_auth(request, require_auth=True, require_admin=False)
     bundle_path = _resolve_observation_bundle(Path(observations_dir).resolve(), foldername)
+    if product is not None:
+        # Product downloads are limited to one direct SatDump dataset; never
+        # interpret a client-supplied path as an arbitrary directory to archive.
+        relative = Path(product)
+        if (
+            len(relative.parts) != 2
+            or relative.parts[0] != "decoded"
+            or ".satdump_" not in relative.name
+        ):
+            raise HTTPException(status_code=400, detail="Invalid observation product")
+        product_path = (bundle_path / relative).resolve()
+        if product_path.parent != bundle_path / "decoded":
+            raise HTTPException(status_code=400, detail="Invalid observation product path")
+        if not product_path.is_dir():
+            raise HTTPException(status_code=404, detail="Observation product not found")
+        bundle_path = product_path
     temp_zip = tempfile.NamedTemporaryFile(delete=False, suffix=".zip")
     temp_zip.close()
     try:
         with zipfile.ZipFile(temp_zip.name, "w", zipfile.ZIP_DEFLATED) as archive:
             for file_path in bundle_path.rglob("*"):
-                if file_path.is_file():
+                if file_path.is_file() and not file_path.is_symlink():
                     archive.write(file_path, file_path.relative_to(bundle_path).as_posix())
     except Exception as exc:
         if os.path.exists(temp_zip.name):
@@ -1722,7 +1745,7 @@ async def download_observation_bundle(
     return FileResponse(
         temp_zip.name,
         media_type="application/zip",
-        filename=f"{foldername}.zip",
+        filename=f"{bundle_path.name}.zip",
         background=background_tasks,
     )
 
