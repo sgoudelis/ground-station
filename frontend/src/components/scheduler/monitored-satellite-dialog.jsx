@@ -61,6 +61,7 @@ import TranscribeIcon from '@mui/icons-material/Transcribe';
 import SaveIcon from '@mui/icons-material/Save';
 import EventRepeatIcon from '@mui/icons-material/EventRepeat';
 import ResponsiveActionButton from '../common/responsive-action-button.jsx';
+import { mobileFullScreenPaperSx } from '../common/dialog-layout.js';
 import {
     setMonitoredSatelliteDialogOpen,
     createMonitoredSatellite,
@@ -963,6 +964,7 @@ export default function MonitoredSatelliteDialog({ onExited }) {
                     bgcolor: 'background.paper',
                     border: (theme) => `1px solid ${theme.palette.divider}`,
                     borderRadius: 2,
+                    ...mobileFullScreenPaperSx,
                 },
             }}
         >

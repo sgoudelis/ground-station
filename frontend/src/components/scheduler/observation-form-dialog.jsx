@@ -73,6 +73,7 @@ import TranscribeIcon from '@mui/icons-material/Transcribe';
 import SaveIcon from '@mui/icons-material/Save';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import ResponsiveActionButton from '../common/responsive-action-button.jsx';
+import { mobileFullScreenPaperSx } from '../common/dialog-layout.js';
 import { useSocket } from '../common/socket.jsx';
 import { getLibreTargetOptions, isLibrePairSupported, resolveTranslationBackend, TranslationBackendField, useLibreTranslateCapabilities } from '../common/translation-options.jsx';
 import {
@@ -1045,6 +1046,7 @@ const ObservationFormDialog = ({ onExited }) => {
                     bgcolor: 'background.paper',
                     border: (theme) => `1px solid ${theme.palette.divider}`,
                     borderRadius: 2,
+                    ...mobileFullScreenPaperSx,
                 },
             }}
         >
