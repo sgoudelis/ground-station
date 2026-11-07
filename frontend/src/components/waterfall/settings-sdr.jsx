@@ -614,7 +614,7 @@ const SdrAccordion = ({
                         <WarningAmberIcon color="warning" />
                         {t('sdr.bias_t_confirm_title')}
                     </DialogTitle>
-                    <DialogContent>
+                    <DialogContent dividers sx={{ p: 3 }}>
                         <DialogContentText id={`${controlId}-bias-t-warning`}>
                             {t('sdr.bias_t_confirm_warning')}
                         </DialogContentText>
