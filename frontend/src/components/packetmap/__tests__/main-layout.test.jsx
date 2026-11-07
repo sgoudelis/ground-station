@@ -258,7 +258,7 @@ it.each([
     expect(screen.queryByRole('button', {name: /Jump to/})).not.toBeInTheDocument();
     expect(store.getState().packetMap.range).toEqual(historyRange);
     expect(usePacketPositions.mock.lastCall[1]).toEqual(historyRange);
-    expect(toast.info).toHaveBeenCalledWith(expect.stringContaining('to show EWG46A.'), {autoClose: 4000});
+    expect(toast.info).not.toHaveBeenCalled();
 
     // Automatic jumps are selection events, not a lock on the playback slider.
     const beforeFirst = Date.parse(first.captured_at) - 1000;
@@ -267,7 +267,7 @@ it.each([
     expect(screen.getByRole('status')).toHaveTextContent('Not yet seen');
     fireEvent.click(screen.getByRole('button', {name: 'Jump to first position'}));
     expect(mapRender.mock.lastCall[0].playbackTime).toBe(Date.parse(first.captured_at));
-    expect(toast.info).toHaveBeenCalledTimes(1);
+    expect(toast.info).not.toHaveBeenCalled();
 });
 
 it.each([0, 30000, 61000, LIVE_WINDOW_MS])('keeps the cursor when selecting a historical aircraft visible at age %sms', (age) => {
@@ -324,13 +324,13 @@ it.each(['radiosonde', 'meshtastic', 'aprs'].flatMap((kind) => [
     act(() => tableRender.mock.lastCall[0].onSelectTransmitter(first.transmitter_id));
     expect(mapRender.mock.lastCall[0].selectedTransmitterId).toBe(first.transmitter_id);
     expect(mapRender.mock.lastCall[0].playbackTime).toBe(Date.parse(last.captured_at));
-    expect(toast.info).toHaveBeenCalledOnce();
+    expect(toast.info).not.toHaveBeenCalled();
     expect(store.getState().packetMap.range).toEqual(historyRange);
     expect(usePacketPositions.mock.lastCall[1]).toEqual(historyRange);
     // Scrubbing remains free after the selection-triggered jump.
     fireEvent.change(screen.getByRole('slider', {name: 'Playback time'}), {target: {value: Date.parse(cursor)}});
     expect(mapRender.mock.lastCall[0].playbackTime).toBe(Date.parse(cursor));
-    expect(toast.info).toHaveBeenCalledOnce();
+    expect(toast.info).not.toHaveBeenCalled();
 });
 
 it.each(['radiosonde', 'meshtastic', 'aprs'])('keeps playback within a historical %s interval, including its endpoints and gaps', (kind) => {

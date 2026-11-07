@@ -3,8 +3,6 @@
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {Alert, Box, LinearProgress} from '@mui/material';
 import {useDispatch, useSelector} from 'react-redux';
-import {useTranslation} from 'react-i18next';
-import {toast} from 'react-toastify';
 import {Responsive, useContainerWidth} from 'react-grid-layout';
 import {absoluteStrategy} from 'react-grid-layout/core';
 import 'react-grid-layout/css/styles.css';
@@ -27,15 +25,11 @@ import {createAircraftHistory} from './aircraft.js';
 import {aircraftReceptionAt} from './reception.js';
 import {setPacketMapRange} from './packet-map-slice.jsx';
 import {liveRangeAt} from './live.js';
-import {useUserTimeSettings} from '../../hooks/useUserTimeSettings.jsx';
-import {formatDateTime} from '../../utils/date-time.js';
 
 export {gridLayoutStoreName} from './storage.js';
 
 export default function PacketMapLayout() {
     const {socket} = useSocket();
-    const {t} = useTranslation('navigation');
-    const timeSettings = useUserTimeSettings();
     const dispatch = useDispatch();
     const gridEditable = useSelector((state) => Boolean(state.dashboard?.isEditing));
     const {width, containerRef, mounted} = useContainerWidth({measureBeforeMount: true});
@@ -130,10 +124,6 @@ export default function PacketMapLayout() {
                 // leave this transmitter's history. Its endpoint reveals the trail.
                 const time = times.at(-1);
                 setPlaybackTime(time);
-                toast.info(t('packet_map.playback_moved', {
-                    defaultValue: 'Playback moved to {{time}} to show {{name}}.',
-                    time: formatDateTime(time, timeSettings), name: transmitter.name || transmitter.source || id,
-                }), {autoClose: 4000});
             }
         }
     };
