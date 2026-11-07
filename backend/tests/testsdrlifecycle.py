@@ -3,6 +3,7 @@
 import asyncio
 import logging
 import queue
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 
@@ -144,6 +145,180 @@ def _new_manager(processes=None):
         basic_manager,
         basic_manager,
     )
+
+
+def _tuning_manager():
+    info = {
+        "config": {"center_freq": 145e6, "sample_rate": 2e6, "config_epoch": "worker"},
+        "config_queue": queue.Queue(),
+        "data_queue": queue.Queue(),
+        "worker_config_ack": True,
+        "decoders": {"viewer": {1: {"config": {}}, 2: {"config": {}}}},
+    }
+    manager = _new_manager({"radio": info})
+    manager.demodulator_manager.flush_all_demodulator_queues = Mock()
+    return manager, info
+
+
+@pytest.mark.asyncio
+async def test_tuning_burst_restarts_decoders_once_after_latest_hardware_ack():
+    manager, info = _tuning_manager()
+    manager._restart_decoder_async = AsyncMock()
+    for sequence in range(1, 21):
+        await manager.update_configuration(
+            "radio",
+            {
+                "center_freq": 145e6 + sequence * 1e6,
+                "config_request": {"origin": "browser", "sequence": sequence},
+            },
+        )
+    await info["config_restart_task"]
+    manager._restart_decoder_async.assert_not_awaited()
+    assert info["pending_decoder_restart"] == 20
+    # An intermediate acknowledgement cannot restart against the final target.
+    info["applied_config_revision"] = 19
+    manager._schedule_config_decoder_restart("radio", info)
+    await info["config_restart_task"]
+    manager._restart_decoder_async.assert_not_awaited()
+    info["applied_config_revision"] = 20
+    manager._schedule_config_decoder_restart("radio", info)
+    await info["config_restart_task"]
+    assert manager._restart_decoder_async.await_count == 2
+    assert info["pending_decoder_restart"] is None
+
+
+@pytest.mark.asyncio
+async def test_new_tunes_during_restart_are_serialized_and_coalesced():
+    manager, info = _tuning_manager()
+    info["decoders"]["viewer"].pop(2)
+    started, release = asyncio.Event(), asyncio.Event()
+    frequencies = []
+
+    async def restart(*_args):
+        frequencies.append(info["config"]["center_freq"])
+        if len(frequencies) == 1:
+            started.set()
+            await release.wait()
+
+    manager._restart_decoder_async = restart
+    await manager.update_configuration("radio", {"center_freq": 146e6})
+    info["applied_config_revision"] = 1
+    task = info["config_restart_task"]
+    try:
+        await asyncio.wait_for(started.wait(), 1)
+        for frequency in (147e6, 148e6, 149e6):
+            await manager.update_configuration("radio", {"center_freq": frequency})
+        assert info["config_restart_task"] is task
+        info["applied_config_revision"] = 4
+    finally:
+        release.set()
+        await asyncio.wait_for(task, 1)
+    assert frequencies == [146e6, 149e6]
+
+
+@pytest.mark.asyncio
+async def test_stale_requests_do_not_retune_and_fft_flush_preserves_control_events():
+    manager, info = _tuning_manager()
+    manager._restart_decoder_async = AsyncMock()
+    control = {"type": "config-applied", "config_revision": 1}
+    output = {"type": "decoder-output", "output": {"filepath": "packet.bin"}}
+    for message in ({"type": "fft_data", "data": b"stale"}, control, output):
+        info["data_queue"].put(message)
+    await manager.update_configuration(
+        "radio",
+        {
+            "center_freq": 147e6,
+            "config_request": {"origin": "browser", "sequence": 2},
+        },
+    )
+    await manager.update_configuration(
+        "radio",
+        {
+            "center_freq": 146e6,
+            "config_request": {"origin": "browser", "sequence": 1},
+        },
+    )
+    assert info["config"]["center_freq"] == 147e6
+    assert info["config_queue"].qsize() == 1
+    assert list(info["data_queue"].queue) == [control, output]
+    info["stopping"] = True
+    await info["config_restart_task"]
+    manager._restart_decoder_async.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_decoder_stopped_while_waiting_for_restart_is_not_resurrected():
+    manager, info = _tuning_manager()
+    manager.decoder_manager._restart_decoder = Mock()
+    lock = asyncio.Lock()
+    await lock.acquire()
+    manager._restart_locks[("radio", "viewer", 1)] = lock
+    task = asyncio.create_task(manager._restart_decoder_async("radio", "viewer", 1, "retune"))
+    await asyncio.sleep(0)
+    info["decoders"]["viewer"].pop(1)
+    lock.release()
+    await task
+    manager.decoder_manager._restart_decoder.assert_not_called()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("failed_revision", [1, 2])
+async def test_worker_failure_only_reconciles_the_latest_tune(failed_revision):
+    manager, info = _tuning_manager()
+    info.update(
+        {
+            "process": _StoppedProcess(),
+            "fft_process": None,
+            "stop_event": asyncio.Event(),
+            "clients": {"viewer"},
+            "iq_broadcaster": _Broadcaster(),
+            "decoders": {},
+            "config_revision": 2,
+            "pending_decoder_restart": 2,
+        }
+    )
+    info["config"].update({"config_revision": 2, "center_freq": 147e6})
+    info["data_queue"].put(
+        {
+            "type": "config-failed",
+            "config_revision": failed_revision,
+            "measured_config": {"center_freq": 145e6},
+            "receiver_status": {"frequency_hz": 145e6},
+            "message": "Device rejected tune",
+        }
+    )
+    info["data_queue"].put({"type": "terminated"})
+    await asyncio.wait_for(manager._monitor_data_queue("radio", 42), 1)
+    configs = [args[1] for args, _kwargs in manager.sio.emitted if args[0] == "sdr-config"]
+    if failed_revision == 2:
+        assert configs[0]["center_freq"] == 145e6
+        assert configs[0]["config_revision"] == 3
+        assert info["pending_decoder_restart"] is None
+    else:
+        assert configs == []
+        assert info["config"]["center_freq"] == 147e6
+
+
+@pytest.mark.asyncio
+async def test_hardware_acknowledgement_wakes_pending_decoder_restart():
+    manager, info = _tuning_manager()
+    info.update(
+        {
+            "process": _StoppedProcess(),
+            "fft_process": None,
+            "stop_event": asyncio.Event(),
+            "clients": {"viewer"},
+            "iq_broadcaster": _Broadcaster(),
+            "decoders": {},
+            "pending_decoder_restart": 2,
+        }
+    )
+    manager._schedule_config_decoder_restart = Mock()
+    info["data_queue"].put({"type": "config-applied", "config_revision": 2})
+    info["data_queue"].put({"type": "terminated"})
+    await asyncio.wait_for(manager._monitor_data_queue("radio", 42), 1)
+    assert info["applied_config_revision"] == 2
+    manager._schedule_config_decoder_restart.assert_called_once_with("radio", info)
 
 
 @pytest.mark.asyncio

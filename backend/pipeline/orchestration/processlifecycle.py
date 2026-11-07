@@ -19,6 +19,7 @@ import logging
 import multiprocessing
 import os
 from typing import Any, Awaitable, Callable, Dict, Optional, Tuple
+from uuid import uuid4
 
 import numpy as np
 
@@ -628,6 +629,7 @@ class ProcessLifecycleManager:
                     config[param] = sdr_config[param]
 
             # Send configuration to the process
+            starting_revision = process_info.get("config_revision", 0)
             process_info["config_queue"].put(config)
 
             try:
@@ -645,7 +647,10 @@ class ProcessLifecycleManager:
 
             # Publish the accepted worker config to controllers and joiners
             # only after the new samples have proved it is usable.
-            process_info["config"] = {**process_info.get("config", {}), **config}
+            # A browser can tune while this startup call awaits fresh IQ. Do
+            # not restore its older snapshot over that newer configuration.
+            if process_info.get("config_revision", 0) == starting_revision:
+                process_info["config"] = {**process_info.get("config", {}), **config}
             await self.sio.emit(
                 "sdr-config", {"sdr_id": sdr_id, **process_info["config"]}, room=sdr_id
             )
@@ -769,6 +774,10 @@ class ProcessLifecycleManager:
 
             self.logger.info(f"Started IQ broadcaster for device {sdr_id}")
 
+            # A new worker starts a fresh revision space for joined browsers.
+            config["config_epoch"] = uuid4().hex
+            config["config_revision"] = 0
+
             # Store process information
             self.processes[sdr_id] = {
                 "process": process,
@@ -790,6 +799,7 @@ class ProcessLifecycleManager:
                 "parameters": capabilities,
                 # Keep full applied SDR config for change detection in update_configuration().
                 "config": dict(config),
+                "worker_config_ack": connection_type in ("soapysdrlocal", "soapysdrremote", "uhd"),
                 # Startup succeeds only after STREAMING_START and a worker stats
                 # update proving that at least one IQ sample was read.
                 "streaming_started": False,
@@ -915,6 +925,11 @@ class ProcessLifecycleManager:
                 await asyncio.sleep(0.05)
             return
         process_info["stopping"] = True
+        restart_task = process_info.pop("config_restart_task", None)
+        if restart_task is not None:
+            # Do not cancel a thread already restarting hardware consumers.
+            # The task checks stopping before starting any further decoder.
+            process_info["pending_decoder_restart"] = None
 
         # Stop the broadcaster first
         if "iq_broadcaster" in process_info:
@@ -1032,6 +1047,17 @@ class ProcessLifecycleManager:
             return
 
         process_info = self.processes[sdr_id]
+        if process_info.get("stopping"):
+            return
+        request = config.get("config_request")
+        if request:
+            sequences = process_info.setdefault("config_request_sequences", {})
+            if request["sequence"] <= sequences.get(request["origin"], -1):
+                return
+            sequences[request["origin"]] = request["sequence"]
+        revision = process_info.get("config_revision", 0) + 1
+        process_info["config_revision"] = revision
+        config = {**config, "config_revision": revision}
 
         # Check if sample rate or center frequency is changing.
         # Compare against the effective full config (old config merged with incoming partial update)
@@ -1039,6 +1065,9 @@ class ProcessLifecycleManager:
         old_config = process_info.get("config", {})
         effective_config = dict(old_config)
         effective_config.update(config)
+        if "config_request" not in config:
+            # Internal/scheduler updates must not inherit a browser's identity.
+            effective_config.pop("config_request", None)
         old_sample_rate = old_config.get("sample_rate")
         new_sample_rate = effective_config.get("sample_rate")
         old_center_freq = old_config.get("center_freq")
@@ -1114,12 +1143,20 @@ class ProcessLifecycleManager:
             data_queue = process_info.get("data_queue")
             if data_queue:
                 flushed_count = 0
+                control_messages = []
                 while not data_queue.empty():
                     try:
-                        data_queue.get_nowait()
-                        flushed_count += 1
+                        message = data_queue.get_nowait()
                     except Exception:
                         break
+                    if message.get("type") == QueueMessageTypes.FFT_DATA:
+                        flushed_count += 1
+                    else:
+                        control_messages.append(message)
+                # Hardware acknowledgements and decoder output share this queue;
+                # dropping them can strand restarts or lose saved packets.
+                for message in control_messages:
+                    data_queue.put(message)
                 if flushed_count > 0:
                     self.logger.info(f"Flushed {flushed_count} stale FFT messages from data_queue")
 
@@ -1128,62 +1165,54 @@ class ProcessLifecycleManager:
 
         # Store the full effective config for future comparisons.
         process_info["config"] = effective_config
+        if (new_sample_rate != old_sample_rate) or (new_center_freq != old_center_freq):
+            process_info["pending_decoder_restart"] = revision
+            self._schedule_config_decoder_restart(sdr_id, process_info)
         # All controllers and joiners must render the same live scale.
         if self.sio is not None:
             await self.sio.emit("sdr-config", {"sdr_id": sdr_id, **effective_config}, room=sdr_id)
 
         self.logger.info(f"Sent configuration update to SDR process for device {sdr_id}")
 
-        # If sample rate or center frequency changed, restart all decoders for this SDR
-        # so that they reinitialize DSP state (filters/decimation) with the new parameters.
-        if (new_sample_rate != old_sample_rate) or (new_center_freq != old_center_freq):
-            try:
-                decoders = process_info.get("decoders", {})
-                if not decoders:
+    def _schedule_config_decoder_restart(self, sdr_id, process_info):
+        task = process_info.get("config_restart_task")
+        if task is None or task.done():
+            process_info["config_restart_task"] = asyncio.create_task(
+                self._restart_config_decoders(sdr_id, process_info)
+            )
+
+    async def _restart_config_decoders(self, sdr_id, process_info):
+        """Restart once for the latest settled tune, serially across bursts."""
+        try:
+            while process_info.get("pending_decoder_restart") is not None:
+                revision = process_info["pending_decoder_restart"]
+                # Allow a rapid burst to settle without delaying the dial or IQ.
+                await asyncio.sleep(0.15)
+                if self.processes.get(sdr_id) is not process_info or process_info.get("stopping"):
                     return
-
-                # Build a human-readable reason describing what changed
-                if (new_sample_rate != old_sample_rate) and (new_center_freq != old_center_freq):
-                    reason = (
-                        f"sdr_rate_and_center_changed: rate {old_sample_rate} -> {new_sample_rate}, "
-                        f"center {old_center_freq} -> {new_center_freq}"
-                    )
-                elif new_sample_rate != old_sample_rate:
-                    reason = f"sdr_sample_rate_changed: {old_sample_rate} -> {new_sample_rate}"
-                else:
-                    reason = f"sdr_center_changed: {old_center_freq} -> {new_center_freq}"
-
-                # Snapshot the decoders we plan to restart to avoid races while iterating
-                restart_list = []
-                for session_id, vfo_map in decoders.items():
-                    for vfo_number, decoder_entry in list(vfo_map.items()):
-                        restart_list.append((session_id, vfo_number, decoder_entry))
-
-                # Stagger restarts slightly to reduce contention and race surface
-                for idx, (session_id, vfo_number, decoder_entry) in enumerate(restart_list):
-                    try:
-                        self.logger.info(
-                            f"Restarting decoder due to SDR config change: {session_id} VFO{vfo_number} | {reason}"
+                if revision != process_info.get("pending_decoder_restart"):
+                    continue
+                if (
+                    process_info.get("worker_config_ack")
+                    and process_info.get("applied_config_revision", 0) < revision
+                ):
+                    # The queue monitor schedules us again when hardware finishes.
+                    return
+                process_info["pending_decoder_restart"] = None
+                for session_id, vfos in list(process_info.get("decoders", {}).items()):
+                    for vfo_number in list(vfos):
+                        if (
+                            process_info.get("stopping")
+                            or process_info.get("pending_decoder_restart") is not None
+                        ):
+                            break
+                        await self._restart_decoder_async(
+                            sdr_id, session_id, vfo_number, "sdr_configuration_applied"
                         )
-                        # Use async helper to avoid blocking the event loop; add tiny stagger
-                        asyncio.create_task(
-                            self._restart_decoder_async(
-                                sdr_id,
-                                session_id,
-                                vfo_number,
-                                reason,
-                                decoder_entry,
-                                delay_ms=50 * idx,
-                            )
-                        )
-                    except Exception as e:
-                        self.logger.error(
-                            f"Error scheduling decoder restarts for session {session_id} on SDR {sdr_id}: {e}"
-                        )
-            except Exception as e:
-                self.logger.error(
-                    f"Failed to enumerate decoders for restart on SDR {sdr_id} after config change: {e}"
-                )
+        except Exception:
+            self.logger.exception("Failed restarting decoders after configuring SDR %s", sdr_id)
+        finally:
+            process_info.pop("config_restart_task", None)
 
     async def _restart_decoder_async(
         self, sdr_id, session_id, vfo_number, reason, decoder_entry=None, delay_ms=0
@@ -1213,25 +1242,6 @@ class ProcessLifecycleManager:
                 return
 
             process_info = self.processes[sdr_id]
-            decoders = process_info.get("decoders", {})
-
-            # If decoder_entry not provided (e.g., restart request coming from queue), try to fetch it.
-            if decoder_entry is None:
-                decoder_entry = decoders.get(session_id, {}).get(vfo_number)
-                if decoder_entry is None:
-                    self.logger.warning(
-                        f"Decoder entry not found in live map for {session_id} VFO{vfo_number}; aborting restart"
-                    )
-                    return
-            # Removed verbose pre-kill snapshot debug logging
-
-            # Mark restart in progress to prevent duplicate restarts
-            try:
-                if session_id in decoders and vfo_number in decoders.get(session_id, {}):
-                    decoders[session_id][vfo_number]["restart_in_progress"] = True
-            except Exception:
-                pass
-
             # Serialize restarts per (sdr, session, vfo)
             key = (sdr_id, session_id, vfo_number)
             lock = self._restart_locks.get(key)
@@ -1240,6 +1250,14 @@ class ProcessLifecycleManager:
                 self._restart_locks[key] = lock
 
             async with lock:
+                if self.processes.get(sdr_id) is not process_info or process_info.get("stopping"):
+                    return
+                decoders = process_info.get("decoders", {})
+                decoder_entry = decoders.get(session_id, {}).get(vfo_number)
+                if decoder_entry is None:
+                    # The user may have stopped this decoder while we waited.
+                    return
+                decoder_entry["restart_in_progress"] = True
                 # Use DecoderManager's restart method in a thread pool
                 loop = asyncio.get_event_loop()
                 success = await loop.run_in_executor(
@@ -1346,6 +1364,38 @@ class ProcessLifecycleManager:
                                 ]
 
                             await self.sio.emit(SocketEvents.SDR_FFT_DATA, fft_payload, room=sdr_id)
+
+                        elif data_type == "config-failed":
+                            # Obsolete failures cannot roll back a newer tune.
+                            if data.get("config_revision") == process_info.get("config_revision"):
+                                config = process_info["config"]
+                                config.update(data["measured_config"])
+                                # Give reconciliation a newer revision so an
+                                # acceptance reply still in flight cannot undo it.
+                                process_info["config_revision"] += 1
+                                config["config_revision"] = process_info["config_revision"]
+                                process_info["receiver_status"] = data["receiver_status"]
+                                process_info["pending_decoder_restart"] = None
+                                await self.sio.emit(
+                                    "sdr-config", {"sdr_id": sdr_id, **config}, room=sdr_id
+                                )
+                                await self.sio.emit(
+                                    SocketEvents.SDR_ERROR,
+                                    {"message": data["message"]},
+                                    room=sdr_id,
+                                )
+                            else:
+                                self.logger.warning(
+                                    "Superseded SDR configuration failed: %s", data["message"]
+                                )
+
+                        elif data_type == "config-applied":
+                            revision = data.get("config_revision", 0)
+                            process_info["applied_config_revision"] = max(
+                                revision, process_info.get("applied_config_revision", 0)
+                            )
+                            if process_info.get("pending_decoder_restart") is not None:
+                                self._schedule_config_decoder_restart(sdr_id, process_info)
 
                         elif data_type == "receiver":
                             # Publish measurements independently from the requested

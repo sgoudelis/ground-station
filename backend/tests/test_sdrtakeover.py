@@ -85,6 +85,44 @@ def _set_active_sdr(monkeypatch):
     return process_info
 
 
+@pytest.mark.asyncio
+async def test_out_of_order_configuration_does_not_replace_newer_session_settings(monkeypatch):
+    info = _set_active_sdr(monkeypatch)
+    info["config_request_sequences"] = {"viewer": 2}
+    monkeypatch.setattr(sdrhandlers, "_list_other_sdr_clients", lambda *_args: [])
+    monkeypatch.setattr(sdrhandlers, "_is_joiner", lambda *_args: False)
+    monkeypatch.setattr(
+        sdrhandlers.crud.hardware,
+        "fetch_sdr",
+        AsyncMock(
+            return_value={
+                "success": True,
+                "data": {
+                    "id": "sdr-a",
+                    "type": "soapysdrlocal",
+                    "frequency_min": 24,
+                    "frequency_max": 1766,
+                },
+            }
+        ),
+    )
+    configure, update = AsyncMock(), AsyncMock()
+    monkeypatch.setattr(sdrhandlers.session_service, "configure_sdr", configure)
+    monkeypatch.setattr(sdrhandlers.process_manager, "update_configuration", update)
+    response = await sdrhandlers.sdr_command_routing(
+        _SocketServer(),
+        "configure-sdr",
+        {"selectedSDRId": "sdr-a", "centerFrequency": 146e6, "configRequest": 1},
+        logging.getLogger(__name__),
+        "viewer",
+    )
+    assert response["success"] is True
+    assert response["data"]["superseded"] is True
+    assert response["data"]["config"]["center_freq"] == 145_800_000
+    configure.assert_not_awaited()
+    update.assert_not_awaited()
+
+
 def test_lists_other_clients():
     original_processes = sdrhandlers.process_manager.processes
     sdrhandlers.process_manager.processes = {

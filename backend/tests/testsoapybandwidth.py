@@ -177,12 +177,19 @@ def test_worker_reapplies_bandwidth_after_sample_rate_reset(monkeypatch, kind, s
     configs.put(config)
     # Both updates omit settings; the frequency update must not erase the mode
     # needed when the following rate change resets the device's filter.
-    configs.put({"center_freq": 1090e6})
-    configs.put({"sample_rate": 6e6})
+    configs.put({"center_freq": 1088e6, "config_revision": 1})
+    configs.put({"center_freq": 1089e6, "config_revision": 2})
+    configs.put({"center_freq": 1090e6, "config_revision": 3})
+    configs.put({"sample_rate": 6e6, "config_revision": 4})
     getattr(worker, f"soapysdr_{kind}_worker_process")(configs, messages, stopped)
 
     updates = list(messages.queue)
-    assert not [item for item in updates if item["type"] == "error"]
+    assert not [item for item in updates if item["type"] in ("error", "config-failed")]
+    # One initial tune and one final tune; intermediate requests cost no driver
+    # stream teardown, and the acknowledgement covers the merged rate update.
+    assert receiver.setFrequency.call_count == 2
+    assert receiver.setFrequency.call_args.args[-1] == 1090e6
+    assert [item["config_revision"] for item in updates if item["type"] == "config-applied"] == [4]
     bandwidth_updates = [item["status"] for item in updates if item["type"] == "bandwidth"]
     expected = 5e6 if selection == "auto" else selection
     assert [item["actual_hz"] for item in bandwidth_updates] == [expected, 6e6]

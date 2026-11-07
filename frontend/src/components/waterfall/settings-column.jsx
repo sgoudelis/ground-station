@@ -112,6 +112,7 @@ import { setCurrentSessionId } from '../decoders/decoders-slice.jsx';
 import { DevRenderProfiler } from './render-profiler.jsx';
 import { formatGnssRate, getGnssTuningAdvice } from './gnss-tuning.js';
 import useStableEvent from '../../hooks/useStableEvent.js';
+import { configureSdr } from './sdr-config.js';
 import { hasSingleUhdGain, normalizeSdrGain, setSdrSetting } from '../common/sdr-parameters.js';
 
 const PLAYBACK_DEFAULT_FFT_OVERLAP_PERCENT = 50;
@@ -474,10 +475,13 @@ const WaterfallSettings = forwardRef(function WaterfallSettings({ playbackRemain
 
     const emitApiCall = useCallback((cmd, payload) => {
         return new Promise((resolve) => {
-            if (!socket) {
+            if (!socket || socket.connected === false) {
                 resolve({ success: false, error: 'Socket is not connected' });
                 return;
             }
+            // Time out only the transport call; takeover confirmation may wait
+            // for the user for as long as needed.
+            const timeout = setTimeout(() => resolve({ success: false, error: 'SDR configuration timed out' }), 10000);
             socket.emit(
                 "api.call",
                 {
@@ -485,6 +489,7 @@ const WaterfallSettings = forwardRef(function WaterfallSettings({ playbackRemain
                     data: payload,
                 },
                 (response) => {
+                    clearTimeout(timeout);
                     resolve(response || { success: false, error: 'No response from server' });
                 }
             );
@@ -565,7 +570,9 @@ const WaterfallSettings = forwardRef(function WaterfallSettings({ playbackRemain
 
                 let SDRSettings = {
                     selectedSDRId: targetSDRId,
-                    centerFrequency: centerFrequency,
+                    // A second control event can arrive before React renders the
+                    // previous tune. Read the current intent directly from Redux.
+                    centerFrequency: store.getState().waterfall.centerFrequency,
                     sampleRate: sampleRate,
                     gain: gain,
                     fftSize: fftSize,
@@ -609,12 +616,14 @@ const WaterfallSettings = forwardRef(function WaterfallSettings({ playbackRemain
                     );
                 };
 
-                return callWithTakeoverConfirmation(
-                    "sdr.configure-sdr",
-                    SDRSettings,
-                    operationLabel
-                ).then((response) => {
-                    if (response?.success) {
+                return configureSdr({
+                    socket,
+                    store,
+                    settings: SDRSettings,
+                    call: (payload) => callWithTakeoverConfirmation("sdr.configure-sdr", payload, operationLabel),
+                }).then((response) => {
+                    if (response?.success && !response.superseded
+                        && store.getState().waterfall.selectedSDRId === targetSDRId) {
                         if (response.data?.session_id) {
                             dispatch(setReceivingSession({
                                 session_id: response.data.session_id,

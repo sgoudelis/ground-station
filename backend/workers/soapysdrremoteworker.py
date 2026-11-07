@@ -27,6 +27,7 @@ from common.errors import format_device_error
 from common.iqsamples import require_complex64
 from hardware.receiver import read_soapy_receiver
 from hardware.soapybandwidth import apply_bandwidth, read_bandwidth
+from workers.configuration import ConfigurationInbox, report_configuration_failure
 
 # Configure logging for the worker process
 logger = logging.getLogger("soapysdr-remote")
@@ -402,6 +403,8 @@ def soapysdr_remote_worker_process(
 
         frame_counter = 0
 
+        inbox = ConfigurationInbox(config_queue)
+
         # Main processing loop
         while not stop_event.is_set():
             # Update CPU and memory usage periodically
@@ -436,11 +439,14 @@ def soapysdr_remote_worker_process(
                 last_stats_send = current_time
 
             # Check for new configuration without blocking
+            new_config = old_config
             try:
-                if not config_queue.empty():
-                    # Configuration packets may be partial; retain manual/AGC
-                    # and advanced settings when another field changes.
-                    new_config = {**old_config, **config_queue.get_nowait()}
+                update = inbox.get()
+                if update is not None and update.get("type") == "get_center_freq":
+                    update["response_queue"].put({"center_freq": logical_center_freq})
+                    update = None
+                if update is not None:
+                    new_config = {**old_config, **update}
                     # Partial updates must not discard the chosen filter mode.
                     next_bandwidth = bandwidth_selection
                     if "sdr_settings" in new_config:
@@ -622,22 +628,30 @@ def soapysdr_remote_worker_process(
                     ):
                         report_receiver()
                     old_config = new_config
+                    # Acceptance is broadcast by the parent; this acknowledges
+                    # hardware completion so decoders restart against settled IQ.
+                    data_queue.put(
+                        {
+                            "type": "config-applied",
+                            "config_revision": new_config.get("config_revision", 0),
+                        }
+                    )
 
             except Exception as e:
                 error_msg = f"Error processing configuration: {str(e)}"
                 logger.error(error_msg)
                 logger.exception(e)
 
-                # Send error back to the main process
-                if data_queue:
-                    data_queue.put(
-                        {
-                            "type": "error",
-                            "client_id": client_id,
-                            "message": error_msg,
-                            "timestamp": time.time(),
-                        }
-                    )
+                # A failed tune must reconcile the UI with measured hardware,
+                # but only if this request is still the latest one in the parent.
+                report_configuration_failure(
+                    data_queue,
+                    new_config,
+                    read_soapy_receiver(sdr, SOAPY_SDR_RX, channel, logger),
+                    error_msg,
+                    offset=offset_freq,
+                )
+                center_freq = old_config.get("center_freq", center_freq)
 
             try:
                 # Use larger read size for better throughput at high sample rates

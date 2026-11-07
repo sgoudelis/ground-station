@@ -170,6 +170,10 @@ const initialState = {
         28.0, 29.7, 32.8, 33.8, 36.4, 37.2, 38.6, 40.2, 42.1, 43.4, 43.9, 44.5, 48.0, 49.6],
     sampleRate: "none",
     centerFrequency: 100000000,
+    // Runtime request tracking is deliberately excluded from persisted settings.
+    sdrConfigRequestsById: {},
+    sdrConfirmedFrequencyById: {},
+    sdrConfigVersionsById: {},
     selectedOffsetMode: "",
     selectedOffsetValue: 0,
     errorMessage: null,
@@ -293,6 +297,25 @@ export const waterfallSlice = createSlice({
         },
         setCenterFrequency: (state, action) => {
             state.centerFrequency = action.payload;
+        },
+        beginSDRConfigRequest: (state, action) => {
+            const { sdrId, request } = action.payload;
+            const previous = state.sdrConfigRequestsById[sdrId];
+            state.sdrConfigRequestsById[sdrId] = {
+                ...request,
+                pending: true,
+                confirmedSequence: previous?.origin === request.origin ? previous.confirmedSequence : 0,
+            };
+        },
+        finishSDRConfigRequest: (state, action) => {
+            const { sdrId, request, success } = action.payload;
+            const current = state.sdrConfigRequestsById[sdrId];
+            if (current?.origin !== request.origin || current.sequence !== request.sequence) return;
+            current.pending = false;
+            if (!success && state.selectedSDRId === sdrId
+                && state.sdrConfirmedFrequencyById[sdrId] !== undefined) {
+                state.centerFrequency = state.sdrConfirmedFrequencyById[sdrId];
+            }
         },
         setSelectedOffsetMode: (state, action) => {
             state.selectedOffsetMode = action.payload;
@@ -561,6 +584,29 @@ export const waterfallSlice = createSlice({
         updateSDRConfig: (state, action) => {
             // Update all SDR configuration parameters at once
             const config = action.payload;
+            const version = state.sdrConfigVersionsById[config.sdr_id];
+            if (config.config_epoch && config.config_revision !== undefined) {
+                if (version?.epoch === config.config_epoch && config.config_revision < version.revision) return;
+                state.sdrConfigVersionsById[config.sdr_id] = {
+                    epoch: config.config_epoch, revision: config.config_revision,
+                };
+            }
+            const request = state.sdrConfigRequestsById[config.sdr_id];
+            const echo = config.config_request;
+            const ownEcho = request && echo?.origin === request.origin;
+            const staleEcho = ownEcho && echo.sequence < request.sequence;
+            if (config.center_freq !== undefined
+                && (!ownEcho || echo.sequence >= (request.confirmedSequence || 0))) {
+                state.sdrConfirmedFrequencyById[config.sdr_id] = config.center_freq;
+                if (ownEcho) request.confirmedSequence = echo.sequence;
+            }
+            // An old acceptance must not undo newer user input, even after the
+            // newer acknowledgement has already arrived. Explicit joins and
+            // conflict resolutions can still restore authoritative settings.
+            if (staleEcho && !config.force_live) return;
+            const protectFrequency = request?.pending && !echo && !config.force_live;
+            if (ownEcho && echo.sequence === request.sequence) request.pending = false;
+            if (request && (config.force_live || (echo && !ownEcho))) request.pending = false;
             if (config.sdr_id && Object.prototype.hasOwnProperty.call(config, 'bandwidth_status')) {
                 state.sdrBandwidthById ??= {};
                 state.sdrBandwidthById[config.sdr_id] = config.bandwidth_status;
@@ -569,7 +615,7 @@ export const waterfallSlice = createSlice({
                 state.sdrReceiverById ??= {};
                 state.sdrReceiverById[config.sdr_id] = config.receiver_status;
             }
-            if (config.center_freq !== undefined) state.centerFrequency = config.center_freq;
+            if (config.center_freq !== undefined && !protectFrequency) state.centerFrequency = config.center_freq;
             if (config.sample_rate !== undefined) {
                 state.sampleRate = config.sample_rate;
                 if (!Array.isArray(state.sampleRateValues)) state.sampleRateValues = [];
@@ -805,6 +851,8 @@ export const waterfallSlice = createSlice({
 });
 
 export const {
+    beginSDRConfigRequest,
+    finishSDRConfigRequest,
     setFFTdataOverflow,
     setColorMap,
     setWaterfallRendererMode,

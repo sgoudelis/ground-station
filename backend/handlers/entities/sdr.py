@@ -232,6 +232,9 @@ def _live_sdr_config(sdr_id: str, process_info: Dict[str, Any]) -> Dict[str, Any
         "offset_freq",
         "sdr_settings",
         "recording_path",
+        "config_request",
+        "config_revision",
+        "config_epoch",
     )
     config = process_info.get("config") or {}
     return {
@@ -648,6 +651,13 @@ async def sdr_command_routing(
                     sdr_settings=sdr_settings,
                 ).to_dict()
 
+                request_sequence = data.get("configRequest")
+                if isinstance(request_sequence, int) and not isinstance(request_sequence, bool):
+                    sdr_config["config_request"] = {
+                        "origin": socket_id,
+                        "sequence": request_sequence,
+                    }
+
                 # A configure request carries the whole browser draft and always writes
                 # to the shared worker. Require consent for every such request.
                 other_clients = _list_other_sdr_clients(str(sdr_id), client_id)
@@ -681,6 +691,21 @@ async def sdr_command_routing(
                 sdr_config["client_id"] = client_id
                 _copy_controller_metadata(socket_id, client_id)
                 await sio.enter_room(socket_id, client_id)
+                # Database/room awaits can complete out of order. An older
+                # browser snapshot must never replace a newer accepted tune.
+                process_info = process_manager.processes.get(str(sdr_id), {})
+                request = sdr_config.get("config_request")
+                latest_sequence = process_info.get("config_request_sequences", {}).get(
+                    socket_id, -1
+                )
+                if request and request["sequence"] <= latest_sequence:
+                    reply["success"] = True
+                    reply["data"] = {
+                        "session_id": client_id,
+                        "config": _live_sdr_config(str(sdr_id), process_info),
+                        "superseded": True,
+                    }
+                    return reply
                 logger.info(f"Creating an SDR session for client {client_id}")
                 await session_service.configure_sdr(client_id, sdr_device, sdr_config)
 
@@ -692,7 +717,14 @@ async def sdr_command_routing(
                     await process_manager.update_configuration(sdr_id, sdr_config)
 
                 reply["success"] = True
-                reply["data"] = {"session_id": client_id}
+                reply["data"] = {
+                    "session_id": client_id,
+                    "config": (
+                        _live_sdr_config(str(sdr_id), process_info)
+                        if is_running
+                        else {"sdr_id": sdr_id, **sdr_config}
+                    ),
+                }
 
             except Exception as e:
                 logger.error(f"Error configuring SDR: {str(e)}")
@@ -703,6 +735,11 @@ async def sdr_command_routing(
                     room=client_id,
                 )
                 reply["success"] = False
+                reply["error"] = str(e)
+                if sdr_id in process_manager.processes:
+                    reply["data"] = {
+                        "config": _live_sdr_config(str(sdr_id), process_manager.processes[sdr_id])
+                    }
 
         elif cmd == "start-streaming":
 
