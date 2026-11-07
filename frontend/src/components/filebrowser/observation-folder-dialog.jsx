@@ -33,6 +33,7 @@ import {
 } from './file-dialog-styles.js';
 import CloseIcon from '@mui/icons-material/Close';
 import AudioFileIcon from '@mui/icons-material/AudioFile';
+import BuildIcon from '@mui/icons-material/Build';
 import DescriptionIcon from '@mui/icons-material/Description';
 import DeleteIcon from '@mui/icons-material/Delete';
 import DownloadIcon from '@mui/icons-material/Download';
@@ -135,6 +136,7 @@ export default function ObservationFolderDialog({
     folder,
     onOpenArtifact,
     onGenerateWaterfall,
+    onProcessRecording,
     onDelete,
     runningWaterfallPaths,
     socket,
@@ -413,7 +415,7 @@ export default function ObservationFolderDialog({
                                                     color={recording.recording_in_progress ? 'warning' : 'error'}
                                                     sx={{ position: 'absolute', top: 8, left: 8 }}
                                                 />
-                                                {onGenerateWaterfall && (
+                                                {(onGenerateWaterfall || onProcessRecording) && (
                                                     <IconButton
                                                         size="small"
                                                         aria-label={t('observation_folder_dialog.recording_actions', { defaultValue: 'Recording actions' })}
@@ -549,14 +551,27 @@ export default function ObservationFolderDialog({
                 anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
                 transformOrigin={{ vertical: 'top', horizontal: 'right' }}
             >
-                <MenuItem onClick={() => {
-                    const recording = recordingMenu?.recording;
-                    setRecordingMenu(null);
-                    if (recording) onGenerateWaterfall?.(recording);
-                }}>
-                    <ListItemIcon><ImageIcon fontSize="small" /></ListItemIcon>
-                    <ListItemText primary={t('observation_folder_dialog.generate_waterfall_image', { defaultValue: 'Generate Waterfall Image' })} />
-                </MenuItem>
+                {onGenerateWaterfall && (
+                    <MenuItem onClick={() => {
+                        const recording = recordingMenu?.recording;
+                        setRecordingMenu(null);
+                        if (recording) onGenerateWaterfall(recording);
+                    }}>
+                        <ListItemIcon><ImageIcon fontSize="small" /></ListItemIcon>
+                        <ListItemText primary={t('observation_folder_dialog.generate_waterfall_image', { defaultValue: 'Generate Waterfall Image' })} />
+                    </MenuItem>
+                )}
+                {onProcessRecording && (
+                    <MenuItem onClick={() => {
+                        const recording = recordingMenu?.recording;
+                        setRecordingMenu(null);
+                        // Keep the bundle's URLs and metadata for the shared processing dialog.
+                        if (recording) onProcessRecording(recording);
+                    }}>
+                        <ListItemIcon><BuildIcon fontSize="small" /></ListItemIcon>
+                        <ListItemText primary={t('actions.process_iq_recording', 'Process IQ Recording')} />
+                    </MenuItem>
+                )}
             </Menu>
         </Dialog>
     );

@@ -191,6 +191,7 @@
     "modified": "Modified"
   },
   "actions": {
+    "process_iq_recording": "Process IQ Recording",
     "view_details": "View Details",
     "download": "Download",
     "download_data": "Download Data",
@@ -199,6 +200,11 @@
     "delete": "Delete",
     "cannot_delete_active": "Cannot delete active recording",
     "close": "Close"
+  },
+  "download_dialog": {
+    "title": "Confirm Download",
+    "message": "Large downloads may take a while to prepare and transfer. Do you want to continue?",
+    "cancel": "Cancel"
   },
   "delete_dialog": {
     "title_recording": "Delete Recording",

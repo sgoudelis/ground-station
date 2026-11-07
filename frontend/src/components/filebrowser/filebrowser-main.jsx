@@ -349,6 +349,9 @@ export default function FileBrowserMain() {
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [itemToDelete, setItemToDelete] = useState(null);
     const [batchDeleteDialogOpen, setBatchDeleteDialogOpen] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [itemToDownload, setItemToDownload] = useState(null);
+    const downloadSize = itemToDownload?.data_size ?? itemToDownload?.size;
     const [telemetryViewerOpen, setTelemetryViewerOpen] = useState(false);
     const [telemetryFile, setTelemetryFile] = useState(null);
     const [telemetryMetadata, setTelemetryMetadata] = useState(null);
@@ -614,12 +617,15 @@ export default function FileBrowserMain() {
     };
 
     const handleCloseDeleteDialog = () => {
+        // Keep feedback visible until the server acknowledges the deletion.
+        if (isDeleting) return;
         setDeleteDialogOpen(false);
         setItemToDelete(null);
     };
 
     const confirmDelete = async () => {
-        if (itemToDelete && socket) {
+        if (itemToDelete && socket && !isDeleting) {
+            setIsDeleting(true);
             try {
                 await dispatch(deleteLibraryItems({ socket, ids: [itemToDelete.id] })).unwrap();
 
@@ -636,6 +642,8 @@ export default function FileBrowserMain() {
             } catch (error) {
                 // Error will be shown by socket error event listener, but show local toast too
                 toast.error(t('toast.delete_failed', 'Failed to delete: {{error}}', { error }));
+            } finally {
+                setIsDeleting(false);
             }
         }
     };
@@ -651,6 +659,13 @@ export default function FileBrowserMain() {
         } else {
             window.open(item.url, '_blank');
         }
+    };
+
+    const confirmDownload = () => {
+        if (!itemToDownload) return;
+        // Start transfers only after confirmation, directly from the user's click.
+        handleDownload(itemToDownload);
+        setItemToDownload(null);
     };
 
     const handleViewTelemetry = async (item) => {
@@ -969,13 +984,21 @@ export default function FileBrowserMain() {
         }
     };
 
+    const handleCloseBatchDeleteDialog = () => {
+        if (isDeleting) return;
+        setBatchDeleteDialogOpen(false);
+    };
+
     const confirmBatchDelete = async () => {
-        if (selectedItems.length > 0 && socket) {
+        if (selectedItems.length > 0 && socket && !isDeleting) {
+            setIsDeleting(true);
             try {
                 await dispatch(deleteLibraryItems({ socket, ids: selectedItems })).unwrap();
                 setBatchDeleteDialogOpen(false);
             } catch (error) {
                 toast.error(t('toast.batch_delete_failed', 'Failed to delete items: {{error}}', { error }));
+            } finally {
+                setIsDeleting(false);
             }
         }
     };
@@ -1269,7 +1292,7 @@ export default function FileBrowserMain() {
                         selectedItems={selectedItems}
                         onToggleSelection={handleToggleSelection}
                         onShowDetails={handleShowDetails}
-                        onDownload={handleDownload}
+                        onDownload={setItemToDownload}
                         onDelete={handleDelete}
                         onProcessingMenu={handleOpenProcessingMenu}
                         timezone={timezone}
@@ -2014,7 +2037,7 @@ export default function FileBrowserMain() {
                                         <Tooltip title={t('actions.download', 'Download')}>
                                             <IconButton
                                                 size="small"
-                                                onClick={() => handleDownload(item)}
+                                                onClick={() => setItemToDownload(item)}
                                             >
                                                 <DownloadIcon fontSize="small" />
                                             </IconButton>
@@ -2112,7 +2135,7 @@ export default function FileBrowserMain() {
                     <ListItemIcon>
                         <BuildIcon fontSize="small" />
                     </ListItemIcon>
-                    <ListItemText primary="Process IQ Recording" />
+                    <ListItemText primary={t('actions.process_iq_recording', 'Process IQ Recording')} />
                 </MenuItem>
             </Menu>
 
@@ -2314,6 +2337,41 @@ export default function FileBrowserMain() {
                 />
             )}
 
+            {/* Download Confirmation Dialog */}
+            <Dialog
+                open={Boolean(itemToDownload)}
+                onClose={() => setItemToDownload(null)}
+                maxWidth="sm"
+                fullWidth
+                aria-labelledby="download-confirmation-title"
+                aria-describedby="download-confirmation-description"
+            >
+                <DialogTitle id="download-confirmation-title">
+                    {t('download_dialog.title', 'Confirm Download')}
+                </DialogTitle>
+                <DialogContent>
+                    <Typography sx={{ fontFamily: 'monospace', overflowWrap: 'anywhere', mb: 1 }}>
+                        {itemToDownload?.displayName || itemToDownload?.name || itemToDownload?.filename || itemToDownload?.foldername}
+                    </Typography>
+                    {Number.isFinite(downloadSize) && downloadSize >= 0 && (
+                        <Typography variant="body2" sx={{ mb: 2 }}>
+                            {t('file_table_view.size', 'Size')}: {formatBytes(downloadSize)}
+                        </Typography>
+                    )}
+                    <Typography id="download-confirmation-description" color="text.secondary">
+                        {t('download_dialog.message', 'Large downloads may take a while to prepare and transfer. Do you want to continue?')}
+                    </Typography>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setItemToDownload(null)} autoFocus>
+                        {t('download_dialog.cancel', 'Cancel')}
+                    </Button>
+                    <Button onClick={confirmDownload} variant="contained" startIcon={<DownloadIcon />}>
+                        {t('actions.download', 'Download')}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
             {/* Delete Confirmation Dialog */}
             <Dialog
                 open={deleteDialogOpen}
@@ -2441,6 +2499,7 @@ export default function FileBrowserMain() {
                 >
                     <Button
                         onClick={handleCloseDeleteDialog}
+                        disabled={isDeleting}
                         variant="outlined"
                         color="inherit"
                         sx={{
@@ -2453,6 +2512,7 @@ export default function FileBrowserMain() {
                     </Button>
                     <Button
                         onClick={confirmDelete}
+                        loading={isDeleting}
                         color="error"
                         variant="contained"
                         sx={{
@@ -2469,7 +2529,7 @@ export default function FileBrowserMain() {
             {/* Batch Delete Confirmation Dialog */}
             <Dialog
                 open={batchDeleteDialogOpen}
-                onClose={() => setBatchDeleteDialogOpen(false)}
+                onClose={handleCloseBatchDeleteDialog}
                 maxWidth="sm"
                 fullWidth
                 PaperProps={{
@@ -2585,7 +2645,8 @@ export default function FileBrowserMain() {
                     }}
                 >
                     <Button
-                        onClick={() => setBatchDeleteDialogOpen(false)}
+                        onClick={handleCloseBatchDeleteDialog}
+                        disabled={isDeleting}
                         variant="outlined"
                         color="inherit"
                         sx={{
@@ -2598,6 +2659,7 @@ export default function FileBrowserMain() {
                     </Button>
                     <Button
                         onClick={confirmBatchDelete}
+                        loading={isDeleting}
                         color="error"
                         variant="contained"
                         sx={{
@@ -2664,6 +2726,7 @@ export default function FileBrowserMain() {
                 runningWaterfallPaths={runningWaterfallPaths}
                 onOpenArtifact={handleObservationArtifact}
                 onGenerateWaterfall={handleOpenWaterfallDialog}
+                onProcessRecording={handleOpenProcessing}
                 onDelete={handleDeleteObservation}
             />
 
