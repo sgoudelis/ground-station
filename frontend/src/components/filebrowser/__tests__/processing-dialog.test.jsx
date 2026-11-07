@@ -15,7 +15,7 @@ beforeEach(() => {
 
 describe('file browser SatDump processing destination', () => {
     it.each([null, '/observations/METEOR.gsobs/recordings/capture.sigmf-data'])(
-        'always produces a shared decoded folder with input %s', async (dataUrl) => {
+        'submits the source and product path for server-side routing with input %s', async (dataUrl) => {
             const store = configureStore({ reducer: { backgroundTasks: () => ({ tasks: {} }) } });
             renderWithProviders(<ProcessingDialog open onClose={vi.fn()} recording={{
                 name: 'capture', metadata: { sample_rate: 1000000 },
@@ -33,4 +33,35 @@ describe('file browser SatDump processing destination', () => {
             expect(request.data.kwargs).not.toHaveProperty('observation_bundle');
         },
     );
+
+    it.each([
+        ['/recordings/capture%20IQ.sigmf-data', 'Standalone processing'],
+        ['/observations/METEOR.gsobs/recordings/capture%20IQ.sigmf-data?v=1', 'Observation processing'],
+    ])('restores the correct running job for %s when reopened', (dataUrl, taskName) => {
+        const tasks = {
+            unrelated: { name: 'Other task', args: ['100% complete'] },
+            standalone: {
+                name: 'Standalone processing', status: 'running', start_time: 1,
+                args: ['/srv/backend/data/recordings/capture IQ.sigmf-data'],
+            },
+            observation: {
+                name: 'Observation processing', status: 'running', start_time: 2,
+                args: ['/srv/backend/data/observations/METEOR.gsobs/recordings/capture IQ.sigmf-data'],
+            },
+            other: {
+                name: 'Other observation processing', status: 'running', start_time: 3,
+                args: ['/srv/backend/data/observations/OTHER.gsobs/recordings/capture IQ.sigmf-data'],
+            },
+        };
+        const store = configureStore({ reducer: { backgroundTasks: () => ({ tasks }) } });
+        renderWithProviders(<ProcessingDialog open onClose={vi.fn()} recording={{
+            name: 'capture IQ', metadata: { sample_rate: 1000000 },
+            download_urls: { data: dataUrl },
+        }} />, { store });
+
+        expect(screen.getByText(taskName)).toBeInTheDocument();
+        expect(screen.queryByText('Other observation processing')).not.toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Start Processing' })).toBeDisabled();
+        expect(socket.emit).not.toHaveBeenCalled();
+    });
 });

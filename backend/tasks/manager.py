@@ -67,7 +67,11 @@ from queue import Empty
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from common.logger import logger
-from common.satdump import resolve_satdump_bundle, resolve_satdump_output_dir
+from common.satdump import (
+    resolve_satdump_bundle,
+    resolve_satdump_output_dir,
+    resolve_satdump_recording_bundle,
+)
 from db import AsyncSessionLocal
 from handlers.entities.filebrowser import emit_file_browser_state
 from hardware.soapysdrbrowser import DISCOVERY_SEARCH_SECONDS, update_discovered_servers
@@ -229,7 +233,7 @@ class BackgroundTaskManager:
             kwargs: Keyword arguments for the function
             name: Human-readable task name (defaults to function name)
             task_id: Optional task ID (generated if not provided)
-            observation_bundle: Owner of an observation's follow-up waterfall
+            observation_bundle: Owner of an observation's processing task
 
         Returns:
             Task ID string
@@ -290,6 +294,20 @@ class BackgroundTaskManager:
         process = None
         try:
             bundle_owner = observation_bundle or kwargs.get("observation_bundle")
+            if func.__name__ == "satdump_process_recording" and not bundle_owner:
+                backend_dir = Path(__file__).resolve().parents[1]
+                source, inferred_bundle = resolve_satdump_recording_bundle(args[0], backend_dir)
+                if inferred_bundle:
+                    # Manual jobs inherit storage and lifecycle tracking from their IQ source.
+                    # Validate the requested product path before moving it into that bundle.
+                    shared_output = resolve_satdump_output_dir(args[1], backend_dir)
+                    relative_output = shared_output.relative_to(
+                        (backend_dir / "data" / "decoded").resolve()
+                    )
+                    output = inferred_bundle / "decoded" / relative_output
+                    args = (str(source), str(output), *args[2:])
+                    bundle_owner = str(inferred_bundle)
+                    kwargs = {**kwargs, "observation_bundle": bundle_owner}
             if bundle_owner:
                 backend_dir = Path(__file__).resolve().parents[1]
                 bundle_dir = resolve_satdump_bundle(bundle_owner, backend_dir)

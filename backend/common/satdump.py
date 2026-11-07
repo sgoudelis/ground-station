@@ -2,6 +2,7 @@
 
 import re
 from pathlib import Path
+from urllib.parse import unquote
 
 from common.pathguard import ensure_path_in_allowed_roots
 
@@ -38,6 +39,30 @@ def resolve_satdump_bundle(bundle_dir: str | Path, backend_dir: Path) -> Path:
     ):
         raise ValueError("Invalid SatDump observation bundle.")
     return resolved
+
+
+def resolve_satdump_recording_bundle(
+    recording_path: str | Path, backend_dir: Path
+) -> tuple[Path, Path | None]:
+    """Find a recording's observation owner from its storage path, not UI metadata."""
+    path_text = str(recording_path)
+    source = Path(recording_path)
+    if path_text.lstrip("/").startswith(("observations/", "recordings/", "decoded/")):
+        # File-browser URLs may contain escaped filenames and cache query parameters.
+        source = backend_dir / "data" / unquote(path_text.split("?", 1)[0].lstrip("/"))
+    elif not source.exists():
+        source = backend_dir / "data" / path_text.lstrip("/")
+    source = source.resolve()
+
+    observations_root = (backend_dir / "data" / "observations").resolve()
+    if not source.is_relative_to(observations_root):
+        return source, None
+
+    relative = source.relative_to(observations_root)
+    if len(relative.parts) < 3 or relative.parts[1] != "recordings":
+        raise ValueError("SatDump input must be inside an observation's recordings directory.")
+    bundle = resolve_satdump_bundle(observations_root / relative.parts[0], backend_dir)
+    return source, bundle
 
 
 def resolve_satdump_output_dir(

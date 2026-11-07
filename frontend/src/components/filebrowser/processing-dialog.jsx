@@ -65,6 +65,16 @@ const getRecordingBaseName = (recordingName) => {
     return recordingName;
 };
 
+const getRecordingTaskPath = (path = '') => {
+    const value = String(path);
+    // URL decoding applies to browser paths; absolute worker paths are already decoded.
+    const decoded = /^\/?(?:observations|recordings)\//.test(value)
+        ? decodeURIComponent(value.split('?')[0])
+        : value;
+    // Keep the observation identity so captures with the same filename cannot share task state.
+    return decoded.match(/(?:^|\/)(observations\/[^/]+\/recordings\/[^/]+|recordings\/[^/]+)$/)?.[1] || decoded;
+};
+
 // Parse ANSI color codes into renderable text parts for terminal-style output.
 const parseAnsiColors = (text = '') => {
     const normalized = String(text).replace(/\uFFFD/g, '').replaceAll('\u001b', '');
@@ -194,12 +204,15 @@ export default function ProcessingDialog({ open, onClose, recording }) {
 
     const recordingBaseName = getRecordingBaseName(recording?.name);
     const expectedRecordingPath = recordingBaseName
-        ? recording.download_urls?.data || `/recordings/${recordingBaseName}.sigmf-data`
+        ? getRecordingTaskPath(recording.download_urls?.data || `/recordings/${recordingBaseName}.sigmf-data`)
         : '';
 
     const matchingTask = useMemo(() => {
         if (!expectedRecordingPath) return null;
-        const candidates = Object.values(tasks).filter(task => task?.args?.[0] === expectedRecordingPath);
+        // Observation jobs use absolute server paths after their owner is resolved.
+        const candidates = Object.values(tasks).filter(task =>
+            typeof task?.args?.[0] === 'string' && getRecordingTaskPath(task.args[0]) === expectedRecordingPath
+        );
         if (candidates.length === 0) return null;
         return candidates.reduce((latest, current) => {
             if (!latest) return current;
@@ -241,8 +254,8 @@ export default function ProcessingDialog({ open, onClose, recording }) {
 
             // Generate output directory matching SatDump naming convention
             // Format: SATELLITE_TIMESTAMP.satdump_PIPELINE
-            // User-triggered processing always stays in the shared decoded
-            // library, including recordings opened from an observation bundle.
+            // The server places this product inside the source observation's decoded
+            // directory when the recording belongs to a bundle.
             const outputDir = `/decoded/${baseName}.satdump_${selectedPipeline}`;
 
             // Prepare task arguments

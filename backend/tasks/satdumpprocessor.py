@@ -321,7 +321,7 @@ def satdump_process_recording(
         finish_processing: Whether to run product generation after decoding
         delete_input_after: Delete SigMF input after processing
         retain_input_on_failure: Keep SigMF input when decoding fails
-        observation_bundle: Explicit owner for automated processing only
+        observation_bundle: Owning bundle for automated or manual observation processing
         _progress_queue: Queue for sending progress updates
 
     Returns:
@@ -339,7 +339,7 @@ def satdump_process_recording(
     if not recording_file.exists():
         recording_file = backend_dir / "data" / recording_path.lstrip("/")
     if observation_bundle:
-        # Automated workers may only delete input owned by their own bundle.
+        # Bundle workers may only delete input owned by their own bundle.
         recording_file = recording_file.resolve()
         bundle = resolve_satdump_bundle(observation_bundle, backend_dir)
         recording_file.relative_to(bundle / "recordings")

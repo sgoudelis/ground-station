@@ -3,7 +3,8 @@
 import json
 import zipfile
 from queue import Empty
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, Mock
+from urllib.parse import quote
 
 import pytest
 from fastapi import BackgroundTasks, HTTPException, Request
@@ -19,9 +20,10 @@ pytestmark = pytest.mark.unit
 
 
 @pytest.mark.parametrize("outcome", ["completed", "failed", "stopped", "launch-failed"])
-async def test_worker_lifecycle_keeps_ownership_until_exit(tmp_path, monkeypatch, outcome):
+@pytest.mark.parametrize("origin", ["explicit", "app-url", "relative", "absolute"])
+async def test_worker_lifecycle_keeps_ownership_until_exit(tmp_path, monkeypatch, outcome, origin):
     bundle = create_observation_bundle("obs-1", {}, tmp_path)
-    recording = bundle / "recordings" / "capture.sigmf-data"
+    recording = bundle / "recordings" / "capture IQ.sigmf-data"
     recording.write_bytes(b"iq")
     output = bundle / "decoded" / "capture.satdump_meteor_hrpt"
     monkeypatch.setattr(taskmanager, "__file__", str(tmp_path / "tasks" / "manager.py"))
@@ -34,7 +36,11 @@ async def test_worker_lifecycle_keeps_ownership_until_exit(tmp_path, monkeypatch
         alive = False
 
         def __init__(self, **kwargs):
-            pass
+            _, worker_args, worker_kwargs, _ = kwargs["args"]
+            assert worker_args == (str(recording), str(output), "meteor_hrpt")
+            assert worker_kwargs["observation_bundle"] == str(bundle)
+            if origin != "explicit":
+                assert not worker_kwargs.get("delete_input_after", False)
 
         def start(self):
             manifest = json.loads((bundle / "manifest.json").read_text())
@@ -45,7 +51,8 @@ async def test_worker_lifecycle_keeps_ownership_until_exit(tmp_path, monkeypatch
             if outcome == "completed":
                 output.mkdir()
                 (output / "image.png").write_bytes(b"image")
-                recording.unlink()
+                if origin == "explicit":
+                    recording.unlink()
 
         def is_alive(self):
             return self.alive
@@ -77,6 +84,14 @@ async def test_worker_lifecycle_keeps_ownership_until_exit(tmp_path, monkeypatch
         name="SatDump: capture",
         task_id="job-1",
     )
+    if origin != "explicit":
+        source = {
+            "app-url": f"/observations/{quote(bundle.name)}/recordings/{quote(recording.name)}?v=1",
+            "relative": f"observations/{bundle.name}/recordings/{recording.name}",
+            "absolute": str(recording),
+        }[origin]
+        arguments["args"] = (source, "/decoded/capture.satdump_meteor_hrpt", "meteor_hrpt")
+        arguments["kwargs"] = {}
     if outcome == "launch-failed":
         with pytest.raises(RuntimeError, match="Unable to start worker"):
             await manager.start_task(**arguments)
@@ -98,7 +113,64 @@ async def test_worker_lifecycle_keeps_ownership_until_exit(tmp_path, monkeypatch
     assert manifest["processing_tasks"][0]["status"] == (
         "failed" if outcome == "launch-failed" else outcome
     )
-    assert recording.exists() is (outcome != "completed")
+    assert recording.exists() is (origin != "explicit" or outcome != "completed")
+    assert not (tmp_path / "data" / "decoded" / output.name).exists()
+
+
+async def test_standalone_manual_processing_keeps_shared_output(tmp_path, monkeypatch):
+    monkeypatch.setattr(taskmanager, "__file__", str(tmp_path / "tasks" / "manager.py"))
+    process = Mock(pid=123)
+    constructor = Mock(return_value=process)
+    monkeypatch.setattr(taskmanager.mp, "Process", constructor)
+    monkeypatch.setattr(taskmanager.mp, "Queue", Mock())
+    manager = taskmanager.BackgroundTaskManager(type("Socket", (), {"emit": AsyncMock()})())
+    monkeypatch.setattr(manager, "_monitor_task", AsyncMock())
+    args = ("/recordings/capture.sigmf-data", "/decoded/capture.satdump_meteor_hrpt", "meteor_hrpt")
+
+    task_id = await manager.start_task(func=satdump_process_recording, args=args)
+    await manager._monitor_tasks[task_id]
+
+    _, worker_args, worker_kwargs, _ = constructor.call_args.kwargs["args"]
+    assert worker_args == args
+    assert "observation_bundle" not in worker_kwargs
+    assert manager.tasks[task_id].observation_bundle is None
+
+
+@pytest.mark.parametrize("destination", ["outside", "decoded-root", "other-bundle", "symlink"])
+async def test_manual_observation_processing_rejects_escaped_output(
+    tmp_path, monkeypatch, destination
+):
+    bundle = create_observation_bundle("obs-1", {}, tmp_path)
+    other = create_observation_bundle("obs-2", {}, tmp_path)
+    recording = bundle / "recordings" / "capture.sigmf-data"
+    recording.write_bytes(b"iq")
+    decoded_root = tmp_path / "data" / "decoded"
+    decoded_root.mkdir()
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    link = decoded_root / "linked-output"
+    link.symlink_to(outside, target_is_directory=True)
+    output = {
+        "outside": outside / "product",
+        "decoded-root": decoded_root,
+        "other-bundle": other / "decoded" / "product",
+        "symlink": link,
+    }[destination]
+    monkeypatch.setattr(taskmanager, "__file__", str(tmp_path / "tasks" / "manager.py"))
+    constructor = Mock()
+    monkeypatch.setattr(taskmanager.mp, "Process", constructor)
+    manager = taskmanager.BackgroundTaskManager(type("Socket", (), {"emit": AsyncMock()})())
+
+    with pytest.raises(RuntimeError, match="SatDump output directory"):
+        await manager.start_task(
+            func=satdump_process_recording,
+            args=(str(recording), str(output), "meteor_hrpt"),
+        )
+
+    constructor.assert_not_called()
+    assert recording.exists()
+    assert not (outside / "product").exists()
+    assert not json.loads((bundle / "manifest.json").read_text()).get("processing_tasks")
 
 
 @pytest.mark.parametrize("pipeline", ["meteor_m2-x_lrpt", "meteor_hrpt"])
