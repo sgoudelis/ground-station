@@ -8,7 +8,13 @@ import {
 import Typography from '@mui/material/Typography';
 import {
     Box,
+    Button,
     Chip,
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogContentText,
+    DialogTitle,
     FormControl,
     FormHelperText,
     IconButton,
@@ -26,6 +32,7 @@ import MemoryIcon from '@mui/icons-material/Memory';
 import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
 import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
 import AutorenewIcon from '@mui/icons-material/Autorenew';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import { useTranslation } from 'react-i18next';
 import BackgroundStreamControl from './background-stream-control.jsx';
 import SdrParameterFields from '../common/sdr-parameter-fields.jsx';
@@ -116,6 +123,22 @@ const SdrAccordion = ({
 }) => {
     const { t } = useTranslation('waterfall');
     const controlId = React.useId();
+    const [biasTConfirmationOpen, setBiasTConfirmationOpen] = React.useState(false);
+
+    React.useEffect(() => {
+        // A pending confirmation only applies to the receiver that opened it.
+        setBiasTConfirmationOpen(false);
+    }, [selectedSDRId]);
+
+    const handleBiasTChange = (enabled) => {
+        if (enabled) {
+            // Keep Bias-T off until the voltage warning is explicitly accepted.
+            setBiasTConfirmationOpen(true);
+            return;
+        }
+        onBiasTChange?.(false);
+    };
+
     const getSdrOptionIcon = React.useCallback((type) => {
         const normalizedType = String(type || '').trim().toLowerCase();
         if (normalizedType.startsWith('rtlsdr')) return UsbIcon;
@@ -446,7 +469,7 @@ const SdrAccordion = ({
                                 gain: onGainChange,
                                 sample_rate: onSampleRateChange,
                                 antenna_port: onAntennaChange,
-                                bias_t: onBiasTChange,
+                                bias_t: handleBiasTChange,
                                 tuner_agc: onTunerAgcChange,
                                 soapy_agc: onSoapyAgcChange,
                                 rtl_agc: onRtlAgcChange,
@@ -579,6 +602,39 @@ const SdrAccordion = ({
                         </Box>
                     )}
                 </LoadingOverlay>
+                <Dialog
+                    open={biasTConfirmationOpen}
+                    onClose={() => setBiasTConfirmationOpen(false)}
+                    aria-labelledby={`${controlId}-bias-t-title`}
+                    aria-describedby={`${controlId}-bias-t-warning`}
+                    maxWidth="sm"
+                    fullWidth
+                >
+                    <DialogTitle id={`${controlId}-bias-t-title`} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <WarningAmberIcon color="warning" />
+                        {t('sdr.bias_t_confirm_title')}
+                    </DialogTitle>
+                    <DialogContent>
+                        <DialogContentText id={`${controlId}-bias-t-warning`}>
+                            {t('sdr.bias_t_confirm_warning')}
+                        </DialogContentText>
+                    </DialogContent>
+                    <DialogActions>
+                        <Button autoFocus onClick={() => setBiasTConfirmationOpen(false)}>
+                            {t('common:cancel')}
+                        </Button>
+                        <Button
+                            color="warning"
+                            variant="contained"
+                            onClick={() => {
+                                setBiasTConfirmationOpen(false);
+                                onBiasTChange?.(true);
+                            }}
+                        >
+                            {t('sdr.bias_t_confirm_enable')}
+                        </Button>
+                    </DialogActions>
+                </Dialog>
             </AccordionDetails>
         </Accordion>
     );
