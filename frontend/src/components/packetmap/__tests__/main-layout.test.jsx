@@ -308,11 +308,64 @@ it('keeps live playback running when selecting an aircraft with an older fix', (
     expect(toast.info).not.toHaveBeenCalled();
 });
 
-it('keeps the cursor when selecting another transmitter type in history', () => {
+it.each(['radiosonde', 'meshtastic', 'aprs'].flatMap((kind) => [
+    [kind, 'before its first fix', '2026-11-01T09:00:00Z'],
+    [kind, 'after its last fix', '2026-11-01T11:00:01Z'],
+]))('reveals a selected historical %s at its last recorded position %s', (kind, _description, cursor) => {
+    const first = {id: 'first', transmitter_id: `${kind}:A`, kind, name: 'A', source: 'A',
+        latitude: 40, longitude: 23, captured_at: '2026-11-01T10:00:00Z'};
+    const last = {...first, id: 'last', latitude: 41, captured_at: '2026-11-01T11:00:00Z'};
+    fixture.positions = [last, first];
+    // Latest row telemetry must not replace the endpoint in the loaded track.
+    fixture.transmitters = [{...last, id: last.transmitter_id, captured_at: historyRange.end}];
     const store = createStore(historyRange);
     render(<Provider store={store}><ThemeProvider theme={createTheme()}><PacketMapLayout /></ThemeProvider></Provider>);
-    act(() => tableRender.mock.lastCall[0].onSelectTransmitter('aprs:A'));
-    expect(mapRender.mock.lastCall[0].selectedTransmitterId).toBe('aprs:A');
+    fireEvent.change(screen.getByRole('slider', {name: 'Playback time'}), {target: {value: Date.parse(cursor)}});
+    act(() => tableRender.mock.lastCall[0].onSelectTransmitter(first.transmitter_id));
+    expect(mapRender.mock.lastCall[0].selectedTransmitterId).toBe(first.transmitter_id);
+    expect(mapRender.mock.lastCall[0].playbackTime).toBe(Date.parse(last.captured_at));
+    expect(toast.info).toHaveBeenCalledOnce();
+    expect(store.getState().packetMap.range).toEqual(historyRange);
+    expect(usePacketPositions.mock.lastCall[1]).toEqual(historyRange);
+    // Scrubbing remains free after the selection-triggered jump.
+    fireEvent.change(screen.getByRole('slider', {name: 'Playback time'}), {target: {value: Date.parse(cursor)}});
+    expect(mapRender.mock.lastCall[0].playbackTime).toBe(Date.parse(cursor));
+    expect(toast.info).toHaveBeenCalledOnce();
+});
+
+it.each(['radiosonde', 'meshtastic', 'aprs'])('keeps playback within a historical %s interval, including its endpoints and gaps', (kind) => {
+    const first = {id: 'first', transmitter_id: `${kind}:A`, kind, name: 'A', source: 'A',
+        latitude: 40, longitude: 23, captured_at: '2026-11-01T10:00:00Z'};
+    const last = {...first, id: 'last', latitude: 41, captured_at: '2026-11-01T11:30:00Z'};
+    fixture.positions = [last, first];
+    fixture.transmitters = [{...last, id: last.transmitter_id}];
+    render(<Provider store={createStore(historyRange)}><ThemeProvider theme={createTheme()}><PacketMapLayout /></ThemeProvider></Provider>);
+    for (const cursor of [first.captured_at, '2026-11-01T11:00:00Z', last.captured_at]) {
+        fireEvent.change(screen.getByRole('slider', {name: 'Playback time'}), {target: {value: Date.parse(cursor)}});
+        act(() => tableRender.mock.lastCall[0].onSelectTransmitter(first.transmitter_id));
+        expect(mapRender.mock.lastCall[0].playbackTime).toBe(Date.parse(cursor));
+    }
+    expect(toast.info).not.toHaveBeenCalled();
+});
+
+it.each(['radiosonde', 'meshtastic', 'aprs'])('keeps LIVE enabled when selecting a %s', (kind) => {
+    const point = {id: 'fix', transmitter_id: `${kind}:A`, kind, name: 'A', source: 'A',
+        latitude: 40, longitude: 23, captured_at: new Date(Date.now() - 300000).toISOString()};
+    fixture.positions = [point];
+    fixture.transmitters = [{...point, id: point.transmitter_id}];
+    const store = createStore();
+    render(<Provider store={store}><ThemeProvider theme={createTheme()}><PacketMapLayout /></ThemeProvider></Provider>);
+    act(() => tableRender.mock.lastCall[0].onSelectTransmitter(point.transmitter_id));
+    expect(mapRender.mock.lastCall[0].playbackTime).toBeGreaterThan(Date.parse(point.captured_at));
+    expect(store.getState().packetMap.range.end).toBeNull();
+    expect(toast.info).not.toHaveBeenCalled();
+});
+
+it.each(['radiosonde', 'meshtastic', 'aprs'])('keeps the cursor when a historical %s has no valid recorded timestamp', (kind) => {
+    fixture.positions = [{id: 'invalid', transmitter_id: `${kind}:A`, kind, captured_at: 'invalid'}];
+    fixture.transmitters = [{id: `${kind}:A`, kind, name: 'A', source: 'A', captured_at: historyRange.end}];
+    render(<Provider store={createStore(historyRange)}><ThemeProvider theme={createTheme()}><PacketMapLayout /></ThemeProvider></Provider>);
+    act(() => tableRender.mock.lastCall[0].onSelectTransmitter(`${kind}:A`));
     expect(mapRender.mock.lastCall[0].playbackTime).toBe(Date.parse(historyRange.end));
     expect(toast.info).not.toHaveBeenCalled();
 });

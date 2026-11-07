@@ -113,15 +113,21 @@ export default function PacketMapLayout() {
         const kind = transmitter?.kind;
         // Selecting a hidden transmitter should reveal its marker and track.
         if (hiddenTypes.includes(kind)) changeHiddenTypes(hiddenTypes.filter((value) => value !== kind));
-        if (movePlayback && !isLive && kind === 'adsb') {
+        if (movePlayback && !isLive) {
             // Use recorded fixes rather than the row's latest telemetry: only
             // positions in the loaded history can reveal a marker and trail.
             const times = positions.filter((point) => point.transmitter_id === id)
                 .map((point) => Date.parse(point.captured_at)).filter(Number.isFinite).sort((left, right) => left - right);
             const {status} = aircraftReceptionAt(times, currentPlaybackTime);
-            if (status === 'upcoming' || status === 'expired') {
+            // Aircraft can expire between recorded flights. Other protocols
+            // retain their last position, so use their recorded interval to
+            // bring a past sonde, station or node back to its actual reception.
+            const outsideHistory = times.length > 0
+                && (currentPlaybackTime < times[0] || currentPlaybackTime > times.at(-1));
+            const shouldJump = kind === 'adsb' ? status === 'upcoming' || status === 'expired' : outsideHistory;
+            if (shouldJump) {
                 // Jump only on selection so manual scrubbing remains free to
-                // leave this aircraft's flight. Its endpoint reveals the trail.
+                // leave this transmitter's history. Its endpoint reveals the trail.
                 const time = times.at(-1);
                 setPlaybackTime(time);
                 toast.info(t('packet_map.playback_moved', {

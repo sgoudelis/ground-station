@@ -34,6 +34,11 @@ function RowContextMenuContent({
     anchorPosition,
     title,
     noradId,
+    badgeLabel,
+    menuLabel,
+    menuListRef,
+    onExited,
+    disableRestoreFocus = false,
     items = [],
 }) {
     return (
@@ -43,6 +48,8 @@ function RowContextMenuContent({
             onContextMenu={onSuppressNativeContextMenu}
             anchorReference="anchorPosition"
             transitionDuration={0}
+            disableRestoreFocus={disableRestoreFocus}
+            slotProps={{transition: {onExited}}}
             PaperProps={{
                 onContextMenu: onSuppressNativeContextMenu,
                 sx: {
@@ -50,6 +57,8 @@ function RowContextMenuContent({
                 },
             }}
             MenuListProps={{
+                ref: menuListRef,
+                'aria-label': menuLabel,
                 dense: true,
                 onContextMenu: onSuppressNativeContextMenu,
                 sx: {
@@ -115,7 +124,7 @@ function RowContextMenuContent({
                             flexShrink: 0,
                         }}
                     >
-                        NORAD {noradId ?? '-'}
+                        {badgeLabel ?? `NORAD ${noradId ?? '-'}`}
                     </Box>
                 </Box>
             </MenuItem>
@@ -129,6 +138,8 @@ function RowContextMenuContent({
                         sx={{ px: 1, py: 0.4, minHeight: 29, fontSize: '0.82rem', borderRadius: 0 }}
                         disabled={Boolean(item?.disabled)}
                         onClick={item?.onClick}
+                        onKeyDown={item?.onKeyDown}
+                        aria-haspopup={item?.hasSubmenu ? 'menu' : undefined}
                     >
                         <ListItemIcon
                             sx={(theme) => ({
@@ -142,6 +153,10 @@ function RowContextMenuContent({
                             {item?.icon || ITEM_ICONS[item?.key]}
                         </ListItemIcon>
                         {formatItemLabel(item)}
+                        {item?.endIcon && <Box component="span" sx={{ml: 'auto', pl: 1, display: 'inline-flex',
+                            '& .MuiSvgIcon-root': {fontSize: '0.92rem'}}}>
+                            {item.endIcon}
+                        </Box>}
                     </MenuItem>
                 );
             })}
@@ -149,8 +164,9 @@ function RowContextMenuContent({
     );
 }
 
-// Skip the menu's subtree while closed; it is mounted on busy tracking islands.
-export default function RowContextMenu(props) {
+// Skip closed menus on busy tracking islands. Callers with custom focus
+// restoration can retain the renderer so its exit callback always runs.
+export default function RowContextMenu({keepMounted = false, ...props}) {
     const shouldRender = useDelayedUnmount(props.open, 0);
-    return shouldRender ? <RowContextMenuContent {...props} /> : null;
+    return keepMounted || shouldRender ? <RowContextMenuContent {...props} /> : null;
 }

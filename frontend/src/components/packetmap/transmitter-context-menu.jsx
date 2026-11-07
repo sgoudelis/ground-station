@@ -2,7 +2,6 @@
 
 import React, {useEffect, useMemo, useRef, useState} from 'react';
 import {flushSync} from 'react-dom';
-import {Divider, ListItemIcon, ListItemText, ListSubheader, Menu, MenuItem} from '@mui/material';
 import CenterFocusStrongIcon from '@mui/icons-material/CenterFocusStrong';
 import GpsFixedIcon from '@mui/icons-material/GpsFixed';
 import GpsOffIcon from '@mui/icons-material/GpsOff';
@@ -10,14 +9,18 @@ import RouteIcon from '@mui/icons-material/Route';
 import FirstPageIcon from '@mui/icons-material/FirstPage';
 import LastPageIcon from '@mui/icons-material/LastPage';
 import FolderOpenOutlinedIcon from '@mui/icons-material/FolderOpenOutlined';
-import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import ContentCopyIcon from '@mui/icons-material/ContentCopyOutlined';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import PlaceOutlinedIcon from '@mui/icons-material/PlaceOutlined';
+import SummarizeOutlinedIcon from '@mui/icons-material/SummarizeOutlined';
 import {useTranslation} from 'react-i18next';
 import {toast} from 'react-toastify';
 import {isValidMapPosition} from '../filebrowser/position-utils.js';
 import {trackPositionAt} from './playback.js';
 import {captureFile, captureItemId, copyTransmitterText, transmitterTrack} from './transmitter-actions.js';
+import {typeLabel} from './transmitters.js';
+import RowContextMenu from '../earthview/rowcontextmenu.jsx';
 
 const emptyTrack = {points: [], times: [], samples: [], path: []};
 
@@ -51,47 +54,40 @@ export default function TransmitterContextMenu({transmitter, anchorPosition, pos
             toast.error(label('copy_failed', 'Unable to copy to clipboard.'));
         }
     };
-    const item = (key, fallback, icon, disabled = false) => <MenuItem key={key} disabled={disabled} onClick={() => action(key)}>
-        <ListItemIcon>{icon}</ListItemIcon><ListItemText>{label(key, fallback)}</ListItemText>
-    </MenuItem>;
-    return <Menu open={Boolean(transmitter)} anchorReference="anchorPosition" anchorPosition={anchorPosition}
-        onClose={close} disableRestoreFocus transitionDuration={0}
-        slotProps={{paper: {sx: {minWidth: 240}, onContextMenu: (event) => {event.preventDefault(); close();}},
-            list: {ref: menuRef, 'aria-label': label('title', 'Transmitter actions')}, transition: {onExited}}}>
-        <ListSubheader disableSticky sx={{px: 2, py: 0.75, lineHeight: 1.5, maxWidth: 320, overflowWrap: 'anywhere'}}>
-            {transmitter?.name || transmitter?.source || transmitter?.id}
-        </ListSubheader>
-        <Divider />
-        {copyMenu ? [
-            <MenuItem key="back" onClick={() => setCopyMenu(false)} onKeyDown={(event) => {
+    const item = (key, fallback, icon, disabled = false) => ({key, label: label(key, fallback), icon, disabled,
+        onClick: () => action(key)});
+    const items = copyMenu ? [
+        {key: 'back', label: label('back', 'Back'), icon: <ChevronLeftIcon />, onClick: () => setCopyMenu(false),
+            onKeyDown: (event) => {
                 if (event.key === 'ArrowLeft') {event.preventDefault(); setCopyMenu(false);}
-            }}><ListItemIcon><ChevronLeftIcon /></ListItemIcon>{label('back', 'Back')}</MenuItem>,
-            <Divider key="divider" />,
-            <MenuItem key="identifier" onClick={() => copy(transmitter.source || transmitter.name || transmitter.id)}>
-                {label('copy_identifier', 'Copy identifier')}
-            </MenuItem>,
-            <MenuItem key="coordinates" disabled={!isValidMapPosition(transmitter?.latitude, transmitter?.longitude)}
-                onClick={() => copy(`${transmitter.latitude.toFixed(6)}, ${transmitter.longitude.toFixed(6)}`)}>
-                {label('copy_coordinates', 'Copy latest coordinates')}
-            </MenuItem>,
-            <MenuItem key="json" onClick={() => copy(JSON.stringify(transmitter, null, 2))}>
-                {label('copy_json', 'Copy details JSON')}
-            </MenuItem>,
-        ] : [
-            item('center', 'Center on map', <CenterFocusStrongIcon />, !hasPosition),
-            item(following ? 'stop' : 'follow', following ? 'Stop following' : 'Follow transmitter',
-                following ? <GpsOffIcon /> : <GpsFixedIcon />, !following && !hasPosition),
-            item('fit', 'Fit entire track', <RouteIcon />, !track.points.length),
-            <Divider key="playback-divider" />,
-            item('first', 'Jump to first position', <FirstPageIcon />, isLive || !track.points.length),
-            item('last', 'Jump to last position', <LastPageIcon />, isLive || !track.points.length),
-            <Divider key="captures-divider" />,
-            item('captures', 'Open captures', <FolderOpenOutlinedIcon />, !captureItemId(transmitter) && !captureFile(transmitter)),
-            <MenuItem key="copy" onClick={() => setCopyMenu(true)} aria-haspopup="menu" onKeyDown={(event) => {
+            }},
+        {type: 'divider', key: 'divider'},
+        {key: 'identifier', label: label('copy_identifier', 'Copy identifier'), icon: <ContentCopyIcon />,
+            onClick: () => copy(transmitter.source || transmitter.name || transmitter.id)},
+        {key: 'coordinates', label: label('copy_coordinates', 'Copy latest coordinates'), icon: <PlaceOutlinedIcon />,
+            disabled: !isValidMapPosition(transmitter?.latitude, transmitter?.longitude),
+            onClick: () => copy(`${transmitter.latitude.toFixed(6)}, ${transmitter.longitude.toFixed(6)}`)},
+        {key: 'json', label: label('copy_json', 'Copy details JSON'), icon: <SummarizeOutlinedIcon />,
+            onClick: () => copy(JSON.stringify(transmitter, null, 2))},
+    ] : [
+        item('center', 'Center on map', <CenterFocusStrongIcon />, !hasPosition),
+        item(following ? 'stop' : 'follow', following ? 'Stop following' : 'Follow transmitter',
+            following ? <GpsOffIcon /> : <GpsFixedIcon />, !following && !hasPosition),
+        item('fit', 'Fit entire track', <RouteIcon />, !track.points.length),
+        {type: 'divider', key: 'playback-divider'},
+        item('first', 'Jump to first position', <FirstPageIcon />, isLive || !track.points.length),
+        item('last', 'Jump to last position', <LastPageIcon />, isLive || !track.points.length),
+        {type: 'divider', key: 'captures-divider'},
+        {...item('captures', 'Open captures', <FolderOpenOutlinedIcon />, !captureItemId(transmitter) && !captureFile(transmitter)),
+            opensDialog: true},
+        {key: 'copy', label: label('copy', 'Copy'), icon: <ContentCopyIcon />, endIcon: <ChevronRightIcon />,
+            hasSubmenu: true, onClick: () => setCopyMenu(true), onKeyDown: (event) => {
                 if (event.key === 'ArrowRight') {event.preventDefault(); setCopyMenu(true);}
-            }}><ListItemIcon><ContentCopyIcon /></ListItemIcon><ListItemText>{label('copy', 'Copy')}</ListItemText>
-                <ChevronRightIcon fontSize="small" />
-            </MenuItem>,
-        ]}
-    </Menu>;
+            }},
+    ];
+    return <RowContextMenu open={Boolean(transmitter)} onClose={close}
+        onSuppressNativeContextMenu={(event) => {event.preventDefault(); close();}}
+        anchorPosition={anchorPosition} title={transmitter?.name || transmitter?.source || transmitter?.id}
+        badgeLabel={typeLabel(transmitter?.kind)} menuLabel={label('title', 'Transmitter actions')}
+        menuListRef={menuRef} onExited={onExited} disableRestoreFocus keepMounted items={items} />;
 }
