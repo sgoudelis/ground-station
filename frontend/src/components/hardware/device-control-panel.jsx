@@ -52,17 +52,9 @@ function TelemetryValue({label, value}) {
     </Box>;
 }
 
-// Keep unavailable actions in place and explain their prerequisites on hover/focus.
-function DeviceAction({reason, hint, children, sx, ...props}) {
-    const [showReason, setShowReason] = useState(false);
-    return <Tooltip title={reason || hint || ''} describeChild open={Boolean((reason || hint) && showReason)}
-        onOpen={() => setShowReason(true)} onClose={() => setShowReason(false)}>
-        <Box component="span" sx={{display: 'flex', minWidth: 0}} tabIndex={reason ? 0 : undefined}
-            onFocus={() => setShowReason(true)} onBlur={() => setShowReason(false)}>
-            <Button fullWidth size="small" variant="outlined" disabled={Boolean(reason)}
-                sx={[{minWidth: 0, minHeight: 34, px: 1, lineHeight: 1.3}, ...(Array.isArray(sx) ? sx : [sx])]} {...props}>{children}</Button>
-        </Box>
-    </Tooltip>;
+function DeviceAction({reason, children, sx, ...props}) {
+    return <Button fullWidth size="small" variant="outlined" disabled={Boolean(reason)}
+        sx={[{minWidth: 0, minHeight: 34, px: 1, lineHeight: 1.3}, ...(Array.isArray(sx) ? sx : [sx])]} {...props}>{children}</Button>;
 }
 
 function DeviceFeedback({message, severity, pending}) {
@@ -211,16 +203,12 @@ function DeviceRow({device, kind, snapshot, status, command, owner, expanded, no
                         title={ready ? ownerLabel : t('hardware_popover.status_unavailable')}>
                         {ready ? ownerLabel : '—'}
                     </Typography>
-                    <Tooltip title={openOwnerLabel}>
-                        <span><IconButton size="small" aria-label={openOwnerLabel}
-                            disabled={!ready || !owned || manual || !onViewOwner} onClick={() => onViewOwner(owner)}>
-                            <OpenInNewIcon sx={{fontSize: 16}} />
-                        </IconButton></span>
-                    </Tooltip>
-                    <Tooltip title={t('hardware_popover.device_settings')}>
-                        <span><IconButton size="small" disabled={!onEdit} aria-label={t('hardware_popover.device_settings')}
-                            onClick={() => onEdit(device)}><SettingsOutlinedIcon sx={{fontSize: 18}} /></IconButton></span>
-                    </Tooltip>
+                    <IconButton size="small" aria-label={openOwnerLabel}
+                        disabled={!ready || !owned || manual || !onViewOwner} onClick={() => onViewOwner(owner)}>
+                        <OpenInNewIcon sx={{fontSize: 16}} />
+                    </IconButton>
+                    <IconButton size="small" disabled={!onEdit} aria-label={t('hardware_popover.device_settings')}
+                        onClick={() => onEdit(device)}><SettingsOutlinedIcon sx={{fontSize: 18}} /></IconButton>
                 </Stack>
                 <Box sx={{display: 'grid', gridTemplateColumns: kind === 'rotator' ? '1fr 1fr 1fr' : '2fr 1fr', gap: 1.25, mb: 1.25}}>
                     {kind === 'rotator' ? <>
@@ -270,11 +258,11 @@ function DeviceRow({device, kind, snapshot, status, command, owner, expanded, no
             <DeviceAction reason={disconnectReason} color="inherit" startIcon={<LinkOffIcon />} onClick={() => onSubmit('disconnect')}>
                 {t('hardware_popover.disconnect')}
             </DeviceAction>
-            <DeviceAction reason={pauseReason} hint={t(`hardware_popover.${kind === 'rotator' ? 'pause_rotator_hint' : 'pause_rig_hint'}`)}
+            <DeviceAction reason={pauseReason}
                 color="inherit" startIcon={<PauseIcon sx={{fontSize: '16px !important'}} />}
                 onClick={() => onSubmit('pause')}>{t('hardware_popover.pause_tracking')}</DeviceAction>
             {kind === 'rotator' && <DeviceAction reason={stopReason} color="error" variant="contained" sx={operationalButtonSx('fault')}
-                hint={t('hardware_popover.stop_hint')} startIcon={<StopIcon sx={{fontSize: '16px !important'}} />}
+                startIcon={<StopIcon sx={{fontSize: '16px !important'}} />}
                 onClick={() => onSubmit('stop')}>{t('hardware_popover.stop')}</DeviceAction>}
         </Box>
         <Menu id={menuId} anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={() => setMenuAnchor(null)}>

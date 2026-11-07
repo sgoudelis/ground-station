@@ -152,6 +152,11 @@
     "move": "MOVE",
     "close": "CLOSE"
   },
+  "manual_rotator_dialog": {
+    "current": "Current",
+    "requested": "Requested",
+    "readout_label": "{{axis}} position"
+  },
   "satellite_search": {
     "search_label": "Search satellites (by name or NORAD ID)"
   },

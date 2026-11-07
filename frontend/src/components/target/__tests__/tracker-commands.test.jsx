@@ -1,12 +1,14 @@
 import React from 'react';
 import {describe, expect, it, vi} from 'vitest';
 import {configureStore} from '@reduxjs/toolkit';
+import {Provider} from 'react-redux';
 import {fireEvent, render, screen} from '@testing-library/react';
 import reducer, {setTrackingStateInBackend, moveRotatorToPosition, stopRotator,
     setTrackerCommandStatus, setHardwareSnapshot, setSatelliteData, setTrackerId, setRadioRig,
     reconcileTrackerCommands, markTrackerCommandsUnknown} from '../target-slice.jsx';
 import {isCommandOutstanding, isCommandSpinning, selectTrackerCommand} from '../tracker-command-state.js';
 import ManualRotatorDialog from '../../dashboard/manual-rotator-dialog.jsx';
+import dashboard from '../../dashboard/dashboard-slice.jsx';
 
 // The module under test pulls in the shared i18n instance, so keep the rest of the
 // react-i18next module (notably initReactI18next) and only stub the hook.
@@ -362,12 +364,16 @@ describe('tracker command lifecycle', () => {
 });
 
 describe('manual dialog', () => {
+    const renderManualDialog = (ui) => {
+        const store = configureStore({reducer: {dashboard}});
+        return render(ui, {wrapper: ({children}) => <Provider store={store}>{children}</Provider>});
+    };
     const props = {open: true, onClose: vi.fn(), onMove: vi.fn(), onStop: vi.fn(),
         rotator: {name: 'Mount'}, currentAz: 10, currentEl: 20, minAz: 0, maxAz: 360, minEl: 0, maxEl: 90,
         disabled: false, canStop: true};
 
     it('uses one status row for movement and returns to the current hardware state', () => {
-        const {rerender} = render(<ManualRotatorDialog {...props} rotatorStatus={{key: 'slewing'}}
+        const {rerender} = renderManualDialog(<ManualRotatorDialog {...props} rotatorStatus={{key: 'slewing'}}
             command={{action: 'move', status: 'started'}} />);
 
         expect(screen.getAllByRole('status')).toHaveLength(1);
@@ -386,7 +392,7 @@ describe('manual dialog', () => {
 
     it('allows retrying an unconfirmed Stop while movement remains locked', () => {
         const onStop = vi.fn();
-        render(<ManualRotatorDialog {...props} disabled onStop={onStop}
+        renderManualDialog(<ManualRotatorDialog {...props} disabled onStop={onStop}
             rotatorStatus={{value: 'Motion unconfirmed'}}
             command={{action: 'stop', status: 'unknown', reconciled: true}} />);
         expect(screen.getByRole('status')).toHaveTextContent('Stop unconfirmed');
@@ -398,7 +404,7 @@ describe('manual dialog', () => {
 
     it('keeps Move busy after acceptance and allows Stop before slewing telemetry', () => {
         const onStop = vi.fn();
-        render(<ManualRotatorDialog {...props} onStop={onStop} command={{action: 'move', status: 'submitted'}} />);
+        renderManualDialog(<ManualRotatorDialog {...props} onStop={onStop} command={{action: 'move', status: 'submitted'}} />);
         expect(screen.getByRole('button', {name: 'rotator_control.move'})).toBeDisabled();
         fireEvent.click(screen.getByRole('button', {name: 'rotator_control.stop'}));
         expect(onStop).toHaveBeenCalledOnce();
@@ -408,7 +414,7 @@ describe('manual dialog', () => {
     it('can close while waiting for Stop and restores progress on reopening', () => {
         const onClose = vi.fn();
         const command = {action: 'stop', status: 'started'};
-        const {rerender} = render(<ManualRotatorDialog {...props} onClose={onClose} command={command} />);
+        const {rerender} = renderManualDialog(<ManualRotatorDialog {...props} onClose={onClose} command={command} />);
         fireEvent.click(screen.getByRole('button', {name: 'rotator_control.close'}));
         expect(onClose).toHaveBeenCalledOnce();
         rerender(<ManualRotatorDialog {...props} open={false} command={command} />);
@@ -418,7 +424,7 @@ describe('manual dialog', () => {
     });
 
     it('shows worker failure and re-enables a valid Move', () => {
-        render(<ManualRotatorDialog {...props} command={{action: 'move', status: 'failed', reason: 'Controller rejected movement'}} />);
+        renderManualDialog(<ManualRotatorDialog {...props} command={{action: 'move', status: 'failed', reason: 'Controller rejected movement'}} />);
         expect(screen.getByRole('status')).toHaveTextContent('Move failed');
         expect(screen.getByRole('status')).toHaveAttribute('title', expect.stringContaining('Controller rejected movement'));
         expect(screen.getByRole('button', {name: 'rotator_control.move'})).toBeEnabled();

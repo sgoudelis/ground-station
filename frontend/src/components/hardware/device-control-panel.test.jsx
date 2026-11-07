@@ -246,12 +246,12 @@ describe('device actions and status', () => {
         expect(screen.getByRole('menuitem', {name: 'Unpark'})).not.toHaveAttribute('aria-disabled', 'true');
     });
 
-    it('explains unavailable actions on keyboard focus', async () => {
+    it('keeps unavailable actions disabled without tooltip focus wrappers', () => {
         setup({snapshots: [snapshot({owner: {type: 'tracker', id: 'target-1'}})]});
         const move = screen.getByRole('button', {name: 'Manual movement…'});
         expect(move).toBeDisabled();
-        fireEvent.keyDown(document, {key: 'Tab'});
-        act(() => move.parentElement.focus());
-        expect(await screen.findByRole('tooltip')).toHaveTextContent('Take manual control first');
+        expect(move.parentElement).not.toHaveAttribute('tabindex');
+        expect(move).not.toHaveAttribute('title');
+        expect(move).not.toHaveAttribute('aria-describedby');
     });
 });

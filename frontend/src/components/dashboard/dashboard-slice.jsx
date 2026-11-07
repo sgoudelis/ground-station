@@ -37,6 +37,7 @@ const rigsSlice = createSlice({
             total: 0,
         },
         showLocationSetupDialog: false,
+        manualRotatorDialogPosition: {x: 0, y: 0},
     },
     reducers: {
         setIsEditing: (state, action) => {
@@ -74,6 +75,12 @@ const rigsSlice = createSlice({
         setShowLocationSetupDialog: (state, action) => {
             state.showLocationSetupDialog = action.payload;
         },
+        setManualRotatorDialogPosition: (state, action) => {
+            const {x, y} = action.payload;
+            if (Number.isFinite(x) && Number.isFinite(y)) {
+                state.manualRotatorDialogPosition = {x, y};
+            }
+        },
         resetRuntimeSessionState: (state) => {
             // Force a clean runtime bootstrap for each authenticated session.
             // Without this reset, logout/login cycles can briefly reuse stale
@@ -105,6 +112,7 @@ export const {
     setInitialDataLoading,
     setInitialDataProgress,
     setShowLocationSetupDialog,
+    setManualRotatorDialogPosition,
     resetRuntimeSessionState,
 } = rigsSlice.actions;
 

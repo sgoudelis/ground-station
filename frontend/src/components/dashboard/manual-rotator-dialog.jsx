@@ -5,16 +5,18 @@
  */
 
 import * as React from 'react';
+import {useDispatch, useSelector} from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import {
     Box,
     Button,
-    Dialog,
     DialogActions,
     DialogContent,
     DialogTitle,
     Grid,
     IconButton,
+    Paper,
+    Portal,
     Typography,
 } from '@mui/material';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
@@ -23,6 +25,10 @@ import {resolveHardwarePresentation} from '../common/hardware-status-presentatio
 import {isCommandOutstanding} from '../target/tracker-command-state.js';
 import {TrackerCommandHeaderStatus} from '../target/tracker-command-feedback.jsx';
 import CloseIcon from '@mui/icons-material/Close';
+import {setManualRotatorDialogPosition} from './dashboard-slice.jsx';
+
+const CENTERED_POSITION = {x: 0, y: 0};
+const VIEWPORT_MARGIN = 16;
 
 const DIAL_SIZE = 184;
 const DIAL_CENTER = DIAL_SIZE / 2;
@@ -48,6 +54,28 @@ const clamp = (value, min, max) => Math.max(min, Math.min(value, max));
 
 const rangeValue = (ratio, min, max) => min + clamp(ratio, 0, 1) * (max - min);
 const valueRatio = (value, min, max) => (max > min ? clamp((value - min) / (max - min), 0, 1) : 0);
+
+function CoordinateReadout({axis, current, requested}) {
+    const {t} = useTranslation('target');
+    const degrees = (value) => {
+        // Missing telemetry must stay visibly unknown rather than looking like 0°.
+        if (value === null || value === undefined || value === '') return '—';
+        const parsed = finiteNumber(value);
+        return parsed === null ? '—' : `${parsed.toFixed(1)}°`;
+    };
+
+    return <Box component="dl" role="group" aria-label={t('manual_rotator_dialog.readout_label', {axis})}
+        sx={{display: 'grid', gridTemplateColumns: '1fr auto', columnGap: 1, rowGap: 0.25, m: 0, mt: 0.5, px: 1}}>
+        <Typography component="dt" variant="caption" color="text.secondary">{t('manual_rotator_dialog.current')}</Typography>
+        <Typography component="dd" variant="body2" sx={{m: 0, fontFamily: 'monospace', fontVariantNumeric: 'tabular-nums'}}>
+            {degrees(current)}
+        </Typography>
+        <Typography component="dt" variant="caption" color="text.secondary">{t('manual_rotator_dialog.requested')}</Typography>
+        <Typography component="dd" variant="body2" sx={{m: 0, fontFamily: 'monospace', fontVariantNumeric: 'tabular-nums', fontWeight: 700}}>
+            {degrees(requested)}
+        </Typography>
+    </Box>;
+}
 
 function CoordinateStepper({ label, value, min, max, disabled, onChange }) {
     const numericValue = finiteNumber(value);
@@ -260,6 +288,14 @@ export default function ManualRotatorDialog({
     stopLabel,
 }) {
     const { t } = useTranslation('target');
+    const dispatch = useDispatch();
+    const savedPosition = useSelector((state) => state.dashboard?.manualRotatorDialogPosition) || CENTERED_POSITION;
+    const [position, setPosition] = React.useState(savedPosition);
+    const positionRef = React.useRef(savedPosition);
+    const [paper, setPaper] = React.useState(null);
+    const [dragging, setDragging] = React.useState(false);
+    const drag = React.useRef(null);
+    const titleId = React.useId();
     const [az, setAz] = React.useState('');
     const [el, setEl] = React.useState('');
     const busy = isCommandOutstanding(command);
@@ -267,6 +303,69 @@ export default function ManualRotatorDialog({
     const stopping = busy && ['pause', 'stop'].includes(command.action);
     const hardwareStatus = resolveHardwarePresentation({source: 'rotator', status: rotatorStatus?.key || 'unknown', t});
     const wasOpen = React.useRef(false);
+
+    const updatePosition = React.useCallback((next) => {
+        positionRef.current = next;
+        setPosition(next);
+    }, []);
+
+    const boundPosition = React.useCallback((next) => {
+        if (!paper) return next;
+        const {width, height} = paper.getBoundingClientRect();
+        // Store offsets from the normal centered position. Keep the whole dialog
+        // reachable when restoring it on a smaller screen or resizing the window.
+        const maxX = Math.max(0, (window.innerWidth - width) / 2 - VIEWPORT_MARGIN);
+        const maxY = Math.max(0, (window.innerHeight - height) / 2 - VIEWPORT_MARGIN);
+        return {x: clamp(next.x, -maxX, maxX), y: clamp(next.y, -maxY, maxY)};
+    }, [paper]);
+
+    React.useLayoutEffect(() => {
+        if (!open) {
+            // Closing during a drag must not leave the next opening grabbed.
+            drag.current = null;
+            setDragging(false);
+            return;
+        }
+        if (!paper) return;
+        updatePosition(boundPosition(savedPosition));
+        const keepInView = () => updatePosition(boundPosition(positionRef.current));
+        const observer = new ResizeObserver(keepInView);
+        observer.observe(paper);
+        window.addEventListener('resize', keepInView);
+        return () => {
+            observer.disconnect();
+            window.removeEventListener('resize', keepInView);
+        };
+    }, [boundPosition, open, paper, savedPosition, updatePosition]);
+
+    const startDrag = (event) => {
+        // The close button and the antenna controls retain their normal behavior.
+        if (drag.current || event.isPrimary === false || event.button !== 0 || event.target.closest('button')) return;
+        event.preventDefault();
+        event.currentTarget.setPointerCapture(event.pointerId);
+        drag.current = {pointerId: event.pointerId, x: event.clientX, y: event.clientY, position: positionRef.current};
+        setDragging(true);
+    };
+
+    const moveDialog = (event) => {
+        const start = drag.current;
+        if (!start || start.pointerId !== event.pointerId) return;
+        updatePosition(boundPosition({
+            x: start.position.x + event.clientX - start.x,
+            y: start.position.y + event.clientY - start.y,
+        }));
+    };
+
+    const finishDrag = (event) => {
+        if (!drag.current || drag.current.pointerId !== event.pointerId) return;
+        drag.current = null;
+        setDragging(false);
+        // Persist only the completed drag; pointer movement stays local to the dialog.
+        dispatch(setManualRotatorDialogPosition(positionRef.current));
+        if (event.currentTarget.hasPointerCapture?.(event.pointerId)) {
+            event.currentTarget.releasePointerCapture(event.pointerId);
+        }
+    };
 
     React.useEffect(() => {
         if (open && !wasOpen.current) {
@@ -300,61 +399,84 @@ export default function ManualRotatorDialog({
         catch { /* Failure remains visible in the shared operation record. */ }
     };
 
+    if (!open) return null;
+
     return (
-        <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
-            <DialogTitle sx={{ pb: 1, pr: 6, position: 'relative' }}>
-                <IconButton aria-label={t('rotator_control.close')} onClick={onClose} size="small"
-                    sx={{ position: 'absolute', top: 8, right: 8, color: 'text.secondary' }}>
-                    <CloseIcon fontSize="small" />
-                </IconButton>
-                <Typography component="span" noWrap variant="subtitle1" sx={{ display: 'block', fontWeight: 800, lineHeight: 1.2 }}>
-                    {rotator?.name || 'Rotator'}
-                </Typography>
-                <Typography noWrap color="text.secondary" variant="caption" sx={{ display: 'block', fontFamily: 'monospace', mt: 0.35 }}>
-                    {rotatorDetails}
-                </Typography>
-            </DialogTitle>
-            <DialogContent dividers sx={{ px: 1 }}>
-                {/* Command progress replaces the hardware label in one stable row. */}
-                <TrackerCommandHeaderStatus command={command} hardwareStatus={hardwareStatus.label}
-                    hardwareIcon={hardwareStatus.Icon} showIcon
-                    sx={{mx: 1, mb: 1.75, px: 1.25, py: 0.75, minHeight: 34, minWidth: 0,
-                        border: '1px solid', borderColor: 'divider', borderRadius: 1.25, bgcolor: 'action.hover',
-                        fontSize: '0.8rem', fontWeight: 600, lineHeight: 1.4, gap: 0.75,
-                        '& .MuiSvgIcon-root': {fontSize: 16}}} />
-                <Grid container spacing={2}>
-                    <Grid size={{ xs: 6, sm: 6 }}>
-                        <CoordinateStepper
-                            label={t('manual_rotator_dialog.az', { defaultValue: 'AZ' })}
-                            value={az}
-                            min={minAz}
-                            max={maxAz}
-                            disabled={disabled || moving || stopping}
-                            onChange={(next) => setAz(formatDegrees(next))}
-                        />
-                    </Grid>
-                    <Grid size={{ xs: 6, sm: 6 }}>
-                        <CoordinateStepper
-                            label={t('manual_rotator_dialog.el', { defaultValue: 'EL' })}
-                            value={el}
-                            min={minEl}
-                            max={maxEl}
-                            disabled={disabled || moving || stopping}
-                            onChange={(next) => setEl(formatDegrees(next))}
-                        />
-                    </Grid>
-                    <Grid size={{ xs: 6, sm: 6 }}>
-                        <AzimuthDial value={numericAz} currentValue={currentAz} min={minAz} max={maxAz} disabled={disabled || moving || stopping} onChange={(next) => setAz(formatDegrees(next))} />
-                    </Grid>
-                    <Grid size={{ xs: 6, sm: 6 }}>
-                        <ElevationDial value={numericEl} currentValue={currentEl} min={minEl} max={maxEl} disabled={disabled || moving || stopping} onChange={(next) => setEl(formatDegrees(next))} />
-                    </Grid>
-                </Grid>
-            </DialogContent>
-            <DialogActions sx={{ p: 2 }}>
-                <Button color="error" disabled={!canStop || (stopping && command?.status !== 'unknown')} loading={stopping && command?.status !== 'unknown'} variant="contained" onClick={stop}>{stopLabel || t('rotator_control.stop')}</Button>
-                <Button disabled={disabled || !validPosition || moving || stopping} loading={moving && command?.status !== 'unknown'} variant="contained" onClick={submit}>{t('rotator_control.move')}</Button>
-            </DialogActions>
-        </Dialog>
+        <Portal>
+            {/* A floating paper avoids modal focus traps, scroll locks and hidden
+                background content so waterfall controls remain usable. */}
+            <Box sx={{position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                bgcolor: 'transparent', backdropFilter: 'none', pointerEvents: 'none', zIndex: (theme) => theme.zIndex.modal - 1}}>
+                <Paper ref={setPaper} role="dialog" aria-modal="false" aria-labelledby={titleId} elevation={24}
+                    onKeyDown={(event) => {
+                        if (event.key === 'Escape') {
+                            event.stopPropagation();
+                            onClose();
+                        }
+                    }}
+                    style={{translate: `${position.x}px ${position.y}px`}}
+                    sx={{pointerEvents: 'auto', display: 'flex', flexDirection: 'column', position: 'relative',
+                        m: 4, width: 'calc(100% - 64px)', maxWidth: 444, maxHeight: 'calc(100% - 64px)', overflowY: 'auto',
+                        border: '1px solid', borderColor: 'divider'}}>
+                    <DialogTitle id={titleId} onPointerDown={startDrag} onPointerMove={moveDialog} onPointerUp={finishDrag}
+                        onPointerCancel={finishDrag} onLostPointerCapture={finishDrag}
+                        sx={{ pb: 1, pr: 6, position: 'relative', cursor: dragging ? 'grabbing' : 'grab', touchAction: 'none', userSelect: 'none' }}>
+                        <IconButton aria-label={t('rotator_control.close')} onClick={onClose} size="small"
+                            sx={{ position: 'absolute', top: 8, right: 8, color: 'text.secondary' }}>
+                            <CloseIcon fontSize="small" />
+                        </IconButton>
+                        <Typography component="span" noWrap variant="subtitle1" sx={{ display: 'block', fontWeight: 800, lineHeight: 1.2 }}>
+                            {rotator?.name || 'Rotator'}
+                        </Typography>
+                        <Typography noWrap color="text.secondary" variant="caption" sx={{ display: 'block', fontFamily: 'monospace', mt: 0.35 }}>
+                            {rotatorDetails}
+                        </Typography>
+                    </DialogTitle>
+                    <DialogContent dividers sx={{ px: 1 }}>
+                        {/* Command progress replaces the hardware label in one stable row. */}
+                        <TrackerCommandHeaderStatus command={command} hardwareStatus={hardwareStatus.label}
+                            hardwareIcon={hardwareStatus.Icon} showIcon
+                            sx={{mx: 1, mb: 1.75, px: 1.25, py: 0.75, minHeight: 34, minWidth: 0,
+                                border: '1px solid', borderColor: 'divider', borderRadius: 1.25, bgcolor: 'action.hover',
+                                fontSize: '0.8rem', fontWeight: 600, lineHeight: 1.4, gap: 0.75,
+                                '& .MuiSvgIcon-root': {fontSize: 16}}} />
+                        <Grid container spacing={2}>
+                            <Grid size={{ xs: 6, sm: 6 }}>
+                                <CoordinateStepper
+                                    label={t('manual_rotator_dialog.az', { defaultValue: 'AZ' })}
+                                    value={az}
+                                    min={minAz}
+                                    max={maxAz}
+                                    disabled={disabled || moving || stopping}
+                                    onChange={(next) => setAz(formatDegrees(next))}
+                                />
+                            </Grid>
+                            <Grid size={{ xs: 6, sm: 6 }}>
+                                <CoordinateStepper
+                                    label={t('manual_rotator_dialog.el', { defaultValue: 'EL' })}
+                                    value={el}
+                                    min={minEl}
+                                    max={maxEl}
+                                    disabled={disabled || moving || stopping}
+                                    onChange={(next) => setEl(formatDegrees(next))}
+                                />
+                            </Grid>
+                            <Grid size={{ xs: 6, sm: 6 }}>
+                                <AzimuthDial value={numericAz} currentValue={currentAz} min={minAz} max={maxAz} disabled={disabled || moving || stopping} onChange={(next) => setAz(formatDegrees(next))} />
+                                <CoordinateReadout axis={t('manual_rotator_dialog.az', {defaultValue: 'AZ'})} current={currentAz} requested={az} />
+                            </Grid>
+                            <Grid size={{ xs: 6, sm: 6 }}>
+                                <ElevationDial value={numericEl} currentValue={currentEl} min={minEl} max={maxEl} disabled={disabled || moving || stopping} onChange={(next) => setEl(formatDegrees(next))} />
+                                <CoordinateReadout axis={t('manual_rotator_dialog.el', {defaultValue: 'EL'})} current={currentEl} requested={el} />
+                            </Grid>
+                        </Grid>
+                    </DialogContent>
+                    <DialogActions sx={{ p: 2 }}>
+                        <Button color="error" disabled={!canStop || (stopping && command?.status !== 'unknown')} loading={stopping && command?.status !== 'unknown'} variant="contained" onClick={stop}>{stopLabel || t('rotator_control.stop')}</Button>
+                        <Button disabled={disabled || !validPosition || moving || stopping} loading={moving && command?.status !== 'unknown'} variant="contained" onClick={submit}>{t('rotator_control.move')}</Button>
+                    </DialogActions>
+                </Paper>
+            </Box>
+        </Portal>
     );
 }

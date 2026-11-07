@@ -225,7 +225,7 @@ const earthViewTrackPersistConfig = {
 const dashboardPersistConfig = {
     key: 'dashboard',
     storage,
-    whitelist: []
+    whitelist: ['manualRotatorDialogPosition']
 };
 
 

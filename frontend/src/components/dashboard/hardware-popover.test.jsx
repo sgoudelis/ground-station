@@ -10,6 +10,7 @@ import {setupTheme} from '../../theme.js';
 import HardwareSettingsPopover from './hardware-popover.jsx';
 import tracking from '../target/target-slice.jsx';
 import scheduler from '../scheduler/scheduler-slice.jsx';
+import dashboard from './dashboard-slice.jsx';
 import hardware, {fetchHardwareState, receiveDeviceCommand, receiveDeviceSnapshot} from '../hardware/control-slice.js';
 
 const {socket} = vi.hoisted(() => ({socket: {connected: true, emit: vi.fn()}}));
@@ -31,7 +32,7 @@ function setup({data = {}, owner = {type: 'manual', id: 'manual:rotator:mount'},
     const initial = tracking(undefined, {type: '@@init'});
     const store = configureStore({
         reducer: {
-            hardwareControl: hardware, targetSatTrack: tracking, scheduler,
+            hardwareControl: hardware, targetSatTrack: tracking, scheduler, dashboard,
             trackerInstances: () => ({instances: [
                 {tracker_id: 'target-1', target_number: 1},
                 {tracker_id: 'target-2', target_number: 2, tracking_state: {target_name: 'ISS'}},
@@ -229,8 +230,8 @@ describe('device popovers', () => {
         expect(screen.getByRole('button', {name: 'Pause'})).toBeEnabled();
         const stop = screen.getByRole('button', {name: 'Stop'});
         expect(stop).toBeDisabled();
-        fireEvent.focus(stop.parentElement);
-        expect(await screen.findByRole('tooltip')).toHaveTextContent('This controller does not support physical Stop');
+        expect(stop).not.toHaveAttribute('title');
+        expect(stop).not.toHaveAttribute('aria-describedby');
     });
 
     it.each(['rotator', 'rig'])('pauses %s tracking from the collapsed action row', async (kind) => {
