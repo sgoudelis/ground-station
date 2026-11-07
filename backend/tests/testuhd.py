@@ -81,7 +81,13 @@ def test_native_worker_applies_explicit_controls_and_publishes_actual_settings(m
     def receive(buffer, _metadata, _timeout):
         buffer[:] = 0
         if configs.empty():
-            stopped.set()
+            # Deliver each change after the previous one reached the hardware;
+            # preloading them would coalesce away the intermediate bandwidths.
+            update = next(pending_configs, None)
+            if update is None:
+                stopped.set()
+            else:
+                configs.put(update)
         return buffer.shape[-1]
 
     streamer = SimpleNamespace(recv=receive, issue_stream_cmd=Mock())
@@ -140,23 +146,33 @@ def test_native_worker_applies_explicit_controls_and_publishes_actual_settings(m
             "sdr_settings": legacy,
         }
     )
-    configs.put(
-        {
-            "gain": 42,
-            "sdr_settings": {**legacy, "uhd": {"clockSource": "external", "bandwidth": "auto"}},
-        }
-    )
-    configs.put({"sample_rate": 6e6})
-    configs.put(
-        {"sdr_settings": {**legacy, "uhd": {"clockSource": "external", "bandwidth": "driver"}}}
+    pending_configs = iter(
+        [
+            {
+                "gain": 42,
+                "sdr_settings": {
+                    **legacy,
+                    "uhd": {"clockSource": "external", "bandwidth": "auto"},
+                },
+            },
+            {"sample_rate": 6e6},
+            {
+                "sdr_settings": {
+                    **legacy,
+                    "uhd": {"clockSource": "external", "bandwidth": "driver"},
+                }
+            },
+        ]
     )
     uhdworker.uhd_worker_process(configs, messages, stopped)
 
     events = list(messages.queue)
-    assert not [item for item in events if item["type"] == "error"]
+    assert not [item for item in events if item["type"] in ("error", "config-failed")]
     assert bandwidth_requests == [4e6, 6e6, 56e6]
     assert clock_requests == ["external"]
     readbacks = [item["status"] for item in events if item["type"] == "receiver"]
+    assert [item["bandwidth_hz"] for item in readbacks] == [56e6, 4e6, 6e6, 56e6]
+    assert [item["sample_rate"] for item in readbacks] == [4e6, 4e6, 6e6, 6e6]
     assert readbacks[0]["gain_db"] == 15
     assert readbacks[0]["clock_source"] == "internal"
     assert readbacks[0]["bandwidth_hz"] == 56e6
