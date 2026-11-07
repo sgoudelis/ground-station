@@ -133,7 +133,7 @@ export default function MeshtasticFolderDialog({folder, socket, onClose, onOpenP
             </Paper>
         </DialogContent>
         <DialogActions disableSpacing sx={fileDialogActionsSx}>
-            <Button color="error" variant="outlined" startIcon={<DeleteIcon />} onClick={() => onDelete(detail)}>{text('delete', 'Delete node captures')}</Button>
+            {onDelete && <Button color="error" variant="outlined" startIcon={<DeleteIcon />} onClick={() => onDelete(detail)}>{text('delete', 'Delete node captures')}</Button>}
             <Button component="a" variant="outlined" href={detail.download_url} startIcon={<DownloadIcon />}>{text('download', 'Download all captures')}</Button>
             <Button variant="outlined" onClick={onClose}>{text('close', 'Close')}</Button>
         </DialogActions>

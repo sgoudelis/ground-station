@@ -121,7 +121,7 @@ export default function RadiosondeFolderDialog({ folder, socket, onClose, onOpen
                 </Paper>
             </DialogContent>
             <DialogActions disableSpacing sx={fileDialogActionsSx}>
-                <Button color="error" variant="outlined" startIcon={<DeleteIcon />} onClick={() => onDelete(detail)}>{t('radiosonde_folder.delete', 'Delete sonde captures')}</Button>
+                {onDelete && <Button color="error" variant="outlined" startIcon={<DeleteIcon />} onClick={() => onDelete(detail)}>{t('radiosonde_folder.delete', 'Delete sonde captures')}</Button>}
                 <Button component="a" variant="outlined" href={detail.download_url} startIcon={<DownloadIcon />}>
                     {t('radiosonde_folder.download', 'Download all captures')}
                 </Button>

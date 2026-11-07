@@ -34,6 +34,7 @@ import MeshtasticMapMarker from './meshtastic-map-marker.jsx';
 import {createMeshtasticRenderer, meshtasticPinSize} from './meshtastic-marker.js';
 
 export const POSITION_COLORS = Object.fromEntries(Object.entries(TRANSMITTER_TYPES).map(([kind, value]) => [kind, value.color]));
+const emptyBounds = [];
 
 const hybridReferenceLayers = ['World_Transportation', 'World_Boundaries_and_Places'].map((service) => ({
     id: service,
@@ -49,7 +50,7 @@ function aprsPosition(point, details) {
 }
 
 export function MapViewport({bounds, ready, fitRequest, preserveViewRequest = 0, padding = 42, paddingTop = padding,
-    selectedTransmitterId = null, selectedPoint}) {
+    selectedTransmitterId = null, selectedPoint, selectedBounds = emptyBounds, navigationRequest = null, onFollowingChange}) {
     const {current} = useMap();
     const map = current?.getMap();
     const [savedView] = useState(readMapView);
@@ -59,6 +60,11 @@ export function MapViewport({bounds, ready, fitRequest, preserveViewRequest = 0,
     const lastPreserveViewRequest = useRef(preserveViewRequest);
     // Navigation can release the camera without clearing the selected transmitter.
     const following = useRef(selectedTransmitterId !== null);
+    const lastNavigationRequest = useRef(null);
+    const changeFollowing = useStableEvent((value) => {
+        following.current = value;
+        onFollowingChange?.(value ? selectedTransmitterId : null);
+    });
     const targetLatitude = selectedPoint?.latitude;
     const targetLongitude = selectedPoint?.longitude;
     const fitOptions = useMemo(() => ({padding: {top: paddingTop, left: padding, right: padding, bottom: padding},
@@ -69,7 +75,7 @@ export function MapViewport({bounds, ready, fitRequest, preserveViewRequest = 0,
     ], [[Infinity, Infinity], [-Infinity, -Infinity]]) : null, [bounds]);
 
     useEffect(() => {
-        following.current = selectedTransmitterId !== null;
+        changeFollowing(selectedTransmitterId !== null);
     }, [selectedTransmitterId]);
 
     useEffect(() => {
@@ -85,7 +91,7 @@ export function MapViewport({bounds, ready, fitRequest, preserveViewRequest = 0,
             if (programmatic.current || event?.packetMapResize) return;
             hasUserView.current = true;
             // Panning and zooming both release follow while keeping the selection.
-            following.current = false;
+            changeFollowing(false);
         };
         const persist = (event) => {
             if (!programmatic.current && !event?.packetMapResize && hasUserView.current) {
@@ -144,6 +150,33 @@ export function MapViewport({bounds, ready, fitRequest, preserveViewRequest = 0,
             hasUserView.current = false;
             writeStored(mapViewStoreName, null);
         }
+        if (navigationRequest && navigationRequest !== lastNavigationRequest.current) {
+            // A request belongs to its selected transmitter. Defer it through
+            // loading, but never replay an old command after deselection.
+            if (navigationRequest.transmitterId !== selectedTransmitterId) {
+                lastNavigationRequest.current = navigationRequest;
+            } else if (!ready) return;
+            else {
+                const {type} = navigationRequest;
+                lastNavigationRequest.current = navigationRequest;
+                hasUserView.current = true;
+                changeFollowing(type === 'follow');
+                if (type !== 'follow') {
+                    programmatic.current = true;
+                    if (type === 'center' && isValidMapPosition(targetLatitude, targetLongitude)) {
+                        map.jumpTo({center: [targetLongitude, targetLatitude], zoom: map.getZoom()});
+                    } else if (type === 'fit' && selectedBounds.length) {
+                        const trackBounds = selectedBounds.reduce(([min, max], [lat, lon]) => [
+                            [Math.min(min[0], lon), Math.min(min[1], lat)],
+                            [Math.max(max[0], lon), Math.max(max[1], lat)],
+                        ], [[Infinity, Infinity], [-Infinity, -Infinity]]);
+                        map.fitBounds(trackBounds, fitOptions);
+                    }
+                    programmatic.current = false;
+                    return;
+                }
+            }
+        }
         if (following.current) {
             // Following owns the center, while the user's current zoom stays intact.
             // Retain that view after deselection until an explicit Fit all request.
@@ -162,13 +195,15 @@ export function MapViewport({bounds, ready, fitRequest, preserveViewRequest = 0,
         map.resize();
         map.fitBounds(fitBounds, fitOptions);
         programmatic.current = false;
-    }, [map, bounds, fitBounds, ready, fitRequest, preserveViewRequest, fitOptions, selectedTransmitterId, targetLatitude, targetLongitude]);
+    }, [map, bounds, fitBounds, ready, fitRequest, preserveViewRequest, fitOptions, selectedTransmitterId,
+        targetLatitude, targetLongitude, navigationRequest, selectedBounds, changeFollowing]);
     return null;
 }
 
 export default function PacketMap({positions, transmitters, hasPositions = positions.length > 0, loading, gridEditable, fitRequest = 0,
     preserveViewRequest = 0,
-    selectedTransmitterId = null, onSelectTransmitter, hiddenTypes = [], onHiddenTypesChange, onFitAll, playbackTime}) {
+    selectedTransmitterId = null, onSelectTransmitter, hiddenTypes = [], onHiddenTypesChange, onFitAll, playbackTime,
+    navigationRequest, onFollowingChange}) {
     const {t} = useTranslation('navigation');
     const selectTransmitter = useStableEvent((id) => onSelectTransmitter?.(id));
     const receiver = useSelector((state) => state.location?.location);
@@ -352,7 +387,8 @@ export default function PacketMap({positions, transmitters, hasPositions = posit
                 <MapInteractions enableMapDragging={settings.enableMapDragging} />
                 <MapViewport bounds={bounds} ready={!loading} fitRequest={`${fitRequest}:${localFit}`}
                     preserveViewRequest={preserveViewRequest} selectedTransmitterId={selectedTransmitterId}
-                    selectedPoint={selectedPoint} paddingTop={paddingTop} />
+                    selectedPoint={selectedPoint} selectedBounds={selectedTrack?.path}
+                    navigationRequest={navigationRequest} onFollowingChange={onFollowingChange} paddingTop={paddingTop} />
                 {visibilityCircles.map(({id, radius, color, pathLabel}) => <VisibilityCircle key={id}
                     center={[selectedPoint.latitude, selectedPoint.longitude]} radius={radius} label={pathLabel}
                     pathOptions={{color, fill: false, weight: 2, opacity: 0.85, dashArray: '8 6'}} />)}

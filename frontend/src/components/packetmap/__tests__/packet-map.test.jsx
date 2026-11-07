@@ -305,6 +305,56 @@ it.each([
 });
 
 describe('Packet map viewport', () => {
+    it('centers once, resumes and stops following the same selection, and reports manual release', () => {
+        const onFollowingChange = vi.fn();
+        const element = (navigationRequest, latitude = 40) => <MapViewport ready bounds={[[40, 23], [42, 25]]}
+            fitRequest={0} selectedTransmitterId="A" selectedPoint={{latitude, longitude: 23}}
+            navigationRequest={navigationRequest} onFollowingChange={onFollowingChange} />;
+        const center = {type: 'center', transmitterId: 'A'};
+        const {rerender} = render(element(center));
+        expect(map.jumpTo).toHaveBeenLastCalledWith({center: [23, 40], zoom: 8});
+        expect(onFollowingChange).toHaveBeenLastCalledWith(null);
+        map.jumpTo.mockClear();
+        rerender(element(center, 41));
+        expect(map.jumpTo).not.toHaveBeenCalled();
+
+        const follow = {type: 'follow', transmitterId: 'A'};
+        rerender(element(follow, 41));
+        expect(onFollowingChange).toHaveBeenLastCalledWith('A');
+        expect(map.jumpTo).toHaveBeenLastCalledWith({center: [23, 41], zoom: 8});
+        rerender(element(follow, 42));
+        expect(map.jumpTo).toHaveBeenLastCalledWith({center: [23, 42], zoom: 8});
+        act(() => listeners.get('movestart')());
+        expect(onFollowingChange).toHaveBeenLastCalledWith(null);
+        map.jumpTo.mockClear();
+        rerender(element(follow, 43));
+        expect(map.jumpTo).not.toHaveBeenCalled();
+        rerender(element({...follow}, 43));
+        expect(onFollowingChange).toHaveBeenLastCalledWith('A');
+        expect(map.jumpTo).toHaveBeenLastCalledWith({center: [23, 43], zoom: 8});
+        const stop = {type: 'stop', transmitterId: 'A'};
+        map.jumpTo.mockClear();
+        rerender(element(stop, 43));
+        rerender(element(stop, 44));
+        expect(map.jumpTo).not.toHaveBeenCalled();
+        expect(onFollowingChange).toHaveBeenLastCalledWith(null);
+    });
+
+    it('fits only the selected complete track once, waits through loading and keeps the view on updates', () => {
+        const navigationRequest = {type: 'fit', transmitterId: 'A'};
+        const element = (ready, latitude = 40) => <MapViewport ready={ready} bounds={[[0, 0], [80, 120]]}
+            selectedBounds={[[40, 23], [42, 25], [41, 22]]} fitRequest={0}
+            selectedTransmitterId="A" selectedPoint={{latitude, longitude: 23}} navigationRequest={navigationRequest} />;
+        const {rerender} = render(element(false));
+        expect(map.fitBounds).not.toHaveBeenCalled();
+        rerender(element(true));
+        expect(map.fitBounds).toHaveBeenCalledExactlyOnceWith([[22, 40], [25, 42]], expect.objectContaining({maxZoom: 13}));
+        expect(map.jumpTo).not.toHaveBeenCalled();
+        rerender(element(true, 41));
+        expect(map.fitBounds).toHaveBeenCalledTimes(1);
+        expect(map.jumpTo).not.toHaveBeenCalled();
+    });
+
     it.each([null, 'A'])('keeps a mouse pan uninterrupted by live fixes while selection is %s', (selectedTransmitterId) => {
         vi.spyOn(globalThis, 'ResizeObserver').mockImplementation(function (callback) {
             // Browsers deliver an initial size notification whenever observe()

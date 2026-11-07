@@ -20,6 +20,8 @@ import {columns, LAYOUT_SCHEMA_VERSION, loadLayouts} from './layouts.js';
 import {transmitterRows} from './transmitters.js';
 import TransmitterList from './transmitter-list.jsx';
 import TransmitterInfo from './transmitter-info.jsx';
+import TransmitterCapturesDialog from './transmitter-captures-dialog.jsx';
+import {transmitterTrack} from './transmitter-actions.js';
 import useAircraft from '../decoders/use-aircraft.js';
 import {createAircraftHistory} from './aircraft.js';
 import {aircraftReceptionAt} from './reception.js';
@@ -50,6 +52,9 @@ export default function PacketMapLayout() {
     const isLive = range.end === null;
     const [liveNow, setLiveNow] = useState(Date.now);
     const [selectedTransmitterId, setSelectedTransmitterId] = useState(null);
+    const [followedTransmitterId, setFollowedTransmitterId] = useState(null);
+    const [navigationRequest, setNavigationRequest] = useState(null);
+    const [capturesTransmitter, setCapturesTransmitter] = useState(null);
     const mergeHistory = useMemo(() => createAircraftHistory(), [range]);
     const {positions, transmitters} = useMemo(() => mergeHistory(savedPositions, savedTransmitters, liveAircraft, range,
         {now: Math.max(liveNow, Date.now()), selectedTransmitterId}),
@@ -100,13 +105,15 @@ export default function PacketMapLayout() {
         setHiddenTypes(next);
         writeStored(hiddenTypesStoreName, next);
     };
-    const selectTransmitter = (id) => {
+    const selectTransmitter = (id, {movePlayback = true, navigation = 'follow'} = {}) => {
         setSelectedTransmitterId(id);
+        // A fresh object also resumes following an already-selected row.
+        setNavigationRequest({type: navigation, transmitterId: id});
         const transmitter = rows.find((row) => row.id === id);
         const kind = transmitter?.kind;
         // Selecting a hidden transmitter should reveal its marker and track.
         if (hiddenTypes.includes(kind)) changeHiddenTypes(hiddenTypes.filter((value) => value !== kind));
-        if (!isLive && kind === 'adsb') {
+        if (movePlayback && !isLive && kind === 'adsb') {
             // Use recorded fixes rather than the row's latest telemetry: only
             // positions in the loaded history can reveal a marker and trail.
             const times = positions.filter((point) => point.transmitter_id === id)
@@ -123,6 +130,24 @@ export default function PacketMapLayout() {
                 }), {autoClose: 4000});
             }
         }
+    };
+    const transmitterAction = (action, id) => {
+        const transmitter = rows.find((row) => row.id === id);
+        if (!transmitter) return;
+        if (action === 'captures') {
+            setCapturesTransmitter(transmitter);
+            return;
+        }
+        if (action === 'first' || action === 'last') {
+            if (isLive) return;
+            const track = transmitterTrack(positions, id);
+            const time = action === 'first' ? track.times[0] : track.times.at(-1);
+            if (!Number.isFinite(time)) return;
+            setPlaybackTime(time);
+            selectTransmitter(id, {movePlayback: false});
+            return;
+        }
+        selectTransmitter(id, {movePlayback: false, navigation: action});
     };
     const [refreshError, setRefreshError] = useState('');
     const [reconciling, setReconciling] = useState(false);
@@ -163,6 +188,7 @@ export default function PacketMapLayout() {
                     <PacketMap positions={visiblePositions} transmitters={rows} playbackTime={currentPlaybackTime}
                         hasPositions={positions.length > 0} loading={loading} gridEditable={gridEditable}
                         preserveViewRequest={preserveViewRequest} selectedTransmitterId={selectedTransmitterId} onSelectTransmitter={selectTransmitter}
+                        navigationRequest={navigationRequest} onFollowingChange={setFollowedTransmitterId}
                         hiddenTypes={hiddenTypes} onHiddenTypesChange={changeHiddenTypes} onFitAll={() => setSelectedTransmitterId(null)} />
                 </StyledIslandParentNoScrollbar>
                 <StyledIslandParentNoScrollbar key="transmitter-info">
@@ -176,9 +202,12 @@ export default function PacketMapLayout() {
                     <TransmitterList rows={rows} loading={loading} hiddenTypes={hiddenTypes} gridEditable={gridEditable}
                         positions={positions}
                         selectedTransmitterId={selectedTransmitterId} onSelectTransmitter={selectTransmitter}
-                        playbackTime={currentPlaybackTime} />
+                        playbackTime={currentPlaybackTime} isLive={isLive} followedTransmitterId={followedTransmitterId}
+                        onTransmitterAction={transmitterAction} />
                 </StyledIslandParentNoScrollbar>
             </Responsive>}
         </div>
+        {capturesTransmitter && <TransmitterCapturesDialog key={capturesTransmitter.id} transmitter={capturesTransmitter}
+            socket={socket} onClose={() => setCapturesTransmitter(null)} />}
     </PageTabsLayout>;
 }

@@ -156,7 +156,7 @@ export default function AprsFolderDialog({folder, socket, onClose, onOpenPacket,
             </Paper>
         </DialogContent>
         <DialogActions disableSpacing sx={fileDialogActionsSx}>
-            <Button color="error" variant="outlined" startIcon={<DeleteIcon />} onClick={() => onDelete(detail)}>{text('delete', 'Delete station captures')}</Button>
+            {onDelete && <Button color="error" variant="outlined" startIcon={<DeleteIcon />} onClick={() => onDelete(detail)}>{text('delete', 'Delete station captures')}</Button>}
             <Button component="a" variant="outlined" href={detail.download_url} startIcon={<DownloadIcon />}>{text('download', 'Download all captures')}</Button>
             <Button variant="outlined" onClick={onClose}>{text('close', 'Close')}</Button>
         </DialogActions>

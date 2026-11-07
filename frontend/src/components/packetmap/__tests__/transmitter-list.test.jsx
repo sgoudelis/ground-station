@@ -1,5 +1,5 @@
 import React from 'react';
-import {fireEvent, render, screen, within} from '@testing-library/react';
+import {fireEvent, render, screen, waitFor, within} from '@testing-library/react';
 import {configureStore} from '@reduxjs/toolkit';
 import {Provider} from 'react-redux';
 import {afterAll, beforeAll, beforeEach, expect, it, vi} from 'vitest';
@@ -177,11 +177,106 @@ it('searches identities and metadata, filters types independently of map visibil
     fireEvent.mouseDown(screen.getByRole('combobox', {name: 'Sort transmitters'}));
     fireEvent.click(screen.getByRole('option', {name: 'Name', exact: true}));
     expect(store.getState().packetMap.transmitterList.sort).toBe('name');
-    expect(within(screen.getByRole('list', {name: 'Transmitters'})).getAllByRole('listitem').map((item) => within(item).getByRole('button').getAttribute('aria-label')))
+    expect(within(screen.getByRole('list', {name: 'Transmitters'})).getAllByRole('listitem').map((item) => item.querySelector('button[data-id]').getAttribute('aria-label')))
         .toEqual(['!2008e299', 'SV1ABC', 'V1234567']);
     update({rows: fixtures.map((row) => ({...row, packet_count: 10}))});
     expect(screen.queryByRole('button', {name: 'AEE608'})).not.toBeInTheDocument();
     expect(screen.getByRole('button', {name: '!2008e299'})).toBeInTheDocument();
+});
+
+const fixesFor = (row) => [0, 60000].map((offset, index) => ({...row, transmitter_id: row.id,
+    latitude: row.latitude + index, captured_at: new Date(received + offset).toISOString()}));
+
+it('opens row actions by right click without selecting or moving playback, then acts on that identity', async () => {
+    const onSelectTransmitter = vi.fn();
+    const onTransmitterAction = vi.fn();
+    setup({positions: fixesFor(fixtures[0]), onSelectTransmitter, onTransmitterAction});
+    const row = screen.getByRole('button', {name: 'AEE608'});
+    row.focus();
+    fireEvent.contextMenu(row, {clientX: 120, clientY: 180});
+    expect(screen.getByRole('menu', {name: 'Transmitter actions'})).toBeInTheDocument();
+    expect(onSelectTransmitter).not.toHaveBeenCalled();
+    expect(onTransmitterAction).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('menuitem', {name: 'Center on map'}));
+    expect(onTransmitterAction).toHaveBeenCalledExactlyOnceWith('center', fixtures[0].id);
+    await waitFor(() => expect(row).toHaveFocus());
+});
+
+it('provides a visible menu button and Shift+F10, and reflects follow and LIVE state', () => {
+    const onSelectTransmitter = vi.fn();
+    const {update} = setup({positions: fixesFor(fixtures[0]), isLive: true,
+        followedTransmitterId: fixtures[0].id, onSelectTransmitter});
+    fireEvent.click(screen.getByRole('button', {name: 'Actions for AEE608'}));
+    expect(screen.getByRole('menuitem', {name: 'Stop following'})).toBeEnabled();
+    expect(screen.getByRole('menuitem', {name: 'Jump to first position'})).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByRole('menuitem', {name: 'Jump to last position'})).toHaveAttribute('aria-disabled', 'true');
+    fireEvent.keyDown(screen.getByRole('menu'), {key: 'Escape'});
+    update({followedTransmitterId: null, isLive: false});
+    fireEvent.keyDown(screen.getByRole('button', {name: 'AEE608'}), {key: 'F10', shiftKey: true});
+    expect(screen.getByRole('menuitem', {name: 'Follow transmitter'})).toBeEnabled();
+    expect(screen.getByRole('menuitem', {name: 'Jump to first position'})).toBeEnabled();
+    expect(onSelectTransmitter).not.toHaveBeenCalled();
+});
+
+it('disables camera actions without a playback position and closes on live row expiry', async () => {
+    const {update} = setup({positions: fixesFor(fixtures[0]), playbackTime: received - 1});
+    fireEvent.contextMenu(screen.getByRole('button', {name: 'AEE608'}));
+    expect(screen.getByRole('menuitem', {name: 'Center on map'})).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByRole('menuitem', {name: 'Follow transmitter'})).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByRole('menuitem', {name: 'Fit entire track'})).toBeEnabled();
+    update({rows: fixtures.slice(1)});
+    await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument());
+});
+
+it('copies the real identifier, latest coordinates and full details without selecting the transmitter', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    const clipboard = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+    Object.defineProperty(navigator, 'clipboard', {configurable: true, value: {writeText}});
+    try {
+        const row = {...fixtures[0], file_id: 'decoded:adsb_4d2406/run/packet.jsonl'};
+        const onSelectTransmitter = vi.fn();
+        setup({rows: [row], onSelectTransmitter});
+        for (const [label, expected] of [
+            ['Copy identifier', '4D2406'],
+            ['Copy latest coordinates', '40.000000, 23.000000'],
+            ['Copy details JSON', JSON.stringify(row, null, 2)],
+        ]) {
+            fireEvent.contextMenu(screen.getByRole('button', {name: 'AEE608'}));
+            fireEvent.click(screen.getByRole('menuitem', {name: 'Copy', exact: true}));
+            fireEvent.click(screen.getByRole('menuitem', {name: label}));
+            await waitFor(() => expect(writeText).toHaveBeenLastCalledWith(expected));
+        }
+        expect(onSelectTransmitter).not.toHaveBeenCalled();
+    } finally {
+        if (clipboard) Object.defineProperty(navigator, 'clipboard', clipboard);
+        else delete navigator.clipboard;
+    }
+});
+
+it('copies from the menu on HTTP installations while releasing the menu focus trap', async () => {
+    const clipboard = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+    const command = Object.getOwnPropertyDescriptor(document, 'execCommand');
+    const copiedValues = [];
+    const copy = vi.fn(() => {
+        copiedValues.push(document.activeElement.value);
+        return true;
+    });
+    Object.defineProperty(navigator, 'clipboard', {configurable: true, value: undefined});
+    Object.defineProperty(document, 'execCommand', {configurable: true, value: copy});
+    try {
+        setup();
+        fireEvent.contextMenu(screen.getByRole('button', {name: 'AEE608'}));
+        fireEvent.click(screen.getByRole('menuitem', {name: 'Copy', exact: true}));
+        fireEvent.click(screen.getByRole('menuitem', {name: 'Copy identifier'}));
+        await waitFor(() => expect(copy).toHaveBeenCalledExactlyOnceWith('copy'));
+        expect(copiedValues).toEqual(['4D2406']);
+        expect(document.querySelector('textarea')).toBeNull();
+    } finally {
+        if (clipboard) Object.defineProperty(navigator, 'clipboard', clipboard);
+        else delete navigator.clipboard;
+        if (command) Object.defineProperty(document, 'execCommand', command);
+        else delete document.execCommand;
+    }
 });
 
 it('restores saved list controls after a remount', () => {

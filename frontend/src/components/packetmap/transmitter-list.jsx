@@ -16,6 +16,7 @@ import {createTransmitterListRows, transmitterSorts} from './transmitter-list-da
 import useTransmitterPages, {transmitterPageSizes} from './use-transmitter-pages.js';
 import TransmitterListRow, {AircraftReceptionContext, PlaybackTimeContext} from './transmitter-list-row.jsx';
 import {aircraftReceptionIndex} from './reception.js';
+import TransmitterContextMenu from './transmitter-context-menu.jsx';
 
 const rowHeight = 62;
 const emptyTypes = [];
@@ -25,19 +26,20 @@ const listStyle = {height: '100%', width: '100%', overflowX: 'hidden'};
 const sortLabels = {first_seen: 'Newest discovered', last_seen: 'Recently heard', name: 'Name', distance: 'Nearest first'};
 
 function VirtualRow({index, style, ariaAttributes, rows, offset, total, selectedId, focusId, hiddenTypes, onSelect, onFocusRow,
-    numberFormatters, timeFormatter, clockFormatter}) {
+    onOpenMenu, numberFormatters, timeFormatter, clockFormatter}) {
     const row = rows[index];
     return <div {...ariaAttributes} aria-posinset={offset + index + 1} aria-setsize={total} style={style}>
         {/* Index positions are recycled by the virtualizer; identity owns row state. */}
         <TransmitterListRow key={row.id} row={row} index={offset + index} selected={row.id === selectedId}
             focused={row.id === focusId} hidden={hiddenTypes.includes(row.kind)}
-            onSelect={onSelect} onFocusRow={onFocusRow} numberFormatters={numberFormatters}
+            onSelect={onSelect} onFocusRow={onFocusRow} onOpenMenu={onOpenMenu} numberFormatters={numberFormatters}
             timeFormatter={timeFormatter} clockFormatter={clockFormatter} />
     </div>;
 }
 
 export default function TransmitterList({rows, loading, hiddenTypes = emptyTypes, gridEditable, selectedTransmitterId = null,
-    onSelectTransmitter, playbackTime, positions = emptyPositions}) {
+    onSelectTransmitter, playbackTime, positions = emptyPositions, isLive = false, followedTransmitterId = null,
+    onTransmitterAction}) {
     const {t} = useTranslation('navigation');
     const timeSettings = useUserTimeSettings();
     const dispatch = useDispatch();
@@ -48,6 +50,7 @@ export default function TransmitterList({rows, loading, hiddenTypes = emptyTypes
     const pageSize = transmitterPageSizes.includes(savedSettings.pageSize) ? savedSettings.pageSize : 100;
     const [search, setSearch] = useState('');
     const [typeAnchor, setTypeAnchor] = useState(null);
+    const [contextMenu, setContextMenu] = useState(null);
     const [focusedId, setFocusedId] = useState(null);
     const [renderedRange, setRenderedRange] = useState({startIndex: 0, stopIndex: 7});
     const listRef = useRef(null);
@@ -56,6 +59,17 @@ export default function TransmitterList({rows, loading, hiddenTypes = emptyTypes
     const lastSelection = useRef(null);
     const select = useStableEvent((id) => onSelectTransmitter?.(id));
     const focusRow = useCallback((id) => setFocusedId(id), []);
+    const openMenu = useCallback((event, id) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const bounds = event.currentTarget.getBoundingClientRect();
+        const keyboard = event.type === 'keydown' || (event.type === 'click' && event.detail === 0);
+        setFocusedId(id);
+        setContextMenu({id, position: {left: keyboard ? bounds.left + 16 : event.clientX,
+            top: keyboard ? bounds.bottom : event.clientY}});
+    }, []);
+    // Keep the action tied to an identity, never to a recycled virtual row index.
+    const menuTransmitter = contextMenu ? rows.find((row) => row.id === contextMenu.id) ?? null : null;
     const prepareRows = useMemo(() => createTransmitterListRows(), []);
     const data = useMemo(() => prepareRows(rows, receiver), [prepareRows, rows, receiver]);
     const aircraftTimes = useMemo(() => aircraftReceptionIndex(positions), [positions]);
@@ -83,8 +97,8 @@ export default function TransmitterList({rows, loading, hiddenTypes = emptyTypes
     const focusId = inViewport(focusedIndex) ? focusedId : inViewport(selectedIndex) ? selectedTransmitterId
         : visible[Math.min(renderedRange.startIndex, visible.length - 1)]?.id;
     const rowProps = useMemo(() => ({rows: visible, offset, total, selectedId: selectedTransmitterId, focusId, hiddenTypes,
-        onSelect: select, onFocusRow: focusRow, numberFormatters, timeFormatter, clockFormatter,
-    }), [visible, offset, total, selectedTransmitterId, focusId, hiddenTypes, select, focusRow, numberFormatters, timeFormatter, clockFormatter]);
+        onSelect: select, onFocusRow: focusRow, onOpenMenu: openMenu, numberFormatters, timeFormatter, clockFormatter,
+    }), [visible, offset, total, selectedTransmitterId, focusId, hiddenTypes, select, focusRow, openMenu, numberFormatters, timeFormatter, clockFormatter]);
     const changeSettings = (settings) => dispatch(setTransmitterListSettings({...savedSettings, ...settings}));
     const toggleType = (kind) => changeSettings({excludedTypes: excludedTypes.includes(kind)
         ? excludedTypes.filter((value) => value !== kind) : [...excludedTypes, kind]});
@@ -98,6 +112,22 @@ export default function TransmitterList({rows, loading, hiddenTypes = emptyTypes
             pendingFocus.current = null;
         }
     }, []);
+    const closeMenu = () => {
+        pendingFocus.current = contextMenu?.id ?? null;
+        setContextMenu(null);
+    };
+    const restoreMenuFocus = useCallback(() => {
+        restoreFocus();
+        if (pendingFocus.current !== null) {
+            // A live expiry can remove the opener while the menu is visible.
+            pendingFocus.current = null;
+            listRef.current?.element?.querySelector('button[data-id][tabindex="0"]')?.focus({preventScroll: true});
+        }
+    }, [restoreFocus]);
+    useEffect(() => {
+        // A live expiry must close the menu instead of acting on another node.
+        if (contextMenu && !menuTransmitter) closeMenu();
+    }, [contextMenu, menuTransmitter]);
     const revealPending = useCallback(() => {
         // A newly mounted virtual list exposes its element on a second commit.
         // Keep navigation queued until its scrolling container is available.
@@ -197,6 +227,9 @@ export default function TransmitterList({rows, loading, hiddenTypes = emptyTypes
                 <Typography variant="caption" sx={{ml: 2, color: 'text.secondary'}}>{counts.get(kind) ?? 0}</Typography>
             </MenuItem>)}
         </Menu>
+        <TransmitterContextMenu transmitter={menuTransmitter} anchorPosition={contextMenu?.position}
+            positions={positions} playbackTime={playbackTime} isLive={isLive} followedTransmitterId={followedTransmitterId}
+            onAction={onTransmitterAction} onClose={closeMenu} onExited={restoreMenuFocus} />
         <Box sx={{position: 'relative', flex: 1, minHeight: 0}} aria-busy={Boolean(loading)}>
             {loading && <LinearProgress sx={{position: 'absolute', top: 0, left: 0, right: 0, height: 2, zIndex: 1}} />}
             <PlaybackTimeContext.Provider value={Number.isFinite(playbackTime) ? playbackTime : Date.now()}>

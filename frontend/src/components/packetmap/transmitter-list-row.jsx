@@ -1,7 +1,8 @@
 /** Copyright (c) 2026 Efstratios Goudelis — GPL-3.0-or-later */
 
 import React, {createContext, useContext, useId, useMemo} from 'react';
-import {Box, Chip, Typography} from '@mui/material';
+import {Box, Chip, IconButton, Tooltip, Typography} from '@mui/material';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
 import {alpha, useTheme} from '@mui/material/styles';
 import SensorsIcon from '@mui/icons-material/Sensors';
 import {useTranslation} from 'react-i18next';
@@ -160,7 +161,7 @@ function telemetryFields(row, number, t) {
 }
 
 const TransmitterListRow = React.memo(function TransmitterListRow({row, selected, focused, hidden, index,
-    onSelect, onFocusRow, numberFormatters, timeFormatter, clockFormatter}) {
+    onSelect, onFocusRow, onOpenMenu, numberFormatters, timeFormatter, clockFormatter}) {
     const {t} = useTranslation('navigation');
     const {t: aircraftT} = useTranslation('common');
     const descriptionId = useId();
@@ -209,7 +210,11 @@ const TransmitterListRow = React.memo(function TransmitterListRow({row, selected
     const firstSeen = firstStamp && Number.isFinite(firstStamp.getTime()) ? timeFormatter.format(firstStamp) : '';
     const stamp = row.last_seen ? new Date(row.last_seen) : null;
     const lastSeen = stamp && Number.isFinite(stamp.getTime()) ? timeFormatter.format(stamp) : '—';
-    return <Box component="button" type="button" data-id={row.id} data-index={index}
+    return <Box sx={{position: 'relative', height: '100%'}} onContextMenu={(event) => onOpenMenu(event, row.id)}
+        onKeyDown={(event) => {
+            if (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10')) onOpenMenu(event, row.id);
+        }}>
+        <Box component="button" type="button" data-id={row.id} data-index={index}
         className={[hidden ? 'transmitter-hidden' : '', status ? `transmitter-emergency-${status.severity}` : ''].filter(Boolean).join(' ')}
         aria-label={row.name} aria-describedby={headerFields.length ? `${descriptionId} ${flightId}` : descriptionId}
         aria-pressed={selected} tabIndex={focused ? 0 : -1}
@@ -218,10 +223,10 @@ const TransmitterListRow = React.memo(function TransmitterListRow({row, selected
             borderBottom: `1px solid ${theme.palette.divider}`, borderLeft: '3px solid',
             borderLeftColor: selected ? row.kind === 'meshtastic' ? typeColor(row.kind) : 'primary.main'
                 : 'transparent', borderRadius: 0,
-            display: 'flex', alignItems: 'center', gap: 1.25, px: 1.25, py: 0.75,
+            display: 'flex', alignItems: 'center', gap: 1.25, pl: 1.25, pr: 4.5, py: 0.75,
             color: 'text.primary', font: 'inherit', textAlign: 'left', cursor: 'pointer',
             opacity: hidden ? 0.55 : 1,
-            '@container (max-width: 650px)': {px: 0.75, gap: 0.75},
+            '@container (max-width: 650px)': {pl: 0.75, gap: 0.75},
             bgcolor: status ? alpha(theme.palette[status.severity].main, selected ? 0.18 : 0.08)
                 : row.kind === 'meshtastic' ? alpha(typeColor(row.kind), selected ? 0.14 : 0.025)
                     : selected ? 'action.selected' : 'transparent',
@@ -312,6 +317,15 @@ const TransmitterListRow = React.memo(function TransmitterListRow({row, selected
                 <span className="reception-time">{stamp && Number.isFinite(stamp.getTime()) ? clockFormatter.format(stamp) : '—'}</span>
             </Typography>
         </Box>
+        </Box>
+        <Tooltip title={t('packet_map.context.title', 'Transmitter actions')}>
+            <IconButton size="small" aria-haspopup="menu"
+                aria-label={t('packet_map.context.open', {defaultValue: 'Actions for {{name}}', name: row.name})}
+                onClick={(event) => onOpenMenu(event, row.id)}
+                sx={{position: 'absolute', right: 3, top: '50%', transform: 'translateY(-50%)'}}>
+                <MoreVertIcon sx={{fontSize: 18}} />
+            </IconButton>
+        </Tooltip>
     </Box>;
 });
 

@@ -632,3 +632,42 @@ it('reveals a selected transmitter type and shares selection between the table a
     fireEvent.click(screen.getByRole('button', {name: 'Clear transmitter selection'}));
     expect(tableRender.mock.lastCall[0].selectedTransmitterId).toBeNull();
 });
+
+it('routes context camera actions without moving playback and jumps to chronological track endpoints on request', () => {
+    const id = 'radiosonde:S';
+    const first = Date.parse('2026-11-01T01:00:00Z');
+    const last = first + 3600000;
+    fixture.positions = [last, first].map((time, index) => ({id: String(index), transmitter_id: id, kind: 'radiosonde',
+        name: 'S', latitude: 40 + index, longitude: 23, captured_at: new Date(time).toISOString()}));
+    fixture.transmitters = [{...fixture.positions[0], id}];
+    localStorage.setItem(hiddenTypesStoreName, JSON.stringify(['radiosonde']));
+    render(<Provider store={createStore(historyRange)}><ThemeProvider theme={createTheme()}><PacketMapLayout /></ThemeProvider></Provider>);
+    const originalTime = mapRender.mock.lastCall[0].playbackTime;
+    act(() => tableRender.mock.lastCall[0].onTransmitterAction('center', id));
+    expect(mapRender.mock.lastCall[0]).toMatchObject({selectedTransmitterId: id, playbackTime: originalTime,
+        navigationRequest: {type: 'center', transmitterId: id}, hiddenTypes: []});
+    act(() => tableRender.mock.lastCall[0].onTransmitterAction('fit', id));
+    expect(mapRender.mock.lastCall[0].playbackTime).toBe(originalTime);
+    expect(mapRender.mock.lastCall[0].navigationRequest.type).toBe('fit');
+    act(() => tableRender.mock.lastCall[0].onTransmitterAction('first', id));
+    expect(mapRender.mock.lastCall[0].playbackTime).toBe(first);
+    expect(mapRender.mock.lastCall[0].navigationRequest.type).toBe('follow');
+    act(() => tableRender.mock.lastCall[0].onTransmitterAction('last', id));
+    expect(mapRender.mock.lastCall[0].playbackTime).toBe(last);
+    act(() => mapRender.mock.lastCall[0].onFollowingChange(id));
+    expect(tableRender.mock.lastCall[0].followedTransmitterId).toBe(id);
+    act(() => mapRender.mock.lastCall[0].onFollowingChange(null));
+    expect(tableRender.mock.lastCall[0].followedTransmitterId).toBeNull();
+});
+
+it('keeps LIVE enabled when a stale jump action arrives and allows following to resume on reselection', () => {
+    render(<Provider store={createStore()}><ThemeProvider theme={createTheme()}><PacketMapLayout /></ThemeProvider></Provider>);
+    expect(tableRender.mock.lastCall[0].isLive).toBe(true);
+    act(() => tableRender.mock.lastCall[0].onTransmitterAction('first', 'radiosonde:S'));
+    expect(mapRender.mock.lastCall[0].selectedTransmitterId).toBeNull();
+    act(() => tableRender.mock.lastCall[0].onSelectTransmitter('radiosonde:S'));
+    const request = mapRender.mock.lastCall[0].navigationRequest;
+    act(() => tableRender.mock.lastCall[0].onSelectTransmitter('radiosonde:S'));
+    expect(mapRender.mock.lastCall[0].navigationRequest).not.toBe(request);
+    expect(mapRender.mock.lastCall[0].navigationRequest).toEqual({type: 'follow', transmitterId: 'radiosonde:S'});
+});
