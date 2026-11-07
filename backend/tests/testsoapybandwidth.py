@@ -32,7 +32,9 @@ class Receiver:
 
 
 def apply(receiver, selection, rate=4e6):
-    return apply_bandwidth(receiver, 0, 0, rate, selection, "sdrplay", logging.getLogger(__name__))
+    return apply_bandwidth(
+        receiver, 0, 0, rate, selection, "sdrplay", logging.getLogger(__name__), 1_536_000
+    )
 
 
 @pytest.mark.parametrize("rate,expected", [(3e6, 5e6), (4e6, 5e6), (5e6, 5e6), (6e6, 6e6)])
@@ -57,7 +59,52 @@ def test_existing_config_preserves_driver_and_explicit_driver_restores_it():
     assert receiver.applied == []
     assert apply(receiver, 6e6)["actual_hz"] == 6e6
     assert apply(receiver, "driver")["actual_hz"] == 1_536_000
-    assert receiver.applied == [6e6, 0]
+    assert receiver.applied == [6e6, 1_536_000]
+
+
+@pytest.mark.parametrize("selection,expected", [("auto", 4e6), (4e6, 4e6), ("driver", 56e6)])
+def test_uhd_uses_continuous_range_and_never_resets_bandwidth_to_zero(selection, expected):
+    receiver = Receiver([200_000, 56e6])
+    receiver.getBandwidthRange = lambda *_args: [
+        SimpleNamespace(
+            minimum=lambda: 200_000,
+            maximum=lambda: 56e6,
+            step=lambda: 0,
+        )
+    ]
+
+    def set_bandwidth(_direction, _channel, value):
+        receiver.applied.append(value)
+        # Match the AD9361 behavior seen in production, including zero clamping.
+        receiver.actual = max(200_000, min(56e6, value))
+
+    receiver.setBandwidth = set_bandwidth
+    status = apply_bandwidth(
+        receiver, 0, 0, 4e6, selection, "uhd", logging.getLogger(__name__), 56e6
+    )
+    assert receiver.applied == [expected]
+    assert status["actual_hz"] == expected
+    assert status["error"] is None
+
+
+def test_missing_default_is_reported_without_narrowing_the_receiver():
+    receiver = Receiver([200_000, 56e6])
+    status = apply_bandwidth(receiver, 0, 0, 4e6, "driver", "uhd", logging.getLogger(__name__))
+    assert receiver.applied == []
+    assert "Driver bandwidth is unavailable" in status["error"]
+
+
+@pytest.mark.parametrize(
+    "selection,expected", [("auto", 4_200_000), (4_200_000, 4_200_000), (4e6, None)]
+)
+def test_uhd_respects_bandwidth_range_increments(selection, expected):
+    receiver = Receiver([200_000, 56_200_000])
+    receiver.getBandwidthRange = lambda *_args: [
+        SimpleNamespace(minimum=lambda: 200_000, maximum=lambda: 56_200_000, step=lambda: 1e6)
+    ]
+    status = apply_bandwidth(receiver, 0, 0, 4e6, selection, "uhd", logging.getLogger(__name__))
+    assert receiver.applied == ([] if expected is None else [expected])
+    assert bool(status["error"]) is (expected is None)
 
 
 @pytest.mark.parametrize("selection", [float("nan"), float("inf"), -1, True, "bad", 4e6])

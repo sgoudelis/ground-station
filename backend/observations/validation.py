@@ -98,7 +98,9 @@ def validate_transmitter_frequencies(data: Dict[str, Any]) -> Dict[str, Any]:
 
         # A manual IF filter can cover less than the sampled span. Driver/Auto
         # readback is only available when the worker opens the device.
-        filter_width = (sdr_config.get("sdr_settings") or {}).get("bandwidth")
+        settings = sdr_config.get("sdr_settings") or {}
+        filter_width = (settings.get("uhd") if "uhd" in settings else settings) or {}
+        filter_width = filter_width.get("bandwidth")
         capture_bandwidth = sample_rate
         if isinstance(filter_width, (int, float)) and not isinstance(filter_width, bool):
             if not math.isfinite(filter_width) or filter_width <= 0:

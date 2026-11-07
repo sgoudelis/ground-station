@@ -210,6 +210,7 @@ const initialState = {
     sdrCapabilities: {},
     sdrSettingsById: {},
     sdrBandwidthById: {},
+    sdrReceiverById: {},
     hasBiasT: false,
     hasTunerAgc: false,
     hasRtlAgc: false,
@@ -563,6 +564,10 @@ export const waterfallSlice = createSlice({
             if (config.sdr_id && Object.prototype.hasOwnProperty.call(config, 'bandwidth_status')) {
                 state.sdrBandwidthById ??= {};
                 state.sdrBandwidthById[config.sdr_id] = config.bandwidth_status;
+            }
+            if (config.sdr_id && Object.prototype.hasOwnProperty.call(config, 'receiver_status')) {
+                state.sdrReceiverById ??= {};
+                state.sdrReceiverById[config.sdr_id] = config.receiver_status;
             }
             if (config.center_freq !== undefined) state.centerFrequency = config.center_freq;
             if (config.sample_rate !== undefined) {

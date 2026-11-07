@@ -29,6 +29,7 @@ import AutorenewIcon from '@mui/icons-material/Autorenew';
 import { useTranslation } from 'react-i18next';
 import BackgroundStreamControl from './background-stream-control.jsx';
 import SdrParameterFields from '../common/sdr-parameter-fields.jsx';
+import ReceiverStatus from './receiver-status.jsx';
 
 // Factory (rather than a module-level constant) so the labels are translated with the
 // translator of the rendering component and follow runtime language changes.
@@ -87,6 +88,7 @@ const SdrAccordion = ({
                           sdrCapabilities,
                           sdrSettings,
                           bandwidthStatus,
+                          receiverStatus,
                           onBandwidthChange,
                           hasBiasT,
                           biasT,
@@ -472,6 +474,9 @@ const SdrAccordion = ({
                             bandwidthStatus={bandwidthStatus}
                             validationErrors={startStreamValidationErrors}
                         />
+                        {isStreaming && <ReceiverStatus status={receiverStatus}
+                            device={selectedSdrRecord} gain={localGain} sampleRate={localSampleRate}
+                            antenna={selectedAntenna} settings={sdrSettings} />}
                     </Box>
 
                     <BackgroundStreamControl />
@@ -601,6 +606,7 @@ function areSdrAccordionPropsEqual(prevProps, nextProps) {
         prevProps.sdrCapabilities === nextProps.sdrCapabilities &&
         prevProps.sdrSettings === nextProps.sdrSettings &&
         prevProps.bandwidthStatus === nextProps.bandwidthStatus &&
+        prevProps.receiverStatus === nextProps.receiverStatus &&
         prevProps.onBandwidthChange === nextProps.onBandwidthChange &&
         prevProps.hasBiasT === nextProps.hasBiasT &&
         prevProps.biasT === nextProps.biasT &&

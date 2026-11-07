@@ -60,11 +60,18 @@ def test_valid_pass_is_accepted(offset):
 
 
 @pytest.mark.parametrize("task_type", ["decoder", "audio_recording", "transcription"])
+@pytest.mark.parametrize("native", [False, True])
 @pytest.mark.parametrize(
     ("bandwidth", "accepted"),
     [(200000, False), (1536000, True), ("auto", True), ("driver", True), (None, True)],
 )
-def test_task_frequency_respects_manual_if_filter(task_type, bandwidth, accepted):
+def test_task_frequency_respects_manual_if_filter(task_type, native, bandwidth, accepted):
+    # Native UHD's explicit controls take precedence over ignored legacy fields.
+    settings = (
+        {"bandwidth": 200000, "uhd": {"bandwidth": bandwidth}}
+        if native
+        else {"bandwidth": bandwidth}
+    )
     result = validate_transmitter_frequencies(
         {
             "sessions": [
@@ -72,7 +79,7 @@ def test_task_frequency_respects_manual_if_filter(task_type, bandwidth, accepted
                     "sdr": {
                         "center_frequency": 145000000,
                         "sample_rate": 2048000,
-                        "sdr_settings": {"bandwidth": bandwidth},
+                        "sdr_settings": settings,
                     },
                     "tasks": [{"type": task_type, "config": {"frequency": 145600000}}],
                 }

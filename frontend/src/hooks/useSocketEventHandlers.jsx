@@ -595,7 +595,8 @@ export const useSocketEventHandlers = (socket, enabled = true) => {
         socket.on('sdr-status', (data) => {
             const currentSdrId = store.getState()?.waterfall?.selectedSDRId;
             if (data?.sdr_id && data.sdr_id !== currentSdrId) return;
-            if (Object.prototype.hasOwnProperty.call(data, 'bandwidth_status')) {
+            if (Object.prototype.hasOwnProperty.call(data, 'bandwidth_status')
+                || Object.prototype.hasOwnProperty.call(data, 'receiver_status')) {
                 store.dispatch(updateSDRConfig({ ...data, sdr_id: data.sdr_id || currentSdrId }));
             }
             if (data['streaming'] === true) {
@@ -607,7 +608,7 @@ export const useSocketEventHandlers = (socket, enabled = true) => {
                 store.dispatch(setIsStreaming(true));
                 store.dispatch(setStartStreamingLoading(false));
             } else if (data['streaming'] === false) {
-                store.dispatch(updateSDRConfig({ sdr_id: currentSdrId, bandwidth_status: null }));
+                store.dispatch(updateSDRConfig({ sdr_id: currentSdrId, bandwidth_status: null, receiver_status: null }));
                 store.dispatch(setIsStreaming(false));
                 store.dispatch(setJoinedSdrId(null));
                 store.dispatch(setStartStreamingLoading(false));

@@ -659,6 +659,7 @@ class ProcessLifecycleManager:
                         "streaming": True,
                         "sdr_id": sdr_id,
                         "bandwidth_status": process_info.get("bandwidth_status"),
+                        "receiver_status": process_info.get("receiver_status"),
                     },
                     room=client_id,
                 )
@@ -1345,6 +1346,16 @@ class ProcessLifecycleManager:
                                 ]
 
                             await self.sio.emit(SocketEvents.SDR_FFT_DATA, fft_payload, room=sdr_id)
+
+                        elif data_type == "receiver":
+                            # Publish measurements independently from the requested
+                            # config so mismatches remain visible to all viewers.
+                            process_info["receiver_status"] = data["status"]
+                            await self.sio.emit(
+                                SocketEvents.SDR_STATUS,
+                                {"sdr_id": sdr_id, "receiver_status": data["status"]},
+                                room=sdr_id,
+                            )
 
                         elif data_type == "bandwidth":
                             # Keep measured filter state separate from requested

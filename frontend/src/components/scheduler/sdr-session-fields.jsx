@@ -7,7 +7,7 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import { useTranslation } from 'react-i18next';
 import SdrParameterFields from '../common/sdr-parameter-fields.jsx';
 import {
-    DEFAULT_SDR_SAMPLE_RATES, getSdrSampleRates, isSdrBandwidthUnavailable,
+    DEFAULT_SDR_SAMPLE_RATES, getSdrSampleRates, isSdrBandwidthUnavailable, normalizeSdrGain, setSdrSetting,
 } from '../common/sdr-parameters.js';
 
 export default function SdrSessionFields({
@@ -17,6 +17,12 @@ export default function SdrSessionFields({
     const { t } = useTranslation(['common', 'waterfall']);
     const id = React.useId();
     const device = sdrs.find((entry) => String(entry.id) === String(sdr.id));
+
+    useEffect(() => {
+        if (disabled || loading || !parameters) return;
+        const normalized = normalizeSdrGain(device, parameters.capabilities, sdr);
+        if (normalized !== sdr) onChange({ gain: normalized.gain, sdr_settings: normalized.sdr_settings });
+    }, [device, parameters, sdr, disabled, loading, onChange]);
 
     useEffect(() => {
         const rates = getSdrSampleRates(parameters);
@@ -84,7 +90,7 @@ export default function SdrSessionFields({
             parameters={{ ...parameters, sample_rate_values: getSdrSampleRates(parameters, DEFAULT_SDR_SAMPLE_RATES) }}
             value={sdr}
             onChange={(name, value) => onChange({ [name]: value === 'none' ? '' : value })}
-            onSettingChange={(name, value) => onChange({ sdr_settings: { ...sdr.sdr_settings, [name]: value } })}
+            onSettingChange={(name, value) => onChange({ sdr_settings: setSdrSetting(device, sdr.sdr_settings, name, value) })}
             disabled={disabled || loading || !sdr.id}
             required
             labels={{

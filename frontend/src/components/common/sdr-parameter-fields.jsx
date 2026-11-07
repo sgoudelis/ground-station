@@ -6,6 +6,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import {
     formatSdrRate, getSdrBandwidthOptions, getSdrGainEntries, getSdrGainOptions, getSdrSampleRates,
+    getSdrBandwidthRanges, getSdrSetting, hasSingleUhdGain, isSdrBandwidthSupported,
 } from './sdr-parameters.js';
 
 function ParameterSelect({ id, label, value, options, disabled, error, required, onChange, help }) {
@@ -43,11 +44,16 @@ export default function SdrParameterFields({
     const sampleRates = getSdrSampleRates(parameters);
     const gains = parameters.gain_values || [];
     const antennas = parameters.antennas?.rx || [];
-    const gainEntries = getSdrGainEntries(capabilities);
+    // Native UHD supports overall gain only. A single SoapyUHD PGA is the
+    // same physical gain as the overall control, so it must not compete with it.
+    const gainEntries = device?.type === 'uhd' || hasSingleUhdGain(device, capabilities)
+        ? [] : getSdrGainEntries(capabilities);
     const bandwidths = getSdrBandwidthOptions(device, capabilities, value.sample_rate);
-    const hasBandwidth = ['soapysdrlocal', 'soapysdrremote'].includes(device?.type)
-        && capabilities.bandwidths?.rx?.some((width) => Number.isFinite(width) && width > 0);
-    const bandwidth = settings.bandwidth ?? 'driver';
+    const hasBandwidth = ['uhd', 'soapysdrlocal', 'soapysdrremote'].includes(device?.type)
+        && (getSdrBandwidthRanges(device, capabilities).length > 0
+            || capabilities.bandwidths?.rx?.some((width) => Number.isFinite(width) && width > 0));
+    const bandwidth = getSdrSetting(device, settings, 'bandwidth') ?? 'driver';
+    const savedBandwidthSupported = isSdrBandwidthSupported(device, capabilities, value.sample_rate, bandwidth);
     const currentBandwidthStatus = isStreaming && bandwidthStatus
         && bandwidthStatus.mode === bandwidth
         && bandwidthStatus.sample_rate === Number(value.sample_rate);
@@ -118,7 +124,7 @@ export default function SdrParameterFields({
                     { value: 'driver', label: t('sdr.if_bandwidth_driver') },
                     ...bandwidths.map((width) => ({ value: width, label: formatSdrRate(width) })),
                     ...(typeof bandwidth === 'number' && !bandwidths.includes(bandwidth)
-                        ? [{ value: bandwidth, label: `${formatSdrRate(bandwidth)} (${t('sdr.if_bandwidth_unavailable')})`, disabled: true }]
+                        ? [{ value: bandwidth, label: `${formatSdrRate(bandwidth)}${savedBandwidthSupported ? '' : ` (${t('sdr.if_bandwidth_unavailable')})`}`, disabled: !savedBandwidthSupported }]
                         : []),
                 ]}
                 onChange={settingChanged('bandwidth')}
@@ -144,7 +150,7 @@ export default function SdrParameterFields({
                 const options = (capabilities[`${source}_sources`] || [])
                     .filter((option) => String(option).trim().toLowerCase() !== 'none');
                 if (!options.length) return null;
-                const selection = settings[`${source}Source`] ?? capabilities[`${source}_source`];
+                const selection = getSdrSetting(device, settings, `${source}Source`) ?? capabilities[`${source}_source`];
                 return <ParameterSelect key={source}
                     id={`${id}-${source}`} label={t(`settings_sdr.${source}_source`)}
                     disabled={disabled || fixedDisabled || isRecording}

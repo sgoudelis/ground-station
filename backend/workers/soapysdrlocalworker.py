@@ -25,7 +25,8 @@ from SoapySDR import SOAPY_SDR_CF32, SOAPY_SDR_RX
 
 from common.errors import format_device_error
 from common.iqsamples import require_complex64
-from hardware.soapybandwidth import apply_bandwidth
+from hardware.receiver import read_soapy_receiver
+from hardware.soapybandwidth import apply_bandwidth, read_bandwidth
 
 # Configure logging for the worker process
 logger = logging.getLogger("soapysdr-local")
@@ -293,6 +294,17 @@ def soapysdr_local_worker_process(
 
         # Readback is sent independently from requested settings so the UI can
         # show driver rounding, mode restrictions, and configuration failures.
+        default_bandwidth = read_bandwidth(sdr, SOAPY_SDR_RX, channel)
+
+        def report_receiver():
+            data_queue.put(
+                {
+                    "type": "receiver",
+                    "sdr_id": sdr_id,
+                    "status": read_soapy_receiver(sdr, SOAPY_SDR_RX, channel, logger),
+                }
+            )
+
         def update_bandwidth(selection):
             status = apply_bandwidth(
                 sdr,
@@ -302,6 +314,7 @@ def soapysdr_local_worker_process(
                 selection,
                 driver,
                 logger,
+                default_bandwidth=default_bandwidth,
             )
             data_queue.put({"type": "bandwidth", "sdr_id": sdr_id, "status": status})
 
@@ -309,6 +322,7 @@ def soapysdr_local_worker_process(
             "bandwidth"
         )
         update_bandwidth(bandwidth_selection)
+        report_receiver()
 
         # Enable DC offset correction for devices that support it (e.g., USRP B200/B210)
         try:
@@ -391,13 +405,17 @@ def soapysdr_local_worker_process(
             # Check for new configuration without blocking
             try:
                 if not config_queue.empty():
-                    new_config = config_queue.get_nowait()
+                    # Configuration packets may be partial; retain manual/AGC
+                    # and advanced settings when another field changes.
+                    new_config = {**old_config, **config_queue.get_nowait()}
                     # Partial updates must not discard the chosen filter mode.
                     next_bandwidth = bandwidth_selection
                     if "sdr_settings" in new_config:
                         next_bandwidth = (new_config["sdr_settings"] or {}).get("bandwidth")
                     previous_channel = channel
                     channel = new_config.get("channel", channel)
+                    if previous_channel != channel:
+                        default_bandwidth = read_bandwidth(sdr, SOAPY_SDR_RX, channel)
                     bandwidth_changed = (
                         previous_channel != channel
                         or actual_sample_rate != new_config.get("sample_rate", actual_sample_rate)
@@ -414,6 +432,9 @@ def soapysdr_local_worker_process(
 
                             sdr.setSampleRate(SOAPY_SDR_RX, channel, new_config["sample_rate"])
                             actual_sample_rate = sdr.getSampleRate(SOAPY_SDR_RX, channel)
+                            if driver.lower() == "sdrplay":
+                                # This driver resets its filter when the rate changes.
+                                default_bandwidth = read_bandwidth(sdr, SOAPY_SDR_RX, channel)
 
                             # Setup stream again with a new sample rate
                             rx_stream = sdr.setupStream(SOAPY_SDR_RX, SOAPY_SDR_CF32)
@@ -552,6 +573,21 @@ def soapysdr_local_worker_process(
                         update_bandwidth(selection)
                         bandwidth_selection = next_bandwidth
 
+                    if any(
+                        old_config.get(key) != new_config.get(key)
+                        for key in (
+                            "gain",
+                            "sample_rate",
+                            "center_freq",
+                            "offset_freq",
+                            "ppm_error",
+                            "antenna",
+                            "soapy_agc",
+                            "sdr_settings",
+                            "channel",
+                        )
+                    ):
+                        report_receiver()
                     old_config = new_config
 
             except Exception as e:

@@ -1,6 +1,7 @@
 # flake8: noqa
 # pylint: skip-file
-# type: ignore
+# mypy: ignore-errors
+# Native bindings are untyped; keep exports visible when checking this file directly.
 
 import logging
 import time
@@ -11,6 +12,9 @@ import psutil
 
 from common.errors import format_device_error
 from common.iqsamples import require_complex64
+from hardware.receiver import read_uhd_receiver
+from hardware.soapybandwidth import apply_bandwidth, read_bandwidth
+from hardware.uhdsettings import UhdBandwidth, apply_uhd_sources
 
 # Configure logging for the worker process
 logger = logging.getLogger("uhd-worker")
@@ -151,6 +155,8 @@ def uhd_worker_process(
         # Configure the device
         stage = "configuring receiver"
         channel = config.get("channel", 0)
+        sdr_settings = config.get("sdr_settings") or {}
+        source_errors = apply_uhd_sources(UHD, sdr_settings)
         antenna = config.get("antenna", "RX2")
 
         # Set antenna
@@ -191,6 +197,28 @@ def uhd_worker_process(
 
         UHD.set_rx_gain(gain, channel)
 
+        bandwidth_receiver = UhdBandwidth(UHD)
+        default_bandwidth = read_bandwidth(bandwidth_receiver, 0, channel)
+        bandwidth_selection = (sdr_settings.get("uhd") or {}).get("bandwidth")
+
+        def update_bandwidth(selection):
+            status = apply_bandwidth(
+                bandwidth_receiver,
+                0,
+                channel,
+                actual_rate,
+                selection,
+                "uhd",
+                logger,
+                default_bandwidth,
+            )
+            data_queue.put({"type": "bandwidth", "sdr_id": sdr_id, "status": status})
+
+        def report_receiver():
+            status = read_uhd_receiver(UHD, channel, logger)
+            status["configuration_errors"] = source_errors.copy()
+            data_queue.put({"type": "receiver", "sdr_id": sdr_id, "status": status})
+
         # Enable automatic DC offset correction to mitigate center spike
         UHD.set_rx_dc_offset(True, channel)
         logger.info("Enabled automatic DC offset correction")
@@ -202,6 +230,8 @@ def uhd_worker_process(
         actual_rate = UHD.get_rx_rate(channel)
         actual_freq = UHD.get_rx_freq(channel)
         actual_gain = UHD.get_rx_gain(channel)
+        update_bandwidth(bandwidth_selection)
+        report_receiver()
 
         if ppm_error:
             logger.info(f"Applied frequency correction: {ppm_error} ppm")
@@ -298,7 +328,38 @@ def uhd_worker_process(
             # Check for new configuration without blocking
             try:
                 if not config_queue.empty():
-                    new_config = config_queue.get_nowait()
+                    new_config = {**old_config, **config_queue.get_nowait()}
+                    next_settings = new_config.get("sdr_settings") or {}
+                    sources_changed = any(
+                        (next_settings.get("uhd") or {}).get(key)
+                        != (sdr_settings.get("uhd") or {}).get(key)
+                        for key in ("clockSource", "timeSource")
+                    )
+                    next_bandwidth = (next_settings.get("uhd") or {}).get("bandwidth")
+                    bandwidth_changed = (
+                        sources_changed
+                        or any(
+                            old_config.get(key) != new_config.get(key)
+                            for key in ("sample_rate", "antenna")
+                        )
+                        or next_bandwidth != bandwidth_selection
+                    )
+
+                    if sources_changed:
+                        # Reference changes can reset the clock/rate. Pause RX,
+                        # restore the requested tuning, then resume the stream.
+                        command = uhd.types.StreamCMD(uhd.types.StreamMode.stop_cont)
+                        streamer.issue_stream_cmd(command)
+                        source_errors = apply_uhd_sources(UHD, next_settings, sdr_settings)
+                        UHD.set_rx_rate(new_config["sample_rate"], channel)
+                        actual_rate = UHD.get_rx_rate(channel)
+                        num_samples = calculate_samples_per_scan(actual_rate, fft_size)
+                        read_size = min(num_samples, 8192)
+                        recv_buffer = np.zeros((1, read_size), dtype=np.complex64)
+                        actual_freq = _set_uhd_rx_freq(corrected_center_freq, offset_freq)
+                        command = uhd.types.StreamCMD(uhd.types.StreamMode.start_cont)
+                        command.stream_now = True
+                        streamer.issue_stream_cmd(command)
 
                     if "sample_rate" in new_config:
                         if actual_rate != new_config["sample_rate"]:
@@ -434,6 +495,26 @@ def uhd_worker_process(
                             UHD.set_rx_antenna(new_config["antenna"], channel)
                             logger.info(f"Updated antenna: {new_config['antenna']}")
 
+                    if bandwidth_changed:
+                        selection = next_bandwidth
+                        if selection is None and bandwidth_selection is not None:
+                            selection = "driver"
+                        update_bandwidth(selection)
+                        bandwidth_selection = next_bandwidth
+                    if any(
+                        old_config.get(key) != new_config.get(key)
+                        for key in (
+                            "gain",
+                            "sample_rate",
+                            "center_freq",
+                            "offset_freq",
+                            "ppm_error",
+                            "antenna",
+                            "sdr_settings",
+                        )
+                    ):
+                        report_receiver()
+                    sdr_settings = next_settings
                     old_config = new_config
 
             except Exception as e:

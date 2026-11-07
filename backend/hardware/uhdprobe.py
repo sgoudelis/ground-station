@@ -81,6 +81,7 @@ def probe_local_uhd_usrp(sdr_details):
     capabilities = {
         "agc": {"supported_rx": False, "supported_tx": False, "settings": []},
         "bandwidths": {"rx": [], "tx": []},
+        "bandwidth_ranges": {"rx": [], "tx": []},
         "bias_t": {"supported": False, "keys": [], "value": None},
         "clock_rate": None,
         "clock_rates": [],
@@ -470,12 +471,26 @@ def probe_local_uhd_usrp(sdr_details):
         try:
             rx_bw_range = usrp.get_rx_bandwidth_range(channel)
             capabilities["bandwidths"]["rx"] = [rx_bw_range.start(), rx_bw_range.stop()]
+            capabilities["bandwidth_ranges"]["rx"] = [
+                {
+                    "min": rx_bw_range.start(),
+                    "max": rx_bw_range.stop(),
+                    "step": rx_bw_range.step(),
+                }
+            ]
         except Exception as e:
             reply["log"].append(f"INFO: RX bandwidth range not available: {e}")
 
         try:
             tx_bw_range = usrp.get_tx_bandwidth_range(channel)
             capabilities["bandwidths"]["tx"] = [tx_bw_range.start(), tx_bw_range.stop()]
+            capabilities["bandwidth_ranges"]["tx"] = [
+                {
+                    "min": tx_bw_range.start(),
+                    "max": tx_bw_range.stop(),
+                    "step": tx_bw_range.step(),
+                }
+            ]
         except Exception as e:
             reply["log"].append(f"INFO: TX bandwidth range not available: {e}")
 

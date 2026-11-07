@@ -1,4 +1,4 @@
-import { getSdrCaptureBandwidth, isSdrBandwidthUnavailable } from '../common/sdr-parameters.js';
+import { getSdrCaptureBandwidth, getSdrSetting, isSdrBandwidthUnavailable } from '../common/sdr-parameters.js';
 
 export const createEmptySdrSession = (sampleRate = 2000000) => ({
     sdr: {
@@ -65,7 +65,8 @@ export const validateSdrTaskBandwidth = (session, transmitters, sdrs, parameters
     const details = getTaskFrequencyDetails(session, transmitters)
         .map((entry) => ({ ...entry, name: entry.name || t('unknown') }));
     const { minFreq, maxFreq, requiredBandwidth } = getFrequencySpan(details);
-    const filterSelected = sdr.sdr_settings?.bandwidth != null && sdr.sdr_settings.bandwidth !== 'driver';
+    const filter = getSdrSetting(device, sdr.sdr_settings, 'bandwidth');
+    const filterSelected = filter != null && filter !== 'driver';
     // A narrow filter must also cover the tasks at the selected center frequency.
     const outsideFilter = filterSelected && details.length > 0 && sdr.center_frequency > 0
         && (minFreq < sdr.center_frequency - captureBandwidth / 2

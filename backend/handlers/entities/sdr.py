@@ -238,6 +238,11 @@ def _live_sdr_config(sdr_id: str, process_info: Dict[str, Any]) -> Dict[str, Any
         "sdr_id": sdr_id,
         **{key: config[key] for key in fields if key in config},
         **(
+            {"receiver_status": process_info["receiver_status"]}
+            if "receiver_status" in process_info
+            else {}
+        ),
+        **(
             {"bandwidth_status": process_info["bandwidth_status"]}
             if "bandwidth_status" in process_info
             else {}

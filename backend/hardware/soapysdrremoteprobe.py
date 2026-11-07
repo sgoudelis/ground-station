@@ -195,6 +195,7 @@ def probe_remote_soapy_sdr(sdr_details: Dict[str, Any]) -> ProbeReply:
             "gain_elements": {"rx": [], "tx": []},
             "gain_ranges": {"rx": {}, "tx": {}},
             "bandwidths": {"rx": [], "tx": []},
+            "bandwidth_ranges": {"rx": [], "tx": []},
             "sample_rate_ranges": {"rx": [], "tx": []},
             "stream_formats": {"rx": [], "tx": []},
             "native_stream_format": {"rx": None, "tx": None},
@@ -301,6 +302,14 @@ def probe_remote_soapy_sdr(sdr_details: Dict[str, Any]) -> ProbeReply:
                     caps["bandwidths"][direction_name] = device.listBandwidths(
                         direction, channel_index
                     )
+            except Exception:
+                pass
+
+            try:
+                caps["bandwidth_ranges"][direction_name] = [
+                    {"min": item.minimum(), "max": item.maximum(), "step": item.step()}
+                    for item in device.getBandwidthRange(direction, channel_index)
+                ]
             except Exception:
                 pass
 

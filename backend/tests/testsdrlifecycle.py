@@ -147,10 +147,13 @@ def _new_manager(processes=None):
 
 
 @pytest.mark.asyncio
-async def test_bandwidth_readback_is_cached_and_broadcast_to_sdr_room():
+@pytest.mark.parametrize(
+    "message_type,status_key", [("bandwidth", "bandwidth_status"), ("receiver", "receiver_status")]
+)
+async def test_hardware_readback_is_cached_and_broadcast_to_sdr_room(message_type, status_key):
     status = {"mode": "auto", "sample_rate": 4e6, "actual_hz": 5e6}
     messages = queue.Queue()
-    messages.put({"type": "bandwidth", "sdr_id": "radio", "status": status})
+    messages.put({"type": message_type, "sdr_id": "radio", "status": status})
     messages.put({"type": "terminated"})
     process_info = {
         "process": _StoppedProcess(),
@@ -164,9 +167,9 @@ async def test_bandwidth_readback_is_cached_and_broadcast_to_sdr_room():
 
     await asyncio.wait_for(manager._monitor_data_queue("radio", 42), timeout=1)
 
-    assert process_info["bandwidth_status"] == status
+    assert process_info[status_key] == status
     assert (
-        ("sdr-status", {"sdr_id": "radio", "bandwidth_status": status}),
+        ("sdr-status", {"sdr_id": "radio", status_key: status}),
         {"room": "radio"},
     ) in manager.sio.emitted
 
