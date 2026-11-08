@@ -52,6 +52,8 @@ import {
 } from './target-slice.jsx';
 import {calculateElevationCurvesForPasses} from '../../utils/elevation-curve-calculator.js';
 import GridTableToolbar from '../common/grid-table-toolbar.jsx';
+import GridPaginationActions from '../common/grid-pagination-actions.jsx';
+import {compactGridFooterSx} from '../common/compact-grid-footer.js';
 import { useUserTimeSettings } from '../../hooks/useUserTimeSettings.jsx';
 import CelestialPasses from '../celestial/celestial-passes.jsx';
 import { fetchTargetCelestialScene } from '../celestial/celestial-slice.jsx';
@@ -653,6 +655,9 @@ const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({
             loading={passesLoading}
             slotProps={{
                 toolbar: { container: toolbarContainer },
+                basePagination: {
+                    ActionsComponent: GridPaginationActions,
+                },
                 loadingOverlay: {
                     variant: 'linear-progress',
                     noRowsVariant: 'linear-progress',
@@ -666,6 +671,7 @@ const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({
                 noRowsLabel: t('next_passes.no_satellite_selected')
             }}
             sx={{
+                ...compactGridFooterSx,
                 border: 0,
                 marginTop: 0,
                 [`& .${gridClasses.cell}:focus, & .${gridClasses.cell}:focus-within`]: {

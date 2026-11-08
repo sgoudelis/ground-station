@@ -34,6 +34,8 @@ import { toRowSelectionModel, toSelectedIds } from '../../utils/datagrid-selecti
 import { useUserTimeSettings } from '../../hooks/useUserTimeSettings.jsx';
 import TargetNumberIcon from '../common/target-number-icon.jsx';
 import GridTableToolbar from '../common/grid-table-toolbar.jsx';
+import GridPaginationActions from '../common/grid-pagination-actions.jsx';
+import {compactGridFooterSx} from '../common/compact-grid-footer.js';
 import {
     buildTargetKeyFromCelestialRow,
     replaceCelestialTargetKey,
@@ -902,6 +904,9 @@ const MonitoredCelestialGridIsland = ({
                     }}
                     slotProps={{
                         toolbar: { container: toolbarContainer },
+                        basePagination: {
+                            ActionsComponent: GridPaginationActions,
+                        },
                         row: {
                             onContextMenu: handleRowContextMenu,
                         },
@@ -936,6 +941,7 @@ const MonitoredCelestialGridIsland = ({
                         return classes.join(' ');
                     }}
                     sx={{
+                        ...compactGridFooterSx,
                         border: 0,
                         marginTop: 0,
                         [`& .${gridClasses.cell}:focus, & .${gridClasses.cell}:focus-within`]: {

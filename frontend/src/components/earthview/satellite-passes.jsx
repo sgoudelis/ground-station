@@ -66,6 +66,7 @@ import GridTableToolbar from '../common/grid-table-toolbar.jsx';
 import { useUserTimeSettings } from '../../hooks/useUserTimeSettings.jsx';
 import TargetNumberIcon from '../common/target-number-icon.jsx';
 import GridPaginationActions from '../common/grid-pagination-actions.jsx';
+import {compactGridFooterSx} from '../common/compact-grid-footer.js';
 import {formatAlternativeSatelliteNames} from '../common/satellite-names.js';
 import { setRotator, setTrackerId, setTrackingStateInBackend } from "../target/target-slice.jsx";
 import { useTargetRotatorSelectionDialog } from "../target/use-target-rotator-selection-dialog.jsx";
@@ -884,6 +885,7 @@ const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({
             getRowId={getRowId}
             localeText={localeText}
             sx={{
+                ...compactGridFooterSx,
                 border: 0,
                 marginTop: 0,
                 [`& .${gridClasses.cell}:focus, & .${gridClasses.cell}:focus-within`]: {
@@ -939,12 +941,10 @@ const NextPassesGroupIsland = React.memo(function NextPassesGroupIsland() {
     const theme = useTheme();
     const isCompactHeader = useMediaQuery(theme.breakpoints.down('lg'));
     const isTightHeader = useMediaQuery(theme.breakpoints.down('md'));
-    const containerRef = useRef(null);
     const [toolbarContainer, setToolbarContainer] = useState(null);
     const hasFetchedRef = useRef(false);
     const lastFetchParamsRef = useRef(null);
     const lastSatelliteFetchGroupRef = useRef(null);
-    const [containerHeight, setContainerHeight] = useState(0);
     const {
         selectedSatGroupId,
         passes,
@@ -969,8 +969,6 @@ const NextPassesGroupIsland = React.memo(function NextPassesGroupIsland() {
     const { requestRotatorForTarget, dialog: rotatorSelectionDialog } = useTargetRotatorSelectionDialog();
     const { location } = useSelector(state => state.location);
 
-    const minHeight = 200;
-    const maxHeight = 400;
     const [columnUpdateKey, setColumnUpdateKey] = useState(0);
     const hasLoadedFromStorageRef = useRef(false);
     const isLoadingRef = useRef(false);
@@ -1247,19 +1245,6 @@ const NextPassesGroupIsland = React.memo(function NextPassesGroupIsland() {
             clearInterval(interval);
         }
     }, [selectedSatGroupId, socket, nextPassesHours, dispatch]);
-
-    useEffect(() => {
-        const target = containerRef.current;
-        const observer = new ResizeObserver((entries) => {
-            setContainerHeight(entries[0].contentRect.height);
-        });
-        if (target) {
-            observer.observe(target);
-        }
-        return () => {
-            observer.disconnect();
-        };
-    }, [containerRef]);
 
     const handleOnRowClick = (params) => {
         const noradId = params.row.id.split("_")[1];
@@ -1675,7 +1660,7 @@ const NextPassesGroupIsland = React.memo(function NextPassesGroupIsland() {
     ]), [handlePassMenuAction, t]);
 
     return (
-        <>
+        <Box sx={{height: '100%', display: 'flex', flexDirection: 'column', minHeight: 0, minWidth: 0}}>
             <TitleBar
                 className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}
                 sx={islandTitleBarCompactSx}
@@ -1783,35 +1768,28 @@ const NextPassesGroupIsland = React.memo(function NextPassesGroupIsland() {
                     </Box>
                 </Box>
             </TitleBar>
-            <div style={{position: 'relative', display: 'block', height: '100%'}} ref={containerRef}>
-                <div style={{
-                    padding: '0rem 0rem 0rem 0rem',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    height: containerHeight - 25,
-                    minHeight,
-                }}>
-                    <MemoizedStyledDataGrid
-                        toolbarContainer={toolbarContainer}
-                        passes={passes}
-                        passesLoading={Boolean(selectedSatGroupId) && (passesLoading || loadingSatellites)}
-                        quickFilterPreset={quickFilterPreset}
-                        trackedSatelliteNoradIds={trackedSatelliteNoradIds}
-                        targetNumberByNorad={targetNumberByNorad}
-                        scheduledObservations={scheduledObservations}
-                        onRowClick={handleOnRowClick}
-                        onRowDoubleClick={handleOnRowDoubleClick}
-                        onRowContextMenu={handlePassRowContextMenu}
-                        orbitProjectionDuration={orbitProjectionDuration}
-                        pageSize={passesTablePageSize}
-                        onPageSizeChange={handlePageSizeChange}
-                        sortModel={passesTableSortModel}
-                        onSortModelChange={handleSortModelChange}
-                        columnVisibility={passesTableColumnVisibility}
-                        onColumnVisibilityChange={handleColumnVisibilityChange}
-                    />
-                </div>
-            </div>
+            {/* Fill the space below the header so the island cannot clip the footer. */}
+            <Box sx={{display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, minWidth: 0}}>
+                <MemoizedStyledDataGrid
+                    toolbarContainer={toolbarContainer}
+                    passes={passes}
+                    passesLoading={Boolean(selectedSatGroupId) && (passesLoading || loadingSatellites)}
+                    quickFilterPreset={quickFilterPreset}
+                    trackedSatelliteNoradIds={trackedSatelliteNoradIds}
+                    targetNumberByNorad={targetNumberByNorad}
+                    scheduledObservations={scheduledObservations}
+                    onRowClick={handleOnRowClick}
+                    onRowDoubleClick={handleOnRowDoubleClick}
+                    onRowContextMenu={handlePassRowContextMenu}
+                    orbitProjectionDuration={orbitProjectionDuration}
+                    pageSize={passesTablePageSize}
+                    onPageSizeChange={handlePageSizeChange}
+                    sortModel={passesTableSortModel}
+                    onSortModelChange={handleSortModelChange}
+                    columnVisibility={passesTableColumnVisibility}
+                    onColumnVisibilityChange={handleColumnVisibilityChange}
+                />
+            </Box>
             <RowContextMenu
                 open={Boolean(passContextMenu)}
                 onClose={handleClosePassContextMenu}
@@ -1842,7 +1820,7 @@ const NextPassesGroupIsland = React.memo(function NextPassesGroupIsland() {
                 variant="paper"
                 widthOffsetPx={20}
             />
-        </>
+        </Box>
     );
 });
 

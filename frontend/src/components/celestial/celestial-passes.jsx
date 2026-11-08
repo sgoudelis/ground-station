@@ -44,6 +44,7 @@ import { toRowSelectionModel, toSelectedIds } from '../../utils/datagrid-selecti
 import ProgressFormatter from '../earthview/progressbar-widget.jsx';
 import TargetNumberIcon from '../common/target-number-icon.jsx';
 import GridPaginationActions from '../common/grid-pagination-actions.jsx';
+import {compactGridFooterSx} from '../common/compact-grid-footer.js';
 import GridTableToolbar from '../common/grid-table-toolbar.jsx';
 import CelestialContextMenu from '../target/celestialcontextmenu.jsx';
 import { useSocket } from '../common/socket.jsx';
@@ -1234,6 +1235,7 @@ const CelestialPasses = ({
                     getRowClassName={getRowClassName}
                     density="compact"
                     sx={{
+                        ...compactGridFooterSx,
                         border: 0,
                         marginTop: 0,
                         [`& .${gridClasses.cell}:focus, & .${gridClasses.cell}:focus-within`]: {

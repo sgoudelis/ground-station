@@ -57,6 +57,7 @@ import { toast } from '../../utils/toast-with-timestamp.jsx';
 import GridTableToolbar from '../common/grid-table-toolbar.jsx';
 import TargetNumberIcon from '../common/target-number-icon.jsx';
 import GridPaginationActions from '../common/grid-pagination-actions.jsx';
+import {compactGridFooterSx} from '../common/compact-grid-footer.js';
 import PassTransmitterLinksCell from '../common/pass-transmitter-links-cell.jsx';
 import {formatAlternativeSatelliteNames} from '../common/satellite-names.js';
 import { setRotator, setTrackerId, setTrackingStateInBackend } from "../target/target-slice.jsx";
@@ -552,6 +553,7 @@ const MemoizedStyledDataGrid = React.memo(({
             columnVisibilityModel={columnVisibility}
             onColumnVisibilityModelChange={onColumnVisibilityChange}
             sx={{
+                ...compactGridFooterSx,
                 border: 0,
                 marginTop: 0,
                 [`& .${gridClasses.cell}:focus, & .${gridClasses.cell}:focus-within`]: {
@@ -583,9 +585,7 @@ const SatelliteDetailsTable = React.memo(function SatelliteDetailsTable() {
     const theme = useTheme();
     const isCompactHeader = useMediaQuery(theme.breakpoints.down('lg'));
     const isTightHeader = useMediaQuery(theme.breakpoints.down('md'));
-    const containerRef = useRef(null);
     const [toolbarContainer, setToolbarContainer] = useState(null);
-    const [containerHeight, setContainerHeight] = useState(0);
     const apiRef = useGridApiRef();
     const store = useStore();
 
@@ -638,7 +638,6 @@ const SatelliteDetailsTable = React.memo(function SatelliteDetailsTable() {
         return mapping;
     }, [trackerInstances, selectedSatGroupId]);
 
-    const minHeight = 200;
     const hasLoadedFromStorageRef = useRef(false);
     const isLoadingRef = useRef(false);
     const [quickFilterPreset, setQuickFilterPreset] = useState('all');
@@ -712,19 +711,6 @@ const SatelliteDetailsTable = React.memo(function SatelliteDetailsTable() {
                 toast.error(t('satellite_selector.failed_load_groups') + ": " + err.message)
             });
     }, []);
-
-    useEffect(() => {
-        const target = containerRef.current;
-        const observer = new ResizeObserver((entries) => {
-            setContainerHeight(entries[0].contentRect.height);
-        });
-        if (target) {
-            observer.observe(target);
-        }
-        return () => {
-            observer.disconnect();
-        };
-    }, [containerRef]);
 
     const handleOnRowClick = useCallback((params) => {
         dispatch(setSelectedSatelliteId(params.row.norad_id));
@@ -1115,7 +1101,7 @@ const SatelliteDetailsTable = React.memo(function SatelliteDetailsTable() {
     ]), [handleSatelliteMenuAction, t]);
 
     return (
-        <>
+        <Box sx={{height: '100%', display: 'flex', flexDirection: 'column', minHeight: 0, minWidth: 0}}>
             {rotatorSelectionDialog}
             <TitleBar
                 className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}
@@ -1205,51 +1191,44 @@ const SatelliteDetailsTable = React.memo(function SatelliteDetailsTable() {
                     </Box>
                 </Box>
             </TitleBar>
-            <div style={{ position: 'relative', display: 'block', height: '100%' }} ref={containerRef}>
-                <div style={{
-                    padding: '0rem 0rem 0rem 0rem',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    height: containerHeight - 25,
-                    minHeight,
-                }}>
-                    {!selectedSatGroupId ? (
-                        <Box
-                            sx={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                height: '100%',
-                            }}
-                        >
-                            <Typography variant="body2" sx={{ color: 'text.secondary', fontStyle: 'italic' }}>
-                                {t('satellites_table.no_group_selected')}
-                            </Typography>
-                        </Box>
-                    ) : (
-                        <MemoizedStyledDataGrid
-                            toolbarContainer={toolbarContainer}
-                            apiRef={apiRef}
-                            satellites={selectedSatellites}
-                            quickFilterPreset={quickFilterPreset}
-                            onRowClick={handleOnRowClick}
-                            onRowDoubleClick={handleOnRowDoubleClick}
-                            onRowContextMenu={handleSatelliteRowContextMenu}
-                            selectedSatelliteId={selectedSatelliteId}
-                            trackedSatelliteNoradIds={trackedSatelliteNoradIds}
-                            loadingSatellites={loadingSatellites}
-                            columnVisibility={columnVisibility}
-                            onColumnVisibilityChange={handleColumnVisibilityChange}
-                            selectedSatellitePositionsRef={selectedSatellitePositionsRef}
-                            pageSize={satellitesTablePageSize}
-                            onPageSizeChange={handlePageSizeChange}
-                            sortModel={satellitesTableSortModel}
-                            onSortModelChange={handleSortModelChange}
-                            targetNumberByNorad={targetNumberByNorad}
-                        />
-                    )}
-                </div>
-            </div>
+            {/* Fill the space below the header so the island cannot clip the footer. */}
+            <Box sx={{display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, minWidth: 0}}>
+                {!selectedSatGroupId ? (
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            height: '100%',
+                        }}
+                    >
+                        <Typography variant="body2" sx={{ color: 'text.secondary', fontStyle: 'italic' }}>
+                            {t('satellites_table.no_group_selected')}
+                        </Typography>
+                    </Box>
+                ) : (
+                    <MemoizedStyledDataGrid
+                        toolbarContainer={toolbarContainer}
+                        apiRef={apiRef}
+                        satellites={selectedSatellites}
+                        quickFilterPreset={quickFilterPreset}
+                        onRowClick={handleOnRowClick}
+                        onRowDoubleClick={handleOnRowDoubleClick}
+                        onRowContextMenu={handleSatelliteRowContextMenu}
+                        selectedSatelliteId={selectedSatelliteId}
+                        trackedSatelliteNoradIds={trackedSatelliteNoradIds}
+                        loadingSatellites={loadingSatellites}
+                        columnVisibility={columnVisibility}
+                        onColumnVisibilityChange={handleColumnVisibilityChange}
+                        selectedSatellitePositionsRef={selectedSatellitePositionsRef}
+                        pageSize={satellitesTablePageSize}
+                        onPageSizeChange={handlePageSizeChange}
+                        sortModel={satellitesTableSortModel}
+                        onSortModelChange={handleSortModelChange}
+                        targetNumberByNorad={targetNumberByNorad}
+                    />
+                )}
+            </Box>
             <RowContextMenu
                 open={Boolean(satelliteContextMenu)}
                 onClose={handleCloseSatelliteContextMenu}
@@ -1279,7 +1258,7 @@ const SatelliteDetailsTable = React.memo(function SatelliteDetailsTable() {
                 variant="paper"
                 widthOffsetPx={20}
             />
-        </>
+        </Box>
     );
 });
 
