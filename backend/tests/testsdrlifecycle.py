@@ -554,3 +554,46 @@ async def test_active_internal_session_receives_worker_failure(monkeypatch):
     assert failures == [("sdr-1", {"internal:obs-1:sdr-1"}, "USB transfer failed")]
     assert "sdr-1" not in processes
     assert subscription.queue.get_nowait() == ("sdr.streaming.stopped", {"sdr_id": "sdr-1"})
+
+
+@pytest.mark.asyncio
+async def test_continuous_receiver_rejects_configuration():
+    manager, info = _tuning_manager()
+    info["continuous_observation_id"] = "continuous"
+    with pytest.raises(ValueError, match="Stop the continuous"):
+        await manager.update_configuration("radio", {"center_freq": 100e6})
+    assert info["config"]["center_freq"] == 145e6
+    assert info["config_queue"].empty()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "caller,force", [("browser", False), ("browser", True), ("internal:pass", False)]
+)
+async def test_continuous_receiver_cannot_be_taken_over(caller, force):
+    info = {
+        "clients": {"internal:continuous-definition"},
+        "continuous_observation_id": "definition",
+        "process": Mock(is_alive=Mock(return_value=True)),
+    }
+    manager = _new_manager({"radio": info})
+    manager._start_sdr_process = AsyncMock()
+    with pytest.raises(processlifecycle.SdrStartConflict):
+        await manager.start_sdr_process(
+            {"id": "radio", "type": "rtlsdrusbv3"}, {}, caller, force_takeover=force
+        )
+    manager._start_sdr_process.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_continuous_start_does_not_preempt_existing_receiver():
+    info = {"clients": {"browser"}, "process": Mock(is_alive=Mock(return_value=True))}
+    manager = _new_manager({"radio": info})
+    manager._start_sdr_process = AsyncMock()
+    with pytest.raises(processlifecycle.SdrStartConflict):
+        await manager.start_sdr_process(
+            {"id": "radio", "type": "rtlsdrusbv3"},
+            {"continuous_observation_id": "definition"},
+            "internal:continuous-definition",
+        )
+    manager._start_sdr_process.assert_not_awaited()

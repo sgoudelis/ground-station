@@ -51,6 +51,7 @@ import {
 } from './vfo-events.jsx';
 import {
 
+    DEFAULT_VFO_COLORS,
     getBandwidthConfig,
     canDragLeftEdge,
     canDragRightEdge,
@@ -97,6 +98,7 @@ const VFOMarkersContainer = ({
     const gnssFixLifecycle = useSelector(state => state.gnss.gnssFixLifecycle);
 
     // Get runtime snapshot for internal VFO data
+    const selectedSdrId = useSelector(state => state.waterfall.selectedSDRId);
     const runtimeSnapshot = useSelector(state => state.sessions?.runtimeSnapshot?.data);
 
     const containerRef = useRef(null);
@@ -193,7 +195,7 @@ const VFOMarkersContainer = ({
         // Iterate through all sessions in runtime snapshot
         Object.entries(runtimeSnapshot.sessions).forEach(([sessionId, sessionData]) => {
             // Only process internal sessions
-            if (!sessionData.is_internal || !sessionId.startsWith('internal:')) {
+            if (!sessionData.is_internal || !sessionId.startsWith('internal:') || sessionData.sdr_id !== selectedSdrId) {
                 return;
             }
 
@@ -222,7 +224,7 @@ const VFOMarkersContainer = ({
         });
 
         return internalSessions;
-    }, [runtimeSnapshot, activeDecoders]);
+    }, [runtimeSnapshot, activeDecoders, selectedSdrId]);
 
     // Helper function to get morse decoder output text for a VFO
     const getMorseOutputForVFO = useCallback((vfoNumber) => {
@@ -536,7 +538,7 @@ const VFOMarkersContainer = ({
         // Clear the canvas
         ctx.clearRect(0, 0, canvas.width, height);
 
-        // Draw internal VFO markers FIRST (read-only, greyed-out) using live session data
+        // Draw internal VFO markers FIRST (read-only) using live session data
         // This ensures user VFOs always paint over internal observation VFOs
         const internalVFOSessions = getInternalVFOSessions();
         internalVFOSessions.forEach(({ sessionId, vfoNumber, vfoData, sessionMetadata, decoderInfo }) => {
@@ -560,10 +562,13 @@ const VFOMarkersContainer = ({
             const leftEdgeX = ((leftFreq - startFreq) / freqRange) * actualWidth;
             const rightEdgeX = ((rightFreq - startFreq) / freqRange) * actualWidth;
 
-            // Use grey color for internal VFOs
-            const internalColor = '#A0A0A0';
-            const internalAreaOpacity = '20'; // More visible
-            const internalLineOpacity = 'CC'; // Much brighter
+            const isContinuousObservation = Boolean(sessionMetadata?.continuous_observation_id);
+            // Keep continuous VFO colors recognizable, with faint fills and outlines
+            // to distinguish their fixed configuration from editable user VFOs.
+            const internalColor = isContinuousObservation
+                ? vfoColors[vfoNumber] || DEFAULT_VFO_COLORS[(vfoNumber - 1) % DEFAULT_VFO_COLORS.length] : '#A0A0A0';
+            const internalAreaOpacity = isContinuousObservation ? '10' : '20';
+            const internalLineOpacity = isContinuousObservation ? '70' : 'CC';
 
             // Draw area, center line, and edges using same style as regular VFOs
             canvasDrawingUtils.drawVFOArea(ctx, leftEdgeX, rightEdgeX, height, internalColor, internalAreaOpacity);
@@ -575,7 +580,7 @@ const VFOMarkersContainer = ({
 
             // Generate label text using session metadata and VFO data
             // For internal VFOs, use "OBS" prefix to distinguish from regular VFOs
-            const satelliteName = sessionMetadata?.satellite_name || 'Internal';
+            const satelliteName = sessionMetadata?.name || sessionMetadata?.satellite_name || 'Internal';
 
             // Create a marker-like object to use with generateVFOLabelText
             // Use a name like "OBS 1" to match the VFO naming pattern
@@ -599,7 +604,7 @@ const VFOMarkersContainer = ({
             // Check if this internal VFO is locked to a transmitter
             const isLocked = vfoData.locked_transmitter_id && vfoData.locked_transmitter_id !== 'none';
 
-            // Use the same drawing utility as regular VFOs but with grey color
+            // Share the regular label layout while keeping observation colors subdued.
             canvasDrawingUtils.drawVFOLabel(
                 ctx,
                 centerX,

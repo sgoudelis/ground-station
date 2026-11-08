@@ -17,6 +17,7 @@
  *
  */
 
+import { fetchContinuousObservations } from '../components/scheduler/continuous-observations-slice.js';
 import { useEffect, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { toast } from '../utils/toast-with-timestamp.jsx';
@@ -848,6 +849,10 @@ export const useSocketEventHandlers = (socket, enabled = true) => {
             }
         });
 
+        socket.on('continuous-observations-changed', () => {
+            store.dispatch(fetchContinuousObservations({ socket }));
+        });
+
         // Scheduler observations changed (refetch all)
         socket.on('scheduled-observations-changed', () => {
             store.dispatch(fetchScheduledObservations({ socket }));
@@ -1239,6 +1244,7 @@ export const useSocketEventHandlers = (socket, enabled = true) => {
             socket.off("celestial-ephemeris-status-update");
             socket.off("observation-status-update");
             socket.off("scheduled-observations-changed");
+            socket.off("continuous-observations-changed");
             socket.off("soapysdr:discovery_started");
             socket.off("soapysdr:discovery_complete");
             socket.off("soapysdr:refresh_complete");

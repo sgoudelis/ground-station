@@ -19,7 +19,7 @@
  */
 
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { getDefaultVFOConfig, DEMODULATORS, getDemodulatorConfig, getDecoderConfig } from './vfo-config.js';
+import { getDefaultVFOConfig, DEMODULATORS, getDemodulatorConfig, getDecoderConfig, DEFAULT_VFO_COLORS } from './vfo-config.js';
 import { setIsStreaming } from '../waterfall-slice.jsx';
 import { mapParametersFromBackend } from '../decoder-parameters.js';
 
@@ -152,7 +152,7 @@ const initialState = {
         3: { isRecording: false, duration: 0 },
         4: { isRecording: false, duration: 0 },
     },
-    vfoColors: ['#FF0000', '#207820', '#144bff', '#9e129e'],
+    vfoColors: DEFAULT_VFO_COLORS,
     selectedVFOTab: 0,
     errorMessage: null,
 };
@@ -288,7 +288,7 @@ export const vfoSlice = createSlice({
         },
         setVfoMuted(state, action) {
             const { vfoNumber, muted } = action.payload;
-            if (state.vfoMuted[vfoNumber] !== undefined) {
+            if (Number.isInteger(vfoNumber) && vfoNumber >= 1 && vfoNumber <= 10) {
                 state.vfoMuted[vfoNumber] = muted;
             }
         },

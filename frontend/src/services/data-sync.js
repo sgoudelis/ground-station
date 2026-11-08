@@ -17,6 +17,7 @@
  *
  */
 
+import { fetchContinuousObservations } from '../components/scheduler/continuous-observations-slice.js';
 import { store } from '../components/common/store.jsx';
 import { fetchPreferences, fetchSystemPreferences } from '../components/settings/preferences-slice.jsx';
 import { fetchLocationForUserId } from '../components/settings/location-slice.jsx';
@@ -88,6 +89,7 @@ export async function initializeAppData(socket) {
         { name: 'earth_view_map', run: () => store.dispatch(getEarthViewMapSettings({ socket })) },
         { name: 'target_map', run: () => store.dispatch(getTargetMapSettings({ socket })) },
         { name: 'scheduled_observations', run: () => store.dispatch(fetchScheduledObservations({ socket })) },
+        { name: 'continuous_observations', run: () => store.dispatch(fetchContinuousObservations({ socket })) },
         { name: 'monitored_satellites', run: () => store.dispatch(fetchMonitoredSatellites({ socket })) },
     ];
 

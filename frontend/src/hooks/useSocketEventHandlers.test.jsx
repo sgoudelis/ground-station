@@ -270,14 +270,14 @@ test('checks the version before reconnect sync and resumes only after dismissal'
 
     requests.length = 0;
     socket.id = 'session-2';
-    act(() => listeners.get('connect')());
+    await act(async () => { await listeners.get('connect')(); });
     await waitFor(() => expect(initializeAppData).toHaveBeenCalledTimes(2));
     expect(requests.slice(0, 3)).toEqual(['system.version', 'background-task.list', 'initializeAppData']);
 
     requests.length = 0;
     versionCheckFails = true;
     socket.id = 'session-3';
-    act(() => listeners.get('connect')());
+    await act(async () => { await listeners.get('connect')(); });
     await waitFor(() => expect(initializeAppData).toHaveBeenCalledTimes(3));
     expect(requests.slice(0, 3)).toEqual(['system.version', 'background-task.list', 'initializeAppData']);
 
@@ -286,7 +286,7 @@ test('checks the version before reconnect sync and resumes only after dismissal'
     versionCheckFails = false;
     serverVersion = '3.0.0';
     socket.id = 'session-4';
-    act(() => listeners.get('connect')());
+    await act(async () => { await listeners.get('connect')(); });
     await waitFor(() => expect(store.getState().version.hasVersionChanged).toBe(true));
     expect(requests).toEqual(['system.version']);
 
@@ -300,9 +300,33 @@ test('checks the version before reconnect sync and resumes only after dismissal'
     requests.length = 0;
     socket.connected = true;
     socket.id = 'session-5';
-    act(() => listeners.get('connect')());
+    await act(async () => { await listeners.get('connect')(); });
     await waitFor(() => expect(initializeAppData).toHaveBeenCalledTimes(4));
     expect(requests.slice(0, 3)).toEqual(['system.version', 'background-task.list', 'initializeAppData']);
 
     unmount();
+});
+
+test('continuous observation notifications refetch shared definitions and clean up their subscription', async () => {
+    const listeners = new Map();
+    const requests = [];
+    const definition = { id: 'continuous-one', name: 'Monitoring', updated_at: '2026-11-08T10:00:00.000001+00:00' };
+    const socket = {
+        connected: false,
+        on: vi.fn((event, handler) => listeners.set(event, handler)),
+        off: vi.fn((event, handler) => { if (!handler || listeners.get(event) === handler) listeners.delete(event); }),
+        emit: vi.fn((_event, request, callback) => {
+            requests.push(request);
+            callback({ success: true, data: [definition] });
+        }),
+    };
+    const wrapper = ({ children }) => <Provider store={store}>{children}</Provider>;
+    const { unmount } = renderHook(() => useSocketEventHandlers(socket), { wrapper });
+    socket.connected = true;
+    expect(listeners.has('continuous-observations-changed')).toBe(true);
+    await act(async () => listeners.get('continuous-observations-changed')({ id: definition.id }));
+    expect(requests).toEqual([{ cmd: 'continuous-observations.list', data: {} }]);
+    expect(store.getState().continuousObservations.definitions).toEqual([definition]);
+    unmount();
+    expect(listeners.has('continuous-observations-changed')).toBe(false);
 });

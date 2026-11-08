@@ -111,7 +111,7 @@ const router = createBrowserRouter([
                         element: <Navigate to="/files" replace />,
                     },
                     {
-                        path: "scheduler",
+                        path: "scheduler/:tab?",
                         lazy: pages.scheduler,
                     },
                     {

@@ -34,6 +34,7 @@ import { usePassFetching } from "./hooks/usePassFetching.jsx";
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { loadAuthStatus } from './components/auth/auth-slice.jsx';
+import { clearContinuousObservationSession } from './components/scheduler/continuous-observations-slice.js';
 import { resetRuntimeSessionState } from './components/dashboard/dashboard-slice.jsx';
 import { clearSourceSession } from './components/satellites/sources-slice.jsx';
 import ConnectionOverlay from './components/dashboard/reconnecting-overlay.jsx';
@@ -114,6 +115,7 @@ export default function App() {
         // Reset dashboard runtime connection/data flags whenever auth context changes.
         // This avoids a stale dashboard frame from a previous session during logout/login.
         dispatch(resetRuntimeSessionState());
+        dispatch(clearContinuousObservationSession());
         setSessionBootstrapped(false);
         setAwaitingRuntimeReset(true);
     }, [dispatch, socketAuthEpoch]);

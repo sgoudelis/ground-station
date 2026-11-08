@@ -19,6 +19,8 @@
 
 import i18n from '../../../i18n/config.js';
 
+export const DEFAULT_VFO_COLORS = Object.freeze(['#FF0000', '#207820', '#144bff', '#9e129e']);
+
 /**
  * Module-level translator.
  *

@@ -3,6 +3,13 @@ export const DEFAULT_SDR_SAMPLE_RATES = [
     5000000, 6000000, 8000000, 10000000, 12000000, 16000000,
 ];
 
+// Hardware configuration stores tuning limits in MHz; receiver sessions and
+// VFO frequencies use Hz. Convert once before centering or validating a session.
+export const getSdrTuningRangeHz = (device) => ({
+    min: device?.frequency_min == null ? 1 : Math.max(1, Math.ceil(device.frequency_min * 1e6)),
+    max: device?.frequency_max == null ? Infinity : Math.floor(device.frequency_max * 1e6),
+});
+
 // Keep the full Hz precision after converting units, including decimated rates.
 export const formatSdrRate = (value) => {
     const rate = Number(value);

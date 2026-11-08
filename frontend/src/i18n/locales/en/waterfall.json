@@ -50,6 +50,8 @@
   },
   "frequency": {
     "title": "Frequency control",
+    "increase_by_hz": "Increase by {{step}} Hz",
+    "decrease_by_hz": "Decrease by {{step}} Hz",
     "go_to_transmitter": "Go to transmitter",
     "no_frequency_selected": "[no frequency selected]",
     "select_transmitter": "select a transmitter",

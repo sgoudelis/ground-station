@@ -38,20 +38,31 @@ const getTaskFrequencyDetails = (session, transmitters) =>
         }];
     });
 
-const getFrequencySpan = (details) => {
+export const getFrequencySpan = (details) => {
     const minFreq = details.length ? Math.min(...details.map((entry) => entry.freq - entry.bandwidth / 2)) : 0;
     const maxFreq = details.length ? Math.max(...details.map((entry) => entry.freq + entry.bandwidth / 2)) : 0;
     return { minFreq, maxFreq, requiredBandwidth: maxFreq - minFreq };
 };
 
-export const calculateSdrCenterFrequency = (session, transmitters, device, parameters) => {
-    const details = getTaskFrequencyDetails(session, transmitters);
+export const calculateChannelCenterFrequency = (details, captureBandwidth, { min = -Infinity, max = Infinity } = {}) => {
     if (!details.length) return 0;
     const { minFreq, maxFreq, requiredBandwidth } = getFrequencySpan(details);
-    const captureBandwidth = getSdrCaptureBandwidth(session.sdr, device, parameters);
-    // Avoid DC where possible, but never shift a fitting task span out of the filter.
+    // Both scheduled tasks and continuous VFOs avoid DC only where the full
+    // channel span still fits. Receiver tuning limits can further reduce the shift.
     const dcOffset = Math.min(captureBandwidth / 4, Math.max(0, (captureBandwidth - requiredBandwidth) / 2));
-    return Math.round((minFreq + maxFreq) / 2 + dcOffset);
+    const center = Math.round((minFreq + maxFreq) / 2 + dcOffset);
+    const minCenter = Math.max(Math.ceil(maxFreq - captureBandwidth / 2), min);
+    const maxCenter = Math.min(Math.floor(minFreq + captureBandwidth / 2), max);
+    // An impossible span remains centered for the preview; validation explains
+    // why it cannot be saved instead of silently changing channel widths or rate.
+    return minCenter <= maxCenter ? Math.max(minCenter, Math.min(maxCenter, center)) : center;
+};
+
+export const calculateSdrCenterFrequency = (session, transmitters, device, parameters) => {
+    return calculateChannelCenterFrequency(
+        getTaskFrequencyDetails(session, transmitters),
+        getSdrCaptureBandwidth(session.sdr, device, parameters),
+    );
 };
 
 export const validateSdrTaskBandwidth = (session, transmitters, sdrs, parametersById, t) => {

@@ -36,6 +36,17 @@ const manual = {
     vfos: { 1: { active: true, center_freq: 145800000, decoder: 'aprs', modulation: 'fm' } },
 };
 
+const continuous = {
+    sdr_id: 'sdr-continuous', is_internal: true,
+    metadata: { continuous_observation_id: 'definition-1', name: 'VHF monitoring' },
+    vfos: {
+        1: { active: true, center_freq: 145800000, decoder: 'aprs', modulation: 'none' },
+        10: { active: true, center_freq: 145900000, decoder: 'none', modulation: 'fm' },
+        2: { active: false, center_freq: 146000000, decoder: 'none', modulation: 'am' },
+    },
+};
+const continuousReceiver = { alive: true, device: { name: 'Continuous receiver' } };
+
 function Harness() {
     const [anchor, setAnchor] = useState(null);
     const location = useLocation();
@@ -49,14 +60,14 @@ function Harness() {
     );
 }
 
-function setup({ observations = [], sessions = {}, streaming = false, sdrId = 'sdr-3' } = {}) {
-    const initialSessions = { runtimeSnapshot: { data: { sessions, sdrs: {} } } };
+function setup({ observations = [], sessions = {}, streaming = false, sdrId = 'sdr-3', sdrs = {}, initialPath = '/waterfall' } = {}) {
+    const initialSessions = { runtimeSnapshot: { data: { sessions, sdrs } } };
     const store = configureStore({
         reducer: {
             scheduler: schedulerReducer,
             decoders: decodersReducer,
             sessions: (state = initialSessions, action) => action.type === 'runtime'
-                ? { runtimeSnapshot: { data: { sessions: action.payload, sdrs: {} } } } : state,
+                ? { runtimeSnapshot: { data: { sessions: action.payload, sdrs } } } : state,
             waterfall: () => ({ isStreaming: streaming, selectedSDRId: sdrId, joinedSdrId: sdrId }),
             preferences: () => ({ preferences: [{ name: 'timezone', value: 'UTC' }, { name: 'locale', value: 'en-GB' }] }),
         },
@@ -68,7 +79,7 @@ function setup({ observations = [], sessions = {}, streaming = false, sdrId = 's
     render(
         <Provider store={store}>
             <ThemeProvider theme={setupTheme()}>
-                <MemoryRouter initialEntries={['/waterfall']}><Harness /></MemoryRouter>
+                <MemoryRouter initialEntries={[initialPath]}><Harness /></MemoryRouter>
             </ThemeProvider>
         </Provider>
     );
@@ -123,6 +134,66 @@ describe('observations popover', () => {
         expect(screen.getAllByText('operator')).toHaveLength(1);
         expect(screen.getByText('VFO 1: 145.800000 MHz · aprs')).toBeInTheDocument();
         expect(screen.queryByRole('button', { name: 'Take control' })).not.toBeInTheDocument();
+    });
+
+    it('discovers continuous runs from live sessions and counts each alongside scheduled and manual observations', () => {
+        setup({
+            observations: [automated],
+            sessions: {
+                manual,
+                'internal:continuous-definition-1': continuous,
+                viewer: { sdr_id: continuous.sdr_id },
+                stale: { ...continuous, sdr_id: 'stopped-receiver' },
+            },
+            sdrs: { [continuous.sdr_id]: continuousReceiver, 'stopped-receiver': { alive: false } },
+        });
+        expect(within(toolbarButton()).getByText('3')).toBeInTheDocument();
+        openPopover();
+        expect(screen.getByRole('heading', { name: 'Continuous', exact: true })).toBeVisible();
+        expect(screen.getAllByText('VHF monitoring')).toHaveLength(1);
+        expect(screen.getByText('Continuous receiver')).toBeVisible();
+        expect(screen.getByText('View only · fixed frequencies')).toBeVisible();
+        expect(screen.getByText('VFO 10: 145.900000 MHz · fm')).toBeVisible();
+        expect(screen.queryByText(/VFO 2:/)).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Take control' })).not.toBeInTheDocument();
+    });
+
+    it('joins a continuous observation read-only from any page without claiming it', async () => {
+        setup({ sessions: { 'internal:continuous-definition-1': continuous },
+            sdrs: { [continuous.sdr_id]: continuousReceiver }, initialPath: '/settings/sessions' });
+        openPopover();
+        await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Join', exact: true })));
+        expect(joinSdr).toHaveBeenCalledExactlyOnceWith(socket, expect.any(Function), continuous.sdr_id, 'watch-sdr', {
+            continuousObservationId: 'definition-1',
+        });
+        expect(screen.getByTestId('current-page')).toHaveTextContent('/waterfall');
+        expect(toolbarButton()).toHaveAttribute('aria-expanded', 'false');
+    });
+
+    it('keeps the continuous card open when JOIN fails and removes it when the run ends', async () => {
+        joinSdr.mockResolvedValue({ success: false, error: 'Continuous observation stopped during JOIN' });
+        const store = setup({ sessions: { 'internal:continuous-definition-1': continuous },
+            sdrs: { [continuous.sdr_id]: continuousReceiver } });
+        openPopover();
+        await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Join', exact: true })));
+        expect(showError).toHaveBeenCalledWith('Continuous observation stopped during JOIN');
+        expect(screen.getByRole('dialog', { name: 'Observations' })).toBeVisible();
+        act(() => store.dispatch({ type: 'runtime', payload: {} }));
+        expect(screen.queryByRole('dialog', { name: 'Observations' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Observations' })).not.toBeInTheDocument();
+    });
+
+    it('preserves continuous decoder subscriptions only on the viewed receiver after a fresh snapshot', () => {
+        const store = setup({ streaming: true, sdrId: continuous.sdr_id,
+            sessions: { 'internal:continuous-definition-1': continuous },
+            sdrs: { [continuous.sdr_id]: continuousReceiver } });
+        expect(store.getState().decoders.observedSessionIds).toEqual(['joined-session']);
+        act(() => store.dispatch({ type: 'runtime', payload: {
+            'internal:continuous-definition-1': continuous,
+            manual,
+            other: { ...continuous, sdr_id: 'other-receiver' },
+        } }));
+        expect(store.getState().decoders.observedSessionIds).toEqual(['internal:continuous-definition-1']);
     });
 
     it('opens observation details from the shared shortcut without claiming the SDR', () => {

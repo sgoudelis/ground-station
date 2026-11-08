@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { formatSdrRate, getSdrCaptureBandwidth } from '../common/sdr-parameters.js';
-import { calculateSdrCenterFrequency, validateSdrTaskBandwidth } from './session-utils.js';
+import { calculateChannelCenterFrequency, calculateSdrCenterFrequency, validateSdrTaskBandwidth } from './session-utils.js';
 
 describe('shared SDR values', () => {
     it.each([
@@ -20,6 +20,14 @@ describe('shared SDR values', () => {
     it('uses the widest compatible low-rate SDRplay filter in Auto mode', () => {
         expect(getSdrCaptureBandwidth({ ...sdr, sdr_settings: { bandwidth: 'auto' } }, device, parameters))
             .toBe(1536000);
+    });
+
+    it('uses the same centering rules for task and VFO channel descriptions', () => {
+        const session = { sdr, tasks: [{ config: { transmitter_id: 'tx' } }] };
+        const details = [{ freq: transmitter.downlink_low, bandwidth: transmitter.downlink_high - transmitter.downlink_low }];
+        expect(calculateChannelCenterFrequency(details, getSdrCaptureBandwidth(sdr, device, parameters)))
+            .toBe(calculateSdrCenterFrequency(session, [transmitter], device, parameters));
+        expect(calculateChannelCenterFrequency([], 2000000)).toBe(0);
     });
 
     it('rejects a task inside the sampled span but outside the hardware filter', () => {

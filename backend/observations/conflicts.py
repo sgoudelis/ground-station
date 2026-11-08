@@ -62,7 +62,8 @@ async def find_overlapping_observation(
     )
 
     result = await session.execute(stmt)
-    return result.scalar_one_or_none()
+    observation: Optional[ScheduledObservations] = result.scalar_one_or_none()
+    return observation
 
 
 def should_update_observation(existing_obs: ScheduledObservations) -> bool:

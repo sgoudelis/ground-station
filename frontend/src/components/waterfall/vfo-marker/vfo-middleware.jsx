@@ -125,7 +125,8 @@ const filterUIOnlyFields = (vfoState) => {
 };
 
 const backendSyncMiddleware = (store) => (next) => (action) => {
-    if (action.type === 'vfo/restoreReceivingSession'
+    if (action.type === 'waterfallState/setContinuousObservation'
+        || action.type === 'vfo/restoreReceivingSession'
         || (action.type === 'waterfallState/setIsStreaming' && !action.payload)) {
         // Old debounced edits must never land in a newly adopted observation.
         Object.values(debounceTimers).forEach(clearTimeout);
@@ -133,6 +134,13 @@ const backendSyncMiddleware = (store) => (next) => (action) => {
     }
     // Get state BEFORE action is processed for VFO activation checks
     const stateBefore = store.getState();
+
+    // Continuous viewers never synchronize local VFO controls to the owner.
+    if (stateBefore.waterfall.continuousObservation) {
+        if (['vfo/setVFOProperty', 'vfo/setVfoActive', 'vfo/setVfoInactive',
+            'vfo/syncDraggedVFOToBackend'].includes(action.type)) return action;
+        return next(action);
+    }
 
     // Use the socket from the module variable instead of state
     const socket = socketInstance;

@@ -34,7 +34,8 @@ export const useAudio = () => {
     return context;
 };
 
-const VFO_NUMBERS = [1, 2, 3, 4];
+// Browser receivers use four slots; continuous observation viewers can hear ten.
+const VFO_NUMBERS = Array.from({ length: 10 }, (_, index) => index + 1);
 
 export const AudioProvider = ({ children }) => {
     const dispatch = useDispatch();
@@ -52,7 +53,7 @@ export const AudioProvider = ({ children }) => {
     const [audioEnabled, setAudioEnabled] = useState(false);
     const [volume, setVolume] = useState(0.5);
 
-    // Per-VFO state (supports 4 VFOs: 1-4)
+    // Per-VFO state (four receiver slots or ten continuous observation slots)
     const vfoGainNodesRef = useRef({}); // { 1: GainNode, 2: GainNode, ... }
     const vfoNextPlayTimeRef = useRef({}); // { 1: time, 2: time, ... } - end of the last scheduled chunk
     const vfoScheduledSourcesRef = useRef({}); // { 1: Set<AudioBufferSourceNode>, ... } - not yet finished
@@ -82,7 +83,7 @@ export const AudioProvider = ({ children }) => {
 
             audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)(contextOptions);
 
-            // Create separate GainNode for each VFO (4 VFOs: 1-4)
+            // Create a separate GainNode for every supported VFO
             for (const vfoNumber of VFO_NUMBERS) {
                 const gainNode = audioContextRef.current.createGain();
                 gainNode.connect(audioContextRef.current.destination);
@@ -204,9 +205,9 @@ export const AudioProvider = ({ children }) => {
             setAudioEnabled(true);
         }
 
-        // Extract VFO number from audio data (backend sends 1-4)
+        // Extract VFO number from audio data
         const vfoNumber = audioData.vfo?.vfo_number;
-        if (vfoNumber === undefined || vfoNumber < 1 || vfoNumber > 4) {
+        if (vfoNumber === undefined || vfoNumber < 1 || vfoNumber > VFO_NUMBERS.length) {
             console.warn('Invalid or missing vfo_number in audio data:', audioData);
             return;
         }
@@ -242,7 +243,7 @@ export const AudioProvider = ({ children }) => {
 
     // Set individual VFO volume
     const setVfoVolume = useCallback((vfoNumber, vfoVolume) => {
-        if (vfoNumber < 1 || vfoNumber > 4) return;
+        if (vfoNumber < 1 || vfoNumber > VFO_NUMBERS.length) return;
 
         vfoVolumeRef.current[vfoNumber] = vfoVolume;
         const gainNode = vfoGainNodesRef.current[vfoNumber];
@@ -280,9 +281,9 @@ export const AudioProvider = ({ children }) => {
     }, [flushVfo]);
 
     // Mute/unmute individual VFO
-    // VFO numbers are 1-4 (from UI/backend), matching audio routing
+    // VFO numbers match the backend observation slots
     const setVfoMute = useCallback((vfoNumber, muted) => {
-        if (vfoNumber < 1 || vfoNumber > 4) return;
+        if (vfoNumber < 1 || vfoNumber > VFO_NUMBERS.length) return;
 
         vfoMutedRef.current[vfoNumber] = muted;
         const gainNode = vfoGainNodesRef.current[vfoNumber];
@@ -350,19 +351,19 @@ export const AudioProvider = ({ children }) => {
 
     // Get VFO audio level (RMS of the most recent chunk, range 0.0 to 1.0)
     const getVfoAudioLevel = useCallback((vfoNumber) => {
-        if (vfoNumber < 1 || vfoNumber > 4) return 0;
+        if (vfoNumber < 1 || vfoNumber > VFO_NUMBERS.length) return 0;
         return vfoAudioLevelRef.current[vfoNumber] || 0;
     }, []);
 
     // Get VFO RF power in dB
     const getVfoRfPower = useCallback((vfoNumber) => {
-        if (vfoNumber < 1 || vfoNumber > 4) return null;
+        if (vfoNumber < 1 || vfoNumber > VFO_NUMBERS.length) return null;
         return vfoRfPowerRef.current[vfoNumber] || null;
     }, []);
 
     // Get VFO squelch diagnostics
     const getVfoSquelchDebug = useCallback((vfoNumber) => {
-        if (vfoNumber < 1 || vfoNumber > 4) return null;
+        if (vfoNumber < 1 || vfoNumber > VFO_NUMBERS.length) return null;
         return vfoSquelchDebugRef.current[vfoNumber] || null;
     }, []);
 

@@ -15,19 +15,22 @@
 
 import json
 import math
+import re
 import traceback
 import uuid
 from datetime import datetime, timezone
+from decimal import ROUND_CEILING, Decimal
 from typing import Any, Union
 
-from sqlalchemy import delete, insert, or_, select, update
+from sqlalchemy import String, and_, case, delete, func, insert, or_, select, update
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from common.common import logger, serialize_object
 from common.targetkey import normalize_target_key
+from common.transmittersearch import TransmitterSearchRequest
 from constants.framing import FSK_DECODER_FRAMINGS
-from db.models import CelestialTargets, Transmitters
+from db.models import CelestialTargets, Satellites, Transmitters
 from demodulators.loraconfig import LORA_DEFAULTS, normalize_lora
 
 NULL_MARKERS = {"", "-", None}
@@ -282,6 +285,137 @@ async def _ensure_target_owner(session: AsyncSession, target_key: str | None) ->
         updated_at=now_utc,
     )
     await session.execute(stmt.on_conflict_do_nothing(index_elements=[CelestialTargets.id]))
+
+
+async def search_transmitters(session: AsyncSession, query: TransmitterSearchRequest) -> dict:
+    """Search every owner/status, enriching only the requested SQL page."""
+    keyword = query.keyword
+    try:
+        owner_name = func.coalesce(
+            Satellites.name,
+            CelestialTargets.display_name,
+            Transmitters.target_key,
+            Transmitters.norad_cat_id.cast(String),
+        )
+        text_columns = (
+            Satellites.name,
+            Satellites.name_other,
+            Satellites.alternative_name,
+            Satellites.norad_id.cast(String),
+            CelestialTargets.display_name,
+            Transmitters.target_key,
+            Transmitters.description,
+            Transmitters.id,
+            Transmitters.source_transmitter_id,
+            Transmitters.mode,
+            Transmitters.service,
+        )
+        # Tokens may match different columns ("ISS APRS"). Escape SQL wildcard
+        # characters so catalog names containing '%' or '_' remain literal.
+        conditions = [
+            and_(
+                *[
+                    or_(*[column.icontains(token, autoescape=True) for column in text_columns])
+                    for token in keyword.split()
+                ]
+            )
+        ]
+        numeric = re.fullmatch(r"(\d+(?:\.\d*)?)\s*(hz|khz|mhz|ghz)?", keyword.lower())
+        if numeric:
+            number, unit = numeric.groups()
+            value = Decimal(number)
+            scale = {"hz": 1, "khz": 1000, "mhz": 1000000, "ghz": 1000000000}.get(
+                unit or "", 1 if value >= 1000000 else 1000000
+            )
+            frequency = value * scale
+            # Treat the typed precision as a frequency prefix: 145.8 MHz
+            # covers 145.800–145.899… MHz, including overlapping passbands.
+            decimals = len(number.partition(".")[2])
+            step = Decimal(10) ** -decimals * scale
+            if 0 < frequency < 2**63 - 1 and frequency + step < 2**63 - 1:
+                low = func.coalesce(Transmitters.downlink_low, Transmitters.downlink_high)
+                high = func.coalesce(Transmitters.downlink_high, Transmitters.downlink_low)
+                # Endpoints are integer Hz. Ceiling preserves the half-open
+                # interval even when a caller supplies sub-Hz precision.
+                lower_hz = int(frequency.to_integral_value(rounding=ROUND_CEILING))
+                upper_hz = int((frequency + step).to_integral_value(rounding=ROUND_CEILING))
+                conditions.append(and_(low < upper_hz, high >= lower_hz))
+
+        stmt = (
+            select(
+                Transmitters.id,
+                Transmitters.description,
+                Transmitters.downlink_low,
+                Transmitters.downlink_high,
+                Transmitters.mode,
+                Transmitters.baud,
+                Transmitters.deviation,
+                Transmitters.framing,
+                Transmitters.lora_config,
+                Transmitters.norad_cat_id,
+                Transmitters.target_key,
+                Transmitters.status,
+                Transmitters.alive,
+                Transmitters.source,
+                owner_name.label("owner_name"),
+                case(
+                    (Transmitters.norad_cat_id.is_not(None), "satellite"),
+                    else_=CelestialTargets.target_type,
+                ).label("owner_type"),
+            )
+            .select_from(Transmitters)
+            .outerjoin(Satellites, Satellites.norad_id == Transmitters.norad_cat_id)
+            .outerjoin(CelestialTargets, CelestialTargets.id == Transmitters.target_key)
+            .where(or_(*conditions))
+        )
+        total = int(await session.scalar(select(func.count()).select_from(stmt.subquery())) or 0)
+        rank = case(
+            (
+                or_(
+                    func.lower(owner_name) == keyword.lower(),
+                    func.lower(Transmitters.description) == keyword.lower(),
+                    Transmitters.id == keyword,
+                ),
+                0,
+            ),
+            (
+                or_(
+                    owner_name.istartswith(keyword, autoescape=True),
+                    Transmitters.description.istartswith(keyword, autoescape=True),
+                ),
+                1,
+            ),
+            else_=2,
+        )
+        # The unique id breaks ties so consecutive pages never reorder equal names.
+        rows = (
+            (
+                await session.execute(
+                    stmt.order_by(
+                        rank,
+                        func.lower(owner_name),
+                        func.lower(Transmitters.description),
+                        Transmitters.id,
+                    )
+                    .offset(query.page * query.page_size)
+                    .limit(query.page_size)
+                )
+            )
+            .mappings()
+            .all()
+        )
+        return {
+            "success": True,
+            "data": [dict(row) for row in rows],
+            "total": total,
+            "page": query.page,
+            "page_size": query.page_size,
+            "has_more": (query.page + 1) * query.page_size < total,
+            "error": None,
+        }
+    except Exception:
+        logger.exception("Error searching transmitters")
+        return {"success": False, "data": [], "error": "Unable to search transmitters."}
 
 
 async def fetch_transmitters_for_satellite(session: AsyncSession, norad_id: int) -> dict:

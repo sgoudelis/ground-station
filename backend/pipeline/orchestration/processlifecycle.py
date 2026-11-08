@@ -449,10 +449,15 @@ class ProcessLifecycleManager:
                 other_clients = sorted(
                     str(sid) for sid in process_info["clients"] if str(sid) != str(client_id)
                 )
+                if process_info.get("continuous_observation_id") and other_clients:
+                    raise SdrStartConflict(sdr_id, other_clients)
                 if (
                     (other_clients or client_id in process_info.get("joiners", set()))
                     and not force_takeover
-                    and not VFOManager.is_internal_session(client_id)
+                    and (
+                        not VFOManager.is_internal_session(client_id)
+                        or sdr_config.get("continuous_observation_id")
+                    )
                 ):
                     raise SdrStartConflict(sdr_id, other_clients)
             else:
@@ -780,6 +785,7 @@ class ProcessLifecycleManager:
 
             # Store process information
             self.processes[sdr_id] = {
+                "continuous_observation_id": sdr_config.get("continuous_observation_id"),
                 "process": process,
                 "fft_process": fft_process,
                 "config_queue": config_queue,
@@ -877,6 +883,11 @@ class ProcessLifecycleManager:
             VFOManager().clear_session_vfos(client_id)
 
         if not VFOManager.is_internal_session(client_id) and controller:
+            continuous_id = process_info.get("continuous_observation_id")
+            if continuous_id:
+                await (sio or self.sio).leave_room(
+                    controller, f"internal:continuous-{continuous_id}"
+                )
             await (sio or self.sio).leave_room(controller, sdr_id)
             if controller != client_id:
                 await (sio or self.sio).leave_room(controller, client_id)
@@ -1049,6 +1060,8 @@ class ProcessLifecycleManager:
         process_info = self.processes[sdr_id]
         if process_info.get("stopping"):
             return
+        if process_info.get("continuous_observation_id"):
+            raise ValueError("Stop the continuous observation before changing receiver settings.")
         request = config.get("config_request")
         if request:
             sequences = process_info.setdefault("config_request_sequences", {})

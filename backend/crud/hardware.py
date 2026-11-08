@@ -23,7 +23,7 @@ from sqlalchemy import delete, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from common.common import logger, serialize_object
-from db.models import Cameras, Rigs, Rotators, SDRs
+from db.models import Cameras, ContinuousObservations, Rigs, Rotators, SDRs
 
 VALID_AZIMUTH_MODES = {"0_360", "-180_180", "0_450"}
 SUPPORTED_CAMERA_TYPES = {"hls", "mjpeg"}
@@ -806,6 +806,18 @@ async def delete_sdrs(session: AsyncSession, sdr_ids: List[Union[str, uuid.UUID]
 
         if not sdrs:
             return {"success": False, "error": "No SDRs with the provided IDs were found"}
+
+        # Definitions retain a real receiver reference, including when not running.
+        referenced = await session.scalar(
+            select(ContinuousObservations.id)
+            .where(ContinuousObservations.sdr_id.in_(sdr_ids))
+            .limit(1)
+        )
+        if referenced:
+            return {
+                "success": False,
+                "error": "This SDR is used by a continuous observation. Change or delete that definition first.",
+            }
 
         # Delete the SDRs
         stmt = delete(SDRs).where(SDRs.id.in_(sdr_ids))

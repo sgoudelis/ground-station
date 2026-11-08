@@ -100,6 +100,7 @@ import getValue from "lodash/_getValue.js";
 import FrequencyControlAccordion from "./settings-frequency.jsx";
 import SdrAccordion from "./settings-sdr.jsx";
 import FftAccordion from "./settings-fft.jsx";
+import ContinuousObservationView from "./continuous-observation-view.jsx";
 import VfoAccordion from "./vfo-settings/settings-vfo.jsx";
 import RecordingAccordion from "./settings-recording.jsx";
 import PlaybackAccordion from "./settings-playback.jsx";
@@ -153,6 +154,7 @@ const WaterfallSettings = forwardRef(function WaterfallSettings({ playbackRemain
         errorMessage,
         isStreaming,
         joinedSdrId,
+        continuousObservation,
         targetFPS,
         settingsDialogOpen,
         autoDBRange,
@@ -208,6 +210,7 @@ const WaterfallSettings = forwardRef(function WaterfallSettings({ playbackRemain
             errorMessage: state.waterfall.errorMessage,
             isStreaming: state.waterfall.isStreaming,
             joinedSdrId: state.waterfall.joinedSdrId,
+            continuousObservation: state.waterfall.continuousObservation,
             targetFPS: state.waterfall.targetFPS,
             settingsDialogOpen: state.waterfall.settingsDialogOpen,
             autoDBRange: state.waterfall.autoDBRange,
@@ -1711,6 +1714,7 @@ const WaterfallSettings = forwardRef(function WaterfallSettings({ playbackRemain
             </TitleBar>
             <div ref={settingsScrollRef} style={{overflowY: 'auto', overflowAnchor: 'none', height: '100%', paddingBottom: '29px'}}>
 
+                <Box component="fieldset" disabled={Boolean(continuousObservation)} sx={{ border: 0, m: 0, p: 0, minWidth: 0 }}>
                 <DevRenderProfiler id="SdrAccordion">
                     <SdrAccordion
                     expanded={expandedPanels.includes('sdr')}
@@ -1761,7 +1765,9 @@ const WaterfallSettings = forwardRef(function WaterfallSettings({ playbackRemain
                     onPlaybackRecordingChange={onPlaybackRecordingChange}
                     />
                 </DevRenderProfiler>
+                </Box>
 
+                <Box component="fieldset" disabled={Boolean(continuousObservation)} sx={{ border: 0, m: 0, p: 0, minWidth: 0 }}>
                 <DevRenderProfiler id="FrequencyControlAccordion">
                     <FrequencyControlAccordion
                     expanded={expandedPanels.includes('freqControl')}
@@ -1779,8 +1785,9 @@ const WaterfallSettings = forwardRef(function WaterfallSettings({ playbackRemain
                     isStreaming={isStreaming}
                     />
                 </DevRenderProfiler>
+                </Box>
 
-                <DevRenderProfiler id="VfoAccordion">
+                {continuousObservation ? <ContinuousObservationView observation={continuousObservation} /> : <DevRenderProfiler id="VfoAccordion">
                     <VfoAccordion
                     expanded={expandedPanels.includes('vfo')}
                     onAccordionChange={handleVfoAccordionChange}
@@ -1797,8 +1804,9 @@ const WaterfallSettings = forwardRef(function WaterfallSettings({ playbackRemain
                     onCenterFrequencyChange={handleVfoCenterFrequencyChange}
                     onSampleRateChange={handleGnssSampleRateChange}
                     />
-                </DevRenderProfiler>
+                </DevRenderProfiler>}
 
+                <Box component="fieldset" disabled={Boolean(continuousObservation)} sx={{ border: 0, m: 0, p: 0, minWidth: 0 }}>
                 <DevRenderProfiler id="FftAccordion">
                     <FftAccordion
                     expanded={expandedPanels.includes('fft')}
@@ -1823,6 +1831,7 @@ const WaterfallSettings = forwardRef(function WaterfallSettings({ playbackRemain
                     onColorMapChange={handleColorMapChange}
                     />
                 </DevRenderProfiler>
+                </Box>
 
                 <Box sx={{pointerEvents: joinedSdrId ? 'none' : 'auto', opacity: joinedSdrId ? 0.6 : 1}}>
                 <DevRenderProfiler id="RecordingAccordion">

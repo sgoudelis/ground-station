@@ -35,7 +35,7 @@ export default function SdrParameterFields({
     device, parameters = {}, value = {}, onChange, onSettingChange,
     disabled = false, fixedDisabled = false, gainDisabled = false,
     isStreaming = false, isRecording = false, bandwidthStatus,
-    labels = {}, required = false, validationErrors = {}, sampleRateHelp, showRequiredHelp = true,
+    labels = {}, required = false, validationErrors = {}, sampleRateHelp, showRequiredHelp = true, columns = 1,
 }) {
     const { t } = useTranslation('waterfall');
     const id = React.useId();
@@ -71,7 +71,9 @@ export default function SdrParameterFields({
     };
 
     return (
-        <Box sx={{ display: 'grid', gap: 1 }}>
+        <Box sx={{ display: 'grid', gap: 1, alignItems: 'start',
+            gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: `repeat(${columns}, minmax(0, 1fr))` },
+        }}>
             <ParameterSelect {...selectProps}
                 id={`${id}-gain`} label={labels.gain || t('sdr.gain_db')}
                 disabled={disabled || gainDisabled} error={validationErrors.gain}
@@ -159,7 +161,7 @@ export default function SdrParameterFields({
                     onChange={settingChanged(`${source}Source`)}
                 />;
             })}
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', ml: 1.5 }}>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', ml: 1.5, gridColumn: '1 / -1' }}>
                 {[
                     { name: 'bias_t', supported: parameters.has_bias_t || capabilities.bias_t?.supported, label: t('sdr.enable_bias_t') },
                     { name: 'bitpack', supported: bitpack, label: t('settings_sdr.bit_packing'), setting: true },

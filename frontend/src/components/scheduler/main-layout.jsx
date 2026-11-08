@@ -17,34 +17,41 @@
  *
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { Box, Stack } from '@mui/material';
 import { useDispatch } from 'react-redux';
 import { useTranslation } from 'react-i18next';
+import { Link, Navigate, useParams } from 'react-router';
 import { AntTab, AntTabs } from '../common/common.jsx';
 import PageTabsLayout from '../common/page-tabs.jsx';
+import NotFoundPage from '../common/not-found-page.jsx';
 import { useSocket } from '../common/socket.jsx';
 import { fetchScheduledObservations } from './scheduler-slice.jsx';
 import ObservationsTable from './observations-table.jsx';
 import MonitoredSatellitesTable from './monitored-satellites-table.jsx';
 import ObservationStatusBanner from './observation-status-banner.jsx';
+import ContinuousObservations from './continuous-observations.jsx';
 
 export default function ScheduledObservationsLayout() {
     const dispatch = useDispatch();
     const { socket } = useSocket();
     const { t } = useTranslation('common');
-    const [activeTab, setActiveTab] = useState('monitored');
+    // The URL is the source of truth for direct links and browser history.
+    const { tab: activeTab } = useParams();
+    const validTab = ['monitored', 'observations', 'continuous'].includes(activeTab);
 
     useEffect(() => {
         // The upcoming banner needs observations before their table's tab is opened.
-        if (socket) dispatch(fetchScheduledObservations({ socket }));
-    }, [socket, dispatch]);
+        if (socket && validTab) dispatch(fetchScheduledObservations({ socket }));
+    }, [socket, dispatch, validTab]);
+
+    if (!activeTab) return <Navigate to="/scheduler/monitored" replace />;
+    if (!validTab) return <NotFoundPage />;
 
     return (
         <PageTabsLayout sx={{ width: '100%', minWidth: 0, bgcolor: 'transparent' }} tabs={
             <AntTabs
                 value={activeTab}
-                onChange={(_event, value) => setActiveTab(value)}
                 variant="scrollable"
                 scrollButtons
                 allowScrollButtonsMobile
@@ -62,15 +69,27 @@ export default function ScheduledObservationsLayout() {
             >
                 <AntTab
                     value="monitored"
+                    component={Link}
+                    to="/scheduler/monitored"
                     id="scheduler-tab-monitored"
                     aria-controls="scheduler-panel-monitored"
                     label={t('scheduler_tables.monitored.title')}
                 />
                 <AntTab
                     value="observations"
+                    component={Link}
+                    to="/scheduler/observations"
                     id="scheduler-tab-observations"
                     aria-controls="scheduler-panel-observations"
                     label={t('scheduler_tables.observations.title')}
+                />
+                <AntTab
+                    value="continuous"
+                    component={Link}
+                    to="/scheduler/continuous"
+                    id="scheduler-tab-continuous"
+                    aria-controls="scheduler-panel-continuous"
+                    label={t('continuous_observations.title')}
                 />
             </AntTabs>
         }>
@@ -101,6 +120,15 @@ export default function ScheduledObservationsLayout() {
                         <ObservationsTable />
                     </Stack>
                 )}
+            </Box>
+            <Box
+                role="tabpanel"
+                id="scheduler-panel-continuous"
+                aria-labelledby="scheduler-tab-continuous"
+                hidden={activeTab !== 'continuous'}
+                sx={{ p: 2, minWidth: 0 }}
+            >
+                {activeTab === 'continuous' && <ContinuousObservations />}
             </Box>
         </PageTabsLayout>
     );

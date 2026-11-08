@@ -743,6 +743,29 @@ class MonitoredSatellites(Base):
     )
 
 
+class ContinuousObservations(Base):
+    """Durable receiver/channel definitions, independent of any running session."""
+
+    __tablename__ = "continuous_observations"
+
+    id = Column(String, primary_key=True, nullable=False)
+    name = Column(String(200), nullable=False)
+    auto_start = Column(Boolean, nullable=False, default=True, server_default="1", index=True)
+    sdr_id = Column(
+        Uuid(as_uuid=True), ForeignKey("sdrs.id", ondelete="RESTRICT"), nullable=False, index=True
+    )
+    sdr_config = Column(JSON, nullable=False)
+    vfos = Column(JSON, nullable=False)
+    config_version = Column(Integer, nullable=False, default=1, server_default="1")
+    created_at = Column(AwareDateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(
+        AwareDateTime,
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+
 class ScheduledObservations(Base):
     """
     Individual scheduled observations for specific satellite passes.

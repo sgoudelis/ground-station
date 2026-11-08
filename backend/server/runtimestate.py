@@ -11,3 +11,4 @@ audio_queue: Any = None
 background_task_manager: Any = None
 process_manager: Any = None
 audio_consumer: Any = None
+continuous_observations: Any = None

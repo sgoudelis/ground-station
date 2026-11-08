@@ -12,7 +12,7 @@ import {
 
 export default function SdrSessionFields({
     sdr, sdrs, parameters, loading, error, disabled = false,
-    isSdrUsedByAnotherSession, onChange, onRefresh, validationErrors = {}, bandwidthValidation,
+    isSdrUsedByAnotherSession, onChange, onRefresh, validationErrors = {}, bandwidthValidation, parameterColumns = 1,
 }) {
     const { t } = useTranslation(['common', 'waterfall']);
     const id = React.useId();
@@ -86,6 +86,7 @@ export default function SdrSessionFields({
             </Tooltip>
         </Stack>
         <SdrParameterFields
+            columns={parameterColumns}
             device={device}
             parameters={{ ...parameters, sample_rate_values: getSdrSampleRates(parameters, DEFAULT_SDR_SAMPLE_RATES) }}
             value={sdr}

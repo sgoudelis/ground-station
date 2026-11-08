@@ -10,7 +10,7 @@ export default function BackgroundStreamControl() {
     const dispatch = useDispatch();
     const { socket } = useSocket();
     const { t } = useTranslation('waterfall');
-    const { isStreaming, selectedSDRId, joinedSdrId, backgroundStreaming } = useSelector((state) => state.waterfall);
+    const { isStreaming, selectedSDRId, joinedSdrId, backgroundStreaming, continuousObservation } = useSelector((state) => state.waterfall);
     const [busy, setBusy] = useState(false);
 
     const toggleBackground = async (_event, enabled) => {
@@ -28,6 +28,8 @@ export default function BackgroundStreamControl() {
             setBusy(false);
         }
     };
+
+    if (continuousObservation) return null;
 
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', mt: 1, ml: 1.5 }}>

@@ -50,6 +50,7 @@ import systemInfoReducer from '../settings/system-info-slice.jsx';
 import sessionsReducer from '../settings/sessions-slice.jsx';
 import transcriptionReducer from '../waterfall/transcription-slice.jsx';
 import schedulerReducer from '../scheduler/scheduler-slice.jsx';
+import continuousObservationsReducer from '../scheduler/continuous-observations-slice.js';
 import tasksReducer from '../tasks/tasks-slice.jsx';
 import celestialReducer, { CELESTIAL_PASSES_DEFAULTS_VERSION } from '../celestial/celestial-slice.jsx';
 import celestialMonitoredReducer from '../celestial/monitored-slice.jsx';
@@ -301,6 +302,14 @@ const schedulerPersistConfig = {
     whitelist: ['columnVisibility', 'timeline']  // Persist UI preferences, not observations
 };
 
+// Keep legacy browser drafts until their database import succeeds. Backend
+// definitions and live status are always fetched, never persisted in the browser.
+const continuousObservationsPersistConfig = {
+    key: 'continuousObservationDrafts',
+    storage,
+    whitelist: ['drafts'],
+};
+
 // Persist configuration for background tasks slice (do not persist - runtime only)
 const tasksPersistConfig = {
     key: 'backgroundTasks',
@@ -429,6 +438,7 @@ const persistedPerformanceReducer = persistReducer(performancePersistConfig, per
 const persistedSystemInfoReducer = persistReducer(systemInfoPersistConfig, systemInfoReducer);
 const persistedTranscriptionReducer = persistReducer(transcriptionPersistConfig, transcriptionReducer);
 const persistedSchedulerReducer = persistReducer(schedulerPersistConfig, schedulerReducer);
+const persistedContinuousObservationsReducer = persistReducer(continuousObservationsPersistConfig, continuousObservationsReducer);
 const persistedTasksReducer = persistReducer(tasksPersistConfig, tasksReducer);
 const persistedCelestialReducer = persistReducer(celestialPersistConfig, celestialReducer);
 const persistedCelestialMonitoredReducer = persistReducer(celestialMonitoredPersistConfig, celestialMonitoredReducer);
@@ -467,6 +477,7 @@ export const store = configureStore({
         sessions: sessionsReducer,
         transcription: persistedTranscriptionReducer,
         scheduler: persistedSchedulerReducer,
+        continuousObservations: persistedContinuousObservationsReducer,
         backgroundTasks: persistedTasksReducer,
         celestial: persistedCelestialReducer,
         celestialMonitored: persistedCelestialMonitoredReducer,

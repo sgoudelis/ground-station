@@ -14,6 +14,7 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 import asyncio
+from dataclasses import asdict
 from typing import Any, Dict, List, Optional, Union
 
 import crud
@@ -184,6 +185,7 @@ def _build_sdr_in_use_conflict(
             }
         )
 
+    continuous_id = process_manager.processes.get(sdr_id, {}).get("continuous_observation_id")
     default_message = (
         f"SDR '{sdr_id}' is currently in use by {len(other_clients)} other session(s). "
         "Choose Join to use its live stream, or Take Over to change its settings."
@@ -195,9 +197,14 @@ def _build_sdr_in_use_conflict(
         "other_session_count": len(other_clients),
         "other_sessions": other_sessions,
         "includes_internal_observation": includes_internal_observation,
-        "requires_force_takeover": True,
+        "continuous_observation_id": continuous_id,
+        "requires_force_takeover": not bool(continuous_id),
         "config": _live_sdr_config(sdr_id, process_manager.processes.get(sdr_id, {})),
-        "message": message or default_message,
+        "message": (
+            "This SDR runs a continuous observation. Join to view it; stop it from the scheduler to make changes."
+            if continuous_id
+            else message or default_message
+        ),
     }
 
 
@@ -265,6 +272,31 @@ async def sdr_command_routing(
         session = background_sessions.sessions.get(client_id)
         if session and session.controller != socket_id:
             return {"success": False, "error": "This observation has no attached controller"}
+
+    # Continuous observations have no browser controller. Enforce this before
+    # configuration stores or consumer state can be changed by legacy clients.
+    target_id = str(data.get("selectedSDRId") or session_tracker.get_session_sdr(client_id) or "")
+    continuous_info = process_manager.processes.get(target_id, {})
+    if continuous_info.get("continuous_observation_id") and cmd not in {
+        "inspect-sdr",
+        "join-sdr",
+        "watch-sdr",
+        "leave-sdr",
+        "unwatch-sdr",
+        "stop-streaming",
+        "save-waterfall-snapshot",
+    }:
+        return {
+            "success": False,
+            "error": "Continuous observations are view-only. Stop the observation before making changes.",
+        }
+
+    if continuous_info.get("continuous_observation_id") and cmd == "stop-streaming":
+        await sio.leave_room(
+            socket_id, f"internal:continuous-{continuous_info['continuous_observation_id']}"
+        )
+        left = await process_manager.stop_sdr_join(target_id, client_id, sio=sio)
+        return {"success": left, "data": {"sdr_id": target_id}}
 
     async with AsyncSessionLocal() as dbsession:
         reply: Dict[str, Union[bool, None, dict, list, str]] = {"success": False, "data": None}
@@ -360,7 +392,13 @@ async def sdr_command_routing(
                 and client_id in process_info.get("clients", set())
                 and client_id not in process_info.get("joiners", set())
             )
-            if not process_info:
+            expected_continuous = data.get("continuousObservationId")
+            if expected_continuous and (
+                not process_info
+                or process_info.get("continuous_observation_id") != expected_continuous
+            ):
+                reply["error"] = "The continuous observation is no longer running on this SDR"
+            elif not process_info:
                 reply["error"] = "SDR is no longer streaming"
             elif not already_adopted and any(
                 client_id in info.get("clients", set())
@@ -411,7 +449,11 @@ async def sdr_command_routing(
                 session = (
                     adopted
                     if already_adopted
-                    else background_sessions.claim(target_sdr_id, socket_id)
+                    else (
+                        None
+                        if process_info.get("continuous_observation_id")
+                        else background_sessions.claim(target_sdr_id, socket_id)
+                    )
                 )
                 observation = None
                 if session:
@@ -461,8 +503,50 @@ async def sdr_command_routing(
                     process_info.setdefault("joiners", set()).add(client_id)
                     process_info["clients"].add(client_id)
                     session_tracker.register_session_streaming(client_id, target_sdr_id)
+                continuous_id = process_info.get("continuous_observation_id")
+                continuous_view = None
+                if continuous_id:
+                    owner_id = f"internal:continuous-{continuous_id}"
+                    # Audio and private decoder events belong to the immutable
+                    # owner. Room subscription conveys no controller privileges.
+                    await sio.enter_room(socket_id, owner_id)
+                    if _running_sdr_info(target_sdr_id) is not process_info:
+                        # Stop can finish during room attachment. Do not revive
+                        # cleaned VFO state or return a successful obsolete JOIN.
+                        await sio.leave_room(socket_id, owner_id)
+                        await session_service.cleanup_session(client_id)
+                        await sio.leave_room(socket_id, target_sdr_id)
+                        reply["error"] = "Continuous observation stopped during JOIN"
+                        return reply
+                    owner_vfos = VFOManager().get_all_vfo_states(owner_id)
+                    continuous_view = {
+                        "id": continuous_id,
+                        "session_id": owner_id,
+                        "name": (session_tracker.get_session_metadata(owner_id) or {}).get("name"),
+                        "vfos": {
+                            number: asdict(state)
+                            for number, state in owner_vfos.items()
+                            if state.active
+                        },
+                        "decoder_statuses": [
+                            entry.get("status")
+                            or {
+                                "session_id": owner_id,
+                                "vfo": number,
+                                "decoder_type": (
+                                    owner_vfos[number].decoder if number in owner_vfos else "none"
+                                ),
+                                "decoder_id": getattr(entry.get("instance"), "decoder_id", None),
+                                "status": "running",
+                            }
+                            for number, entry in process_info.get("decoders", {})
+                            .get(owner_id, {})
+                            .items()
+                        ],
+                    }
                 reply["success"] = True
                 reply["data"] = {
+                    "continuous_observation": continuous_view,
                     "session_id": background_sessions.resolve(socket_id),
                     "config": live_config,
                     "observation": observation,
@@ -481,6 +565,10 @@ async def sdr_command_routing(
 
         elif cmd in ("leave-sdr", "unwatch-sdr"):
             target_sdr_id = str(data.get("selectedSDRId") or "")
+            info = process_manager.processes.get(target_sdr_id, {})
+            continuous_id = info.get("continuous_observation_id")
+            if continuous_id:
+                await sio.leave_room(socket_id, f"internal:continuous-{continuous_id}")
             if not await process_manager.stop_sdr_join(target_sdr_id, client_id, sio=sio):
                 reply["error"] = "No active join for this SDR"
             else:

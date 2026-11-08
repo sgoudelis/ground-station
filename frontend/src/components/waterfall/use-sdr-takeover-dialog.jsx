@@ -82,6 +82,7 @@ export const useSdrTakeoverDialog = ({ defaultSdrId } = {}) => {
         [pendingConflict]
     );
 
+    const continuous = Boolean(pendingConflict?.continuous_observation_id);
     const otherSessionCount = Number(pendingConflict?.other_session_count || otherSessions.length || 0);
     const sdrId = pendingConflict?.sdr_id || defaultSdrId || 'selected SDR';
     const message = pendingConflict?.message
@@ -112,14 +113,14 @@ export const useSdrTakeoverDialog = ({ defaultSdrId } = {}) => {
                     {message}
                 </Typography>
                 <Typography variant="body2" sx={{ mb: 2 }}>
-                    {t('use_sdr_takeover_dialog.you_are_about_to', { defaultValue: 'You are about to' })} {pendingActionLabel || 'continue'} {t('use_sdr_takeover_dialog.on_this_sdr_joining_lets_you_use_its_current_stream_and_', { defaultValue: 'on this SDR. Joining lets you use its current stream and your own VFOs. The stream stays live while any participant remains. Taking over may disrupt active sessions.' })}
+                    {!continuous && <>{t('use_sdr_takeover_dialog.you_are_about_to', { defaultValue: 'You are about to' })} {pendingActionLabel || 'continue'} {t('use_sdr_takeover_dialog.on_this_sdr_joining_lets_you_use_its_current_stream_and_', { defaultValue: 'on this SDR. Joining lets you use its current stream and your own VFOs. The stream stays live while any participant remains. Taking over may disrupt active sessions.' })}</>}
                 </Typography>
                 {otherSessions.some((session) => session.is_background && session.unattended) && (
                     <Alert severity="info" sx={{ mb: 2 }}>
                         {t('background.join_description', { defaultValue: 'Joining an unattended observation gives you control of its running VFOs and decoders. Frequencies stay fixed until you change them.' })}
                     </Alert>
                 )}
-                {pendingConflict?.includes_internal_observation && (
+                {!continuous && pendingConflict?.includes_internal_observation && (
                     <Alert severity="warning" sx={{ mb: 2 }}>
                         <AlertTitle>{t('use_sdr_takeover_dialog.automated_observation_active', { defaultValue: 'Automated observation active' })}</AlertTitle>
                         {t('use_sdr_takeover_dialog.taking_over_this_sdr_can_interrupt_an_ongoing_scheduled_', { defaultValue: 'Taking over this SDR can interrupt an ongoing scheduled observation.' })}
@@ -166,7 +167,7 @@ export const useSdrTakeoverDialog = ({ defaultSdrId } = {}) => {
                 <Button onClick={() => closeWithResult('join')} variant="outlined">
                     {t('use_sdr_takeover_dialog.join', { defaultValue: 'Join' })}
                 </Button>
-                <Button onClick={() => closeWithResult('takeover')} color="warning" variant="contained">
+                <Button disabled={continuous} onClick={() => closeWithResult('takeover')} color="warning" variant="contained">
                     {t('use_sdr_takeover_dialog.take_over', { defaultValue: 'Take Over' })}
                 </Button>
             </DialogActions>

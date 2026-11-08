@@ -77,6 +77,8 @@ from observations.executor import (
 from observations.sync import ObservationSchedulerSync
 from pipeline.orchestration.processmanager import process_manager
 from server import runtimestate, shutdown
+from server.continuous import PREFIX as CONTINUOUS_PREFIX
+from server.continuous import ContinuousObservations
 from server.docs import get_themed_swagger_ui_html
 from server.firsttime import first_time_initialization, run_initial_sync
 from server.scheduler import (
@@ -276,6 +278,18 @@ async def lifespan(fastapiapp: FastAPI):
     # Initialize observation executor and scheduler sync
     observation_executor = ObservationExecutor(process_manager, sio)
     observation_sync = ObservationSchedulerSync(scheduler, observation_executor)
+    continuous_observations = ContinuousObservations(process_manager, sio)
+    runtimestate.continuous_observations = continuous_observations
+
+    async def handle_receiver_failure(sdr_id, session_ids, message):
+        # Both lifecycles share workers, but continuous runs have no scheduled
+        # observation row to transition or end-of-pass job to cancel.
+        await observation_executor.handle_sdr_failure(
+            sdr_id, {sid for sid in session_ids if not sid.startswith(CONTINUOUS_PREFIX)}, message
+        )
+        await continuous_observations.handle_failure(sdr_id, session_ids, message)
+
+    process_manager.set_sdr_failure_handler(handle_receiver_failure)
 
     # Store observation_sync globally for use in handlers
     obs_events.observation_sync = observation_sync
@@ -327,6 +341,7 @@ async def lifespan(fastapiapp: FastAPI):
 
     # Start session runtime snapshot emitter task (registers into background_tasks)
     start_session_runtime_emitter(sio, background_tasks)
+    continuous_observations.start_automatic()
 
     try:
         yield
@@ -338,6 +353,12 @@ async def lifespan(fastapiapp: FastAPI):
             scheduler.pause()
         except Exception:
             logger.exception("Failed to pause scheduler during shutdown")
+        try:
+            await continuous_observations.shutdown()
+        except Exception:
+            logger.exception("Failed to shut down continuous observations")
+        finally:
+            runtimestate.continuous_observations = None
 
         try:
             interruption_stats = await observation_executor.interrupt_running_observations(

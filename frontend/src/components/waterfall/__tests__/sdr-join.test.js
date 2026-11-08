@@ -84,6 +84,35 @@ describe('SDR detaching', () => {
 });
 
 describe('SDR joining', () => {
+    it('views continuous VFOs without adopting or synchronizing their configuration', async () => {
+        vi.useFakeTimers();
+        const owner = 'internal:continuous-definition';
+        const socket = { id: 'browser', connected: true, emit: vi.fn((_event, request, callback) => {
+            callback({ success: true, data: {
+                session_id: 'receiving-viewer', continuous_observation: {
+                    id: 'definition', session_id: owner, vfos: { 1: { active: true, center_freq: 145800000 } },
+                }, config: { sdr_id: 'radio', center_freq: 145800000, sample_rate: 2000000 },
+            } });
+        }) };
+        setSocketForMiddleware(socket);
+        const store = configureStore({
+            reducer: { waterfall: reducer, vfo: vfoReducer, decoders: decodersReducer },
+            middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(backendSyncMiddleware),
+        });
+        store.dispatch(setVfoActive(1));
+        await joinSdr(socket, store.dispatch, 'radio', 'watch-sdr', { continuousObservationId: 'definition' });
+        store.dispatch(setVFOProperty({ vfoNumber: 1, updates: { frequency: 146000000 } }));
+        await vi.runAllTimersAsync();
+        expect(socket.emit.mock.calls.map(([, request]) => request.cmd)).toEqual(['sdr.watch-sdr']);
+        expect(store.getState().waterfall.continuousObservation.session_id).toBe(owner);
+        expect(store.getState().waterfall.joinedSdrId).toBe('radio');
+        expect(store.getState().decoders.currentSessionId).toBe(owner);
+        expect(store.getState().decoders.observedSessionIds).toContain(owner);
+        expect(Object.values(store.getState().vfo.vfoActive).some(Boolean)).toBe(false);
+        await leaveSdr(socket, store.dispatch, 'radio');
+        expect(store.getState().waterfall.continuousObservation).toBeNull();
+    });
+
     it('uses only the join subscription and applies the worker settings', async () => {
         const commands = [];
         const socket = {

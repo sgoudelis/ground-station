@@ -584,3 +584,68 @@ async def test_decoder_events_are_cached_and_published_to_joined_viewers(receivi
     assert entry["status"] == status
     assert (("decoder-data", status), {"room": "radio"}) in socket.emitted
     assert (("decoder-data", output), {"room": "radio"}) in socket.emitted
+
+
+@pytest.mark.asyncio
+async def test_continuous_join_is_readonly_and_leaving_preserves_owner(receiving):
+    socket, pipeline, manager = receiving
+    pipeline["continuous_observation_id"] = "definition"
+    owner = "internal:continuous-definition"
+    pipeline["clients"] = {owner}
+    VFOManager().update_vfo_state(owner, 1, center_freq=145810000, active=True)
+    response = await command(socket, "watch-sdr", "viewer", continuousObservationId="definition")
+    assert response["success"]
+    assert response["data"]["observation"] is None
+    assert response["data"]["continuous_observation"]["session_id"] == owner
+    assert response["data"]["continuous_observation"]["vfos"][1]["active"]
+    assert ("viewer", owner) in socket.entered
+    sid = background_sessions.resolve("viewer")
+    assert sid in pipeline["joiners"]
+    for cmd in (
+        "claim-sdr",
+        "configure-sdr",
+        "start-streaming",
+        "start-recording",
+        "set-background",
+    ):
+        denied = await command(socket, cmd, "viewer", forceTakeover=True, enabled=True)
+        assert not denied["success"] and "view-only" in denied["error"]
+    for handler in (vfohandlers.update_vfo_parameters, vfohandlers.toggle_transcription):
+        denied = await handler(
+            socket, {"vfoNumber": 1, "active": True}, logging.getLogger(__name__), "viewer"
+        )
+        assert not denied["success"] and "view-only" in denied["error"]
+    assert (await command(socket, "leave-sdr", "viewer"))["success"]
+    assert pipeline["clients"] == {owner}
+    assert ("viewer", owner) in socket.left
+    assert manager.is_sdr_process_running("radio")
+
+
+@pytest.mark.asyncio
+async def test_continuous_join_rejects_replaced_run(receiving):
+    socket, pipeline, _ = receiving
+    pipeline["continuous_observation_id"] = "other"
+    reply = await command(socket, "watch-sdr", "viewer", continuousObservationId="expected")
+    assert not reply["success"]
+    assert not socket.entered
+
+
+@pytest.mark.asyncio
+async def test_continuous_stop_during_room_attachment_cannot_revive_join(receiving):
+    socket, pipeline, manager = receiving
+    pipeline["continuous_observation_id"] = "definition"
+    owner = "internal:continuous-definition"
+    pipeline["clients"] = {owner}
+    original = socket.enter_room
+
+    async def stop_during_attachment(sid, room):
+        await original(sid, room)
+        if room == owner:
+            await manager.stop_sdr_process("radio")
+
+    socket.enter_room = stop_during_attachment
+    reply = await command(socket, "watch-sdr", "viewer")
+    assert not reply["success"]
+    assert "stopped during JOIN" in reply["error"]
+    assert not background_sessions.sessions
+    assert owner not in VFOManager().get_all_session_ids()

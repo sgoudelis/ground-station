@@ -289,9 +289,10 @@ export function setupTheme(themeName = 'dark') {
             },
             MuiAutocomplete: {
                 styleOverrides: {
-                    root: ({ theme }) => ({
-                        backgroundColor: theme.palette.background.paper,
-                    }),
+                    root: {
+                        // Let helper text blend into its container; TextField colors the input.
+                        backgroundColor: 'transparent',
+                    },
                     paper: ({ theme }) => ({
                         border: `1px solid ${theme.palette.border.main}`,
                         boxShadow: theme.palette.mode === 'dark'

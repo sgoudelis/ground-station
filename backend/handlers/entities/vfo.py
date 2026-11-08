@@ -65,6 +65,9 @@ async def update_vfo_parameters(
     session = background_sessions.sessions.get(sid)
     if session and session.controller != socket_id:
         return {"success": False, "error": "This observation has no attached controller"}
+    sdr_id = session_tracker.get_session_sdr(sid)
+    if process_manager.processes.get(sdr_id or "", {}).get("continuous_observation_id"):
+        return {"success": False, "error": "Continuous observation VFOs are view-only."}
     logger.debug(f"Updating VFO parameters, data: {data}")
 
     if not data:
@@ -373,6 +376,9 @@ async def toggle_transcription(
     session = background_sessions.sessions.get(sid)
     if session and session.controller != socket_id:
         return {"success": False, "error": "This observation has no attached controller"}
+    sdr_id = session_tracker.get_session_sdr(sid)
+    if process_manager.processes.get(sdr_id or "", {}).get("continuous_observation_id"):
+        return {"success": False, "error": "Continuous observation VFOs are view-only."}
     logger.debug(f"Toggling transcription, data: {data}")
 
     if not data or "vfoNumber" not in data:

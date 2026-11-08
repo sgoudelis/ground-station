@@ -4,6 +4,7 @@ import {
     setSelectedPlaybackRecording,
     selectSdrForJoin,
     setJoinedSdrId,
+    setContinuousObservation,
     updateSDRConfig,
     setReceivingSession,
     setIsRecording,
@@ -13,7 +14,7 @@ import {
 import { restoreReceivingSession, deactivateDetachedVfos } from './vfo-marker/vfo-slice.jsx';
 import { setCurrentSessionId, setObservedSessionIds, decoderStatusChanged } from '../decoders/decoders-slice.jsx';
 
-export const callSdrApi = (socket, command, selectedSDRId) => new Promise((resolve) => {
+export const callSdrApi = (socket, command, selectedSDRId, extra = {}) => new Promise((resolve) => {
     if (!socket || socket.connected === false) {
         resolve({ success: false, error: 'Socket is not connected' });
         return;
@@ -21,7 +22,7 @@ export const callSdrApi = (socket, command, selectedSDRId) => new Promise((resol
     const timer = setTimeout(() => resolve({ success: false, error: 'SDR request timed out' }), 10000);
     socket.emit('api.call', {
         cmd: `sdr.${command}`,
-        data: { selectedSDRId },
+        data: { selectedSDRId, ...extra },
     }, (response) => {
         clearTimeout(timer);
         resolve(response || { success: false, error: 'No response from server' });
@@ -55,8 +56,8 @@ export const liveConfigToUpdates = (config) => {
     return updates;
 };
 
-export const joinSdr = async (socket, dispatch, selectedSDRId, command = 'join-sdr') => {
-    const response = await callSdrApi(socket, command, selectedSDRId);
+export const joinSdr = async (socket, dispatch, selectedSDRId, command = 'join-sdr', extra = {}) => {
+    const response = await callSdrApi(socket, command, selectedSDRId, extra);
     if (response?.success) {
         const config = response.data?.config;
         dispatch(selectSdrForJoin(selectedSDRId));
@@ -70,13 +71,16 @@ export const joinSdr = async (socket, dispatch, selectedSDRId, command = 'join-s
         }
         if (selectedSDRId === 'sigmf-playback') dispatch(setSelectedPlaybackRecording(null));
         if (config) dispatch(updateSDRConfig({ ...config, force_live: true }));
+        const continuous = response.data?.continuous_observation || null;
+        dispatch(setContinuousObservation(continuous));
+        if (continuous) dispatch(deactivateDetachedVfos());
         const observation = response.data?.observation;
         const backgrounds = response.data?.background_observations || [];
-        dispatch(setObservedSessionIds(backgrounds.map((receiving) => receiving.session_id)));
+        dispatch(setObservedSessionIds([...backgrounds.map((receiving) => receiving.session_id), ...(continuous ? [continuous.session_id] : [])]));
         dispatch(setJoinedSdrId(observation ? null : selectedSDRId));
         dispatch(setReceivingSession(observation || (response.data?.session_id
             ? { session_id: response.data.session_id, enabled: false } : null)));
-        dispatch(setCurrentSessionId(observation?.session_id || response.data?.session_id || socket.id));
+        dispatch(setCurrentSessionId(continuous?.session_id || observation?.session_id || response.data?.session_id || socket.id));
         if (observation) {
             dispatch(restoreReceivingSession(observation));
             dispatch(setIsRecording(Boolean(observation.is_recording)));
@@ -85,6 +89,7 @@ export const joinSdr = async (socket, dispatch, selectedSDRId, command = 'join-s
                 ? Math.max(0, Math.floor((Date.now() - new Date(observation.recording_start_time).getTime()) / 1000)) : 0));
             for (const status of observation.decoder_statuses || []) dispatch(decoderStatusChanged(status));
         }
+        for (const status of continuous?.decoder_statuses || []) dispatch(decoderStatusChanged(status));
         for (const receiving of backgrounds) {
             for (const status of receiving.decoder_statuses || []) dispatch(decoderStatusChanged(status));
         }

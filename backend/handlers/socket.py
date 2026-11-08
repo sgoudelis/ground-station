@@ -22,6 +22,7 @@ from handlers.entities import (
     apitokens,
     appsettings,
     celestial,
+    continuous,
     control,
     decoderconfig,
     filebrowser,
@@ -67,6 +68,7 @@ def _register_all_handlers():
     systeminfo.register_handlers(handler_registry)
     sessions.register_handlers(handler_registry)
     scheduler.register_handlers(handler_registry)
+    continuous.register_handlers(handler_registry)
     decoderconfig.register_handlers(handler_registry)
     celestial.register_handlers(handler_registry)
     sdr.register_handlers(handler_registry)

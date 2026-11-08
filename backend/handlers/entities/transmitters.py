@@ -17,7 +17,10 @@
 
 from typing import Any, Dict, Optional, Union, cast
 
+from pydantic import ValidationError
+
 import crud
+from common.transmittersearch import TransmitterSearchRequest
 from db import AsyncSessionLocal
 from tracker.runner import get_all_tracker_managers
 
@@ -222,11 +225,36 @@ async def get_transmitters(
     }
 
 
+async def search_transmitters(
+    sio: Any, data: Optional[Dict], logger: Any, sid: str
+) -> Dict[str, Any]:
+    """Read-only, bounded search across satellite and celestial-target transmitters."""
+    try:
+        query = TransmitterSearchRequest.model_validate(data)
+    except ValidationError as exc:
+        # Return field names and messages, never echo arbitrary caller payloads.
+        return {
+            "success": False,
+            "data": [],
+            "error": "Invalid transmitter search request.",
+            "validation_errors": [
+                {"field": ".".join(str(part) for part in error["loc"]), "message": error["msg"]}
+                for error in exc.errors(include_input=False, include_url=False)
+            ],
+        }
+    async with AsyncSessionLocal() as dbsession:
+        return cast(
+            Dict[str, Any],
+            await crud.transmitters.search_transmitters(dbsession, query),
+        )
+
+
 def register_handlers(registry):
     """Register transmitter handlers with the command registry."""
     registry.register_batch(
         {
             "get-transmitters": (get_transmitters, "api_call"),
+            "get-transmitter-search": (search_transmitters, "api_call"),
             "submit-transmitter": (submit_transmitter, "api_call"),
             "edit-transmitter": (edit_transmitter, "api_call"),
             "delete-transmitter": (delete_transmitter, "api_call"),

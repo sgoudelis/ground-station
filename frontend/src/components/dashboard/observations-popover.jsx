@@ -102,6 +102,12 @@ export default function ObservationsPopover({ anchorEl, buttonRef, onOpen, onClo
         session.sdr_id && session.background?.enabled
         && !session.is_internal && !session.metadata?.observation_id && !id.startsWith('internal:')
     )), [sessions]);
+    // Discover backend-owned runs from the live snapshot, including before the
+    // scheduler page has been opened. Browser viewers must not count as runs.
+    const continuous = useMemo(() => Object.entries(sessions).filter(([, session]) => (
+        session.is_internal && session.metadata?.continuous_observation_id
+        && session.sdr_id && sdrs[session.sdr_id]?.alive
+    )), [sessions, sdrs]);
     // Count scheduler observations, rather than their SDR sessions, so a
     // multi-receiver observation appears exactly once in the badge and list.
     const automated = useMemo(() => scheduled.filter((observation) => observation.status === 'running'), [scheduled]);
@@ -110,7 +116,7 @@ export default function ObservationsPopover({ anchorEl, buttonRef, onOpen, onClo
         .map((observation) => ({ observation, start: new Date(observation.task_start || observation.pass?.event_start).getTime() }))
         .filter(({ start }) => start > now)
         .sort((a, b) => a.start - b.start)[0]?.observation, [scheduled, now]);
-    const activeCount = automated.length + manual.length;
+    const activeCount = automated.length + manual.length + continuous.length;
     const open = Boolean(anchorEl) && activeCount > 0;
     const label = t('observations.title');
 
@@ -132,10 +138,10 @@ export default function ObservationsPopover({ anchorEl, buttonRef, onOpen, onClo
         // snapshot must not erase them while the next snapshot is in flight.
         if (previousSessions.current === sessions) return;
         previousSessions.current = sessions;
-        dispatch(setObservedSessionIds(manual
+        dispatch(setObservedSessionIds([...manual, ...continuous]
             .filter(([, session]) => isStreaming && session.sdr_id === selectedSDRId)
             .map(([id]) => id)));
-    }, [dispatch, sessions, manual, isStreaming, selectedSDRId]);
+    }, [dispatch, sessions, manual, continuous, isStreaming, selectedSDRId]);
 
     const takeControl = async (sdrId) => {
         setBusy(true);
@@ -143,6 +149,24 @@ export default function ObservationsPopover({ anchorEl, buttonRef, onOpen, onClo
             const response = await joinSdr(socket, dispatch, sdrId, 'claim-sdr');
             if (!response?.success) throw new Error(response?.error || 'Could not take control');
             onClose();
+        } catch (error) {
+            toast.error(error.message);
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    const joinContinuous = async (session) => {
+        setBusy(true);
+        try {
+            // Identify the definition as well as the receiver so a stale card
+            // cannot attach the user to a different run on the same hardware.
+            const response = await joinSdr(socket, dispatch, session.sdr_id, 'watch-sdr', {
+                continuousObservationId: session.metadata.continuous_observation_id,
+            });
+            if (!response?.success) throw new Error(response?.error || t('observations.join_failed'));
+            onClose();
+            navigate('/waterfall');
         } catch (error) {
             toast.error(error.message);
         } finally {
@@ -222,6 +246,33 @@ export default function ObservationsPopover({ anchorEl, buttonRef, onOpen, onClo
                     {automated.map((observation) => (
                         <AutomatedObservation key={observation.id} observation={observation} now={now}
                             onView={viewObservation} t={t} sdrs={sdrs} />
+                    ))}
+                    {continuous.length > 0 && (
+                        <Typography component="h3" variant="caption" sx={{ fontWeight: 700 }}>
+                            {t('observations.continuous')}
+                        </Typography>
+                    )}
+                    {continuous.map(([id, session]) => (
+                        <Box key={id} sx={{ ...cardSx, borderLeftColor: 'success.main' }}>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 700, lineHeight: 1.2, overflowWrap: 'anywhere' }}>
+                                {session.metadata.name || t('observations.continuous_observation')}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.35, overflowWrap: 'anywhere' }}>
+                                {sdrs[session.sdr_id]?.device?.name || session.sdr_id}
+                            </Typography>
+                            <Typography variant="caption" color="success.main" sx={{ display: 'block', fontWeight: 600, mb: 0.5 }}>
+                                {t('observations.view_only')}
+                            </Typography>
+                            {Object.entries(session.vfos || {}).filter(([, vfo]) => vfo.active).map(([number, vfo]) => (
+                                <Typography key={number} component="div" variant="caption" sx={{ fontFamily: 'monospace', lineHeight: 1.6 }}>
+                                    VFO {number}: {(vfo.center_freq / 1e6).toFixed(6)} MHz · {vfo.decoder && vfo.decoder !== 'none' ? vfo.decoder : vfo.modulation}
+                                </Typography>
+                            ))}
+                            <Button size="small" sx={{ mt: 0.5 }} disabled={busy || !socket || socket.connected === false}
+                                onClick={() => joinContinuous(session)}>
+                                {t('observations.join')}
+                            </Button>
+                        </Box>
                     ))}
                     {manual.length > 0 && (
                         <Typography component="h3" variant="caption" sx={{ fontWeight: 700 }}>

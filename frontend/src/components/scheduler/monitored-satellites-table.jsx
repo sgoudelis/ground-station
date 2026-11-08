@@ -20,7 +20,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
-import { DataGrid, gridClasses } from '@mui/x-data-grid';
+import { DataGrid } from '@mui/x-data-grid';
 import {
     Box,
     Chip,
@@ -48,8 +48,8 @@ import {
     CheckCircle as EnableIcon,
     Cancel as DisableIcon,
 } from '@mui/icons-material';
-import { alpha } from '@mui/material/styles';
 import { useSocket } from '../common/socket.jsx';
+import { schedulerTableSx } from './scheduler-table-styles.js';
 import {
     setSelectedMonitoredSatellite,
     setMonitoredSatelliteDialogOpen,
@@ -445,45 +445,7 @@ const MonitoredSatellitesTable = () => {
                         noRowsLabel: t('scheduler_tables.monitored.no_rows')
                     }}
                     sx={{
-                        border: 0,
-                        width: '100%',
-                        '& .MuiDataGrid-main': {
-                            overflowX: 'auto',
-                        },
-                        '& .MuiDataGrid-virtualScroller': {
-                            overflowX: 'auto',
-                            touchAction: 'pan-x pan-y',
-                        },
-                        [`& .${gridClasses.cell}:focus, & .${gridClasses.cell}:focus-within`]: {
-                            outline: 'none',
-                        },
-                        [`& .${gridClasses.columnHeader}:focus, & .${gridClasses.columnHeader}:focus-within`]: {
-                            outline: 'none',
-                        },
-                        '& .MuiDataGrid-columnHeaders': {
-                            backgroundColor: (theme) => alpha(
-                                theme.palette.primary.main,
-                                theme.palette.mode === 'dark' ? 0.18 : 0.10
-                            ),
-                            borderBottom: (theme) => `2px solid ${alpha(theme.palette.primary.main, 0.45)}`,
-                        },
-                        '& .MuiDataGrid-columnHeader': {
-                            backgroundColor: 'transparent',
-                        },
-                        '& .MuiDataGrid-columnHeaderTitle': {
-                            fontSize: '0.8125rem',
-                            fontWeight: 700,
-                            letterSpacing: '0.02em',
-                        },
-                        '& .MuiDataGrid-overlay': {
-                            fontSize: '0.875rem',
-                            fontStyle: 'italic',
-                            color: 'text.secondary',
-                        },
-                        '& .MuiDataGrid-cell': {
-                            display: 'flex',
-                            alignItems: 'center',
-                        },
+                        ...schedulerTableSx,
                         '& .scheduler-tasks-cell': {
                             alignItems: 'center',
                         },
