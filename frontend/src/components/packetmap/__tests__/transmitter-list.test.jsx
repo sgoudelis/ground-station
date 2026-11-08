@@ -242,7 +242,6 @@ it('copies the real identifier, latest coordinates and full details without sele
             ['Copy details JSON', JSON.stringify(row, null, 2)],
         ]) {
             fireEvent.contextMenu(screen.getByRole('button', {name: 'AEE608'}));
-            fireEvent.click(screen.getByRole('menuitem', {name: 'Copy', exact: true}));
             fireEvent.click(screen.getByRole('menuitem', {name: label}));
             await waitFor(() => expect(writeText).toHaveBeenLastCalledWith(expected));
         }
@@ -266,7 +265,6 @@ it('copies from the menu on HTTP installations while releasing the menu focus tr
     try {
         setup();
         fireEvent.contextMenu(screen.getByRole('button', {name: 'AEE608'}));
-        fireEvent.click(screen.getByRole('menuitem', {name: 'Copy', exact: true}));
         fireEvent.click(screen.getByRole('menuitem', {name: 'Copy identifier'}));
         await waitFor(() => expect(copy).toHaveBeenCalledExactlyOnceWith('copy'));
         expect(copiedValues).toEqual(['4D2406']);
