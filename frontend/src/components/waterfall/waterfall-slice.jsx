@@ -52,6 +52,8 @@ export const getSDRConfigParameters = createAsyncThunk(
 );
 
 function applySDRConfigParametersToState(state, payload, sdrId) {
+    // A probe can finish after the user has selected a different device.
+    if (sdrId !== state.selectedSDRId) return;
     state.gainValues = payload['gain_values'];
     state.sampleRateValues = payload['sample_rate_values'];
     if (sdrId) {
@@ -64,6 +66,25 @@ function applySDRConfigParametersToState(state, payload, sdrId) {
     state.fftWindowValues = payload['fft_window_values'];
     state.antennasList = payload['antennas'];
     state.hasSoapyAgc = payload['has_soapy_agc'];
+}
+
+function selectSDR(state, sdrId) {
+    if (state.selectedSDRId !== sdrId) {
+        // Capability choices and the selected port belong to one physical SDR.
+        // Clear them for normal selections as well as joins while parameters load.
+        state.gainValues = [];
+        state.sampleRateValues = [];
+        state.fftSizeValues = [];
+        state.fftWindowValues = [];
+        state.antennasList = { tx: [], rx: [] };
+        state.selectedAntenna = 'none';
+        state.hasBiasT = false;
+        state.hasTunerAgc = false;
+        state.hasRtlAgc = false;
+        state.hasSoapyAgc = false;
+        state.gettingSDRParameters = false;
+    }
+    state.selectedSDRId = sdrId;
 }
 
 export const startRecording = createAsyncThunk(
@@ -492,23 +513,10 @@ export const waterfallSlice = createSlice({
             state.expandedPanels = action.payload;
         },
         setSelectedSDRId(state, action) {
-            state.selectedSDRId = action.payload;
+            selectSDR(state, action.payload);
         },
         selectSdrForJoin(state, action) {
-            if (state.selectedSDRId !== action.payload) {
-                // Capability choices from a previously selected device must not
-                // appear as available controls for a joined SDR.
-                state.gainValues = [];
-                state.sampleRateValues = [];
-                state.fftSizeValues = [];
-                state.fftWindowValues = [];
-                state.antennasList = { tx: [], rx: [] };
-                state.hasBiasT = false;
-                state.hasTunerAgc = false;
-                state.hasRtlAgc = false;
-                state.hasSoapyAgc = false;
-            }
-            state.selectedSDRId = action.payload;
+            selectSDR(state, action.payload);
         },
         restoreSdrSelection(state, action) {
             // A canceled selection must restore both its controls and capability lists.
@@ -648,11 +656,9 @@ export const waterfallSlice = createSlice({
                 state.fftOverlapDepth = config.fft_overlap_depth;
             }
             if (config.antenna !== undefined) {
+                // Config echoes describe a selection, not hardware capabilities.
+                // An old port must never become an available option on another SDR.
                 state.selectedAntenna = config.antenna;
-                if (config.antenna && Array.isArray(state.antennasList?.rx)
-                    && !state.antennasList.rx.includes(config.antenna)) {
-                    state.antennasList.rx.push(config.antenna);
-                }
             }
             if (config.recording_path !== undefined && config.sdr_id === 'sigmf-playback') {
                 state.playbackRecordingPath = config.recording_path;
@@ -821,11 +827,13 @@ export const waterfallSlice = createSlice({
                 state.errorMessage = null;
             })
             .addCase(getSDRConfigParameters.fulfilled, (state, action) => {
-                state.gettingSDRParameters = false;
                 const sdrId = action.meta?.arg?.selectedSDRId;
+                if (sdrId !== state.selectedSDRId) return;
+                state.gettingSDRParameters = false;
                 applySDRConfigParametersToState(state, action.payload, sdrId);
             })
             .addCase(getSDRConfigParameters.rejected, (state, action) => {
+                if (action.meta?.arg?.selectedSDRId !== state.selectedSDRId) return;
                 state.gettingSDRParameters = false;
                 state.errorMessage = action.payload;
             })

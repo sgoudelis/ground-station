@@ -643,6 +643,11 @@ const WaterfallSettings = forwardRef(function WaterfallSettings({ playbackRemain
         });
 
     const applyLoadedSDRParameters = useCallback((selectedValue, response, liveConfig = null) => {
+        const current = store.getState().waterfall;
+        // Do not configure or restore an SDR whose probe finished after a switch.
+        if (current.selectedSDRId !== selectedValue) {
+            return Promise.resolve({ success: false, superseded: true });
+        }
         const caps = response?.capabilities || {};
         const device = sdrs.find((entry) => String(entry.id) === String(selectedValue));
         const rxGainElements = hasSingleUhdGain(device, caps) ? [] : (
@@ -716,6 +721,9 @@ const WaterfallSettings = forwardRef(function WaterfallSettings({ playbackRemain
             sdr_settings: nextSdrSettings,
         }, !liveConfig?.receiver_status);
         nextSdrSettings = normalized.sdr_settings;
+        const requestedAntenna = liveConfig?.antenna ?? current.selectedAntenna;
+        const antenna = response?.antennas?.rx?.includes(requestedAntenna) ? requestedAntenna : 'none';
+        dispatch(setSelectedAntenna(antenna));
         dispatch(setGain(normalized.gain));
         dispatch(setSdrSettings({ sdrId: selectedValue, settings: nextSdrSettings }));
         dispatch(setSdrSettingsApplied({ sdrId: selectedValue, settings: nextSdrSettings }));
@@ -723,6 +731,9 @@ const WaterfallSettings = forwardRef(function WaterfallSettings({ playbackRemain
             ...liveConfigToUpdates(liveConfig),
             selectedSDRId: selectedValue,
             gain: normalized.gain,
+            // Pass the validated port explicitly: the render captured by the
+            // configure callback may still contain the previous SDR's antenna.
+            antenna,
             sdrSettings: nextSdrSettings,
             forceTakeover: Boolean(liveConfig),
         });
@@ -787,6 +798,7 @@ const WaterfallSettings = forwardRef(function WaterfallSettings({ playbackRemain
             try {
                 const response = await loadSDRParameters(selectedValue);
                 const configureResponse = await applyLoadedSDRParameters(selectedValue, response, takeoverConfig);
+                if (configureResponse?.superseded || store.getState().waterfall.selectedSDRId !== selectedValue) return;
                 if (!configureResponse?.success && !configureResponse?.joined) {
                     dispatch(restoreSdrSelection(previous));
                     if (!configureResponse?.canceled && configureResponse?.error) {
@@ -795,6 +807,7 @@ const WaterfallSettings = forwardRef(function WaterfallSettings({ playbackRemain
                     }
                 }
             } catch (error) {
+                if (store.getState().waterfall.selectedSDRId !== selectedValue) return;
                 dispatch(restoreSdrSelection(previous));
                 dispatch(setErrorMessage(error?.message || String(error)));
                 dispatch(setErrorDialogOpen(true));
@@ -813,10 +826,11 @@ const WaterfallSettings = forwardRef(function WaterfallSettings({ playbackRemain
                 applyLoadedSDRParameters(selectedSDRId, response);
             })
             .catch((error) => {
+                if (store.getState().waterfall.selectedSDRId !== selectedSDRId) return;
                 dispatch(setErrorMessage(error?.message || String(error)));
                 dispatch(setErrorDialogOpen(true));
             });
-    }, [selectedSDRId, loadSDRParameters, applyLoadedSDRParameters, dispatch]);
+    }, [selectedSDRId, loadSDRParameters, applyLoadedSDRParameters, dispatch, store]);
 
     // Expose the function to parent components
     useImperativeHandle(ref, () => ({
@@ -1531,15 +1545,15 @@ const WaterfallSettings = forwardRef(function WaterfallSettings({ playbackRemain
                 dispatch(setCenterFrequency(recordingCenterFreq));
             }
 
+            // Select the playback SDR before assigning its device-specific port.
+            dispatch(setSelectedSDRId(sigmfSdr.id));
+
             // Set antenna to "RX" for sigmfplayback
             dispatch(setSelectedAntenna("RX"));
             dispatch(setFFTOverlapPercent(PLAYBACK_DEFAULT_FFT_OVERLAP_PERCENT));
 
             // Set gain to 0 for playback
             dispatch(setGain(0));
-
-            // Auto-select the SigMF Playback SDR
-            dispatch(setSelectedSDRId(sigmfSdr.id));
 
             // Expand the SDR accordion
             if (!expandedPanels.includes('sdr')) {
