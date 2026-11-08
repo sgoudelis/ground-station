@@ -324,13 +324,17 @@ class HardwareSupervisor:
             return
         previous = worker.snapshot.get("owner")
         if worker.process.is_alive():
-            # A mount without Stop must finish its last slew. Pause fences the old
-            # producer immediately; wait outside the device lock so telemetry and
-            # operator Pause/Stop/Disconnect remain available throughout the slew.
+            # A mount without Stop must finish its last slew. Cleanup may also
+            # have closed the transport while leaving physical motion uncertain.
+            # In either case, wait outside the device lock so operators can still
+            # Pause/Stop/Disconnect while fresh telemetry confirms stationarity.
             wait_for_slew = (
                 kind == "rotator"
                 and stationary_timeout is not None
-                and not worker.details.get("stop_supported", True)
+                and (
+                    not worker.details.get("stop_supported", True)
+                    or not worker.snapshot.get("data", {}).get("connected")
+                )
             )
             await self.call(
                 kind,
@@ -339,6 +343,7 @@ class HardwareSupervisor:
                 owner=previous,
                 generation=generation or worker.snapshot.get("generation"),
                 deadline=deadline,
+                reconnect=wait_for_slew,
             )
             if wait_for_slew:
                 timeout = (
@@ -347,7 +352,7 @@ class HardwareSupervisor:
                     else min(stationary_timeout, max(0, deadline - time.time()))
                 )
                 logger.info(
-                    "Waiting up to %.1fs for rotator %s to settle; controller Stop is unsupported",
+                    "Waiting up to %.1fs for rotator %s to settle before handoff",
                     timeout,
                     device_id,
                 )

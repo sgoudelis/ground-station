@@ -336,7 +336,12 @@ class DeviceRuntime:
             if method == "pause":
                 self._check(request)
                 if not self.data["connected"]:
-                    raise RuntimeError("Device is disconnected")
+                    if not payload.get("reconnect"):
+                        raise RuntimeError("Device is disconnected")
+                    # Scheduled handoffs may follow normal observation cleanup.
+                    # Reopen only for telemetry; retain the motion guard until
+                    # fresh stationary readings permit the next producer to move.
+                    await self.connect()
                 previous_control = (self.owner, self.generation)
                 active = any(
                     self.data.get(field)

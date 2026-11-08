@@ -1173,18 +1173,120 @@ async def test_observation_waits_for_slew_longer_than_ten_seconds(station, monke
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("stop_supported", [True, False])
+async def test_consecutive_observations_reconnect_and_confirm_stationarity(
+    station, monkeypatch, stop_supported
+):
+    service, details, commands, connections = station
+    details["stop_supported"] = stop_supported
+    first = RotatorProxy(HardwareClient(service.register_tracker("obs-one")), "mount", details)
+    second = RotatorProxy(HardwareClient(service.register_tracker("obs-two")), "mount", details)
+    await first.connect()
+    await first.call("mode", mode="tracking")
+    # Normal observation cleanup closes the transport without sending Stop.
+    await first.disconnect()
+    opened = len(connections)
+    assert service.snapshots()[0]["data"]["connected"] is False
+    assert service.snapshots()[0]["data"]["motion_unconfirmed"] is True
+    monkeypatch.setattr(observationmodule, "hardware", service)
+    monkeypatch.setattr(observationmodule, "get_assigned_tracker_for_rotator", lambda _id: None)
+    monkeypatch.setattr(observationmodule, "get_all_tracker_managers", lambda: {})
+
+    async with service.reserve([("rotator", "mount")], "two") as reservation:
+        handoff = asyncio.create_task(
+            TrackerHandler()._release_existing_hardware("two", "mount", None)
+        )
+        try:
+            async with asyncio.timeout(3):
+                while not service.snapshots()[0]["data"]["connected"]:
+                    # Propagate startup errors instead of hiding them in a timeout.
+                    if handoff.done():
+                        await handoff
+                    await asyncio.sleep(0.01)
+            snapshot = service.snapshots()[0]
+            assert snapshot["owner"] is None
+            assert snapshot["data"]["motion_unconfirmed"] is True
+            assert not handoff.done()
+            with pytest.raises(StopUnconfirmed, match="stationary"):
+                await service.call(
+                    "rotator",
+                    "mount",
+                    "position",
+                    generation=snapshot["generation"],
+                    az=100,
+                    el=30,
+                )
+            assert "P 100 30" not in commands
+            await asyncio.wait_for(handoff, timeout=6)
+            assert service.snapshots()[0]["data"]["motion_unconfirmed"] is False
+            reservation["tracker_id"] = "obs-two"
+            await second.connect()
+            await anext(second.set_position(100, 30))
+        finally:
+            handoff.cancel()
+            await asyncio.gather(handoff, return_exceptions=True)
+
+    assert len(connections) == opened + 2  # Ping and persistent connection.
+    assert "S" not in commands
+    assert "P 100 30" in commands
+    assert service.snapshots()[0]["owner"]["id"] == "obs-two"
+    # Late cleanup from the first observation cannot close the second's socket.
+    await first.disconnect()
+    assert await second.get_position() == (100, 30)
+
+
+@pytest.mark.asyncio
+async def test_observation_reconnect_failure_preserves_motion_guard_and_allows_retry(
+    station, monkeypatch
+):
+    service, details, commands, _ = station
+    details["stop_supported"] = False
+    first = RotatorProxy(HardwareClient(service.register_tracker("obs-one")), "mount", details)
+    await first.connect()
+    await first.call("mode", mode="tracking")
+    await first.disconnect()
+    monkeypatch.setattr(observationmodule, "hardware", service)
+    monkeypatch.setattr(observationmodule, "get_assigned_tracker_for_rotator", lambda _id: None)
+    monkeypatch.setattr(observationmodule, "get_all_tracker_managers", lambda: {})
+    details["_drop_reads"] = True
+
+    with pytest.raises(RuntimeError):
+        await TrackerHandler()._release_existing_hardware("two", "mount", None)
+    snapshot = service.snapshots()[0]
+    assert snapshot["owner"] is None
+    assert snapshot["data"]["connected"] is False
+    assert snapshot["data"]["motion_unconfirmed"] is True
+    assert not any(command.startswith("P ") or command == "S" for command in commands)
+
+    details["_drop_reads"] = False
+    await asyncio.wait_for(
+        TrackerHandler()._release_existing_hardware("three", "mount", None), timeout=6
+    )
+    assert service.snapshots()[0]["data"]["connected"] is True
+    assert service.snapshots()[0]["data"]["motion_unconfirmed"] is False
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("disconnected", [False, True])
 @pytest.mark.parametrize("operator_action", ["pause", "disconnect"])
-async def test_waiting_handoff_remains_interruptible(station, operator_action):
+async def test_waiting_handoff_remains_interruptible(station, operator_action, disconnected):
     service, details, commands, _ = station
     details["stop_supported"] = False
     first = RotatorProxy(HardwareClient(service.register_tracker("target-1")), "mount", details)
     await first.connect()
     await first.call("mode", mode="tracking")
+    if disconnected:
+        await first.disconnect()
     details["_moving_until"] = time.monotonic() + 30
     handoff = asyncio.create_task(service.release("rotator", "mount", stationary_timeout=30))
     try:
         async with asyncio.timeout(3):
-            while not service.snapshots()[0]["data"]["motion_unconfirmed"]:
+            while not (
+                service.snapshots()[0]["data"]["connected"]
+                and service.snapshots()[0]["data"]["motion_unconfirmed"]
+            ):
+                if handoff.done():
+                    await handoff
                 await asyncio.sleep(0.01)
         worker = service.devices[("rotator", "mount")]
         await asyncio.wait_for(
@@ -1247,13 +1349,17 @@ async def test_slew_handoff_timeout_preserves_motion_guard(station, request_dead
 
 
 @pytest.mark.asyncio
-async def test_observation_waits_for_already_paused_rotator(station, monkeypatch):
+@pytest.mark.parametrize("disconnected", [False, True])
+async def test_observation_waits_for_unowned_rotator(station, monkeypatch, disconnected):
     service, details, _, _ = station
     details["stop_supported"] = False
     first = RotatorProxy(HardwareClient(service.register_tracker("target-1")), "mount", details)
     await first.connect()
     await first.call("mode", mode="tracking")
-    await first.call("pause")
+    if disconnected:
+        await first.disconnect()
+    else:
+        await first.call("pause")
     assert service.snapshots()[0]["owner"] is None
     details["_moving_until"] = time.monotonic() + 30
     monkeypatch.setattr(observationmodule, "hardware", service)
