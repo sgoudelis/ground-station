@@ -35,6 +35,7 @@ export default function PacketMapLayout() {
     const {width, containerRef, mounted} = useContainerWidth({measureBeforeMount: true});
     const [layouts, setLayouts] = useState(loadLayouts);
     const range = useSelector((state) => state.packetMap.range);
+    const excludedTypes = useSelector((state) => state.packetMap.transmitterList?.excludedTypes);
     const [playbackTime, setPlaybackTime] = useState(() => range.end === null ? null : Date.parse(range.end));
     const applyRange = (nextRange) => {
         dispatch(setPacketMapRange(nextRange));
@@ -94,7 +95,10 @@ export default function PacketMapLayout() {
         const saved = readStored(hiddenTypesStoreName);
         return Array.isArray(saved) ? saved.filter((kind) => typeof kind === 'string') : [];
     });
-    const visiblePositions = useMemo(() => positions.filter((point) => !hiddenTypes.includes(point.kind)), [positions, hiddenTypes]);
+    // Apply the table's type selection before building any map markers or
+    // tracks, alongside the additional visibility choices in map settings.
+    const visiblePositions = useMemo(() => positions.filter((point) => !hiddenTypes.includes(point.kind)
+        && (!Array.isArray(excludedTypes) || !excludedTypes.includes(point.kind))), [positions, hiddenTypes, excludedTypes]);
     const changeHiddenTypes = (next) => {
         setHiddenTypes(next);
         writeStored(hiddenTypesStoreName, next);

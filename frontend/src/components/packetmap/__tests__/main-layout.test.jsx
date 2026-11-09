@@ -11,7 +11,7 @@ import PacketMapLayout from '../main-layout.jsx';
 import {gridLayoutStoreName, hiddenTypesStoreName} from '../storage.js';
 import {defaultLayouts, LAYOUT_SCHEMA_VERSION} from '../layouts.js';
 import usePacketPositions from '../use-packet-positions.js';
-import packetMapReducer from '../packet-map-slice.jsx';
+import packetMapReducer, {setTransmitterListSettings} from '../packet-map-slice.jsx';
 import useAircraft from '../../decoders/use-aircraft.js';
 import {liveRangeAt, LIVE_WINDOW_MS} from '../live.js';
 
@@ -35,7 +35,13 @@ vi.mock('../../common/common.jsx', () => ({
 }));
 vi.mock('../use-packet-positions.js', async (importOriginal) => ({...await importOriginal(), default: vi.fn()}));
 vi.mock('../packet-map.jsx', () => ({default: (props) => {mapRender(props); return null;}}));
-vi.mock('../transmitter-list.jsx', () => ({default: (props) => {tableRender(props); return null;}}));
+vi.mock('../transmitter-list.jsx', async (importOriginal) => {
+    const {default: TransmitterList} = await importOriginal();
+    return {default: (props) => {
+        tableRender(props);
+        return fixture.showList ? <TransmitterList {...props} /> : null;
+    }};
+});
 vi.mock('react-toastify', () => ({toast: {info: vi.fn()}}));
 
 const historyRange = {start: '2026-10-31T12:00:00Z', end: '2026-11-01T12:00:00Z'};
@@ -62,6 +68,7 @@ beforeEach(() => {
     vi.clearAllMocks();
     useAircraft.mockReturnValue({aircraft: [], positions: []});
     fixture.socket = null;
+    fixture.showList = false;
     usePacketPositions.mockImplementation(() => ({...fixture, loading: false}));
     fixture.positions = [
         {id: '1', transmitter_id: 'aprs:A', kind: 'aprs', name: 'A', captured_at: '2026-11-01T00:00:00Z'},
@@ -664,6 +671,61 @@ it('hides entire types on the map, retains every table row and remembers visibil
     expect(mapRender.mock.lastCall[0].hiddenTypes).toEqual(['aprs', 'radiosonde']);
     act(() => mapRender.mock.lastCall[0].onHiddenTypesChange(['radiosonde']));
     expect(mapRender.mock.lastCall[0].positions.map((point) => point.kind)).toEqual(['aprs']);
+});
+
+it('applies the transmitter dropdown to the map, including the selected type and All types', () => {
+    fixture.showList = true;
+    const store = createStore();
+    const element = () => <Provider store={store}><ThemeProvider theme={createTheme()}><PacketMapLayout /></ThemeProvider></Provider>;
+    const {container, rerender, unmount} = render(element());
+    const activity = () => [...container.querySelectorAll('.packet-timeline-activity line')]
+        .map((line) => [line.getAttribute('x1'), line.getAttribute('x2')]);
+    const highlighted = activity();
+    fireEvent.click(screen.getByRole('button', {name: 'S', exact: true}));
+    expect(mapRender.mock.lastCall[0].selectedTransmitterId).toBe('radiosonde:S');
+    fireEvent.click(screen.getByRole('button', {name: 'Transmitter types'}));
+    fireEvent.click(screen.getByRole('menuitem', {name: /Radiosonde/}));
+    expect(screen.queryByRole('button', {name: 'S', exact: true})).not.toBeInTheDocument();
+    expect(mapRender.mock.lastCall[0].positions.map((point) => point.kind)).toEqual(['aprs']);
+    expect(activity()).toEqual(highlighted);
+    // New captures must not restore a type excluded by the dropdown.
+    fixture.positions = [...fixture.positions, {...fixture.positions[1], id: 'new-sonde-fix',
+        captured_at: new Date().toISOString()}];
+    rerender(element());
+    expect(tableRender.mock.lastCall[0].positions).toHaveLength(3);
+    expect(mapRender.mock.lastCall[0].positions.map((point) => point.kind)).toEqual(['aprs']);
+    fireEvent.click(screen.getByRole('menuitem', {name: /All types/}));
+    expect(mapRender.mock.lastCall[0].positions).toHaveLength(3);
+    fireEvent.click(screen.getByRole('menuitem', {name: /All types/}));
+    expect(mapRender.mock.lastCall[0].positions).toEqual([]);
+    expect(mapRender.mock.lastCall[0].hasPositions).toBe(true);
+    fireEvent.keyDown(screen.getByRole('menu'), {key: 'Escape'});
+    unmount();
+    render(element());
+    expect(mapRender.mock.lastCall[0].positions).toEqual([]);
+    fireEvent.click(screen.getByRole('button', {name: 'Transmitter types'}));
+    fireEvent.click(screen.getByRole('menuitem', {name: /All types/}));
+    expect(mapRender.mock.lastCall[0].positions).toHaveLength(3);
+    fireEvent.keyDown(screen.getByRole('menu'), {key: 'Escape'});
+    expect(screen.getByRole('button', {name: 'S', exact: true})).toBeInTheDocument();
+});
+
+it('combines restored table exclusions with map visibility without changing the saved positions or list settings', () => {
+    localStorage.setItem(hiddenTypesStoreName, JSON.stringify(['radiosonde']));
+    const store = createStore();
+    const settings = {excludedTypes: ['aprs'], sort: 'distance', pageSize: 50};
+    store.dispatch(setTransmitterListSettings(settings));
+    render(<Provider store={store}><ThemeProvider theme={createTheme()}><PacketMapLayout /></ThemeProvider></Provider>);
+    expect(mapRender.mock.lastCall[0].positions).toEqual([]);
+    expect(mapRender.mock.lastCall[0].hasPositions).toBe(true);
+    expect(tableRender.mock.lastCall[0].rows).toHaveLength(2);
+    expect(tableRender.mock.lastCall[0].positions).toHaveLength(2);
+    act(() => mapRender.mock.lastCall[0].onHiddenTypesChange([]));
+    expect(mapRender.mock.lastCall[0].positions.map((point) => point.kind)).toEqual(['radiosonde']);
+    expect(store.getState().packetMap.transmitterList).toEqual(settings);
+    act(() => store.dispatch(setTransmitterListSettings({...settings, excludedTypes: []})));
+    expect(mapRender.mock.lastCall[0].positions).toHaveLength(2);
+    expect(store.getState().packetMap.transmitterList).toEqual({...settings, excludedTypes: []});
 });
 
 it('reveals a selected transmitter type and shares selection between the table and map', () => {
