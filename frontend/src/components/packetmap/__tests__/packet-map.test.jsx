@@ -198,7 +198,7 @@ it('updates only the selected aircraft and reuses icons for position-only teleme
     expect(markerRenders.mock.calls.map(([props]) => props.title)).toEqual(['A', 'B']);
     const icon = markerRenders.mock.lastCall[0].icon;
 
-    const moved = points.map((point) => point.name === 'B' ? {...point, latitude: 44, altitude: 5000,
+    const moved = points.map((point) => point.name === 'B' ? {...point, latitude: 44,
         aircraft: {...point.aircraft},
     } : point);
     markerRenders.mockClear();

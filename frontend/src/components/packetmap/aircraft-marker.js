@@ -5,6 +5,9 @@ import {aircraftSymbolRotation, renderAircraftSymbol, selectAircraftShape} from 
 import {aircraftColor, aircraftEmergency, aircraftEmergencyLabel} from '../../utils/aircraft-emergency.js';
 import {aircraftSelectionCrosshair as selectionCrosshair} from './selection-crosshair.js';
 
+const maximumLift = 24;
+const maximumLiftAltitude = 12000;
+
 class AircraftIcon extends MarkerArtwork {
     updateSymbol(holder) {
         // Heading updates only rotate the existing SVG. Reparse artwork only
@@ -26,6 +29,7 @@ class AircraftIcon extends MarkerArtwork {
         }
 
         // Keep the previous label and SVG nodes for each received fix.
+        content.style.setProperty('--aircraft-lift', `${this.options.lift}px`);
         const label = content.querySelector('.packet-aircraft-label');
         if (label.textContent !== this.options.labelText) label.textContent = this.options.labelText;
         if (label.title !== this.options.labelTitle) label.title = this.options.labelTitle;
@@ -52,8 +56,12 @@ class AircraftIcon extends MarkerArtwork {
     }
 }
 
-export function createAircraftIcon({track = 0, name = '', icao, aircraft, shape = selectAircraftShape(aircraft), squawk, emergency, stale = false, selected = false, normalColor} = {}) {
+export function createAircraftIcon({track = 0, altitude, onGround, name = '', icao, aircraft, shape = selectAircraftShape(aircraft), squawk, emergency, stale = false, selected = false, normalColor} = {}) {
     const angle = Number.isFinite(track) ? track : 0;
+    // Emphasize low-altitude changes while keeping the symbol near its ground
+    // position. Explicit ground status overrides altitude above sea level.
+    const lift = onGround === true ? 0 : Number.isFinite(altitude)
+        ? maximumLift * Math.sqrt(Math.min(1, Math.max(0, altitude) / maximumLiftAltitude)) : 12;
     const status = aircraftEmergency({squawk, emergency});
     const color = aircraftColor(status, stale, normalColor);
     // Callsigns come from received messages. Escape them before using the
@@ -81,7 +89,8 @@ export function createAircraftIcon({track = 0, name = '', icao, aircraft, shape 
         labelText: label.textContent,
         labelTitle: label.title,
         selected,
-        html: `<div class="packet-aircraft-content${selected ? ' packet-aircraft-selected' : ''}">${label.outerHTML}<span class="packet-aircraft-symbol">${symbol}</span>${selected ? selectionCrosshair : ''}</div>`,
+        lift,
+        html: `<div class="packet-aircraft-content${selected ? ' packet-aircraft-selected' : ''}" style="--aircraft-lift:${lift}px;">${label.outerHTML}<span class="packet-aircraft-symbol">${symbol}</span>${selected ? selectionCrosshair : ''}</div>`,
         shadowHtml: `<span class="packet-aircraft-shadow">${symbol}</span>`,
     });
 }

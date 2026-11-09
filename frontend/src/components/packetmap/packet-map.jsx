@@ -420,6 +420,7 @@ export default function PacketMap({positions, transmitters, hasPositions = posit
                             renderer={meshtasticRenderer} onSelectTransmitter={selectTransmitter}
                         /> : current.aircraftShape ? <AircraftMapMarker key="cursor" id={id}
                             latitude={current.point.latitude} longitude={current.point.longitude}
+                            altitude={current.point.altitude} onGround={current.point.on_ground ?? current.aircraftReport?.on_ground}
                             track={current.point.track_deg} name={current.point.name || current.point.source}
                             icao={current.point.source} shapeName={current.aircraftShape.name} shapeScale={current.aircraftShape.scale}
                             squawk={current.aircraftReport?.squawk} emergency={current.aircraftReport?.emergency}
