@@ -154,11 +154,14 @@ describe('scheduler navigation status', () => {
         expect(container).not.toHaveTextContent('running');
     });
 
-    it('prioritizes failures and transitions while retaining running counts in the tooltip', () => {
-        const { container, store } = renderScheduler([{ status: 'running' }, { status: 'failed' }], [
-            { runtime: { status: 'running' } },
-            { runtime: { status: 'starting' } },
-            { runtime: { status: 'failed', active: true } },
+    it('prioritizes the latest failure and transitions while retaining running counts', () => {
+        const { container, store } = renderScheduler([
+            { status: 'failed', task_start: '2026-01-03T00:00:00Z' },
+            { status: 'running', task_start: '2026-01-01T00:00:00Z' },
+        ], [
+            { runtime: { status: 'failed', active: true, attempted_at: '2026-01-03T00:00:00Z' } },
+            { runtime: { status: 'running', attempted_at: '2026-01-01T00:00:00Z' } },
+            { runtime: { status: 'starting', attempted_at: '2026-01-02T00:00:00Z' } },
         ]);
         expect(container.querySelectorAll('[data-overlay="error"]')).toHaveLength(2);
         expect(container.querySelector('[data-overlay="continuous"]')).toBeNull();
@@ -172,6 +175,44 @@ describe('scheduler navigation status', () => {
         ] }));
         expect(container.querySelector('[data-overlay="spinner"]')).toHaveStyle({ left: '-6px' });
         expect(container.querySelector('[data-overlay="error"]')).toHaveStyle({ right: '-6px' });
+    });
+
+    it.each(['running', 'completed'])('hides an older scheduled failure after a newer %s run', (status) => {
+        const { container } = renderScheduler([
+            { status, actual_start_time: '2026-01-02T00:00:00Z' },
+            // Editing an old failure must not make it the latest executed observation.
+            { status: 'failed', task_start: '2026-01-01T00:00:00Z', updated_at: '2026-01-04T00:00:00Z' },
+            { status: 'scheduled', task_start: '2099-01-01T00:00:00Z' },
+        ]);
+        expect(container.querySelector('[data-overlay="error"]')).toBeNull();
+        expect(container.querySelector('[data-overlay="play"]') !== null).toBe(status === 'running');
+        expect(container).not.toHaveTextContent('observation failed');
+    });
+
+    it.each(['running', 'stopped'])('hides an older continuous failure after a newer %s run', (status) => {
+        const { container } = renderScheduler([], [
+            { runtime: { status, attempted_at: '2026-01-02T00:00:00Z' } },
+            { updated_at: '2026-01-04T00:00:00Z', runtime: { status: 'failed', attempted_at: '2026-01-01T00:00:00Z' } },
+            { auto_start: true, runtime: { status: 'not_started' } },
+        ]);
+        expect(container.querySelector('[data-overlay="error"]')).toBeNull();
+        expect(container.querySelector('[data-overlay="continuous"]') !== null).toBe(status === 'running');
+        expect(container).not.toHaveTextContent('observation failed');
+    });
+
+    it('shows only the latest failure even when future passes or other failed runs exist', () => {
+        const { container } = renderScheduler([
+            { status: 'failed', pass: { event_start: '2026-01-02T00:00:00Z' } },
+            { status: 'failed', task_start: '2026-01-01T00:00:00Z' },
+            { status: 'scheduled', enabled: true, task_start: '2099-01-01T00:00:00Z' },
+        ], [
+            { runtime: { status: 'failed', attempted_at: '2026-01-02T00:00:00Z', started_at: null } },
+            { runtime: { status: 'running', started_at: '2026-01-01T00:00:00Z' } },
+        ]);
+        expect(container.querySelectorAll('[data-overlay="error"]')).toHaveLength(2);
+        expect(container).toHaveTextContent('1 scheduled observation failed');
+        expect(container).not.toHaveTextContent('2 scheduled observations failed');
+        expect(container).toHaveTextContent('1 continuous observation failed');
     });
 
     it('keeps scheduled pass details alongside plural continuous counts', () => {

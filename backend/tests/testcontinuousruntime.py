@@ -3,6 +3,7 @@
 import asyncio
 import copy
 import logging
+from datetime import datetime, timezone
 from unittest.mock import AsyncMock, Mock
 from uuid import uuid4
 
@@ -114,6 +115,7 @@ async def test_fixed_internal_vfos_and_idempotent_start_stop(runtime):
     run = await runner.start(saved["id"], saved["updated_at"])
     sid = PREFIX + saved["id"]
     assert run["status"] == "running"
+    assert datetime.fromisoformat(run["attempted_at"]) <= datetime.fromisoformat(run["started_at"])
     assert run["session_id"] == sid
     assert session_tracker.is_internal_session(sid)
     assert not background_sessions.sessions
@@ -199,8 +201,16 @@ async def test_busy_receiver_is_never_closed_on_failed_acquisition(runtime):
     runner, manager, saved, _ = runtime
     info = {"clients": {"unrelated"}}
     manager.processes[saved["sdr"]["id"]] = info
+    before_attempt = datetime.now(timezone.utc)
     with pytest.raises(RuntimeError, match="busy"):
         await runner.start(saved["id"])
+    failed_run = runner.snapshot(saved["id"])
+    assert (
+        before_attempt
+        <= datetime.fromisoformat(failed_run["attempted_at"])
+        <= datetime.now(timezone.utc)
+    )
+    assert failed_run["started_at"] is None
     assert manager.processes[saved["sdr"]["id"]] is info
     assert not session_tracker.get_all_internal_sessions()
 
@@ -370,6 +380,7 @@ async def test_delayed_failure_cleanup_cannot_stop_a_replacement_run(runtime):
     await runner.stop(saved["id"])
     new = await runner.start(saved["id"])
     assert new["started_at"] != old["started_at"]
+    assert datetime.fromisoformat(new["attempted_at"]) > datetime.fromisoformat(old["attempted_at"])
     await runner._finish_failure(saved["id"], old_record)
     assert runner.snapshot(saved["id"])["status"] == "running"
     assert manager.processes

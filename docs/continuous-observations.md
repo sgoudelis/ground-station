@@ -92,7 +92,10 @@ event and reconnect, reject obsolete list responses, and clear backend state whe
 the authenticated session changes.
 
 List/get responses include `runtime` with `status` (`not_started`, `starting`,
-`running`, `stopping`, `stopped`, or `failed`), `active`, `started_at`, and `error`.
+`running`, `stopping`, `stopped`, or `failed`), `active`, `attempted_at`, `started_at`, and `error`.
+`attempted_at` records the start of the current attempt, including startup failures;
+it is independent of edits to the saved definition. The sidebar shows a failure
+only when the most recent run in that observation group failed.
 A failed run whose cleanup could not release its receiver remains active and offers
 Stop again; it cannot be edited or restarted over retained resources. Active and
 previous runs also expose the internal `session_id`, `sdr_id`, and the definition

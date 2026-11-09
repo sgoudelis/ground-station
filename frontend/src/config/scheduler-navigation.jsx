@@ -9,6 +9,7 @@ import { formatTime } from '../utils/date-time.js';
 
 const EMPTY_OBSERVATIONS = [];
 const DISPLAY_STATUSES = ['failed', 'starting', 'running', 'stopping'];
+const RUN_STATUSES = new Set([...DISPLAY_STATUSES, 'completed', 'stopped']);
 
 const useSchedulerObservations = () => ({
     scheduled: useSelector((state) => state.scheduler?.observations || EMPTY_OBSERVATIONS),
@@ -17,16 +18,31 @@ const useSchedulerObservations = () => ({
 
 const countStatuses = (observations, continuous = false) => {
     const counts = {};
+    let latestStatus;
+    let latestTime = -Infinity;
     for (const observation of observations) {
         // Startup preferences and retained resources are independent of reception status.
         const status = continuous ? observation.runtime?.status : observation.status;
         counts[status] = (counts[status] || 0) + 1;
+        // Future passes and unstarted definitions must not clear the last run's failure.
+        if (!RUN_STATUSES.has(status)) continue;
+        const timestamps = continuous
+            ? [observation.runtime?.attempted_at, observation.runtime?.started_at]
+            : [observation.actual_start_time, observation.task_start, observation.pass?.event_start,
+                observation.last_error_time, observation.updated_at, observation.created_at];
+        const time = timestamps.map((value) => Date.parse(value)).find(Number.isFinite) ?? 0;
+        if (time >= latestTime) {
+            latestTime = time;
+            latestStatus = status;
+        }
     }
+    // Historical failures belong on the observations page, not in the live sidebar status.
+    counts.failed = latestStatus === 'failed' ? 1 : 0;
     return counts;
 };
 
 const overlayType = (counts, runningType) => {
-    // Surface faults first, including failed continuous runs that still hold a receiver.
+    // Only the latest run can surface a fault ahead of current activity.
     if (counts.failed) return 'error';
     if (counts.starting || counts.stopping) return 'spinner';
     return counts.running ? runningType : null;

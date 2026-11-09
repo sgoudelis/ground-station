@@ -44,7 +44,10 @@ class ContinuousObservations:
 
     def snapshot(self, identity: str) -> dict[str, Any]:
         return {
-            **self.runs.get(identity, {"status": "not_started", "started_at": None, "error": None}),
+            **self.runs.get(
+                identity,
+                {"status": "not_started", "attempted_at": None, "started_at": None, "error": None},
+            ),
             "active": self.active(identity),
         }
 
@@ -105,6 +108,8 @@ class ContinuousObservations:
             "status": "starting",
             "session_id": session_id,
             "sdr_id": definition.sdr.id,
+            # Startup failures still need a run time so clients can order attempts.
+            "attempted_at": datetime.now(timezone.utc).isoformat(),
             "started_at": None,
             "error": None,
             "definition_updated_at": saved["updated_at"],
