@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Badge, Box, Button, Divider, IconButton, Popover, Stack, Tooltip, Typography } from '@mui/material';
 import DynamicFeedOutlinedIcon from '@mui/icons-material/DynamicFeedOutlined';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import ScheduleOutlinedIcon from '@mui/icons-material/ScheduleOutlined';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
@@ -10,20 +12,59 @@ import { joinSdr } from '../waterfall/sdr-join.js';
 import { toast } from '../../utils/toast-with-timestamp.jsx';
 import { setDialogOpen, setSelectedObservation } from '../scheduler/scheduler-slice.jsx';
 import { useUserTimeSettings } from '../../hooks/useUserTimeSettings.jsx';
-import { formatDateTime } from '../../utils/date-time.js';
+import { formatDateTime, formatRelativeTime } from '../../utils/date-time.js';
 
 const EMPTY_SESSIONS = {};
 const EMPTY_OBSERVATIONS = [];
 
 const cardSx = {
-    px: 1,
-    py: 0.9,
+    p: 1.25,
     border: '1px solid',
     borderColor: 'divider',
     borderLeft: '3px solid',
     borderRadius: 1,
     bgcolor: 'action.hover',
+    minWidth: 0,
+    overflowWrap: 'anywhere',
 };
+
+const statusSx = {
+    display: 'block',
+    mt: 0.5,
+    fontWeight: 600,
+    '&::before': {
+        content: '""',
+        display: 'inline-block',
+        width: 5,
+        height: 5,
+        mr: 0.75,
+        mb: '2px',
+        borderRadius: '50%',
+        bgcolor: 'currentColor',
+    },
+};
+
+function ObservationSection({ title, children }) {
+    return (
+        <Stack component="section" spacing={0.75}>
+            <Typography component="h3" variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                {title}
+            </Typography>
+            {children}
+        </Stack>
+    );
+}
+
+function ObservationAction({ children, onClick, disabled }) {
+    return (
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1, pt: 0.75, borderTop: '1px solid', borderColor: 'divider' }}>
+            <Button onClick={onClick} disabled={disabled} size="small" endIcon={<ChevronRightIcon />}
+                sx={{ py: 0.25 }}>
+                {children}
+            </Button>
+        </Box>
+    );
+}
 
 function RemainingTime({ observation, now, t }) {
     const end = observation.task_end || observation.pass?.event_end;
@@ -50,35 +91,37 @@ function AutomatedObservation({ observation, now, onView, t, sdrs }) {
                     {observation.name}
                 </Typography>
             )}
-            <Typography variant="caption" color="success.main" sx={{ display: 'block', fontWeight: 600 }}>
+            <Typography variant="caption" color="success.main" sx={statusSx}>
                 {t('observations.running')}
                 <RemainingTime observation={observation} now={now} t={t} />
             </Typography>
-            {(observation.sessions || []).map((session, index) => {
-                // These are the observation's configured tasks. Do not present
-                // them as individual worker health checks.
-                const tasks = (session.tasks || []).map((task) => {
-                    if (task.type === 'decoder') {
-                        return t('observations.decoder', { name: (task.config?.decoder_type || '').toUpperCase() });
-                    }
-                    return t(`observations.task_${task.type}`, { defaultValue: task.type });
-                });
-                return (
-                    <Box key={session.id || index} sx={{ mt: 0.5 }}>
-                        <Typography variant="caption" sx={{ display: 'block', fontWeight: 600, overflowWrap: 'anywhere' }}>
-                            {sdrs[session.sdr?.id]?.device?.name || session.sdr?.name || session.sdr?.id || t('observations.receiver', { number: index + 1 })}
-                        </Typography>
-                        {tasks.length > 0 && (
-                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                                {t('observations.tasks', { tasks: tasks.join(' · ') })}
+            <Stack spacing={0.75} sx={{ mt: 1 }}>
+                {(observation.sessions || []).map((session, index) => {
+                    // These are the observation's configured tasks. Do not present
+                    // them as individual worker health checks.
+                    const tasks = (session.tasks || []).map((task) => {
+                        if (task.type === 'decoder') {
+                            return t('observations.decoder', { name: (task.config?.decoder_type || '').toUpperCase() });
+                        }
+                        return t(`observations.task_${task.type}`, { defaultValue: task.type });
+                    });
+                    return (
+                        <Box key={session.id || index}>
+                            <Typography variant="caption" sx={{ display: 'block', fontWeight: 600, overflowWrap: 'anywhere' }}>
+                                {sdrs[session.sdr?.id]?.device?.name || session.sdr?.name || session.sdr?.id || t('observations.receiver', { number: index + 1 })}
                             </Typography>
-                        )}
-                    </Box>
-                );
-            })}
-            <Button onClick={() => onView(observation)} size="small" sx={{ mt: 0.5 }}>
+                            {tasks.length > 0 && (
+                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                                    {t('observations.tasks', { tasks: tasks.join(' · ') })}
+                                </Typography>
+                            )}
+                        </Box>
+                    );
+                })}
+            </Stack>
+            <ObservationAction onClick={() => onView(observation)}>
                 {t('observations.view_observation')}
-            </Button>
+            </ObservationAction>
         </Box>
     );
 }
@@ -230,116 +273,128 @@ export default function ObservationsPopover({ anchorEl, buttonRef, onOpen, onClo
                         bgcolor: 'background.paper',
                     },
                 } }}>
-                <Stack direction="row" alignItems="baseline" spacing={0.5} sx={{ px: 1.25, py: 0.75 }}>
+                <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1} sx={{ px: 1.25, py: 1 }}>
                     <Typography id="observations-title" variant="subtitle2" sx={{ fontWeight: 700, lineHeight: 1.2 }}>
                         {label}
                     </Typography>
-                    <Typography variant="caption" color="text.secondary">• {activeCount}</Typography>
+                    <Typography variant="caption" color="success.main" sx={{ fontWeight: 600 }}>
+                        {t('observations.active_count', { count: activeCount })}
+                    </Typography>
                 </Stack>
                 <Divider />
-                <Stack spacing={0.75} sx={{ px: 1.25, py: 1, maxHeight: '60vh', overflowY: 'auto' }}>
+                <Stack spacing={1.5} sx={{ px: 1.25, py: 1.25, maxHeight: '60vh', overflowY: 'auto' }}>
                     {automated.length > 0 && (
-                        <Typography component="h3" variant="caption" sx={{ fontWeight: 700 }}>
-                            {t('observations.automated')}
-                        </Typography>
+                        <ObservationSection title={t('observations.automated')}>
+                            {automated.map((observation) => (
+                                <AutomatedObservation key={observation.id} observation={observation} now={now}
+                                    onView={viewObservation} t={t} sdrs={sdrs} />
+                            ))}
+                        </ObservationSection>
                     )}
-                    {automated.map((observation) => (
-                        <AutomatedObservation key={observation.id} observation={observation} now={now}
-                            onView={viewObservation} t={t} sdrs={sdrs} />
-                    ))}
                     {continuous.length > 0 && (
-                        <Typography component="h3" variant="caption" sx={{ fontWeight: 700 }}>
-                            {t('observations.continuous')}
-                        </Typography>
-                    )}
-                    {continuous.map(([id, session]) => (
-                        <Box key={id} sx={{ ...cardSx, borderLeftColor: 'success.main' }}>
-                            <Typography variant="subtitle2" sx={{ fontWeight: 700, lineHeight: 1.2, overflowWrap: 'anywhere' }}>
-                                {session.metadata.name || t('observations.continuous_observation')}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.35, overflowWrap: 'anywhere' }}>
-                                {sdrs[session.sdr_id]?.device?.name || session.sdr_id}
-                            </Typography>
-                            <Typography variant="caption" color="success.main" sx={{ display: 'block', fontWeight: 600, mb: 0.5 }}>
-                                {t('observations.view_only')}
-                            </Typography>
-                            {Object.entries(session.vfos || {}).filter(([, vfo]) => vfo.active).map(([number, vfo]) => (
-                                <Typography key={number} component="div" variant="caption" sx={{ fontFamily: 'monospace', lineHeight: 1.6 }}>
-                                    VFO {number}: {(vfo.center_freq / 1e6).toFixed(6)} MHz · {vfo.decoder && vfo.decoder !== 'none' ? vfo.decoder : vfo.modulation}
-                                </Typography>
-                            ))}
-                            <Button size="small" sx={{ mt: 0.5 }} disabled={busy || !socket || socket.connected === false}
-                                onClick={() => joinContinuous(session)}>
-                                {t('observations.join')}
-                            </Button>
-                        </Box>
-                    ))}
-                    {manual.length > 0 && (
-                        <Typography component="h3" variant="caption" sx={{ fontWeight: 700 }}>
-                            {t('observations.manual_background')}
-                        </Typography>
-                    )}
-                    {manual.map(([id, observation]) => (
-                        <Box key={id} sx={{
-                            ...cardSx,
-                            borderLeftColor: observation.background.controller_connected ? 'success.main' : 'info.main',
-                        }}>
-                            <Typography variant="subtitle2" sx={{ fontWeight: 700, lineHeight: 1.2, overflowWrap: 'anywhere' }}>
-                                {observation.metadata?.username || waterfallText('background.observation', { defaultValue: 'Observation' })}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.35, overflowWrap: 'anywhere' }}>
-                                {sdrs[observation.sdr_id]?.device?.name || observation.sdr_id}
-                            </Typography>
-                            <Typography variant="caption" sx={{
-                                display: 'block',
-                                color: observation.background.controller_connected ? 'success.main' : 'info.main',
-                                fontWeight: 600,
-                                mb: 0.5,
-                            }}>
-                                {observation.background.controller_connected
-                                    ? waterfallText('background.controlled', { defaultValue: 'Controller connected' })
-                                    : waterfallText('background.unattended', { defaultValue: 'Unattended · frequencies held' })}
-                            </Typography>
-                            {Object.entries(observation.vfos || {}).filter(([, vfo]) => vfo.active).map(([number, vfo]) => (
-                                <Typography key={number} component="div" variant="caption" sx={{ fontFamily: 'monospace', lineHeight: 1.6 }}>
-                                    VFO {number}: {(vfo.center_freq / 1e6).toFixed(6)} MHz · {vfo.decoder !== 'none' ? vfo.decoder : vfo.modulation}
-                                </Typography>
-                            ))}
-                            {isStreaming && joinedSdrId === observation.sdr_id && !observation.background.controller_connected && (
-                                <Box sx={{ mt: 1 }}>
-                                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.75 }}>
-                                        {waterfallText('background.adopt_description', { defaultValue: 'Adopt the running observation and replace your current VFOs.' })}
+                        <ObservationSection title={t('observations.continuous')}>
+                            {continuous.map(([id, session]) => (
+                                <Box key={id} sx={{ ...cardSx, borderLeftColor: 'success.main' }}>
+                                    <Typography variant="subtitle2" sx={{ fontWeight: 700, lineHeight: 1.2, overflowWrap: 'anywhere' }}>
+                                        {session.metadata.name || t('observations.continuous_observation')}
                                     </Typography>
-                                    <Button disabled={busy} onClick={() => takeControl(observation.sdr_id)} variant="outlined" size="small">
-                                        {waterfallText('background.take_control', { defaultValue: 'Take control' })}
-                                    </Button>
+                                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.35, overflowWrap: 'anywhere' }}>
+                                        {sdrs[session.sdr_id]?.device?.name || session.sdr_id}
+                                    </Typography>
+                                    <Typography variant="caption" color="success.main" sx={{ ...statusSx, mb: 0.75 }}>
+                                        {t('observations.view_only')}
+                                    </Typography>
+                                    {Object.entries(session.vfos || {}).filter(([, vfo]) => vfo.active).map(([number, vfo]) => (
+                                        <Typography key={number} component="div" variant="caption" sx={{ fontFamily: 'monospace', lineHeight: 1.6 }}>
+                                            VFO {number}: {(vfo.center_freq / 1e6).toFixed(6)} MHz · {vfo.decoder && vfo.decoder !== 'none' ? vfo.decoder : vfo.modulation}
+                                        </Typography>
+                                    ))}
+                                    <ObservationAction disabled={busy || !socket || socket.connected === false}
+                                        onClick={() => joinContinuous(session)}>
+                                        {t('observations.join')}
+                                    </ObservationAction>
                                 </Box>
-                            )}
-                        </Box>
-                    ))}
+                            ))}
+                        </ObservationSection>
+                    )}
+                    {manual.length > 0 && (
+                        <ObservationSection title={t('observations.manual_background')}>
+                            {manual.map(([id, observation]) => (
+                                <Box key={id} sx={{
+                                    ...cardSx,
+                                    borderLeftColor: observation.background.controller_connected ? 'success.main' : 'info.main',
+                                }}>
+                                    <Typography variant="subtitle2" sx={{ fontWeight: 700, lineHeight: 1.2, overflowWrap: 'anywhere' }}>
+                                        {observation.metadata?.username || waterfallText('background.observation', { defaultValue: 'Observation' })}
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.35, overflowWrap: 'anywhere' }}>
+                                        {sdrs[observation.sdr_id]?.device?.name || observation.sdr_id}
+                                    </Typography>
+                                    <Typography variant="caption" sx={{
+                                        ...statusSx,
+                                        color: observation.background.controller_connected ? 'success.main' : 'info.main',
+                                        mb: 0.75,
+                                    }}>
+                                        {observation.background.controller_connected
+                                            ? waterfallText('background.controlled', { defaultValue: 'Controller connected' })
+                                            : waterfallText('background.unattended', { defaultValue: 'Unattended · frequencies held' })}
+                                    </Typography>
+                                    {Object.entries(observation.vfos || {}).filter(([, vfo]) => vfo.active).map(([number, vfo]) => (
+                                        <Typography key={number} component="div" variant="caption" sx={{ fontFamily: 'monospace', lineHeight: 1.6 }}>
+                                            VFO {number}: {(vfo.center_freq / 1e6).toFixed(6)} MHz · {vfo.decoder !== 'none' ? vfo.decoder : vfo.modulation}
+                                        </Typography>
+                                    ))}
+                                    {isStreaming && joinedSdrId === observation.sdr_id && !observation.background.controller_connected && (
+                                        <Box sx={{ mt: 1 }}>
+                                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.75 }}>
+                                                {waterfallText('background.adopt_description', { defaultValue: 'Adopt the running observation and replace your current VFOs.' })}
+                                            </Typography>
+                                            <Button disabled={busy} onClick={() => takeControl(observation.sdr_id)} variant="outlined" size="small">
+                                                {waterfallText('background.take_control', { defaultValue: 'Take control' })}
+                                            </Button>
+                                        </Box>
+                                    )}
+                                </Box>
+                            ))}
+                        </ObservationSection>
+                    )}
                     {next && (
                         <>
                             <Divider />
-                            <Typography component="h3" variant="caption" sx={{ fontWeight: 700 }}>
-                                {t('observations.next_scheduled')}
-                            </Typography>
-                            <Typography variant="body2" sx={{ overflowWrap: 'anywhere' }}>
-                                {next.satellite?.name || next.name || t('observations.unknown_satellite')}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                                {t('observations.starts_at', { time: formatDateTime(next.task_start || next.pass?.event_start, {
-                                    timezone, locale, options: { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZoneName: 'short' },
-                                }) })}
-                            </Typography>
-                            <Button size="small" onClick={() => viewObservation(next)} sx={{ alignSelf: 'flex-start' }}>
-                                {t('observations.view_observation')}
-                            </Button>
+                            <ObservationSection title={t('observations.next_scheduled')}>
+                                <Box sx={{ ...cardSx, borderLeftColor: 'divider' }}>
+                                    <Stack direction="row" spacing={1} alignItems="flex-start">
+                                        <ScheduleOutlinedIcon sx={{ fontSize: 18, color: 'text.secondary', mt: 0.25 }} />
+                                        <Box sx={{ minWidth: 0 }}>
+                                            <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                                                {next.satellite?.name || next.name || t('observations.unknown_satellite')}
+                                            </Typography>
+                                            <Typography variant="body2" sx={{ mt: 0.5 }}>
+                                                {t('observations.starts_at', { time: formatRelativeTime(next.task_start || next.pass?.event_start, { now, locale }) })}
+                                            </Typography>
+                                            <Typography component="time" dateTime={next.task_start || next.pass?.event_start}
+                                                variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.25 }}>
+                                                {formatDateTime(next.task_start || next.pass?.event_start, {
+                                                    timezone, locale,
+                                                    options: { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZoneName: 'short' },
+                                                })}
+                                            </Typography>
+                                        </Box>
+                                    </Stack>
+                                    <ObservationAction onClick={() => viewObservation(next)}>
+                                        {t('observations.view_observation')}
+                                    </ObservationAction>
+                                </Box>
+                            </ObservationSection>
                         </>
                     )}
                 </Stack>
                 <Divider />
-                <Box sx={{ px: 1.25, py: 0.5 }}>
-                    <Button size="small" onClick={openScheduler}>{t('observations.open_scheduler')}</Button>
+                <Box sx={{ px: 1.25, py: 0.75 }}>
+                    <Button fullWidth size="small" onClick={openScheduler} endIcon={<ChevronRightIcon />}
+                        sx={{ justifyContent: 'space-between', px: 0.75 }}>
+                        {t('observations.open_scheduler')}
+                    </Button>
                 </Box>
             </Popover>
         </>

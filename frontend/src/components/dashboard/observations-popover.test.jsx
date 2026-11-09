@@ -60,7 +60,7 @@ function Harness() {
     );
 }
 
-function setup({ observations = [], sessions = {}, streaming = false, sdrId = 'sdr-3', sdrs = {}, initialPath = '/waterfall' } = {}) {
+function setup({ observations = [], sessions = {}, streaming = false, sdrId = 'sdr-3', sdrs = {}, initialPath = '/waterfall', timezone = 'UTC', locale = 'en-GB' } = {}) {
     const initialSessions = { runtimeSnapshot: { data: { sessions, sdrs } } };
     const store = configureStore({
         reducer: {
@@ -69,7 +69,7 @@ function setup({ observations = [], sessions = {}, streaming = false, sdrId = 's
             sessions: (state = initialSessions, action) => action.type === 'runtime'
                 ? { runtimeSnapshot: { data: { sessions: action.payload, sdrs } } } : state,
             waterfall: () => ({ isStreaming: streaming, selectedSDRId: sdrId, joinedSdrId: sdrId }),
-            preferences: () => ({ preferences: [{ name: 'timezone', value: 'UTC' }, { name: 'locale', value: 'en-GB' }] }),
+            preferences: () => ({ preferences: [{ name: 'timezone', value: timezone }, { name: 'locale', value: locale }] }),
         },
         preloadedState: {
             scheduler: { ...schedulerReducer(undefined, { type: '@@init' }), observations },
@@ -237,12 +237,37 @@ describe('observations popover', () => {
         openPopover();
         expect(screen.getByText('Next scheduled')).toBeInTheDocument();
         expect(screen.getByText('Next satellite')).toBeInTheDocument();
-        expect(screen.getByText(/Starts .*10:02.*UTC/)).toBeInTheDocument();
+        expect(screen.getByText('Starts in 2 minutes')).toBeInTheDocument();
+        expect(screen.getByText(/Thu.*5 Nov 2026.*10:02.*UTC/)).toHaveAttribute('dateTime', at(120));
         for (const name of ['Later satellite', 'Disabled satellite', 'Past satellite', 'Invalid satellite']) {
             expect(screen.queryByText(name)).not.toBeInTheDocument();
         }
         fireEvent.click(screen.getAllByRole('button', { name: 'View observation' }).at(-1));
         expect(store.getState().scheduler.selectedObservation.id).toBe('next');
+    });
+
+    it('keeps the exact start in the preferred timezone, including a different calendar day', () => {
+        setup({ sessions: { manual }, timezone: 'Asia/Tokyo', observations: [
+            { ...automated, status: 'scheduled', task_start: null, pass: { event_start: '2026-11-05T18:02:00Z' } },
+        ] });
+        openPopover();
+        expect(screen.getByText('Starts in 8 hours')).toBeVisible();
+        expect(screen.getByText(/Fri.*6 Nov 2026.*03:02.*GMT\+9/)).toHaveAttribute('dateTime', '2026-11-05T18:02:00Z');
+    });
+
+    it('refreshes the relative start and advances to the following scheduled observation', () => {
+        setup({ sessions: { manual }, observations: [
+            { ...automated, id: 'next', status: 'scheduled', task_start: at(65), satellite: { name: 'Next satellite' } },
+            { ...automated, id: 'following', status: 'scheduled', task_start: at(600), satellite: { name: 'Following satellite' } },
+        ] });
+        openPopover();
+        expect(screen.getByText('Starts in 1 minute')).toBeVisible();
+        act(() => vi.advanceTimersByTime(6000));
+        expect(screen.getByText('Starts in 59 seconds')).toBeVisible();
+        act(() => vi.advanceTimersByTime(59000));
+        expect(screen.queryByText('Next satellite')).not.toBeInTheDocument();
+        expect(screen.getByText('Following satellite')).toBeVisible();
+        expect(screen.getByText('Starts in 9 minutes')).toBeVisible();
     });
 
     it('preserves JOIN hydration and only watches manual sessions on the joined SDR after a fresh snapshot', () => {
