@@ -308,7 +308,9 @@ class RotatorController:
                 response = await self._send_command(f"P {park_az} {park_el}")
             else:
                 self.logger.info("Parking rotator using hardware-native park command")
-                response = await self._send_command("K", waitforreply=False)
+                # Consume K's acknowledgement before polling position on this
+                # stream; an unread RPRT would corrupt the next position reply.
+                response = await self._send_command("K")
 
             # Check response
             if response.startswith("RPRT"):

@@ -188,7 +188,9 @@ class DeviceRuntime:
             else:
                 self._stationary_hits += 1
                 if self._stationary_hits >= 3 and time.monotonic() - self._stationary_since >= 2:
-                    self.data.update(motion_unconfirmed=False, stopped=True, slewing=False)
+                    self.data.update(
+                        motion_unconfirmed=False, stopped=True, slewing=False, park_requested=False
+                    )
         if self.target and not self.data["motion_unconfirmed"]:
             az_tol = float(
                 self.details.get("aztolerance", self.details.get("az_tolerance", 2)) or 2
@@ -450,12 +452,25 @@ class DeviceRuntime:
                         parked=False,
                         park_requested=False,
                     )
+                    if method == "park":
+                        self.data["tracking"] = False
                     return True if method == "park" else result
                 if method == "park":
                     if self.data["motion_unconfirmed"]:
                         raise StopUnconfirmed("Wait for stationary position readings")
                     result = await self.controller.park()
-                    self.data.update(park_requested=bool(result), tracking=False)
+                    # Native K has no target coordinates or arrival reply. Forget
+                    # the tracking target and require fresh stationary samples.
+                    self.motion_revision += 1
+                    self.target = None
+                    self._stationary = None
+                    self.data.update(
+                        park_requested=bool(result),
+                        tracking=False,
+                        stopped=False,
+                        slewing=bool(result),
+                        motion_unconfirmed=bool(result),
+                    )
                     return result
                 await self.poll()
                 return self.data["az"], self.data["el"]

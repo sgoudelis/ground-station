@@ -58,11 +58,16 @@ so telemetry and operator
 Pause/Stop/Disconnect remain responsive. A disconnect, worker failure, or another
 control change aborts the handoff; continuing motion still fails at the deadline.
 
-At observation end, optional parking is followed by a direct Disconnect. Closing
-the connection does not send Stop or require stationary readings. A Disconnect
-deadline must not trigger a physical Stop. Temporary tracker removal follows
-disconnection; cleanup failures retain the tracker context for retry without
-claiming that the hardware failed to disconnect.
+At observation end, cleanup pauses tracking updates, sends Stop, and confirms
+stationary readings before disconnecting. If Stop is unsupported, rejected, or
+unacknowledged, cleanup still allows up to 120 seconds for telemetry to confirm
+that the last slew has finished, preserving any Stop warning. With parking
+enabled, cleanup waits for parking instead of interrupting it with Stop.
+Configured park coordinates require confirmed arrival; native Hamlib `K` has no
+arrival report, so its acknowledgement is consumed and fresh stationary readings
+are required. Failed parking falls back to Stop and the same motion checks.
+Temporary tracker removal follows disconnection. Continuing motion, lost
+telemetry, or a control change leaves the tracker context available for retry.
 
 Manual takeover can release an interactive tracker. Observations reserve their
 whole device bundle during handoff and cannot be displaced by manual takeover.

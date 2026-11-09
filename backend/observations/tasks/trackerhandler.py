@@ -89,9 +89,14 @@ class TrackerHandler:
         )
 
     async def _update_and_confirm(
-        self, tracker_id: str, value: Dict[str, Any], observation_id: str
+        self,
+        tracker_id: str,
+        value: Dict[str, Any],
+        observation_id: str,
+        *,
+        timeout: float = COMMAND_TIMEOUT_SECONDS,
     ) -> None:
-        deadline = time.monotonic() + COMMAND_TIMEOUT_SECONDS
+        deadline = time.monotonic() + timeout
         while True:
             reply = await update_tracking_state_with_ownership(
                 tracker_id=tracker_id,
@@ -153,8 +158,8 @@ class TrackerHandler:
                 tracker_id, {"rig_id": "none", "rig_vfo": "none"}, observation_id
             )
         if rotator and self._assigned(state.get("rotator_id")):
-            # Disconnect directly so the final move or park can finish without S.
-            # Ownership handoffs already quiesce hardware in _release_existing_hardware.
+            # OBS cleanup settles the mount before closing it. Ownership handoffs
+            # already quiesce hardware in _release_existing_hardware.
             await self._update_and_confirm(
                 tracker_id, {"rotator_state": "disconnected"}, observation_id
             )
@@ -383,25 +388,85 @@ class TrackerHandler:
                     "message": str(exc),
                 }
 
+    async def _wait_rotator_stationary(self, tracker_id: str, rotator_id: str) -> None:
+        worker = hardware.devices.get(("rotator", str(rotator_id)))
+        if worker is None:
+            return  # Legacy/test trackers do not have a station-owned runtime.
+        generation = worker.snapshot.get("generation")
+        deadline = time.monotonic() + ROTATOR_SETTLE_TIMEOUT_SECONDS
+        logger.info("Waiting for rotator %s to settle before cleanup of %s", rotator_id, tracker_id)
+        while True:
+            snapshot = worker.snapshot
+            owner = hardware.owners.get(snapshot.get("owner") or "", {})
+            if (
+                hardware.devices.get(("rotator", str(rotator_id))) is not worker
+                or not worker.process.is_alive()
+                or snapshot.get("generation") != generation
+                or owner.get("id") != tracker_id
+            ):
+                raise TrackerHandoffError(
+                    "rotator_control_changed", "Rotator control changed during observation cleanup"
+                )
+            data = snapshot.get("data", {})
+            if not data.get("connected") or data.get("error"):
+                raise TrackerHandoffError(
+                    "rotator_telemetry_failed",
+                    data.get("error_message") or "Rotator disconnected before motion was confirmed",
+                )
+            if data.get("stopped") and not any(
+                data.get(field)
+                for field in ("tracking", "slewing", "motion_unconfirmed", "park_requested")
+            ):
+                logger.info("Rotator %s confirmed stationary before disconnect", rotator_id)
+                return
+            if time.monotonic() >= deadline:
+                raise TrackerHandoffError(
+                    "rotator_settle_timeout", "Rotator stationary motion could not be confirmed"
+                )
+            await asyncio.sleep(0.1)
+
     async def _stop_observation_slot(
         self, observation_id: str, tracker_id: str, *, park_rotator: bool = False
     ) -> bool:
         try:
-            if park_rotator:
-                state = await get_tracker_manager(tracker_id).get_tracking_state() or {}
-                if (
-                    self._assigned(state.get("rotator_id"))
-                    and state.get("rotator_state") != "disconnected"
-                ):
+            state = await get_tracker_manager(tracker_id).get_tracking_state() or {}
+            rotator_id = state.get("rotator_id")
+            if self._assigned(rotator_id) and state.get("rotator_state") != "disconnected":
+                rotator_id = str(rotator_id)
+                parked = False
+                if park_rotator:
                     try:
                         await self._update_and_confirm(
-                            tracker_id, {"rotator_state": "parked"}, observation_id
+                            tracker_id,
+                            {"rotator_state": "parked"},
+                            observation_id,
+                            timeout=ROTATOR_SETTLE_TIMEOUT_SECONDS,
                         )
+                        # Native Hamlib K acknowledges dispatch, not arrival.
+                        # Keep polling until the physical mount has settled.
+                        await self._wait_rotator_stationary(tracker_id, rotator_id)
+                        parked = True
                     except Exception:
-                        # Parking is optional; disconnect remains mandatory.
                         logger.exception(
-                            "Could not park rotator for observation %s", observation_id
+                            "Could not confirm rotator parking for observation %s; trying Stop",
+                            observation_id,
                         )
+                if not parked:
+                    try:
+                        # Stop also pauses the producer and cancels queued moves.
+                        await self._update_and_confirm(
+                            tracker_id, {"rotator_state": "stopped"}, observation_id
+                        )
+                    except TrackerHandoffError as exc:
+                        # Unsupported/rejected Stop may still finish its last slew.
+                        # Telemetry, rather than the command result, decides safety.
+                        logger.warning(
+                            "Rotator Stop was not confirmed for observation %s; "
+                            "waiting for stationary readings: %s",
+                            observation_id,
+                            exc,
+                        )
+                    await self._wait_rotator_stationary(tracker_id, rotator_id)
             await self._disconnect_slot_hardware(tracker_id, observation_id, rotator=True, rig=True)
         except Exception:
             logger.exception(
@@ -418,7 +483,7 @@ class TrackerHandler:
         rotator_config: Dict[str, Any],
         tracker_context: Optional[Dict[str, Any]] = None,
     ) -> bool:
-        """Disconnect OBS hardware, clear assignments, and remove the OBS slot."""
+        """Settle and disconnect OBS hardware, clear assignments, and remove the OBS slot."""
         context = tracker_context or {}
         tracker_id = str(context.get("tracker_id") or "").strip()
         if not tracker_id:

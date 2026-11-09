@@ -105,7 +105,7 @@ async def test_rotator_parses_position_and_command_outcomes(monkeypatch):
         await controller.stop()
     assert commands[-1] == ("S", True)
     assert await controller.park() is True
-    assert commands[-1] == ("K", False)
+    assert commands[-1] == ("K", True)
 
 
 @pytest.mark.asyncio

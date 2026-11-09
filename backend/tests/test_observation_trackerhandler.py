@@ -344,3 +344,40 @@ async def test_cleanup_keeps_obs_slot_when_disconnect_is_unconfirmed(monkeypatch
     )
     assert ok is False
     assert removed == []
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("failure", ["park-command", "park-motion"])
+async def test_failed_parking_falls_back_to_confirmed_stop(monkeypatch, failure):
+    manager = FakeManager({"rotator_id": "rot-1", "rotator_state": "tracking"})
+    handler = TrackerHandler()
+    calls = []
+
+    async def confirm(_tracker_id, value, _observation_id, **_options):
+        calls.append(value)
+        if value.get("rotator_state") == "parked" and failure == "park-command":
+            raise TrackerHandoffError("park_rejected", "Controller rejected park")
+        manager.state.update(value)
+
+    async def stationary(_tracker_id, _rotator_id):
+        if manager.state["rotator_state"] == "parked":
+            raise TrackerHandoffError("rotator_settle_timeout", "Park never settled")
+        calls.append("stationary")
+
+    remove = AsyncMock(return_value=True)
+    monkeypatch.setattr(handler_module, "get_tracker_manager", lambda _id: manager)
+    monkeypatch.setattr(handler, "_update_and_confirm", confirm)
+    monkeypatch.setattr(handler, "_wait_rotator_stationary", stationary)
+    monkeypatch.setattr(handler, "_remove_observation_tracker_instance", remove)
+
+    assert await handler.stop_tracker_task(
+        "one", {"park_after_observation": True}, {"tracker_id": "obs-one"}
+    )
+    assert calls == [
+        {"rotator_state": "parked"},
+        {"rotator_state": "stopped"},
+        "stationary",
+        {"rotator_state": "disconnected"},
+        {"rotator_id": "none"},
+    ]
+    remove.assert_awaited_once_with("obs-one")

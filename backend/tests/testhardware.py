@@ -69,7 +69,7 @@ async def station():
                         position[:] = [float(value) for value in command.split()[1:]]
                     response = "RPRT 0\n"
                 elif command in {"S", "K"}:
-                    response = "RPRT 0\n"
+                    response = f"RPRT {details.get('_stop_reply', 0) if command == 'S' else 0}\n"
                 elif command == "f":
                     response = f"{frequency[0]}\n"
                 elif command.startswith("F "):
@@ -562,10 +562,11 @@ async def test_observation_handoff_without_assignment_map_keeps_connection(
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("park", [False, True])
-async def test_observation_cleanup_disconnects_without_stop(station, monkeypatch, park):
+@pytest.mark.parametrize("outcome", ["settled", "timeout", "takeover", "telemetry-failure"])
+async def test_observation_cleanup_waits_for_motion_before_disconnect(
+    station, monkeypatch, park, outcome
+):
     service, details, commands, connections = station
-    # Match controllers that leave S unanswered: cleanup must not wait for its timeout.
-    details["_ignore_stop"] = True
     client = RotatorProxy(HardwareClient(service.register_tracker("obs-one")), "mount", details)
     service.on_intent = AsyncMock()
     await client.connect()
@@ -578,12 +579,17 @@ async def test_observation_cleanup_disconnects_without_stop(station, monkeypatch
     manager.get_tracking_state.return_value = state
     removed = []
 
-    async def confirmed(_self, _tracker_id, value, _observation_id):
+    async def confirmed(_self, _tracker_id, value, _observation_id, **_options):
         # Stand in for the tracker consuming state updates; all hardware calls
         # still travel through real IPC to the TCP controller.
         if value.get("rotator_state") == "parked":
             await client.park()
+        elif value.get("rotator_state") == "stopped":
+            await client.stop()
         elif value.get("rotator_state") == "disconnected":
+            data = service.snapshots()[0]["data"]
+            assert data["stopped"] is True
+            assert data["motion_unconfirmed"] is False
             await client.disconnect()
         if value.get("rotator_id") == "none":
             assert service.snapshots()[0]["data"]["connected"] is False
@@ -597,23 +603,67 @@ async def test_observation_cleanup_disconnects_without_stop(station, monkeypatch
     monkeypatch.setattr(observationmodule, "get_tracker_manager", lambda _id: manager)
     monkeypatch.setattr(TrackerHandler, "_update_and_confirm", confirmed)
     monkeypatch.setattr(TrackerHandler, "_remove_observation_tracker_instance", remove)
+    if outcome == "timeout":
+        monkeypatch.setattr(observationmodule, "ROTATOR_SETTLE_TIMEOUT_SECONDS", 1.5)
 
-    assert await asyncio.wait_for(
+    details["_moving_until"] = time.monotonic() + 30
+    cleanup = asyncio.create_task(
         TrackerHandler().stop_tracker_task(
             "one", {"park_after_observation": park}, {"tracker_id": "obs-one"}
-        ),
-        timeout=2,
+        )
     )
+    try:
+        async with asyncio.timeout(3):
+            while ("K" if park else "S") not in commands:
+                await asyncio.sleep(0.01)
+        # An acknowledged Stop/park must not close a mount that is still moving.
+        await asyncio.sleep(1.1)
+        assert not cleanup.done()
+        assert service.snapshots()[0]["data"]["connected"] is True
+        assert removed == []
+        if outcome != "settled":
+            if outcome == "takeover":
+                worker = service.devices[("rotator", "mount")]
+                await service.call(
+                    "rotator",
+                    "mount",
+                    "pause",
+                    owner=worker.snapshot["owner"],
+                    generation=worker.snapshot["generation"],
+                )
+                service.owners["manual:new"] = {"type": "manual", "id": "manual:new"}
+                await service.call("rotator", "mount", "acquire", owner="manual:new")
+            elif outcome == "telemetry-failure":
+                details["_drop_reads"] = True
+            assert await asyncio.wait_for(cleanup, timeout=3) is False
+            assert removed == []
+            assert state["rotator_id"] == "mount"
+            assert state["rotator_state"] != "disconnected"
+            data = service.snapshots()[0]["data"]
+            assert data["motion_unconfirmed"] is True
+            assert data["stopped"] is False
+            if outcome == "takeover":
+                assert service.snapshots()[0]["owner"]["id"] == "manual:new"
+                assert data["connected"] is True
+            return
+        details["_moving_until"] = 0
+        assert await asyncio.wait_for(cleanup, timeout=6)
+    finally:
+        details["_moving_until"] = 0
+        cleanup.cancel()
+        await asyncio.gather(cleanup, return_exceptions=True)
 
     snapshot = service.snapshots()[0]
     assert snapshot["data"]["connected"] is False
-    assert snapshot["data"]["motion_unconfirmed"] is True
+    assert snapshot["data"]["motion_unconfirmed"] is False
+    assert snapshot["data"]["stopped"] is True
+    assert snapshot["data"]["stop_warning"] is None
     assert snapshot["owner"] is None
     assert snapshot["generation"] != old_generation
     assert state["rotator_state"] == "disconnected"
     assert state["rotator_id"] == "none"
     assert removed == ["obs-one"]
-    assert "S" not in commands
+    assert commands.count("S") == int(not park)
     assert commands.count("K") == int(park)
     assert len(connections) == opened
     service.on_intent.assert_awaited_with("rotator", "mount", False)
@@ -1736,13 +1786,27 @@ async def test_threaded_obs_removal_and_eof_monitor_close_tracker_pipe_once(monk
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("stop_supported", [True, False])
-@pytest.mark.parametrize("park_after", [True, False])
-async def test_observation_cleanup_disconnects_without_stop(
-    station, monkeypatch, stop_supported, park_after
+@pytest.mark.parametrize("stop_behavior", ["supported", "unsupported", "rejected", "timeout"])
+@pytest.mark.parametrize("park_mode", ["none", "native", "coordinates"])
+async def test_observation_cleanup_settles_rotator_through_tracker_commands(
+    station, monkeypatch, stop_behavior, park_mode
 ):
     service, details, commands, connections = station
-    details.update(stop_supported=stop_supported, _ignore_stop=True)
+    details.update(
+        stop_supported=stop_behavior != "unsupported",
+        _ignore_stop=stop_behavior == "timeout",
+        _stop_reply=-4 if stop_behavior == "rejected" else 0,
+    )
+    if park_mode == "coordinates":
+        details.update(parkaz=180.0, parkel=20.0)
+    if stop_behavior == "timeout":
+        initialize = RotatorController.__init__
+
+        def short_timeout(self, *args, **kwargs):
+            initialize(self, *args, **kwargs)
+            self.timeout = 0.3
+
+        monkeypatch.setattr(RotatorController, "__init__", short_timeout)
     registry = OperationRegistry()
     tracker = SatelliteTracker(
         queue.Queue(),
@@ -1755,6 +1819,25 @@ async def test_observation_cleanup_disconnects_without_stop(
     tracker.input_tracking_state = {"rotator_id": "mount", "rotator_state": "tracking"}
     await tracker.rotator_handler.handle_rotator_state_change("disconnected", "tracking")
     opened = len(connections)
+
+    def consume_results():
+        while not tracker.queue_out._queue_out.empty():
+            message = tracker.queue_out._queue_out.get_nowait()
+            if message.get("event") == "tracker-command-status":
+                data = message["data"]
+                registry.update(
+                    data["command_id"],
+                    data["status"],
+                    data.get("reason"),
+                    reconciled=data.get("reconciled"),
+                )
+
+    async def poll_tracker():
+        while True:
+            await tracker.rotator_handler.update_hardware_position()
+            tracker.operations.finish_cycle()
+            consume_results()
+            await asyncio.sleep(0.1)
 
     async def state():
         return dict(tracker.input_tracking_state)
@@ -1779,11 +1862,7 @@ async def test_observation_cleanup_disconnects_without_stop(
                 previous, value["rotator_state"]
             )
         tracker.operations.finish_cycle()
-        while not tracker.queue_out._queue_out.empty():
-            message = tracker.queue_out._queue_out.get_nowait()
-            if message.get("event") == "tracker-command-status":
-                data = message["data"]
-                registry.update(data["command_id"], data["status"], data.get("reason"))
+        consume_results()
         return {"success": True, "result": {"command_id": command["command_id"]}}
 
     handler = TrackerHandler()
@@ -1798,18 +1877,30 @@ async def test_observation_cleanup_disconnects_without_stop(
     monkeypatch.setattr(observationmodule, "update_tracking_state_with_ownership", update)
     monkeypatch.setattr(handler, "_remove_observation_tracker_instance", remove)
 
-    assert await asyncio.wait_for(
-        handler.stop_tracker_task(
-            "one", {"park_after_observation": park_after}, {"tracker_id": "obs-one"}
-        ),
-        timeout=2,
-    )
+    polling = asyncio.create_task(poll_tracker())
+    try:
+        assert await asyncio.wait_for(
+            handler.stop_tracker_task(
+                "one",
+                {"park_after_observation": park_mode != "none"},
+                {"tracker_id": "obs-one"},
+            ),
+            timeout=10,
+        )
+    finally:
+        polling.cancel()
+        await asyncio.gather(polling, return_exceptions=True)
     remove.assert_awaited_once_with("obs-one")
     assert tracker.input_tracking_state["rotator_id"] == "none"
-    assert service.snapshots()[0]["data"]["connected"] is False
-    assert ("K" in commands) is park_after
-    assert "S" not in commands
-    assert len(connections) == opened
+    data = service.snapshots()[0]["data"]
+    assert data["connected"] is False
+    assert data["motion_unconfirmed"] is False
+    assert data["stopped"] is True
+    assert ("K" in commands) is (park_mode == "native")
+    assert ("P 180.0 20.0" in commands) is (park_mode == "coordinates")
+    assert commands.count("S") == int(park_mode == "none" and stop_behavior != "unsupported")
+    assert bool(data["stop_warning"]) is (park_mode == "none" and stop_behavior != "supported")
+    assert len(connections) == opened + int(park_mode == "none" and stop_behavior == "timeout")
 
 
 @pytest.mark.asyncio
