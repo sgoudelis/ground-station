@@ -361,7 +361,11 @@ class DeviceRuntime:
             if method == "emergency_stop":
                 previous_control = (self.owner, self.generation)
                 self._fence()
-                self.owner = None
+                # Renew manual control so the dialog can move again after stationary
+                # readings. The new generation still fences every pre-Stop command;
+                # automatic producers lose ownership so they cannot resume tracking.
+                if not (self.owner or "").startswith("manual:"):
+                    self.owner = None
                 await self.stop()
                 if previous_control[0] is not None:
                     self.released_controls.append(previous_control)

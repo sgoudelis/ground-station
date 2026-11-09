@@ -73,6 +73,9 @@ This permission applies only to the manual ownership generation seen at acceptan
 saved tracking intent and automatic reconnects cannot displace manual control.
 Pause, Stop, and explicit operator Disconnect are available independently of
 ownership, including during observations, and revoke queued producer writes.
+Stop retains an existing manual owner with a new ownership generation, allowing
+another manual move after fresh stationary readings confirm the stop. Automatic
+producers lose ownership, and commands queued before Stop remain fenced.
 Pause and Disconnect do not acquire manual control. They interrupt pending device
 operations and update the former target's connection state before reporting
 completion. Their generation checks prevent delayed requests from disrupting a

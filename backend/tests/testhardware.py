@@ -855,6 +855,34 @@ async def test_lost_target_stops_motion_without_closing_connection():
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("owner", ["manual:rotator:mount", "tracker:one:incarnation", None])
+async def test_emergency_stop_retains_only_manual_owner_and_fences_old_requests(owner):
+    controller = FakeController()
+    runtime = DeviceRuntime("rotator", "mount", {}, "epoch", controller)
+    runtime.owner = owner
+    runtime.data.update(connected=True, slewing=True)
+    queued_move = request(runtime, "position", az=100, el=20)
+    queued_acquire = request(runtime, "acquire")
+    previous_generation = runtime.generation
+
+    await runtime.execute(request(runtime, "emergency_stop"))
+
+    assert runtime.owner == (owner if owner and owner.startswith("manual:") else None)
+    assert runtime.generation != previous_generation
+    assert runtime.data["connected"] is True
+    assert runtime.data["motion_unconfirmed"] is True
+    with pytest.raises(RuntimeError, match="control changed"):
+        await runtime.execute(queued_move)
+    if owner:
+        with pytest.raises(ControlReleased):
+            await runtime.execute(queued_acquire)
+    if runtime.owner:
+        with pytest.raises(StopUnconfirmed, match="stationary"):
+            await runtime.execute(request(runtime, "position", az=100, el=20))
+    assert controller.commands == ["S"]
+
+
+@pytest.mark.asyncio
 async def test_unanswered_stop_preserves_motion_guard_across_owner_loss():
     class Unanswered(FakeController):
         async def stop(self):
@@ -1482,6 +1510,66 @@ async def test_stop_capability_is_persisted_and_validated(db_session):
         db_session, {"id": device_id, "stop_supported": "false"}
     )
     assert invalid["success"] is False
+
+
+@pytest.mark.asyncio
+async def test_manual_move_can_resume_after_immediate_stop(station, monkeypatch):
+    service, details, commands, connections = station
+    details["_hold_moves"] = True
+    registry = OperationRegistry()
+    monkeypatch.setattr(control, "hardware", service)
+    monkeypatch.setattr(control, "operations", registry)
+
+    async def submit(command_id, action, **extra):
+        worker = service.devices.get(("rotator", "mount"))
+        return await control.submit_device_command(
+            "rotator",
+            "mount",
+            action,
+            details,
+            {
+                "command_id": command_id,
+                "epoch": registry.epoch,
+                "accept_before": time.time() + 10,
+                "generation": worker.snapshot.get("generation") if worker else None,
+                **extra,
+            },
+        )
+
+    async def completed(command_id, expected="succeeded"):
+        async with asyncio.timeout(10):
+            while registry.records[command_id]["status"] in {"submitted", "started"}:
+                await asyncio.sleep(0.01)
+        assert registry.records[command_id]["status"] == expected, registry.records[command_id]
+
+    await submit("connect", "connect")
+    await completed("connect")
+    opened = len(connections)
+    await submit("first-move", "move", position={"az": 90, "el": 25})
+    worker = service.devices[("rotator", "mount")]
+    async with asyncio.timeout(5):
+        while not worker.snapshot.get("data", {}).get("slewing"):
+            await asyncio.sleep(0.01)
+    previous_generation = worker.snapshot["generation"]
+    assert registry.records["first-move"]["status"] == "started"
+
+    await submit("stop", "stop")
+    await completed("stop")
+    await completed("first-move", "cancelled")
+    snapshot = service.snapshots()[0]
+    assert snapshot["owner"] == {"type": "manual", "id": "manual:rotator:mount"}
+    assert snapshot["generation"] != previous_generation
+    assert snapshot["data"]["motion_unconfirmed"] is False
+    assert snapshot["data"]["stopped"] is True
+
+    # A new command uses the renewed manual lease without reconnecting or takeover.
+    details["_hold_moves"] = False
+    await submit("second-move", "move", position={"az": 120, "el": 30})
+    await completed("second-move")
+    assert "P 90 25" in commands
+    assert "P 120 30" in commands
+    assert commands.count("S") == 1
+    assert len(connections) == opened
 
 
 @pytest.mark.asyncio
