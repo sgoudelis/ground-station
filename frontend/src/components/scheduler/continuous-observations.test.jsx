@@ -171,6 +171,95 @@ describe('continuous observation frontend', () => {
         expect(original.vfos[0].modulation).toBe('fm');
     });
 
+    it('loads the waterfall LoRa profiles into a new definition and saves their typed parameters', async () => {
+        const store = renderPage();
+        fireEvent.click(screen.getByRole('button', { name: 'ADD', exact: true }));
+        fireEvent.change(screen.getByRole('textbox', { name: /Observation name/ }), { target: { value: 'LoRa monitoring' } });
+        select(/^SDR/, /VHF receiver/);
+        select(/^Gain/, '0 dB');
+        select(/^Antenna Port/, 'RX');
+        select('Decoder', 'LoRa');
+        fireEvent.click(screen.getByRole('button', { name: 'Decoder parameters' }));
+        expect(screen.getByRole('combobox', { name: 'LoRa profile' })).toHaveTextContent('Generic LoRa (defaults)');
+        expect(screen.getByText(/before saving the observation/)).toBeVisible();
+
+        select('LoRa profile', 'Meshtastic — Long Fast');
+        expect(screen.getByRole('combobox', { name: 'Spreading Factor' })).toHaveTextContent('SF11');
+        expect(screen.getByRole('combobox', { name: 'Bandwidth', exact: true })).toHaveTextContent('250 kHz');
+        expect(screen.getByRole('spinbutton', { name: 'Preamble Length' })).toHaveValue(16);
+        expect(store.getState().continuousObservations.definitions).toHaveLength(0);
+
+        fireEvent.click(screen.getByRole('button', { name: 'Save definition' }));
+        await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+        expect(store.getState().continuousObservations.definitions[0].vfos[0]).toMatchObject({
+            decoder: 'lora', modulation: 'none', frequency: 145800000, bandwidth: 500000,
+            decoder_parameters: {
+                lora_sf: 11, lora_bw: 250000, lora_cr: 1, lora_sync_word: [0x2B],
+                lora_preamble_len: 16, lora_ldro_mode: 2, lora_invert_iq: false,
+                lora_implicit_header: false, lora_payload_length: 255, lora_has_crc: true,
+            },
+        });
+        expect(socket.emit.mock.calls.some(([, request]) => request.cmd.endsWith('.start'))).toBe(false);
+    }, 15000);
+
+    it('applies a LoRa profile only to the selected VFO and clears incompatible overrides', async () => {
+        const original = savedDefinition();
+        original.vfos[0] = { ...original.vfos[0], modulation: 'none', decoder: 'lora', bandwidth: 500000,
+            decoder_parameters: { lora_implicit_header: true, lora_payload_length: 42, lora_has_crc: false, lora_invert_iq: true } };
+        original.vfos.push({ ...createContinuousVfo(145900000), modulation: 'none', decoder: 'lora', bandwidth: 500000,
+            decoder_parameters: { lora_sf: 9 } });
+        const store = renderPage([original]);
+        fireEvent.click(screen.getByRole('button', { name: 'Edit VHF monitoring' }));
+        const first = within(screen.getByRole('region', { name: 'VFO 1' }));
+        const second = within(screen.getByRole('region', { name: 'VFO 2' }));
+        fireEvent.click(first.getByRole('button', { name: 'Decoder parameters' }));
+        fireEvent.click(second.getByRole('button', { name: 'Decoder parameters' }));
+        const firstProfile = first.getByRole('combobox', { name: 'LoRa profile' });
+        const secondProfile = second.getByRole('combobox', { name: 'LoRa profile' });
+        expect(firstProfile.getAttribute('aria-labelledby')).not.toBe(secondProfile.getAttribute('aria-labelledby'));
+        fireEvent.mouseDown(firstProfile);
+        fireEvent.click(screen.getByRole('option', { name: 'MeshCore — EU/UK Narrow' }));
+        expect(first.getByRole('spinbutton', { name: 'Preamble Length' })).toHaveValue(32);
+        expect(first.getByRole('checkbox', { name: /^Implicit Header/ })).not.toBeChecked();
+        expect(first.getByRole('checkbox', { name: /^Invert IQ/ })).not.toBeChecked();
+        expect(second.getByRole('combobox', { name: 'Spreading Factor' })).toHaveTextContent('SF9');
+
+        fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+        await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+        const saved = store.getState().continuousObservations.definitions[0];
+        expect(saved.vfos[0]).toMatchObject({
+            frequency: original.vfos[0].frequency, bandwidth: original.vfos[0].bandwidth,
+            decoder_parameters: { lora_sf: 8, lora_bw: 62500, lora_cr: 4, lora_sync_word: [0x12],
+                lora_preamble_len: 32, lora_implicit_header: false, lora_payload_length: 255, lora_has_crc: true, lora_invert_iq: false },
+        });
+        expect(saved.vfos[1]).toEqual(original.vfos[1]);
+        expect(saved.sdr).toEqual(original.sdr);
+    }, 15000);
+
+    it('allows custom edits after choosing a LoRa profile and discards them on Cancel', () => {
+        const original = savedDefinition();
+        const store = renderPage([original]);
+        fireEvent.click(screen.getByRole('button', { name: 'Edit VHF monitoring' }));
+        select('Decoder', 'LoRa');
+        fireEvent.click(screen.getByRole('button', { name: 'Decoder parameters' }));
+        select('LoRa profile', 'Reticulum / RNode (example)');
+        expect(screen.getByRole('spinbutton', { name: 'Preamble Length' })).toHaveValue(18);
+        fireEvent.change(screen.getByRole('spinbutton', { name: 'Preamble Length' }), { target: { value: '24' } });
+        expect(screen.getByRole('combobox', { name: 'LoRa profile' })).toHaveTextContent('Custom');
+        fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+        expect(store.getState().continuousObservations.definitions[0]).toEqual(original);
+        expect(socket.emit.mock.calls.some(([, request]) => request.cmd.endsWith('.update'))).toBe(false);
+    }, 15000);
+
+    it('disables the LoRa profile selector when inspecting a saved configuration', () => {
+        const original = savedDefinition();
+        original.vfos[0] = { ...original.vfos[0], modulation: 'none', decoder: 'lora', decoder_parameters: {} };
+        renderPage([original]);
+        fireEvent.click(screen.getByRole('button', { name: 'View configuration VHF monitoring' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Decoder parameters' }));
+        expect(screen.getByRole('combobox', { name: 'LoRa profile' })).toHaveAttribute('aria-disabled', 'true');
+    });
+
     it('blocks saving a VFO whose channel extends outside reception, then allows a corrected draft', async () => {
         const store = renderPage([savedDefinition()]);
         fireEvent.click(screen.getByRole('button', { name: 'Edit VHF monitoring' }));

@@ -5,6 +5,7 @@
     "label": "LoRa profile",
     "custom": "Custom",
     "help": "Load modem settings, adjust them below, then Apply. Tune the VFO to the network frequency separately.",
+    "observation_help": "Load modem settings and adjust them below before saving the observation. Tune the VFO to the network frequency separately.",
     "suggested_frequency": "Suggested frequency: {{frequency}} MHz",
     "reticulum_help": "Example SF8/BW125 settings for an SX126x RNode. Match the spreading factor, bandwidth, coding rate and preamble to your network.",
     "lorawan_help": "Receives one channel and data rate at a time. Downlink profiles invert IQ. Explicit headers announce coding rate and CRC presence."

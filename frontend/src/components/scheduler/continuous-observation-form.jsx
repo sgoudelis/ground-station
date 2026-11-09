@@ -15,6 +15,7 @@ import { useSocket } from '../common/socket.jsx';
 import { mobileFullScreenPaperSx } from '../common/dialog-layout.js';
 import { getDecoderParameters } from '../waterfall/decoder-parameters.js';
 import { DecoderNumberField } from '../waterfall/decoder-number-field.jsx';
+import LoraProfileSelect from '../waterfall/lora-profile-select.jsx';
 import FrequencyDisplay from '../waterfall/frequency-dial.jsx';
 import { DEFAULT_VFO_COLORS } from '../waterfall/vfo-marker/vfo-config.js';
 import { fetchSDRParameters } from './scheduler-slice.jsx';
@@ -75,6 +76,7 @@ function DecoderParameters({ vfo, onChange, disabled }) {
 
 export default function ContinuousObservationForm({ observation, readOnly = false, saving = false, saveError = null, connected = true, onClose, onSave }) {
     const { t } = useTranslation('common');
+    const { t: waterfallText } = useTranslation('waterfall');
     const dispatch = useDispatch();
     const { socket } = useSocket();
     // The parent mounts a fresh form for each definition, so cancelled edits
@@ -318,10 +320,21 @@ export default function ContinuousObservationForm({ observation, readOnly = fals
                                             <Tune sx={{ fontSize: 17, color: 'text.secondary' }} />
                                             <Typography variant="body2">{label('decoder_parameters')}</Typography>
                                         </AccordionSummary>
-                                        <AccordionDetails sx={{ px: 1.5, pt: 1 }}><Box sx={fieldGrid}>
-                                            <DecoderParameters vfo={vfo} disabled={readOnly || saving}
-                                                onChange={(decoder_parameters) => changeVfo(vfo.id, { decoder_parameters })} />
-                                        </Box></AccordionDetails>
+                                        <AccordionDetails sx={{ px: 1.5, pt: 1 }}>
+                                            {vfo.decoder === 'lora' && <LoraProfileSelect
+                                                vfoIndex={`continuous-${vfo.id}`}
+                                                parameters={vfo.decoder_parameters} disabled={readOnly || saving}
+                                                helperText={waterfallText('lora_profiles.observation_help')}
+                                                onSelect={(parameters) => {
+                                                    // Apply the full preset to this VFO's draft so switching
+                                                    // profiles also clears incompatible hidden overrides.
+                                                    changeVfo(vfo.id, { decoder_parameters: { ...vfo.decoder_parameters, ...parameters } });
+                                                }} />}
+                                            <Box sx={fieldGrid}>
+                                                <DecoderParameters vfo={vfo} disabled={readOnly || saving}
+                                                    onChange={(decoder_parameters) => changeVfo(vfo.id, { decoder_parameters })} />
+                                            </Box>
+                                        </AccordionDetails>
                                     </Accordion>}
                                 </Stack>
                             </Box>;

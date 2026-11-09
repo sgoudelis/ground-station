@@ -8,7 +8,7 @@ import { mapParametersToBackend } from './decoder-parameters.js';
 import { findLoraProfile, LORA_PROFILE_GROUPS, LORA_PROFILES } from './lora-profiles.js';
 import { formatLoraConfig } from '../../utils/lora-config.js';
 
-const LoraProfileSelect = ({ parameters, disabled, onSelect, vfoIndex }) => {
+const LoraProfileSelect = ({ parameters, disabled, onSelect, vfoIndex, helperText }) => {
     const { t } = useTranslation('waterfall');
     // Keep an explicit region choice when multiple profiles share the same
     // PHY, and display Custom when edits no longer match the selected profile.
@@ -48,7 +48,7 @@ const LoraProfileSelect = ({ parameters, disabled, onSelect, vfoIndex }) => {
                     ])}
                 </Select>
                 <FormHelperText id={helpId}>
-                    {t('lora_profiles.help', {
+                    {helperText ?? t('lora_profiles.help', {
                         defaultValue: 'Load modem settings, adjust them below, then Apply. Tune the VFO to the network frequency separately.',
                     })}
                 </FormHelperText>
