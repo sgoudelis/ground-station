@@ -133,13 +133,19 @@ describe('scheduler navigation status', () => {
         ]);
         expect(container.querySelector('[data-testid="ManageHistoryIcon"]')).toBeInTheDocument();
         expect(container.querySelector('[data-overlay="play"]')).toHaveStyle({ right: '-6px' });
-        expect(container.querySelector('[data-overlay="continuous"]')).toHaveStyle({ left: '-6px' });
+        expect(container.querySelector('.MuiBadge-badge:not(.MuiBadge-invisible)')).toHaveTextContent('1');
+        expect(container.querySelector('.MuiBadge-badge')).toHaveAttribute('aria-label', '1 continuous observation running');
 
         for (const [status, overlay] of [['stopping', 'spinner'], ['stopped', null], ['starting', 'spinner'], ['running', 'continuous'], ['failed', 'error']]) {
             act(() => store.dispatch({ type: 'continuous/update', payload: [{ runtime: { status } }] }));
             expect(container.querySelector('[data-overlay="play"]')).toBeInTheDocument();
-            expect(container.querySelectorAll('[data-overlay]')).toHaveLength(overlay ? 2 : 1);
-            if (overlay) expect(container.querySelector(`[data-overlay="${overlay}"]`)).toHaveStyle({ left: '-6px' });
+            expect(container.querySelectorAll('[data-overlay]')).toHaveLength(overlay && overlay !== 'continuous' ? 2 : 1);
+            expect(container.querySelector('.MuiBadge-badge')).toHaveAttribute('aria-hidden', String(overlay !== 'continuous'));
+            if (overlay === 'continuous') {
+                expect(container.querySelector('.MuiBadge-badge:not(.MuiBadge-invisible)')).toHaveTextContent('1');
+            } else if (overlay) {
+                expect(container.querySelector(`[data-overlay="${overlay}"]`)).toHaveStyle({ left: '-6px' });
+            }
         }
     });
 
@@ -150,6 +156,7 @@ describe('scheduler navigation status', () => {
             { auto_start: true, runtime: { status: 'stopped' } },
         ]);
         expect(container.querySelector('[data-overlay]')).toBeNull();
+        expect(container.querySelector('.MuiBadge-badge')).toHaveClass('MuiBadge-invisible');
         expect(container).toHaveTextContent('Scheduler');
         expect(container).not.toHaveTextContent('running');
     });
@@ -164,7 +171,7 @@ describe('scheduler navigation status', () => {
             { runtime: { status: 'starting', attempted_at: '2026-01-02T00:00:00Z' } },
         ]);
         expect(container.querySelectorAll('[data-overlay="error"]')).toHaveLength(2);
-        expect(container.querySelector('[data-overlay="continuous"]')).toBeNull();
+        expect(container.querySelector('.MuiBadge-badge:not(.MuiBadge-invisible)')).toBeNull();
         expect(container).toHaveTextContent('1 scheduled observation failed');
         expect(container).toHaveTextContent('1 continuous observation failed');
         expect(container).toHaveTextContent('1 continuous observation starting');
@@ -196,7 +203,7 @@ describe('scheduler navigation status', () => {
             { auto_start: true, runtime: { status: 'not_started' } },
         ]);
         expect(container.querySelector('[data-overlay="error"]')).toBeNull();
-        expect(container.querySelector('[data-overlay="continuous"]') !== null).toBe(status === 'running');
+        expect(container.querySelector('.MuiBadge-badge:not(.MuiBadge-invisible)') !== null).toBe(status === 'running');
         expect(container).not.toHaveTextContent('observation failed');
     });
 
@@ -225,6 +232,7 @@ describe('scheduler navigation status', () => {
         ], [{ runtime: { status: 'running' } }, { runtime: { status: 'running' } }]);
 
         expect(container).toHaveTextContent('2 continuous observations running');
+        expect(container.querySelector('.MuiBadge-badge:not(.MuiBadge-invisible)')).toHaveTextContent('2');
         expect(container).toHaveTextContent('Active: Current pass');
         expect(container).toHaveTextContent('left, ends');
         expect(container).toHaveTextContent('Next: Next pass');

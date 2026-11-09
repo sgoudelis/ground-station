@@ -1,5 +1,5 @@
 /** Copyright (c) 2026 Efstratios Goudelis, GPL-3.0-or-later */
-import { Box } from '@mui/material';
+import { Badge, Box } from '@mui/material';
 import ManageHistoryIcon from '@mui/icons-material/ManageHistory';
 import { useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
@@ -49,14 +49,39 @@ const overlayType = (counts, runningType) => {
 };
 
 export const SchedulerIconWithStatus = () => {
+    const { t } = useTranslation('navigation');
     const { scheduled, continuous } = useSchedulerObservations();
     const scheduledOverlay = overlayType(countStatuses(scheduled), 'play');
-    const continuousOverlay = overlayType(countStatuses(continuous, true), 'continuous');
+    const continuousCounts = countStatuses(continuous, true);
+    const continuousOverlay = overlayType(continuousCounts, 'continuous');
 
     return (
         <Box sx={{ position: 'relative', display: 'inline-flex' }}>
-            <ManageHistoryIcon />
-            {continuousOverlay && <StatusOverlay type={continuousOverlay} side="left" />}
+            <Badge badgeContent={continuousCounts.running || 0}
+                invisible={continuousOverlay !== 'continuous'} max={99}
+                anchorOrigin={{ vertical: 'top', horizontal: 'left' }}
+                slotProps={{ badge: {
+                    'aria-label': t('scheduler_status.continuous_running', { count: continuousCounts.running || 0 }),
+                    'aria-hidden': continuousOverlay !== 'continuous',
+                } }}
+                sx={{
+                    '& .MuiBadge-badge': {
+                        minWidth: 14,
+                        height: 14,
+                        px: 0.4,
+                        bgcolor: 'background.paper',
+                        color: 'text.secondary',
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        fontSize: '0.55rem',
+                        fontWeight: 700,
+                    },
+                }}>
+                <ManageHistoryIcon />
+            </Badge>
+            {continuousOverlay && continuousOverlay !== 'continuous' && (
+                <StatusOverlay type={continuousOverlay} side="left" />
+            )}
             {scheduledOverlay && <StatusOverlay type={scheduledOverlay} />}
         </Box>
     );

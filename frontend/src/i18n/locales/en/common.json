@@ -763,7 +763,6 @@
     "spinner": "Loading",
     "sync": "Synchronizing",
     "play": "Running",
-    "continuous": "Continuous observations running",
     "recording": "Recording",
     "new": "New files",
     "error": "Error"
