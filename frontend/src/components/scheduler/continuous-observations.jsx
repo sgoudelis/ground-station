@@ -12,7 +12,7 @@ import {
 } from '@mui/material';
 import { DataGrid } from '@mui/x-data-grid';
 import {
-    Add, AllInclusive, Cancel, CheckCircle, ContentCopy, DeleteOutline, EditOutlined, MemoryOutlined,
+    Add, Cancel, CheckCircle, ContentCopy, DeleteOutline, EditOutlined, MemoryOutlined,
     PlayArrow, Stop, VisibilityOutlined,
 } from '@mui/icons-material';
 import { v4 as uuidv4 } from 'uuid';
@@ -288,7 +288,6 @@ export default function ContinuousObservations() {
 
     return <Paper elevation={3} sx={{ p: 2, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1.5 }}>
-            <AllInclusive color="primary" />
             <Typography variant="h6" component="h2" sx={{ fontWeight: 700, color: 'text.primary' }}>{label('title')}</Typography>
         </Stack>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2, maxWidth: 720 }}>
