@@ -34,10 +34,10 @@ import { CelestialSolarIcon, TleIcon } from '../components/common/custom-icons.j
 import StatusOverlay from '../components/common/status-overlay.jsx';
 import { Box } from '@mui/material';
 import SyncIcon from '@mui/icons-material/Sync';
-import EventNoteIcon from '@mui/icons-material/EventNote';
 import { useSelector } from 'react-redux';
 import { useLocation } from 'react-router-dom';
 import { TrackingIconWithStatus, TrackingStatusTooltip } from './tracking-navigation.jsx';
+import { SchedulerIconWithStatus, SchedulerStatusTooltip } from './scheduler-navigation.jsx';
 
 // Navigation keeps its base icon; overlays carry the shared operational language.
 const IconWithOverlay = ({children, showOverlay = false, overlayType = 'spinner', showLeftOverlay = false, leftOverlayType = null}) => (
@@ -163,20 +163,6 @@ const FileBrowserIconWithStatus = () => {
     );
 };
 
-// Wrapper component for EventNoteIcon that reads Redux state
-const SchedulerIconWithStatus = () => {
-    const observations = useSelector((state) => state.scheduler?.observations || []);
-
-    // Check if any observation has status "running"
-    const hasActiveObservation = observations.some(obs => obs.status === 'running');
-
-    return (
-        <IconWithOverlay showOverlay={hasActiveObservation} overlayType="play">
-            <EventNoteIcon />
-        </IconWithOverlay>
-    );
-};
-
 export const getNavigation = ({ isAdmin = false } = {}) => {
     const operationsSection = [
         {
@@ -218,7 +204,7 @@ export const getNavigation = ({ isAdmin = false } = {}) => {
             segment: 'scheduler',
             title: i18n.t('scheduler', { ns: 'navigation', defaultValue: 'Scheduler' }),
             icon: <SchedulerIconWithStatus />,
-            dynamicTooltip: true, // Flag to indicate this item needs dynamic tooltip
+            tooltip: <SchedulerStatusTooltip />,
         },
     ];
 

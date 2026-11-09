@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { render } from '@testing-library/react';
+import { act, render } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { MemoryRouter } from 'react-router-dom';
 import { configureStore } from '@reduxjs/toolkit';
@@ -109,6 +109,87 @@ describe('tracking navigation status', () => {
         expect(container.querySelector('[data-testid="tracking-rig-status"]')).toHaveAttribute('data-status', 'tracking');
         expect(container).toHaveTextContent('Rotator: Slewing');
         expect(container).toHaveTextContent('Rig: Tracking');
+    });
+});
+
+describe('scheduler navigation status', () => {
+    function renderScheduler(scheduled = [], continuous = []) {
+        const store = configureStore({ reducer: {
+            scheduler: (state = { observations: scheduled }) => state,
+            continuousObservations: (state = { definitions: continuous }, action) => (
+                action.type === 'continuous/update' ? { definitions: action.payload } : state
+            ),
+            preferences: () => ({ preferences: [
+                { name: 'timezone', value: 'UTC' }, { name: 'locale', value: 'en-GB' },
+            ] }),
+        } });
+        const scheduler = getNavigation().find((item) => item.segment === 'scheduler');
+        return { store, ...render(<Provider store={store}>{scheduler.icon}{scheduler.tooltip}</Provider>) };
+    }
+
+    it('shows both observation types independently and updates as a continuous run changes', () => {
+        const { container, store } = renderScheduler([{ status: 'running' }], [
+            { runtime: { status: 'running' } },
+        ]);
+        expect(container.querySelector('[data-testid="ManageHistoryIcon"]')).toBeInTheDocument();
+        expect(container.querySelector('[data-overlay="play"]')).toHaveStyle({ right: '-6px' });
+        expect(container.querySelector('[data-overlay="continuous"]')).toHaveStyle({ left: '-6px' });
+
+        for (const [status, overlay] of [['stopping', 'spinner'], ['stopped', null], ['starting', 'spinner'], ['running', 'continuous'], ['failed', 'error']]) {
+            act(() => store.dispatch({ type: 'continuous/update', payload: [{ runtime: { status } }] }));
+            expect(container.querySelector('[data-overlay="play"]')).toBeInTheDocument();
+            expect(container.querySelectorAll('[data-overlay]')).toHaveLength(overlay ? 2 : 1);
+            if (overlay) expect(container.querySelector(`[data-overlay="${overlay}"]`)).toHaveStyle({ left: '-6px' });
+        }
+    });
+
+    it('does not treat auto-start preferences or stopped definitions as running', () => {
+        const { container } = renderScheduler([{ status: 'scheduled', enabled: true }], [
+            { auto_start: true },
+            { auto_start: true, runtime: { status: 'not_started' } },
+            { auto_start: true, runtime: { status: 'stopped' } },
+        ]);
+        expect(container.querySelector('[data-overlay]')).toBeNull();
+        expect(container).toHaveTextContent('Scheduler');
+        expect(container).not.toHaveTextContent('running');
+    });
+
+    it('prioritizes failures and transitions while retaining running counts in the tooltip', () => {
+        const { container, store } = renderScheduler([{ status: 'running' }, { status: 'failed' }], [
+            { runtime: { status: 'running' } },
+            { runtime: { status: 'starting' } },
+            { runtime: { status: 'failed', active: true } },
+        ]);
+        expect(container.querySelectorAll('[data-overlay="error"]')).toHaveLength(2);
+        expect(container.querySelector('[data-overlay="continuous"]')).toBeNull();
+        expect(container).toHaveTextContent('1 scheduled observation failed');
+        expect(container).toHaveTextContent('1 continuous observation failed');
+        expect(container).toHaveTextContent('1 continuous observation starting');
+        expect(container).toHaveTextContent('1 continuous observation running');
+
+        act(() => store.dispatch({ type: 'continuous/update', payload: [
+            { runtime: { status: 'running' } }, { runtime: { status: 'starting' } },
+        ] }));
+        expect(container.querySelector('[data-overlay="spinner"]')).toHaveStyle({ left: '-6px' });
+        expect(container.querySelector('[data-overlay="error"]')).toHaveStyle({ right: '-6px' });
+    });
+
+    it('keeps scheduled pass details alongside plural continuous counts', () => {
+        const now = Date.now();
+        const { container } = renderScheduler([
+            { status: 'running', satellite: { name: 'Current pass' }, task_end: new Date(now + 600000).toISOString() },
+            { status: 'scheduled', enabled: true, satellite: { name: 'Next pass' }, task_start: new Date(now + 1200000).toISOString() },
+            { status: 'scheduled', enabled: false, satellite: { name: 'Disabled pass' }, task_start: new Date(now + 60000).toISOString() },
+            { status: 'scheduled', enabled: true, satellite: { name: 'Past pass' }, task_start: new Date(now - 60000).toISOString() },
+        ], [{ runtime: { status: 'running' } }, { runtime: { status: 'running' } }]);
+
+        expect(container).toHaveTextContent('2 continuous observations running');
+        expect(container).toHaveTextContent('Active: Current pass');
+        expect(container).toHaveTextContent('left, ends');
+        expect(container).toHaveTextContent('Next: Next pass');
+        expect(container).toHaveTextContent('starts');
+        expect(container).not.toHaveTextContent('Disabled pass');
+        expect(container).not.toHaveTextContent('Past pass');
     });
 });
 

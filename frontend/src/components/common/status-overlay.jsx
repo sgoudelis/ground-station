@@ -5,12 +5,14 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import RadioButtonCheckedIcon from '@mui/icons-material/RadioButtonChecked';
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
+import AllInclusiveIcon from '@mui/icons-material/AllInclusive';
 import {useTranslation} from 'react-i18next';
 
 const OVERLAYS = {
     spinner: {tone: 'busy', label: 'Loading', spinning: true},
     sync: {tone: 'busy', Icon: SyncIcon, label: 'Synchronizing', spinning: true},
     play: {tone: 'active', Icon: PlayArrowIcon, label: 'Running'},
+    continuous: {tone: 'active', Icon: AllInclusiveIcon, label: 'Continuous observations running'},
     recording: {tone: 'active', Icon: RadioButtonCheckedIcon, label: 'Recording'},
     new: {tone: 'busy', Icon: FiberManualRecordIcon, label: 'New files'},
     error: {tone: 'fault', Icon: ErrorOutlineIcon, label: 'Error'},
