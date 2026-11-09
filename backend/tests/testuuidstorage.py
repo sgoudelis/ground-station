@@ -16,7 +16,6 @@ from db import migrations
 from db.models import (
     ApiTokens,
     AuthSessions,
-    Base,
     Cameras,
     CameraType,
     Groups,
@@ -37,6 +36,25 @@ from db.models import (
 
 PARENT_REVISION = "e5f7a9b2c4d6"
 UUID_REVISION = "f6a8b1c3d5e7"
+# Freeze expectations at this revision, independently of newer ORM tables and columns.
+UUID_COLUMNS = {
+    "satellite_orbits": ("source_id",),
+    "rigs": ("id",),
+    "sdrs": ("id",),
+    "rotators": ("id",),
+    "locations": ("id",),
+    "preferences": ("id", "user_id"),
+    "orbital_sources": ("id", "group_id"),
+    "orbital_source_sync_states": ("source_id",),
+    "groups": ("id",),
+    "tracking_state": ("id",),
+    "cameras": ("id",),
+    "monitored_satellites": ("sdr_id", "rotator_id", "rig_id"),
+    "scheduled_observations": ("sdr_id", "rotator_id", "rig_id"),
+    "users": ("id", "created_by_user_id", "updated_by_user_id"),
+    "auth_sessions": ("id", "user_id"),
+    "api_tokens": ("id", "user_id"),
+}
 NUMERIC_ID = uuid.UUID("12345678-1234-4234-8234-123456789012")
 LEGACY_ID = uuid.UUID("abcdef00-0000-4000-8000-000000000001")
 
@@ -206,11 +224,10 @@ def test_uuid_migration_preserves_rows_constraints_and_hardware_references(
         assert connection.exec_driver_sql("PRAGMA foreign_key_check").all() == []
         # Cover every UUID PK and FK, even nullable columns without seeded data.
         inspector = sa.inspect(connection)
-        for table in Base.metadata.tables.values():
-            types = {column["name"]: column["type"] for column in inspector.get_columns(table.name)}
-            for column in table.columns:
-                if isinstance(column.type, sa.Uuid):
-                    assert isinstance(types[column.name], sa.CHAR)
+        for table_name, columns in UUID_COLUMNS.items():
+            types = {column["name"]: column["type"] for column in inspector.get_columns(table_name)}
+            for column_name in columns:
+                assert isinstance(types[column_name], sa.CHAR), f"{table_name}.{column_name}"
 
         for model in (Rotators, Rigs):
             values = dict(connection.execute(sa.select(model.__table__)).mappings().one())

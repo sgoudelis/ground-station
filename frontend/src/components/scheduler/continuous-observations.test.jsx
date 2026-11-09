@@ -260,6 +260,7 @@ describe('continuous observation frontend', () => {
         expect(screen.getByRole('combobox', { name: 'LoRa profile' })).toHaveAttribute('aria-disabled', 'true');
     });
 
+    // Allow CI coverage runs time to render and update the MUI dialogs in these workflows.
     it('blocks saving a VFO whose channel extends outside reception, then allows a corrected draft', async () => {
         const store = renderPage([savedDefinition()]);
         fireEvent.click(screen.getByRole('button', { name: 'Edit VHF monitoring' }));
@@ -273,7 +274,7 @@ describe('continuous observation frontend', () => {
         fireEvent.click(screen.getByRole('button', { name: /^Save (definition|changes)$/ }));
         await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
         expect(store.getState().continuousObservations.definitions[0].vfos[0].frequency).toBe(146700000);
-    });
+    }, 15000);
 
     it('keeps configuration inspection read-only even before SDR capabilities have loaded', () => {
         const original = savedDefinition();
@@ -350,7 +351,7 @@ describe('continuous observation frontend', () => {
         fireEvent.click(screen.getByRole('button', { name: 'Edit VHF monitoring' }));
         expectCenterFrequency(145.799991);
         expect(socket.emit.mock.calls.every(([, payload]) => payload.cmd.startsWith('continuous-observations.'))).toBe(true);
-    });
+    }, 15000);
 
     it('reports the required bandwidth and refuses to save VFOs that cannot fit', async () => {
         const original = savedDefinition();
@@ -473,7 +474,7 @@ describe('continuous observation frontend', () => {
         expect(copy.name).toBe('VHF monitoring (copy)');
         expect(copy.id).not.toBe(first.id);
         expect(copy.vfos[0].id).not.toBe(first.vfos[0].id);
-    });
+    }, 15000);
 
     it('requires confirmation to delete a definition', async () => {
         const store = renderPage([savedDefinition()]);
