@@ -71,14 +71,9 @@ const EntityInfoHeader = ({
                 },
                 borderBottom: '1px solid',
                 borderColor: 'divider',
-                // Islands resize independently of the viewport.
-                containerType: 'inline-size',
-                containerName: 'entity-header',
-                '@container entity-header (max-width: 240px)': {
-                    '& .entity-header-actions': { gridColumn: '2', justifySelf: 'start' },
-                },
             }}
         >
+            {/* Let the name shrink so edit actions stay beside it even in narrow islands. */}
             <Box sx={{ display: 'grid', gridTemplateColumns: '44px minmax(0, 1fr) auto', alignItems: 'center', gap: 1 }}>
                 <Box sx={{
                     width: 44,
@@ -110,7 +105,7 @@ const EntityInfoHeader = ({
                     </Typography>
                 </Box>
                 {actions.length > 0 && (
-                    <Box className="entity-header-actions" sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
                         {actions.map(({ onClick, label, icon: Icon, disabled: actionDisabled }) => (
                             <Tooltip key={label} title={label}>
                                 <span>
