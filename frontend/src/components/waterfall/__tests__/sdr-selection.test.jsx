@@ -95,29 +95,37 @@ it('opens a prefilled continuous observation from the live session and cancels w
     const vfos = store.getState().vfo;
     fireEvent.click(screen.getByRole('button', { name: 'Create continuous observation' }));
     const dialog = within(screen.getByRole('dialog', { name: 'Create continuous observation' }));
-    expect(dialog.getByRole('textbox', { name: /Observation name/ })).toHaveValue('SDR a · 869.750 MHz');
-    expect(dialog.getByRole('combobox', { name: /^SDR/ })).toHaveTextContent('SDR a');
-    expect(dialog.getByRole('combobox', { name: /^Gain/ })).toHaveTextContent('20 dB');
-    expect(dialog.getByRole('combobox', { name: /^Sample Rate/ })).toHaveTextContent('2 MHz');
-    expect(dialog.getByRole('combobox', { name: /Antenna Port/ })).toHaveTextContent('ANT-A');
+    // Labels identify these fields directly without checking every select's visibility.
+    const field = (name) => dialog.getByLabelText(name, { selector: '[role="combobox"]' });
+    expect(dialog.getByLabelText(/Observation name/)).toHaveValue('SDR a · 869.750 MHz');
+    expect(field(/^SDR/)).toHaveTextContent('SDR a');
+    expect(field(/^Gain/)).toHaveTextContent('20 dB');
+    expect(field(/^Sample Rate/)).toHaveTextContent('2 MHz');
+    expect(field(/Antenna Port/)).toHaveTextContent('ANT-A');
     expect(dialog.getByRole('switch', { name: 'Auto center from VFOs' })).not.toBeChecked();
-    expect(dialog.getByRole('group', { name: '869750000 Hz' })).toBeVisible();
-    expect(dialog.getByRole('combobox', { name: 'Decoder' })).toHaveTextContent('LoRa');
-    expect(dialog.getByRole('combobox', { name: 'Modulation' })).toHaveTextContent('None');
+    expect(dialog.getByLabelText('869750000 Hz')).toBeVisible();
+    expect(field('Decoder')).toHaveTextContent('LoRa');
+    expect(field('Modulation')).toHaveTextContent('None');
     fireEvent.click(dialog.getByRole('button', { name: 'Decoder parameters' }));
-    expect(dialog.getByRole('combobox', { name: 'LoRa profile' })).toHaveTextContent('Meshtastic — Long Fast');
-    expect(dialog.getByRole('combobox', { name: 'Spreading Factor' })).toHaveTextContent('SF11');
-    expect(dialog.getByRole('combobox', { name: 'Bandwidth', exact: true })).toHaveTextContent('250 kHz');
+    expect(field('LoRa profile')).toHaveTextContent('Meshtastic — Long Fast');
+    expect(field('Spreading Factor')).toHaveTextContent('SF11');
+    expect(field('Bandwidth')).toHaveTextContent('250 kHz');
 
     fireEvent.click(dialog.getByRole('button', { name: 'Cancel' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(store.getState().waterfall).toBe(live);
     expect(store.getState().vfo).toBe(vfos);
     expect(socket.emit).not.toHaveBeenCalled();
+});
 
+it('uses the latest live frequency when reopening a cancelled continuous observation draft', async () => {
+    const { store } = receiver(loraSession());
+    fireEvent.click(screen.getByRole('button', { name: 'Create continuous observation' }));
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     act(() => store.dispatch(setCenterFrequency(869500000)));
     fireEvent.click(screen.getByRole('button', { name: 'Create continuous observation' }));
-    expect(screen.getByRole('group', { name: '869500000 Hz' })).toBeVisible();
+    expect(within(screen.getByRole('dialog')).getByLabelText('869500000 Hz')).toBeVisible();
 });
 
 it('saves the reviewed definition while leaving the live receiver and VFOs running', async () => {

@@ -676,7 +676,8 @@ it('hides entire types on the map, retains every table row and remembers visibil
 it('applies the transmitter dropdown to the map, including the selected type and All types', () => {
     fixture.showList = true;
     const store = createStore();
-    const element = () => <Provider store={store}><ThemeProvider theme={createTheme()}><PacketMapLayout /></ThemeProvider></Provider>;
+    const theme = createTheme();
+    const element = () => <Provider store={store}><ThemeProvider theme={theme}><PacketMapLayout /></ThemeProvider></Provider>;
     const {container, rerender, unmount} = render(element());
     const activity = () => [...container.querySelectorAll('.packet-timeline-activity line')]
         .map((line) => [line.getAttribute('x1'), line.getAttribute('x2')]);
@@ -684,7 +685,10 @@ it('applies the transmitter dropdown to the map, including the selected type and
     fireEvent.click(screen.getByRole('button', {name: 'S', exact: true}));
     expect(mapRender.mock.lastCall[0].selectedTransmitterId).toBe('radiosonde:S');
     fireEvent.click(screen.getByRole('button', {name: 'Transmitter types'}));
-    fireEvent.click(screen.getByRole('menuitem', {name: /Radiosonde/}));
+    // Keep menu queries inside the portal instead of searching the whole map page.
+    const menu = screen.getByRole('menu');
+    const options = within(menu);
+    fireEvent.click(options.getByRole('menuitem', {name: /Radiosonde/}));
     expect(screen.queryByRole('button', {name: 'S', exact: true})).not.toBeInTheDocument();
     expect(mapRender.mock.lastCall[0].positions.map((point) => point.kind)).toEqual(['aprs']);
     expect(activity()).toEqual(highlighted);
@@ -694,19 +698,20 @@ it('applies the transmitter dropdown to the map, including the selected type and
     rerender(element());
     expect(tableRender.mock.lastCall[0].positions).toHaveLength(3);
     expect(mapRender.mock.lastCall[0].positions.map((point) => point.kind)).toEqual(['aprs']);
-    fireEvent.click(screen.getByRole('menuitem', {name: /All types/}));
+    fireEvent.click(options.getByRole('menuitem', {name: /All types/}));
     expect(mapRender.mock.lastCall[0].positions).toHaveLength(3);
-    fireEvent.click(screen.getByRole('menuitem', {name: /All types/}));
+    fireEvent.click(options.getByRole('menuitem', {name: /All types/}));
     expect(mapRender.mock.lastCall[0].positions).toEqual([]);
     expect(mapRender.mock.lastCall[0].hasPositions).toBe(true);
-    fireEvent.keyDown(screen.getByRole('menu'), {key: 'Escape'});
+    fireEvent.keyDown(menu, {key: 'Escape'});
     unmount();
     render(element());
     expect(mapRender.mock.lastCall[0].positions).toEqual([]);
     fireEvent.click(screen.getByRole('button', {name: 'Transmitter types'}));
-    fireEvent.click(screen.getByRole('menuitem', {name: /All types/}));
+    const restoredMenu = screen.getByRole('menu');
+    fireEvent.click(within(restoredMenu).getByRole('menuitem', {name: /All types/}));
     expect(mapRender.mock.lastCall[0].positions).toHaveLength(3);
-    fireEvent.keyDown(screen.getByRole('menu'), {key: 'Escape'});
+    fireEvent.keyDown(restoredMenu, {key: 'Escape'});
     expect(screen.getByRole('button', {name: 'S', exact: true})).toBeInTheDocument();
 });
 

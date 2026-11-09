@@ -59,14 +59,16 @@ function renderPage(definitions = [], { cachedParameters = true, drafts = [], lo
     return store;
 }
 function select(name, option) {
-    fireEvent.mouseDown(screen.getByRole('combobox', { name }));
-    fireEvent.click(screen.getByRole('option', { name: option }));
+    // Field labels avoid computing the accessible name of every select in the form.
+    fireEvent.mouseDown(screen.getByLabelText(name, { selector: '[role="combobox"]' }));
+    fireEvent.click(within(screen.getByRole('listbox')).getByRole('option', { name: option }));
 }
 function centerDisplay() {
     return screen.getByRole('group', { name: 'Center frequency' });
 }
 function expectCenterFrequency(frequencyMHz) {
-    expect(within(centerDisplay()).getByRole('group', { name: `${Math.round(frequencyMHz * 1e6)} Hz` })).toBeVisible();
+    // The dial exposes its exact value as a label; avoid rescanning every group.
+    expect(screen.getByLabelText(`${Math.round(frequencyMHz * 1e6)} Hz`)).toBeVisible();
 }
 function toggleRow(name) {
     const row = screen.getByRole('button', { name, exact: true }).closest('[role="row"]');
@@ -80,7 +82,7 @@ describe('continuous observation frontend', () => {
         const store = renderPage();
         fireEvent.click(screen.getByRole('button', { name: 'ADD', exact: true }));
         expect(screen.getByRole('switch', { name: 'Auto center from VFOs' })).toBeChecked();
-        fireEvent.change(screen.getByRole('textbox', { name: /Observation name/ }), { target: { value: '  Backend APRS  ' } });
+        fireEvent.change(screen.getByLabelText(/Observation name/, { selector: 'input' }), { target: { value: '  Backend APRS  ' } });
         select(/^SDR/, /VHF receiver/);
         select(/^Gain/, '0 dB');
         select(/^Antenna Port/, 'RX');
@@ -97,7 +99,7 @@ describe('continuous observation frontend', () => {
         expect(screen.getByRole('button', { name: 'Join' })).toBeDisabled();
         expect(screen.getByText('Not started')).toBeVisible();
         expect(socket.emit.mock.calls.every(([, payload]) => payload.cmd.startsWith('continuous-observations.'))).toBe(true);
-    }, 15000);
+    });
 
     it('starts and stops a saved run and locks configuration while running', async () => {
         const saved = savedDefinition();
@@ -115,7 +117,7 @@ describe('continuous observation frontend', () => {
         const calls = socket.emit.mock.calls.map(([, request]) => request);
         expect(calls.find((request) => request.cmd.endsWith('.start')).data).toEqual({ id: saved.id, expected_updated_at: saved.updated_at });
         expect(calls.find((request) => request.cmd.endsWith('.stop')).data).toEqual({ id: saved.id });
-    }, 15000);
+    });
 
     it('offers Stop again when failed cleanup still owns receiver resources', async () => {
         renderPage([{ ...savedDefinition(), runtime: { status: 'failed', active: true, error: 'Temporary cleanup failure' } }]);
@@ -137,8 +139,8 @@ describe('continuous observation frontend', () => {
     it('clears the opposite selector and decoder parameters, and persists the final exclusive choice', async () => {
         const store = renderPage([savedDefinition()]);
         fireEvent.click(screen.getByRole('button', { name: 'Edit VHF monitoring' }));
-        const modulation = screen.getByRole('combobox', { name: 'Modulation' });
-        const decoder = screen.getByRole('combobox', { name: 'Decoder' });
+        const modulation = screen.getByLabelText('Modulation', { selector: '[role="combobox"]' });
+        const decoder = screen.getByLabelText('Decoder', { selector: '[role="combobox"]' });
         expect(modulation).toHaveTextContent('FM');
         expect(decoder).toHaveTextContent('None');
         select('Decoder', 'APRS');
@@ -159,34 +161,34 @@ describe('continuous observation frontend', () => {
         expect(store.getState().continuousObservations.definitions[0].vfos[0]).toMatchObject({
             modulation: 'usb', decoder: 'none', decoder_parameters: {},
         });
-    }, 15000);
+    });
 
     it('shows legacy decoder definitions exclusively in the read-only view', () => {
         const original = savedDefinition();
         original.vfos[0] = { ...original.vfos[0], modulation: 'fm', decoder: 'aprs', decoder_parameters: { aprs_baudrate: 1200 } };
         renderPage([original]);
         fireEvent.click(screen.getByRole('button', { name: 'View configuration VHF monitoring' }));
-        expect(screen.getByRole('combobox', { name: 'Modulation' })).toHaveTextContent(/^None$/);
-        expect(screen.getByRole('combobox', { name: 'Decoder' })).toHaveTextContent('APRS');
+        expect(screen.getByLabelText('Modulation', { selector: '[role="combobox"]' })).toHaveTextContent(/^None$/);
+        expect(screen.getByLabelText('Decoder', { selector: '[role="combobox"]' })).toHaveTextContent('APRS');
         expect(original.vfos[0].modulation).toBe('fm');
     });
 
     it('loads the waterfall LoRa profiles into a new definition and saves their typed parameters', async () => {
         const store = renderPage();
         fireEvent.click(screen.getByRole('button', { name: 'ADD', exact: true }));
-        fireEvent.change(screen.getByRole('textbox', { name: /Observation name/ }), { target: { value: 'LoRa monitoring' } });
+        fireEvent.change(screen.getByLabelText(/Observation name/, { selector: 'input' }), { target: { value: 'LoRa monitoring' } });
         select(/^SDR/, /VHF receiver/);
         select(/^Gain/, '0 dB');
         select(/^Antenna Port/, 'RX');
         select('Decoder', 'LoRa');
         fireEvent.click(screen.getByRole('button', { name: 'Decoder parameters' }));
-        expect(screen.getByRole('combobox', { name: 'LoRa profile' })).toHaveTextContent('Generic LoRa (defaults)');
+        expect(screen.getByLabelText('LoRa profile', { selector: '[role="combobox"]' })).toHaveTextContent('Generic LoRa (defaults)');
         expect(screen.getByText(/before saving the observation/)).toBeVisible();
 
         select('LoRa profile', 'Meshtastic — Long Fast');
-        expect(screen.getByRole('combobox', { name: 'Spreading Factor' })).toHaveTextContent('SF11');
-        expect(screen.getByRole('combobox', { name: 'Bandwidth', exact: true })).toHaveTextContent('250 kHz');
-        expect(screen.getByRole('spinbutton', { name: 'Preamble Length' })).toHaveValue(16);
+        expect(screen.getByLabelText('Spreading Factor', { selector: '[role="combobox"]' })).toHaveTextContent('SF11');
+        expect(screen.getByLabelText('Bandwidth', { selector: '[role="combobox"]' })).toHaveTextContent('250 kHz');
+        expect(screen.getByLabelText('Preamble Length', { selector: 'input' })).toHaveValue(16);
         expect(store.getState().continuousObservations.definitions).toHaveLength(0);
 
         fireEvent.click(screen.getByRole('button', { name: 'Save definition' }));
@@ -200,7 +202,7 @@ describe('continuous observation frontend', () => {
             },
         });
         expect(socket.emit.mock.calls.some(([, request]) => request.cmd.endsWith('.start'))).toBe(false);
-    }, 15000);
+    });
 
     it('applies a LoRa profile only to the selected VFO and clears incompatible overrides', async () => {
         const original = savedDefinition();
@@ -214,15 +216,15 @@ describe('continuous observation frontend', () => {
         const second = within(screen.getByRole('region', { name: 'VFO 2' }));
         fireEvent.click(first.getByRole('button', { name: 'Decoder parameters' }));
         fireEvent.click(second.getByRole('button', { name: 'Decoder parameters' }));
-        const firstProfile = first.getByRole('combobox', { name: 'LoRa profile' });
-        const secondProfile = second.getByRole('combobox', { name: 'LoRa profile' });
+        const firstProfile = first.getByLabelText('LoRa profile', { selector: '[role="combobox"]' });
+        const secondProfile = second.getByLabelText('LoRa profile', { selector: '[role="combobox"]' });
         expect(firstProfile.getAttribute('aria-labelledby')).not.toBe(secondProfile.getAttribute('aria-labelledby'));
         fireEvent.mouseDown(firstProfile);
         fireEvent.click(screen.getByRole('option', { name: 'MeshCore — EU/UK Narrow' }));
-        expect(first.getByRole('spinbutton', { name: 'Preamble Length' })).toHaveValue(32);
+        expect(first.getByLabelText('Preamble Length', { selector: 'input' })).toHaveValue(32);
         expect(first.getByRole('checkbox', { name: /^Implicit Header/ })).not.toBeChecked();
         expect(first.getByRole('checkbox', { name: /^Invert IQ/ })).not.toBeChecked();
-        expect(second.getByRole('combobox', { name: 'Spreading Factor' })).toHaveTextContent('SF9');
+        expect(second.getByLabelText('Spreading Factor', { selector: '[role="combobox"]' })).toHaveTextContent('SF9');
 
         fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
         await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
@@ -234,7 +236,7 @@ describe('continuous observation frontend', () => {
         });
         expect(saved.vfos[1]).toEqual(original.vfos[1]);
         expect(saved.sdr).toEqual(original.sdr);
-    }, 15000);
+    });
 
     it('allows custom edits after choosing a LoRa profile and discards them on Cancel', () => {
         const original = savedDefinition();
@@ -243,13 +245,13 @@ describe('continuous observation frontend', () => {
         select('Decoder', 'LoRa');
         fireEvent.click(screen.getByRole('button', { name: 'Decoder parameters' }));
         select('LoRa profile', 'Reticulum / RNode (example)');
-        expect(screen.getByRole('spinbutton', { name: 'Preamble Length' })).toHaveValue(18);
-        fireEvent.change(screen.getByRole('spinbutton', { name: 'Preamble Length' }), { target: { value: '24' } });
-        expect(screen.getByRole('combobox', { name: 'LoRa profile' })).toHaveTextContent('Custom');
+        expect(screen.getByLabelText('Preamble Length', { selector: 'input' })).toHaveValue(18);
+        fireEvent.change(screen.getByLabelText('Preamble Length', { selector: 'input' }), { target: { value: '24' } });
+        expect(screen.getByLabelText('LoRa profile', { selector: '[role="combobox"]' })).toHaveTextContent('Custom');
         fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
         expect(store.getState().continuousObservations.definitions[0]).toEqual(original);
         expect(socket.emit.mock.calls.some(([, request]) => request.cmd.endsWith('.update'))).toBe(false);
-    }, 15000);
+    });
 
     it('disables the LoRa profile selector when inspecting a saved configuration', () => {
         const original = savedDefinition();
@@ -257,24 +259,23 @@ describe('continuous observation frontend', () => {
         renderPage([original]);
         fireEvent.click(screen.getByRole('button', { name: 'View configuration VHF monitoring' }));
         fireEvent.click(screen.getByRole('button', { name: 'Decoder parameters' }));
-        expect(screen.getByRole('combobox', { name: 'LoRa profile' })).toHaveAttribute('aria-disabled', 'true');
+        expect(screen.getByLabelText('LoRa profile', { selector: '[role="combobox"]' })).toHaveAttribute('aria-disabled', 'true');
     });
 
-    // Allow CI coverage runs time to render and update the MUI dialogs in these workflows.
     it('blocks saving a VFO whose channel extends outside reception, then allows a corrected draft', async () => {
         const store = renderPage([savedDefinition()]);
         fireEvent.click(screen.getByRole('button', { name: 'Edit VHF monitoring' }));
-        fireEvent.change(screen.getByRole('spinbutton', { name: /Frequency \(MHz\)/ }), { target: { value: '146.8' } });
+        fireEvent.change(screen.getByLabelText(/Frequency \(MHz\)/, { selector: 'input' }), { target: { value: '146.8' } });
         expect(screen.getByText(/This VFO extends outside/)).toBeVisible();
         fireEvent.click(screen.getByRole('button', { name: /^Save (definition|changes)$/ }));
         expect(screen.getByRole('dialog')).toBeVisible();
         expect(store.getState().continuousObservations.definitions[0].vfos[0].frequency).toBe(145800000);
 
-        fireEvent.change(screen.getByRole('spinbutton', { name: /Frequency \(MHz\)/ }), { target: { value: '146.7' } });
+        fireEvent.change(screen.getByLabelText(/Frequency \(MHz\)/, { selector: 'input' }), { target: { value: '146.7' } });
         fireEvent.click(screen.getByRole('button', { name: /^Save (definition|changes)$/ }));
         await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
         expect(store.getState().continuousObservations.definitions[0].vfos[0].frequency).toBe(146700000);
-    }, 15000);
+    });
 
     it('keeps configuration inspection read-only even before SDR capabilities have loaded', () => {
         const original = savedDefinition();
@@ -282,10 +283,10 @@ describe('continuous observation frontend', () => {
         renderPage([original], { cachedParameters: false });
         fireEvent.click(screen.getByRole('button', { name: 'View configuration VHF monitoring' }));
         const dialog = within(screen.getByRole('dialog'));
-        expect(dialog.getByRole('textbox', { name: /Observation name/ })).toBeDisabled();
-        expect(dialog.getByRole('combobox', { name: /^Gain/ })).toHaveTextContent('0 dB');
-        expect(dialog.getByRole('combobox', { name: /^Antenna Port/ })).toHaveTextContent('RX');
-        expect(dialog.getByRole('spinbutton', { name: /Frequency \(MHz\)/ })).toBeDisabled();
+        expect(dialog.getByLabelText(/Observation name/, { selector: 'input' })).toBeDisabled();
+        expect(dialog.getByLabelText(/^Gain/, { selector: '[role="combobox"]' })).toHaveTextContent('0 dB');
+        expect(dialog.getByLabelText(/^Antenna Port/, { selector: '[role="combobox"]' })).toHaveTextContent('RX');
+        expect(dialog.getByLabelText(/Frequency \(MHz\)/, { selector: 'input' })).toBeDisabled();
         expect(dialog.getByRole('switch', { name: 'Auto center from VFOs' })).toBeDisabled();
         expect(dialog.getByRole('switch', { name: 'Auto center from VFOs' })).toBeChecked();
         expectCenterFrequency(145.8);
@@ -295,37 +296,59 @@ describe('continuous observation frontend', () => {
         expect(socket.emit.mock.calls.every(([, payload]) => payload.cmd.startsWith('continuous-observations.'))).toBe(true);
     });
 
-    it('recalculates from VFO and receiver edits, freezes when disabled, and persists the resolved mode and center', async () => {
-        const store = renderPage([savedDefinition()]);
+    it('recalculates the center after VFO edits and keeps the last center for incomplete input', () => {
+        renderPage([savedDefinition()]);
         fireEvent.click(screen.getByRole('button', { name: 'Edit VHF monitoring' }));
-        const toggle = screen.getByRole('switch', { name: 'Auto center from VFOs' });
-        const center = centerDisplay();
-        fireEvent.click(toggle);
-        expect(within(center).queryByRole('button')).not.toBeInTheDocument();
+        const dialog = within(screen.getByRole('dialog'));
+        const frequency = dialog.getByLabelText(/Frequency \(MHz\)/);
+        const bandwidth = dialog.getByLabelText(/Bandwidth \(kHz\)/);
+        fireEvent.click(dialog.getByRole('switch', { name: 'Auto center from VFOs' }));
+        expect(within(centerDisplay()).queryByRole('button')).not.toBeInTheDocument();
         expectCenterFrequency(146.3);
-        fireEvent.change(screen.getByRole('spinbutton', { name: /Frequency \(MHz\)/ }), { target: { value: '145.9' } });
+        fireEvent.change(frequency, { target: { value: '145.9' } });
         expectCenterFrequency(146.4);
-        fireEvent.change(screen.getByRole('spinbutton', { name: /Frequency \(MHz\)/ }), { target: { value: '' } });
+        fireEvent.change(frequency, { target: { value: '' } });
         expectCenterFrequency(146.4);
-        expect(screen.getByText('Enter a valid VFO frequency and bandwidth to calculate the center.')).toBeVisible();
-        fireEvent.change(screen.getByRole('spinbutton', { name: /Frequency \(MHz\)/ }), { target: { value: '145.9' } });
-        fireEvent.change(screen.getByRole('spinbutton', { name: /Bandwidth \(kHz\)/ }), { target: { value: '2000' } });
+        expect(dialog.getByText('Enter a valid VFO frequency and bandwidth to calculate the center.')).toBeVisible();
+        fireEvent.change(frequency, { target: { value: '145.9' } });
+        fireEvent.change(bandwidth, { target: { value: '2000' } });
         expectCenterFrequency(145.9);
-        fireEvent.change(screen.getByRole('spinbutton', { name: /Bandwidth \(kHz\)/ }), { target: { value: '12.5' } });
-        fireEvent.click(screen.getByRole('button', { name: 'Add VFO' }));
+        fireEvent.change(bandwidth, { target: { value: '12.5' } });
+        expectCenterFrequency(146.4);
+    });
+
+    it('recalculates the center when VFOs are added or removed and the receiver sample rate changes', () => {
+        const original = savedDefinition();
+        original.vfos[0].frequency = 145900000;
+        original.sdr.auto_center_frequency = true;
+        renderPage([original]);
+        fireEvent.click(screen.getByRole('button', { name: 'Edit VHF monitoring' }));
+        const dialog = within(screen.getByRole('dialog'));
+        expectCenterFrequency(146.4);
+        fireEvent.click(dialog.getByRole('button', { name: 'Add VFO' }));
         expectCenterFrequency(146.65);
-        fireEvent.click(screen.getByRole('button', { name: 'Remove VFO 2' }));
+        fireEvent.click(dialog.getByRole('button', { name: 'Remove VFO 2' }));
         expectCenterFrequency(146.4);
         select(/^Sample Rate/, '1 MHz');
         expectCenterFrequency(146.15);
+    });
+
+    it('freezes the automatic center for manual tuning and persists the mode and center after re-enabling it', async () => {
+        const original = savedDefinition();
+        original.vfos[0].frequency = 145900000;
+        original.sdr = { ...original.sdr, auto_center_frequency: true, sample_rate: 1000000 };
+        const store = renderPage([original]);
+        fireEvent.click(screen.getByRole('button', { name: 'Edit VHF monitoring' }));
+        const dialog = within(screen.getByRole('dialog'));
+        const toggle = dialog.getByRole('switch', { name: 'Auto center from VFOs' });
         fireEvent.click(toggle);
         expectCenterFrequency(146.15);
-        fireEvent.click(within(center).getByRole('button', { name: 'Increase by 100000 Hz' }));
-        fireEvent.change(screen.getByRole('spinbutton', { name: /Frequency \(MHz\)/ }), { target: { value: '145.95' } });
+        fireEvent.click(within(centerDisplay()).getByRole('button', { name: 'Increase by 100000 Hz' }));
+        fireEvent.change(dialog.getByLabelText(/Frequency \(MHz\)/), { target: { value: '145.95' } });
         expectCenterFrequency(146.25);
         fireEvent.click(toggle);
         expectCenterFrequency(146.2);
-        fireEvent.click(screen.getByRole('button', { name: /^Save (definition|changes)$/ }));
+        fireEvent.click(dialog.getByRole('button', { name: /^Save (definition|changes)$/ }));
         await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
         expect(store.getState().continuousObservations.definitions[0]).toMatchObject({
             sdr: { center_frequency: 146200000, auto_center_frequency: true, sample_rate: 1000000 },
@@ -335,7 +358,7 @@ describe('continuous observation frontend', () => {
         expect(screen.getByRole('switch', { name: 'Auto center from VFOs' })).toBeChecked();
         expectCenterFrequency(146.2);
         expect(socket.emit.mock.calls.every(([, payload]) => payload.cmd.startsWith('continuous-observations.'))).toBe(true);
-    }, 20000);
+    });
 
     it('tunes with the waterfall dial and preserves individual Hz when saving and reopening', async () => {
         const store = renderPage([savedDefinition()]);
@@ -351,7 +374,7 @@ describe('continuous observation frontend', () => {
         fireEvent.click(screen.getByRole('button', { name: 'Edit VHF monitoring' }));
         expectCenterFrequency(145.799991);
         expect(socket.emit.mock.calls.every(([, payload]) => payload.cmd.startsWith('continuous-observations.'))).toBe(true);
-    }, 15000);
+    });
 
     it('reports the required bandwidth and refuses to save VFOs that cannot fit', async () => {
         const original = savedDefinition();
@@ -364,7 +387,7 @@ describe('continuous observation frontend', () => {
         expect(screen.getByRole('dialog')).toBeVisible();
         expect(store.getState().continuousObservations.definitions[0]).toEqual(original);
         const second = within(screen.getByRole('region', { name: 'VFO 2' }));
-        fireEvent.change(second.getByRole('spinbutton', { name: /Frequency \(MHz\)/ }), { target: { value: '146' } });
+        fireEvent.change(second.getByLabelText(/Frequency \(MHz\)/, { selector: 'input' }), { target: { value: '146' } });
         expect(screen.queryByText(/These VFOs need/)).not.toBeInTheDocument();
         fireEvent.click(screen.getByRole('button', { name: /^Save (definition|changes)$/ }));
         await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
@@ -372,7 +395,7 @@ describe('continuous observation frontend', () => {
         expect(saved.sdr.sample_rate).toBe(2000000);
         expect(saved.vfos[0]).toEqual(original.vfos[0]);
         expect(saved.vfos[1]).toEqual({ ...original.vfos[1], frequency: 146000000 });
-    }, 15000);
+    });
 
     it('auto-centers after using the transmitter helper without retaining an association or changing VFO settings', async () => {
         const original = savedDefinition();
@@ -383,7 +406,7 @@ describe('continuous observation frontend', () => {
         const store = renderPage([original]);
         fireEvent.click(screen.getByRole('button', { name: 'Edit VHF monitoring' }));
         fireEvent.click(screen.getByRole('switch', { name: 'Auto center from VFOs' }));
-        fireEvent.change(screen.getByRole('combobox', { name: 'Find transmitter (optional)' }), { target: { value: 'Telemetry' } });
+        fireEvent.change(screen.getByLabelText('Find transmitter (optional)', { selector: '[role="combobox"]' }), { target: { value: 'Telemetry' } });
         fireEvent.click(await screen.findByRole('option', { name: /Satellite · Telemetry/ }));
         expectCenterFrequency(438.3);
         fireEvent.click(screen.getByRole('button', { name: /^Save (definition|changes)$/ }));
@@ -391,7 +414,7 @@ describe('continuous observation frontend', () => {
         const saved = store.getState().continuousObservations.definitions[0];
         expect(saved.vfos[0]).toEqual({ ...original.vfos[0], frequency: 437800000 });
         expect(saved.sdr).toEqual({ ...original.sdr, center_frequency: 438300000, auto_center_frequency: true });
-    }, 15000);
+    });
 
     it('copies known analog modulation to the chosen VFO, clears decoding, and allows manual overrides', async () => {
         const original = savedDefinition();
@@ -405,14 +428,14 @@ describe('continuous observation frontend', () => {
         const store = renderPage([original]);
         fireEvent.click(screen.getByRole('button', { name: 'Edit VHF monitoring' }));
         const vfo = within(screen.getByRole('region', { name: 'VFO 2' }));
-        fireEvent.change(vfo.getByRole('combobox', { name: 'Find transmitter (optional)' }), { target: { value: 'Telemetry' } });
+        fireEvent.change(vfo.getByLabelText('Find transmitter (optional)', { selector: '[role="combobox"]' }), { target: { value: 'Telemetry' } });
         fireEvent.click(await screen.findByRole('option', { name: /Example satellite · Telemetry/ }));
-        expect(vfo.getByRole('spinbutton', { name: /Frequency \(MHz\)/ })).toHaveValue(437.8);
+        expect(vfo.getByLabelText(/Frequency \(MHz\)/, { selector: 'input' })).toHaveValue(437.8);
         expect(vfo.getByText(/This VFO extends outside/)).toBeVisible();
         expectCenterFrequency(145.8);
         fireEvent.click(screen.getByRole('button', { name: /^Save (definition|changes)$/ }));
         expect(screen.getByRole('dialog')).toBeVisible();
-        fireEvent.change(vfo.getByRole('spinbutton', { name: /Frequency \(MHz\)/ }), { target: { value: '145.925' } });
+        fireEvent.change(vfo.getByLabelText(/Frequency \(MHz\)/, { selector: 'input' }), { target: { value: '145.925' } });
         fireEvent.click(screen.getByRole('button', { name: /^Save (definition|changes)$/ }));
         await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
         const saved = store.getState().continuousObservations.definitions[0];
@@ -421,7 +444,7 @@ describe('continuous observation frontend', () => {
         expect(saved.vfos[1]).toEqual({ ...original.vfos[1], frequency: 145925000, modulation: 'fm', decoder: 'none', decoder_parameters: {} });
         expect(socket.emit.mock.calls.filter(([, payload]) => payload.cmd === 'get-transmitter-search')).toHaveLength(1);
         expect(socket.emit.mock.calls.some(([, payload]) => payload.cmd === 'continuous-observations.update')).toBe(true);
-    }, 15000);
+    });
 
     it('prefills a supported decoder and custom catalog values, then permits manual parameter edits', async () => {
         const original = savedDefinition();
@@ -433,16 +456,16 @@ describe('continuous observation frontend', () => {
         const store = renderPage([original]);
         fireEvent.click(screen.getByRole('button', { name: 'Edit VHF monitoring' }));
         fireEvent.click(screen.getByRole('switch', { name: 'Auto center from VFOs' }));
-        fireEvent.change(screen.getByRole('combobox', { name: 'Find transmitter (optional)' }), { target: { value: 'Telemetry' } });
+        fireEvent.change(screen.getByLabelText('Find transmitter (optional)', { selector: '[role="combobox"]' }), { target: { value: 'Telemetry' } });
         fireEvent.click(await screen.findByRole('option', { name: /Satellite · FSK telemetry/ }));
-        expect(screen.getByRole('combobox', { name: 'Decoder' })).toHaveTextContent('FSK');
-        expect(screen.getByRole('combobox', { name: 'Modulation' })).toHaveTextContent(/^None$/);
-        expect(screen.getByRole('spinbutton', { name: /Bandwidth \(kHz\)/ })).toHaveValue(3.702);
+        expect(screen.getByLabelText('Decoder', { selector: '[role="combobox"]' })).toHaveTextContent('FSK');
+        expect(screen.getByLabelText('Modulation', { selector: '[role="combobox"]' })).toHaveTextContent(/^None$/);
+        expect(screen.getByLabelText(/Bandwidth \(kHz\)/, { selector: 'input' })).toHaveValue(3.702);
         expectCenterFrequency(438.3);
         fireEvent.click(screen.getByRole('button', { name: 'Decoder parameters' }));
-        expect(screen.getByRole('combobox', { name: 'Baud Rate' })).toHaveTextContent('1234');
-        expect(screen.getByRole('combobox', { name: 'Frequency Deviation' })).toHaveTextContent('563.5');
-        expect(screen.getByRole('combobox', { name: 'Framing Protocol' })).toHaveTextContent('GEOSCAN');
+        expect(screen.getByLabelText('Baud Rate', { selector: '[role="combobox"]' })).toHaveTextContent('1234');
+        expect(screen.getByLabelText('Frequency Deviation', { selector: '[role="combobox"]' })).toHaveTextContent('563.5');
+        expect(screen.getByLabelText('Framing Protocol', { selector: '[role="combobox"]' })).toHaveTextContent('GEOSCAN');
         select('Baud Rate', '1200 baud');
         fireEvent.click(screen.getByRole('button', { name: /^Save (definition|changes)$/ }));
         await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
@@ -454,13 +477,13 @@ describe('continuous observation frontend', () => {
         expect(saved.vfos[0]).not.toHaveProperty('transmitter_id');
         expect(saved.vfos[0]).not.toHaveProperty('lockedTransmitterId');
         expect(socket.emit.mock.calls.filter(([, payload]) => payload.cmd === 'get-transmitter-search')).toHaveLength(1);
-    }, 15000);
+    });
 
     it('discards cancelled edits and gives duplicate definitions independent identities', async () => {
         const original = savedDefinition();
         const store = renderPage([original]);
         fireEvent.click(screen.getByRole('button', { name: 'Edit VHF monitoring' }));
-        fireEvent.change(screen.getByRole('textbox', { name: /Observation name/ }), { target: { value: 'Unsaved name' } });
+        fireEvent.change(screen.getByLabelText(/Observation name/, { selector: 'input' }), { target: { value: 'Unsaved name' } });
         fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
         await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
         expect(store.getState().continuousObservations.definitions[0].name).toBe('VHF monitoring');
@@ -474,7 +497,7 @@ describe('continuous observation frontend', () => {
         expect(copy.name).toBe('VHF monitoring (copy)');
         expect(copy.id).not.toBe(first.id);
         expect(copy.vfos[0].id).not.toBe(first.vfos[0].id);
-    }, 15000);
+    });
 
     it('requires confirmation to delete a definition', async () => {
         const store = renderPage([savedDefinition()]);
@@ -493,7 +516,7 @@ describe('continuous observation frontend', () => {
         expect(screen.getByRole('button', { name: 'Delete', exact: true })).toBeDisabled();
         toggleRow(first.name);
         fireEvent.click(screen.getByRole('button', { name: 'Edit', exact: true }));
-        expect(screen.getByRole('textbox', { name: /Observation name/ })).toHaveValue(first.name);
+        expect(screen.getByLabelText(/Observation name/, { selector: 'input' })).toHaveValue(first.name);
         fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
         await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
 
@@ -508,7 +531,7 @@ describe('continuous observation frontend', () => {
         await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
         expect(store.getState().continuousObservations.definitions).toEqual([first, second]);
         expect(socket.emit.mock.calls.some(([, payload]) => payload.cmd.endsWith('.delete'))).toBe(false);
-    }, 15000);
+    });
 
     it('selects a clicked row and checks its checkbox while keeping configuration actions separate', async () => {
         renderPage([savedDefinition()]);
@@ -563,7 +586,7 @@ describe('continuous observation frontend', () => {
         fireEvent.click(screen.getByRole('button', { name: 'Edit VHF monitoring' }));
         expect(screen.getByRole('switch', { name: 'Start automatically with backend' })).toBeChecked();
         expect(socket.emit.mock.calls.every(([, payload]) => payload.cmd.startsWith('continuous-observations.'))).toBe(true);
-    }, 15000);
+    });
 
     it('keeps failed startup updates unchanged and retries only rows still needing a change', async () => {
         const first = savedDefinition();
@@ -640,18 +663,18 @@ describe('continuous observation frontend', () => {
             else api(event, payload, callback);
         });
         fireEvent.click(screen.getByRole('button', { name: 'Edit VHF monitoring' }));
-        fireEvent.change(screen.getByRole('textbox', { name: /Observation name/ }), { target: { value: 'Keep my edits' } });
+        fireEvent.change(screen.getByLabelText(/Observation name/, { selector: 'input' }), { target: { value: 'Keep my edits' } });
         fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
-        expect(screen.getByRole('textbox', { name: /Observation name/ })).toBeDisabled();
+        expect(screen.getByLabelText(/Observation name/, { selector: 'input' })).toBeDisabled();
         expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
         fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
         expect(screen.getByRole('dialog')).toBeVisible();
         reply({ success: false, error: 'Changed by another editor. Reopen before saving.', code: 'conflict' });
         expect(await screen.findByText('Changed by another editor. Reopen before saving.')).toBeVisible();
-        expect(screen.getByRole('textbox', { name: /Observation name/ })).toHaveValue('Keep my edits');
+        expect(screen.getByLabelText(/Observation name/, { selector: 'input' })).toHaveValue('Keep my edits');
         expect(screen.getByRole('button', { name: 'Save changes' })).toBeEnabled();
         expect(socket.emit.mock.calls.filter(([, payload]) => payload.cmd.endsWith('.update'))).toHaveLength(1);
-    }, 15000);
+    });
 
     it('keeps the delete dialog and saved row when deletion fails', async () => {
         const store = renderPage([savedDefinition()], { apiOverride: (cmd) => cmd.endsWith('.delete')

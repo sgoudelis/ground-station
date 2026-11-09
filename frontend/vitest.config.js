@@ -7,7 +7,9 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
-    // Running many DOM-heavy suites at once can exceed their 5-second timeouts.
+    // MUI integration tests need headroom for DOM queries during CI coverage runs.
+    testTimeout: 15000,
+    // Limit concurrent DOM suites to keep CI coverage runs within resource limits.
     maxWorkers: 2,
     setupFiles: './src/test/setup.js',
     css: true,
