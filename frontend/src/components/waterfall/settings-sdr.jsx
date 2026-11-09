@@ -33,6 +33,7 @@ import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
 import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
 import AutorenewIcon from '@mui/icons-material/Autorenew';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import { useTranslation } from 'react-i18next';
 import BackgroundStreamControl from './background-stream-control.jsx';
 import SdrParameterFields from '../common/sdr-parameter-fields.jsx';
@@ -80,6 +81,7 @@ const SdrAccordion = ({
                           isStreaming,
                           joinedSdrId,
                           readOnly = false,
+                          onCreateContinuousObservation,
                           sdrs,
                           selectedSDRId,
                           onSDRChange,
@@ -606,6 +608,13 @@ const SdrAccordion = ({
                         </Box>
                     )}
                 </LoadingOverlay>
+                {onCreateContinuousObservation && <Button fullWidth size="small" variant="outlined"
+                    startIcon={<AddCircleOutlineIcon />} sx={{ mt: 2 }}
+                    disabled={readOnly || !isStreaming || gettingSDRParameters || !selectedSdrRecord
+                        || isSigmfPlaybackSelected || selectedSdrRecord.type === 'sigmfplayback'}
+                    onClick={onCreateContinuousObservation}>
+                    {t('sdr.create_continuous_observation')}
+                </Button>}
                 <Dialog
                     open={biasTConfirmationOpen}
                     onClose={() => setBiasTConfirmationOpen(false)}
@@ -652,6 +661,7 @@ function areSdrAccordionPropsEqual(prevProps, nextProps) {
         prevProps.gettingSDRParameters === nextProps.gettingSDRParameters &&
         prevProps.isStreaming === nextProps.isStreaming &&
         prevProps.readOnly === nextProps.readOnly &&
+        prevProps.onCreateContinuousObservation === nextProps.onCreateContinuousObservation &&
         prevProps.sdrs === nextProps.sdrs &&
         prevProps.selectedSDRId === nextProps.selectedSDRId &&
         prevProps.onSDRChange === nextProps.onSDRChange &&

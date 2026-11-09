@@ -42,7 +42,10 @@ export default function SdrParameterFields({
     const capabilities = parameters.capabilities || {};
     const settings = value.sdr_settings || {};
     const sampleRates = getSdrSampleRates(parameters);
-    const gains = parameters.gain_values || [];
+    const gains = [...(parameters.gain_values || [])];
+    // A live receiver can accept values between the advertised gain steps.
+    // Preserve those selections when opening a form with a fresh capability list.
+    if (Number.isFinite(value.gain) && !gains.includes(value.gain)) gains.push(value.gain);
     const antennas = parameters.antennas?.rx || [];
     // Native UHD supports overall gain only. A single SoapyUHD PGA is the
     // same physical gain as the overall control, so it must not compete with it.
@@ -88,6 +91,8 @@ export default function SdrParameterFields({
             {gainEntries.map(([name, range]) => {
                 const options = getSdrGainOptions(range);
                 if (!options.length) return null;
+                const selectedGain = settings.gains?.[name];
+                if (Number.isFinite(selectedGain) && !options.includes(selectedGain)) options.push(selectedGain);
                 const lnaState = isSdrplay && name === 'RFGR';
                 const label = lnaState
                     ? t('settings_sdr.lna_attenuation_state', { defaultValue: 'LNA attenuation state (RFGR)' })
@@ -96,7 +101,7 @@ export default function SdrParameterFields({
                         : `Gain ${name}`;
                 return <ParameterSelect key={name}
                     id={`${id}-gain-${name}`} label={label} disabled={disabled}
-                    value={settings.gains?.[name] ?? 'none'}
+                    value={selectedGain ?? 'none'}
                     options={[notConfigured, ...options.map((gain) => ({
                         value: gain, label: lnaState ? gain : `${gain} dB`,
                     }))]}

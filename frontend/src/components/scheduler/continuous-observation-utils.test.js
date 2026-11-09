@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { getSdrTuningRangeHz } from '../common/sdr-parameters.js';
 import {
-    calculateContinuousCenterFrequency, createContinuousObservation, createContinuousVfo,
+    calculateContinuousCenterFrequency, createContinuousObservation, createContinuousObservationFromSession, createContinuousVfo,
     getContinuousFrequencySpan, hasContinuousErrors,
     normalizeContinuousVfo, setContinuousDecoder, setContinuousModulation, validateContinuousObservation,
 } from './continuous-observation-utils.js';
@@ -15,6 +15,90 @@ const definition = () => {
 const errors = (draft) => validateContinuousObservation(draft, [device], parameters);
 
 describe('continuous observation configuration', () => {
+    it('copies confirmed receiver settings and active VFOs without carrying over unrelated decoder drafts', () => {
+        const state = {
+            waterfall: { selectedSDRId: 'radio', centerFrequency: 869525000, sampleRate: 2000000,
+                gain: 0, selectedAntenna: 'RX', sdrSettingsById: { radio: {
+                    draft: { biasT: true, tunerAgc: false, bandwidth: 1000000 },
+                    applied: { biasT: false, tunerAgc: true, rtlAgc: false, soapyAgc: true,
+                        bandwidth: 2000000, bitpack: true, gains: { LNA: 10 },
+                        uhd: { clockSource: 'external', timeSource: 'internal' } },
+                } } },
+            sdrs: { sdrs: [device] },
+            vfo: {
+                vfoActive: { 1: true, 2: false, 4: true },
+                vfoMarkers: {
+                    4: { frequency: 869600000, bandwidth: 12500, mode: 'USB', decoder: 'none', parameters: { lora_sf: 7 } },
+                    2: { frequency: 145000000, bandwidth: 12500, mode: 'FM', decoder: 'aprs' },
+                    1: { frequency: 869525000, bandwidth: 500000, mode: 'FM', decoder: 'lora',
+                        parameters: { lora_bw: 250000, lora_sf: 11, lora_sync_word: [43], gnss_total_channels: 24 } },
+                },
+            },
+        };
+        const draft = createContinuousObservationFromSession(state, 'Meshtastic');
+        expect(draft).toMatchObject({ name: 'Meshtastic', auto_start: true,
+            sdr: { id: 'radio', gain: 0, antenna_port: 'RX', center_frequency: 869525000,
+                sample_rate: 2000000, auto_center_frequency: false, bias_t: false,
+                tuner_agc: true, rtl_agc: false, soapy_agc: true,
+                sdr_settings: { bandwidth: 2000000, bitpack: true, gains: { LNA: 10 },
+                    uhd: { clockSource: 'external', timeSource: 'internal' } } },
+        });
+        expect(draft.sdr.sdr_settings).not.toHaveProperty('biasT');
+        expect(draft.vfos).toHaveLength(2);
+        expect(draft.vfos[0]).toMatchObject({ frequency: 869525000, bandwidth: 500000,
+            modulation: 'none', decoder: 'lora', decoder_parameters: { lora_bw: 250000, lora_sf: 11, lora_sync_word: [43] } });
+        expect(draft.vfos[0].decoder_parameters).not.toHaveProperty('gnss_total_channels');
+        expect(draft.vfos[1]).toMatchObject({ frequency: 869600000, bandwidth: 12500,
+            modulation: 'usb', decoder: 'none', decoder_parameters: {} });
+
+        draft.sdr.sdr_settings.gains.LNA = 20;
+        draft.sdr.sdr_settings.uhd.clockSource = 'internal';
+        draft.vfos[0].decoder_parameters.lora_sync_word.push(1);
+        expect(state.waterfall.sdrSettingsById.radio.applied.gains.LNA).toBe(10);
+        expect(state.waterfall.sdrSettingsById.radio.applied.uhd.clockSource).toBe('external');
+        expect(state.vfo.vfoMarkers[1].parameters.lora_sync_word).toEqual([43]);
+        const next = createContinuousObservationFromSession(state, 'Second draft');
+        expect(next.id).not.toBe(draft.id);
+        expect(next.vfos[0].id).not.toBe(draft.vfos[0].id);
+    });
+
+    it('keeps a receiver-only session empty so the user can add channels before saving', () => {
+        const draft = createContinuousObservationFromSession({
+            waterfall: { selectedSDRId: 'radio', centerFrequency: 145800000, sampleRate: 1000000, gain: 0, selectedAntenna: 'RX' },
+            sdrs: { sdrs: [device] }, vfo: { vfoActive: {}, vfoMarkers: {} },
+        }, 'Receiver');
+        expect(draft.vfos).toEqual([]);
+        expect(draft.sdr).toMatchObject({ bias_t: false, tuner_agc: false, rtl_agc: false, soapy_agc: false, sdr_settings: {} });
+    });
+
+    it.each([undefined, {}, { RFGR: 2 }, { IFGR: 25, MIX: 0 }])('preserves displayed gain stages when the confirmed gain map is %j', (gains) => {
+        const draft = createContinuousObservationFromSession({
+            waterfall: { selectedSDRId: 'radio', centerFrequency: 145800000, sampleRate: 2000000,
+                gain: 25.4, selectedAntenna: 'RX', sdrSettingsById: { radio: {
+                    draft: { gains: { RFGR: 0, IFGR: 35 } }, applied: { gains },
+                } } },
+            sdrs: { sdrs: [device] }, vfo: { vfoActive: {}, vfoMarkers: {} },
+        }, 'Receiver');
+        expect(draft.sdr.gain).toBe(25.4);
+        expect(draft.sdr.sdr_settings.gains).toEqual({ ...gains, RFGR: 0, IFGR: 35 });
+    });
+
+    it('does not silently drop converter offsets or unsupported VFO processing modes', () => {
+        const state = {
+            waterfall: { selectedSDRId: 'radio', centerFrequency: 145800000, sampleRate: 1000000, gain: 0, selectedAntenna: 'RX',
+                selectedOffsetMode: 'manual', selectedOffsetValue: '125000000' },
+            sdrs: { sdrs: [device] }, vfo: { vfoActive: { 1: true }, vfoMarkers: {
+                1: { frequency: 145800000, bandwidth: 12500, mode: 'FM_STEREO', decoder: 'none' },
+            } },
+        };
+        expect(() => createContinuousObservationFromSession(state, 'Converted')).toThrow('sdr.continuous_observation_offset_unsupported');
+        state.waterfall.selectedOffsetMode = 'none';
+        expect(() => createContinuousObservationFromSession(state, 'Stereo')).toThrow('sdr.continuous_observation_mode_unsupported');
+        state.vfo.vfoMarkers[1].mode = 'FM';
+        state.vfo.vfoMarkers[1].decoder = 'morse';
+        expect(() => createContinuousObservationFromSession(state, 'Morse')).toThrow('sdr.continuous_observation_mode_unsupported');
+    });
+
     it('defaults to automatic receiver centering from VFOs', () => {
         expect(createContinuousObservation().sdr.auto_center_frequency).toBe(true);
     });

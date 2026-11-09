@@ -99,6 +99,8 @@ import { toast } from "../../utils/toast-with-timestamp.jsx";
 import getValue from "lodash/_getValue.js";
 import FrequencyControlAccordion from "./settings-frequency.jsx";
 import SdrAccordion from "./settings-sdr.jsx";
+import ContinuousObservationSessionDialog from './continuous-observation-session-dialog.jsx';
+import { createContinuousObservationFromSession } from '../scheduler/continuous-observation-utils.js';
 import FftAccordion from "./settings-fft.jsx";
 import VfoAccordion from "./vfo-settings/settings-vfo.jsx";
 import RecordingAccordion from "./settings-recording.jsx";
@@ -138,6 +140,23 @@ const WaterfallSettings = forwardRef(function WaterfallSettings({ playbackRemain
     const { t } = useTranslation('waterfall');
     const dispatch = useDispatch();
     const store = useStore();
+    const [continuousObservationDraft, setContinuousObservationDraft] = useState(null);
+    const openContinuousObservation = useCallback(() => {
+        // Read at click time so VFO edits are copied without subscribing this whole column to them.
+        const current = store.getState();
+        const device = current.sdrs.sdrs.find((entry) => String(entry.id) === String(current.waterfall.selectedSDRId));
+        if (!current.waterfall.isStreaming || current.waterfall.continuousObservation
+            || !device || device.id === 'sigmf-playback' || device.type === 'sigmfplayback') return;
+        const name = t('sdr.continuous_observation_name', {
+            name: device.name, frequency: (current.waterfall.centerFrequency / 1e6).toFixed(3),
+        });
+        try {
+            setContinuousObservationDraft(createContinuousObservationFromSession(current, name));
+        } catch (failure) {
+            toast.error(t(failure.message));
+        }
+    }, [store, t]);
+    const closeContinuousObservation = useCallback(() => setContinuousObservationDraft(null), []);
 
     const {
         colorMap,
@@ -1732,6 +1751,7 @@ const WaterfallSettings = forwardRef(function WaterfallSettings({ playbackRemain
                     expanded={expandedPanels.includes('sdr')}
                     onAccordionChange={handleSdrAccordionChange}
                     readOnly={Boolean(continuousObservation)}
+                    onCreateContinuousObservation={openContinuousObservation}
                     gettingSDRParameters={gettingSDRParameters}
                     isStreaming={isStreaming}
                     joinedSdrId={joinedSdrId}
@@ -1890,6 +1910,8 @@ const WaterfallSettings = forwardRef(function WaterfallSettings({ playbackRemain
                 </Box>
                 {takeoverDialog}
             </div>
+            {continuousObservationDraft && <ContinuousObservationSessionDialog
+                key={continuousObservationDraft.id} observation={continuousObservationDraft} onClose={closeContinuousObservation} />}
         </>
     );
 });

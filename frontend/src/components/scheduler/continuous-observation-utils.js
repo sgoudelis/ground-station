@@ -34,6 +34,66 @@ export const createContinuousObservation = () => ({
     vfos: [createContinuousVfo(145800000)],
 });
 
+export const createContinuousObservationFromSession = ({ waterfall, vfo, sdrs }, name) => {
+    // Definitions cannot represent converter offsets yet; never silently change the received band.
+    if (waterfall.selectedOffsetMode && waterfall.selectedOffsetMode !== 'none'
+        && Number(waterfall.selectedOffsetValue)) {
+        throw new Error('sdr.continuous_observation_offset_unsupported');
+    }
+    const device = sdrs.sdrs.find((entry) => String(entry.id) === String(waterfall.selectedSDRId));
+    const receiverSettings = waterfall.sdrSettingsById?.[waterfall.selectedSDRId];
+    // Prefer acknowledged settings over any edits still waiting on the receiver.
+    const settings = { ...receiverSettings?.draft, ...receiverSettings?.applied };
+    if (receiverSettings?.draft?.gains || receiverSettings?.applied?.gains) {
+        // Live echoes can omit stages or retain an older map. Copy the gain
+        // selections shown in the waterfall without discarding other known stages.
+        settings.gains = { ...receiverSettings?.applied?.gains, ...receiverSettings?.draft?.gains };
+    }
+    const { biasT = false, tunerAgc = false, rtlAgc = false, soapyAgc = false, ...advanced } = settings;
+    const observation = createContinuousObservation();
+    return structuredClone({
+        ...observation,
+        name,
+        sdr: {
+            ...observation.sdr,
+            id: waterfall.selectedSDRId,
+            name: device?.name || '',
+            center_frequency: waterfall.centerFrequency,
+            // Copy the tuned center exactly; automatic centering would move it on opening.
+            auto_center_frequency: false,
+            sample_rate: waterfall.sampleRate,
+            gain: waterfall.gain,
+            antenna_port: waterfall.selectedAntenna,
+            bias_t: biasT, tuner_agc: tunerAgc, rtl_agc: rtlAgc, soapy_agc: soapyAgc,
+            sdr_settings: advanced,
+        },
+        vfos: Object.entries(vfo.vfoMarkers)
+            .filter(([number]) => vfo.vfoActive[number])
+            .sort(([left], [right]) => Number(left) - Number(right))
+            .map(([, marker]) => {
+                const decoder = marker.decoder || 'none';
+                const modulation = decoder === 'none' ? marker.mode.toLowerCase() : 'none';
+                if (!CONTINUOUS_MODULATIONS.includes(modulation)
+                    || !CONTINUOUS_DECODERS.some(([value]) => value === decoder)) {
+                    throw new Error('sdr.continuous_observation_mode_unsupported');
+                }
+                return {
+                    id: uuidv4(),
+                    frequency: marker.frequency,
+                    bandwidth: marker.bandwidth,
+                    modulation,
+                    decoder,
+                    // Waterfall markers keep drafts for multiple decoders; persist only the active one.
+                    decoder_parameters: decoder === 'none' ? {} : {
+                        ...getDecoderDefaultParameters(decoder),
+                        ...Object.fromEntries(Object.entries(marker.parameters || {})
+                            .filter(([key]) => key.startsWith(`${decoder}_`))),
+                    },
+                };
+            }),
+    });
+};
+
 // Older definitions kept an audio mode beside their decoder. The decoder has
 // always taken precedence in the waterfall, so show and save that effective mode.
 export const normalizeContinuousVfo = (vfo) => vfo.decoder !== 'none'

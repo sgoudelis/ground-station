@@ -8,14 +8,14 @@ import SdrAccordion from '../settings-sdr.jsx';
 
 vi.mock('../background-stream-control.jsx', () => ({ default: () => null }));
 
-function renderGains(gainRanges, onGainElementChange = vi.fn()) {
+function renderGains(gainRanges, onGainElementChange = vi.fn(), settings = {gains: {}}) {
     render(<ThemeProvider theme={setupTheme()}>
         <SdrAccordion expanded gettingSDRParameters={false} isStreaming={false}
             selectedSDRId="radio" sdrs={[{id: 'radio', name: 'RSPduo', type: 'soapysdrremote', driver: 'sdrplay'}]}
             gainValues={[30]} localGain={30} sampleRateValues={[4000000]} localSampleRate={4000000}
             antennasList={{rx: ['Tuner 2 50 ohm']}} selectedAntenna="Tuner 2 50 ohm"
             sdrCapabilities={{radio: {gain_elements: {rx: Object.keys(gainRanges)}, gain_ranges: {rx: gainRanges}}}}
-            sdrSettings={{gains: {}}} onGainElementChange={onGainElementChange} />
+            sdrSettings={settings} onGainElementChange={onGainElementChange} />
     </ThemeProvider>);
 }
 
@@ -34,4 +34,15 @@ it('preserves fractional increments supplied by the driver', () => {
     fireEvent.mouseDown(screen.getByRole('combobox', {name: 'Gain LNA'}));
     fireEvent.click(screen.getByRole('option', {name: '0.5 dB'}));
     expect(changed).toHaveBeenCalledWith('LNA', 0.5);
+});
+
+it('keeps an existing fractional stage gain visible when it falls between the advertised steps', () => {
+    const changed = vi.fn();
+    renderGains({LNA: {min: 0, max: 40, step: 1}}, changed, {gains: {LNA: 25.4}});
+    const gain = screen.getByRole('combobox', {name: 'Gain LNA'});
+    expect(gain).toHaveTextContent('25.4 dB');
+    fireEvent.mouseDown(gain);
+    expect(screen.getByRole('option', {name: '25.4 dB'})).toHaveAttribute('aria-selected', 'true');
+    fireEvent.click(screen.getByRole('option', {name: '26 dB'}));
+    expect(changed).toHaveBeenCalledWith('LNA', 26);
 });

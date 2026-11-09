@@ -79,6 +79,11 @@
   "sdr": {
     "title": "SDR",
     "continuous_read_only": "Stop the continuous observation in the scheduler to edit these SDR settings.",
+    "create_continuous_observation": "Create continuous observation",
+    "continuous_observation_name": "{{name}} · {{frequency}} MHz",
+    "continuous_observation_saved": "Continuous observation saved. Stop this stream, then start the observation in the scheduler.",
+    "continuous_observation_offset_unsupported": "Continuous observations do not support frequency offsets yet. Remove the offset before copying this session.",
+    "continuous_observation_mode_unsupported": "An active VFO uses a modulation or decoder that continuous observations do not support. Choose a supported mode before copying this session.",
     "sdr_label": "SDR",
     "sdr_hint": "Select a receiver, or SigMF Playback to replay a saved IQ recording.",
     "playback_recording_hint": "Select a saved IQ recording to replay through the waterfall and decoders.",
