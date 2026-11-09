@@ -19,7 +19,8 @@ export default function HardwareControlHeader({kind, device, emptyLabel, status,
             <TrackerCommandHeaderStatus kind={kind} command={command} hardwareStatus=""
                 sx={{minWidth: 0, maxWidth: '30%'}} showIcon />
             <Box sx={{display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0}}>
-                <HardwareStatusIndicator kind={kind} status={connectionStatus} compact={showActivity} />
+                {/* Keep status badges icon-only even when there is no activity badge. */}
+                <HardwareStatusIndicator kind={kind} status={connectionStatus} compact />
                 {showActivity && <HardwareStatusIndicator kind={kind} status={activityStatus} compact />}
             </Box>
             <Typography variant="caption" color="text.secondary" sx={{fontSize: '0.62rem', fontVariantNumeric: 'tabular-nums', flexShrink: 0}}
