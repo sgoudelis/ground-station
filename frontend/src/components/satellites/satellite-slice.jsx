@@ -333,6 +333,8 @@ const satellitesSlice = createSlice({
         catalogTotal: 0,
         catalogSortModel: DEFAULT_CATALOG_SORT_MODEL,
         currentSearchRequestId: null,
+        // The first debounced search must settle before controls below the grid are usable.
+        catalogLoading: true,
     },
     reducers: {
         setSatellites: (state, action) => {
@@ -512,6 +514,7 @@ const satellitesSlice = createSlice({
             .addCase(searchSatellites.pending, (state, action) => {
                 state.status = 'loading';
                 state.loading = true;
+                state.catalogLoading = true;
                 state.error = null;
                 state.currentSearchRequestId = action.meta.requestId;
             })
@@ -528,6 +531,7 @@ const satellitesSlice = createSlice({
                     ? action.payload.length
                     : action.payload.total;
                 state.currentSearchRequestId = null;
+                state.catalogLoading = false;
             })
             .addCase(searchSatellites.rejected, (state, action) => {
                 if (state.currentSearchRequestId !== action.meta.requestId) {
@@ -537,6 +541,7 @@ const satellitesSlice = createSlice({
                 state.loading = false;
                 state.error = action.error?.message;
                 state.currentSearchRequestId = null;
+                state.catalogLoading = false;
             })
             .addCase(submitOrEditSatellite.pending, (state) => {
                 state.status = 'loading';

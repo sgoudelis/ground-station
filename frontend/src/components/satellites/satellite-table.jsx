@@ -290,7 +290,7 @@ const SatelliteTable = React.memo(function SatelliteTable() {
         satellitesGroups,
         satGroupId,
         selected,
-        loading,
+        catalogLoading,
         openDeleteConfirm,
         openAddDialog,
         clickedSatellite,
@@ -1140,7 +1140,7 @@ const SatelliteTable = React.memo(function SatelliteTable() {
                     <Typography variant="body2" color="text.secondary" sx={{whiteSpace: 'nowrap', flexShrink: 0}}>
                         {localSearchValue.trim().length === 1
                             ? t('satellite_database.catalog_search_min_chars', {defaultValue: 'Type at least 2 characters to search'})
-                            : loading
+                            : catalogLoading
                                 ? t('satellite_database.searching')
                                 : t('satellite_database.results_count', {count: catalogTotal})}
                     </Typography>
@@ -1151,7 +1151,7 @@ const SatelliteTable = React.memo(function SatelliteTable() {
                     getRowId={(satellite) => {
                         return satellite['norad_id'];
                     }}
-                    loading={loading}
+                    loading={catalogLoading}
                     rows={satellites}
                     columns={columns}
                     rowHeight={52}
@@ -1175,6 +1175,9 @@ const SatelliteTable = React.memo(function SatelliteTable() {
                     }}
                     checkboxSelection={true}
                     slotProps={{
+                        main: {
+                            'aria-busy': catalogLoading,
+                        },
                         basePagination: {
                             ActionsComponent: GridPaginationActions,
                         },
@@ -1234,7 +1237,7 @@ const SatelliteTable = React.memo(function SatelliteTable() {
                     }}
                 />
                 <Stack direction="row" spacing={2} sx={{marginTop: 2}}>
-                    <Button variant="contained" onClick={handleAddClick}>
+                    <Button variant="contained" onClick={handleAddClick} disabled={catalogLoading}>
                         {t('satellite_database.add')}
                     </Button>
                     <Button variant="contained" disabled={selected.length !== 1} onClick={handleEditClick}>

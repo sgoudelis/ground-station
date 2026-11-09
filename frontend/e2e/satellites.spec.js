@@ -195,6 +195,8 @@ test.describe('Satellite List CRUD', () => {
     const tle1 = '1 25544U 98067A   20029.54791585  .00001264  00000-0  29621-4 0  9994';
     const tle2 = '2 25544  51.6449  18.9183 0004869  73.6915  35.7994 15.49191311210139';
 
+    // Catalog rows change the grid height; wait until the toolbar has settled below them.
+    await expect(page.getByRole('grid')).toHaveAttribute('aria-busy', 'false');
     await page.getByRole('button', { name: /^add$/i }).click();
     const addDialog = page.getByRole('dialog', { name: /add satellite/i });
     await expect(addDialog).toBeVisible();

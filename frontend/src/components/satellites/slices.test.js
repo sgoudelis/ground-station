@@ -5,6 +5,7 @@ import satelliteReducer, {
     DEFAULT_CATALOG_SORT_MODEL,
     fetchSatellite,
     fetchSatelliteCatalogStats,
+    fetchSatelliteGroups,
     searchSatellites,
     setCatalogSortModel,
     submitOrEditSatellite,
@@ -21,6 +22,27 @@ import sourcesReducer, {
 } from './sources-slice.jsx';
 
 describe('satellite state slices', () => {
+    it('keeps catalog controls loading until the search settles despite group responses', () => {
+        let state = satelliteReducer(undefined, { type: '@@INIT' });
+        expect(state.catalogLoading).toBe(true);
+
+        state = satelliteReducer(state, fetchSatelliteGroups.fulfilled([], 'groups'));
+        expect(state.catalogLoading).toBe(true);
+
+        state = satelliteReducer(state, searchSatellites.pending('catalog'));
+        state = satelliteReducer(state, fetchSatelliteGroups.fulfilled([], 'groups-refresh'));
+        expect(state.catalogLoading).toBe(true);
+
+        state = satelliteReducer(state, searchSatellites.fulfilled({items: [], total: 0}, 'catalog'));
+        expect(state.catalogLoading).toBe(false);
+
+        // A failed refresh must also release the controls so the operator can recover.
+        state = satelliteReducer(state, searchSatellites.pending('refresh'));
+        expect(state.catalogLoading).toBe(true);
+        state = satelliteReducer(state, searchSatellites.rejected(new Error('Offline'), 'refresh'));
+        expect(state.catalogLoading).toBe(false);
+    });
+
     it('defaults catalog sorting to bands and stores user sort changes', () => {
         let state = satelliteReducer(undefined, { type: '@@INIT' });
         expect(state.catalogSortModel).toEqual(DEFAULT_CATALOG_SORT_MODEL);
@@ -64,6 +86,7 @@ describe('satellite state slices', () => {
             [{norad_id: 1, name: 'Stale result'}],
             'older-request',
         ));
+        expect(state.catalogLoading).toBe(true);
         state = satelliteReducer(state, searchSatellites.fulfilled(
             [{norad_id: 2, name: 'Current result'}],
             'newer-request',
