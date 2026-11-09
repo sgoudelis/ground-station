@@ -674,7 +674,8 @@ it('reveals a selected transmitter type and shares selection between the table a
     expect(mapRender.mock.lastCall[0].selectedTransmitterId).toBe('aprs:A');
     expect(tableRender.mock.lastCall[0].selectedTransmitterId).toBe('aprs:A');
     expect(mapRender.mock.lastCall[0].positions).toHaveLength(2);
-    expect(screen.getByRole('region', {name: 'Transmitter info'})).toHaveTextContent('aprs:A');
+    expect(within(screen.getByRole('region', {name: 'Transmitter info'}))
+        .getByRole('heading', {name: 'A'})).toBeInTheDocument();
     expect(JSON.parse(localStorage.getItem(hiddenTypesStoreName))).toEqual([]);
     act(() => mapRender.mock.lastCall[0].onFitAll());
     expect(tableRender.mock.lastCall[0].selectedTransmitterId).toBeNull();

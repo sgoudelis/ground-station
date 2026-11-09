@@ -90,7 +90,9 @@ export function getAprsSymbol(position) {
     return {label, image, overlay, balloon: label === 'Balloon'};
 }
 
-export function createAprsIcon({position, report, phase, altitude, name, stale = false, selected = false}) {
+// Both the map and station dashboard use report types only when the packet's
+// symbol is unknown, keeping station identity consistent between the two.
+export function resolveAprsSymbol(position, report) {
     let symbol = getAprsSymbol(position);
     // A packet's category can identify a pin when its symbol is unknown.
     // Recognized per-fix symbols still take precedence during playback.
@@ -99,6 +101,11 @@ export function createAprsIcon({position, report, phase, altitude, name, stale =
         else if (report?.telemetry) symbol = {label: 'Telemetry', image: telemetryPin};
         else if (report?.weather) symbol = {label: 'Weather station', image: weatherPin};
     }
+    return symbol;
+}
+
+export function createAprsIcon({position, report, phase, altitude, name, stale = false, selected = false}) {
+    const symbol = resolveAprsSymbol(position, report);
     // Unclassified positions retain the map's generic APRS circle.
     if (!symbol) return null;
     if (symbol.balloon) return createRadiosondeIcon({phase, altitude, name, stale, selected});

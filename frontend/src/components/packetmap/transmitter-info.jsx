@@ -22,6 +22,7 @@ import {renderAircraftSymbol, selectAircraftShape} from './aircraft-symbol.js';
 import {aircraftColor, aircraftEmergency, aircraftEmergencyLabel} from '../../utils/aircraft-emergency.js';
 import FlightInstruments from './flight-instruments.jsx';
 import MeshtasticInfo from './meshtastic-info.jsx';
+import AprsInfo from './aprs-info.jsx';
 import {aircraftFlightAt, FLIGHT_TELEMETRY_FIELDS} from './aircraft-flight.js';
 import {radiosondeFlightAt, SONDE_FLIGHT_TELEMETRY_FIELDS} from './radiosonde-flight.js';
 import {buildPlaybackTrack} from './playback.js';
@@ -86,8 +87,8 @@ export default function TransmitterInfo({transmitter, selectedTransmitterId = nu
     const formatNumber = (value, digits) => Number.isFinite(value)
         ? value.toLocaleString(timeSettings.locale, {maximumFractionDigits: digits}) : value;
     const groups = useMemo(() => {
-        // The node dashboard formats raw details only when its disclosure is opened.
-        if (transmitter?.kind === 'meshtastic') return [];
+        // Dedicated dashboards traverse raw details only while their disclosure is open.
+        if (['meshtastic', 'aprs'].includes(transmitter?.kind)) return [];
         const grouped = new Map();
         for (const [path, value] of Object.entries(flattenDetails(transmitter?.details))) {
             // Aircraft metadata has its own translated section and attribution.
@@ -135,7 +136,9 @@ export default function TransmitterInfo({transmitter, selectedTransmitterId = nu
                 </Tooltip>}
             </Box>
         </TitleBar>
-        {transmitter?.kind === 'meshtastic' ? <MeshtasticInfo key={transmitter.id} transmitter={transmitter} /> : transmitter ? <>
+        {transmitter?.kind === 'meshtastic' ? <MeshtasticInfo key={transmitter.id} transmitter={transmitter} />
+            : transmitter?.kind === 'aprs' ? <AprsInfo key={transmitter.id} transmitter={transmitter}
+                now={isLive ? playbackTime : null} isLive={isLive} /> : transmitter ? <>
             <Box sx={{p: 1.25, borderBottom: 1, borderColor: 'divider', flexShrink: 0,
                 display: 'flex', alignItems: 'center', gap: 1,
                 bgcolor: (theme) => alpha(typeColor(transmitter.kind), theme.palette.mode === 'dark' ? 0.1 : 0.06)}}>

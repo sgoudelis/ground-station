@@ -288,14 +288,16 @@ describe('Transmitter information', () => {
         expect(container.innerHTML).not.toMatch(/NaN|Infinity/);
     });
 
-    it('initializes the appropriate units when switching between aircraft and radiosondes, and leaves APRS unchanged', () => {
+    it('initializes flight units when switching protocols and gives APRS its own dashboard', () => {
         const {rerender} = render(<TransmitterInfo transmitter={{...transmitter, kind: 'adsb'}} />, {wrapper});
         expect(screen.getByRole('button', {name: 'Use metric units'})).toBeInTheDocument();
         rerender(<TransmitterInfo transmitter={transmitter} />);
         expect(screen.getByRole('button', {name: 'Use aviation units'})).toBeInTheDocument();
         rerender(<TransmitterInfo transmitter={{...transmitter, kind: 'aprs'}} />);
         expect(screen.queryByRole('region', {name: 'Flight instruments'})).not.toBeInTheDocument();
-        expect(screen.getByRole('region', {name: 'Latest position'})).toHaveTextContent('Altitude (m)');
+        expect(screen.getByText('Latest position report')).toBeInTheDocument();
+        expect(screen.getByRole('region', {name: 'Latest position'})).toHaveTextContent('Latitude');
+        expect(screen.getByRole('region', {name: 'Altitude'})).toHaveTextContent('0m');
     });
 
     it('updates the selected data and clears it while another window is loading or empty', () => {

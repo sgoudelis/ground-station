@@ -1,0 +1,67 @@
+/** Copyright (c) 2026 Efstratios Goudelis — GPL-3.0-or-later */
+
+.aprs-panel {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+    min-width: 0;
+    container: aprs-info / inline-size;
+    color: var(--aprs-text);
+    font-variant-numeric: tabular-nums;
+}
+.aprs-identity {display: flex; align-items: center; flex-shrink: 0; gap: 12px; padding: 14px; border-bottom: 1px solid var(--aprs-line); background: var(--aprs-tint);}
+.aprs-station-icon {position: relative; display: grid; place-items: center; flex-shrink: 0; width: 44px; height: 44px; border: 1px solid var(--aprs-line); border-radius: 12px; color: var(--aprs-accent);}
+.aprs-station-icon img {width: 36px; height: 36px; object-fit: contain;}
+.aprs-station-icon svg {width: 29px; height: 29px;}
+.aprs-symbol-overlay {position: absolute; right: -3px; bottom: -3px; min-width: 14px; padding: 0 2px; border-radius: 3px; background: #075a85; color: #fff; font-size: 10px; font-weight: 700; line-height: 16px; text-align: center;}
+.aprs-station-name {flex: 1; min-width: 0;}
+.aprs-identity-title {display: flex; align-items: center; flex-wrap: wrap; gap: 8px;}
+.aprs-identity h2 {margin: 0; font-size: 15px; font-weight: 700; overflow-wrap: anywhere;}
+.aprs-category {margin-top: 4px; font-size: 11px; color: var(--aprs-muted); overflow-wrap: anywhere;}
+.aprs-received, .aprs-entity-state {margin-top: 6px; font-size: 10px; color: var(--aprs-muted); overflow-wrap: anywhere;}
+.aprs-dashboard-scroll {flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 14px;}
+.aprs-report-kind {display: flex; align-items: baseline; flex-wrap: wrap; gap: 5px 8px; margin-bottom: 12px; font-size: 10px; color: var(--aprs-muted);}
+.aprs-report-kind strong {font-weight: 600; color: var(--aprs-accent);}
+.aprs-metrics {display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-bottom: 18px;}
+.aprs-metric {min-width: 0; padding: 12px 10px; border: 1px solid var(--aprs-line); border-top: 2px solid var(--aprs-accent); border-radius: 8px; background: var(--aprs-tint);}
+.aprs-metric-label {display: flex; align-items: center; gap: 5px; color: var(--aprs-muted);}
+.aprs-metric-label svg {width: 15px; height: 15px; flex-shrink: 0; color: var(--aprs-accent);}
+.aprs-metric h3 {margin: 0; font-size: 10px; font-weight: 500; overflow-wrap: anywhere;}
+.aprs-metric-reading {display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px; margin-top: 9px; font-size: 24px; font-weight: 650; line-height: 1.15; overflow-wrap: anywhere;}
+.aprs-metric-reading span {font-size: 10px; font-weight: 500; color: var(--aprs-muted);}
+.aprs-metric-note {margin-top: 7px; font-size: 9px; color: var(--aprs-muted); overflow-wrap: anywhere;}
+.aprs-section {margin-bottom: 18px;}
+.aprs-section-heading {display: flex; align-items: center; gap: 6px; padding-bottom: 8px; margin-bottom: 10px; border-bottom: 1px solid var(--aprs-line); color: var(--aprs-accent);}
+.aprs-section-heading svg {width: 16px; height: 16px; flex-shrink: 0;}
+.aprs-section h3 {margin: 0; font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;}
+.aprs-fields {display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 16px; margin: 0;}
+.aprs-fields > div {min-width: 0;}
+.aprs-field-wide {grid-column: 1 / -1;}
+.aprs-fields dt {font-size: 10px; color: var(--aprs-muted);}
+.aprs-fields dd {margin: 4px 0 0; font-size: 12px; font-weight: 500; overflow-wrap: anywhere; white-space: pre-wrap;}
+.aprs-message {padding: 10px 12px; margin-bottom: 12px; border-left: 2px solid var(--aprs-accent); border-radius: 0 6px 6px 0; background: var(--aprs-tint); font-size: 12px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere;}
+.aprs-message:last-child {margin-bottom: 0;}
+.aprs-digital {display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px;}
+.aprs-digital-bit {display: flex; align-items: center; gap: 6px; font-size: 10px; color: var(--aprs-muted);}
+.aprs-digital-bit > span:first-child {width: 7px; height: 7px; flex-shrink: 0; border: 1px solid var(--aprs-muted); border-radius: 50%;}
+.aprs-digital-bit > .aprs-bit-set {border-color: var(--aprs-accent); background: var(--aprs-accent);}
+.aprs-packet-details {padding-top: 12px; border-top: 1px solid var(--aprs-line);}
+.aprs-packet-details summary {font-size: 11px; color: var(--aprs-muted); cursor: pointer;}
+.aprs-packet-details[open] summary {margin-bottom: 18px;}
+.aprs-packet-details summary:focus-visible {outline: 2px solid var(--aprs-accent); outline-offset: 4px;}
+@container aprs-info (max-width: 600px) {.aprs-metrics {grid-template-columns: repeat(2, minmax(0, 1fr));}}
+@container aprs-info (max-width: 280px) {
+    .aprs-identity {gap: 8px; padding: 10px;}
+    .aprs-station-icon {width: 34px; height: 34px; border-radius: 9px;}
+    .aprs-station-icon img, .aprs-station-icon svg {width: 27px; height: 27px;}
+    .aprs-dashboard-scroll {padding: 10px;}
+    .aprs-metric {padding: 10px 8px;}
+    .aprs-metric-reading {font-size: 21px;}
+    .aprs-metric-label {gap: 3px;}
+    .aprs-fields {gap: 10px;}
+    .aprs-digital {grid-template-columns: repeat(2, minmax(0, 1fr));}
+}
+@container aprs-info (max-width: 190px) {
+    .aprs-metrics, .aprs-fields {grid-template-columns: 1fr;}
+}
