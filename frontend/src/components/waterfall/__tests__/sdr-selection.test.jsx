@@ -7,7 +7,7 @@ import { beforeEach, expect, it, vi } from 'vitest';
 import '../../../i18n/config.js';
 import { setupTheme } from '../../../theme.js';
 import WaterfallSettings from '../settings-column.jsx';
-import reducer, { applySDRConfigParameters, updateSDRConfig } from '../waterfall-slice.jsx';
+import reducer, { applySDRConfigParameters, setContinuousObservation, updateSDRConfig } from '../waterfall-slice.jsx';
 import vfoReducer from '../vfo-marker/vfo-slice.jsx';
 import decodersReducer from '../../decoders/decoders-slice.jsx';
 
@@ -19,12 +19,11 @@ vi.mock('../../common/common.jsx', () => ({
     getClassNamesBasedOnGridEditing: () => '',
 }));
 vi.mock('../background-stream-control.jsx', () => ({ default: () => null }));
-vi.mock('../settings-frequency.jsx', () => ({ default: () => null }));
+vi.mock('../settings-frequency.jsx', () => ({ default: ({ readOnly }) => <input aria-label="Frequency" disabled={readOnly} /> }));
 vi.mock('../settings-fft.jsx', () => ({ default: () => null }));
-vi.mock('../vfo-settings/settings-vfo.jsx', () => ({ default: () => null }));
+vi.mock('../vfo-settings/settings-vfo.jsx', () => ({ default: () => <div>VFO controls</div> }));
 vi.mock('../settings-recording.jsx', () => ({ default: () => null }));
 vi.mock('../settings-playback.jsx', () => ({ default: () => null }));
-vi.mock('../continuous-observation-view.jsx', () => ({ default: () => null }));
 
 const parameters = (antenna) => ({
     gain_values: [0, 20], sample_rate_values: [2000000],
@@ -68,6 +67,25 @@ function receiver() {
     </ThemeProvider></Provider>);
     return { store, ref };
 }
+
+it('locks frequency controls and hides VFO settings while viewing a continuous observation', () => {
+    const { store } = receiver();
+    expect(screen.getByLabelText('Frequency')).toBeEnabled();
+    expect(screen.getByText('VFO controls')).toBeInTheDocument();
+
+    act(() => store.dispatch(setContinuousObservation({
+        name: 'Meshtastic', session_id: 'continuous-owner',
+        vfos: { 1: { center_freq: 869525000, bandwidth: 250000, modulation: 'none', decoder: 'lora' } },
+    })));
+    expect(screen.getByLabelText('Frequency')).toBeDisabled();
+    expect(screen.queryByText('VFO controls')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Viewing a continuous observation/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/VFO 1/)).not.toBeInTheDocument();
+
+    act(() => store.dispatch(setContinuousObservation(null)));
+    expect(screen.getByLabelText('Frequency')).toBeEnabled();
+    expect(screen.getByText('VFO controls')).toBeInTheDocument();
+});
 
 it('sends an unset antenna when switching devices and offers only the new SDR ports', async () => {
     const { store, ref } = receiver();

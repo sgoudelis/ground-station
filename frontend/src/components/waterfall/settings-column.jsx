@@ -100,7 +100,6 @@ import getValue from "lodash/_getValue.js";
 import FrequencyControlAccordion from "./settings-frequency.jsx";
 import SdrAccordion from "./settings-sdr.jsx";
 import FftAccordion from "./settings-fft.jsx";
-import ContinuousObservationView from "./continuous-observation-view.jsx";
 import VfoAccordion from "./vfo-settings/settings-vfo.jsx";
 import RecordingAccordion from "./settings-recording.jsx";
 import PlaybackAccordion from "./settings-playback.jsx";
@@ -1728,11 +1727,11 @@ const WaterfallSettings = forwardRef(function WaterfallSettings({ playbackRemain
             </TitleBar>
             <div ref={settingsScrollRef} style={{overflowY: 'auto', overflowAnchor: 'none', height: '100%', paddingBottom: '29px'}}>
 
-                <Box component="fieldset" disabled={Boolean(continuousObservation)} sx={{ border: 0, m: 0, p: 0, minWidth: 0 }}>
                 <DevRenderProfiler id="SdrAccordion">
                     <SdrAccordion
                     expanded={expandedPanels.includes('sdr')}
                     onAccordionChange={handleSdrAccordionChange}
+                    readOnly={Boolean(continuousObservation)}
                     gettingSDRParameters={gettingSDRParameters}
                     isStreaming={isStreaming}
                     joinedSdrId={joinedSdrId}
@@ -1779,13 +1778,12 @@ const WaterfallSettings = forwardRef(function WaterfallSettings({ playbackRemain
                     onPlaybackRecordingChange={onPlaybackRecordingChange}
                     />
                 </DevRenderProfiler>
-                </Box>
 
-                <Box component="fieldset" disabled={Boolean(continuousObservation)} sx={{ border: 0, m: 0, p: 0, minWidth: 0 }}>
                 <DevRenderProfiler id="FrequencyControlAccordion">
                     <FrequencyControlAccordion
                     expanded={expandedPanels.includes('freqControl')}
                     onAccordionChange={handleFreqAccordionChange}
+                    readOnly={Boolean(continuousObservation)}
                     centerFrequency={centerFrequency}
                     onCenterFrequencyChange={handleFrequencyDialChange}
                     availableTransmitters={runningTransmitters || []}
@@ -1799,9 +1797,8 @@ const WaterfallSettings = forwardRef(function WaterfallSettings({ playbackRemain
                     isStreaming={isStreaming}
                     />
                 </DevRenderProfiler>
-                </Box>
 
-                {continuousObservation ? <ContinuousObservationView observation={continuousObservation} /> : <DevRenderProfiler id="VfoAccordion">
+                {!continuousObservation && <DevRenderProfiler id="VfoAccordion">
                     <VfoAccordion
                     expanded={expandedPanels.includes('vfo')}
                     onAccordionChange={handleVfoAccordionChange}

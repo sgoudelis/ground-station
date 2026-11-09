@@ -79,6 +79,7 @@ const SdrAccordion = ({
                           gettingSDRParameters,
                           isStreaming,
                           joinedSdrId,
+                          readOnly = false,
                           sdrs,
                           selectedSDRId,
                           onSDRChange,
@@ -126,9 +127,9 @@ const SdrAccordion = ({
     const [biasTConfirmationOpen, setBiasTConfirmationOpen] = React.useState(false);
 
     React.useEffect(() => {
-        // A pending confirmation only applies to the receiver that opened it.
+        // Cancel pending confirmations if the receiver or its ownership changes.
         setBiasTConfirmationOpen(false);
-    }, [selectedSDRId]);
+    }, [selectedSDRId, readOnly]);
 
     const handleBiasTChange = (enabled) => {
         if (enabled) {
@@ -343,7 +344,7 @@ const SdrAccordion = ({
                                     event.stopPropagation();
                                     onRefreshParameters?.();
                                 }}
-                                disabled={gettingSDRParameters || selectedSDRId === 'none' || Boolean(joinedSdrId)}
+                                disabled={readOnly || gettingSDRParameters || selectedSDRId === 'none' || Boolean(joinedSdrId)}
                                 sx={{ opacity: 0.7, p: 0.5, mr: 0.5 }}
                             >
                                 <RefreshIcon sx={{ fontSize: '1rem' }} />
@@ -355,10 +356,13 @@ const SdrAccordion = ({
             <AccordionDetails sx={{
                 backgroundColor: 'background.elevated',
             }}>
+                {readOnly && <Typography variant="caption" color="text.secondary" component="p" sx={{ mb: 1.5 }}>
+                    {t('sdr.continuous_read_only')}
+                </Typography>}
                 <LoadingOverlay loading={gettingSDRParameters}>
                     <Box sx={{mb: 2}}>
 
-                        <FormControl disabled={isStreaming} error={sdrRequiredError} margin="normal"
+                        <FormControl disabled={readOnly || isStreaming} error={sdrRequiredError} margin="normal"
                                      sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth
                                      variant="outlined"
                                      size="small">
@@ -388,7 +392,7 @@ const SdrAccordion = ({
                         </FormControl>
                         {isSigmfPlaybackSelected && (
                             <FormControl
-                                disabled={gettingSDRParameters || isStreaming}
+                                disabled={readOnly || gettingSDRParameters || isStreaming}
                                 sx={{minWidth: 200, marginTop: 0, marginBottom: 1}}
                                 fullWidth
                                 variant="outlined"
@@ -489,7 +493,7 @@ const SdrAccordion = ({
                                     timeSource: onTimeSourceChange,
                                 })[name]?.(value);
                             }}
-                            disabled={gettingSDRParameters}
+                            disabled={readOnly || gettingSDRParameters}
                             fixedDisabled={isSigmfPlaybackSelected && isStreaming}
                             gainDisabled={isSigmfPlaybackSelected && isStreaming}
                             isStreaming={isStreaming}
@@ -626,6 +630,7 @@ const SdrAccordion = ({
                         <Button
                             color="warning"
                             variant="contained"
+                            disabled={readOnly}
                             onClick={() => {
                                 setBiasTConfirmationOpen(false);
                                 onBiasTChange?.(true);
@@ -646,6 +651,7 @@ function areSdrAccordionPropsEqual(prevProps, nextProps) {
         prevProps.onAccordionChange === nextProps.onAccordionChange &&
         prevProps.gettingSDRParameters === nextProps.gettingSDRParameters &&
         prevProps.isStreaming === nextProps.isStreaming &&
+        prevProps.readOnly === nextProps.readOnly &&
         prevProps.sdrs === nextProps.sdrs &&
         prevProps.selectedSDRId === nextProps.selectedSDRId &&
         prevProps.onSDRChange === nextProps.onSDRChange &&

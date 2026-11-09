@@ -78,6 +78,7 @@
   },
   "sdr": {
     "title": "SDR",
+    "continuous_read_only": "Stop the continuous observation in the scheduler to edit these SDR settings.",
     "sdr_label": "SDR",
     "sdr_hint": "Select a receiver, or SigMF Playback to replay a saved IQ recording.",
     "playback_recording_hint": "Select a saved IQ recording to replay through the waterfall and decoders.",

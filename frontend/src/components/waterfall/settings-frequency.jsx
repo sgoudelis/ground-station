@@ -38,18 +38,30 @@ const FrequencyControlAccordion = ({
                                        isRecording,
                                        selectedSDRId,
                                        isStreaming,
+                                       readOnly = false,
 }) => {
     const { t } = useTranslation('waterfall');
     const [menuAnchor, setMenuAnchor] = React.useState(null);
-    const menuOpen = Boolean(menuAnchor);
+    const [offsetMenuOpen, setOffsetMenuOpen] = React.useState(false);
+    // Recording, playback, and continuous viewers cannot retune the receiver.
+    const isPlayingback = selectedSDRId === 'sigmf-playback' && isStreaming;
+    const controlsDisabled = readOnly || isRecording || isPlayingback;
+    const menuOpen = Boolean(menuAnchor) && !controlsDisabled;
+
+    React.useEffect(() => {
+        // Menus live in portals and must also close when a session becomes read only.
+        if (controlsDisabled) {
+            setMenuAnchor(null);
+            setOffsetMenuOpen(false);
+        }
+    }, [controlsDisabled]);
 
     const handleMenuItemClick = (transmitter) => {
+        if (controlsDisabled) return;
         // Different targets can publish the same transmitter ID; use the exact menu choice.
         onGoToTransmitter(transmitter);
         setMenuAnchor(null);
     };
-    // Check if we're playing back a SigMF recording
-    const isPlayingback = selectedSDRId === 'sigmf-playback' && isStreaming;
 
     // Group transmitters by band
     const groupedTransmitters = React.useMemo(() => {
@@ -94,7 +106,7 @@ const FrequencyControlAccordion = ({
                         onChange={onCenterFrequencyChange}
                         size={"small"}
                         hideHzDigits={true}
-                        disabled={isRecording || isPlayingback}
+                        disabled={controlsDisabled}
                     />
                 </Box>
 
@@ -103,7 +115,7 @@ const FrequencyControlAccordion = ({
                         id="go-to-transmitter-button"
                         variant="contained"
                         fullWidth
-                        disabled={isRecording || isPlayingback || availableTransmitters.length === 0}
+                        disabled={controlsDisabled || availableTransmitters.length === 0}
                         startIcon={<NearMeIcon />}
                         endIcon={<ArrowDropDownIcon />}
                         onClick={(event) => setMenuAnchor(event.currentTarget)}
@@ -131,6 +143,7 @@ const FrequencyControlAccordion = ({
                             ...groupTx.map((transmitter) => (
                                 <MenuItem
                                     key={transmitter.uiId || transmitter.id}
+                                    disabled={controlsDisabled}
                                     onClick={() => handleMenuItemClick(transmitter)}
                                     sx={{ fontSize: '0.875rem', pl: 3 }}
                                 >
@@ -168,7 +181,7 @@ const FrequencyControlAccordion = ({
                 </Box>
 
                 <FormControl
-                    disabled={isRecording || isPlayingback}
+                    disabled={controlsDisabled}
                     sx={{minWidth: 200, marginTop: 1, marginBottom: 0}}
                     fullWidth
                     variant="outlined"
@@ -176,6 +189,9 @@ const FrequencyControlAccordion = ({
                     <InputLabel htmlFor="frequency-offset-select">{t('frequency.frequency_offset')}</InputLabel>
                     <Select
                         id="frequency-offset-select"
+                        open={offsetMenuOpen && !controlsDisabled}
+                        onOpen={() => setOffsetMenuOpen(true)}
+                        onClose={() => setOffsetMenuOpen(false)}
                         value={selectedOffsetMode || "none"}
                         onChange={onOffsetModeChange}
                         label={t('frequency.frequency_offset')}
@@ -234,11 +250,11 @@ const FrequencyControlAccordion = ({
                     </Select>
                 </FormControl>
 
-                <FormControl disabled={selectedOffsetMode !== "manual" || isRecording || isPlayingback} sx={{minWidth: 200, marginTop: 1}}
+                <FormControl disabled={selectedOffsetMode !== "manual" || controlsDisabled} sx={{minWidth: 200, marginTop: 1}}
                              fullWidth variant="outlined"
                              size="small">
                     <TextField
-                        disabled={selectedOffsetMode !== "manual" || isRecording || isPlayingback}
+                        disabled={selectedOffsetMode !== "manual" || controlsDisabled}
                         label={t('frequency.manual_offset_hz')}
                         value={selectedOffsetValue}
                         variant="outlined"
@@ -272,7 +288,8 @@ function areFrequencyControlAccordionPropsEqual(prevProps, nextProps) {
         prevProps.onOffsetValueChange === nextProps.onOffsetValueChange &&
         prevProps.isRecording === nextProps.isRecording &&
         prevProps.selectedSDRId === nextProps.selectedSDRId &&
-        prevProps.isStreaming === nextProps.isStreaming
+        prevProps.isStreaming === nextProps.isStreaming &&
+        prevProps.readOnly === nextProps.readOnly
     );
 }
 

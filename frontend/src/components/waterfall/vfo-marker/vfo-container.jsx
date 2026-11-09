@@ -38,7 +38,8 @@ import {
     getVisibleFrequencyRange,
     formatFrequency,
     formatBaudrate,
-    formatGnssMarkerLabel
+    formatGnssMarkerLabel,
+    getVFOBandwidth
 } from './vfo-utils.js';
 import { resolveVfoAudioStatus, VFO_AUDIO_STATUS } from '../vfo-audio-status.js';
 import { getVerifiedGnssSatelliteCountForStream } from '../gnss-slice.jsx';
@@ -553,8 +554,9 @@ const VFOMarkersContainer = ({
             // Calculate center position
             const centerX = ((frequency - startFreq) / freqRange) * actualWidth;
 
-            // Use actual bandwidth from VFO data
-            const bandwidth = vfoData.bandwidth;
+            // LoRa's reported PHY bandwidth can differ from the generic VFO
+            // capture width. Resolve it the same way as editable user markers.
+            const bandwidth = getVFOBandwidth(vfoData, decoderInfo);
 
             // Calculate edge positions
             const leftFreq = frequency - bandwidth / 2;
@@ -565,8 +567,9 @@ const VFOMarkersContainer = ({
             const isContinuousObservation = Boolean(sessionMetadata?.continuous_observation_id);
             // Keep continuous VFO colors recognizable, with faint fills and outlines
             // to distinguish their fixed configuration from editable user VFOs.
+            // VFO numbers start at one; cycle the palette as in the observation form.
             const internalColor = isContinuousObservation
-                ? vfoColors[vfoNumber] || DEFAULT_VFO_COLORS[(vfoNumber - 1) % DEFAULT_VFO_COLORS.length] : '#A0A0A0';
+                ? vfoColors[(vfoNumber - 1) % vfoColors.length] || DEFAULT_VFO_COLORS[(vfoNumber - 1) % DEFAULT_VFO_COLORS.length] : '#A0A0A0';
             const internalAreaOpacity = isContinuousObservation ? '10' : '20';
             const internalLineOpacity = isContinuousObservation ? '70' : 'CC';
 
