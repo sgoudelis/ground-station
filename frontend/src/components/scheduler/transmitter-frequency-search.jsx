@@ -1,12 +1,13 @@
 // Copyright (c) 2026 Efstratios Goudelis
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Autocomplete, Box, CircularProgress, IconButton, TextField, Typography } from '@mui/material';
 import { Refresh } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { useSocket } from '../common/socket.jsx';
 import { getTransmitterDownlink } from './continuous-transmitter-preset.js';
+import { getTransmitterBand } from './transmitter-bands.js';
 
 const PAGE_SIZE = 20;
 const SEARCH_TIMEOUT_MS = 8000;
@@ -30,6 +31,11 @@ export default function TransmitterFrequencySearch({ onTransmitterSelect, disabl
     const listbox = useRef(null);
     const scrollPosition = useRef(0);
     const label = (key, options) => t(`continuous_observations.transmitter_search.${key}`, options);
+    // Sort all loaded pages together so each band has a single heading.
+    // Entries without a usable downlink stay disabled at the end of the list.
+    const options = useMemo(() => [...results.options].sort((a, b) => (
+        (downlink(a) || Infinity) - (downlink(b) || Infinity)
+    )), [results.options]);
 
     const reset = (nextInput = '') => {
         // Invalidate immediately, before the next effect, so a late reply cannot
@@ -104,7 +110,8 @@ export default function TransmitterFrequencySearch({ onTransmitterSelect, disabl
     else if (results.hasMore) status = label('more_results', { count: results.options.length, total: results.total });
 
     return <Autocomplete disabled={disabled} fullWidth size="small" open={open} value={null} inputValue={input}
-        options={results.options} loading={loading} filterOptions={(options) => options}
+        options={options} loading={loading} filterOptions={(options) => options}
+        groupBy={(entry) => t(`scheduler_dialogs.shared.band_${getTransmitterBand(downlink(entry))}`)}
         getOptionLabel={title} getOptionKey={(entry) => entry.id}
         getOptionDisabled={(entry) => !downlink(entry)}
         onOpen={() => setOpen(true)}

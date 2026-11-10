@@ -101,6 +101,7 @@ import { DecoderConfigSuggestion } from './decoder-config-suggestion.jsx';
 import { ObservationRigFields } from './observation-rig-fields.jsx';
 import SdrSessionFields from './sdr-session-fields.jsx';
 import { calculateSdrCenterFrequency, createEmptySdrSession as createEmptySession, validateSdrTaskBandwidth } from './session-utils.js';
+import { getTransmitterBand } from './transmitter-bands.js';
 import { formatSdrRate as formatSampleRate } from '../common/sdr-parameters.js';
 import { findObservationConflict, getObservationForPass } from './observation-conflicts.js';
 
@@ -193,25 +194,12 @@ const getDefaultSatdumpPipeline = (t) => {
     return group?.pipelines?.[0]?.value || '';
 };
 
-// Helper function to determine band from frequency in Hz
-const getBand = (frequencyHz) => {
-    const freqMHz = frequencyHz / 1000000;
-    if (freqMHz >= 30 && freqMHz < 300) return 'vhf';
-    if (freqMHz >= 300 && freqMHz < 1000) return 'uhf';
-    if (freqMHz >= 1000 && freqMHz < 2000) return 'l_band';
-    if (freqMHz >= 2000 && freqMHz < 4000) return 's_band';
-    if (freqMHz >= 4000 && freqMHz < 8000) return 'c_band';
-    if (freqMHz >= 8000 && freqMHz < 12000) return 'x_band';
-    if (freqMHz < 30) return 'hf';
-    return 'other';
-};
-
 // Helper function to group transmitters by band
 const groupTransmittersByBand = (transmitters) => {
     const grouped = {};
 
     transmitters.forEach(transmitter => {
-        const band = getBand(transmitter.downlink_low || 0);
+        const band = getTransmitterBand(transmitter.downlink_low || 0);
         if (!grouped[band]) {
             grouped[band] = [];
         }

@@ -12,25 +12,14 @@ import React, { useId } from 'react';
 import { Box, FormControl, InputLabel, ListSubheader, MenuItem, Select, Stack, Typography } from '@mui/material';
 import RadioIcon from '@mui/icons-material/Radio';
 import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
+import { getTransmitterBand } from './transmitter-bands.js';
 
 const BAND_ORDER = ['hf', 'vhf', 'uhf', 'l_band', 's_band', 'c_band', 'x_band', 'other'];
-
-const getBand = (frequencyHz) => {
-    const freqMHz = frequencyHz / 1000000;
-    if (freqMHz >= 30 && freqMHz < 300) return 'vhf';
-    if (freqMHz >= 300 && freqMHz < 1000) return 'uhf';
-    if (freqMHz >= 1000 && freqMHz < 2000) return 'l_band';
-    if (freqMHz >= 2000 && freqMHz < 4000) return 's_band';
-    if (freqMHz >= 4000 && freqMHz < 8000) return 'c_band';
-    if (freqMHz >= 8000 && freqMHz < 12000) return 'x_band';
-    if (freqMHz < 30) return 'hf';
-    return 'other';
-};
 
 const groupTransmittersByBand = (transmitters) => {
     const grouped = {};
     transmitters.forEach((transmitter) => {
-        const band = getBand(Number(transmitter.downlink_low));
+        const band = getTransmitterBand(Number(transmitter.downlink_low));
         if (!grouped[band]) grouped[band] = [];
         grouped[band].push(transmitter);
     });
