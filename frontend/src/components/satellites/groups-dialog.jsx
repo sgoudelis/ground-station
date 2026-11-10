@@ -23,7 +23,7 @@ import {useSocket} from "../common/socket.jsx";
 import {Fragment, useCallback, useEffect, useMemo, useRef, useState} from "react";
 import * as React from "react";
 import { toast } from '../../utils/toast-with-timestamp.jsx';
-import {Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, IconButton, TextField} from "@mui/material";
+import {Box, Button, Switch, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, IconButton, TextField} from "@mui/material";
 import {DataGrid} from "@mui/x-data-grid";
 import Autocomplete from "@mui/material/Autocomplete";
 import CircularProgress from "@mui/material/CircularProgress";
@@ -138,6 +138,7 @@ export function AddEditDialog({formDialogOpen, handleRowsCallback, handleDialogO
         id: '',
         name: '',
         satellite_ids: [],
+        show_on_earth_view: true,
     };
     const [formDialogValues, setFormDialogValues] = useState(defaultFormValues);
     const [selectionModel, setSelectionModel] = useState([]);
@@ -156,6 +157,7 @@ export function AddEditDialog({formDialogOpen, handleRowsCallback, handleDialogO
     const hasFormChanges = formDialogValues.id
         ? formDialogValues.name.trim() !== (satGroup?.name || '').trim()
             || !sameSatelliteIds(selectionModel, originalSatelliteIds)
+            || formDialogValues.show_on_earth_view !== (satGroup?.show_on_earth_view ?? true)
         : formDialogValues.name.trim().length > 0;
     const canSubmit = formDialogValues.name.trim().length > 0 && hasFormChanges;
 
@@ -178,6 +180,7 @@ export function AddEditDialog({formDialogOpen, handleRowsCallback, handleDialogO
             id: group.id,
             name: group.name || '',
             satellite_ids: satelliteIds,
+            show_on_earth_view: group.show_on_earth_view ?? true,
         } : defaultFormValues);
         setSelectionModel([...satelliteIds]);
         setSatellites([]);
@@ -212,6 +215,7 @@ export function AddEditDialog({formDialogOpen, handleRowsCallback, handleDialogO
             ...(formDialogValues.id ? {id: formDialogValues.id} : {}),
             name: formDialogValues.name.trim(),
             satellite_ids: [...new Set(selectionModel)],
+            show_on_earth_view: formDialogValues.show_on_earth_view,
         };
         setSubmitting(true);
         dispatch(AddOrEditSatelliteGroup({socket, groupData: newRow}))
@@ -279,6 +283,20 @@ export function AddEditDialog({formDialogOpen, handleRowsCallback, handleDialogO
             <form onSubmit={handleFormSubmit}>
                 <DialogContent sx={{ px: 3, pt: 3, pb: 0 }}>
                     <Box sx={{ mt: 0 }}>
+                        <FormControlLabel
+                            sx={{ mb: 2 }}
+                            control={
+                                <Switch
+                                    name="show_on_earth_view"
+                                    checked={formDialogValues.show_on_earth_view}
+                                    onChange={(event) => setFormDialogValues(previous => ({
+                                        ...previous,
+                                        show_on_earth_view: event.target.checked,
+                                    }))}
+                                />
+                            }
+                            label={t('groups.show_on_earth_view')}
+                        />
                         <TextField
                             autoComplete="new-password"
                             autoFocus

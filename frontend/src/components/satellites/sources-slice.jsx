@@ -31,6 +31,7 @@ const defaultTLESource = {
     provider: 'generic_http',
     adapter: 'http_3le',
     enabled: true,
+    show_on_earth_view: true,
     priority: 100,
     central_body: 'earth',
     auth_type: 'none',

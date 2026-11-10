@@ -135,6 +135,7 @@ async def submit_satellite_group(
             {
                 "name": data["name"].strip(),
                 "satellite_ids": data.get("satellite_ids", []),
+                "show_on_earth_view": data.get("show_on_earth_view", True),
             },
             group_type=SatelliteGroupType.USER,
         )
@@ -169,7 +170,9 @@ async def edit_satellite_group(
         if not data or "id" not in data:
             return {"success": False, "data": [], "error": "Missing satellite group ID"}
 
-        edit_data = {key: data[key] for key in ("name", "satellite_ids") if key in data}
+        edit_data = {
+            key: data[key] for key in ("name", "satellite_ids", "show_on_earth_view") if key in data
+        }
         if "name" in edit_data and isinstance(edit_data["name"], str):
             edit_data["name"] = edit_data["name"].strip()
         edit_reply = await crud.groups.edit_satellite_group(

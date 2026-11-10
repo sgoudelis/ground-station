@@ -114,6 +114,7 @@ async def add_satellite_group(
             data = {
                 "name": data["name"],
                 "satellite_ids": data.get("satellite_ids", []),
+                "show_on_earth_view": data.get("show_on_earth_view", True),
                 "type": group_type,
             }
 
@@ -155,7 +156,11 @@ async def edit_satellite_group(
             return {"success": False, "data": None, "error": "Satellite group not found."}
 
         if group_type is not None:
-            data = {key: data[key] for key in ("name", "satellite_ids") if key in data}
+            data = {
+                key: data[key]
+                for key in ("name", "satellite_ids", "show_on_earth_view")
+                if key in data
+            }
 
         for key, value in data.items():
             setattr(group, key, value)

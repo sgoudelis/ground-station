@@ -208,6 +208,8 @@ def _normalize_source_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
     else:
         normalized["enabled"] = True
 
+    normalized["show_on_earth_view"] = _coerce_bool(normalized.get("show_on_earth_view", True))
+
     if "priority" in normalized and normalized.get("priority") is not None:
         normalized["priority"] = int(normalized["priority"])
     else:
@@ -414,6 +416,16 @@ async def edit_satellite_tle_source(
                 continue
             if hasattr(source, key):
                 setattr(source, key, value)
+
+        # Apply shortcut visibility immediately, even when the next sync is deferred.
+        await session.execute(
+            update(Groups)
+            .where(
+                Groups.identifier == source.identifier,
+                Groups.type == SatelliteGroupType.SYSTEM,
+            )
+            .values(show_on_earth_view=source.show_on_earth_view)
+        )
 
         await session.commit()
         await session.refresh(source)

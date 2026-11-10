@@ -114,7 +114,7 @@ const SatelliteGroupSelectorBar = React.memo(function SatelliteGroupSelectorBar(
         if (!selectedSatGroupId || selectedSatGroupId === 'none') return;
 
         const group = satGroups.find(g => g.id === selectedSatGroupId);
-        if (!group) return;
+        if (!group || group.show_on_earth_view === false) return;
 
         // Add to Redux
         dispatch(addRecentSatelliteGroup({ id: group.id, name: group.name }));
@@ -170,9 +170,12 @@ const SatelliteGroupSelectorBar = React.memo(function SatelliteGroupSelectorBar(
             name: group.name,
             satelliteCount: group.satellite_ids?.length || 0,
             type: group.type,
+            showOnEarthView: group.show_on_earth_view !== false,
         })).sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })), [satGroups]);
     const groupsById = useMemo(() => new Map(allGroups.map(group => [group.id, group])), [allGroups]);
-    const displayedRecentGroups = displayedRecentIds.map(id => groupsById.get(id)).filter(Boolean);
+    // Read visibility from the current catalog: local history can predate an edit.
+    const displayedRecentGroups = displayedRecentIds.map(id => groupsById.get(id))
+        .filter(group => group?.showOnEarthView);
 
     // A subtle fade advertises more pills without covering the last visible pill.
     useEffect(() => {

@@ -5,7 +5,7 @@ import {Provider} from 'react-redux';
 import {beforeEach, describe, expect, it, vi} from 'vitest';
 import '../../i18n/config.js';
 import SatelliteGroupSelectorBar from './satellite-group-selector-bar.jsx';
-import earthViewReducer, {setSelectedSatGroupId} from './earthview-slice.jsx';
+import earthViewReducer, {setSatGroups, setSelectedSatGroupId} from './earthview-slice.jsx';
 
 const socket = vi.hoisted(() => ({emit: vi.fn()}));
 
@@ -64,5 +64,39 @@ describe('Earth view recent group shortcuts', () => {
         act(() => store.dispatch(setSelectedSatGroupId('noaa')));
         await waitFor(() => expect(recentPillIds()).toEqual(['amateur', 'weather', 'tinygs', 'large', 'noaa']));
         expect(screen.queryByText(/^\+\d+$/)).not.toBeInTheDocument();
+    });
+
+    it('hides opted-out system and user groups from stored shortcuts but keeps them selectable', async () => {
+        localStorage.setItem('satellite-recent-groups', JSON.stringify(groups.slice(0, 3)));
+        const hiddenGroups = groups.map(group => ({
+            ...group,
+            show_on_earth_view: !['amateur', 'tinygs'].includes(group.id),
+        }));
+        const store = configureStore({
+            reducer: {earthViewTrack: earthViewReducer},
+            preloadedState: {
+                earthViewTrack: {
+                    ...earthViewReducer(undefined, {type: 'init'}),
+                    satGroups: hiddenGroups,
+                    selectedSatGroupId: 'amateur',
+                },
+            },
+        });
+
+        render(<Provider store={store}><SatelliteGroupSelectorBar /></Provider>);
+
+        await waitFor(() => expect(recentPillIds()).toEqual(['weather']));
+        fireEvent.mouseDown(screen.getByRole('combobox'));
+        fireEvent.click(await screen.findByRole('option', {name: /TinyGS/}));
+        await waitFor(() => expect(store.getState().earthViewTrack.selectedSatGroupId).toBe('tinygs'));
+        expect(recentPillIds()).toEqual(['weather']);
+        expect(socket.emit).toHaveBeenCalledWith('api.call', expect.objectContaining({
+            cmd: 'get-satellites-for-group-id',
+            data: 'tinygs',
+        }), expect.any(Function));
+
+        // A catalog refresh must also remove shortcuts already rendered on screen.
+        act(() => store.dispatch(setSatGroups(hiddenGroups.map(group => ({...group, show_on_earth_view: false})))));
+        await waitFor(() => expect(screen.queryByRole('group', {name: 'Recent'})).not.toBeInTheDocument());
     });
 });

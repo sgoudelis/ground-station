@@ -115,4 +115,30 @@ describe('GroupsTable bulk actions', () => {
 
         expect(await screen.findByText('Edit Group')).toBeInTheDocument();
     });
+
+    it('saves an edit that only changes recent-group visibility', async () => {
+        socket.emit.mockImplementation((_event, request, acknowledge) => {
+            acknowledge({success: true, data: request.cmd === 'get-satellites' ? [] : groups});
+        });
+        renderTable();
+
+        fireEvent.click(screen.getByRole('button', {name: 'Select first group'}));
+        fireEvent.click(screen.getByRole('button', {name: 'Edit selected'}));
+        const visibility = await screen.findByRole('switch', {name: "Show in Earth view's recent groups"});
+        expect(visibility).toBeChecked();
+        expect(screen.getByRole('button', {name: 'Save'})).toBeDisabled();
+
+        fireEvent.click(visibility);
+        fireEvent.click(screen.getByRole('button', {name: 'Save'}));
+
+        await waitFor(() => expect(socket.emit).toHaveBeenCalledWith('api.call', {
+            cmd: 'edit-satellite-group',
+            data: {
+                id: 'group-1',
+                name: 'First group',
+                satellite_ids: ['12345'],
+                show_on_earth_view: false,
+            },
+        }, expect.any(Function)));
+    });
 });

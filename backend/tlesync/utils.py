@@ -1088,7 +1088,7 @@ async def detect_and_remove_satellites(
 
 
 async def update_satellite_group_with_removal_detection(
-    session, tle_source_identifier, satellite_ids, group_name, logger
+    session, tle_source_identifier, satellite_ids, group_name, logger, show_on_earth_view=True
 ):
     """
     Update or create a satellite group and detect removed satellites.
@@ -1099,6 +1099,7 @@ async def update_satellite_group_with_removal_detection(
         satellite_ids: List of current satellite NORAD IDs
         group_name: Name for the satellite group
         logger: logger object for logging messages
+        show_on_earth_view: Whether the group may appear in Earth view's recent shortcuts
 
     Returns:
         Dict with removed satellite details including names
@@ -1120,6 +1121,7 @@ async def update_satellite_group_with_removal_detection(
         # Keep system-group display name aligned with the current orbital source name.
         existing_group.name = group_name
         existing_group.satellite_ids = normalize_satellite_ids(satellite_ids)
+        existing_group.show_on_earth_view = show_on_earth_view
         existing_group.updated = datetime.now(timezone.utc)
         logger.info(f"Updated satellite group '{group_name}' with {len(satellite_ids)} satellites")
     else:
@@ -1129,6 +1131,7 @@ async def update_satellite_group_with_removal_detection(
             identifier=tle_source_identifier,
             type=SatelliteGroupType.SYSTEM,
             satellite_ids=normalize_satellite_ids(satellite_ids),
+            show_on_earth_view=show_on_earth_view,
             added=datetime.now(timezone.utc),
             updated=datetime.now(timezone.utc),
         )

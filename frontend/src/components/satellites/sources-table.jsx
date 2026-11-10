@@ -383,6 +383,7 @@ const defaultFormValues = {
     provider: 'generic_http',
     adapter: 'http_3le',
     enabled: true,
+    show_on_earth_view: true,
     priority: '100',
     central_body: 'earth',
     auth_type: 'none',
@@ -411,6 +412,7 @@ export function toFormValues(source, inferLegacyCelestrakProvider = false) {
             : normalizeProvider(source.provider ?? defaultFormValues.provider),
         adapter: String(source.adapter ?? defaultFormValues.adapter).toLowerCase(),
         enabled: source.enabled === undefined ? true : Boolean(source.enabled),
+        show_on_earth_view: source.show_on_earth_view ?? true,
         priority: String(source.priority ?? '100'),
         // Orbital sources are Earth-only until a non-Earth propagation path exists.
         central_body: 'earth',
@@ -532,6 +534,7 @@ export function validateSourceForm(formValues, t) {
             provider,
             adapter,
             enabled: Boolean(formValues.enabled),
+            show_on_earth_view: formValues.show_on_earth_view ?? true,
             priority,
             central_body: centralBody,
             auth_type: authType,
@@ -1142,6 +1145,28 @@ export default function SourcesTable({ showTabs = true }) {
                     </DialogTitle>
                     <DialogContent sx={{ px: 3, py: 3 }}>
                         <Stack spacing={2} sx={{ mt: 3 }}>
+                            <Stack>
+                                <FormControlLabel
+                                    control={
+                                        <Switch
+                                            name="enabled"
+                                            checked={normalizedFormValues.enabled}
+                                            onChange={handleInputChange}
+                                        />
+                                    }
+                                    label={t('orbital_sources.enabled')}
+                                />
+                                <FormControlLabel
+                                    control={
+                                        <Switch
+                                            name="show_on_earth_view"
+                                            checked={normalizedFormValues.show_on_earth_view}
+                                            onChange={handleInputChange}
+                                        />
+                                    }
+                                    label={t('groups.show_on_earth_view')}
+                                />
+                            </Stack>
                             {submitError && (
                                 <Box
                                     role="alert"
@@ -1326,37 +1351,20 @@ export default function SourcesTable({ showTabs = true }) {
                                 </>
                             )}
 
-                            <Stack
-                                direction={{ xs: 'column', sm: 'row' }}
-                                spacing={2}
-                                alignItems={{ xs: 'stretch', sm: 'flex-start' }}
-                            >
-                                <TextField
-                                    label={t('orbital_sources.priority')}
-                                    name="priority"
-                                    type="number"
-                                    value={normalizedFormValues.priority}
-                                    onChange={handleInputChange}
-                                    size="small"
-                                    fullWidth
-                                    error={Boolean(validationErrors.priority)}
-                                    helperText={
-                                        validationErrors.priority || t('orbital_sources.priority_hint')
-                                    }
-                                    inputProps={{min: 0, step: 1}}
-                                />
-                                <FormControlLabel
-                                    sx={{ minHeight: 40, alignItems: 'center' }}
-                                    control={
-                                        <Switch
-                                            name="enabled"
-                                            checked={Boolean(normalizedFormValues.enabled)}
-                                            onChange={handleInputChange}
-                                        />
-                                    }
-                                    label={t('orbital_sources.enabled')}
-                                />
-                            </Stack>
+                            <TextField
+                                label={t('orbital_sources.priority')}
+                                name="priority"
+                                type="number"
+                                value={normalizedFormValues.priority}
+                                onChange={handleInputChange}
+                                size="small"
+                                fullWidth
+                                error={Boolean(validationErrors.priority)}
+                                helperText={
+                                    validationErrors.priority || t('orbital_sources.priority_hint')
+                                }
+                                inputProps={{min: 0, step: 1}}
+                            />
 
                             {!isCelestrakConfiguredSource && (
                                 <Accordion disableGutters>

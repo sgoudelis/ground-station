@@ -461,6 +461,7 @@ class OrbitalSources(Base):
     provider = Column(String, nullable=False, default="generic_http", server_default="generic_http")
     adapter = Column(String, nullable=False, default="http_3le", server_default="http_3le")
     enabled = Column(Boolean, nullable=False, default=True, server_default="1")
+    show_on_earth_view = Column(Boolean, nullable=False, default=True, server_default="1")
     priority = Column(Integer, nullable=False, default=100, server_default="100")
     central_body = Column(String, nullable=False, default="earth", server_default="earth")
     auth_type = Column(String, nullable=False, default="none", server_default="none")
@@ -530,6 +531,7 @@ class Groups(Base):
     identifier = Column(String, nullable=True)
     type = Column(Enum(SatelliteGroupType), nullable=False, default=SatelliteGroupType.USER)
     satellite_ids = Column(JsonField, nullable=True)
+    show_on_earth_view = Column(Boolean, nullable=False, default=True, server_default="1")
     added = Column(AwareDateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
     updated = Column(
         AwareDateTime,

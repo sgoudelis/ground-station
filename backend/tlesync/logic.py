@@ -388,6 +388,7 @@ async def synchronize_satellite_data_internal(dbsession, logger, emit_callback):
                         satellite_ids=group_assignments[tle_source_identifier],
                         group_name=tle_source_name,
                         logger=logger,
+                        show_on_earth_view=tle_source.get("show_on_earth_view", True),
                     )
 
                     if removed_data["satellites"] or removed_data["transmitters"]:
