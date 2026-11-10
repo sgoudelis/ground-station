@@ -100,8 +100,21 @@ function FlightMapCanvas({flights, positions, mapStyle, fitVersion, zoomGestures
     </Map>;
 }
 
-export default function FlightPathMap({socket, folderId, run, runs = [], settings, filter}) {
+export default function FlightPathMap({socket, folderId, run, runs = [], settings, filter, kind = 'flight'}) {
     const {t} = useTranslation('filebrowser');
+    const labels = kind === 'aprs' ? {
+        activity: t('aprs_folder.activity', 'Station activity'),
+        map: t('aprs_folder.path_map', 'Station path map'),
+        loading: t('aprs_folder.loading_paths', 'Loading station paths'),
+        unavailable: t('aprs_folder.paths_unavailable', 'Station paths are unavailable.'),
+        legacy: t('aprs_folder.legacy', 'Legacy packets'),
+    } : {
+        activity: t('flight_paths.activity', 'Flight activity'),
+        map: t('flight_paths.map', 'Flight path map'),
+        loading: t('flight_paths.loading', 'Loading flight paths'),
+        unavailable: t('flight_paths.unavailable', 'Flight paths are unavailable.'),
+        legacy: t('radiosonde_folder.legacy', 'Legacy packets'),
+    };
     const theme = useTheme();
     const {data, loading, error, refresh} = useFlightPaths(socket, folderId, run);
     const [layerId, setLayerId] = useState(theme.palette.mode === 'dark' ? 'esridarkcanvas' : 'osm');
@@ -122,21 +135,21 @@ export default function FlightPathMap({socket, folderId, run, runs = [], setting
         ...flight,
         color: flightColor(flight.run),
         label: formatCaptureRunLabel(runs.find(item => item.name === flight.run) || {name: flight.run}, {timezone, locale},
-            flight.run === 'legacy' ? t('radiosonde_folder.legacy', 'Legacy packets') : flight.run),
+            flight.run === 'legacy' ? labels.legacy : flight.run),
         coordinates: flight.segments.map(segment => segment.map(point => [point.longitude, point.latitude])),
-    })), [data, runs, timezone, locale, t]);
+    })), [data, runs, timezone, locale, labels.legacy]);
     const positions = useMemo(() => flights.flatMap(flight => flight.coordinates.flat()), [flights]);
     const {attempt, failure, retry, reportError, reportLoaded} = useMapLoadFailure({
         engine: 'MapLibre', loadKey: JSON.stringify([folderId, run, tileURL]), enabled: positions.length > 0,
     });
 
-    return <Paper component="section" aria-label={t('flight_paths.activity', 'Flight activity')} variant="outlined" sx={fileDialogSectionSx}>
+    return <Paper component="section" aria-label={labels.activity} variant="outlined" sx={fileDialogSectionSx}>
         <Box sx={{...fileDialogSectionHeaderSx, px: {xs: 2, sm: 2.5}, bgcolor: 'background.paper',
             flexDirection: {xs: 'column', sm: 'row'}, alignItems: {xs: 'stretch', sm: 'center'}}}>
             <Box sx={{display: 'flex', alignItems: 'center', gap: 1.25}}>
                 <RouteIcon sx={{fontSize: 20, color: 'text.secondary'}} />
                 <Box>
-                    <Typography component="h3" variant="subtitle2" fontWeight={600}>{t('flight_paths.activity', 'Flight activity')}</Typography>
+                    <Typography component="h3" variant="subtitle2" fontWeight={600}>{labels.activity}</Typography>
                     <Typography variant="caption" color="text.secondary">{t('flight_paths.filter_hint', 'Filter applies to the map and history below.')}</Typography>
                 </Box>
             </Box>
@@ -158,12 +171,12 @@ export default function FlightPathMap({socket, folderId, run, runs = [], setting
                 <MenuItem value="esridarkcanvas">{t('flight_paths.dark', 'Dark')}</MenuItem>
             </Select>
         </Box>
-        <Box sx={{height: 2}}>{loading && <LinearProgress aria-label={t('flight_paths.loading', 'Loading flight paths')} sx={{height: 2}} />}</Box>
+        <Box sx={{height: 2}}>{loading && <LinearProgress aria-label={labels.loading} sx={{height: 2}} />}</Box>
         {error && <Alert severity="error" sx={{m: 2}} action={<Button size="small" color="inherit" onClick={refresh}>{t('flight_paths.retry', 'Retry')}</Button>}>{error}</Alert>}
         {failure && <Alert severity="error" sx={{m: 2}}
             action={<Button size="small" color="inherit" onClick={retry}>{t('flight_paths.retry', 'Retry')}</Button>}>{failure.message}</Alert>}
         {positions.length > 0 ? <>
-            <Box role="region" aria-label={t('flight_paths.map', 'Flight path map')}
+            <Box role="region" aria-label={labels.map}
                 sx={{height: {xs: 260, sm: 320}, position: 'relative', isolation: 'isolate',
                     '& .maplibregl-popup-content': {bgcolor: 'background.paper', color: 'text.primary', borderRadius: 1},
                     '& .maplibregl-popup-tip': {borderTopColor: 'background.paper'}}}>
@@ -178,8 +191,8 @@ export default function FlightPathMap({socket, folderId, run, runs = [], setting
             </MapStatusBar>
         </> : <Box sx={{px: 2.5, py: 5, textAlign: 'center', bgcolor: 'action.hover'}}>
             <RouteIcon sx={{fontSize: 32, color: 'text.disabled', mb: 1}} />
-            <Typography variant="body2" color="text.secondary">{loading ? t('flight_paths.loading', 'Loading flight paths')
-                : error ? t('flight_paths.unavailable', 'Flight paths are unavailable.') : t('flight_paths.empty', 'No recorded positions for this selection.')}</Typography>
+            <Typography variant="body2" color="text.secondary">{loading ? labels.loading
+                : error ? labels.unavailable : t('flight_paths.empty', 'No recorded positions for this selection.')}</Typography>
         </Box>}
         <Box sx={{px: {xs: 2, sm: 2.5}, py: 1.5, borderTop: '1px solid', borderColor: 'divider'}}>
             <Box sx={{display: 'flex', flexWrap: 'wrap', columnGap: 2, rowGap: 0.5}}>

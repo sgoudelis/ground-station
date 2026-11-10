@@ -97,12 +97,12 @@ export default function TransmitterFrequencySearch({ onTransmitterSelect, disabl
         if (listbox.current && page > 0) listbox.current.scrollTop = scrollPosition.current;
     });
 
-    const title = (entry) => [entry.owner_name, entry.description || entry.id].filter(Boolean).join(' · ');
+    const title = (entry) => entry.description || entry.id;
     const details = (entry) => {
         const frequency = downlink(entry);
         const band = frequency ? (entry.downlink_high > frequency
             ? `${mhz(frequency)} – ${mhz(entry.downlink_high)}` : mhz(frequency)) : label('no_downlink');
-        return [band, entry.mode, entry.baud > 0 ? label('baud', { value: entry.baud }) : null].filter(Boolean).join(' · ');
+        return [entry.owner_name, band, entry.mode, entry.baud > 0 ? label('baud', { value: entry.baud }) : null].filter(Boolean).join(' · ');
     };
     let status;
     if (!connected) status = label('offline');

@@ -153,6 +153,25 @@ it('draws each recorded run separately and keeps its color when filtering', asyn
     expect(screen.getAllByTestId('path')[0]).toHaveAttribute('data-color', color);
 });
 
+it('shows APRS station paths with dated run legends and endpoint timestamps', async () => {
+    const run = '20261103T080000.000000Z.gsaprs';
+    const view = mount({kind: 'aprs', folderId: 'decoded_folder:aprs_N0CALL-7',
+        runs: [{name: run, started_at: '2026-11-03T08:00:00Z'}],
+        settings: {timezone: 'Europe/Athens', locale: 'en-GB'}});
+    expect(view.requests[0].request.data).toEqual({id: 'decoded_folder:aprs_N0CALL-7'});
+    expect(screen.getByRole('region', {name: 'Station activity'})).toHaveTextContent('Loading station paths');
+    await view.respond(0, result(run));
+    expect(screen.getByRole('region', {name: 'Station path map'})).toBeInTheDocument();
+    expect(screen.getAllByText(`3 Nov 2026, 10:00:00 (${run})`).length).toBeGreaterThan(0);
+    expect(screen.getByRole('button', {name: /First recorded position.*Europe\/Athens/})).toBeInTheDocument();
+    expect(screen.getByRole('button', {name: /Latest recorded position.*Europe\/Athens/})).toBeInTheDocument();
+    expect(screen.getByRole('button', {name: 'Fit paths'})).toBeEnabled();
+    view.update({run});
+    expect(view.requests[1].request.data).toEqual({id: 'decoded_folder:aprs_N0CALL-7', run});
+    await view.fail(1);
+    expect(screen.getByText('Station paths are unavailable.')).toBeInTheDocument();
+});
+
 
 it('waits for MapLibre to load before fitting and exposes path labels for map interactions', async () => {
     map.autoLoad = false;

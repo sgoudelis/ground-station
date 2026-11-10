@@ -468,13 +468,21 @@ class LibraryInventory:
             item = self._items.get(item_id)
             if item is None:
                 raise ValueError("Library item not found")
-            if item.get("folder_kind") not in {"adsb", "radiosonde"}:
-                raise ValueError("Flight paths require an aircraft or radiosonde folder")
+            if item.get("folder_kind") not in {"adsb", "radiosonde", "aprs"}:
+                raise ValueError("Recorded paths require an aircraft, radiosonde or APRS folder")
             points = [
                 dict(point)
                 for point in item.get("_positions", [])
                 if not run or point["_run"] == run
             ]
+            if item.get("folder_kind") == "aprs":
+                # Reported objects/items have their own locations. Never join
+                # those fixes to the reporting station's recorded path.
+                points = [
+                    point
+                    for point in points
+                    if point["transmitter_id"] == f"aprs:{item['source_callsign']}"
+                ]
             revision = self._revision
         return {**build_flight_paths(points), "revision": revision}
 

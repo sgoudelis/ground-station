@@ -365,7 +365,20 @@
     "latest_status": "Latest status",
     "latest_message": "Latest message",
     "latest_weather": "Latest weather",
-    "latest_telemetry": "Latest telemetry"
+    "latest_telemetry": "Latest telemetry",
+    "activity": "Station activity",
+    "path_map": "Station path map",
+    "loading_paths": "Loading station paths",
+    "paths_unavailable": "Station paths are unavailable.",
+    "legacy": "Legacy packets",
+    "history": "Packet history",
+    "history_hint": "Recorded APRS packets · Newest first",
+    "received_timezone": "Received ({{timezone}})",
+    "shown_packets_one": "{{count}} packet shown",
+    "shown_packets_other": "{{count}} packets shown",
+    "packet_range_one": "{{first}}–{{last}} of {{count}} packet",
+    "packet_range_other": "{{first}}–{{last}} of {{count}} packets",
+    "unavailable": "Packets are unavailable."
   },
   "meshtastic_folder": {
     "node": "Meshtastic node",

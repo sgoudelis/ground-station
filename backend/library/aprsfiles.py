@@ -65,6 +65,8 @@ def scan_aprs(folder: Path):
         summary["started_at"] = min(summary["started_at"], dates["captured_at"])
         summary["last_packet_at"] = max(summary["last_packet_at"], dates["captured_at"])
         fixes = packet_positions(metadata, f"decoded:{relative}", dates["captured_at"])
+        for fix in fixes:
+            fix["_run"] = run
         positions.extend(fixes)
         # An object is reported by the station, but is not the station's location.
         station_packet = not aprs.get("object") and not aprs.get("item")

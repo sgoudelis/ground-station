@@ -214,6 +214,61 @@ def test_objects_stay_under_reporting_station_without_changing_station_location(
     assert {item["id"] for item in transmitters} == {"aprs:N0CALL-7", "aprs:N0CALL-7:TESTOBJ"}
 
 
+def test_station_paths_filter_runs_without_joining_reported_objects_or_items(tmp_path):
+    root = tmp_path / "data" / "decoded"
+    storage = AprsStorage(root)
+    first = storage.directory("N0CALL-7", STAMP)
+    second = storage.directory("N0CALL-7", STAMP + WINDOW_SECONDS)
+    no_position = storage.directory("N0CALL-7", STAMP + 2 * WINDOW_SECONDS)
+    saved(first.parent, "legacy", timestamp=STAMP - 1)
+    for index in range(70):
+        saved(first, f"station{index}", frame(b"!0000.00N/00000.00E>Station"), STAMP + index)
+    saved(first, "status", frame(b">Available"), STAMP + 70)
+    saved(first, "object", frame(b";TESTOBJ  *031200z4000.00N/02300.00E>Object"), STAMP + 71)
+    saved(first, "item", frame(b")TESTITEM!4000.00N/02300.00E>Item"), STAMP + 72)
+    saved(second, "station", timestamp=STAMP + WINDOW_SECONDS)
+    saved(no_position, "status", frame(b">Available"), STAMP + 2 * WINDOW_SECONDS)
+    inventory = LibraryInventory(tmp_path)
+    item_id = "decoded_folder:aprs_N0CALL-7"
+
+    # A full track includes fixes outside the visible history page, while
+    # status packets and separately reported entities never become station fixes.
+    result = inventory.flight_paths(item_id)
+    assert result["point_count"] == result["displayed_points"] == 72
+    assert {flight["run"] for flight in result["flights"]} == {"legacy", first.name, second.name}
+    detail = inventory.detail(item_id, run=first.name)
+    assert len(detail["packets"]) == 50
+    assert detail["total"] == 73
+    filtered = inventory.flight_paths(item_id, first.name)
+    assert filtered["point_count"] == 70
+    assert len(filtered["flights"]) == 1
+    points = filtered["flights"][0]["segments"][0]
+    assert len(points) == 70
+    assert all(point["latitude"] == point["longitude"] == 0 for point in points)
+    assert inventory.flight_paths(item_id, "legacy")["point_count"] == 1
+    assert inventory.flight_paths(item_id, no_position.name)["flights"] == []
+    assert inventory.flight_paths(item_id, "missing")["point_count"] == 0
+
+    # Object/item history remains available to the global packet map, and
+    # private run grouping must not alter that map's public response format.
+    global_map = inventory.query_positions("2026-01-01T00:00:00Z")
+    assert global_map["total"] == 74
+    assert {entry["id"] for entry in global_map["transmitters"]} == {
+        "aprs:N0CALL-7",
+        "aprs:N0CALL-7:TESTOBJ",
+        "aprs:N0CALL-7:TESTITEM",
+    }
+    assert all("_run" not in point for point in global_map["positions"])
+
+    saved(second, "new", timestamp=STAMP + WINDOW_SECONDS + 1)
+    inventory.rebuild()
+    assert inventory.flight_paths(item_id, second.name)["point_count"] == 2
+    assert inventory.flight_paths(item_id)["revision"] > result["revision"]
+    (first.parent / "legacy.bin").unlink()
+    inventory.rebuild()
+    assert inventory.flight_paths(item_id, "legacy")["point_count"] == 0
+
+
 def test_completed_observations_keep_ownership_and_active_bundles_are_skipped(tmp_path):
     for name, active in (("active", True), ("complete", False)):
         bundle = tmp_path / "data" / "observations" / f"{name}.gsobs"

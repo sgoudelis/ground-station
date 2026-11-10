@@ -36,7 +36,7 @@ describe('transmitter frequency helper', () => {
         expect(socket.emit.mock.calls[0][1]).toEqual({
             cmd: 'get-transmitter-search', data: { keyword: 'ISS', page: 0, page_size: 20 },
         });
-        const option = screen.getByRole('option', { name: /ISS · APRS.*145.825 MHz.*FM.*1200 baud/ });
+        const option = screen.getByRole('option', { name: /APRS.*ISS · 145.825 MHz.*FM.*1200 baud/ });
         fireEvent.click(option);
         expect(onSelect).toHaveBeenCalledExactlyOnceWith(aprs);
         expect(screen.getByRole('combobox')).toHaveValue('');
