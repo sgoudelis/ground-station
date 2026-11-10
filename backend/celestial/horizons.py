@@ -348,7 +348,9 @@ def fetch_celestial_vectors(
         "CENTER": "'500@10'",
         "REF_PLANE": "ECLIPTIC",
         "OUT_UNITS": "AU-D",
-        "VEC_TABLE": "2",
+        # Horizons currently omits vector columns from CSV table 2. Table 2x
+        # retains them and appends uncertainties, which our parser ignores.
+        "VEC_TABLE": "'2x'",
         "CSV_FORMAT": "YES",
         "START_TIME": f"'{start_time}'",
         "STOP_TIME": f"'{stop_time}'",
