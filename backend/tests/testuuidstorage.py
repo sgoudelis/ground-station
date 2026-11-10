@@ -59,6 +59,17 @@ NUMERIC_ID = uuid.UUID("12345678-1234-4234-8234-123456789012")
 LEGACY_ID = uuid.UUID("abcdef00-0000-4000-8000-000000000001")
 
 
+def _legacy_table(connection, model):
+    # Reflect the pinned schema so new ORM columns cannot enter legacy inserts.
+    table = sa.Table(model.__tablename__, sa.MetaData(), autoload_with=connection)
+    for column in table.c:
+        current = model.__table__.c[column.name]
+        # Keep UUID/JSON/enum binding and Python defaults for historical columns.
+        column.type = current.type
+        column.default = current.default
+    return table
+
+
 @pytest.fixture
 def legacy_database(monkeypatch, tmp_path):
     path = tmp_path / "legacy-uuids.db"
@@ -173,7 +184,7 @@ def legacy_database(monkeypatch, tmp_path):
     try:
         with engine.begin() as connection:
             for model, values in rows:
-                connection.execute(model.__table__.insert().values(**values))
+                connection.execute(_legacy_table(connection, model).insert().values(**values))
         yield engine, config
     finally:
         engine.dispose()
@@ -255,9 +266,9 @@ def test_uuid_migration_rejects_already_corrupted_ids_before_schema_changes(lega
     with engine.connect() as connection:
         connection.exec_driver_sql("PRAGMA foreign_keys = ON")
         connection.execute(
-            Groups.__table__.insert().values(
-                id=NUMERIC_ID, name="Corrupted", identifier="corrupted"
-            )
+            _legacy_table(connection, Groups)
+            .insert()
+            .values(id=NUMERIC_ID, name="Corrupted", identifier="corrupted")
         )
         connection.commit()
         assert (
