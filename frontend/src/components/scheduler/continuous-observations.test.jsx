@@ -407,7 +407,7 @@ describe('continuous observation frontend', () => {
         fireEvent.click(screen.getByRole('button', { name: 'Edit VHF monitoring' }));
         fireEvent.click(screen.getByRole('switch', { name: 'Auto center from VFOs' }));
         fireEvent.change(screen.getByLabelText('Find transmitter (optional)', { selector: '[role="combobox"]' }), { target: { value: 'Telemetry' } });
-        fireEvent.click(await screen.findByRole('option', { name: /Satellite · Telemetry/ }));
+        fireEvent.click(await screen.findByRole('option', { name: /Telemetry.*Satellite/ }));
         expectCenterFrequency(438.3);
         fireEvent.click(screen.getByRole('button', { name: /^Save (definition|changes)$/ }));
         await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
@@ -429,7 +429,7 @@ describe('continuous observation frontend', () => {
         fireEvent.click(screen.getByRole('button', { name: 'Edit VHF monitoring' }));
         const vfo = within(screen.getByRole('region', { name: 'VFO 2' }));
         fireEvent.change(vfo.getByLabelText('Find transmitter (optional)', { selector: '[role="combobox"]' }), { target: { value: 'Telemetry' } });
-        fireEvent.click(await screen.findByRole('option', { name: /Example satellite · Telemetry/ }));
+        fireEvent.click(await screen.findByRole('option', { name: /Telemetry.*Example satellite/ }));
         expect(vfo.getByLabelText(/Frequency \(MHz\)/, { selector: 'input' })).toHaveValue(437.8);
         expect(vfo.getByText(/This VFO extends outside/)).toBeVisible();
         expectCenterFrequency(145.8);
@@ -457,7 +457,7 @@ describe('continuous observation frontend', () => {
         fireEvent.click(screen.getByRole('button', { name: 'Edit VHF monitoring' }));
         fireEvent.click(screen.getByRole('switch', { name: 'Auto center from VFOs' }));
         fireEvent.change(screen.getByLabelText('Find transmitter (optional)', { selector: '[role="combobox"]' }), { target: { value: 'Telemetry' } });
-        fireEvent.click(await screen.findByRole('option', { name: /Satellite · FSK telemetry/ }));
+        fireEvent.click(await screen.findByRole('option', { name: /FSK telemetry.*Satellite/ }));
         expect(screen.getByLabelText('Decoder', { selector: '[role="combobox"]' })).toHaveTextContent('FSK');
         expect(screen.getByLabelText('Modulation', { selector: '[role="combobox"]' })).toHaveTextContent(/^None$/);
         expect(screen.getByLabelText(/Bandwidth \(kHz\)/, { selector: 'input' })).toHaveValue(3.702);
