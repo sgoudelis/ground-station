@@ -25,6 +25,12 @@ from sqlalchemy.pool import StaticPool
 from db.models import Base
 
 
+@pytest.fixture(autouse=True)
+def feedback_test_environment(monkeypatch):
+    """Keep test census samples distinct from normal deployments."""
+    monkeypatch.setenv("GS_FEEDBACK_ENVIRONMENT", "test")
+
+
 @pytest_asyncio.fixture
 async def db_engine():
     """Create an in-memory SQLite database engine for testing."""

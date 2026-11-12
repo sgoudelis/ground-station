@@ -149,6 +149,7 @@ jobs:
           docker run -d \
             --name ground-station-backend \
             -p 7000:7000 \
+            -e GS_FEEDBACK_ENVIRONMENT=test \
             -v $(pwd)/data:/app/backend/data \
             ground-station-backend:test
 

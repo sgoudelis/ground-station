@@ -28,6 +28,7 @@ from feedback.payload import (
     NOTICE_VERSION,
     SUPPORTED_NOTICE_VERSIONS,
     build_sample,
+    reporting_environment,
 )
 
 logger = logging.getLogger("feedback")
@@ -44,19 +45,17 @@ def validate_choice(data):
         raise ValueError("Census choice must be a boolean.")
     if data["enabled"] and data.get("consent_notice_version") != NOTICE_VERSION:
         raise ValueError("Please review the current census disclosure before opting in.")
+    # Accept legacy clients' valid environment labels, but deployment configuration
+    # remains authoritative; configure() never persists a client-supplied label.
     if "environment" in data and data["environment"] not in ENVIRONMENTS:
         raise ValueError("Invalid reporting environment.")
     return data
 
 
 def _default_state() -> dict[str, Any]:
-    environment = os.environ.get(
-        "GS_FEEDBACK_ENVIRONMENT", os.environ.get("GS_ENVIRONMENT", "unknown")
-    )
     return {
         "enabled": False,
         "consent_notice_version": None,
-        "environment": environment if environment in ENVIRONMENTS else "unknown",
         "installation_id": None,
         "credential": None,
         "registered": False,
@@ -92,8 +91,6 @@ class FeedbackService:
             ):
                 if type(stored.get(key)) is not bool:
                     raise ValueError("Invalid state")
-            if stored.get("environment") not in ENVIRONMENTS:
-                raise ValueError("Invalid environment")
             next_attempt = stored.get("next_attempt_at", 0)
             if (
                 not isinstance(next_attempt, (int, float))
@@ -125,6 +122,8 @@ class FeedbackService:
             for key in ("last_success_at", "error", "consent_notice_version"):
                 if stored.get(key) is not None and not isinstance(stored[key], str):
                     raise ValueError("Invalid state metadata")
+            # Old state files may contain an administrator-selected environment.
+            # Ignore that label while retaining the installation's existing consent.
             self.state.update({key: stored[key] for key in self.state if key in stored})
             # A changed disclosure never silently renews an old grant.
             if (
@@ -170,7 +169,6 @@ class FeedbackService:
                 key: self.state[key]
                 for key in (
                     "enabled",
-                    "environment",
                     "installation_id",
                     "deletion_pending",
                     "blocked",
@@ -180,6 +178,7 @@ class FeedbackService:
             }
             result.update(
                 {
+                    "environment": reporting_environment(),
                     "consent_notice_version": NOTICE_VERSION,
                     "accepted_notice_version": self.state["consent_notice_version"],
                     "needs_consent_review": self.state["enabled"]
@@ -194,7 +193,7 @@ class FeedbackService:
                     result["sample"] = await asyncio.to_thread(
                         build_sample,
                         self.state["installation_id"] or "<random UUID generated on opt-in>",
-                        self.state["environment"],
+                        reporting_environment(),
                         (
                             self.state["consent_notice_version"]
                             if self.state["enabled"]
@@ -232,7 +231,6 @@ class FeedbackService:
                 self.state["grant_pending"] = False
                 self.state["deletion_pending"] = self.state["remote_possible"]
             self.state["enabled"] = data["enabled"]
-            self.state["environment"] = data.get("environment", self.state["environment"])
             self.state["blocked"] = False
             self.state["error"] = None
             self.state["next_attempt_at"] = 0
@@ -312,7 +310,7 @@ class FeedbackService:
                     sample = await asyncio.to_thread(
                         build_sample,
                         identity,
-                        self.state["environment"],
+                        reporting_environment(),
                         self.state["consent_notice_version"],
                     )
                     if len(json.dumps(sample).encode()) > 4096:

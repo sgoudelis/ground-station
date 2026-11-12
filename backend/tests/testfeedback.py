@@ -20,7 +20,7 @@ from handlers.routing.dispatcher import dispatch_request
 from handlers.routing.registry import HandlerRegistry
 
 pytestmark = pytest.mark.unit
-OPT_IN = {"enabled": True, "consent_notice_version": "census-2", "environment": "test"}
+OPT_IN = {"enabled": True, "consent_notice_version": "census-2"}
 
 
 @pytest.fixture
@@ -56,6 +56,66 @@ async def test_default_and_preview_make_no_collector_requests(service):
     assert calls == []
     assert not service.path.exists()
     assert service.state["installation_id"] is None
+
+
+@pytest.mark.parametrize(
+    ("feedback_environment", "runtime_environment", "expected"),
+    [
+        (None, None, "production"),
+        (None, "development", "development"),
+        ("test", "production", "test"),
+        ("production", "development", "production"),
+        ("unknown", "production", "unknown"),
+        ("staging", "production", "unknown"),
+        (None, "staging", "unknown"),
+    ],
+)
+def test_reporting_environment_comes_from_deployment(
+    monkeypatch, feedback_environment, runtime_environment, expected
+):
+    for name, value in (
+        ("GS_FEEDBACK_ENVIRONMENT", feedback_environment),
+        ("GS_ENVIRONMENT", runtime_environment),
+    ):
+        if value is None:
+            monkeypatch.delenv(name, raising=False)
+        else:
+            monkeypatch.setenv(name, value)
+    assert payload.reporting_environment() == expected
+
+
+async def test_saved_and_client_environments_cannot_override_deployment(service, monkeypatch):
+    await service.configure(OPT_IN)
+    stored = json.loads(service.path.read_text())
+    # Simulate the administrator selection persisted by the previous version.
+    stored["environment"] = "development"
+    service.path.write_text(json.dumps(stored))
+    monkeypatch.setenv("GS_FEEDBACK_ENVIRONMENT", "production")
+
+    restarted = FeedbackService(service.path)
+    status = await restarted.status(preview=True)
+    assert status["enabled"]
+    assert status["installation_id"] == stored["installation_id"]
+    assert status["accepted_notice_version"] == stored["consent_notice_version"]
+    assert status["environment"] == "production"
+    assert status["sample"]["deployment"]["environment"] == "production"
+
+    # An older UI remains compatible but cannot change the backend's label.
+    updated = await restarted.configure({**OPT_IN, "environment": "test"})
+    assert updated["environment"] == "production"
+    client, calls = collector()
+    async with client:
+        await restarted.tick(client)
+    assert json.loads(calls[-1].content)["deployment"]["environment"] == "production"
+
+
+async def test_setup_exposes_environment_without_feedback_identity(monkeypatch):
+    monkeypatch.setenv("GS_FEEDBACK_ENVIRONMENT", "development")
+    monkeypatch.setattr(auth, "is_setup_required", AsyncMock(return_value=True))
+    reply = await setup.setup_status(None, None, None, "setup-sid")
+    assert reply["data"]["feedback_environment"] == "development"
+    assert "credential" not in reply["data"]
+    assert "installation_id" not in reply["data"]
 
 
 @pytest.mark.parametrize(

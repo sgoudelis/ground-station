@@ -74,6 +74,9 @@ describe('wizard timezone', () => {
             if (payload.cmd === 'get-location-timezone') {
                 return { success: true, data: { timezone: 'Europe/Amsterdam' } };
             }
+            if (payload.cmd === 'setup.status') {
+                return { success: true, data: { state: 'running', feedback_environment: 'test' } };
+            }
             return { success: true, data: { state: 'running' } };
         });
     });
@@ -129,16 +132,17 @@ describe('wizard timezone', () => {
         fireEvent.click(screen.getByRole('button', { name: 'Next' }));
         const census = screen.getByRole('switch', { name: 'Share installation census' });
         expect(census).not.toBeChecked();
-        expect(screen.getByRole('switch', { name: /share performance metrics/i })).toBeDisabled();
+        expect(screen.queryByText('Installation environment')).not.toBeInTheDocument();
+        expect(screen.queryByRole('switch', { name: /share performance metrics/i })).not.toBeInTheDocument();
         expect(screen.getByText(/pseudonymous, not fully anonymous/i)).toBeInTheDocument();
         fireEvent.click(census);
         expect(socket.emitWithAck.mock.calls.some(([, request]) => request.cmd === 'feedback.update')).toBe(false);
         fireEvent.click(screen.getByRole('button', { name: 'Next' }));
-        expect(screen.getByText('Installation census: enabled (Unknown)')).toBeInTheDocument();
+        expect(screen.getByText('Installation census: enabled (Test)')).toBeInTheDocument();
         fireEvent.click(screen.getByRole('button', { name: 'Save location' }));
         await waitFor(() => expect(socket.emitWithAck).toHaveBeenCalledWith('api.call', {
             cmd: 'setup.finalize',
-            data: expect.objectContaining({ feedback: { enabled: true, environment: 'unknown', consent_notice_version: 'census-2' } }),
+            data: expect.objectContaining({ feedback: { enabled: true, consent_notice_version: 'census-2' } }),
         }));
     }, WIZARD_TEST_TIMEOUT_MS);
 });

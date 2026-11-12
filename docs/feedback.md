@@ -5,7 +5,7 @@ first-run wizard offers a Feedback step before Review. Administrators can change
 the installation-wide choice under **Settings → Feedback**
 (`/admin/system/feedback`; `/settings/feedback` redirects there).
 Opening either page or changing an unsaved switch does not enable reporting.
-Performance reporting is reserved for a later phase and its switch is disabled.
+Performance reporting is reserved for a later phase and has no controls yet.
 
 Both pages share the `census-2` disclosure: why the project collects a census,
 every reported field, the destination, frequency, storage/retention, withdrawal,
@@ -20,9 +20,10 @@ The backend sends only the allowlist constructed in `backend/feedback/payload.py
 
 - Schema/disclosure versions and a random installation UUID.
 - Normalized Ground Station version and build channel.
-- Native/Docker deployment and the administrator-selected environment
+- Native/Docker deployment and the backend-configured environment
   (`production`, `development`, `test`, `unknown`). Environment is independent
-  of build channel. Unknown is valid and does not imply production.
+  of build channel and is included in the local payload preview.
+  Unknown is valid and does not imply production.
 - OS family, distribution ID/version and CPU architecture.
 - CPU vendor/model/logical cores.
 - GPU detection status and vendor/model for at most four GPUs. PCI device model
@@ -61,8 +62,8 @@ UUID and a 32-byte random URL-safe credential before any request. Only the
 collector sees the credential; it never appears in frontend responses or logs.
 Registration is retry-safe, and an explicit consent update grants census only.
 Existing valid `census-1` grants continue reporting without country inference.
-Settings shows a review banner and permits saving the updated disclosure without
-changing a switch. Only that explicit action renews the grant as `census-2`.
+Settings permits saving the updated disclosure without changing a switch.
+Only that explicit action renews the grant as `census-2`.
 Unsupported saved notice versions stop reporting and queue census withdrawal.
 The preview and all outgoing requests use the notice actually accepted, so a
 restart or software upgrade never silently expands consent.
@@ -109,10 +110,18 @@ volumes retain it alongside other backend data.
 
 `GS_FEEDBACK_STATE` can select a separate state-file path for an isolated backend
 instance. Temporary-database mode automatically uses a separate temporary state
-directory instead of the real station's consent. `GS_FEEDBACK_ENVIRONMENT` sets
-the initial environment, falling back to an explicitly set `GS_ENVIRONMENT` or
-`unknown`; the saved administrator selection wins. These environment variables
-never opt an installation into reporting. Direct file edits require a restart.
+directory instead of the real station's consent. The reporting environment comes
+from `GS_FEEDBACK_ENVIRONMENT`, falling back to `GS_ENVIRONMENT`, then
+`production`. Invalid values are reported as `unknown`. The development launcher
+(`backend/startdev.sh`) defaults to `development`; pytest and the CI browser-test
+backend use `test`. Operators can override the launcher default with
+`GS_FEEDBACK_ENVIRONMENT` when needed. Restart the backend after changing its
+deployment environment.
+
+Previously saved administrator selections and labels sent by older clients no
+longer override deployment configuration. Existing consent and installation
+identities are preserved; changing environment never opts an installation into
+reporting. Direct consent-file edits require a restart.
 
 ## Verification
 

@@ -199,6 +199,7 @@ const SetupWizard = ({
     const applySetupStatus = React.useCallback((statusPayload) => {
         if (!statusPayload || typeof statusPayload !== 'object') return;
         setFeedbackError(String(statusPayload.feedback_error || ''));
+        setFeedbackEnvironment(statusPayload.feedback_environment || 'unknown');
 
         const steps = statusPayload?.steps && typeof statusPayload.steps === 'object'
             ? statusPayload.steps
@@ -250,6 +251,22 @@ const SetupWizard = ({
         }
         return null;
     }, [applySetupStatus, callApi]);
+
+    React.useEffect(() => {
+        if (!showWizardAdminStep || !socket) return;
+        let cancelled = false;
+        // Setup status exposes the backend's environment before authentication,
+        // without granting access to administrator-only feedback settings.
+        const loadEnvironment = async () => {
+            const reply = await callApi('setup.status');
+            if (!cancelled && reply?.success) {
+                setFeedbackEnvironment(reply.data?.feedback_environment || 'unknown');
+            }
+        };
+        void loadEnvironment();
+        socket.on('connect', loadEnvironment);
+        return () => { cancelled = true; socket.off('connect', loadEnvironment); };
+    }, [callApi, showWizardAdminStep, socket]);
 
     const effectiveSyncState = wizardSyncState || syncState;
     const syncLastUpdateText = React.useMemo(() => {
@@ -468,7 +485,6 @@ const SetupWizard = ({
             timezone: setupTimezone,
             feedback: {
                 enabled: censusEnabled,
-                environment: feedbackEnvironment,
                 consent_notice_version: CENSUS_NOTICE_VERSION,
             },
             admin: {
@@ -959,8 +975,6 @@ const SetupWizard = ({
                         <FeedbackDisclosure
                             enabled={censusEnabled}
                             onChange={setCensusEnabled}
-                            environment={feedbackEnvironment}
-                            onEnvironmentChange={setFeedbackEnvironment}
                         />
                     )}
 

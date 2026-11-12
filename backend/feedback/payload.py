@@ -19,6 +19,14 @@ ENVIRONMENTS = ("production", "development", "test", "unknown")
 MEMORY_BUCKETS = (1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024)
 
 
+def reporting_environment():
+    """Classify the backend deployment without inferring from hardware or browser flags."""
+    environment = os.environ.get(
+        "GS_FEEDBACK_ENVIRONMENT", os.environ.get("GS_ENVIRONMENT", "production")
+    )
+    return environment if environment in ENVIRONMENTS else "unknown"
+
+
 def _label(value, limit=64):
     if value is None:
         return None

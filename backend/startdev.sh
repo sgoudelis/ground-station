@@ -7,6 +7,9 @@
 
 set -euo pipefail
 
+# Development launches identify themselves without changing census consent.
+export GS_FEEDBACK_ENVIRONMENT="${GS_FEEDBACK_ENVIRONMENT:-development}"
+
 backend_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 venv_python="$backend_dir/venv/bin/python"
 gnu_radio_prefix="${GNU_RADIO_PREFIX:-/opt/ground-station/gnuradio-3.10.12.0}"

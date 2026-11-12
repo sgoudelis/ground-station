@@ -25,6 +25,7 @@ from typing import Any, Dict, Optional, cast
 
 from common import auth as authsvc
 from common.timezones import normalize_coordinates, timezone_for_coordinates, validate_timezone
+from feedback.payload import reporting_environment
 from feedback.service import feedback_service, validate_choice
 from handlers.entities import locations, satellites
 from server import runtimestate
@@ -172,6 +173,9 @@ async def _refresh_setup_required_in_state() -> None:
 def _finalize_state_snapshot() -> Dict[str, Any]:
     snapshot = deepcopy(_setup_finalize_state)
     snapshot["sync_state"] = sync_state_manager.get_state()
+    # Setup can display deployment metadata without exposing feedback identity,
+    # credentials or hardware through the administrator-only feedback.get RPC.
+    snapshot["feedback_environment"] = reporting_environment()
     return snapshot
 
 

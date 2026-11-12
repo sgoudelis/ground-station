@@ -41,23 +41,27 @@ describe('feedback preferences', () => {
         const census = await screen.findByRole('switch', { name: 'Share installation census' });
         await waitFor(() => expect(census).toBeEnabled());
         expect(census).not.toBeChecked();
-        expect(screen.getByRole('switch', { name: /share performance metrics/i })).toBeDisabled();
+        expect(screen.queryByRole('combobox', { name: 'Installation environment' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('switch', { name: /share performance metrics/i })).not.toBeInTheDocument();
         expect(screen.getByText(/pseudonymous, not fully anonymous/i)).toBeInTheDocument();
-        expect(screen.getByText(/CPU: vendor, model and number of logical cores/i)).toBeInTheDocument();
-        expect(screen.getByText(/public source IP address/i)).toBeInTheDocument();
+        expect(screen.getByText('CPU').closest('li')).toHaveTextContent('CPU Processor brand, model and the core count reported by your system.');
+        expect(screen.getByText('Network').closest('li')).toHaveTextContent('We use and store only the public IP address');
         expect(screen.getByText(/seven days after the last report/i)).toBeInTheDocument();
-        expect(screen.getByText(/We do not send your station name/i)).toBeInTheDocument();
+        expect(screen.getByRole('list', { name: 'What gets reported' })).toBeInTheDocument();
+        expect(screen.getByRole('list', { name: 'What stays on your station' })).toBeInTheDocument();
+        expect(screen.getByText('Station identity').closest('li')).toHaveTextContent('Your station name and callsign.');
         expect(submissions()).toHaveLength(0);
         fireEvent.click(census);
         expect(submissions()).toHaveLength(0);
         expect(screen.getByText('Census off')).toBeInTheDocument();
         expect(screen.getByText('Unsaved changes — use Save to apply your choice.')).toBeInTheDocument();
         fireEvent.click(screen.getByRole('button', { name: 'Save feedback preferences' }));
-        await screen.findByText('Your feedback preferences have been saved.');
-        expect(submissions()[0][1].data).toEqual({ enabled: true, environment: 'unknown', consent_notice_version: 'census-2' });
+        await screen.findByText('Census enabled');
+        expect(screen.queryByText('Your feedback preferences have been saved.')).not.toBeInTheDocument();
+        expect(submissions()[0][1].data).toEqual({ enabled: true, consent_notice_version: 'census-2' });
     });
 
-    it('allows withdrawal and clearly shows pending deletion', async () => {
+    it('allows withdrawal without displaying a pending-deletion alert', async () => {
         state.enabled = true;
         socket.emitWithAck.mockImplementation(async (_event, request) => {
             if (request.cmd === 'feedback.update') state = { ...state, ...request.data, deletion_pending: true };
@@ -67,7 +71,8 @@ describe('feedback preferences', () => {
         await screen.findByText('Census enabled');
         fireEvent.click(screen.getByRole('switch', { name: 'Share installation census' }));
         fireEvent.click(screen.getByRole('button', { name: 'Save feedback preferences' }));
-        await screen.findByText(/Deletion of the previously stored census and IP is pending/i);
+        await screen.findByText('Census off');
+        expect(screen.queryByText(/Deletion of the previously stored census and IP is pending/i)).not.toBeInTheDocument();
         expect(submissions()[0][1].data.enabled).toBe(false);
     });
 
@@ -77,14 +82,17 @@ describe('feedback preferences', () => {
         state.needs_consent_review = true;
         state.sample.consent_notice_version = 'census-1';
         const { container } = renderForm();
-        await screen.findByText(/Your existing census consent remains active without country inference/);
-        expect(submissions()).toHaveLength(0);
-        const save = screen.getByRole('button', { name: 'Save feedback preferences' });
+        const save = await screen.findByRole('button', { name: 'Save feedback preferences' });
         await waitFor(() => expect(save).toBeEnabled());
+        expect(screen.queryByText(/Your existing census consent remains active without country inference/)).not.toBeInTheDocument();
+        expect(screen.queryByText(/^Current disclosure:/)).not.toBeInTheDocument();
+        expect(screen.queryByText(/^Saved consent:/)).not.toBeInTheDocument();
+        expect(screen.getByText('JSON · generated locally')).toBeInTheDocument();
+        expect(submissions()).toHaveLength(0);
         expect(JSON.parse(container.querySelector('pre').textContent).consent_notice_version).toBe('census-1');
         fireEvent.click(save);
-        await screen.findByText('Your feedback preferences have been saved.');
-        expect(submissions()[0][1].data).toEqual({ enabled: true, environment: 'unknown', consent_notice_version: 'census-2' });
+        await waitFor(() => expect(JSON.parse(container.querySelector('pre').textContent).consent_notice_version).toBe('census-2'));
+        expect(submissions()[0][1].data).toEqual({ enabled: true, consent_notice_version: 'census-2' });
         expect(JSON.parse(container.querySelector('pre').textContent).consent_notice_version).toBe('census-2');
         expect(screen.queryByText(/Your existing census consent remains active without country inference/)).not.toBeInTheDocument();
     });
@@ -102,6 +110,21 @@ describe('feedback preferences', () => {
         expect(screen.getByText('Census off')).toBeInTheDocument();
         expect(census).toBeChecked();
         expect(screen.queryByText('Your feedback preferences have been saved.')).not.toBeInTheDocument();
+    });
+
+    it('keeps the backend environment in the payload preview without showing a separate setting', async () => {
+        state.environment = 'development';
+        state.sample.deployment.environment = 'development';
+        const { container } = renderForm();
+        const census = await screen.findByRole('switch', { name: 'Share installation census' });
+        await waitFor(() => expect(census).toBeEnabled());
+        expect(screen.queryByText('Installation environment')).not.toBeInTheDocument();
+        expect(screen.queryByText('Development')).not.toBeInTheDocument();
+        expect(JSON.parse(container.querySelector('pre').textContent).deployment.environment).toBe('development');
+        fireEvent.click(census);
+        fireEvent.click(screen.getByRole('button', { name: 'Save feedback preferences' }));
+        await screen.findByText('Census enabled');
+        expect(submissions()[0][1].data).not.toHaveProperty('environment');
     });
 
     it('shows storage failures and prevents claiming consent was saved', async () => {
