@@ -57,33 +57,67 @@ export function FeedbackIntroduction({ actions = null }) {
 
 export function FeedbackChoices({ enabled, onChange, disabled = false, actions = null }) {
     const { t } = useTranslation('settings');
+    const censusLabelId = useId();
     const censusHelpId = useId();
 
     return (
-        <SettingsSection title={t('feedback.choices')} sx={{ borderRadius: 1.5 }}>
-            <Stack spacing={1} sx={{
-                p: 1.5, border: '1px solid', borderRadius: 1,
-                borderColor: enabled ? 'primary.main' : 'divider',
-                bgcolor: (theme) => enabled ? alpha(theme.palette.primary.main, 0.06) : 'transparent',
-            }}>
-                <FormControlLabel
-                    control={<Switch
-                        checked={enabled}
-                        onChange={(event) => onChange(event.target.checked)}
-                        disabled={disabled}
-                        // Custom input slot props replace MUI's default switch role.
-                        slotProps={{ input: { role: 'switch', 'aria-describedby': censusHelpId } }}
-                    />}
-                    label={t('feedback.census_switch')}
-                    labelPlacement="start"
-                    sx={{ m: 0, justifyContent: 'space-between', gap: 1, '& .MuiFormControlLabel-label': { fontSize: '0.875rem', fontWeight: 600 } }}
-                />
-                <Typography id={censusHelpId} variant="body2" color="text.secondary" sx={{ lineHeight: 1.7 }}>
-                    {t('feedback.census_help')}
-                </Typography>
-            </Stack>
-            {actions && <Box sx={{ pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>{actions}</Box>}
-        </SettingsSection>
+        <Stack spacing={2} sx={{ minWidth: 0, width: '100%' }}>
+            {/* A native label toggles from anywhere on the card, without a second click handler. */}
+            <FormControlLabel
+                disabled={disabled}
+                disableTypography
+                control={<Switch
+                    checked={enabled}
+                    onChange={(event) => onChange(event.target.checked)}
+                    disabled={disabled}
+                    // Custom input slot props replace MUI's default switch role.
+                    slotProps={{ input: { role: 'switch', 'aria-labelledby': censusLabelId, 'aria-describedby': censusHelpId } }}
+                    sx={{ flexShrink: 0 }}
+                />}
+                label={(
+                    <Stack component="span" direction="row" spacing={2} alignItems="center" sx={{ minWidth: 0 }}>
+                        <Box component="span" sx={{
+                            display: { xs: 'none', sm: 'flex' }, p: 1.5, borderRadius: 1.5,
+                            color: disabled ? 'text.disabled' : 'primary.main',
+                            bgcolor: (theme) => alpha(theme.palette.primary.main, 0.12),
+                        }}>
+                            <SendOutlinedIcon />
+                        </Box>
+                        <Stack component="span" spacing={0.75} sx={{ minWidth: 0 }}>
+                            <Typography component="span" id={censusLabelId} variant="subtitle1" fontWeight={700}>
+                                {t('feedback.census_switch')}
+                            </Typography>
+                            <Typography component="span" id={censusHelpId} variant="body2" color="text.secondary" sx={{ lineHeight: 1.7 }}>
+                                {t('feedback.census_help')}
+                            </Typography>
+                        </Stack>
+                    </Stack>
+                )}
+                labelPlacement="start"
+                sx={(theme) => ({
+                    m: 0, p: { xs: 2, sm: 2.5 }, width: '100%', boxSizing: 'border-box',
+                    display: 'flex', justifyContent: 'space-between', gap: 2,
+                    border: '2px solid', borderRadius: 2,
+                    borderColor: disabled ? 'divider' : enabled ? 'primary.main' : alpha(theme.palette.primary.main, 0.45),
+                    bgcolor: alpha(theme.palette.primary.main, enabled ? 0.12 : 0.04),
+                    transition: theme.transitions.create(['border-color', 'background-color', 'box-shadow']),
+                    opacity: disabled ? 0.6 : 1,
+                    cursor: disabled ? 'not-allowed' : 'pointer',
+                    ...(!disabled && {
+                        '&:hover': {
+                            borderColor: 'primary.main',
+                            bgcolor: alpha(theme.palette.primary.main, enabled ? 0.18 : 0.08),
+                            boxShadow: `0 2px 12px ${alpha(theme.palette.primary.main, 0.12)}`,
+                        },
+                    }),
+                    '&:has(input:focus-visible)': {
+                        outline: `3px solid ${theme.palette.primary.main}`,
+                        outlineOffset: 3,
+                    },
+                })}
+            />
+            {actions}
+        </Stack>
     );
 }
 

@@ -112,12 +112,7 @@ export default function FeedbackForm() {
                 {status?.preview_error && <Alert severity="warning">{status.preview_error}</Alert>}
 
                 <Stack spacing={3}>
-                    <Box sx={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))',
-                        gap: 2.5,
-                        minWidth: 0,
-                    }}>
+                    <Stack spacing={2.5} sx={{ minWidth: 0 }}>
                         <FeedbackChoices
                             enabled={enabled}
                             onChange={setEnabled}
@@ -162,7 +157,7 @@ export default function FeedbackForm() {
                                 </Typography>
                             </SettingsSection>
                         )}
-                    </Box>
+                    </Stack>
                     <Stack spacing={2.5} sx={{ minWidth: 0 }}>
                         <CensusDisclosure />
                         <FeedbackDelivery />
