@@ -81,6 +81,13 @@ single web interface.
 
 ---
 
+### Map Page — Radiosondes
+<img src="frontend/public/ground-station - desktop - map page - radiosonde with manual rotator control dialog.png" alt="Map page showing radiosonde positions, telemetry, and manual rotator controls (desktop)" width="450"/>
+
+*Radiosonde map with live telemetry and manual rotator control*
+
+---
+
 ### SDR Waterfall View
 <img src="frontend/public/ground station - waterfall page - transcription - iss.png" alt="Waterfall view with live transcription" width="450"/>
 
