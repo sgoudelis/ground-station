@@ -17,29 +17,16 @@
  *
  */
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import {
     Box,
-    Chip,
     Grid,
     Paper,
     Stack,
-    Typography,
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import { tabsClasses } from '@mui/material/Tabs';
-import StorageIcon from '@mui/icons-material/Storage';
-import DashboardCustomizeIcon from '@mui/icons-material/DashboardCustomize';
-import AccountTreeIcon from '@mui/icons-material/AccountTree';
-import PowerSettingsNewIcon from '@mui/icons-material/PowerSettingsNew';
-import BugReportIcon from '@mui/icons-material/BugReport';
-import Inventory2Icon from '@mui/icons-material/Inventory2';
-import MemoryIcon from '@mui/icons-material/Memory';
-import DnsIcon from '@mui/icons-material/Dns';
-import HistoryIcon from '@mui/icons-material/History';
-import ArticleIcon from '@mui/icons-material/Article';
-import SystemUpdateAltIcon from '@mui/icons-material/SystemUpdateAlt';
 import { useTranslation } from 'react-i18next';
 import { AntTab, AntTabs } from '../common/common.jsx';
 import PageTabsLayout from '../common/page-tabs.jsx';
@@ -61,7 +48,7 @@ import {
     UpdateCard,
 } from './maintenance/index.jsx';
 
-const TAB_QUERY_PARAM = 'mtab';
+import { MAINTENANCE_PAGES } from '../../config/system-navigation.jsx';
 
 const maintenanceSectionCardSx = {
     p: 2,
@@ -112,107 +99,14 @@ const MaintenanceForm = () => {
     const navigate = useNavigate();
     const panelRef = useRef(null);
 
-    const tabMeta = useMemo(() => ([
-        {
-            key: 'updates',
-            group: 'operations',
-            label: t('maintenance.tabs.updates', { defaultValue: 'Updates' }),
-            subtitle: t('maintenance.tabs.updates_subtitle', { defaultValue: 'GitHub release status and Docker update instructions' }),
-            icon: <SystemUpdateAltIcon fontSize="small" />,
-        },
-        {
-            key: 'frontend-state',
-            group: 'state',
-            label: t('maintenance.tabs.frontend_state', { defaultValue: 'Frontend State' }),
-            subtitle: t('maintenance.tabs.frontend_state_subtitle', { defaultValue: 'Local storage and persisted client state' }),
-            icon: <DashboardCustomizeIcon fontSize="small" />,
-        },
-        {
-            key: 'redux-inspector',
-            group: 'state',
-            label: t('maintenance.tabs.redux_inspector', { defaultValue: 'Redux Inspector' }),
-            subtitle: t('maintenance.tabs.redux_inspector_subtitle', { defaultValue: 'Inspect and debug Redux state' }),
-            icon: <AccountTreeIcon fontSize="small" />,
-        },
-        {
-            key: 'sessions',
-            group: 'state',
-            label: t('maintenance.tabs.sessions', { defaultValue: 'Sessions' }),
-            subtitle: t('maintenance.tabs.sessions_subtitle', { defaultValue: 'Connected clients and runtime snapshots' }),
-            icon: <HistoryIcon fontSize="small" />,
-        },
-        {
-            key: 'message-log',
-            group: 'state',
-            label: t('maintenance.tabs.message_log', { defaultValue: 'Message Log' }),
-            subtitle: t('maintenance.tabs.message_log_subtitle', { defaultValue: 'Realtime event stream and console output' }),
-            icon: <ArticleIcon fontSize="small" />,
-        },
-        {
-            key: 'diagnostics',
-            group: 'diagnostics',
-            label: t('maintenance.tabs.diagnostics', { defaultValue: 'Diagnostics' }),
-            subtitle: t('maintenance.tabs.diagnostics_subtitle', { defaultValue: 'Browser and socket diagnostics' }),
-            icon: <BugReportIcon fontSize="small" />,
-        },
-        {
-            key: 'dependencies',
-            group: 'diagnostics',
-            label: t('maintenance.tabs.dependencies', { defaultValue: 'Dependencies' }),
-            subtitle: t('maintenance.tabs.dependencies_subtitle', { defaultValue: 'Library and runtime version inventory' }),
-            icon: <Inventory2Icon fontSize="small" />,
-        },
-        {
-            key: 'system-info',
-            group: 'diagnostics',
-            label: t('maintenance.tabs.system_info', { defaultValue: 'System Info' }),
-            subtitle: t('maintenance.tabs.system_info_subtitle', { defaultValue: 'Host metrics and machine details' }),
-            icon: <DnsIcon fontSize="small" />,
-        },
-        {
-            key: 'system-control',
-            group: 'operations',
-            label: t('maintenance.tabs.system_control', { defaultValue: 'System Control' }),
-            subtitle: t('maintenance.tabs.system_control_subtitle', { defaultValue: 'Service-level restart and control actions' }),
-            icon: <PowerSettingsNewIcon fontSize="small" />,
-        },
-        {
-            key: 'database',
-            group: 'operations',
-            label: t('maintenance.tabs.database', { defaultValue: 'Database' }),
-            subtitle: t('maintenance.tabs.database_subtitle', { defaultValue: 'Backup, restore, and transmitter import' }),
-            icon: <StorageIcon fontSize="small" />,
-        },
-    ]), [t]);
-
-    const tabByKey = useMemo(
-        () => Object.fromEntries(tabMeta.map((tab) => [tab.key, tab])),
-        [tabMeta]
-    );
-
-    const getInitialTabKey = () => {
-        const params = new URLSearchParams(location.search);
-        const queryTab = params.get(TAB_QUERY_PARAM);
-        return queryTab && tabByKey[queryTab] ? queryTab : 'updates';
-    };
-
-    const [activeTabKey, setActiveTabKey] = useState(getInitialTabKey);
-
-    useEffect(() => {
-        const params = new URLSearchParams(location.search);
-        const queryTab = params.get(TAB_QUERY_PARAM);
-        if (queryTab && tabByKey[queryTab]) {
-            setActiveTabKey((current) => (current === queryTab ? current : queryTab));
-        }
-    }, [location.search, tabByKey]);
-
-    useEffect(() => {
-        const params = new URLSearchParams(location.search);
-        if (params.get(TAB_QUERY_PARAM) !== activeTabKey) {
-            params.set(TAB_QUERY_PARAM, activeTabKey);
-            navigate({ pathname: location.pathname, search: params.toString() }, { replace: true });
-        }
-    }, [activeTabKey, location.pathname, location.search, navigate]);
+    const tabMeta = useMemo(() => MAINTENANCE_PAGES.map((page) => ({
+        ...page,
+        label: t(page.labelKey, { defaultValue: page.defaultLabel }),
+    })), [t]);
+    // Derive selection from the route so sidebar clicks, reloads and Back/Forward
+    // always show the same panel without effects rewriting browser history.
+    const pathname = location.pathname.replace(/\/$/, '');
+    const activeTabKey = tabMeta.find((page) => page.path === pathname)?.key || tabMeta[0].key;
 
     useEffect(() => {
         if (panelRef.current) {
@@ -220,32 +114,6 @@ const MaintenanceForm = () => {
             panelRef.current.focus({ preventScroll: true });
         }
     }, [activeTabKey]);
-
-    const activeTab = tabByKey[activeTabKey] || tabMeta[0];
-
-    const renderTabLabel = (tab) => (
-        <Stack direction="row" spacing={1} alignItems="center">
-            <Box
-                component="span"
-                sx={{
-                    lineHeight: 1,
-                    color: tab.risk === 'danger' ? 'warning.main' : 'inherit',
-                    textAlign: 'left',
-                }}
-            >
-                {tab.label}
-            </Box>
-            {tab.risk === 'danger' && (
-                <Chip
-                    size="small"
-                    color="warning"
-                    variant="outlined"
-                    label={tab.riskLabel}
-                    sx={{ display: { xs: 'none', xl: 'inline-flex' } }}
-                />
-            )}
-        </Stack>
-    );
 
     const TabPanel = ({ tabKey, children }) => {
         const isActive = activeTabKey === tabKey;
@@ -273,7 +141,10 @@ const MaintenanceForm = () => {
             <PageTabsLayout tabs={
                 <AntTabs
                     value={activeTabKey}
-                    onChange={(_event, newValue) => setActiveTabKey(newValue)}
+                    onChange={(_event, newValue) => {
+                        const page = tabMeta.find((item) => item.key === newValue);
+                        if (page) navigate({ pathname: page.path, search: location.search, hash: location.hash });
+                    }}
                     variant="scrollable"
                     scrollButtons
                     allowScrollButtonsMobile
@@ -286,7 +157,7 @@ const MaintenanceForm = () => {
                             value={tab.key}
                             id={`maintenance-tab-${tab.key}`}
                             aria-controls={`maintenance-tabpanel-${tab.key}`}
-                            label={renderTabLabel(tab)}
+                            label={tab.label}
                         />
                     ))}
                 </AntTabs>
@@ -331,33 +202,13 @@ const MaintenanceForm = () => {
                                 </Paper>
                             </Grid>
                         </Grid>
-                    </Stack>
-                </TabPanel>
-
-                <TabPanel tabKey="redux-inspector">
-                    <Stack spacing={2}>
                         <Grid container spacing={2}>
-                            <Grid size={{ xs: 12, md: 12 }}>
+                            <Grid size={{ xs: 12 }}>
                                 <Paper
                                     variant="outlined"
                                     sx={maintenanceSectionCardSx}
                                 >
                                     <ReduxStateInspectorCard />
-                                </Paper>
-                            </Grid>
-                        </Grid>
-                    </Stack>
-                </TabPanel>
-
-                <TabPanel tabKey="system-control">
-                    <Stack spacing={2}>
-                        <Grid container spacing={2}>
-                            <Grid size={{ xs: 12, md: 6 }}>
-                                <Paper
-                                    variant="outlined"
-                                    sx={maintenanceSectionCardSx}
-                                >
-                                    <ServiceControlCard />
                                 </Paper>
                             </Grid>
                         </Grid>
@@ -441,10 +292,15 @@ const MaintenanceForm = () => {
                     </Stack>
                 </TabPanel>
 
-                <TabPanel tabKey="system-info">
+                <TabPanel tabKey="system">
                     <Grid container spacing={2}>
                         <Grid size={{ xs: 12 }}>
                             <SystemInfoCard />
+                        </Grid>
+                        <Grid size={{ xs: 12, md: 6 }}>
+                            <Paper variant="outlined" sx={maintenanceSectionCardSx}>
+                                <ServiceControlCard />
+                            </Paper>
                         </Grid>
                     </Grid>
                 </TabPanel>

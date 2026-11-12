@@ -1170,8 +1170,9 @@ export default function Layout() {
     const drawerContent = (isExpanded) => (
         <>
             <Toolbar />
-            <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                <Box component="nav" role="navigation" aria-label={t('dashboard_layout.main_navigation', { defaultValue: 'Main navigation' })} sx={{ overflow: 'auto', mt: 1, flex: 1 }}>
+            {/* Let the drawer paper scroll the navigation and footer together. */}
+            <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                <Box component="nav" role="navigation" aria-label={t('dashboard_layout.main_navigation', { defaultValue: 'Main navigation' })} sx={{ mt: 1, flex: 1 }}>
                     <List>
                         {navigation.map((item, index) => {
                             if (item.kind === 'header') {

@@ -21,14 +21,11 @@ import PublicIcon from '@mui/icons-material/Public';
 import MapIcon from '@mui/icons-material/Map';
 import EngineeringIcon from '@mui/icons-material/Engineering';
 import {Satellite03Icon, Saturn01Icon} from "hugeicons-react";
-import MemoryIcon from '@mui/icons-material/Memory';
 import InfoIcon from '@mui/icons-material/Info';
 import GroupWorkIcon from '@mui/icons-material/GroupWork';
 import WavesIcon from '@mui/icons-material/Waves';
 import FolderIcon from '@mui/icons-material/Folder';
 import SettingsApplicationsIcon from '@mui/icons-material/SettingsApplications';
-import LocationOnIcon from '@mui/icons-material/LocationOn';
-import GroupIcon from '@mui/icons-material/Group';
 import i18n from '../i18n/config.js';
 import { CelestialSolarIcon, TleIcon } from '../components/common/custom-icons.jsx';
 import StatusOverlay from '../components/common/status-overlay.jsx';
@@ -38,6 +35,7 @@ import { useSelector } from 'react-redux';
 import { useLocation } from 'react-router-dom';
 import { TrackingIconWithStatus, TrackingStatusTooltip } from './tracking-navigation.jsx';
 import { SchedulerIconWithStatus, SchedulerStatusTooltip } from './scheduler-navigation.jsx';
+import { MAINTENANCE_PAGES, MAINTENANCE_PATH, SYSTEM_SETTINGS_PAGES } from './system-navigation.jsx';
 
 // Navigation keeps its base icon; overlays carry the shared operational language.
 const IconWithOverlay = ({children, showOverlay = false, overlayType = 'spinner', showLeftOverlay = false, leftOverlayType = null}) => (
@@ -221,7 +219,7 @@ export const getNavigation = ({ isAdmin = false } = {}) => {
             children: [
                 {
                     segment: 'orbital-data',
-                    title: i18n.t('orbital_data', { ns: 'navigation', defaultValue: 'Orbital Data' }),
+                    title: i18n.t('orbital_data', { ns: 'navigation', defaultValue: 'Orbital Sync' }),
                     icon: <Satellite03Icon />,
                 },
                 {
@@ -249,7 +247,7 @@ export const getNavigation = ({ isAdmin = false } = {}) => {
             children: [
                 {
                     segment: 'ephemeris',
-                    title: i18n.t('ephemeris_sync', { ns: 'navigation', defaultValue: 'Ephemeris & Sync' }),
+                    title: i18n.t('ephemeris_sync', { ns: 'navigation', defaultValue: 'Ephemeris Sync' }),
                     icon: <SyncIcon />,
                 },
                 {
@@ -265,29 +263,29 @@ export const getNavigation = ({ isAdmin = false } = {}) => {
             title: i18n.t('system', { ns: 'navigation', defaultValue: 'System' }),
         },
         {
-            segment: 'admin/system/general',
-            title: i18n.t('general', { ns: 'navigation', defaultValue: 'General' }),
+            segment: 'admin/system',
+            collapsedSegment: 'admin/system/general',
+            title: i18n.t('settings', { ns: 'navigation', defaultValue: 'Settings' }),
             icon: <SettingsApplicationsIcon/>,
+            children: SYSTEM_SETTINGS_PAGES.map((page) => ({
+                segment: page.key,
+                title: i18n.t(page.key, {
+                    ns: 'navigation',
+                    defaultValue: i18n.t(page.labelKey, { ns: 'settings', defaultValue: page.defaultLabel }),
+                }),
+                icon: page.icon,
+            })),
         },
         {
-            segment: 'admin/system/location',
-            title: i18n.t('location', { ns: 'navigation' }),
-            icon: <LocationOnIcon/>,
-        },
-        {
-            segment: 'admin/system/users',
-            title: i18n.t('users', { ns: 'navigation', defaultValue: 'Users' }),
-            icon: <GroupIcon />,
-        },
-        {
-            segment: 'admin/system/hardware',
-            title: i18n.t('hardware', { ns: 'navigation' }),
-            icon: <MemoryIcon/>,
-        },
-        {
-            segment: 'admin/system/maintenance',
+            segment: MAINTENANCE_PATH.slice(1),
+            collapsedSegment: MAINTENANCE_PAGES[0].path.slice(1),
             title: i18n.t('maintenance', { ns: 'navigation' }),
             icon: <EngineeringIcon/>,
+            children: MAINTENANCE_PAGES.map((page) => ({
+                segment: page.key,
+                title: i18n.t(page.labelKey, { ns: 'settings', defaultValue: page.defaultLabel }),
+                icon: page.icon,
+            })),
         },
         {
             segment: 'admin/system/about',
