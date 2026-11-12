@@ -111,7 +111,8 @@ jobs:
 
   frontend-e2e-tests:
     name: Frontend E2E Tests
-    runs-on: ubuntu-latest
+    # Playwright 1.59 does not support ubuntu-latest's Ubuntu 26 image yet.
+    runs-on: ubuntu-24.04
     timeout-minutes: 180
 
     steps:
