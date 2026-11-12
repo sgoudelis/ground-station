@@ -26,25 +26,25 @@ single web interface.
 
 <div align="center">
 
-### Global Satellite Overview
+### Earth View
 <p>
-  <img src="frontend/public/ground station - overview page - amateur group.png" alt="Overview page with amateur satellite group (desktop)" height="300"/>
+  <img src="frontend/public/ground-station - desktop - earth view - eshail selected.png" alt="Earth view with ES'HAIL 2 selected (desktop)" height="300"/>
   &nbsp;&nbsp;&nbsp;
-  <img src="frontend/public/ground station - earth view - mobile.jpg" alt="Earth view page on mobile" height="300"/>
+  <img src="frontend/public/ground-station - mobile - earth view - eshail selected.png" alt="Earth view with ES'HAIL 2 selected on mobile" height="300"/>
 </p>
 
-*Overview page with quick group selection and real-time satellite status indicators*
+*Earth view with ES'HAIL 2 selected, showing satellite coverage and real-time group status on desktop and mobile*
 
 ---
 
-### Solar System View
+### Celestial View
 <p>
-  <img src="frontend/public/ground station - solar system view.png" alt="Solar System view page (desktop)" height="300"/>
+  <img src="frontend/public/ground-station - desktop - celestial page - io selected.png" alt="Celestial page with Io selected (desktop)" height="300"/>
   &nbsp;&nbsp;&nbsp;
-  <img src="frontend/public/ground station - solar system view - mobile.jpg" alt="Solar System view page on mobile" height="300"/>
+  <img src="frontend/public/ground-station - mobile - celestial page - io selected.png" alt="Celestial page with Io selected on mobile" height="300"/>
 </p>
 
-*Solar System page for celestial-body tracking with live orbital context and interactive visualization*
+*Celestial page with Io selected, showing its trajectory alongside monitored celestial targets on desktop and mobile*
 
 ---
 
@@ -61,12 +61,23 @@ single web interface.
 
 ### Multi-Target Tracking Console
 <p>
-  <img src="frontend/public/ground station - tracking console - multitargets - iss.png" alt="Multi-target tracking console focused on ISS (desktop)" height="300"/>
+  <img src="frontend/public/ground-station - desktop - tracking page - ISS tracking - hardware connected.png" alt="ISS tracking with rotator and radio hardware connected (desktop)" height="300"/>
   &nbsp;&nbsp;&nbsp;
-  <img src="frontend/public/ground station - target console - mobile.jpg" alt="Target console on mobile" height="300"/>
+  <img src="frontend/public/ground-station - mobile - tracking page - ISS tracking - hardware connected.png" alt="ISS tracking with hardware connected on mobile" height="300"/>
 </p>
 
-*Multi-target tracking console view showing an active ISS target with per-target control and live tracking telemetry*
+*Multi-target tracking console focused on ISS with connected rotator and radio hardware, live telemetry, and pass predictions on desktop and mobile*
+
+---
+
+### Map Page — ADS-B Aircraft
+<p>
+  <img src="frontend/public/ground-station - desktop - map page - adsb aircraft.png" alt="Map page showing ADS-B aircraft positions and flight instruments (desktop)" height="300"/>
+  &nbsp;&nbsp;&nbsp;
+  <img src="frontend/public/ground-station - mobile - map page - adsb aircraft.png" alt="Map page showing ADS-B aircraft positions on mobile" height="300"/>
+</p>
+
+*Map page showing live ADS-B aircraft positions on desktop and mobile, with aircraft details and flight instruments in the desktop view*
 
 ---
 
@@ -91,29 +102,17 @@ single web interface.
 
 ---
 
-### TLE Data Synchronization
-<img src="frontend/public/ground station - tle sync page.png" alt="TLE synchronization page" width="450"/>
+### Orbital Data Synchronization
+<img src="frontend/public/ground-station - desktop - orbital data sync page.png" alt="Orbital data synchronization page showing progress and added, modified, and removed items" width="450"/>
 
-*TLE synchronization page showing real-time progress and satellite database updates*
+*Orbital data sync with synchronization progress and satellite and transmitter updates*
 
 ---
 
 ### SDR Hardware Management
-<img src="frontend/public/ground station - sdr page - index.png" alt="SDR page index" width="450"/>
+<img src="frontend/public/ground-station - desktop - hardware page - add sdr dialog.png" alt="Add SDR dialog with remote SoapySDR discovery, device probing, and antenna port labels" width="450"/>
 
-*Comprehensive SDR device management interface supporting RTL-SDR, SoapySDR, and UHD/USRP radios with remote capability*
-
-SoapySDR discovery runs only from **Hardware → SDRs**. Use **Discover SoapySDR Servers**
-to list remote servers and devices, then **Probe selected SDR** to read a radio's capabilities and
-antenna ports. Both controls are also available in the add/edit dialog; probing uses the current
-form values without saving them. A streaming radio returns its cached capabilities.
-If a remote server is missing from discovery, select **Enter server manually…** in the add
-dialog, enter its hostname/IP and port (default **55132**), and click **Query server**.
-Select a returned SDR to probe its capabilities automatically. Manually queried results
-remain available through discovery refreshes, and saved connections do not require mDNS.
-
-Discovery lists remote devices without opening them for capability probing. First-time setup
-leaves SDR discovery and configuration to **Hardware → SDRs**.
+*Add SDR dialog for discovering and configuring radio devices*
 
 ---
 
@@ -124,10 +123,10 @@ leaves SDR discovery and configuration to **Hardware → SDRs**.
 
 ---
 
-### Observations Overview
-<img src="frontend/public/ground station - observations - overview.png" alt="Observations overview" width="450"/>
+### Scheduler — Monitored Satellites
+<img src="frontend/public/ground-station - desktop - scheduler page - monitored satellites.png" alt="Scheduler page showing monitored satellites, hardware, and observation tasks" width="450"/>
 
-*Automated observations dashboard with upcoming passes and task status*
+*Monitored satellites with hardware and tasks configured for automatic observations*
 
 ---
 
