@@ -31,6 +31,8 @@ import { store, persistor } from './components/common/store.jsx';
 import ErrorPage from './components/common/error-page.jsx';
 import NotFoundPage from './components/common/not-found-page.jsx';
 import {WakeLockProvider} from "./components/dashboard/wake-lock-provider.jsx";
+import MaintenanceRedirect from './components/settings/maintenance-redirect.jsx';
+import { MAINTENANCE_ALIASES, MAINTENANCE_PAGES } from './config/system-navigation.jsx';
 
 const enableStrictMode = import.meta.env.VITE_REACT_STRICT_MODE !== 'false';
 
@@ -268,7 +270,17 @@ const router = createBrowserRouter([
                                     },
                                     {
                                         path: "maintenance",
-                                        lazy: lazySettingsPage("AdminSystemMaintenancePage"),
+                                        children: [
+                                            { index: true, element: <MaintenanceRedirect /> },
+                                            ...Object.entries(MAINTENANCE_ALIASES).map(([path, pageKey]) => ({
+                                                path,
+                                                element: <MaintenanceRedirect pageKey={pageKey} />,
+                                            })),
+                                            ...MAINTENANCE_PAGES.map((page) => ({
+                                                path: page.key,
+                                                lazy: lazySettingsPage("AdminSystemMaintenancePage"),
+                                            })),
+                                        ],
                                     },
                                     {
                                         path: "about",
@@ -357,7 +369,7 @@ const router = createBrowserRouter([
                             },
                             {
                                 path: "maintenance",
-                                element: <Navigate to="/admin/system/maintenance" replace />,
+                                element: <MaintenanceRedirect />,
                             },
                             {
                                 path: "about",

@@ -150,7 +150,7 @@ describe('app-settings-form', () => {
         expect(toastSuccessMock).toHaveBeenCalled();
 
         fireEvent.click(screen.getByRole('button', { name: 'Open Maintenance' }));
-        expect(navigateMock).toHaveBeenCalledWith('/admin/system/maintenance?mtab=system-control');
+        expect(navigateMock).toHaveBeenCalledWith('/admin/system/maintenance/system');
     });
 
     it('keeps CLI-controlled backend ports read-only', async () => {

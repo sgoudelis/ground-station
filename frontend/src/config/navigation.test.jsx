@@ -32,6 +32,23 @@ describe('administration navigation', () => {
 
         expect(navigation.some((item) => item.segment === 'admin/satellites')).toBe(false);
         expect(navigation.some((item) => item.segment === 'admin/celestial')).toBe(false);
+        expect(navigation.some((item) => item.segment?.startsWith('admin/system'))).toBe(false);
+    });
+
+    it('separates System settings, maintenance pages and About', () => {
+        const navigation = getNavigation({ isAdmin: true });
+        const system = navigation.filter((item) => item.segment?.startsWith('admin/system'));
+        expect(system.map((item) => item.title)).toEqual(['Settings', 'Maintenance', 'About']);
+        expect(system[0].children.map((item) => item.segment)).toEqual([
+            'general', 'hardware', 'location', 'users', 'feedback',
+        ]);
+        expect(system[1].children.map((item) => item.segment)).toEqual([
+            'updates', 'frontend-state', 'sessions', 'message-log',
+            'diagnostics', 'dependencies', 'system', 'database',
+        ]);
+        expect(system[0].collapsedSegment).toBe('admin/system/general');
+        expect(system[1].collapsedSegment).toBe('admin/system/maintenance/updates');
+        expect(system[2].children).toBeUndefined();
     });
 
     it('uses a planet icon for celestial data administration and its catalog child', () => {

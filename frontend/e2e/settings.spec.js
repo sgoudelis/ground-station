@@ -70,11 +70,8 @@ test.describe('Maintenance Settings', () => {
   });
 
   test('should display maintenance page', async ({ page }) => {
-    // Wait for page to load
-    await page.waitForTimeout(2000);
-
-    // Page should be loaded (basic check)
-    expect(page.url()).toContain('/admin/system/maintenance');
+    await expect(page).toHaveURL(/\/admin\/system\/maintenance\/updates$/);
+    await expect(page.getByRole('tab', { name: 'Updates', exact: true })).toHaveAttribute('aria-selected', 'true');
   });
 
   test('should have maintenance controls or information', async ({ page }) => {
@@ -91,6 +88,7 @@ test.describe('Maintenance Settings', () => {
   test('should display time drift diagnostics card', async ({ page }) => {
     await page.goto('/admin/system/maintenance?mtab=diagnostics');
     await page.waitForLoadState('domcontentloaded');
+    await expect(page).toHaveURL(/\/admin\/system\/maintenance\/diagnostics$/);
     await expect(page.getByText(/Frontend vs Backend Time/i)).toBeVisible({ timeout: 10000 });
     await expect(page.getByText(/Frontend Time/i)).toBeVisible({ timeout: 10000 });
     await expect(page.getByText(/^Backend Time/i)).toBeVisible({ timeout: 10000 });

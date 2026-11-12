@@ -49,6 +49,7 @@ import PageTabsLayout from '../common/page-tabs.jsx';
 import SDRsPage from "../hardware/sdr-table.jsx";
 import AppSettingsForm from "./app-settings-form.jsx";
 import FeedbackForm from "./feedback-form.jsx";
+import { SYSTEM_SETTINGS_PAGES } from '../../config/system-navigation.jsx';
 import {
     CelestialCatalogPage,
     CelestialEphemerisPage,
@@ -237,40 +238,22 @@ export function AdminSystemUsersPage() {
 }
 
 export function AdminSystemMaintenancePage() {
-    return (
-        <AdminSystemPageLayout activeTab="maintenance">
-            <MaintenanceForm />
-        </AdminSystemPageLayout>
-    );
+    return <MaintenanceForm />;
 }
 
 export function AdminSystemAboutPage() {
-    return (
-        <AdminSystemPageLayout activeTab="about">
-            <AboutPage />
-        </AdminSystemPageLayout>
-    );
+    return <AboutPage />;
 }
 
-const ADMIN_SYSTEM_TABS = [
-    { key: "general", labelKey: "tabs.general", defaultLabel: "General", path: "/admin/system/general" },
-    { key: "feedback", labelKey: "tabs.feedback", defaultLabel: "Feedback", path: "/admin/system/feedback" },
-    { key: "location", labelKey: "tabs.location", defaultLabel: "Location", path: "/admin/system/location" },
-    { key: "users", labelKey: "tabs.users", defaultLabel: "Users", path: "/admin/system/users" },
-    { key: "hardware", labelKey: "tabs.hardware", defaultLabel: "Hardware", path: "/admin/system/hardware/sdrs" },
-    { key: "maintenance", labelKey: "tabs.maintenance", defaultLabel: "Maintenance", path: "/admin/system/maintenance" },
-    { key: "about", labelKey: "tabs.about", defaultLabel: "About", path: "/admin/system/about" },
-];
-
 const ADMIN_SATELLITES_TABS = [
-    { key: "orbital-data", labelKey: "tabs.orbital_data", defaultLabel: "Orbital Data", path: "/admin/satellites/orbital-data" },
+    { key: "orbital-data", labelKey: "tabs.orbital_data", defaultLabel: "Orbital Sync", path: "/admin/satellites/orbital-data" },
     { key: "sources", labelKey: "tabs.sources", defaultLabel: "Sources", path: "/admin/satellites/sources" },
     { key: "catalog", labelKey: "tabs.catalog", defaultLabel: "Catalog", path: "/admin/satellites/catalog" },
     { key: "groups", labelKey: "tabs.groups", defaultLabel: "Groups", path: "/admin/satellites/groups" },
 ];
 
 const ADMIN_CELESTIAL_TABS = [
-    { key: "ephemeris", labelKey: "tabs.ephemeris", defaultLabel: "Ephemeris Data", path: "/admin/celestial/ephemeris" },
+    { key: "ephemeris", labelKey: "tabs.ephemeris", defaultLabel: "Ephemeris Sync", path: "/admin/celestial/ephemeris" },
     { key: "catalog", labelKey: "tabs.celestial_catalog", defaultLabel: "Catalog", path: "/admin/celestial/catalog" },
 ];
 
@@ -391,7 +374,7 @@ const AdminSystemPageLayout = React.memo(function AdminSystemPageLayout({ active
             return;
         }
 
-        const tabDefinition = ADMIN_SYSTEM_TABS.find((tab) => tab.key === nextTab);
+        const tabDefinition = SYSTEM_SETTINGS_PAGES.find((tab) => tab.key === nextTab);
         if (tabDefinition) {
             navigate(tabDefinition.path);
         }
@@ -408,7 +391,7 @@ const AdminSystemPageLayout = React.memo(function AdminSystemPageLayout({ active
                 allowScrollButtonsMobile
                 sx={getSettingsTabRowSx('detailRow')}
             >
-                {ADMIN_SYSTEM_TABS.map((tab) => (
+                {SYSTEM_SETTINGS_PAGES.map((tab) => (
                     <AntTab
                         key={tab.key}
                         value={tab.key}
