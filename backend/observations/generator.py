@@ -465,6 +465,17 @@ async def _generate_observations_for_satellite(
                 if not task_end_time:
                     task_end_time = event_end
 
+                # Predictions include the pass currently above the horizon.
+                # A past task start would create only a stop job, which could
+                # report success without ever starting the observation.
+                if task_start_time <= datetime.now(timezone.utc):
+                    logger.info(
+                        "Skipping %s pass because its task start has already passed",
+                        satellite_data["name"],
+                    )
+                    stats["skipped"] += 1
+                    continue
+
                 # Force strategy bypasses conflict resolution and always schedules.
                 if CONFLICT_RESOLUTION_STRATEGY == CONFLICT_STRATEGY_FORCE:
                     if dry_run:
@@ -504,8 +515,17 @@ async def _generate_observations_for_satellite(
                     continue
 
                 new_elevation = pass_data["peak_altitude"]
+                # Replacing an active observation would orphan its tracker,
+                # SDR session and stop job. Preserve the whole group if any
+                # blocker has started, including during startup before RUNNING.
+                replacement_allowed = all(
+                    should_update_observation(obs) for obs, _ in blocking_observations
+                )
                 strategy_action = "keep_existing"
-                if CONFLICT_RESOLUTION_STRATEGY == CONFLICT_STRATEGY_PRIORITY:
+                if (
+                    replacement_allowed
+                    and CONFLICT_RESOLUTION_STRATEGY == CONFLICT_STRATEGY_PRIORITY
+                ):
                     max_existing_elevation = max(
                         obs.pass_config.get("peak_altitude", 0) for obs, _ in blocking_observations
                     )
@@ -522,6 +542,10 @@ async def _generate_observations_for_satellite(
                     if user_action in {"keep_existing", "replace_blockers"}
                     else strategy_action
                 )
+                # A preview choice can become stale before confirmation; user
+                # overrides must respect the same lifecycle boundary.
+                if not replacement_allowed:
+                    effective_action = "keep_existing"
 
                 blockers_preview = []
                 for conflicting_obs, reasons in blocking_observations:
@@ -557,6 +581,7 @@ async def _generate_observations_for_satellite(
                             "strategy_action": strategy_action,
                             "user_action": user_action,
                             "effective_action": effective_action,
+                            "replacement_allowed": replacement_allowed,
                         }
                     )
                     if effective_action == "replace_blockers":
@@ -573,7 +598,17 @@ async def _generate_observations_for_satellite(
                         satellite_data["name"],
                         new_elevation,
                     )
-                    await delete_scheduled_observations(session, blocking_ids)
+                    delete_result = await delete_scheduled_observations(
+                        session, blocking_ids, only_future_scheduled=True
+                    )
+                    if not delete_result["success"]:
+                        logger.warning(
+                            "Skipping %s replacement: %s",
+                            satellite_data["name"],
+                            delete_result.get("error"),
+                        )
+                        stats["skipped"] += 1
+                        continue
                     await _create_observation(session, monitored_sat, pass_data)
                     stats["generated"] += 1
                 else:

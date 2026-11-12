@@ -67,7 +67,7 @@ async def find_overlapping_observation(
 
 
 def should_update_observation(existing_obs: ScheduledObservations) -> bool:
-    """Return whether generation may refresh an existing observation."""
+    """Return whether generation may refresh or replace an existing observation."""
     status = getattr(existing_obs.status, "value", existing_obs.status)
     return bool(
         status == STATUS_SCHEDULED and existing_obs.event_start > datetime.now(timezone.utc)

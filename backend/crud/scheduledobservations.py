@@ -455,16 +455,34 @@ async def log_observation_event(
         return {"success": False, "error": str(e)}
 
 
-async def delete_scheduled_observations(session: AsyncSession, ids: List[str]) -> dict:
+async def delete_scheduled_observations(
+    session: AsyncSession, ids: List[str], *, only_future_scheduled: bool = False
+) -> dict:
     """
     Delete one or more scheduled observation records.
+
+    Conflict replacement may only delete future, scheduled observations. If any
+    member has started or changed, roll back the entire group before committing.
     """
     try:
         stmt = delete(ScheduledObservations).where(ScheduledObservations.id.in_(ids))
+        if only_future_scheduled:
+            # Recheck at the write boundary: a scheduler job may have started
+            # since conflict detection, even before RUNNING is persisted.
+            stmt = stmt.where(
+                ScheduledObservations.status == STATUS_SCHEDULED,
+                ScheduledObservations.event_start > datetime.now(timezone.utc),
+            )
         result = await session.execute(stmt)
+        deleted_count = result.rowcount
+        if only_future_scheduled and deleted_count != len(set(ids)):
+            await session.rollback()
+            return {
+                "success": False,
+                "error": "Conflicting observations have started or changed; keeping existing observations",
+            }
         await session.commit()
 
-        deleted_count = result.rowcount
         if deleted_count:
             public_events.observations_changed()
         return {"success": True, "data": {"deleted": deleted_count}, "error": None}

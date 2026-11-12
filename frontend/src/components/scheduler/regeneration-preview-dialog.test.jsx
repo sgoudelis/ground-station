@@ -77,3 +77,46 @@ it('shows generation progress and prevents another confirmation while the reques
     await userEvent.setup().click(confirmButton);
     expect(onConfirm).toHaveBeenCalledOnce();
 });
+
+it('preserves started observations and disables both replacement controls', async () => {
+    const user = userEvent.setup();
+    const onConfirm = vi.fn();
+    const data = {
+        ...previewData,
+        conflicting_passes: [{
+            ...previewData.conflicting_passes[0],
+            replacement_allowed: false,
+        }],
+    };
+    render(<RegenerationPreviewDialog open onClose={() => {}} previewData={data} onConfirm={onConfirm} />);
+
+    const candidateCard = screen.getByRole('button', { name: /Candidate Pass Candidate Sat/ });
+    const scheduleRadio = screen.getByRole('radio', { name: /Schedule New Pass/ });
+    expect(candidateCard).toBeDisabled();
+    expect(scheduleRadio).toBeDisabled();
+    expect(screen.getByRole('radio', { name: /Keep Existing Pass/ })).toBeChecked();
+    expect(screen.getByText(/An existing observation has started and will be kept/)).toBeInTheDocument();
+
+    expect(scheduleRadio).not.toBeChecked();
+    await user.click(screen.getByRole('button', { name: /Confirm & Generate/ }));
+    expect(onConfirm).toHaveBeenCalledWith({ 'candidate-1': 'keep_existing' });
+});
+
+it('discards a replacement selection when refreshed preview data protects the observation', async () => {
+    const user = userEvent.setup();
+    const props = { open: true, onClose: () => {}, onConfirm: vi.fn() };
+    const { rerender } = render(<RegenerationPreviewDialog {...props} previewData={previewData} />);
+    await user.click(screen.getByRole('button', { name: /Candidate Pass Candidate Sat/ }));
+    expect(screen.getByRole('radio', { name: /Schedule New Pass/ })).toBeChecked();
+
+    rerender(<RegenerationPreviewDialog {...props} previewData={{
+        ...previewData,
+        conflicting_passes: [{ ...previewData.conflicting_passes[0], replacement_allowed: false }],
+    }} />);
+
+    expect(screen.getByRole('radio', { name: /Keep Existing Pass/ })).toBeChecked();
+    expect(screen.getByRole('radio', { name: /Schedule New Pass/ })).not.toBeChecked();
+    expect(screen.getByRole('button', { name: /Conflicts With Existing Existing Sat/ })).toHaveAttribute('aria-pressed', 'true');
+    await user.click(screen.getByRole('button', { name: /Confirm & Generate/ }));
+    expect(props.onConfirm).toHaveBeenCalledWith({ 'candidate-1': 'keep_existing' });
+});

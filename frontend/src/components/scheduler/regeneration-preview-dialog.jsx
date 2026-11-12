@@ -66,7 +66,13 @@ const RegenerationPreviewDialog = ({ open, onClose, previewData, onConfirm, isGe
     };
 
     const handleConfirm = () => {
-        onConfirm(conflictChoices);
+        const choices = { ...conflictChoices };
+        conflicts.forEach((conflict) => {
+            if (conflict.replacement_allowed === false) {
+                choices[conflict.pass_id] = 'keep_existing';
+            }
+        });
+        onConfirm(choices);
     };
     const timeFormatOptions = { hour: '2-digit', minute: '2-digit', hour12: false };
     const formatRange = (start, end) => {
@@ -229,7 +235,10 @@ const RegenerationPreviewDialog = ({ open, onClose, previewData, onConfirm, isGe
                         {conflicts.map((conflict, idx) => {
                             const passId = conflict.pass_id;
                             const userChoice = conflictChoices[passId];
-                            const effectiveAction = userChoice || conflict.strategy_action;
+                            const replacementAllowed = conflict.replacement_allowed !== false;
+                            const effectiveAction = replacementAllowed
+                                ? userChoice || conflict.strategy_action
+                                : 'keep_existing';
                             const blockers = conflict.blockers || [];
                             const conflictReasons = Array.from(
                                 new Set(blockers.flatMap((blocker) => blocker.reasons || []))
@@ -300,6 +309,7 @@ const RegenerationPreviewDialog = ({ open, onClose, previewData, onConfirm, isGe
                                     >
                                         <ButtonBase
                                             type="button"
+                                            disabled={!replacementAllowed}
                                             aria-pressed={isReplace}
                                             onClick={() => handleConflictChoice(passId, 'replace_blockers')}
                                             sx={{
@@ -409,6 +419,13 @@ const RegenerationPreviewDialog = ({ open, onClose, previewData, onConfirm, isGe
                                     <Typography variant="subtitle2" sx={{ mb: 0.8 }}>
                                         {t('regeneration_preview_dialog.resolution', { defaultValue: 'Resolution' })}
                                     </Typography>
+                                    {!replacementAllowed && (
+                                        <Alert severity="info" sx={{ mb: 1 }}>
+                                            {t('regeneration_preview_dialog.observation_already_started', {
+                                                defaultValue: 'An existing observation has started and will be kept. Its conflicting passes cannot be replaced.',
+                                            })}
+                                        </Alert>
+                                    )}
                                     <RadioGroup value={effectiveAction} onChange={(e) => handleConflictChoice(passId, e.target.value)}>
                                         <FormControlLabel
                                             value="keep_existing"
@@ -429,6 +446,7 @@ const RegenerationPreviewDialog = ({ open, onClose, previewData, onConfirm, isGe
                                         />
                                         <FormControlLabel
                                             value="replace_blockers"
+                                            disabled={!replacementAllowed}
                                             control={<Radio size="small" />}
                                             label={
                                                 <Typography variant="body2" component="span">
