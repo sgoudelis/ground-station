@@ -27,13 +27,13 @@
     "distance_los": "LOS 距离",
     "distance_peak": "最高点距离",
     "max_el": "最高仰角",
-    "geo_stat": "地球静止状态",
-    "geo_sync": "同步轨道状态",
+    "geo_stat": "地球静止轨道",
+    "geo_sync": "地球同步轨道",
     "no_satellite_selected": "请选择一颗卫星以查看过境",
     "direction": "方向",
     "direction_values": {
-      "cw": "顺时针",
-      "ccw": "逆时针",
+      "cw": "顺时针（CW）",
+      "ccw": "逆时针（CCW）",
       "mixed": "混合"
     },
     "automatic_observation_tooltip": "该次过境将被自动观测",
@@ -41,8 +41,8 @@
     "pass_tag_labels": {
       "north_crossing": "北向穿越",
       "south_crossing": "南向穿越",
-      "direction_cw": "顺时针",
-      "direction_ccw": "逆时针",
+      "direction_cw": "顺时针（CW）",
+      "direction_ccw": "逆时针（CCW）",
       "direction_mixed": "混合",
       "direction_e_to_w": "东→西",
       "direction_w_to_e": "西→东",
@@ -125,7 +125,8 @@
     "vfo_1": "VFO 1",
     "vfo_2": "VFO 2",
     "downlink": "下行：",
-    "uplink": "上行："
+    "uplink": "上行：",
+    "pause_tracking": "暂停跟踪"
   },
   "rotator_control": {
     "title": "旋转器控制",
@@ -267,7 +268,7 @@
     "sky_interaction_description": "控制星空视图内的指针交互。"
   },
   "target_retarget_dialog": {
-    "title": "重设目标时段或新建目标",
+    "title": "重新指定时隙目标或新建目标",
     "cancel": "取消",
     "confirm_create": "创建新目标",
     "confirm_retarget": "改指所选时段",
@@ -291,7 +292,10 @@
     "azimuth_dial": "方位角拨盘",
     "elevation_dial": "仰角拨盘",
     "az": "AZ",
-    "el": "EL"
+    "el": "EL",
+    "current": "当前",
+    "requested": "请求",
+    "readout_label": "{{axis}} 位置"
   },
   "target_map_composite_view": {
     "refresh_target_scene": "刷新目标场景",

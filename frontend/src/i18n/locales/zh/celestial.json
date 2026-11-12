@@ -3,26 +3,26 @@
     "body": "天体",
     "mission": "任务",
     "error": "错误",
-    "stale": "过期",
-    "ok": "确定",
+    "stale": "已过期",
+    "ok": "正常",
     "yes": "是",
     "no": "否",
     "unknown": "未知",
-    "never": "从未",
-    "loading": "加载中…"
+    "never": "从不",
+    "loading": "正在加载..."
   },
   "units": {
-    "deg": "°",
+    "deg": "度",
     "au": "AU",
     "km_per_s": "km/s",
-    "min": "分钟"
+    "min": "分"
   },
   "errors": {
     "unknown_error": "未知错误"
   },
   "statusbar": {
     "planets": "行星",
-    "moons": "卫星",
+    "moons": "天然卫星",
     "tracked": "已跟踪"
   },
   "toolbar": {
@@ -31,7 +31,7 @@
     "zoom_out": "缩小",
     "reset_zoom": "重置缩放",
     "center_on_sun": "以太阳为中心",
-    "refresh_scene": "刷新天体场景",
+    "refresh_scene": "刷新天象场景",
     "show_labels": "显示标签",
     "scroll_left": "向左滚动工具栏",
     "scroll_right": "向右滚动工具栏",
@@ -41,13 +41,13 @@
     "exit_fullscreen": "退出全屏"
   },
   "main_layout": {
-    "planetarium_title": "星空视图",
+    "planetarium_title": "天象仪",
     "solar_system_layout_title": "太阳系布局",
-    "monitored_title": "监控天体",
-    "loading": "加载中…",
-    "loading_planetarium_vectors": "正在加载星空视图矢量…",
-    "loading_solar_vectors": "正在加载太阳系矢量…",
-    "updating": "正在更新…"
+    "monitored_title": "监测天体",
+    "loading": "正在加载...",
+    "loading_planetarium_vectors": "正在加载天象仪矢量数据...",
+    "loading_solar_vectors": "正在加载太阳系矢量数据...",
+    "updating": "正在更新..."
   },
   "layout_options": {
     "title": "太阳系布局选项",
@@ -55,58 +55,58 @@
     "reset_defaults": "恢复默认",
     "view_mode": {
       "title": "视图模式",
-      "subtitle": "选择该面板使用的主要天体可视化方式。",
+      "subtitle": "选择该分栏使用的主要天体可视化方式。",
       "label": "视图",
       "solar_system": "太阳系",
-      "planetarium": "星空视图"
+      "planetarium": "天象仪"
     },
     "map_interaction": {
       "title": "地图交互",
-      "solar_subtitle": "在太阳系地图上启用手势平移与缩放。",
-      "planetarium_subtitle": "在星空视图视口中启用手势平移与缩放。"
+      "solar_subtitle": "在太阳系地图上启用基于手势的平移与缩放。",
+      "planetarium_subtitle": "在天象仪视口中启用基于手势的平移与缩放。"
     },
     "sections": {
       "solar_scene_elements": {
         "title": "场景元素",
-        "subtitle": "主要太阳系图层与标签。"
+        "subtitle": "主要的太阳系图层与标签。"
       },
       "solar_tracked_targets": {
         "title": "跟踪目标",
-        "subtitle": "被跟踪天体及其轨道/标签叠加层。"
+        "subtitle": "被跟踪对象及其轨道与标签叠加层。"
       },
       "solar_astronomy_background": {
         "title": "天文背景",
-        "subtitle": "地图下方的参考图层。"
+        "subtitle": "地图背后的参考图层。"
       },
       "solar_guides_and_metadata": {
         "title": "参考线与元数据",
-        "subtitle": "上下文标记、标签与场景元数据。"
+        "subtitle": "上下文标记、标签和场景元数据。"
       },
       "planetarium_sky_layers": {
-        "title": "星空图层",
-        "subtitle": "星空视图视口的主要叠加层。"
+        "title": "天空图层",
+        "subtitle": "天象仪视口的主要叠加层。"
       },
       "planetarium_target_overlays": {
         "title": "目标叠加层",
-        "subtitle": "行星与目标的跟踪叠加层及标签。"
+        "subtitle": "行星与目标的跟踪叠加层和标签。"
       }
     },
     "options": {
       "enable_map_dragging": {
-        "label": "启用地图拖动",
-        "description": "允许在地图上按住拖动来平移。关闭后请使用控件操作。"
+        "label": "启用地图拖拽",
+        "description": "允许在地图上点击拖拽平移。关闭时请使用控制按钮。"
       },
       "enable_map_zooming": {
         "label": "启用地图缩放",
-        "description": "允许滚轮和双指缩放手势。关闭后请使用缩放按钮。"
+        "description": "允许滚轮和捏合缩放手势。关闭时请使用缩放按钮。"
       },
       "show_grid": {
         "label": "显示网格",
-        "description": "显示参考网格，便于快速判断方位。"
+        "description": "显示参考网格，便于快速判断空间方位。"
       },
       "show_planets": {
         "label": "显示行星",
-        "description": "在视口中渲染行星及太阳系主要天体。"
+        "description": "在视口中渲染行星和主要太阳系天体。"
       },
       "show_planet_labels": {
         "label": "显示行星标签",
@@ -117,7 +117,7 @@
       },
       "show_planet_orbits": {
         "label": "显示行星轨道",
-        "description": "绘制行星运动的轨道环/轨迹以提供空间参照。"
+        "description": "绘制行星运动的轨道环线/轨迹，便于理解其运行。"
       },
       "show_tracked_objects": {
         "label": "显示跟踪对象",
@@ -125,46 +125,46 @@
       },
       "show_tracked_orbits": {
         "label": "显示跟踪轨道",
-        "description": "叠加跟踪目标的采样轨迹路径。"
+        "description": "叠加跟踪目标的采样轨迹。"
       },
       "show_tracked_labels": {
         "label": "显示跟踪标签",
         "description": "显示跟踪目标的标签与遥测信息。"
       },
       "show_bright_star_field": {
-        "label": "显示亮星场",
-        "description": "渲染来自亮星表的黄道矢量投影。"
+        "label": "显示亮星星场",
+        "description": "基于亮星表渲染黄道矢量投影。"
       },
       "show_asteroid_zones": {
-        "label": "显示小行星带区域",
+        "label": "显示小行星区",
         "description": "显示主要小行星带区域的叠加层。"
       },
       "show_asteroid_zone_labels": {
-        "label": "显示小行星带标签",
-        "description": "为小行星带区域标注名称。"
+        "label": "显示小行星区标签",
+        "description": "用小行星区名称标注相应区域。"
       },
       "show_resonance_markers": {
         "label": "显示共振标记",
-        "description": "渲染主要轨道共振参考标记。"
+        "description": "渲染关键轨道共振参考标记。"
       },
       "show_epoch_label": {
         "label": "显示历元标签",
-        "description": "显示用于当前位置计算的场景时间戳。"
+        "description": "显示用于计算当前位置的场景时间戳。"
       },
       "show_scale_label": {
         "label": "显示比例标签",
-        "description": "显示当前视口的距离比例参照。"
+        "description": "显示当前视口的距离比例参考。"
       },
       "show_gesture_hint": {
         "label": "显示手势提示",
-        "description": "显示地图交互控件的简短操作提示。"
+        "description": "显示地图交互控件的简要操作提示。"
       },
       "show_sky_grid": {
         "label": "显示天球网格",
         "description": "绘制方位角/仰角参考线。"
       },
       "show_horizon_compass": {
-        "label": "显示地平罗盘",
+        "label": "显示地平线罗盘",
         "description": "绘制带东南西北刻度的地平线。"
       },
       "show_star_field": {
@@ -173,11 +173,11 @@
       },
       "show_star_names": {
         "label": "显示恒星名称",
-        "description": "在缩放允许时标注有名称的亮星。"
+        "description": "在缩放允许时标注明亮的具名恒星。"
       },
       "show_constellation_labels": {
         "label": "显示星座标签",
-        "description": "在星空背景中渲染星座名称。"
+        "description": "在天空背景中渲染星座名称。"
       },
       "show_pass_curves": {
         "label": "显示过境曲线",
@@ -188,8 +188,8 @@
         "description": "显示跟踪目标的标签。"
       },
       "show_rotator_crosshair": {
-        "label": "显示旋转器十字线",
-        "description": "在可用时渲染旋转器实时十字线。"
+        "label": "显示旋转器十字准星",
+        "description": "在可用时渲染实时旋转器十字准星。"
       },
       "show_hud_labels": {
         "label": "显示 HUD 标签",
@@ -216,19 +216,19 @@
       "clear_color": "清除"
     },
     "dialogs": {
-      "add_title": "添加监控天体目标",
-      "manage_title": "管理监控天体目标",
-      "delete_title": "删除监控目标",
-      "edit_title": "编辑监控天体目标"
+      "add_title": "添加监测天体目标",
+      "manage_title": "管理监测天体目标",
+      "delete_title": "删除监测目标",
+      "edit_title": "编辑监测天体目标"
     },
     "fields": {
       "target_type": "目标类型",
-      "mission_spacecraft": "任务 / 航天器",
+      "mission_spacecraft": "任务/航天器",
       "solar_body": "太阳系天体",
       "target": "目标",
-      "target_placeholder": "输入命令或从目录中选择",
+      "target_placeholder": "输入指令或从目录中选择",
       "target_body": "目标天体",
-      "horizons_command": "Horizons 命令",
+      "horizons_command": "Horizons 指令",
       "display_name": "显示名称",
       "color": "颜色",
       "color_placeholder": "#06D6A0",
@@ -236,14 +236,14 @@
       "parent": "母体"
     },
     "helper": {
-      "using_static_catalog": "正在使用静态目录条目。",
-      "using_exact_command": "正在使用精确的 Horizons 命令。",
-      "selected_mission_not_active": "所选任务未处于活动状态；Horizons 数据可能受限。",
-      "loading_spacecraft_catalog": "正在加载航天器目录…",
-      "loading_body_catalog": "正在加载天体目录…"
+      "using_static_catalog": "使用静态目录条目。",
+      "using_exact_command": "使用精确的 Horizons 指令。",
+      "selected_mission_not_active": "所选任务未处于活动状态，Horizons 数据可能有限。",
+      "loading_spacecraft_catalog": "正在加载航天器目录...",
+      "loading_body_catalog": "正在加载天体目录..."
     },
     "labels": {
-      "already_monitored": "已在监控中",
+      "already_monitored": "已在监测中",
       "static_body": "静态天体"
     },
     "table": {
@@ -252,32 +252,32 @@
       "last_refresh": "上次刷新"
     },
     "delete": {
-      "confirm": "确定要删除该监控目标吗？",
+      "confirm": "确定要删除该监测目标吗？",
       "unknown_target": "未知目标"
     },
     "empty": {
-      "no_targets": "尚无监控的天体目标。"
+      "no_targets": "暂无监测的天体目标。"
     },
     "errors": {
-      "failed_load_spacecraft_catalog": "加载航天器目录失败。",
-      "failed_load_body_catalog": "加载天体目录失败。",
+      "failed_load_spacecraft_catalog": "无法加载航天器目录。",
+      "failed_load_body_catalog": "无法加载天体目录。",
       "socket_unavailable": "Socket 连接不可用。",
-      "display_name_command_required": "显示名称和命令为必填项。",
-      "command_already_monitored": "该命令已在监控列表中。",
-      "select_body_target": "请选择目标天体。",
-      "body_already_monitored": "该天体已在监控列表中。",
+      "display_name_command_required": "显示名称和指令为必填项。",
+      "command_already_monitored": "该指令已在监测列表中。",
+      "select_body_target": "请选择一个天体目标。",
+      "body_already_monitored": "该天体已在监测列表中。",
       "display_name_required": "显示名称为必填项。",
-      "command_required_for_mission": "任务类目标必须填写命令。",
-      "body_required_for_body_target": "天体类目标必须填写目标天体。",
+      "command_required_for_mission": "任务目标必须提供指令。",
+      "body_required_for_body_target": "天体目标必须提供目标天体。",
       "invalid_hex_color": "颜色必须是有效的十六进制值，例如 #1A2B3C。",
-      "failed_update_target": "更新监控目标失败。"
+      "failed_update_target": "更新监测目标失败。"
     },
     "feedback": {
-      "added_mission": "已添加“{{name}}”，使用命令“{{command}}”。",
+      "added_mission": "已使用指令“{{command}}”添加“{{name}}”。",
       "added_body": "已添加天体目标“{{name}}”。"
     },
     "mission_status": {
-      "active": "活动",
+      "active": "活动中",
       "completed": "已完成",
       "failed": "失败"
     },
@@ -286,9 +286,9 @@
     }
   },
   "passes": {
-    "title": "天体过境",
-    "count_label_single": "次过境",
-    "count_label_plural": "次过境",
+    "title": "天体可见性",
+    "count_label_single": "次",
+    "count_label_plural": "次",
     "table_settings": "表格设置",
     "refresh": "刷新过境",
     "timeline_default_target_name": "天体目标",
@@ -309,9 +309,9 @@
       "end": "结束",
       "start_azimuth": "起始方位角",
       "end_azimuth": "结束方位角",
-      "peak_azimuth": "最高方位角",
+      "peak_azimuth": "峰值方位角",
       "cache": "缓存",
-      "stale": "过期",
+      "stale": "已过期",
       "source": "来源",
       "current_elevation": "当前仰角"
     },
@@ -328,9 +328,9 @@
       "live_short": "实时",
       "next_30_tooltip": "实时或未来 30 分钟（Alt+3）",
       "next_30_aria": "未来 30 分钟",
-      "next_30_short": "未来30分",
-      "highest_elevation_tooltip": "按最高仰角优先排序（Alt+4）",
-      "highest_elevation_aria": "按最高仰角优先排序",
+      "next_30_short": "未来 30 分",
+      "highest_elevation_tooltip": "按最高仰角优先（Alt+4）",
+      "highest_elevation_aria": "按最高仰角优先",
       "high_el_short": "高仰角"
     },
     "settings": {
@@ -362,17 +362,17 @@
       "azimuth": "方位角（度）",
       "distance_from_sun_au": "距太阳距离（AU）",
       "speed_km_s": "速度（km/s）",
-      "light_time_min": "光行时（分钟）",
+      "light_time_min": "光行时间（分）",
       "last_refresh": "上次刷新",
       "refresh_age": "刷新时长",
       "projection_span": "投影跨度",
       "cache": "缓存",
-      "stale": "过期",
-      "samples": "采样数",
-      "last_error": "最近错误"
+      "stale": "已过期",
+      "samples": "采样点",
+      "last_error": "上次错误"
     },
     "settings": {
-      "title": "监控天体表格设置",
+      "title": "监测天体表格设置",
       "rows_per_page": "每页行数",
       "reset_values": "重置数值",
       "close": "关闭",
@@ -400,7 +400,7 @@
   },
   "info": {
     "title": "天体信息",
-    "empty_hint": "请从“监控天体”或“天体过境”中选择一个天体或任务。",
+    "empty_hint": "请从“监测天体”或“天体过境”中选择一个天体或任务。",
     "edit_transmitters": "编辑发射机",
     "no_upcoming_pass": "无即将到来的过境",
     "status": {
@@ -409,19 +409,19 @@
     },
     "sections": {
       "earth_relative": "相对于地球",
-      "pass_window": "过境时间窗",
-      "data_source": "数据源"
+      "pass_window": "过境窗口",
+      "data_source": "数据来源"
     },
     "metrics": {
       "target_type": "目标类型",
       "body_id": "天体 ID",
-      "mission_command": "任务命令",
+      "mission_command": "任务指令",
       "elevation": "仰角",
       "azimuth": "方位角",
       "distance_from_sun_au": "距太阳距离",
       "distance_from_sun_km": "距太阳距离（km）",
       "speed": "日心速度",
-      "light_time": "从太阳出发的光行时",
+      "light_time": "光行时间",
       "distance_from_earth": "距地球距离",
       "relative_speed": "相对速度",
       "range_rate": "距离变化率",
@@ -433,13 +433,13 @@
       "closest_approach_time": "最近距离时间",
       "total_passes": "过境总数",
       "active_pass": "当前过境",
-      "active_since": "起始于",
+      "active_since": "开始于",
       "next_start": "下次开始",
       "ends": "结束",
       "next_peak": "下次最高点",
       "source": "来源",
       "cache": "缓存",
-      "stale": "过期",
+      "stale": "已过期",
       "last_refresh": "上次刷新"
     },
     "motion": {
@@ -450,14 +450,14 @@
   },
   "context": {
     "copy_body_id": "复制天体 ID",
-    "copy_mission_command": "复制任务命令",
+    "copy_mission_command": "复制任务指令",
     "copy_target_key": "复制目标键",
     "copy_target_summary": "复制目标摘要",
     "copy_pass_summary": "复制过境摘要"
   },
   "time": {
     "relative": {
-      "in_less_than_minute": "<1 分钟后",
+      "in_less_than_minute": "<1 分钟内",
       "less_than_minute_ago": "<1 分钟前",
       "in_minutes": "{{count}} 分钟后",
       "minutes_ago": "{{count}} 分钟前",
@@ -481,23 +481,23 @@
     "solar": {
       "anchor_sun": "太阳",
       "anchor_earth": "地球",
-      "anchor_galactic_center": "银心",
-      "anchor_galactic_center_short": "银心",
+      "anchor_galactic_center": "银河系中心",
+      "anchor_galactic_center_short": "银河系中心",
       "no_epoch": "无历元",
       "epoch": "历元：{{timestamp}}",
       "scale": "比例：{{value}} / 格",
       "touch_pan": "双指平移",
       "touch_pan_zoom": "双指平移/缩放",
-      "touch_pinch_zoom": "双指捏合缩放",
+      "touch_pinch_zoom": "捏合缩放",
       "mouse_drag": "拖拽",
       "mouse_wheel": "滚轮",
       "mouse_drag_plus_wheel": "拖拽 + 滚轮",
-      "gesture_hint": "触控：{{touch}} | 鼠标：{{mouse}}",
-      "gesture_disabled": "地图手势已禁用；请使用工具栏控件。"
+      "gesture_hint": "触摸：{{touch}} | 鼠标：{{mouse}}",
+      "gesture_disabled": "地图手势已禁用，请使用工具栏控件。"
     },
     "planetarium": {
-      "aria_label": "星空图",
-      "configure_location": "请先配置地面站位置以渲染本地星空。",
+      "aria_label": "天象仪星图",
+      "configure_location": "请配置地面站位置以渲染本地天空。",
       "fallback_target": "目标",
       "target_below_horizon": "目标位于地平线以下",
       "hud_view_label": "方位 {{az}} / 仰角 {{el}} / 视场 {{fov}}",
@@ -510,7 +510,7 @@
     },
     "moon_phase": {
       "new_moon": "新月",
-      "waxing_crescent": "蛾眉月",
+      "waxing_crescent": "娥眉月",
       "first_quarter": "上弦月",
       "waxing_gibbous": "盈凸月",
       "full_moon": "满月",
@@ -518,7 +518,7 @@
       "last_quarter": "下弦月",
       "waning_crescent": "残月",
       "fallback": "月相",
-      "description": "{{label}}，光照 {{percent}}%"
+      "description": "{{label}}，{{percent}}% 被照亮"
     }
   },
   "admin": {
@@ -534,52 +534,268 @@
     "ephemeris": {
       "title": "同步天体星历",
       "subtitle": "从 {{provider}} 刷新天体矢量。",
-      "actions": { "synchronize_now": "立即同步", "prune_expired": "清理过期历史" },
-      "labels": { "status": "状态", "last_update": "最后更新：{{value}}", "synchronization_progress": "同步进度", "cache_freshness": "缓存新鲜度", "preparing": "正在准备…", "output": "输出：", "cause": "原因：", "next_connection_attempt": "下次连接尝试：", "last_failed_attempt": "上次失败尝试：", "failed_targets_one": "失败目标（{{count}}）", "failed_targets_other": "失败目标（{{count}}）", "provider_fetched": "数据源获取：{{count}}", "cache_reused": "缓存复用：{{count}}", "stale_fallback": "陈旧缓存回退：{{count}}" },
-      "status": { "running": "运行中", "completed": "已完成", "action_required": "需要处理", "idle": "空闲" },
-      "output": { "processed_target": "已处理 {{target}}（{{processed}}/{{total}}）", "processing_target": "正在处理 {{target}}（{{processed}}/{{total}}）", "preparing_sync": "正在准备天体星历同步…", "stopped_with_errors": "同步因错误中止。详见下方。", "cache_ready": "星历缓存已就绪。", "using_cached_data": "Horizons 不可用期间，正在使用缓存的星历数据。", "ready": "可以同步星历数据了。", "pruned_one": "已移除 {{count}} 个过期快照。", "pruned_other": "已移除 {{count}} 个过期快照。" },
-      "horizons_unavailable": { "title": "NASA JPL Horizons 不可用", "detail": "{{cause}} 缓存数据仍可使用。下次自动探测：{{value}}。" },
-      "metrics": { "stored_snapshots": "已存储快照", "targets_one": "{{count}} 个目标", "targets_other": "{{count}} 个目标", "fresh_snapshots": "未过期快照", "newest": "最新：{{value}}", "expired_snapshots": "已过期快照", "with_errors_one": "{{count}} 个存在错误", "with_errors_other": "{{count}} 个存在错误", "ready_targets": "就绪目标", "refresh_due_one": "{{count}} 个待刷新", "refresh_due_other": "{{count}} 个待刷新" },
-      "periodic": { "title": "定期同步", "enabled": "已启用", "disabled": "已禁用", "interval": "间隔", "every_minutes_one": "每 {{count}} 分钟", "every_minutes_other": "每 {{count}} 分钟", "past_projection": "过去投影", "hours_one": "{{count}} 小时", "hours_other": "{{count}} 小时", "next_cache_expiry": "下次缓存过期", "last_failure": "最近失败", "effective_projection": "实际投影", "next_provider_refresh": "下次数据源刷新", "next_scheduler_run": "下次调度检查" },
-      "targets": { "title": "目标缓存检查" },
+      "actions": {
+        "synchronize_now": "立即同步",
+        "prune_expired": "清理过期历史"
+      },
+      "labels": {
+        "status": "状态",
+        "last_update": "最后更新：{{value}}",
+        "synchronization_progress": "同步进度",
+        "cache_freshness": "缓存新鲜度",
+        "preparing": "正在准备…",
+        "output": "输出：",
+        "cause": "原因：",
+        "next_connection_attempt": "下次连接尝试：",
+        "last_failed_attempt": "上次失败尝试：",
+        "failed_targets_one": "失败目标（{{count}}）",
+        "failed_targets_other": "失败目标（{{count}}）",
+        "provider_fetched": "数据源获取：{{count}}",
+        "cache_reused": "缓存复用：{{count}}",
+        "stale_fallback": "陈旧缓存回退：{{count}}"
+      },
+      "status": {
+        "running": "运行中",
+        "completed": "已完成",
+        "action_required": "需要处理",
+        "idle": "空闲"
+      },
+      "output": {
+        "processed_target": "已处理 {{target}}（{{processed}}/{{total}}）",
+        "processing_target": "正在处理 {{target}}（{{processed}}/{{total}}）",
+        "preparing_sync": "正在准备天体星历同步…",
+        "stopped_with_errors": "同步因错误中止。详见下方。",
+        "cache_ready": "星历缓存已就绪。",
+        "using_cached_data": "Horizons 不可用期间，正在使用缓存的星历数据。",
+        "ready": "可以同步星历数据了。",
+        "pruned_one": "已移除 {{count}} 个过期快照。",
+        "pruned_other": "已移除 {{count}} 个过期快照。"
+      },
+      "horizons_unavailable": {
+        "title": "NASA JPL Horizons 不可用",
+        "detail": "{{cause}} 缓存数据仍可使用。下次自动探测：{{value}}。"
+      },
+      "metrics": {
+        "stored_snapshots": "已存储快照",
+        "targets_one": "{{count}} 个目标",
+        "targets_other": "{{count}} 个目标",
+        "fresh_snapshots": "未过期快照",
+        "newest": "最新：{{value}}",
+        "expired_snapshots": "已过期快照",
+        "with_errors_one": "{{count}} 个存在错误",
+        "with_errors_other": "{{count}} 个存在错误",
+        "ready_targets": "就绪目标",
+        "refresh_due_one": "{{count}} 个待刷新",
+        "refresh_due_other": "{{count}} 个待刷新"
+      },
+      "periodic": {
+        "title": "定期同步",
+        "enabled": "已启用",
+        "disabled": "已禁用",
+        "interval": "间隔",
+        "every_minutes_one": "每 {{count}} 分钟",
+        "every_minutes_other": "每 {{count}} 分钟",
+        "past_projection": "过去投影",
+        "hours_one": "{{count}} 小时",
+        "hours_other": "{{count}} 小时",
+        "next_cache_expiry": "下次缓存过期",
+        "last_failure": "最近失败",
+        "effective_projection": "实际投影",
+        "next_provider_refresh": "下次数据源刷新",
+        "next_scheduler_run": "下次调度检查"
+      },
+      "targets": {
+        "title": "目标缓存检查"
+      },
       "failure": {
         "default_summary": "无法完成星历同步。",
         "count_summary": "{{total}} 个目标中已刷新 {{refreshed}} 个，失败 {{failed}} 个。已有的缓存快照仍然可用。",
         "connection_title": "无法连接 NASA JPL Horizons",
         "incomplete_title": "星历同步未完成",
-        "reasons": { "default": "NASA JPL Horizons 无法完成该请求。", "unavailable": "NASA JPL Horizons 暂时不可用。", "connect_timeout": "连接 NASA JPL Horizons 超时。", "read_timeout": "NASA JPL Horizons 在请求超时前未响应。", "dns_failure": "后端无法解析 ssd.jpl.nasa.gov。", "connection_failure": "后端无法与 ssd.jpl.nasa.gov 建立网络连接。", "tls_failure": "无法建立到 NASA JPL Horizons 的安全连接。", "rate_limited": "NASA JPL Horizons 正在临时限制请求频率。", "server_error": "NASA JPL Horizons 返回了服务器错误。", "invalid_response": "NASA JPL Horizons 返回了无效响应。", "invalid_target": "一个或多个目标没有有效的 Horizons 命令。", "target_error": "NASA JPL Horizons 未能为一个或多个目标返回可用的星历数据。" }
+        "reasons": {
+          "default": "NASA JPL Horizons 无法完成该请求。",
+          "unavailable": "NASA JPL Horizons 暂时不可用。",
+          "connect_timeout": "连接 NASA JPL Horizons 超时。",
+          "read_timeout": "NASA JPL Horizons 在请求超时前未响应。",
+          "dns_failure": "后端无法解析 ssd.jpl.nasa.gov。",
+          "connection_failure": "后端无法与 ssd.jpl.nasa.gov 建立网络连接。",
+          "tls_failure": "无法建立到 NASA JPL Horizons 的安全连接。",
+          "rate_limited": "NASA JPL Horizons 正在临时限制请求频率。",
+          "server_error": "NASA JPL Horizons 返回了服务器错误。",
+          "invalid_response": "NASA JPL Horizons 返回了无效响应。",
+          "invalid_target": "一个或多个目标没有有效的 Horizons 命令。",
+          "target_error": "NASA JPL Horizons 未能为一个或多个目标返回可用的星历数据。"
+        }
       }
     },
     "catalog": {
       "custom": "自定义目标",
-      "columns": { "name": "名称", "type": "类型", "agency_parent": "机构 / 母体", "status": "状态", "catalog_status": "目录状态", "identifier": "Horizons 命令 / ID", "monitoring": "监测状态", "actions": "操作" },
-      "monitoring": { "monitored": "已监测", "enabled": "已启用", "disabled": "已禁用", "not_monitored": "未监测" },
-      "actions": { "working": "处理中…", "monitor": "监测", "monitor_target": "监测 {{name}}", "unmonitor": "停止监测", "unmonitor_target": "停止监测 {{name}}" },
-      "filters": { "catalog": "目录", "all_entries": "全部条目", "solar_bodies": "太阳系天体", "spacecraft": "航天器", "status": "状态", "all_statuses": "全部状态", "monitoring": "监测状态", "all_monitoring": "全部监测状态", "monitored": "已监测", "enabled": "已启用", "disabled": "已禁用", "not_monitored": "未监测", "clear_search": "清除搜索", "clear_all": "全部清除", "results_one": "{{count}} 个结果", "results_other": "{{count}} 个结果", "search": "搜索目录" },
+      "columns": {
+        "name": "名称",
+        "type": "类型",
+        "agency_parent": "机构 / 母体",
+        "status": "状态",
+        "catalog_status": "目录状态",
+        "identifier": "Horizons 命令 / ID",
+        "monitoring": "监测状态",
+        "actions": "操作"
+      },
+      "monitoring": {
+        "monitored": "已监测",
+        "enabled": "已启用",
+        "disabled": "已禁用",
+        "not_monitored": "未监测"
+      },
+      "actions": {
+        "working": "处理中…",
+        "monitor": "监测",
+        "monitor_target": "监测 {{name}}",
+        "unmonitor": "停止监测",
+        "unmonitor_target": "停止监测 {{name}}"
+      },
+      "filters": {
+        "catalog": "目录",
+        "all_entries": "全部条目",
+        "solar_bodies": "太阳系天体",
+        "spacecraft": "航天器",
+        "status": "状态",
+        "all_statuses": "全部状态",
+        "monitoring": "监测状态",
+        "all_monitoring": "全部监测状态",
+        "monitored": "已监测",
+        "enabled": "已启用",
+        "disabled": "已禁用",
+        "not_monitored": "未监测",
+        "clear_search": "清除搜索",
+        "clear_all": "全部清除",
+        "results_one": "{{count}} 个结果",
+        "results_other": "{{count}} 个结果",
+        "search": "搜索目录"
+      },
       "empty": "没有符合筛选条件的目录条目。",
-      "info": { "title": "天体目录", "description": "浏览太阳系天体和航天器，并选择要监测的目标。" },
-      "confirm": { "title": "确认停止监测", "question": "停止监测 {{target}}？", "this_target": "此目标", "description": "该目标将不再显示在太阳系视图中，之后可以重新监测。" },
+      "info": {
+        "title": "天体目录",
+        "description": "浏览太阳系天体和航天器，并选择要监测的目标。"
+      },
+      "confirm": {
+        "title": "确认停止监测",
+        "question": "停止监测 {{target}}？",
+        "this_target": "此目标",
+        "description": "该目标将不再显示在太阳系视图中，之后可以重新监测。"
+      },
       "parent_sun": "太阳",
       "unknown_agency": "未知机构",
-      "feedback": { "first_refresh_failed": "{{name}} 已在监测中，但首次数据刷新失败：{{error}}", "monitor_failed": "无法监测 {{name}}：{{error}}", "monitored": "{{name}} 已开始监测，其数据已刷新。", "unmonitored": "{{name}} 已停止监测。" },
-      "types": { "star": "恒星", "planet": "行星", "moon": "卫星", "dwarf-planet": "矮行星", "body": "太阳系天体", "spacecraft": "航天器" },
-      "status": { "available": "可用", "active": "活动", "completed": "已完成", "failed": "失败", "custom": "自定义", "unknown": "未知" },
+      "feedback": {
+        "first_refresh_failed": "{{name}} 已在监测中，但首次数据刷新失败：{{error}}",
+        "monitor_failed": "无法监测 {{name}}：{{error}}",
+        "monitored": "{{name}} 已开始监测，其数据已刷新。",
+        "unmonitored": "{{name}} 已停止监测。"
+      },
+      "types": {
+        "star": "恒星",
+        "planet": "行星",
+        "moon": "天然卫星",
+        "dwarf-planet": "矮行星",
+        "body": "太阳系天体",
+        "spacecraft": "航天器"
+      },
+      "status": {
+        "available": "可用",
+        "active": "活动",
+        "completed": "已完成",
+        "failed": "失败",
+        "custom": "自定义",
+        "unknown": "未知"
+      },
       "summary": "显示 {{entries}} 个条目 · {{monitored}} 个已监测",
-      "bodies": { "sun": "太阳", "mercury": "水星", "venus": "金星", "earth": "地球", "moon": "月球", "mars": "火星", "ceres": "谷神星", "jupiter": "木星", "io": "木卫一", "europa": "木卫二", "ganymede": "木卫三", "callisto": "木卫四", "saturn": "土星", "enceladus": "土卫二", "rhea": "土卫五", "titan": "土卫六", "iapetus": "土卫八", "uranus": "天王星", "miranda": "天卫五", "ariel": "天卫一", "umbriel": "天卫二", "titania": "天卫三", "oberon": "天卫四", "neptune": "海王星", "triton": "海卫一", "nereid": "海卫二", "proteus": "海卫八", "pluto": "冥王星", "charon": "冥卫一", "haumea": "妊神星", "makemake": "鸟神星", "eris": "阋神星" }
+      "bodies": {
+        "sun": "太阳",
+        "mercury": "水星",
+        "venus": "金星",
+        "earth": "地球",
+        "moon": "月球",
+        "mars": "火星",
+        "ceres": "谷神星",
+        "jupiter": "木星",
+        "io": "木卫一",
+        "europa": "木卫二",
+        "ganymede": "木卫三",
+        "callisto": "木卫四",
+        "saturn": "土星",
+        "enceladus": "土卫二",
+        "rhea": "土卫五",
+        "titan": "土卫六",
+        "iapetus": "土卫八",
+        "uranus": "天王星",
+        "miranda": "天卫五",
+        "ariel": "天卫一",
+        "umbriel": "天卫二",
+        "titania": "天卫三",
+        "oberon": "天卫四",
+        "neptune": "海王星",
+        "triton": "海卫一",
+        "nereid": "海卫二",
+        "proteus": "海卫八",
+        "pluto": "冥王星",
+        "charon": "冥卫一",
+        "haumea": "妊神星",
+        "makemake": "鸟神星",
+        "eris": "阋神星"
+      }
     },
     "targets": {
-      "columns": { "target": "监测项", "type": "类型", "enabled": "已启用", "last_refresh": "最后刷新", "status": "状态" },
-      "status": { "refreshing": "刷新中", "refreshed": "已刷新", "refresh_failed": "刷新失败", "ready": "就绪", "not_fetched": "未获取" },
-      "actions": { "refresh": "刷新", "edit": "编辑", "edit_properties": "编辑属性", "delete": "删除", "refresh_selected": "刷新所选项", "enable": "启用", "disable": "禁用", "vector_details": "矢量详情" },
+      "columns": {
+        "target": "监测项",
+        "type": "类型",
+        "enabled": "已启用",
+        "last_refresh": "最后刷新",
+        "status": "状态"
+      },
+      "status": {
+        "refreshing": "刷新中",
+        "refreshed": "已刷新",
+        "refresh_failed": "刷新失败",
+        "ready": "就绪",
+        "not_fetched": "未获取"
+      },
+      "actions": {
+        "refresh": "刷新",
+        "edit": "编辑",
+        "edit_properties": "编辑属性",
+        "delete": "删除",
+        "refresh_selected": "刷新所选项",
+        "enable": "启用",
+        "disable": "禁用",
+        "vector_details": "矢量详情"
+      },
       "search": "搜索监测项",
       "empty": "未找到监测项。",
       "selected_count_one": "已选择 {{count}} 项",
       "selected_count_other": "已选择 {{count}} 项",
-      "info": { "title": "受监测天体", "description": "管理太阳系视图中使用的天体和航天器。" },
-      "edit": { "title": "编辑受监测天体", "display_name": "显示名称", "body_id": "天体 ID", "horizons_command": "Horizons 命令", "color": "颜色", "pick_color": "选择天体颜色" },
-      "delete": { "title": "确认删除监测项", "remove_count_one": "此天体将从监测列表中移除。", "remove_count_other": "{{count}} 个天体将从监测列表中移除。", "description": "已移除天体将不再显示在太阳系视图中。" },
-      "feedback": { "updated": "受监测天体已更新。" },
-      "errors": { "name_identifier_required": "名称和天体标识为必填项。" },
+      "info": {
+        "title": "受监测天体",
+        "description": "管理太阳系视图中使用的天体和航天器。"
+      },
+      "edit": {
+        "title": "编辑受监测天体",
+        "display_name": "显示名称",
+        "body_id": "天体 ID",
+        "horizons_command": "Horizons 命令",
+        "color": "颜色",
+        "pick_color": "选择天体颜色"
+      },
+      "delete": {
+        "title": "确认删除监测项",
+        "remove_count_one": "此天体将从监测列表中移除。",
+        "remove_count_other": "{{count}} 个天体将从监测列表中移除。",
+        "description": "已移除天体将不再显示在太阳系视图中。"
+      },
+      "feedback": {
+        "updated": "受监测天体已更新。"
+      },
+      "errors": {
+        "name_identifier_required": "名称和天体标识为必填项。"
+      },
       "vectors": {
         "title": "矢量数据 · {{name}}",
         "target_type": "天体类型",
@@ -618,8 +834,21 @@
         "confirm_clear_all_title": "清除全部快照？",
         "confirm_clear_all_message": "删除 {{name}} 的全部 {{count}} 个快照？此受监测天体在刷新前可能不可用。",
         "close": "关闭",
-        "diagnosis": { "current_missing": "最新快照未覆盖当前服务器时间。当前的观测者计算无法使用此天体矢量。", "window_short": "当前时间已被覆盖，但采样未跨越当前所需的完整窗口。跟踪或过境计算可能拒绝此快照。", "cache_expired": "采样窗口足够，但数据库缓存已过期，正在等待成功刷新。", "target_ready": "受监测的快照是新鲜的，且已覆盖当前所需的完整窗口。" },
-        "legend": { "samples": "Horizons 采样覆盖范围", "requested": "所需投影窗口", "fresh_cache": "新鲜缓存有效期", "expired_cache": "已过期缓存有效期", "synchronized": "同步时间", "current_time": "当前服务器时间", "expiry": "缓存过期时间" }
+        "diagnosis": {
+          "current_missing": "最新快照未覆盖当前服务器时间。当前的观测者计算无法使用此天体矢量。",
+          "window_short": "当前时间已被覆盖，但采样未跨越当前所需的完整窗口。跟踪或过境计算可能拒绝此快照。",
+          "cache_expired": "采样窗口足够，但数据库缓存已过期，正在等待成功刷新。",
+          "target_ready": "受监测的快照是新鲜的，且已覆盖当前所需的完整窗口。"
+        },
+        "legend": {
+          "samples": "Horizons 采样覆盖范围",
+          "requested": "所需投影窗口",
+          "fresh_cache": "新鲜缓存有效期",
+          "expired_cache": "已过期缓存有效期",
+          "synchronized": "同步时间",
+          "current_time": "当前服务器时间",
+          "expiry": "缓存过期时间"
+        }
       }
     }
   },

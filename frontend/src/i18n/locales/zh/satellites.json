@@ -43,7 +43,7 @@
     "website": "网站",
     "image": "图片 URL",
     "bands": "频段",
-    "decayed": "已衰变",
+    "decayed": "已再入",
     "launched": "已发射",
     "deployed": "已部署",
     "updated": "已更新",
@@ -160,7 +160,7 @@
     "format_hint": "控制如何解析来自此数据源的轨道记录。",
     "norad_ids": "NORAD ID",
     "norad_ids_placeholder": "25544, 43017, 57172",
-    "norad_ids_hint": "空格、逗号或换行分隔的 NORAD 编录 ID。",
+    "norad_ids_hint": "空格、逗号或换行分隔的 NORAD 目录 ID。",
     "query_mode": "数据源模式",
     "query_mode_url": "自定义 Space-Track 查询",
     "query_mode_group_norad": "使用卫星分组",
@@ -199,7 +199,7 @@
     "confirm_deletion": "确认删除",
     "confirm_delete_intro": "您确定要删除选中的轨道数据源吗？此操作将永久删除：",
     "delete_item_1": "轨道数据源",
-    "delete_item_2": "仅由所选数据源列出的卫星及其发射机和轨道。仍由其他保留数据源列出的卫星将被保留。",
+    "delete_item_2": "仅由所选数据源列出的卫星（含其发射机和轨道）。仍被其他数据源列出的卫星将保留。",
     "delete_item_3": "对应的卫星分组",
     "cannot_undo": "此操作无法撤消。",
     "performance_notice": "性能提示",
@@ -302,7 +302,8 @@
     "satellite_count_one": "1 颗卫星",
     "satellite_count_other": "{{count}} 颗卫星",
     "no_satellites": "无卫星",
-    "no_selected_satellites": "尚未选择卫星"
+    "no_selected_satellites": "尚未选择卫星",
+    "show_on_earth_view": "在地球视图的最近分组中显示"
   },
   "satellite_info": {
     "title": "卫星信息",
@@ -325,7 +326,7 @@
       "operator": "运营方：",
       "launched": "发射：",
       "deployed": "部署：",
-      "decayed": "衰变：",
+      "decayed": "已再入：",
       "updated": "更新：",
       "website": "网站：",
       "citation": "引用："
@@ -356,7 +357,7 @@
       "delete_confirm_title": "确认删除",
       "delete_confirm_message": "您确定要删除选中的发射机吗？",
       "cancel": "取消",
-      "duplicate": "重复"
+      "duplicate": "复制"
     },
     "also_known_as": "又名 {{names}}",
     "coverage_map": "覆盖范围图",
@@ -441,7 +442,7 @@
     },
     "results": {
       "added": "新增项目",
-      "modified": "修改项目",
+      "modified": "已修改项目",
       "removed": "移除项目",
       "type": "类型",
       "name": "名称",

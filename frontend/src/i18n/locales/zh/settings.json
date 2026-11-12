@@ -23,7 +23,9 @@
     "celestial": "天体数据",
     "ephemeris": "星历数据",
     "celestial_catalog": "目录",
-    "celestial_targets": "监控天体"
+    "celestial_targets": "监控天体",
+    "api_tokens": "API 令牌",
+    "user_settings": "用户设置"
   },
   "preferences": {
     "title": "用户偏好设置",
@@ -114,7 +116,7 @@
     "updated_keys": "已更新：{{keys}}",
     "open_restart": "打开维护",
     "loading": "正在加载应用程序设置...",
-    "locked": "CLI 覆盖已激活",
+    "locked": "由启动命令设置（只读）",
     "not_in_file": "不在文件中",
     "reset": "重置",
     "saving": "正在保存...",
@@ -158,7 +160,8 @@
     "field_orbital_sync_transmitter_urls": "轨道同步使用的发射机元数据端点列表。",
     "field_celestial_periodic_sync_enabled": "启用监控天体的周期矢量同步任务。",
     "field_celestial_periodic_sync_interval_minutes": "天体矢量周期同步的间隔（分钟）。",
-    "field_celestial_sync_past_hours": "监控天体周期缓存刷新的回溯小时窗口。"
+    "field_celestial_sync_past_hours": "监控天体周期缓存刷新的回溯小时窗口。",
+    "field_libretranslate_url": "LibreTranslate 服务的基础 URL。留空则禁用本地翻译。更改仅对新的转写任务生效。"
   },
   "location": {
     "title": "在地图上选择位置",
@@ -403,7 +406,7 @@
       "instructions_intro": "GitHub 发布流程会推送一个同时支持 AMD64 与 ARM64 的多架构镜像，Docker 会自动选择正确的镜像。",
       "step_review": "查看发布说明，并记录当前容器启动时所用的选项。",
       "step_backup": "备份挂载到 /app/backend/data 的宿主机目录。该目录包含数据库与站点数据。",
-      "step_pull": "拉取所要发布的确切镜像：",
+      "step_pull": "拉取已发布的确切镜像：",
       "step_replace": "停止并移除现有容器：",
       "step_restart": "用适合你的架构与网络模式的命令启动新容器。请把 /path/to/data 替换为上一个容器所用的同一个宿主机数据目录。",
       "host_network_title": "主机网络（推荐用于 SoapySDR 远程发现）",
@@ -413,7 +416,9 @@
       "copy_command": "复制命令",
       "copied": "已复制",
       "copy_failed": "复制失败",
-      "persistence_note": "请保留现有的 /app/backend/data 卷映射。移除容器不会删除绑定挂载的宿主机目录，但若启动时缺少同样的映射，新容器会改用另一个数据目录。"
+      "persistence_note": "请保留现有的 /app/backend/data 卷映射。移除容器不会删除绑定挂载的宿主机目录，但若启动时缺少同样的映射，新容器会改用另一个数据目录。",
+      "host_network_port_note": "若使用 host 网络模式需要其他 HTTP 端口，请将 GS_HTTP_PORT=7000 改为你选择的端口。此模式下 Docker 会忽略 -p 参数。后端仍保持在端口 7001。",
+      "bridge_network_port_note": "若使用 bridge 网络模式需要其他端口，请修改 -p 7000:7000 的宿主机一侧，例如改为 -p 8080:7000。"
     }
   },
   "about": {

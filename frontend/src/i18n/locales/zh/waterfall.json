@@ -45,7 +45,9 @@
       "ku_lnb_9750": "Ku LNB (-9750MHz)",
       "mmds_s_band": "MMDS S-Band (-1998MHz)",
       "spyverter": "SpyVerter (+120MHz)"
-    }
+    },
+    "increase_by_hz": "增加 {{step}} Hz",
+    "decrease_by_hz": "减少 {{step}} Hz"
   },
   "sdr": {
     "title": "SDR",
@@ -74,7 +76,40 @@
     "no_playback_recordings": "未找到 IQ 录制文件",
     "playback_recording": "IQ 录制",
     "sample_rate_required": "开始接收前请先选择采样率",
-    "unknown_date": "未知日期"
+    "unknown_date": "未知日期",
+    "continuous_read_only": "请在调度器中停止连续观测后，再编辑这些 SDR 设置。",
+    "create_continuous_observation": "创建连续观测",
+    "continuous_observation_name": "{{name}} · {{frequency}} MHz",
+    "continuous_observation_saved": "连续观测已保存。请停止此收流，然后在调度器中启动该观测。",
+    "continuous_observation_offset_unsupported": "连续观测尚不支持频率偏移。请先移除偏移，再复制此会话。",
+    "continuous_observation_mode_unsupported": "一个活动 VFO 使用了连续观测不支持的调制方式或解码器。复制此会话前请选择受支持的模式。",
+    "sdr_hint": "选择一个接收机，或选择 SigMF Playback 来回放已保存的 IQ 录制。",
+    "playback_recording_hint": "选择一个已保存的 IQ 录制，通过瀑布图和解码器进行回放。",
+    "gain_hint": "设置接收机增益。信号弱时增大；信号过强导致接收机过载时减小。",
+    "gain_element_hint": "调整 {{name}} 接收级，以在灵敏度与过载之间取得平衡。",
+    "attenuation_hint": "增加输入衰减。设置越高，信号强度越低，有助于防止过载。",
+    "rf_gain_reduction_hint": "选择 LNA 衰减档位。档位越高射频增益越低；衰减量随频率变化。",
+    "sample_rate_hint": "设置采样的频谱宽度。采样率越高，占用的 CPU 和数据带宽越多。",
+    "hardware_readback": "硬件回读",
+    "readback_unavailable": "不可用",
+    "gain_control": "增益控制",
+    "gain_automatic": "自动（AGC）",
+    "gain_manual": "手动",
+    "requested_value": "请求值：{{value}}",
+    "if_bandwidth": "中频滤波器带宽",
+    "if_bandwidth_hint": "设置所有 VFO 共用的接收机滤波器。自动模式会选择覆盖采样率的最小兼容滤波器，或最宽的可用滤波器。更宽的滤波器可能让信号混叠进采样范围。",
+    "if_bandwidth_auto": "自动",
+    "if_bandwidth_driver": "驱动默认值",
+    "if_bandwidth_applied": "已应用：{{value}}",
+    "if_bandwidth_limited": "仅覆盖部分采样范围",
+    "if_bandwidth_unavailable": "在此采样率下不可用",
+    "if_bandwidth_tasks_outside": "中频滤波器未覆盖所有任务频率。请加宽滤波器或更改中心频率。",
+    "antenna_hint": "选择连接到天线的物理接收输入端口。",
+    "clock_source_hint": "选择频率参考。除非已连接外部参考源，否则请使用内部时钟。",
+    "time_source_hint": "选择用于同步硬件时间戳的时间源，例如内部时钟、GPS 或外部 PPS。",
+    "bias_t_confirm_title": "启用 Bias-T？",
+    "bias_t_confirm_warning": "启用 Bias-T 会通过天线馈线提供直流电压。该电压可能损坏不支持它的天线、放大器或其他连接设备。只有当信号路径上的所有设备都与 SDR 的 Bias-T 电压兼容时才可继续。",
+    "bias_t_confirm_enable": "启用 Bias-T"
   },
   "fft": {
     "title": "FFT",
@@ -157,10 +192,16 @@
       "ja": "日语",
       "zh": "中文",
       "ar": "阿拉伯语"
-    }
+    },
+    "transcription_options": "转写选项",
+    "decoder_options": "解码器选项",
+    "decoder_parameters_off": "关闭",
+    "parakeet_language_info": "Parakeet 会将音频发送到已配置的服务并自动检测支持的语言。源语言选择仅用于翻译。",
+    "external_translation_info": "翻译使用 Google Translate API（在设置中配置）。",
+    "doppler_unavailable": "多普勒不可用"
   },
   "error_dialog": {
-    "title": "SDR 问题",
+    "title": "发生错误",
     "technical_details": "技术详情",
     "close": "关闭"
   },
@@ -478,5 +519,26 @@
     "fsk_decoder_frequency_shift_keying_processes_raw": "FSK 解码器（频移键控，处理原始 IQ，无解调器）",
     "bpsk_decoder_with_ax_25_support_processes_raw_iq": "支持 AX.25 的 BPSK 解码器（处理原始 IQ，无解调器）",
     "aprs_bell_202_decoder_processes_raw_iq_with_inte": "APRS Bell 202 解码器（处理原始 IQ，内置 FM 解调）"
+  },
+  "lora_profiles": {
+    "label": "LoRa 配置",
+    "custom": "自定义",
+    "help": "加载调制解调器设置，在下方调整后点击应用。请另行将 VFO 调谐到网络频率。",
+    "observation_help": "加载调制解调器设置并在下方调整，然后保存观测。请另行将 VFO 调谐到网络频率。",
+    "suggested_frequency": "建议频率：{{frequency}} MHz",
+    "reticulum_help": "SX126x RNode 的 SF8/BW125 示例设置。请使扩频因子、带宽、编码率和前导码与你的网络匹配。",
+    "lorawan_help": "一次只接收一个信道和数据速率。下行配置会反转 IQ。显式报头会声明编码率和 CRC 是否存在。"
+  },
+  "background": {
+    "keep_receiving": "在后台继续接收",
+    "description": "按下停止或关闭此标签页后，VFO、解码器和录制仍继续运行。无人值守的 VFO 保持在其最后频率上。下一位加入的用户将取得控制权。如需结束观测，请在按下停止前取消勾选。",
+    "detach_stream": "分离并在后台继续接收",
+    "observations": "后台观测",
+    "observation": "观测",
+    "controlled": "控制器已连接",
+    "unattended": "无人值守 · 频率保持",
+    "adopt_description": "接管正在运行的观测，并替换你当前的 VFO。",
+    "take_control": "接管控制",
+    "join_description": "加入无人值守的观测后，你将获得其运行中 VFO 和解码器的控制权。频率保持不变，除非你手动更改。"
   }
 }

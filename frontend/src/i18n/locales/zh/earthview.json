@@ -12,7 +12,7 @@
     "status": "状态",
     "transmitters": "发射机",
     "countries": "国家",
-    "decayed": "已衰减",
+    "decayed": "已再入",
     "updated": "已更新",
     "launched": "已发射",
     "no_alternative_names": "无备用名称",
@@ -25,12 +25,12 @@
     "no_group_selected": "请选择一个卫星分组以查看卫星",
     "alternative_names": "别名",
     "context_menu": {
-      "set_as_target": "设为目标…",
-      "edit_properties": "编辑属性…",
-      "edit_transmitters": "编辑发射机…",
-      "schedule_observation": "安排观测…",
-      "monitor_satellite": "监控该卫星…",
-      "copy_norad": "复制 NORAD 编号",
+      "set_as_target": "设为目标...",
+      "edit_properties": "编辑属性...",
+      "edit_transmitters": "编辑发射机...",
+      "schedule_observation": "计划观测...",
+      "monitor_satellite": "监测该卫星...",
+      "copy_norad": "复制 NORAD ID",
       "copy_summary": "复制卫星摘要",
       "edit_transmitters_title": "编辑发射机：{{name}}"
     },
@@ -39,8 +39,8 @@
     "visible": "可见",
     "all_satellites": "所有卫星",
     "all_satellites_alt_1": "所有卫星 (Alt+1)",
-    "decayed_satellites": "已衰减卫星",
-    "decayed_satellites_alt_5": "已衰减卫星 (Alt+5)",
+    "decayed_satellites": "已再入卫星",
+    "decayed_satellites_alt_5": "已再入卫星 (Alt+5)",
     "rising_satellites": "上升中的卫星",
     "rising_satellites_alt_3": "上升中的卫星 (Alt+3)",
     "satellites_with_active_transmitters": "有活跃发射机的卫星",
@@ -76,8 +76,8 @@
     "distance_aos": "AOS 距离",
     "distance_los": "LOS 距离",
     "distance_peak": "最高点距离",
-    "geo_stat": "地球静止状态",
-    "geo_sync": "同步轨道状态",
+    "geo_stat": "地球静止轨道",
+    "geo_sync": "地球同步轨道",
     "status_visible": "可见",
     "status_upcoming": "即将过境",
     "status_passed": "已过境",
@@ -87,16 +87,16 @@
     "no_passes": "未来 {{hours}} 小时内未检测到过境",
     "direction": "方向",
     "direction_values": {
-      "cw": "顺时针",
-      "ccw": "逆时针",
+      "cw": "顺时针（CW）",
+      "ccw": "逆时针（CCW）",
       "mixed": "混合"
     },
     "pass_types": "过境类型",
     "pass_tag_labels": {
       "north_crossing": "北向穿越",
       "south_crossing": "南向穿越",
-      "direction_cw": "顺时针",
-      "direction_ccw": "逆时针",
+      "direction_cw": "顺时针（CW）",
+      "direction_ccw": "逆时针（CCW）",
       "direction_mixed": "混合",
       "direction_e_to_w": "东→西",
       "direction_w_to_e": "西→东",
@@ -128,7 +128,7 @@
     },
     "automatic_observation_tooltip": "该次过境将被自动观测",
     "context_menu": {
-      "copy_pass_window": "复制过境时间窗",
+      "copy_pass_window": "复制过境窗口",
       "copy_pass_summary": "复制过境摘要"
     },
     "tracked_tooltip": "当前目标卫星"
@@ -223,7 +223,11 @@
     "show_past_path": "显示过去的轨道",
     "show_future_path": "显示未来的轨道",
     "show_coverage": "显示卫星覆盖范围",
-    "show_grid": "显示坐标网格"
+    "show_grid": "显示坐标网格",
+    "pan_up": "向上平移",
+    "pan_down": "向下平移",
+    "pan_left": "向左平移",
+    "pan_right": "向右平移"
   },
   "weather_errors": {
     "fetch_failed": "无法获取天气数据",
