@@ -102,6 +102,13 @@ single web interface.
 
 ---
 
+### Waterfall Radiosonde Decoding
+<img src="frontend/public/ground-station - desktop - waterfall page - decoding radiosondes.png" alt="Waterfall view decoding radiosonde signals with multiple VFOs and decoded packets (desktop)" width="450"/>
+
+*Waterfall view receiving and decoding radiosonde signals with multiple VFOs*
+
+---
+
 ### Telemetry Packet Viewer (Hex + ASCII)
 <img src="frontend/public/ground station - packet viewer - as hexascii.png" alt="Telemetry packet viewer with hex and ASCII columns" width="450"/>
 
