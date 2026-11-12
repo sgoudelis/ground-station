@@ -67,8 +67,8 @@ const advanceToReviewStep = async (page, setupDialog, { username, password }) =>
   await nextButton.click();
 
   await expect(setupDialog.getByRole('heading', { name: /help shape ground station/i })).toBeVisible();
+  await expect(setupDialog.getByRole('switch', { name: /share installation census/i })).toBeEnabled();
   await expect(setupDialog.getByRole('switch', { name: /share installation census/i })).not.toBeChecked();
-  await expect(setupDialog.getByRole('switch', { name: /share performance metrics/i })).toBeDisabled();
   await nextButton.click();
 
   await expect(setupDialog.getByRole('heading', { name: /review configuration/i })).toBeVisible();
@@ -178,6 +178,7 @@ test.describe('Setup Wizard', () => {
     await expect(nextButton).toBeEnabled();
     await nextButton.click();
     await expect(setupDialog.getByRole('heading', { name: /help shape ground station/i })).toBeVisible();
+    await expect(setupDialog.getByRole('switch', { name: /share installation census/i })).toBeEnabled();
     await expect(setupDialog.getByRole('switch', { name: /share installation census/i })).not.toBeChecked();
     await nextButton.click();
     await expect(setupDialog.getByRole('heading', { name: /review configuration/i })).toBeVisible();
