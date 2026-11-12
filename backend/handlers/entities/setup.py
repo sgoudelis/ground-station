@@ -25,6 +25,7 @@ from typing import Any, Dict, Optional, cast
 
 from common import auth as authsvc
 from common.timezones import normalize_coordinates, timezone_for_coordinates, validate_timezone
+from feedback.service import feedback_service, validate_choice
 from handlers.entities import locations, satellites
 from server import runtimestate
 from server.scheduler import schedule_celestial_sync_warmup_job
@@ -131,7 +132,11 @@ def _normalize_finalize_payload(payload: Any) -> Dict[str, Any]:
         raise ValueError("Password is required.")
 
     location = _normalize_location_payload(payload.get("location"))
+    # Older clients omit feedback entirely. Only a submitted, versioned choice
+    # may change installation consent; completing setup is not consent itself.
+    feedback = validate_choice(payload["feedback"]) if "feedback" in payload else None
     return {
+        "feedback": feedback,
         "location": location,
         # Older clients omit the selection and keep coordinate-based detection.
         "timezone": (
@@ -243,6 +248,16 @@ async def _run_finalize_job(
             await _emit_setup_status(sio, sid)
             raise RuntimeError(error_message)
         _set_step("admin", CALL_STATUS_SUCCESS, "Admin user created.")
+
+        if payload.get("feedback") is not None:
+            try:
+                await feedback_service.configure(payload["feedback"])
+            except ValueError:
+                # Account creation has succeeded. Optional feedback storage must
+                # not strand a usable station in an unretryable setup failure.
+                _setup_finalize_state["feedback_error"] = (
+                    "Your feedback choice could not be saved. Review Settings > Feedback."
+                )
 
         _setup_finalize_state["job_id"] = job_id
         _setup_finalize_state["state"] = SETUP_STATE_COMPLETED

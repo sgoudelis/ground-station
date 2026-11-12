@@ -25,6 +25,7 @@ from handlers.entities import (
     continuous,
     control,
     decoderconfig,
+    feedback,
     filebrowser,
     groups,
     hardware,
@@ -55,6 +56,7 @@ def _register_all_handlers():
     """Register all command handlers with the global registry."""
     apitokens.register_handlers(handler_registry)
     appsettings.register_handlers(handler_registry)
+    feedback.register_handlers(handler_registry)
     satellites.register_handlers(handler_registry)
     orbitalsources.register_handlers(handler_registry)
     groups.register_handlers(handler_registry)

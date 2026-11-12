@@ -48,6 +48,7 @@ import {AntTab, AntTabs} from "../common/common.jsx";
 import PageTabsLayout from '../common/page-tabs.jsx';
 import SDRsPage from "../hardware/sdr-table.jsx";
 import AppSettingsForm from "./app-settings-form.jsx";
+import FeedbackForm from "./feedback-form.jsx";
 import {
     CelestialCatalogPage,
     CelestialEphemerisPage,
@@ -195,6 +196,14 @@ export function AdminSystemGeneralPage() {
     );
 }
 
+export function AdminSystemFeedbackPage() {
+    return (
+        <AdminSystemPageLayout activeTab="feedback">
+            <FeedbackForm />
+        </AdminSystemPageLayout>
+    );
+}
+
 export function AdminSystemPreferencesPage() {
     return (
         <AdminSystemPageLayout activeTab="preferences">
@@ -245,6 +254,7 @@ export function AdminSystemAboutPage() {
 
 const ADMIN_SYSTEM_TABS = [
     { key: "general", labelKey: "tabs.general", defaultLabel: "General", path: "/admin/system/general" },
+    { key: "feedback", labelKey: "tabs.feedback", defaultLabel: "Feedback", path: "/admin/system/feedback" },
     { key: "location", labelKey: "tabs.location", defaultLabel: "Location", path: "/admin/system/location" },
     { key: "users", labelKey: "tabs.users", defaultLabel: "Users", path: "/admin/system/users" },
     { key: "hardware", labelKey: "tabs.hardware", defaultLabel: "Hardware", path: "/admin/system/hardware/sdrs" },

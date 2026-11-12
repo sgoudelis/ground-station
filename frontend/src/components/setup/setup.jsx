@@ -42,12 +42,14 @@ import { toast } from '../../utils/toast-with-timestamp.jsx';
 import { loginUser } from '../auth/auth-slice.jsx';
 import { useSocket } from '../common/socket.jsx';
 import { SettingsActionFooter, SettingsSection } from '../settings/shared/index.js';
+import FeedbackDisclosure, { CENSUS_NOTICE_VERSION } from '../settings/feedback-disclosure.jsx';
 
 const WIZARD_STEP_IDENTITY = 0;
 const WIZARD_STEP_COORDINATES = 1;
 const WIZARD_STEP_REVIEW = 2;
 const WIZARD_STEP_ADMIN = 3;
 const WIZARD_STEP_FINALIZE = 4;
+const WIZARD_STEP_FEEDBACK = 5;
 
 const CALL_STATUS_IDLE = 'idle';
 const CALL_STATUS_PENDING = 'pending';
@@ -109,6 +111,9 @@ const SetupWizard = ({
     const [wizardFinalizing, setWizardFinalizing] = React.useState(false);
     const [wizardFinalizationCompleted, setWizardFinalizationCompleted] = React.useState(false);
     const [callChecklist, setCallChecklist] = React.useState(createInitialCallChecklist);
+    const [censusEnabled, setCensusEnabled] = React.useState(false);
+    const [feedbackEnvironment, setFeedbackEnvironment] = React.useState('unknown');
+    const [feedbackError, setFeedbackError] = React.useState('');
 
     const showWizardAdminStep = Boolean(wizardRequireAdminSetup);
     const showWizardFinalizeStep = showWizardAdminStep;
@@ -128,6 +133,7 @@ const SetupWizard = ({
                 defaultValue: 'Location',
             }),
             [WIZARD_STEP_REVIEW]: t('location.wizard_step_review', { defaultValue: 'Review' }),
+            [WIZARD_STEP_FEEDBACK]: t('feedback.wizard_step'),
             [WIZARD_STEP_FINALIZE]: t('location.wizard_step_finalize', {
                 defaultValue: 'Finalize Setup',
             }),
@@ -141,6 +147,7 @@ const SetupWizard = ({
                       WIZARD_STEP_ADMIN,
                       WIZARD_STEP_IDENTITY,
                       WIZARD_STEP_COORDINATES,
+                      WIZARD_STEP_FEEDBACK,
                       WIZARD_STEP_REVIEW,
                       WIZARD_STEP_FINALIZE,
                   ]
@@ -191,6 +198,7 @@ const SetupWizard = ({
 
     const applySetupStatus = React.useCallback((statusPayload) => {
         if (!statusPayload || typeof statusPayload !== 'object') return;
+        setFeedbackError(String(statusPayload.feedback_error || ''));
 
         const steps = statusPayload?.steps && typeof statusPayload.steps === 'object'
             ? statusPayload.steps
@@ -458,6 +466,11 @@ const SetupWizard = ({
         const finalizeReply = await callApi('setup.finalize', {
             location: setupLocationPayload,
             timezone: setupTimezone,
+            feedback: {
+                enabled: censusEnabled,
+                environment: feedbackEnvironment,
+                consent_notice_version: CENSUS_NOTICE_VERSION,
+            },
             admin: {
                 username: normalizedUsername,
                 password: adminPassword,
@@ -603,6 +616,15 @@ const SetupWizard = ({
 
     const wizardReviewContent = (
         <Grid container spacing={2} columns={12} alignItems="stretch">
+            {showWizardAdminStep && (
+                <Grid size={12}>
+                    <Alert severity="info">
+                        {censusEnabled
+                            ? t('feedback.review_enabled', { environment: t(`feedback.environments.${feedbackEnvironment}`) })
+                            : t('feedback.review_disabled')}
+                    </Alert>
+                </Grid>
+            )}
             <Grid
                 size={{ xs: 12, md: 5 }}
                 sx={{
@@ -897,7 +919,7 @@ const SetupWizard = ({
 
     return (
         <>
-            <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, minWidth: 0, width: '100%' }}>
                 <Box sx={{ px: { xs: 0, sm: 1 } }}>
                     <Box
                         sx={{
@@ -914,8 +936,8 @@ const SetupWizard = ({
                     >
                         <Stepper activeStep={wizardCurrentOrderIndex} alternativeLabel>
                             {wizardStepOrder.map((stepId, index) => (
-                                <Step key={stepId} completed={index < wizardCurrentOrderIndex}>
-                                    <StepLabel>{wizardStepLabels[stepId]}</StepLabel>
+                                <Step key={stepId} completed={index < wizardCurrentOrderIndex} sx={{ minWidth: 0, px: { xs: 0.25, sm: 1 } }}>
+                                    <StepLabel sx={{ '& .MuiStepLabel-label': { overflowWrap: 'anywhere', fontSize: { xs: '0.625rem', sm: '0.875rem' } } }}>{wizardStepLabels[stepId]}</StepLabel>
                                 </Step>
                             ))}
                         </Stepper>
@@ -933,9 +955,23 @@ const SetupWizard = ({
 
                     {wizardStep === WIZARD_STEP_REVIEW && <Stack spacing={2}>{wizardReviewContent}</Stack>}
 
+                    {wizardStep === WIZARD_STEP_FEEDBACK && (
+                        <FeedbackDisclosure
+                            enabled={censusEnabled}
+                            onChange={setCensusEnabled}
+                            environment={feedbackEnvironment}
+                            onEnvironmentChange={setFeedbackEnvironment}
+                        />
+                    )}
+
                     {wizardStep === WIZARD_STEP_ADMIN && <Stack spacing={2}>{wizardAdminSection}</Stack>}
 
-                    {wizardStep === WIZARD_STEP_FINALIZE && <Stack spacing={2}>{wizardFinalizeContent}</Stack>}
+                    {wizardStep === WIZARD_STEP_FINALIZE && (
+                        <Stack spacing={2}>
+                            {feedbackError && <Alert severity="warning">{feedbackError}</Alert>}
+                            {wizardFinalizeContent}
+                        </Stack>
+                    )}
                 </Box>
 
                 <SettingsActionFooter

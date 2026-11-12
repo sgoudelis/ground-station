@@ -66,6 +66,11 @@ const advanceToReviewStep = async (page, setupDialog, { username, password }) =>
   await expect(nextButton).toBeEnabled();
   await nextButton.click();
 
+  await expect(setupDialog.getByRole('heading', { name: /help shape ground station/i })).toBeVisible();
+  await expect(setupDialog.getByRole('switch', { name: /share installation census/i })).not.toBeChecked();
+  await expect(setupDialog.getByRole('switch', { name: /share performance metrics/i })).toBeDisabled();
+  await nextButton.click();
+
   await expect(setupDialog.getByRole('heading', { name: /review configuration/i })).toBeVisible();
   await expect(setupDialog.getByText('257m ASL')).toBeVisible();
   await expect(
@@ -171,6 +176,9 @@ test.describe('Setup Wizard', () => {
 
     await fillCoordinatesInWizard(page, setupDialog);
     await expect(nextButton).toBeEnabled();
+    await nextButton.click();
+    await expect(setupDialog.getByRole('heading', { name: /help shape ground station/i })).toBeVisible();
+    await expect(setupDialog.getByRole('switch', { name: /share installation census/i })).not.toBeChecked();
     await nextButton.click();
     await expect(setupDialog.getByRole('heading', { name: /review configuration/i })).toBeVisible();
   });

@@ -58,6 +58,7 @@ from db.models import (
     ScheduledObservations,
     SDRs,
 )
+from feedback.service import feedback_service
 from handlers.entities.control import restore_full_backup_file
 from hardware.lifecycle import start_hardware
 from hardware.service import hardware
@@ -339,6 +340,11 @@ async def lifespan(fastapiapp: FastAPI):
     # Start live system-info emitter task (registers into background_tasks)
     start_system_info_emitter(sio, background_tasks)
 
+    # One consent-gated sender belongs to the backend lifecycle, independent of
+    # browser sessions. An opted-out installation makes no collector requests.
+    feedback_task = asyncio.create_task(feedback_service.run())
+    background_tasks.add(feedback_task)
+
     # Start session runtime snapshot emitter task (registers into background_tasks)
     start_session_runtime_emitter(sio, background_tasks)
     continuous_observations.start_automatic()
@@ -347,6 +353,8 @@ async def lifespan(fastapiapp: FastAPI):
         yield
     finally:
         logger.info("FastAPI lifespan cleanup...")
+        feedback_task.cancel()
+        await asyncio.gather(feedback_task, return_exceptions=True)
         # Prevent new scheduled work while active observations transition to a
         # durable failed state and release their runtime resources.
         try:

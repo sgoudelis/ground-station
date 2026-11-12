@@ -226,6 +226,10 @@ const router = createBrowserRouter([
                                         lazy: lazySettingsPage("AdminSystemGeneralPage"),
                                     },
                                     {
+                                        path: "feedback",
+                                        lazy: lazySettingsPage("AdminSystemFeedbackPage"),
+                                    },
+                                    {
                                         path: "preferences",
                                         element: <Navigate to="/preferences" replace />,
                                     },
@@ -320,6 +324,10 @@ const router = createBrowserRouter([
                             {
                                 path: "general",
                                 element: <Navigate to="/admin/system/general" replace />,
+                            },
+                            {
+                                path: "feedback",
+                                element: <Navigate to="/admin/system/feedback" replace />,
                             },
                             {
                                 // Backward-compatible alias for older links/bookmarks.

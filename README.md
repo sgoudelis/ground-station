@@ -507,6 +507,12 @@ for its supported versions, trust boundaries, and reporting process.
 
 ## Application Configuration
 
+Optional installation census reporting is off by default. First-time setup and
+**Settings → Feedback** offer the same full disclosure and opt-in choice.
+Administrators can preview the payload, check delivery and withdraw consent.
+See [census reporting and privacy details](docs/feedback.md) for the fields,
+IP-address handling, retention and local state. Performance reporting is inactive.
+
 Ground Station backend runtime options are stored in `backend/data/configs/app_config.json` and are editable in the UI at `Settings -> Settings`.
 
 Configuration precedence is:
