@@ -1332,8 +1332,10 @@ class PerformanceMonitor(threading.Thread):
         trackers = {}
 
         try:
-            for tracker_id, stats_data in tracker_stats.items():
-                if not stats_data:
+            supervisor = get_tracker_supervisor()
+            # The async message handler updates this cache while this thread polls it.
+            for tracker_id, stats_data in list(tracker_stats.items()):
+                if not stats_data or not supervisor.is_alive(tracker_id):
                     continue
 
                 # Calculate rates from previous snapshot
@@ -1382,8 +1384,17 @@ class PerformanceMonitor(threading.Thread):
                         "tracking_cycles_per_sec": tracking_cycles_rate,
                     },
                     "connections": connections,
-                    "is_alive": get_tracker_supervisor().is_alive(tracker_id),
+                    "is_alive": True,
                 }
+
+            # The message handler may already have removed a retired worker's stats.
+            # Drop its rate history too so completed observations do not accumulate.
+            for prev_key in list(self.previous_snapshots):
+                if (
+                    prev_key.startswith("tracker_")
+                    and prev_key.removeprefix("tracker_") not in trackers
+                ):
+                    self.previous_snapshots.pop(prev_key, None)
 
         except Exception as e:
             logger.error(f"Could not poll trackers: {e}")

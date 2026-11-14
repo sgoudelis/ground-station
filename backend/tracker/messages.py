@@ -160,6 +160,10 @@ async def handle_tracker_messages(sockio):
                 is_alive = get_tracker_supervisor().is_alive
                 public_events.reconcile_rotator_workers(is_alive)
                 public_events.reconcile_rig_workers(is_alive)
+                # Retire pass-scoped stats even when performance monitoring is disabled.
+                for tracker_id in list(tracker_stats):
+                    if not is_alive(tracker_id):
+                        tracker_stats.pop(tracker_id, None)
                 last_hardware_reconcile = time.monotonic()
             processed = False
             if queue_from_tracker is not None and not queue_from_tracker.empty():
@@ -179,7 +183,9 @@ async def handle_tracker_messages(sockio):
                         logger.debug("Dropping stats message without tracker_id")
                         await asyncio.sleep(0)
                         continue
-                    tracker_stats[tracker_id] = message.get("stats", {})
+                    # A stopped worker may still have messages in the shared queue.
+                    if get_tracker_supervisor().is_alive(tracker_id):
+                        tracker_stats[tracker_id] = message.get("stats", {})
                 elif event:
                     try:
                         tracker_id = require_tracker_id(
