@@ -1,10 +1,11 @@
 /** Copyright (c) 2026 Efstratios Goudelis — GPL-3.0-or-later */
 
-import React, {useId, useState} from 'react';
+import React, {useId} from 'react';
+import {useDispatch, useSelector} from 'react-redux';
 import {Box, Button, Tooltip} from '@mui/material';
 import {lighten} from '@mui/material/styles';
 import {useTranslation} from 'react-i18next';
-import {aircraftUnitsStoreName, readStored, writeStored} from './storage.js';
+import {FLIGHT_UNIT_SYSTEMS, setFlightUnits} from './packet-map-slice.jsx';
 import SquawkInfo from './squawk-info.jsx';
 import './flight-instruments.css';
 
@@ -86,21 +87,26 @@ function Instrument({label, value, unit, note, variant = '', children}) {
 
 export default function FlightInstruments({flight, locale, formatTime}) {
     const {t} = useTranslation('navigation');
+    const dispatch = useDispatch();
+    const savedUnits = useSelector((state) => state.packetMap?.flightUnits);
     const label = (key, fallback, options = {}) => t(`packet_map.flight.${key}`, {defaultValue: fallback, ...options});
     const radiosonde = flight.kind === 'radiosonde';
-    const [units, setUnits] = useState(() => {
-        const saved = readStored(aircraftUnitsStoreName);
-        return saved === 'metric' || saved === 'aviation' ? saved : radiosonde ? 'metric' : 'aviation';
-    });
-    const metric = units === 'metric';
+    const units = FLIGHT_UNIT_SYSTEMS.includes(savedUnits) ? savedUnits : radiosonde ? 'metric' : 'aviation';
+    const metric = units !== 'aviation';
+    const kilometersPerHour = units === 'kmh';
+    const nextUnits = FLIGHT_UNIT_SYSTEMS[(FLIGHT_UNIT_SYSTEMS.indexOf(units) + 1) % FLIGHT_UNIT_SYSTEMS.length];
+    const nextUnitsLabel = nextUnits === 'aviation' ? label('use_aviation', 'Use aviation units')
+        : nextUnits === 'metric' ? label('use_metric', 'Use metric units') : label('use_kmh', 'Use km/h and meters');
     const format = (value, digits = 0) => Number.isFinite(value)
         ? value.toLocaleString(locale, {minimumFractionDigits: digits, maximumFractionDigits: digits}) : '—';
-    const speed = flight.groundSpeed === null ? null : flight.groundSpeed * (metric ? 1 : 1 / 0.5144444444);
+    const speed = flight.groundSpeed === null ? null
+        : flight.groundSpeed * (kilometersPerHour ? 3.6 : metric ? 1 : 1 / 0.5144444444);
     const altitude = flight.altitude === null ? null : flight.altitude * (metric ? 1 : 1 / 0.3048);
     const vertical = flight.verticalSpeed === null ? null : flight.verticalSpeed * (metric ? 1 : 1 / 0.00508);
     // Balloon speeds need a smaller reference scale. Expand either scale for
     // strong winds or fast descents without clipping the readout.
-    const speedStep = radiosonde ? (metric ? 5 : 10) : (metric ? 50 : 100);
+    const speedStep = radiosonde ? (kilometersPerHour ? 20 : metric ? 5 : 10)
+        : (kilometersPerHour ? 200 : metric ? 50 : 100);
     const speedMax = Math.max(speedStep * 6, Math.ceil((speed ?? 0) / (speedStep * 6)) * speedStep * 6);
     const verticalStep = radiosonde ? (metric ? 2 : 500) : (metric ? 5 : 1000);
     const verticalMax = Math.max(verticalStep * 3, Math.ceil(Math.abs(vertical ?? 0) / (verticalStep * 3)) * verticalStep * 3);
@@ -121,12 +127,6 @@ export default function FlightInstruments({flight, locale, formatTime}) {
             ? label('pressure_reported', 'Pressure altitude · reported') : flight.altitudeSource === 'geometric'
                 ? label('geometric_reported', 'Geometric altitude · reported') : flight.altitudeSource === 'reported'
                     ? label('altitude_reported', 'Reported altitude') : label('source_unknown', 'Altitude source unspecified');
-    const toggleUnits = () => {
-        const next = metric ? 'aviation' : 'metric';
-        setUnits(next);
-        writeStored(aircraftUnitsStoreName, next);
-    };
-
     return <Box component="section" aria-label={label('instruments', 'Flight instruments')}
         className={`flight-panel${flight.stale ? ' flight-stale' : ''}`}
         sx={(theme) => ({
@@ -144,11 +144,11 @@ export default function FlightInstruments({flight, locale, formatTime}) {
             <span className="flight-state"><span className="flight-state-dot" aria-hidden="true" />
                 {flight.stale ? label('stale', 'Stale · last known') : phase}
             </span>
-            <Tooltip title={label(metric ? 'use_aviation' : 'use_metric', metric ? 'Use aviation units' : 'Use metric units')}>
-                <Button size="small" onClick={toggleUnits}
-                    aria-label={label(metric ? 'use_aviation' : 'use_metric', metric ? 'Use aviation units' : 'Use metric units')}
+            <Tooltip title={nextUnitsLabel}>
+                <Button size="small" onClick={() => dispatch(setFlightUnits(nextUnits))}
+                    aria-label={nextUnitsLabel}
                     sx={{fontSize: '0.6rem', minWidth: 0, p: '2px 6px', color: 'text.secondary', flexShrink: 0}}>
-                    {metric ? 'M/S · M' : 'KT · FT'}
+                    {kilometersPerHour ? 'KM/H · M' : metric ? 'M/S · M' : 'KT · FT'}
                 </Button>
             </Tooltip>
         </div>
@@ -157,7 +157,7 @@ export default function FlightInstruments({flight, locale, formatTime}) {
         </div>
         <div className="flight-grid">
             <Instrument label={radiosonde ? label('horizontal_speed', 'Horizontal speed') : label('ground_speed', 'Ground speed')}
-                value={format(speed, metric ? 1 : 0)} unit={metric ? 'm/s' : 'kt'}
+                value={format(speed, metric ? 1 : 0)} unit={kilometersPerHour ? 'km/h' : metric ? 'm/s' : 'kt'}
                 note={flight.groundSpeed === null ? radiosonde ? label('no_horizontal_speed', 'No horizontal speed reported')
                     : label('no_speed', 'No ground speed reported') : radiosonde ? label('horizontal_speed_note', 'Horizontal · reported')
                     : label('ground_speed_note', 'GS · over the ground')}>

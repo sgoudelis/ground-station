@@ -478,6 +478,7 @@
       "no_vertical_speed": "No vertical rate reported",
       "use_aviation": "Use aviation units",
       "use_metric": "Use metric units",
+      "use_kmh": "Use km/h and meters",
       "playback_position": "Playback position",
       "latest_details": "Latest reception details",
       "latest_telemetry": "Latest telemetry",

@@ -8,6 +8,7 @@ import i18n from 'i18next';
 import {initReactI18next} from 'react-i18next';
 import TransmitterInfo from '../transmitter-info.jsx';
 import {aircraftUnitsStoreName} from '../storage.js';
+import packetMapReducer from '../packet-map-slice.jsx';
 import AircraftFolderDialog from '../../filebrowser/aircraft-folder-dialog.jsx';
 import {toast} from 'react-toastify';
 
@@ -36,15 +37,16 @@ const transmitter = {
     field_info: {temp: {label: 'Temperature', unit: '°C'}, encrypted: {label: 'Encrypted payload'}, sats: {label: 'GPS satellites'}},
 };
 
+let store;
 function wrapper({children}) {
-    const store = configureStore({reducer: () => ({preferences: {preferences: [
+    store ??= configureStore({reducer: {packetMap: packetMapReducer, preferences: () => ({preferences: [
         {name: 'timezone', value: 'Europe/Athens'}, {name: 'locale', value: 'en-GB'},
-    ]}})});
+    ]})}});
     return <Provider store={store}><ThemeProvider theme={createTheme()}>{children}</ThemeProvider></Provider>;
 }
 
 describe('Transmitter information', () => {
-    beforeEach(() => {localStorage.clear(); vi.clearAllMocks();});
+    beforeEach(() => {localStorage.clear(); vi.clearAllMocks(); store = undefined;});
 
     it('opens aircraft captures only on demand and keeps the dialog independent of live fixes', async () => {
         const aircraft = {...transmitter, id: 'adsb:4d2406', kind: 'adsb', source: '4D2406'};
@@ -88,7 +90,7 @@ describe('Transmitter information', () => {
         expect(screen.getByRole('button', {name: 'Open aircraft captures'})).toBeEnabled();
     });
 
-    it('shows four cockpit instruments with aviation conversions and remembers the metric choice', () => {
+    it('cycles all three unit systems and keeps the selected units in Redux across remounts', () => {
         const aircraft = {...transmitter, kind: 'adsb', source: '4D2406', details: {telemetry: {
             altitude_baro_m: 10972.8, altitude_geom_m: 11064, groundspeed_mps: 102.88888888,
             vertical_rate_mps: 6.35, track_deg: 326, squawk: '0042', on_ground: false,
@@ -105,10 +107,20 @@ describe('Transmitter information', () => {
         expect(instruments().getByRole('region', {name: 'Ground speed'})).toHaveTextContent('102.9m/s');
         expect(instruments().getByRole('region', {name: 'Baro altitude'})).toHaveTextContent('10,973m');
         expect(instruments().getByRole('region', {name: 'Vertical speed'})).toHaveTextContent('+6.4m/s');
-        expect(JSON.parse(localStorage.getItem(aircraftUnitsStoreName))).toBe('metric');
+        expect(store.getState().packetMap.flightUnits).toBe('metric');
+        fireEvent.click(screen.getByRole('button', {name: 'Use km/h and meters'}));
+        expect(instruments().getByRole('region', {name: 'Ground speed'})).toHaveTextContent('370.4km/h');
+        expect(instruments().getByRole('region', {name: 'Baro altitude'})).toHaveTextContent('10,973m');
+        expect(instruments().getByRole('region', {name: 'Vertical speed'})).toHaveTextContent('+6.4m/s');
+        expect(store.getState().packetMap.flightUnits).toBe('kmh');
         unmount();
-        render(<TransmitterInfo transmitter={aircraft} />, {wrapper});
-        expect(instruments().getByRole('region', {name: 'Ground speed'})).toHaveTextContent('102.9m/s');
+        const {rerender} = render(<TransmitterInfo transmitter={aircraft} />, {wrapper});
+        expect(instruments().getByRole('region', {name: 'Ground speed'})).toHaveTextContent('370.4km/h');
+        rerender(<TransmitterInfo transmitter={{...transmitter, details: {telemetry: {vel_h: 12.5}}}} />);
+        expect(instruments().getByRole('region', {name: 'Horizontal speed'})).toHaveTextContent('45.0km/h');
+        fireEvent.click(screen.getByRole('button', {name: 'Use aviation units'}));
+        expect(store.getState().packetMap.flightUnits).toBe('aviation');
+        expect(instruments().getByRole('region', {name: 'Horizontal speed'})).toHaveTextContent('24kt');
     });
 
     it('preserves zero readings, shows reported ground status and leaves missing instruments empty', () => {
@@ -262,6 +274,9 @@ describe('Transmitter information', () => {
         expect(telemetry).not.toHaveTextContent('24560');
         expect(telemetry.closest('details')).toBeNull();
         expect(screen.getByRole('region', {name: 'Latest position'})).not.toHaveTextContent('Altitude');
+        fireEvent.click(gauges.getByRole('button', {name: 'Use km/h and meters'}));
+        expect(gauges.getByRole('region', {name: 'Horizontal speed'})).toHaveTextContent('45.0km/h');
+        expect(gauges.getByRole('region', {name: 'Vertical speed'})).toHaveTextContent('+5.2m/s');
         fireEvent.click(gauges.getByRole('button', {name: 'Use aviation units'}));
         expect(gauges.getByRole('region', {name: 'Horizontal speed'})).toHaveTextContent('24kt');
         expect(gauges.getByRole('region', {name: 'Vertical speed'})).toHaveTextContent('+1,024ft/min');
@@ -275,6 +290,7 @@ describe('Transmitter information', () => {
         localStorage.setItem(aircraftUnitsStoreName, JSON.stringify('aviation'));
         const sonde = {...transmitter, details: {telemetry: {vel_h: 0, vel_v: 0, heading: 0}}};
         const {rerender, container} = render(<TransmitterInfo transmitter={sonde} />, {wrapper});
+        expect(store.getState().packetMap.flightUnits).toBe('aviation');
         expect(screen.getByRole('region', {name: 'Horizontal speed'})).toHaveTextContent('0kt');
         expect(screen.getByRole('region', {name: 'Vertical speed'})).toHaveTextContent('0ft/min');
         expect(screen.getByRole('region', {name: 'Heading'})).toHaveTextContent('000°');
@@ -292,7 +308,7 @@ describe('Transmitter information', () => {
         const {rerender} = render(<TransmitterInfo transmitter={{...transmitter, kind: 'adsb'}} />, {wrapper});
         expect(screen.getByRole('button', {name: 'Use metric units'})).toBeInTheDocument();
         rerender(<TransmitterInfo transmitter={transmitter} />);
-        expect(screen.getByRole('button', {name: 'Use aviation units'})).toBeInTheDocument();
+        expect(screen.getByRole('button', {name: 'Use km/h and meters'})).toBeInTheDocument();
         rerender(<TransmitterInfo transmitter={{...transmitter, kind: 'aprs'}} />);
         expect(screen.queryByRole('region', {name: 'Flight instruments'})).not.toBeInTheDocument();
         expect(screen.getByText('Latest position report')).toBeInTheDocument();
