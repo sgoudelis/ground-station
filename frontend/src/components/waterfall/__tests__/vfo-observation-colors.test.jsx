@@ -69,6 +69,19 @@ it('keeps scheduled observation markers gray', () => {
     expect(canvasDrawingUtils.drawVFOArea.mock.calls.map((call) => call[4])).toEqual(Array(6).fill('#A0A0A0'));
 });
 
+it.each(['none', 'lora'])('hides an old radiosonde label when the observation VFO decoder is %s', (decoder) => {
+    const store = renderObservation(DEFAULT_VFO_COLORS, true, {
+        1: { active: true, center_freq: 869525000, bandwidth: 250000, modulation: 'FM', decoder },
+    });
+    act(() => {
+        store.dispatch(decoderStatusChanged({ session_id: 'internal:observation', vfo: 1,
+            decoder_type: 'radiosonde', status: 'listening' }));
+    });
+    act(() => vi.runOnlyPendingTimers());
+
+    expect(canvasDrawingUtils.drawVFOLabel.mock.lastCall[7]).toBeNull();
+});
+
 it.each([{ bw: 250000 }, { bandwidth_khz: 250 }])('draws the joined LoRa marker using reported bandwidth %j', (info) => {
     const store = renderObservation(DEFAULT_VFO_COLORS, true, {
         1: { active: true, center_freq: 869525000, bandwidth: 500000, modulation: 'none', decoder: 'lora' },

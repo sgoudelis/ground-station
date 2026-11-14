@@ -73,6 +73,10 @@ const initialState = {
     }
 };
 
+// Radiosonde workers finish with "stopped" rather than "closed".
+const TERMINAL_DECODER_STATUSES = new Set(['idle', 'error', 'closed', 'stopped']);
+export const isTerminalDecoderStatus = (status) => TERMINAL_DECODER_STATUSES.has(status);
+
 export const isStaleDecoderStatus = (existing, incoming) => {
     if (!existing) return false;
 
@@ -87,7 +91,7 @@ export const isStaleDecoderStatus = (existing, incoming) => {
 
     if (decoder_id && existing.decoder_id && decoder_id !== existing.decoder_id) {
         // Terminal events only close the instance that currently owns the VFO.
-        if (status === 'idle' || status === 'error' || status === 'closed') return true;
+        if (isTerminalDecoderStatus(status)) return true;
         // Queued events from an unseen older process can arrive after the new start.
         if (Number.isFinite(timestamp) && Number.isFinite(existing.started_at) &&
             timestamp < existing.started_at) return true;
@@ -122,7 +126,7 @@ export const decodersSlice = createSlice({
                 return;
             }
 
-            if (status === 'idle' || status === 'error' || status === 'closed') {
+            if (isTerminalDecoderStatus(status)) {
                 // Only remove from active decoders if the decoder_id matches
                 // This prevents stale "closed" messages from old decoder instances
                 // from clearing the status of newly restarted decoders

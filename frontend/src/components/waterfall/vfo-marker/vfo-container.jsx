@@ -43,6 +43,7 @@ import {
 } from './vfo-utils.js';
 import { resolveVfoAudioStatus, VFO_AUDIO_STATUS } from '../vfo-audio-status.js';
 import { getVerifiedGnssSatelliteCountForStream } from '../gnss-slice.jsx';
+import { isTerminalDecoderStatus } from '../../decoders/decoders-slice.jsx';
 import {
     useVFODragHandlers,
     useVFOMouseHandlers,
@@ -59,6 +60,19 @@ import {
     isCenterLineOnly,
     isLockedBandwidth
 } from './vfo-config.js';
+
+// Status messages can lag behind a local mode change or an observation snapshot.
+const matchesVfoDecoder = (decoder, vfo = {}) => {
+    let selectedDecoder = vfo.decoder;
+    if (!selectedDecoder || selectedDecoder === 'none') {
+        selectedDecoder = (vfo.transcriptionEnabled ?? vfo.transcription_enabled)
+            ? 'transcription'
+            : null;
+    }
+    return Boolean(selectedDecoder)
+        && decoder.decoder_type === selectedDecoder
+        && !isTerminalDecoderStatus(decoder.status);
+};
 
 const VFOMarkersContainer = ({
                                  centerFrequency,
@@ -171,11 +185,11 @@ const VFOMarkersContainer = ({
             return null;
         }
 
-        // Find decoder sessions matching this VFO number AND current session, excluding closed decoders
+        // Match the current selection so a retiring decoder cannot keep its label visible.
         const decoderEntries = Object.values(activeDecoders).filter(
             decoder => decoder.vfo === vfoNumber &&
                       decoder.session_id === currentSessionId &&
-                      decoder.status !== 'closed'
+                      matchesVfoDecoder(decoder, vfoMarkers[vfoNumber])
         );
 
         // Return the most recent decoder (if multiple exist)
@@ -183,7 +197,7 @@ const VFOMarkersContainer = ({
             return decoderEntries.sort((a, b) => b.last_update - a.last_update)[0];
         }
         return null;
-    }, [activeDecoders, currentSessionId]);
+    }, [activeDecoders, currentSessionId, vfoMarkers]);
 
     // Helper function to get all internal VFO sessions with their live VFO data
     const getInternalVFOSessions = useCallback(() => {
@@ -209,7 +223,7 @@ const VFOMarkersContainer = ({
                         const decoderInfo = Object.values(activeDecoders).find(
                             decoder => decoder.session_id === sessionId &&
                                       decoder.vfo === parseInt(vfoNumber) &&
-                                      decoder.status !== 'closed'
+                                      matchesVfoDecoder(decoder, vfoData)
                         );
 
                         internalSessions.push({

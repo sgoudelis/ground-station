@@ -15,6 +15,46 @@ it('deletes only the specified nested packet when basenames match', () => {
 });
 
 describe('decoders slice status lifecycle', () => {
+    it('removes a stopped radiosonde without clearing other VFO decoders', () => {
+        let state = reducer(undefined, { type: '@@INIT' });
+        for (const vfo of [1, 2]) {
+            state = reducer(state, decoderStatusChanged({
+                session_id: 'session-1', vfo, decoder_id: `sonde-${vfo}`,
+                decoder_type: 'radiosonde', status: 'listening', timestamp: 10,
+            }));
+        }
+        state = reducer(state, decoderStatusChanged({
+            session_id: 'session-1', vfo: 1, decoder_id: 'sonde-1',
+            decoder_type: 'radiosonde', status: 'stopped', timestamp: 20,
+        }));
+
+        expect(Object.keys(state.active)).toEqual(['session-1_vfo2']);
+    });
+
+    it('does not create an active decoder from a late stopped event', () => {
+        const state = reducer(undefined, decoderStatusChanged({
+            session_id: 'session-1', vfo: 1, decoder_id: 'sonde-1',
+            decoder_type: 'radiosonde', status: 'stopped', timestamp: 20,
+        }));
+
+        expect(state.active).toEqual({});
+    });
+
+    it('ignores a stopped event from an unseen older worker after a new decoder starts', () => {
+        let state = reducer(undefined, decoderStatusChanged({
+            session_id: 'session-1', vfo: 1, decoder_id: 'new-lora',
+            decoder_type: 'lora', status: 'listening', timestamp: 20,
+        }));
+        const stopped = {
+            session_id: 'session-1', vfo: 1, decoder_id: 'old-sonde',
+            decoder_type: 'radiosonde', status: 'stopped', timestamp: 30,
+        };
+
+        expect(isStaleDecoderStatus(state.active['session-1_vfo1'], stopped)).toBe(true);
+        state = reducer(state, decoderStatusChanged(stopped));
+        expect(state.active['session-1_vfo1'].decoder_id).toBe('new-lora');
+    });
+
     it('preserves observed decoders across session changes and prunes departed observations', () => {
         let state = reducer(undefined, setCurrentSessionId('previous-socket'));
         state = reducer(state, setObservedSessionIds(['background']));
