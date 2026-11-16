@@ -54,21 +54,21 @@ it('updates the ADS-B count while Packets remains selected and after switching b
     vi.useFakeTimers();
     const {receive} = renderIsland();
     const aircraft = (icao) => ({icao, timestamp: Date.now() / 1000});
-    expect(screen.getByRole('tab', {name: 'PACKETS (0)'})).toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByRole('tab', {name: 'ADSB (0)'})).toBeInTheDocument();
+    expect(screen.getByRole('tab', {name: /packets \(0\)/i})).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', {name: /adsb \(0\)/i})).toBeInTheDocument();
 
     receive([aircraft('406b90')]);
-    expect(screen.getByRole('tab', {name: 'ADSB (1)'})).toBeInTheDocument();
-    expect(screen.getByRole('tab', {name: 'PACKETS (0)'})).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', {name: /adsb \(1\)/i})).toBeInTheDocument();
+    expect(screen.getByRole('tab', {name: /packets \(0\)/i})).toHaveAttribute('aria-selected', 'true');
 
-    fireEvent.click(screen.getByRole('tab', {name: 'ADSB (1)'}));
-    fireEvent.click(screen.getByRole('tab', {name: 'PACKETS (0)'}));
+    fireEvent.click(screen.getByRole('tab', {name: /adsb \(1\)/i}));
+    fireEvent.click(screen.getByRole('tab', {name: /packets \(0\)/i}));
     receive([aircraft('4d2406')]);
-    expect(screen.getByRole('tab', {name: 'ADSB (2)'})).toBeInTheDocument();
+    expect(screen.getByRole('tab', {name: /adsb \(2\)/i})).toBeInTheDocument();
 
     act(() => vi.advanceTimersByTime(61000));
-    expect(screen.getByRole('tab', {name: 'ADSB (0)'})).toBeInTheDocument();
-    expect(screen.getByRole('tab', {name: 'PACKETS (0)'})).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', {name: /adsb \(0\)/i})).toBeInTheDocument();
+    expect(screen.getByRole('tab', {name: /packets \(0\)/i})).toHaveAttribute('aria-selected', 'true');
 });
 
 it('keeps the count live when the socket connects after the Packets tab mounts or reconnects', () => {
@@ -77,14 +77,14 @@ it('keeps the count live when the socket connects after the Packets tab mounts o
     socket.connected = true;
     emit('connect');
     receive([{icao: '406b90', timestamp: Date.now() / 1000}]);
-    expect(screen.getByRole('tab', {name: 'ADSB (1)'})).toBeInTheDocument();
+    expect(screen.getByRole('tab', {name: /adsb \(1\)/i})).toBeInTheDocument();
 
     socket.connected = false;
     emit('disconnect');
-    expect(screen.getByRole('tab', {name: 'ADSB (0)'})).toBeInTheDocument();
+    expect(screen.getByRole('tab', {name: /adsb \(0\)/i})).toBeInTheDocument();
     socket.connected = true;
     emit('connect');
     receive([{icao: '4d2406', timestamp: Date.now() / 1000}]);
-    expect(screen.getByRole('tab', {name: 'ADSB (1)'})).toBeInTheDocument();
-    expect(screen.getByRole('tab', {name: 'PACKETS (0)'})).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', {name: /adsb \(1\)/i})).toBeInTheDocument();
+    expect(screen.getByRole('tab', {name: /packets \(0\)/i})).toHaveAttribute('aria-selected', 'true');
 });

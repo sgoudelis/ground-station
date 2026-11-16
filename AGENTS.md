@@ -46,6 +46,13 @@
 ## i18n Decisions
 - Frontend translations live in `frontend/src/i18n/locales/<lang>/<ns>.json`; read
   `frontend/src/i18n/TRANSLATION_GUIDE.md` before translating (tooling, rules, glossary).
+- Batch translation payloads for `frontend/scripts/fillbytext.py` are index-aligned in the order
+  `[en, de, el, es, fr, nl, it, zh]`. `nl` precedes `it`: writing payload columns alphabetically
+  swaps Italian and Dutch wholesale, and both cells still count as translated. `i18n check` reports
+  this as `lang-mismatch:` and the coverage test fails on it; grep for it before banking a batch.
+- Hardcoded English JSX literals, DataGrid `headerName`/`localeText` values and JS template literals
+  are invisible to key-based coverage. Route them through `t()` when touched
+  (`i18n check` cannot see them at all).
 - Squawk-code prose (`navigation.packet_map.squawk.codes.*.description`, `regional_note`) stays
   English in every locale. Do not translate it; dialog chrome may be translated.
 - No native reviewer gates Italian (or other locales): values ship unreviewed and get fixed from

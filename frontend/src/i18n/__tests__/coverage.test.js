@@ -31,7 +31,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
-import { analyze, check, collectDynamicLabels, greekCaps, greekOrthographyIssues } from '../../../scripts/i18n.mjs';
+import { analyze, check, collectDynamicLabels, crossLanguageIssues, greekCaps, greekOrthographyIssues } from '../../../scripts/i18n.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const BASELINE = path.resolve(HERE, '..', 'coverage-baseline.json');
@@ -119,6 +119,25 @@ describe('Greek orthography', () => {
 
     it('ships no Greek value that breaks either rule', () => {
         const issues = violations.filter((line) => line.startsWith('greek-orthography:'));
+        expect(issues, issues.join('\n')).toEqual([]);
+    });
+});
+
+describe('cross-language contamination', () => {
+    it('catches a value that was written in a sibling language', () => {
+        // Payload columns are index-aligned, so an alphabetical header (it before nl) silently swaps
+        // two whole language columns. Both cells look "translated", so coverage cannot see it.
+        expect(crossLanguageIssues('it', 'Geen selectie').length).toBeGreaterThan(0);
+        expect(crossLanguageIssues('nl', 'Nessuna selezione').length).toBeGreaterThan(0);
+        // Correct values in the same slots stay clean, including short ones.
+        expect(crossLanguageIssues('it', 'Nessuna selezione')).toEqual([]);
+        expect(crossLanguageIssues('nl', 'Geen selectie')).toEqual([]);
+        expect(crossLanguageIssues('it', 'Cina')).toEqual([]);
+        expect(crossLanguageIssues('nl', 'China')).toEqual([]);
+    });
+
+    it('ships no Italian or Dutch value borrowed from the other language', () => {
+        const issues = warnings.filter((line) => line.startsWith('lang-mismatch:'));
         expect(issues, issues.join('\n')).toEqual([]);
     });
 });

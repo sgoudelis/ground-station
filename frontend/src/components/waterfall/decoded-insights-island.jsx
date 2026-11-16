@@ -57,9 +57,9 @@ import { useTranslation } from 'react-i18next';
 // translator of the rendering component and follow runtime language changes.
 const getConstellationOperatorMeta = (t) => ({
     GPS: { flag: '🇺🇸', label: t('decoded_insights_island.united_states', { defaultValue: 'United States' }) },
-    GLONASS: { flag: '🇷🇺', label: 'Russia' },
-    BEIDOU: { flag: '🇨🇳', label: 'China' },
-    QZSS: { flag: '🇯🇵', label: 'Japan' },
+    GLONASS: { flag: '🇷🇺', label: t('decoded_insights_island.russia', { defaultValue: 'Russia' }) },
+    BEIDOU: { flag: '🇨🇳', label: t('decoded_insights_island.china', { defaultValue: 'China' }) },
+    QZSS: { flag: '🇯🇵', label: t('decoded_insights_island.japan', { defaultValue: 'Japan' }) },
     GALILEO: { flag: '🇪🇺', label: t('decoded_insights_island.european_union', { defaultValue: 'European Union' }) },
 });
 
@@ -344,12 +344,12 @@ const DecodedInsightsIsland = React.memo(function DecodedInsightsIsland() {
         : displayFixStatus === 'NO FIX'
             ? theme.palette.warning.main
             : theme.palette.text.secondary;
-    const gnssFixStatusYesNo = displayFixStatus === 'FIX' ? 'YES' : 'NO';
+    const gnssFixStatusYesNo = displayFixStatus === 'FIX' ? t('common:yes', { defaultValue: 'Yes' }) : t('common:no', { defaultValue: 'No' });
 
     const gnssColumns = useMemo(() => ([
         {
             field: 'satelliteId',
-            headerName: 'Satellite',
+            headerName: t('decoded_insights_island.col_satellite', { defaultValue: 'Satellite' }),
             minWidth: 170,
             flex: 1.1,
             renderCell: (params) => {
@@ -431,7 +431,7 @@ const DecodedInsightsIsland = React.memo(function DecodedInsightsIsland() {
         },
         {
             field: 'state',
-            headerName: 'State',
+            headerName: t('decoded_insights_island.col_state', { defaultValue: 'State' }),
             minWidth: 95,
             flex: 0.7,
             renderCell: (params) => (
@@ -455,7 +455,7 @@ const DecodedInsightsIsland = React.memo(function DecodedInsightsIsland() {
         },
         {
             field: 'lastChannel',
-            headerName: 'Chan',
+            headerName: t('decoded_insights_island.col_chan', { defaultValue: 'Chan' }),
             minWidth: 70,
             flex: 0.45,
             align: 'center',
@@ -464,7 +464,7 @@ const DecodedInsightsIsland = React.memo(function DecodedInsightsIsland() {
         },
         {
             field: 'acquisitionCount',
-            headerName: 'Acqs',
+            headerName: t('decoded_insights_island.col_acqs', { defaultValue: 'Acqs' }),
             minWidth: 65,
             flex: 0.4,
             align: 'center',
@@ -472,7 +472,7 @@ const DecodedInsightsIsland = React.memo(function DecodedInsightsIsland() {
         },
         {
             field: 'trackingCount',
-            headerName: 'Track',
+            headerName: t('decoded_insights_island.col_track', { defaultValue: 'Track' }),
             minWidth: 70,
             flex: 0.45,
             align: 'center',
@@ -510,7 +510,7 @@ const DecodedInsightsIsland = React.memo(function DecodedInsightsIsland() {
         },
         {
             field: 'lastCarrierDopplerHz',
-            headerName: 'Doppler Hz',
+            headerName: t('decoded_insights_island.col_doppler_hz', { defaultValue: 'Doppler Hz' }),
             minWidth: 115,
             flex: 0.72,
             align: 'center',
@@ -526,7 +526,7 @@ const DecodedInsightsIsland = React.memo(function DecodedInsightsIsland() {
         },
         {
             field: 'lastSeen',
-            headerName: 'Last Seen',
+            headerName: t('decoded_insights_island.col_last_seen', { defaultValue: 'Last Seen' }),
             minWidth: 170,
             flex: 1.2,
             renderCell: (params) => (
@@ -536,7 +536,7 @@ const DecodedInsightsIsland = React.memo(function DecodedInsightsIsland() {
                 />
             ),
         },
-    ]), [relativeNowMs, constellationOperatorMeta, handleOpenSatelliteInfo, loadingNoradId]);
+    ]), [relativeNowMs, constellationOperatorMeta, handleOpenSatelliteInfo, loadingNoradId, t]);
 
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -572,12 +572,12 @@ const DecodedInsightsIsland = React.memo(function DecodedInsightsIsland() {
             >
                 <AntTab
                     value="packets"
-                    label={`PACKETS (${packetOutputCount})`}
+                    label={t('decoded_insights_island.tab_packets', { count: packetOutputCount, defaultValue: 'PACKETS ({{count}})' })}
                 />
-                <AntTab value="adsb" label={`ADSB (${aircraft.length})`} />
+                <AntTab value="adsb" label={t('decoded_insights_island.tab_adsb', { count: aircraft.length, defaultValue: 'ADSB ({{count}})' })} />
                 <AntTab
                     value="gnss"
-                    label={`GNSS (${satelliteRows.length})`}
+                    label={t('decoded_insights_island.tab_gnss', { count: satelliteRows.length, defaultValue: 'GNSS ({{count}})' })}
                 />
             </AntTabs>
 
@@ -622,7 +622,7 @@ const DecodedInsightsIsland = React.memo(function DecodedInsightsIsland() {
                                     getRowClassName={(params) => (
                                         selectedSatelliteId === params.id ? 'gnss-row-selected' : ''
                                     )}
-                                    localeText={{ noRowsLabel: 'Waiting for validated GNSS navigation data' }}
+                                    localeText={{ noRowsLabel: t('decoded_insights_island.waiting_for_validated_gnss_navigation_data', { defaultValue: 'Waiting for validated GNSS navigation data' }) }}
                                     sx={{
                                         ...decodedTableSx,
                                         '& .MuiDataGrid-row': {
@@ -668,7 +668,7 @@ const DecodedInsightsIsland = React.memo(function DecodedInsightsIsland() {
                                         {t('decoded_insights_island.satellite_details', { defaultValue: 'Satellite Details' })}
                                     </Typography>
                                     <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.66rem', lineHeight: 1.1, maxWidth: '70%', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                        {selectedSatellite ? selectedSatellite.satelliteId : 'No selection'}
+                                        {selectedSatellite ? selectedSatellite.satelliteId : t('decoded_insights_island.no_selection', { defaultValue: 'No selection' })}
                                     </Typography>
                                 </Box>
 
@@ -683,13 +683,13 @@ const DecodedInsightsIsland = React.memo(function DecodedInsightsIsland() {
                                         {selectedSatellite && (
                                             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.8 }}>
                                                 <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.primary' }}>
-                                                    {`${selectedSatellite.satelliteId} details`}
+                                                    {t('decoded_insights_island.satellite_name_details', { name: selectedSatellite.satelliteId, defaultValue: '{{name}} details' })}
                                                 </Typography>
                                                 <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                                                    {`First seen: ${formatTimestamp(selectedSatellite.firstSeen)}`}
+                                                    {t('decoded_insights_island.first_seen_at', { time: formatTimestamp(selectedSatellite.firstSeen), defaultValue: 'First seen: {{time}}' })}
                                                 </Typography>
                                                 <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                                                    {`Last seen: ${formatTimestamp(selectedSatellite.lastSeen)}`}
+                                                    {t('decoded_insights_island.last_seen_at', { time: formatTimestamp(selectedSatellite.lastSeen), defaultValue: 'Last seen: {{time}}' })}
                                                 </Typography>
                                                 {(selectedSatellite.matchedNorad !== null || selectedSatellite.matchedName !== '-') && (
                                                     <Typography variant="caption" sx={{ color: 'text.secondary' }}>

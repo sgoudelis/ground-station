@@ -1,8 +1,14 @@
 #!/usr/bin/env python3
-"""Translate-by-English-text filler for the 5 near-complete languages.
-Reads a JSON array of [en, de, el, es, fr, nl] on stdin (null = skip that lang),
+"""Translate-by-English-text filler for the non-English locales.
+Reads a JSON array of [en, de, el, es, fr, nl, it, zh] on stdin (null = skip that lang),
 maps English text -> translations in a persistent map, then for every missing
 (lang,ns,key) row whose text is known, shells out to fillaligned.py per lang/ns.
+
+!! COLUMN ORDER IS [en, de, el, es, fr, nl, it, zh] - NOT alphabetical. `nl` comes BEFORE `it`,
+so writing the payload in dictionary order silently swaps every Italian and Dutch value. Both
+cells still count as translated, so coverage stays green; `i18n check` reports the damage as
+`lang-mismatch:` and coverage.test.js fails on it. Verified before banking a batch:
+  node scripts/i18n.mjs check | grep lang-mismatch
 
 Run from `frontend/`. Needs /tmp/i18n-rows.json: a JSON array of
 {"ns":..., "k":<dotted key>, "en":<english text>, "miss":[langs]}. Build it with:

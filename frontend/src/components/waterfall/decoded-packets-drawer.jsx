@@ -454,9 +454,10 @@ const DecodedPacketsDrawer = React.memo(function DecodedPacketsDrawer({ embedded
             }
         } catch (error) {
             console.error('Error opening telemetry:', error);
-            toast.error(`Failed to load telemetry: ${error.message}`);
+            toast.error(t('decoded_packets_drawer.failed_to_load_telemetry', { message: error.message, defaultValue: 'Failed to load telemetry: {{message}}' }));
         }
-    }, []);
+        // t is a dependency so the error text follows the language active when the failure happens.
+    }, [t]);
 
     // Handler to delete packet file
     const handleDeletePacket = useCallback((row) => {
@@ -480,7 +481,7 @@ const DecodedPacketsDrawer = React.memo(function DecodedPacketsDrawer({ embedded
             setDeleteDialogOpen(false);
             setPacketToDelete(null);
         } catch (error) {
-            toast.error(`Failed to delete file: ${error.message}`);
+            toast.error(t('decoded_packets_drawer.failed_to_delete_file', { message: error.message, defaultValue: 'Failed to delete file: {{message}}' }));
         }
     };
 
@@ -553,21 +554,21 @@ const DecodedPacketsDrawer = React.memo(function DecodedPacketsDrawer({ embedded
     const columns = useMemo(() => ([
         {
             field: 'timestamp',
-            headerName: 'Time',
+            headerName: t('decoded_packets_drawer.col_time', { defaultValue: 'Time' }),
             minWidth: 150,
             flex: 1.1,
             renderCell: (params) => <TimeFormatter value={params.value} nowMs={timeNowMs} timezone={timezone} locale={locale} />
         },
         {
             field: 'from',
-            headerName: 'From',
+            headerName: t('decoded_packets_drawer.col_from', { defaultValue: 'From' }),
             minWidth: 100,
             flex: 1,
             renderCell: (params) => renderFromCell(params, false)
         },
         {
             field: 'to',
-            headerName: 'To',
+            headerName: t('decoded_packets_drawer.col_to', { defaultValue: 'To' }),
             minWidth: 100,
             flex: 1,
             renderCell: (params) => (
@@ -578,7 +579,7 @@ const DecodedPacketsDrawer = React.memo(function DecodedPacketsDrawer({ embedded
         },
         {
             field: 'decoderType',
-            headerName: 'Decoder',
+            headerName: t('decoded_packets_drawer.col_decoder', { defaultValue: 'Decoder' }),
             minWidth: 72,
             flex: 0.65,
             align: 'center',
@@ -591,7 +592,7 @@ const DecodedPacketsDrawer = React.memo(function DecodedPacketsDrawer({ embedded
         },
         {
             field: 'framing',
-            headerName: 'Framing',
+            headerName: t('decoded_packets_drawer.col_framing', { defaultValue: 'Framing' }),
             minWidth: 76,
             flex: 0.65,
             align: 'center',
@@ -604,7 +605,7 @@ const DecodedPacketsDrawer = React.memo(function DecodedPacketsDrawer({ embedded
         },
         {
             field: 'payloadProtocol',
-            headerName: 'Payload',
+            headerName: t('decoded_packets_drawer.col_payload', { defaultValue: 'Payload' }),
             minWidth: 76,
             flex: 0.65,
             align: 'center',
@@ -617,7 +618,7 @@ const DecodedPacketsDrawer = React.memo(function DecodedPacketsDrawer({ embedded
         },
         {
             field: 'parser',
-            headerName: 'Parser',
+            headerName: t('decoded_packets_drawer.col_parser', { defaultValue: 'Parser' }),
             minWidth: 76,
             flex: 0.65,
             align: 'center',
@@ -630,7 +631,7 @@ const DecodedPacketsDrawer = React.memo(function DecodedPacketsDrawer({ embedded
         },
         {
             field: 'packetLength',
-            headerName: 'Size',
+            headerName: t('decoded_packets_drawer.col_size', { defaultValue: 'Size' }),
             minWidth: 70,
             flex: 0.6,
             align: 'center',
@@ -661,14 +662,14 @@ const DecodedPacketsDrawer = React.memo(function DecodedPacketsDrawer({ embedded
         },
         {
             field: 'parameters',
-            headerName: 'Parameters',
+            headerName: t('decoded_packets_drawer.col_parameters', { defaultValue: 'Parameters' }),
             minWidth: 250,
             flex: 2.6,
             renderCell: (params) => <ParametersCell value={params.value} isLora={params.row.decoderType === ModulationType.LORA} />
         },
         {
             field: 'actions',
-            headerName: 'Actions',
+            headerName: t('decoded_packets_drawer.col_actions', { defaultValue: 'Actions' }),
             width: 120,
             sortable: false,
             align: 'right',
@@ -702,26 +703,26 @@ const DecodedPacketsDrawer = React.memo(function DecodedPacketsDrawer({ embedded
                 </>
             )
         },
-    ]), [theme, handleOpenTelemetry, handleDeletePacket, renderVfoCell, renderFromCell, timeNowMs, timezone, locale]);
+    ]), [theme, handleOpenTelemetry, handleDeletePacket, renderVfoCell, renderFromCell, timeNowMs, timezone, locale, t]);
 
     const liveColumns = useMemo(() => ([
         {
             field: 'timestamp',
-            headerName: 'Time',
+            headerName: t('decoded_packets_drawer.col_time', { defaultValue: 'Time' }),
             minWidth: 150,
             flex: 1.1,
             renderCell: (params) => <TimeFormatter value={params.value} nowMs={timeNowMs} timezone={timezone} locale={locale} />
         },
         {
             field: 'from',
-            headerName: 'From',
+            headerName: t('decoded_packets_drawer.col_from', { defaultValue: 'From' }),
             minWidth: 100,
             flex: 1,
             renderCell: (params) => renderFromCell(params, true)
         },
         {
             field: 'to',
-            headerName: 'To',
+            headerName: t('decoded_packets_drawer.col_to', { defaultValue: 'To' }),
             minWidth: 100,
             flex: 1,
             renderCell: (params) => (
@@ -732,7 +733,7 @@ const DecodedPacketsDrawer = React.memo(function DecodedPacketsDrawer({ embedded
         },
         {
             field: 'decoderType',
-            headerName: 'Decoder',
+            headerName: t('decoded_packets_drawer.col_decoder', { defaultValue: 'Decoder' }),
             minWidth: 72,
             flex: 0.65,
             align: 'center',
@@ -745,7 +746,7 @@ const DecodedPacketsDrawer = React.memo(function DecodedPacketsDrawer({ embedded
         },
         {
             field: 'framing',
-            headerName: 'Framing',
+            headerName: t('decoded_packets_drawer.col_framing', { defaultValue: 'Framing' }),
             minWidth: 76,
             flex: 0.65,
             align: 'center',
@@ -758,7 +759,7 @@ const DecodedPacketsDrawer = React.memo(function DecodedPacketsDrawer({ embedded
         },
         {
             field: 'payloadProtocol',
-            headerName: 'Payload',
+            headerName: t('decoded_packets_drawer.col_payload', { defaultValue: 'Payload' }),
             minWidth: 76,
             flex: 0.65,
             align: 'center',
@@ -771,7 +772,7 @@ const DecodedPacketsDrawer = React.memo(function DecodedPacketsDrawer({ embedded
         },
         {
             field: 'parser',
-            headerName: 'Parser',
+            headerName: t('decoded_packets_drawer.col_parser', { defaultValue: 'Parser' }),
             minWidth: 76,
             flex: 0.65,
             align: 'center',
@@ -784,7 +785,7 @@ const DecodedPacketsDrawer = React.memo(function DecodedPacketsDrawer({ embedded
         },
         {
             field: 'packetLength',
-            headerName: 'Size',
+            headerName: t('decoded_packets_drawer.col_size', { defaultValue: 'Size' }),
             minWidth: 70,
             flex: 0.6,
             align: 'center',
@@ -815,14 +816,14 @@ const DecodedPacketsDrawer = React.memo(function DecodedPacketsDrawer({ embedded
         },
         {
             field: 'parameters',
-            headerName: 'Parameters',
+            headerName: t('decoded_packets_drawer.col_parameters', { defaultValue: 'Parameters' }),
             minWidth: 250,
             flex: 2.6,
             renderCell: (params) => <ParametersCell value={params.value} isLora={params.row.decoderType === ModulationType.LORA} />
         },
         {
             field: 'actions',
-            headerName: 'Actions',
+            headerName: t('decoded_packets_drawer.col_actions', { defaultValue: 'Actions' }),
             width: 120,
             sortable: false,
             align: 'right',
@@ -846,7 +847,7 @@ const DecodedPacketsDrawer = React.memo(function DecodedPacketsDrawer({ embedded
                 </>
             )
         },
-    ]), [handleOpenTelemetry, handleDeletePacket, renderVfoCell, renderFromCell, timeNowMs, timezone, locale]);
+    ]), [handleOpenTelemetry, handleDeletePacket, renderVfoCell, renderFromCell, timeNowMs, timezone, locale, t]);
 
     const displayedColumns = liveMode ? liveColumns : columns;
 
@@ -1017,7 +1018,7 @@ const DecodedPacketsDrawer = React.memo(function DecodedPacketsDrawer({ embedded
                                 },
                             }}
                             localeText={{
-                                noRowsLabel: 'No decoded packets yet',
+                                noRowsLabel: t('decoded_packets_drawer.no_decoded_packets_yet', { defaultValue: 'No decoded packets yet' }),
                             }}
                             sx={{
                                 ...decodedTableSx,

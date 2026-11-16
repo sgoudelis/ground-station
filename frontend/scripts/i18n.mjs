@@ -90,6 +90,29 @@ function greekOrthographyIssues(text) {
 const PLACEHOLDER = /\{\{\s*([\w.]+)(?:\s*,[^}]*)?\s*\}\}/g;
 
 /**
+ * Values that were written in the wrong language. Italian/Dutch are the realistic silent-swap
+ * vector: the index-aligned translation payloads carry one column per language, so writing the
+ * column order alphabetically (it before nl) instead of [..., nl, it, zh] swaps two whole columns
+ * and no coverage number notices, because both cells are "filled".
+ * Markers are words that cannot legitimately appear in the target language.
+ */
+const FOREIGN_WORDS = {
+    it: { looks: 'Dutch', words: ['geen', 'niet', 'van', 'uit', 'wordt', 'maar', 'ook', 'voor', 'nog', 'mislukt', 'verwijderen', 'instellingen', 'kanaal', 'grootte', 'acties', 'tijd', 'selectie', 'rusland', 'nuttelading', 'kadering', 'wachten', 'het', 'een', 'satelliet', 'details'] },
+    nl: { looks: 'Italian', words: ['nessuno', 'nessuna', 'selezione', 'configurazione', 'carico', 'utile', 'dimensione', 'azioni', 'impossibile', 'attesa', 'rilevamento', 'elimina', 'qualsiasi', 'dello', 'degli', 'questa', 'questo', 'dati', 'giappone', 'analizzatore', 'decodificatore'] },
+};
+const FOREIGN_PATTERNS = Object.fromEntries(Object.entries(FOREIGN_WORDS).map(([lang, spec]) => [
+    lang,
+    { looks: spec.looks, patterns: spec.words.map((w) => [w, new RegExp(`(?<![\\p{L}])${w}(?![\\p{L}])`, 'iu')]) },
+]));
+
+/** Foreign-language words inside a value, or [] when the value reads like its own locale. */
+function crossLanguageIssues(lang, text) {
+    const spec = FOREIGN_PATTERNS[lang];
+    if (!spec || typeof text !== 'string') return [];
+    return spec.patterns.filter(([, re]) => re.test(text)).map(([word]) => word);
+}
+
+/**
  * Keys that stay English on purpose.
  * - squawk code titles/scopes/descriptions are regulator-derived reference prose that is only
  *   published in English, and translating it would invent aviation-safety wording.
@@ -683,6 +706,16 @@ function commandCheck() {
                     }
                 }
             }
+            // 2c. a value written in a sibling language (see FOREIGN_WORDS) is fully "translated" as
+            //     far as coverage counts go, so this is the only thing that surfaces a swapped fill.
+            if (FOREIGN_PATTERNS[lang]) {
+                for (const [key, value] of Object.entries(report.table[lang][ns])) {
+                    const foreign = crossLanguageIssues(lang, value);
+                    if (foreign.length) {
+                        warnings.push(`lang-mismatch: ${lang}/${ns}.${key} reads as ${FOREIGN_PATTERNS[lang].looks} (${foreign.slice(0, 3).join(', ')}) -> '${String(value).slice(0, 60)}'`);
+                    }
+                }
+            }
             // 3. half a plural pair (only real plural categories count, so `group_other` is not a form)
             for (const key of Object.keys(report.table[lang][ns])) {
                 const match = PLURAL_SUFFIX.exec(key);
@@ -754,4 +787,4 @@ if (invokedDirectly) {
     }
 }
 
-export { commandCheck as check, greekCaps, greekOrthographyIssues };
+export { commandCheck as check, greekCaps, greekOrthographyIssues, crossLanguageIssues };

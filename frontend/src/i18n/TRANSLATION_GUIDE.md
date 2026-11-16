@@ -149,6 +149,9 @@ Hard failures (rendered output is wrong for a user):
 Warnings (reported, never red):
 
 * **unknown-keys** — locale entries no component references (dynamic keys land here too).
+* **lang-mismatch** — an Italian value written in Dutch, or the reverse. Both cells look translated,
+  so only this rule catches a language column that was swapped in a batch payload (warning today,
+  and `coverage.test.js` fails the build on it).
 
 Deliberately English-only, encoded in `ENGLISH_ONLY` inside the script:
 
@@ -175,6 +178,9 @@ interpolation is correct as long as the value is plural-neutral.
 Rules that apply to every language:
 
 * **Never rename a key** — the key is the contract with the source.
+* **Batch payloads are index-aligned** — `scripts/fillbytext.py` expects
+  `[en, de, el, es, fr, nl, it, zh]`. `nl` sits *before* `it`; alphabetising the columns swaps
+  Italian and Dutch and every coverage number still says "done".
 * Keep product names, acronyms and units untranslated.
 * Greek: an accent on a capital letter is dropped and an all-caps word carries no accents, but a
   tonos on a lowercase letter stays even in a capitalised word (`Ρυθμίσεις`, not `Ρυθμισεις`).
