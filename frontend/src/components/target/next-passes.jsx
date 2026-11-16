@@ -463,7 +463,7 @@ const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({
         {
             field: 'status',
             minWidth: 110,
-            headerName: 'Status',
+            headerName: t('next_passes.status', { defaultValue: 'Status' }),
             align: 'center',
             headerAlign: 'center',
             flex: 1,

@@ -18,6 +18,7 @@
     "zoom_out": "Uitzoomen"
   },
   "next_passes": {
+    "status": "Status",
     "title": "Volgende passages voor {{name}} in de komende {{hours}} uur",
     "start": "Start",
     "end": "Einde",
@@ -226,6 +227,8 @@
     "refresh_passes_force_recalculate": "Passes vernieuwen (herberekening forceren)"
   },
   "timeline": {
+    "passes_for_next_hours": "Passen van de komende {{hours}} uur",
+    "passes_for_next_hours_named": "{{name}} - passen van de komende {{hours}} uur",
     "zoomIn": "Inzoomen",
     "zoomOut": "Uitzoomen",
     "resetZoom": "Zoom herstellen",

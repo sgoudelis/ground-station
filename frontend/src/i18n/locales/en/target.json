@@ -31,6 +31,7 @@
     "go_fullscreen": "Go fullscreen"
   },
   "next_passes": {
+    "status": "Status",
     "title": "Next passes for {{name}} in the next {{hours}} hours",
     "start": "Start",
     "end": "End",
@@ -115,6 +116,8 @@
     "refresh_passes_force_recalculate": "Refresh passes (force recalculate)"
   },
   "timeline": {
+    "passes_for_next_hours": "Passes for the next {{hours}} hours",
+    "passes_for_next_hours_named": "{{name}} - passes for the next {{hours}} hours",
     "zoomIn": "Zoom In",
     "zoomOut": "Zoom Out",
     "resetZoom": "Reset Zoom",

@@ -18,6 +18,7 @@
     "zoom_out": "Zoom arrière"
   },
   "next_passes": {
+    "status": "Statut",
     "title": "Prochains passages de {{name}} dans les {{hours}} prochaines heures",
     "start": "Début",
     "end": "Fin",
@@ -226,6 +227,8 @@
     "refresh_passes_force_recalculate": "Actualiser les passages (recalcul forcé)"
   },
   "timeline": {
+    "passes_for_next_hours": "Passages des {{hours}} prochaines heures",
+    "passes_for_next_hours_named": "{{name}} - passages des {{hours}} prochaines heures",
     "zoomIn": "Zoomer",
     "zoomOut": "Dézoomer",
     "resetZoom": "Réinitialiser le zoom",

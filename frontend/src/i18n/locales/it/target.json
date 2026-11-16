@@ -15,6 +15,7 @@
     "go_fullscreen": "Vai a schermo intero"
   },
   "next_passes": {
+    "status": "Stato",
     "title": "Prossimi passaggi per {{name}} nelle prossime {{hours}} ore",
     "start": "Inizio",
     "end": "Fine",
@@ -223,6 +224,8 @@
     "refresh_passes_force_recalculate": "Aggiorna passaggi (ricalcolo forzato)"
   },
   "timeline": {
+    "passes_for_next_hours": "Passaggi delle prossime {{hours}} ore",
+    "passes_for_next_hours_named": "{{name}} - passaggi delle prossime {{hours}} ore",
     "zoomIn": "Ingrandisci",
     "zoomOut": "Riduci",
     "resetZoom": "Ripristina zoom",

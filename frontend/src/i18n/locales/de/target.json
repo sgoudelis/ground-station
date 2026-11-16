@@ -18,6 +18,7 @@
     "zoom_out": "Verkleinern"
   },
   "next_passes": {
+    "status": "Status",
     "title": "Nächste Überflüge für {{name}} in den nächsten {{hours}} Stunden",
     "start": "Start",
     "end": "Ende",
@@ -226,6 +227,8 @@
     "refresh_passes_force_recalculate": "Vorbeiflüge aktualisieren (Neuberechnung erzwingen)"
   },
   "timeline": {
+    "passes_for_next_hours": "Vorbeiflüge der nächsten {{hours}} Stunden",
+    "passes_for_next_hours_named": "{{name}} - Vorbeiflüge der nächsten {{hours}} Stunden",
     "zoomIn": "Vergrößern",
     "zoomOut": "Verkleinern",
     "resetZoom": "Zoom zurücksetzen",

@@ -18,6 +18,7 @@
     "zoom_out": "缩小"
   },
   "next_passes": {
+    "status": "状态",
     "title": "{{name}} 未来 {{hours}} 小时内的过境",
     "start": "开始",
     "end": "结束",
@@ -102,6 +103,8 @@
     "refresh_passes_force_recalculate": "刷新过境（强制重新计算）"
   },
   "timeline": {
+    "passes_for_next_hours": "未来 {{hours}} 小时的过境",
+    "passes_for_next_hours_named": "{{name}} - 未来 {{hours}} 小时的过境",
     "zoomIn": "放大",
     "zoomOut": "缩小",
     "resetZoom": "重置缩放",

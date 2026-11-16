@@ -18,6 +18,7 @@
     "zoom_out": "Fuera."
   },
   "next_passes": {
+    "status": "Estado",
     "title": "Próximas pasadas de {{name}} en las próximas {{hours}} horas",
     "start": "Inicio",
     "end": "Fin",
@@ -226,6 +227,8 @@
     "refresh_passes_force_recalculate": "Actualizar pasos (forzar recálculo)"
   },
   "timeline": {
+    "passes_for_next_hours": "Pasadas de las próximas {{hours}} horas",
+    "passes_for_next_hours_named": "{{name}} - pasadas de las próximas {{hours}} horas",
     "zoomIn": "Acercar",
     "zoomOut": "Alejar",
     "resetZoom": "Restablecer zoom",

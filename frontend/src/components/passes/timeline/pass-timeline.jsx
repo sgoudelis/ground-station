@@ -785,8 +785,15 @@ const PassTimelineComponent = ({
                 minWidth: 0
               }}>
                 {satelliteName
-                  ? `${satelliteName} - passes for the next ${initialTimeWindowHours.toFixed(0)} hours`
-                  : `Passes for the next ${initialTimeWindowHours.toFixed(0)} hours`
+                  ? t('timeline.passes_for_next_hours_named', {
+                    name: satelliteName,
+                    hours: initialTimeWindowHours.toFixed(0),
+                    defaultValue: '{{name}} - passes for the next {{hours}} hours',
+                  })
+                  : t('timeline.passes_for_next_hours', {
+                    hours: initialTimeWindowHours.toFixed(0),
+                    defaultValue: 'Passes for the next {{hours}} hours',
+                  })
                 }
               </Typography>
               <Typography variant="caption" sx={{
