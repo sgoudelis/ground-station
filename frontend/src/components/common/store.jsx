@@ -257,7 +257,7 @@ const fileBrowserPersistConfig = {
     version: fileBrowserPersistVersion,
     storage,
     stateReconciler: reconcileFileBrowserPersistedState,
-    whitelist: ['sortBy', 'sortOrder', 'viewMode', 'pageSize', 'filters']
+    whitelist: ['sortBy', 'sortOrder', 'viewMode', 'pageSize', 'filters', 'tableColumnVisibility']
 };
 
 // Persist configuration for decoders slice

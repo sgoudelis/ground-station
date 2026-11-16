@@ -93,6 +93,31 @@ test('only registers the file browser as visible while its page is mounted', () 
     expect(store.getState().filebrowser.isVisible).toBe(false);
 });
 
+test('column choices update the listing, survive a view switch, and reset to defaults', async () => {
+    const store = renderBrowser();
+    fireEvent.change(screen.getByRole('searchbox'), {target: {value: 'beacon'}});
+    await screen.findByRole('columnheader', {name: 'Frequency'});
+    fireEvent.click(screen.getByRole('button', {name: 'Columns'}));
+    expect(screen.getByRole('checkbox', {name: 'Name'})).toBeDisabled();
+    expect(screen.getByRole('checkbox', {name: 'Actions'})).toBeDisabled();
+    fireEvent.click(screen.getByRole('checkbox', {name: 'Frequency'}));
+    fireEvent.click(screen.getByRole('checkbox', {name: 'Sample Rate'}));
+    expect(store.getState().filebrowser.tableColumnVisibility).toEqual({frequency: false, sampleRate: false});
+    // Close the popover before checking the table exposed to assistive technology.
+    fireEvent.keyDown(screen.getByRole('dialog', {name: 'Columns'}), {key: 'Escape'});
+    await waitFor(() => expect(screen.queryByRole('dialog', {name: 'Columns'})).not.toBeInTheDocument());
+    expect(screen.queryByRole('columnheader', {name: 'Frequency'})).not.toBeInTheDocument();
+    act(() => store.dispatch(setViewMode('card')));
+    expect(screen.queryByRole('button', {name: 'Columns'})).not.toBeInTheDocument();
+    act(() => store.dispatch(setViewMode('table')));
+    expect(screen.queryByRole('columnheader', {name: 'Frequency'})).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', {name: 'Columns'}));
+    fireEvent.click(screen.getByRole('button', {name: 'Reset'}));
+    expect(screen.getByRole('checkbox', {name: 'Frequency'})).toBeChecked();
+    expect(screen.getByRole('checkbox', {name: 'Sample Rate'})).toBeChecked();
+    expect(store.getState().filebrowser.tableColumnVisibility).toEqual({});
+});
+
 test('shows a search-specific empty state and clears the applied query', async () => {
     const store = renderBrowser();
     const input = screen.getByRole('searchbox');

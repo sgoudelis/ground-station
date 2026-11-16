@@ -11,7 +11,7 @@ beforeEach(() => mockViewport(1280));
 
 const recording = {
     id: 'recording:pass', type: 'recording', displayName: 'pass.sigmf-data', data_size: 4096,
-    duration: '02:35', metadata: {target_satellite_name: 'ISS'},
+    duration: '02:35', metadata: {target_satellite_name: 'ISS', center_frequency: 145800000, sample_rate: 2400000},
     latest_activity: '2026-11-05T08:15:00Z', captured_at_source: 'metadata',
 };
 
@@ -28,7 +28,7 @@ function renderTable(items = [recording], props = {}) {
 }
 
 test.each([
-    [1280, ['Name', 'Type', 'Source', 'Summary', 'Size', 'Last Activity', 'Actions']],
+    [1280, ['Name', 'Type', 'Source', 'Frequency', 'Sample Rate', 'Summary', 'Size', 'Last Activity', 'Actions']],
     [1000, ['Name', 'Type', 'Source', 'Last Activity', 'Actions']],
     [700, ['Name', 'Source', 'Last Activity', 'Actions']],
     [390, ['Name', 'Actions']],
@@ -44,6 +44,33 @@ test.each([
     expect(within(row).getByText('8:15:00 AM')).toBeInTheDocument();
     if (width >= 1200) expect(within(row).getByText('02:35')).toBeInTheDocument();
     else expect(within(row).queryByText('02:35')).not.toBeInTheDocument();
+});
+
+test('shows RF metadata from IQ and audio captures and leaves unknown values empty', () => {
+    renderTable([
+        recording,
+        {id: 'audio', type: 'audio', displayName: 'voice.wav', sample_rate: 44100,
+            metadata: {vfo_frequency: 437625000, center_frequency: 437500000}},
+        {id: 'unknown', type: 'snapshot', displayName: 'waterfall.png'},
+    ]);
+    const row = name => within(screen.getByText(name).closest('tr'));
+    expect(row('pass.sigmf-data').getByText('145.8 MHz')).toBeInTheDocument();
+    expect(row('pass.sigmf-data').getByText('2.4 Msps')).toBeInTheDocument();
+    expect(row('voice.wav').getByText('437.625 MHz')).toBeInTheDocument();
+    expect(row('voice.wav').getByText('44.1 ksps')).toBeInTheDocument();
+    expect(row('waterfall.png').queryByText(/MHz|sps/)).not.toBeInTheDocument();
+});
+
+test('respects explicit column choices on mobile and hides disabled context from the name cell', () => {
+    mockViewport(390);
+    renderTable([recording], {columnVisibility: {type: false, source: false, time: false, frequency: true, sampleRate: true}});
+    expect(screen.getAllByRole('columnheader').map(cell => cell.getAttribute('aria-label') || cell.textContent))
+        .toEqual(['Name', 'Frequency', 'Sample Rate', 'Actions']);
+    expect(screen.getByText('145.8 MHz')).toBeInTheDocument();
+    expect(screen.getByText('2.4 Msps')).toBeInTheDocument();
+    expect(screen.queryByText('IQ Recording')).not.toBeInTheDocument();
+    expect(screen.queryByText('ISS')).not.toBeInTheDocument();
+    expect(screen.queryByText('8:15:00 AM')).not.toBeInTheDocument();
 });
 
 test('shows source identities and summaries across capture types', () => {
@@ -95,10 +122,11 @@ test.each([
     {type: 'recording', recording_in_progress: true, label: 'Recording'},
     {type: 'audio', status: 'recording', label: 'Recording'},
     {type: 'decoded_folder', folder_kind: 'observation', observation_in_progress: true, label: 'In progress'},
-])('retains the active $type indicator on mobile', ({label, ...item}) => {
+])('exposes the active $type status on its icon on mobile', ({label, ...item}) => {
     mockViewport(390);
     renderTable([{...recording, ...item}]);
-    expect(screen.getByText(label)).toBeInTheDocument();
+    expect(screen.getByRole('img', {name: new RegExp(label)})).toBeInTheDocument();
+    expect(screen.queryByText(label)).not.toBeInTheDocument();
 });
 
 test('row and keyboard activation open details, while action clicks stay on the chosen item', async () => {

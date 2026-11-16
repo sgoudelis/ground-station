@@ -315,7 +315,11 @@
     "select_item": "Seleccionar {{name}}",
     "summary": "Resumen",
     "updates_one": "{{count}} actualización",
-    "updates_other": "{{count}} actualizaciones"
+    "updates_other": "{{count}} actualizaciones",
+    "columns": "Columnas",
+    "reset_columns": "Restablecer",
+    "frequency": "Frecuencia",
+    "sample_rate": "Tasa de muestreo"
   },
   "filebrowser_main": {
     "cancel": "Cancelar",

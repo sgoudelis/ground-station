@@ -34,6 +34,7 @@ import reducer, {
     setSearch,
     toggleItemSelection,
     setAllFilters,
+    setTableColumnVisibility,
     toggleFilter,
     reconcileFileBrowserPersistedState,
     fileBrowserPersistVersion,
@@ -45,6 +46,15 @@ import reducer, {
 function createStore() {
     return configureStore({ reducer: { filebrowser: reducer } });
 }
+
+test('restores saved column choices and gives older preferences responsive defaults', () => {
+    const current = reducer(undefined, {type: '@@INIT'});
+    expect(reconcileFileBrowserPersistedState({viewMode: 'table'}, current).tableColumnVisibility).toEqual({});
+    const changed = reducer(current, setTableColumnVisibility({frequency: false, source: true}));
+    const restored = reconcileFileBrowserPersistedState({tableColumnVisibility: changed.tableColumnVisibility}, current);
+    expect(restored.tableColumnVisibility).toEqual({frequency: false, source: true});
+    expect(reducer(restored, setTableColumnVisibility({})).tableColumnVisibility).toEqual({});
+});
 
 test('incremental aircraft rows preserve other rows and reject stale page acknowledgements', async () => {
     const store = createStore();

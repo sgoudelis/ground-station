@@ -315,7 +315,11 @@
     "summary": "Overzicht",
     "updates_one": "{{count}} update",
     "updates_other": "{{count}} updates",
-    "type": "Type"
+    "type": "Type",
+    "columns": "Kolommen",
+    "reset_columns": "Herstellen",
+    "frequency": "Frequentie",
+    "sample_rate": "Samplefrequentie"
   },
   "filebrowser_main": {
     "cancel": "Annuleren",

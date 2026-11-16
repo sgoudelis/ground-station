@@ -315,7 +315,11 @@
     "updates_one": "{{count}} mise à jour",
     "updates_other": "{{count}} mises à jour",
     "actions": "Actions",
-    "source": "Source"
+    "source": "Source",
+    "columns": "Colonnes",
+    "reset_columns": "Réinitialiser",
+    "frequency": "Fréquence",
+    "sample_rate": "Taux d'échantillonnage"
   },
   "filebrowser_main": {
     "cancel": "Annuler",

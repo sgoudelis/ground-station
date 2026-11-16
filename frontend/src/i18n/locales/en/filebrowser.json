@@ -23,7 +23,11 @@
     "runs_one": "{{count}} run",
     "runs_other": "{{count}} runs",
     "flights_one": "{{count}} flight",
-    "flights_other": "{{count}} flights"
+    "flights_other": "{{count}} flights",
+    "columns": "Columns",
+    "reset_columns": "Reset",
+    "frequency": "Frequency",
+    "sample_rate": "Sample Rate"
   },
   "bundle_types": {
     "adsb": "Aircraft · ADS-B",

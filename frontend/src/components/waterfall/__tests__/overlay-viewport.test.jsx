@@ -58,7 +58,7 @@ afterEach(() => {
     vi.useRealTimers();
 });
 
-function renderWaterfall(renderer = 'worker') {
+function renderWaterfall(renderer = 'worker', { waitForFrame = true } = {}) {
     const initialVfo = vfoReducer(undefined, { type: '@@INIT' });
     const store = configureStore({
         reducer: {
@@ -88,11 +88,31 @@ function renderWaterfall(renderer = 'worker') {
         frequencyBands={[{ startFrequency: centerFrequency - 100_000, endFrequency: centerFrequency + 100_000,
             name: 'Test band', color: '#ff0' }]}
     />, { store });
-    frame();
+    if (waitForFrame) frame();
     return { ...result, ref };
 }
 
 describe('waterfall overlay viewport', () => {
+    it('sizes the first VFO drawing before waiting for an animation frame', () => {
+        const { container } = renderWaterfall('worker', { waitForFrame: false });
+        expect(container.querySelector('.vfo-markers-canvas').width).toBe(2000);
+        expect(canvasDrawingUtils.drawVFOLine).toHaveBeenCalled();
+        expect(canvasDrawingUtils.drawVFOLine.mock.calls.every((call) => call[1] === 500)).toBe(true);
+    });
+
+    it('defers overlays in a zero-width layout until their viewport becomes measurable', () => {
+        viewportWidth = 0;
+        const { container } = renderWaterfall();
+        expect(container.querySelector('.vfo-markers-canvas')).toBeNull();
+        expect(canvasDrawingUtils.drawVFOLine).not.toHaveBeenCalled();
+
+        viewportWidth = 1000;
+        act(() => resizeCallback());
+        frame();
+        expect(container.querySelector('.vfo-markers-canvas').width).toBe(2000);
+        expect(canvasDrawingUtils.drawVFOLine.mock.calls.every((call) => call[1] === 500)).toBe(true);
+    });
+
     it.each(['worker', 'dom-tiles'])('keeps %s overlays outside CSS zoom and sized to the screen at 20×', (renderer) => {
         const { container, ref } = renderWaterfall(renderer);
         act(() => ref.current.setZoomScale(20, 500));

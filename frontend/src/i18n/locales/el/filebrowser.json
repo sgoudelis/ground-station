@@ -321,7 +321,11 @@
     "select_item": "Επιλογή {{name}}",
     "summary": "Σύνοψη",
     "updates_one": "{{count}} ενημέρωση",
-    "updates_other": "{{count}} ενημερώσεις"
+    "updates_other": "{{count}} ενημερώσεις",
+    "columns": "Στήλες",
+    "reset_columns": "Επαναφορά",
+    "frequency": "Συχνότητα",
+    "sample_rate": "Ρυθμός δειγματοληψίας"
   },
   "filebrowser_main": {
     "cancel": "Ακύρωση",

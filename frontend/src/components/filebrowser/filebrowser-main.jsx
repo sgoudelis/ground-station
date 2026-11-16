@@ -102,6 +102,7 @@ import {
     markFileBrowserVisited,
     setFileBrowserVisible,
     setViewMode,
+    setTableColumnVisibility,
 } from './filebrowser-slice.jsx';
 import { toast } from 'react-toastify';
 import { useTranslation } from 'react-i18next';
@@ -110,6 +111,7 @@ import TelemetryViewerDialog from './telemetry-viewer-dialog.jsx';
 import AudioDialog from './audio-dialog.jsx';
 import TranscriptionDialog from './transcription-dialog.jsx';
 import FileTableView from './file-table-view.jsx';
+import FileColumnSelector from './file-column-selector.jsx';
 import MeteorM2xLrptFolderDialog from './meteor-m2x-lrpt-folder-dialog.jsx';
 import MeteorHrptFolderDialog from './meteor-hrpt-folder-dialog.jsx';
 import ObservationFolderDialog from './observation-folder-dialog.jsx';
@@ -323,6 +325,7 @@ export default function FileBrowserMain() {
         selectedItems,
         selectionMode,
         viewMode,
+        tableColumnVisibility,
     } = useSelector((state) => state.filebrowser);
     const backgroundTasks = useSelector((state) => state.backgroundTasks);
     const runningWaterfallPaths = useMemo(
@@ -1287,6 +1290,13 @@ export default function FileBrowserMain() {
                 ) : viewMode === 'table' ? (
                     <FileTableView
                         filesByDay={filesByDay}
+                        columnVisibility={tableColumnVisibility}
+                        headerActions={<FileColumnSelector
+                            visibility={tableColumnVisibility}
+                            onChange={visibility => dispatch(setTableColumnVisibility(visibility))}
+                            sortBy={sortBy}
+                            compactQuery={TOOLBAR_COMPACT_QUERY}
+                        />}
                         sortBy={sortBy}
                         selectionMode={selectionMode}
                         selectedItems={selectedItems}

@@ -142,7 +142,10 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
         if (viewportFrameRef.current !== null) return;
         viewportFrameRef.current = requestAnimationFrame(() => {
             viewportFrameRef.current = null;
-            const width = containerRef.current?.clientWidth || 1;
+            const width = containerRef.current?.clientWidth || 0;
+            // Hidden layouts must stay unmeasured until ResizeObserver sees
+            // a real width; a one-pixel drawing would stretch across the scope.
+            if (width <= 0) return;
             setOverlayViewport({
                 width,
                 scale: scaleRef.current,
@@ -150,6 +153,16 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
                 pixelRatio: window.devicePixelRatio || 1,
             });
         });
+    }, []);
+
+    useLayoutEffect(() => {
+        // Measure before the first paint. Overlays mount only after this width
+        // is known, so their first drawing already has screen-sized geometry.
+        const width = containerRef.current?.clientWidth || 0;
+        if (width > 0) {
+            containerWidthRef.current = width;
+            setOverlayViewport((viewport) => ({ ...viewport, width }));
+        }
     }, []);
 
     useLayoutEffect(() => {
@@ -700,57 +713,66 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
                             }}
                         />
                     </Box>
-                    <RecordingBandOverlay
-                        inputSampleRate={sampleRate}
-                        decimationFactor={recordingDecimationFactor}
-                        selectionEnabled={recordingBandSelectionEnabled}
-                        centerOffsetHz={recordingBandCenterOffsetHz}
-                        dragStepHz={recordingBandDragStepHz}
-                        onCenterOffsetChange={(offset) => dispatch(setRecordingBandCenterOffsetHz(offset))}
-                        isRecording={isRecording}
-                        containerWidth={overlayViewport.width}
-                        viewport={overlayViewport}
-                        height={bandScopeHeight + bandscopeTopPadding}
-                        topPadding={bandscopeTopPadding}
-                    />
-                    {/* Add the new FrequencyBandOverlay component */}
-                    <FrequencyBandOverlay
-                        centerFrequency={centerFrequency}
-                        sampleRate={sampleRate}
-                        containerWidth={overlayViewport.width}
-                        viewport={overlayViewport}
-                        height={bandScopeHeight + bandscopeTopPadding}
-                        topPadding={bandscopeTopPadding}
-                        bands={frequencyBands}
-                        bandHeight={20}
-                    />
-                    <BookmarkCanvas
-                        centerFrequency={centerFrequency}
-                        sampleRate={sampleRate}
-                        containerWidth={overlayViewport.width}
-                        viewport={overlayViewport}
-                        height={bandScopeHeight + bandscopeTopPadding}
-                        bandOverlayHeight={20}
-                        topPadding={bandscopeTopPadding}
-                        onBookmarkClick={handleBookmarkClick}
-                    />
-                    <VFOMarkersContainer
-                        centerFrequency={centerFrequency}
-                        sampleRate={sampleRate}
-                        waterfallHeight={waterFallCanvasHeight}
-                        bandscopeHeight={bandScopeHeight}
-                        bandscopeTopPadding={bandscopeTopPadding}
-                        containerWidth={overlayViewport.width}
-                        viewport={overlayViewport}
-                    />
+                    {overlayViewport.width > 0 && (
+                        <>
+                            <RecordingBandOverlay
+                                inputSampleRate={sampleRate}
+                                decimationFactor={recordingDecimationFactor}
+                                selectionEnabled={recordingBandSelectionEnabled}
+                                centerOffsetHz={recordingBandCenterOffsetHz}
+                                dragStepHz={recordingBandDragStepHz}
+                                onCenterOffsetChange={(offset) => dispatch(setRecordingBandCenterOffsetHz(offset))}
+                                isRecording={isRecording}
+                                containerWidth={overlayViewport.width}
+                                viewport={overlayViewport}
+                                height={bandScopeHeight + bandscopeTopPadding}
+                                topPadding={bandscopeTopPadding}
+                            />
+                            {/* Add the new FrequencyBandOverlay component */}
+                            <FrequencyBandOverlay
+                                centerFrequency={centerFrequency}
+                                sampleRate={sampleRate}
+                                containerWidth={overlayViewport.width}
+                                viewport={overlayViewport}
+                                height={bandScopeHeight + bandscopeTopPadding}
+                                topPadding={bandscopeTopPadding}
+                                bands={frequencyBands}
+                                bandHeight={20}
+                            />
+                            <BookmarkCanvas
+                                centerFrequency={centerFrequency}
+                                sampleRate={sampleRate}
+                                containerWidth={overlayViewport.width}
+                                viewport={overlayViewport}
+                                height={bandScopeHeight + bandscopeTopPadding}
+                                bandOverlayHeight={20}
+                                topPadding={bandscopeTopPadding}
+                                onBookmarkClick={handleBookmarkClick}
+                            />
+                            <VFOMarkersContainer
+                                centerFrequency={centerFrequency}
+                                sampleRate={sampleRate}
+                                waterfallHeight={waterFallCanvasHeight}
+                                bandscopeHeight={bandScopeHeight}
+                                bandscopeTopPadding={bandscopeTopPadding}
+                                containerWidth={overlayViewport.width}
+                                viewport={overlayViewport}
+                            />
+                        </>
+                    )}
                 </Box>
 
-                <FrequencyScale
-                    centerFrequency={centerFrequency}
-                    containerWidth={overlayViewport.width}
-                    viewport={overlayViewport}
-                    sampleRate={sampleRate}
-                />
+                {/* Reserve the ruler's space while a hidden layout is measured. */}
+                <Box sx={{ height: '20px' }}>
+                    {overlayViewport.width > 0 && (
+                        <FrequencyScale
+                            centerFrequency={centerFrequency}
+                            containerWidth={overlayViewport.width}
+                            viewport={overlayViewport}
+                            sampleRate={sampleRate}
+                        />
+                    )}
+                </Box>
 
                 <Box ref={waterfallTransformRef} sx={{ transformOrigin: 'left center' }}>
                     {waterfallRendererMode === 'dom-tiles' ? (

@@ -256,7 +256,11 @@
     "runs_one": "{{count}} esecuzione",
     "runs_other": "{{count}} esecuzioni",
     "flights_one": "{{count}} volo",
-    "flights_other": "{{count}} voli"
+    "flights_other": "{{count}} voli",
+    "columns": "Colonne",
+    "reset_columns": "Ripristina",
+    "frequency": "Frequenza",
+    "sample_rate": "Frequenza Campionamento"
   },
   "filebrowser_main": {
     "cancel": "Annulla",

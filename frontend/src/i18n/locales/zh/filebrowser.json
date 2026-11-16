@@ -179,7 +179,11 @@
     "packets_one": "{{count}} 个数据包",
     "updates_one": "{{count}} 条更新",
     "runs_one": "{{count}} 次采集",
-    "flights_one": "{{count}} 个飞行段"
+    "flights_one": "{{count}} 个飞行段",
+    "columns": "列",
+    "reset_columns": "重置",
+    "frequency": "频率",
+    "sample_rate": "采样率"
   },
   "filebrowser_main": {
     "auto_scale_db_range": "自动缩放 dB 范围",

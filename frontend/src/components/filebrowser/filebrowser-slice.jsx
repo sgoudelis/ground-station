@@ -372,6 +372,7 @@ const initialState = {
     hasNewFiles: false, // Flag indicating if new files were added since last visit
     // View mode
     viewMode: 'table', // 'card' or 'table'
+    tableColumnVisibility: {}, // Explicit overrides; absent keys use responsive defaults.
     // Date-based purge dialog state
     purge: {
         preview: null, // latest aggregate from filebrowser.purge-preview
@@ -521,6 +522,9 @@ const fileBrowserSlice = createSlice({
         // View mode actions
         setViewMode: (state, action) => {
             state.viewMode = action.payload;
+        },
+        setTableColumnVisibility: (state, action) => {
+            state.tableColumnVisibility = action.payload;
         },
         setPlaybackRecordings: (state, action) => {
             state.playbackRecordings = action.payload || [];
@@ -752,6 +756,7 @@ export const {
     setFileBrowserVisible,
     setHasNewFiles,
     setViewMode,
+    setTableColumnVisibility,
     setPlaybackRecordings,
     purgeProgressUpdated,
     purgeFinished,
