@@ -21,6 +21,7 @@ const canvasContext = {
     restore: vi.fn(),
     roundRect: vi.fn(),
     save: vi.fn(),
+    setTransform: vi.fn(),
     stroke: vi.fn(),
 };
 
@@ -29,6 +30,24 @@ afterEach(() => {
 });
 
 describe('RecordingBandOverlay drag handling', () => {
+    it('keeps its drag target aligned and converts screen movement using the zoomed bandwidth', () => {
+        vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(canvasContext);
+        vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({ width: 400 });
+        const onCenterOffsetChange = vi.fn();
+        renderWithProviders(<RecordingBandOverlay
+            inputSampleRate={2_400_000} decimationFactor={8} selectionEnabled
+            containerWidth={400} height={200} viewport={{ width: 400, scale: 4, positionX: -600 }}
+            onCenterOffsetChange={onCenterOffsetChange}
+        />);
+
+        const dragHandle = screen.getByLabelText('Drag recording band');
+        expect(dragHandle).toHaveStyle({ left: '100px', width: '200px' });
+        fireEvent.mouseDown(dragHandle, { clientX: 100 });
+        fireEvent.mouseMove(document, { clientX: 200 });
+        fireEvent.mouseUp(document);
+        expect(onCenterOffsetChange).toHaveBeenCalledWith(150_000);
+    });
+
     it('keeps a recording-band drag from reaching the bandscope pan handlers', () => {
         vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(canvasContext);
         vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({

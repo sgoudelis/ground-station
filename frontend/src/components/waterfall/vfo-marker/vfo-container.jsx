@@ -19,10 +19,11 @@
  */
 
 
-import React, {useState, useEffect, useCallback, useRef, useMemo} from "react";
+import React, {useState, useEffect, useLayoutEffect, useCallback, useRef, useMemo} from "react";
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from "react-redux";
 import { Box, IconButton } from '@mui/material';
+import { getOverlayFrequencyRange, prepareOverlayCanvas } from '../overlay-canvas.js';
 import { useVfoSquelchState } from '../vfo-squelch-state.js';
 import {
     setVFOProperty,
@@ -35,7 +36,6 @@ import {
     calculateBandwidthChange,
     calculateVFOFrequencyBounds,
     generateVFOLabelText,
-    getVisibleFrequencyRange,
     formatFrequency,
     formatBaudrate,
     formatGnssMarkerLabel,
@@ -80,12 +80,8 @@ const VFOMarkersContainer = ({
                                  waterfallHeight,
                                  bandscopeHeight,
                                  containerWidth,
-                                 transformTick = 0,
-                                 interactionActive = false,
-                                 allowInteractionMeasure = false,
-                                 interactionMeasureTick = 0,
-                                 zoomScale,
-                                 currentPositionX,
+                                 viewport,
+                                 bandscopeTopPadding = 0,
                              }) => {
     // A full marker canvas redraw is much more expensive than updating the
     // drag ref. Thirty visual updates per second keeps a drag fluid while
@@ -124,8 +120,7 @@ const VFOMarkersContainer = ({
     const lastDragVisualRenderRef = useRef(0);
     const markerRenderFrameRef = useRef(null);
     const renderVFOMarkersDirectRef = useRef(null);
-    const [actualWidth, setActualWidth] = useState(containerWidth);
-    const lastMeasuredWidthRef = useRef(0);
+    const actualWidth = viewport?.width || containerWidth || 1;
     const [activeMarker, setActiveMarker] = useState(null);
     const [isDragging, setIsDragging] = useState(false);
     const isDraggingRef = useRef(false);
@@ -133,7 +128,7 @@ const VFOMarkersContainer = ({
     const lastClientXRef = useRef(0);
     const lastTouchXRef = useRef(0);
     //const height = bandscopeHeight + waterfallHeight;
-    const height = bandscopeHeight;
+    const height = bandscopeHeight + bandscopeTopPadding;
     const [cursor, setCursor] = useState('default');
 
     // Track the previous VFO active state to detect changes
@@ -173,9 +168,9 @@ const VFOMarkersContainer = ({
     }, []);
 
     // Calculate frequency range
-    const startFreq = centerFrequency - sampleRate / 2;
-    const endFreq = centerFrequency + sampleRate / 2;
-    const freqRange = endFreq - startFreq;
+    const minFrequency = centerFrequency - sampleRate / 2;
+    const maxFrequency = centerFrequency + sampleRate / 2;
+    const { startFreq, endFreq, bandwidth: freqRange } = getOverlayFrequencyRange(centerFrequency, sampleRate, viewport);
 
     // Helper function to find decoder info for a VFO
     const getDecoderInfoForVFO = useCallback((vfoNumber) => {
@@ -400,7 +395,7 @@ const VFOMarkersContainer = ({
             const wasPreviouslyActive = prevVfoActiveRef.current[vfoNumber] || false;
 
             // Only process VFOs that just became active (transition from false/undefined to true)
-            if (isCurrentlyActive && !wasPreviouslyActive) {
+            if (isCurrentlyActive && (!wasPreviouslyActive || vfoMarkers[vfoNumber]?.frequency === null)) {
                 const marker = vfoMarkers[vfoNumber];
 
                 if (marker) {
@@ -416,9 +411,8 @@ const VFOMarkersContainer = ({
                     // Check if frequency needs to be updated
                     // Only set frequency if it's null (uninitialized)
                     // Do NOT reset frequency if VFO is outside visible range - user may have intentionally placed it there
-                    if (marker.frequency === null) {
-                        const visibleRange = getVisibleFrequencyRange(centerFrequency, sampleRate, actualWidth, containerWidth, currentPositionX);
-                        updates.frequency = visibleRange.centerFrequency;
+                    if (marker.frequency === null && (!viewport || viewport.width > 0)) {
+                        updates.frequency = (startFreq + endFreq) / 2;
                     }
 
                     // Only dispatch if there are updates to make
@@ -438,7 +432,7 @@ const VFOMarkersContainer = ({
         return () => {
             // Cleanup if needed
         };
-    }, [vfoActive, vfoMarkers, vfoColors, dispatch, centerFrequency, sampleRate, actualWidth, containerWidth, currentPositionX]);
+    }, [vfoActive, vfoMarkers, vfoColors, dispatch, centerFrequency, sampleRate, startFreq, endFreq, viewport]);
 
     // Use VFO drag handlers
     const {
@@ -452,8 +446,8 @@ const VFOMarkersContainer = ({
         actualWidth,
         freqRange,
         dragMode,
-        startFreq,
-        endFreq,
+        startFreq: minFrequency,
+        endFreq: maxFrequency,
         updateVFOProperty,
         syncDraggedVFO,
         onDragValueChange: updateDraggedVFOVisual,
@@ -478,63 +472,10 @@ const VFOMarkersContainer = ({
         selectedVFO,
         vfoMarkers,
         vfoActive,
-        startFreq,
-        endFreq,
+        startFreq: minFrequency,
+        endFreq: maxFrequency,
         updateVFOProperty
     });
-
-    // Update actual width measurement
-    const updateActualWidth = useCallback(() => {
-        // Get the actual client dimensions of the element
-        const rect = containerRef.current?.getBoundingClientRect();
-        if (!rect) return;
-        const roundedWidth = Math.round(rect.width);
-
-        // Quantize width updates to avoid subpixel jitter churn.
-        if (roundedWidth > 0 && roundedWidth !== lastMeasuredWidthRef.current) {
-            lastMeasuredWidthRef.current = roundedWidth;
-            setActualWidth(roundedWidth);
-        }
-    }, []);
-
-    // Update width when layout or transform-driven width changes.
-    useEffect(() => {
-        if (interactionActive) {
-            return;
-        }
-        updateActualWidth();
-    }, [containerWidth, transformTick, interactionActive, updateActualWidth]);
-
-    useEffect(() => {
-        if (!interactionActive || !allowInteractionMeasure) {
-            return;
-        }
-        updateActualWidth();
-    }, [interactionActive, allowInteractionMeasure, interactionMeasureTick, updateActualWidth]);
-
-    // Resize backing store only when dimensions actually change.
-    useEffect(() => {
-        const canvas = canvasRef.current;
-        if (!canvas) {
-            return;
-        }
-
-        const targetWidth = Math.max(1, actualWidth);
-        const targetHeight = Math.max(1, height);
-        if (canvas.width !== targetWidth) {
-            canvas.width = targetWidth;
-        }
-        if (canvas.height !== targetHeight) {
-            canvas.height = targetHeight;
-        }
-    }, [actualWidth, height]);
-
-    // Multiple store updates can land in one browser frame. Coalesce their
-    // canvas work so a live decoder or drag update paints once per frame.
-    useEffect(() => {
-        queueVFOMarkerRender();
-    }, [vfoActive, vfoMarkers, actualWidth, height,
-        centerFrequency, sampleRate, selectedVFO, streamingVFOs, vfoMuted, vfoSquelchOpen, containerWidth, currentPositionX, activeDecoders, decoderOutputs, gnssSatellitesById, gnssFixLifecycle, runtimeSnapshot, queueVFOMarkerRender]);
 
     // Rendering function with cached context
     const renderVFOMarkersDirect = () => {
@@ -544,14 +485,11 @@ const VFOMarkersContainer = ({
         }
 
         // Use cached context
-        const ctx = getCanvasContext();
+        const ctx = prepareOverlayCanvas(canvas, actualWidth, height, { willReadFrequently: true });
         if (!ctx) {
             console.warn('Could not get canvas 2d context');
             return;
         }
-
-        // Clear the canvas
-        ctx.clearRect(0, 0, canvas.width, height);
 
         // Draw internal VFO markers FIRST (read-only) using live session data
         // This ensures user VFOs always paint over internal observation VFOs
@@ -559,11 +497,6 @@ const VFOMarkersContainer = ({
         internalVFOSessions.forEach(({ sessionId, vfoNumber, vfoData, sessionMetadata, decoderInfo }) => {
             // Use actual VFO frequency from session data
             const frequency = vfoData.center_freq;
-
-            // Skip if outside visible range
-            if (frequency < startFreq || frequency > endFreq) {
-                return;
-            }
 
             // Calculate center position
             const centerX = ((frequency - startFreq) / freqRange) * actualWidth;
@@ -575,6 +508,7 @@ const VFOMarkersContainer = ({
             // Calculate edge positions
             const leftFreq = frequency - bandwidth / 2;
             const rightFreq = frequency + bandwidth / 2;
+            if (rightFreq < startFreq || leftFreq > endFreq) return;
             const leftEdgeX = ((leftFreq - startFreq) / freqRange) * actualWidth;
             const rightEdgeX = ((rightFreq - startFreq) / freqRange) * actualWidth;
 
@@ -753,6 +687,14 @@ const VFOMarkersContainer = ({
     // The scheduler above uses a ref so it always invokes this render's
     // current closures without scheduling a stale canvas paint.
     renderVFOMarkersDirectRef.current = renderVFOMarkersDirect;
+
+    // Paint in the same commit that moves the spectrum. Drag-only overrides
+    // still use the frame scheduler above to coalesce pointer updates.
+    useLayoutEffect(() => {
+        renderVFOMarkersDirectRef.current?.();
+    }, [vfoActive, vfoMarkers, actualWidth, height, startFreq, endFreq,
+        selectedVFO, streamingVFOs, vfoMuted, vfoSquelchOpen, activeDecoders,
+        decoderOutputs, gnssSatellitesById, gnssFixLifecycle, runtimeSnapshot, viewport]);
 
     // Check if mouse/touch is over a handle or edge
     const getHoverElement = useCallback((x, y) => {
@@ -1074,9 +1016,7 @@ const VFOMarkersContainer = ({
                     // MozUserSelect: 'none',
                     // msUserSelect: 'none',
                     // userSelect: 'none',
-                    //transform: 'translateZ(0)', // this it breaks box-shadow CSS and also makes the canvas blurry in Chrome
-                    //backfaceVisibility: 'hidden',
-                    perspective: '1000px',
+                    // Keep text out of CSS transforms; draw directly at screen resolution.
                 }}
             />
         </Box>

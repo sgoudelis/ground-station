@@ -18,83 +18,37 @@
  */
 
 
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import { getOverlayFrequencyRange, prepareOverlayCanvas } from './overlay-canvas.js';
+import React, { useRef, useLayoutEffect } from 'react';
 import { useTheme } from '@mui/material';
-import {humanizeFrequency, preciseHumanizeFrequency} from "../common/common.jsx";
+import {preciseHumanizeFrequency} from "../common/common.jsx";
 
 const FrequencyScale = ({
     centerFrequency,
     sampleRate,
     containerWidth,
-    transformTick = 0,
-    interactionActive = false,
-    allowInteractionMeasure = false,
-    interactionMeasureTick = 0,
+    viewport,
     canvasHeight = 20
 }) => {
     const theme = useTheme();
     const canvasRef = useRef(null);
     const frequencyScaleContainerRef = useRef(null);
-    const [actualWidth, setActualWidth] = useState(2048);
-    const lastMeasuredWidthRef = useRef(0);
+    const actualWidth = viewport?.width || containerWidth || 1;
 
     // Calculate start and end frequencies
-    const startFreq = centerFrequency - sampleRate / 2;
-    const endFreq = centerFrequency + sampleRate / 2;
+    const { startFreq, endFreq } = getOverlayFrequencyRange(centerFrequency, sampleRate, viewport);
 
-    const updateActualWidth = useCallback(() => {
-        // Get the actual client dimensions of the element
-        const rect = frequencyScaleContainerRef.current?.getBoundingClientRect();
-        if (!rect) return;
-        const roundedWidth = Math.round(rect.width);
-
-        // Quantize width updates to avoid subpixel jitter churn.
-        if (roundedWidth > 0 && roundedWidth !== lastMeasuredWidthRef.current) {
-            lastMeasuredWidthRef.current = roundedWidth;
-            setActualWidth(roundedWidth);
-        }
-    }, []);
-
-    useEffect(() => {
-        if (interactionActive) {
-            return;
-        }
-        updateActualWidth();
-    }, [containerWidth, transformTick, interactionActive, updateActualWidth]);
-
-    useEffect(() => {
-        if (!interactionActive || !allowInteractionMeasure) {
-            return;
-        }
-        updateActualWidth();
-    }, [interactionActive, allowInteractionMeasure, interactionMeasureTick, updateActualWidth]);
-
-    // Resize backing store only when dimensions actually change.
-    useEffect(() => {
+    // Draw the ruler in visible-frequency coordinates before the browser paints.
+    useLayoutEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
 
-        const targetWidth = Math.max(1, actualWidth);
-        const targetHeight = Math.max(1, canvasHeight);
-        if (canvas.width !== targetWidth) {
-            canvas.width = targetWidth;
-        }
-        if (canvas.height !== targetHeight) {
-            canvas.height = targetHeight;
-        }
-    }, [actualWidth, canvasHeight]);
-
-    // Draw the frequency scale on the canvas
-    useEffect(() => {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-
-        const ctx = canvas.getContext('2d', { alpha: false });
+        const ctx = prepareOverlayCanvas(canvas, actualWidth, canvasHeight, { alpha: false });
         const height = canvasHeight;
 
         // Clear the canvas
         ctx.fillStyle = theme.palette.background.paper;
-        ctx.fillRect(0, 0, canvas.width, height);
+        ctx.fillRect(0, 0, actualWidth, height);
 
         // Calculate frequency range and tick spacing
         const freqRange = endFreq - startFreq;
@@ -184,7 +138,7 @@ const FrequencyScale = ({
                 }
 
                 const isBigTick = Math.abs(Math.round(freq / tickStep) * tickStep - freq) < tickStep / 100;
-                const x = Math.round(((freq - startFreq) / freqRange) * canvas.width);
+                const x = Math.round(((freq - startFreq) / freqRange) * actualWidth);
 
                 if (isBigTick) {
                     // Draw a big tick
@@ -233,7 +187,7 @@ const FrequencyScale = ({
             }
         }
 
-    }, [centerFrequency, sampleRate, actualWidth, canvasHeight, theme.palette]);
+    }, [startFreq, endFreq, actualWidth, canvasHeight, theme.palette, viewport]);
 
     return (
         <div

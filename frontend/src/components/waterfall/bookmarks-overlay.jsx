@@ -18,7 +18,8 @@
  */
     
 
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import { getOverlayFrequencyRange, prepareOverlayCanvas } from './overlay-canvas.js';
+import React, { useRef, useEffect, useLayoutEffect } from 'react';
 import {preciseHumanizeFrequency} from "../common/common.jsx";
 import { shallowEqual, useDispatch, useSelector } from "react-redux";
 import {
@@ -33,10 +34,7 @@ const BookmarkCanvas = ({
                             centerFrequency,
                             sampleRate,
                             containerWidth,
-                            transformTick = 0,
-                            interactionActive = false,
-                            allowInteractionMeasure = false,
-                            interactionMeasureTick = 0,
+                            viewport,
                             height,
                             bandOverlayHeight = 20,
                             onBookmarkClick = null
@@ -46,8 +44,7 @@ const BookmarkCanvas = ({
     const canvasRef = useRef(null);
     const bookmarkContainerRef = useRef(null);
     const rowAssignmentsRef = useRef(new Map());
-    const [actualWidth, setActualWidth] = useState(2048);
-    const lastMeasuredWidthRef = useRef(0);
+    const actualWidth = viewport?.width || containerWidth || 1;
 
     const {
         bookmarks,
@@ -74,21 +71,7 @@ const BookmarkCanvas = ({
     }), shallowEqual);
 
     // Calculate frequency range
-    const startFreq = centerFrequency - sampleRate / 2;
-    const endFreq = centerFrequency + sampleRate / 2;
-
-    const updateActualWidth = useCallback(() => {
-        // Get the actual client dimensions of the element
-        const rect = bookmarkContainerRef.current?.getBoundingClientRect();
-
-        // Only update if the width has changed significantly (avoid unnecessary redraws)
-        if (rect && Math.abs(rect.width - lastMeasuredWidthRef.current) > 1) {
-            if (rect.width > 0) {
-                lastMeasuredWidthRef.current = rect.width;
-                setActualWidth(rect.width);
-            }
-        }
-    }, []);
+    const { startFreq, endFreq } = getOverlayFrequencyRange(centerFrequency, sampleRate, viewport);
 
     // Function to add a bookmark at a specific frequency
     const makeBookMark = (frequency, label, color, metadata = {}) => {
@@ -99,21 +82,6 @@ const BookmarkCanvas = ({
             metadata,
         };
     };
-
-    // Update width when layout or transform-driven width changes
-    useEffect(() => {
-        if (interactionActive) {
-            return;
-        }
-        updateActualWidth();
-    }, [containerWidth, transformTick, interactionActive, updateActualWidth]);
-
-    useEffect(() => {
-        if (!interactionActive || !allowInteractionMeasure) {
-            return;
-        }
-        updateActualWidth();
-    }, [interactionActive, allowInteractionMeasure, interactionMeasureTick, updateActualWidth]);
 
     // Helper function to compare bookmarks arrays
     function areBookmarksEqual(bookmarksA, bookmarksB) {
@@ -289,20 +257,13 @@ const BookmarkCanvas = ({
         theme.palette.grey
     ]);
 
-    useEffect(() => {
+    useLayoutEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas) {
             return;
         }
 
-        const ctx = canvas.getContext('2d', { willReadFrequently: true});
-
-        // Set canvas width based on actual measured width
-        canvas.width = actualWidth;
-        canvas.height = height;
-
-        // Clear the canvas with a transparent background
-        ctx.clearRect(0, 0, canvas.width, height);
+        const ctx = prepareOverlayCanvas(canvas, actualWidth, height, { willReadFrequently: true });
 
         // Calculate frequency range
         const freqRange = endFreq - startFreq;
@@ -537,7 +498,7 @@ const BookmarkCanvas = ({
                 .filter((bookmark) => bookmark.frequency >= startFreq && bookmark.frequency <= endFreq)
                 .map((bookmark) => ({
                     bookmark,
-                    x: ((bookmark.frequency - startFreq) / freqRange) * canvas.width,
+                    x: ((bookmark.frequency - startFreq) / freqRange) * actualWidth,
                     key: getDrawKey(bookmark, layer),
                 }))
                 .sort((a, b) => {
@@ -623,7 +584,7 @@ const BookmarkCanvas = ({
                 }
 
                 // Calculate x position based on frequency
-                const x = ((bookmark.frequency - startFreq) / freqRange) * canvas.width;
+                const x = ((bookmark.frequency - startFreq) / freqRange) * actualWidth;
                 const sourceStyle = getBookmarkSourceStyle(bookmark.metadata?.source, theme);
 
                 // Check if this is an inactive transmitter for line styling
@@ -740,7 +701,7 @@ const BookmarkCanvas = ({
                 }
 
                 // Calculate x position based on frequency
-                const x = ((bookmark.frequency - startFreq) / freqRange) * canvas.width;
+                const x = ((bookmark.frequency - startFreq) / freqRange) * actualWidth;
                 const sourceStyle = getBookmarkSourceStyle(bookmark.metadata?.source, theme);
 
                 // Check if this is an inactive transmitter for line styling
@@ -956,7 +917,7 @@ const BookmarkCanvas = ({
                 ctx.shadowBlur = 0;
             });
         }
-    }, [bookmarks, centerFrequency, sampleRate, actualWidth, height, theme]);
+    }, [bookmarks, startFreq, endFreq, actualWidth, height, theme, viewport]);
 
     return (
         <div

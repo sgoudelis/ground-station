@@ -18,7 +18,7 @@
  */
 
 
-import React, {useCallback, useEffect, useRef, useState, useImperativeHandle, forwardRef} from "react";
+import React, {useCallback, useEffect, useLayoutEffect, useRef, useState, useImperativeHandle, forwardRef} from "react";
 import { shallowEqual, useDispatch, useSelector } from "react-redux";
 import {Box, IconButton, useTheme} from "@mui/material";
 import FrequencyScale from "./frequency-scale.jsx";
@@ -35,9 +35,6 @@ import {useDopplerNeighbors} from '../../hooks/useDopplerNeighbors.jsx';
 import { useTranslation } from 'react-i18next';
 
 const PLAYBACK_COUNTDOWN_UPDATE_MS = 250;
-const INTERACTION_IDLE_MS = 120;
-const FAST_ZOOM_INTERACTION_IDLE_MS = 80;
-const TOUCH_INTERACTION_MEASURE_MS = 200;
 
 const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
                                               bandscopeCanvasRef,
@@ -59,6 +56,8 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
     const theme = useTheme();
     const containerRef = useRef(null);
     const viewportRef = useRef(null);
+    const bandscopeTransformRef = useRef(null);
+    const waterfallTransformRef = useRef(null);
     const lastVisibleWaterfallHeightRef = useRef(null);
     const containerWidthRef = useRef(0);
     const [isMobile, setIsMobile] = useState(false);
@@ -69,10 +68,7 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
     const lastPinchDistanceRef = useRef(0);
     const pinchCenterXRef = useRef(0);
     const persistTimerRef = useRef(null);
-    const bookmarkMeasureRafRef = useRef(null);
-    const interactionIdleTimerRef = useRef(null);
-    const interactionActiveRef = useRef(false);
-    const touchMeasureIntervalRef = useRef(null);
+    const viewportFrameRef = useRef(null);
     const dispatch = useDispatch();
 
     // Activate doppler neighbor calculation hook
@@ -109,10 +105,10 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
 
     // Track playback countdown for display
     const [playbackCountdown, setPlaybackCountdown] = useState(0);
-    const [bookmarkTransformTick, setBookmarkTransformTick] = useState(0);
-    const [isTransformInteracting, setIsTransformInteracting] = useState(false);
-    const [touchInteractionMeasureTick, setTouchInteractionMeasureTick] = useState(0);
-    const [isTouchMeasuring, setIsTouchMeasuring] = useState(false);
+    const [overlayViewport, setOverlayViewport] = useState({
+        width: 0, scale: waterFallScaleX, positionX: waterFallPositionX,
+        pixelRatio: window.devicePixelRatio || 1,
+    });
 
     // Update playback countdown from ref
     useEffect(() => {
@@ -140,26 +136,28 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
         return () => clearInterval(intervalId);
     }, [isStreaming, playbackRemainingSecondsRef]);
 
-    // Batch layout notifications so a resize drag triggers at most one overlay
-    // measurement per painted frame, even if ResizeObserver fires repeatedly.
-    const notifyOverlayLayoutChange = useCallback(() => {
-        if (bookmarkMeasureRafRef.current !== null) {
-            return;
-        }
-
-        bookmarkMeasureRafRef.current = requestAnimationFrame(() => {
-            bookmarkMeasureRafRef.current = null;
-            setBookmarkTransformTick((value) => value + 1);
+    // Commit one viewport per frame. Both raw pixels and text overlays use
+    // this same snapshot, so the debounced Redux persistence cannot cause lag.
+    const applyTransform = useCallback(() => {
+        if (viewportFrameRef.current !== null) return;
+        viewportFrameRef.current = requestAnimationFrame(() => {
+            viewportFrameRef.current = null;
+            const width = containerRef.current?.clientWidth || 1;
+            setOverlayViewport({
+                width,
+                scale: scaleRef.current,
+                positionX: positionXRef.current,
+                pixelRatio: window.devicePixelRatio || 1,
+            });
         });
     }, []);
 
-    // Apply a transform directly to a DOM element.
-    const applyTransform = useCallback(() => {
-        if (containerRef.current) {
-            containerRef.current.style.transform = `translateX(${positionXRef.current}px) scaleX(${scaleRef.current})`;
-            notifyOverlayLayoutChange();
+    useLayoutEffect(() => {
+        const transform = `translateX(${overlayViewport.positionX}px) scaleX(${overlayViewport.scale})`;
+        for (const element of [bandscopeTransformRef.current, waterfallTransformRef.current]) {
+            if (element) element.style.transform = transform;
         }
-    }, [notifyOverlayLayoutChange]);
+    }, [overlayViewport]);
 
     // Function to recalculate position when the container resizes
     const handleResize = useCallback(() => {
@@ -168,14 +166,20 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
         const newWidth = containerRef.current.clientWidth;
         const oldWidth = containerWidthRef.current;
 
-        if (newWidth <= 0 || oldWidth === 0 || newWidth === oldWidth) return;
+        if (newWidth <= 0) return;
+        // A monitor change can update DPR without changing the CSS width.
+        if (oldWidth === 0 || newWidth === oldWidth) {
+            containerWidthRef.current = newWidth;
+            applyTransform();
+            return;
+        }
 
         // CSS resizes the base canvases automatically, but each overlay keeps
         // its own backing store. Notify them even at 1x zoom so they redraw at
         // the new physical width instead of being stretched by the browser.
         if (scaleRef.current <= 1) {
             containerWidthRef.current = newWidth;
-            notifyOverlayLayoutChange();
+            applyTransform();
             return;
         }
 
@@ -186,10 +190,10 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
         const newCenterPoint = newWidth * centerPointRatio;
 
         // Scale the center point positions
-        const oldScaledCenter = (oldCenterPoint - positionXRef.current) / scaleRef.current;
+        const centerFrequencyRatio = (oldCenterPoint - positionXRef.current) / (oldWidth * scaleRef.current);
 
         // Calculate the position to maintain the same content at the center
-        const newPositionX = newCenterPoint - (oldScaledCenter * scaleRef.current);
+        const newPositionX = newCenterPoint - (centerFrequencyRatio * newWidth * scaleRef.current);
 
         // Apply constraints to keep within bounds
         const maxPanLeft = newWidth - (newWidth * scaleRef.current);
@@ -200,7 +204,7 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
 
         // Apply transform (this now also updates React state)
         applyTransform();
-    }, [applyTransform, notifyOverlayLayoutChange]);
+    }, [applyTransform]);
 
     // Handle clicks on bookmarks
     const handleBookmarkClick = useCallback((bookmark) => {
@@ -224,52 +228,14 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
 
         // Start observing the container
         resizeObserver.observe(containerRef.current);
+        window.addEventListener('resize', handleResize);
 
         return () => {
             resizeObserver.disconnect();
+            window.removeEventListener('resize', handleResize);
         };
 
     }, [handleResize]);
-
-    const markTransformInteraction = useCallback((idleMs = INTERACTION_IDLE_MS) => {
-        if (!interactionActiveRef.current) {
-            interactionActiveRef.current = true;
-            setIsTransformInteracting(true);
-        }
-
-        if (interactionIdleTimerRef.current) {
-            clearTimeout(interactionIdleTimerRef.current);
-        }
-
-        interactionIdleTimerRef.current = setTimeout(() => {
-            interactionIdleTimerRef.current = null;
-            interactionActiveRef.current = false;
-            setIsTransformInteracting(false);
-        }, idleMs);
-    }, []);
-
-    const startTouchMeasureLoop = useCallback(() => {
-        if (!isTouchMeasuring) {
-            setIsTouchMeasuring(true);
-        }
-        setTouchInteractionMeasureTick((value) => value + 1);
-        if (touchMeasureIntervalRef.current !== null) {
-            return;
-        }
-        touchMeasureIntervalRef.current = setInterval(() => {
-            setTouchInteractionMeasureTick((value) => value + 1);
-        }, TOUCH_INTERACTION_MEASURE_MS);
-    }, [isTouchMeasuring]);
-
-    const stopTouchMeasureLoop = useCallback(() => {
-        if (touchMeasureIntervalRef.current !== null) {
-            clearInterval(touchMeasureIntervalRef.current);
-            touchMeasureIntervalRef.current = null;
-        }
-        if (isTouchMeasuring) {
-            setIsTouchMeasuring(false);
-        }
-    }, [isTouchMeasuring]);
 
     // Debounced persist function
     const persistToRedux = useCallback(() => {
@@ -302,23 +268,15 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
             if (persistTimerRef.current) {
                 clearTimeout(persistTimerRef.current);
             }
-            if (bookmarkMeasureRafRef.current !== null) {
-                cancelAnimationFrame(bookmarkMeasureRafRef.current);
-                bookmarkMeasureRafRef.current = null;
-            }
-            if (interactionIdleTimerRef.current) {
-                clearTimeout(interactionIdleTimerRef.current);
-                interactionIdleTimerRef.current = null;
-            }
-            if (touchMeasureIntervalRef.current !== null) {
-                clearInterval(touchMeasureIntervalRef.current);
-                touchMeasureIntervalRef.current = null;
+            if (viewportFrameRef.current !== null) {
+                cancelAnimationFrame(viewportFrameRef.current);
+                viewportFrameRef.current = null;
             }
         }
     }, []);
 
     // Zoom functionality
-    const zoomOnXAxisOnly = useCallback((deltaScale, centerX, interactionIdleMs = INTERACTION_IDLE_MS) => {
+    const zoomOnXAxisOnly = useCallback((deltaScale, centerX) => {
         const prevScale = scaleRef.current;
         const safePrevPositionX = Number.isFinite(positionXRef.current) ? positionXRef.current : 0;
         const newScale = Math.max(minZoom, Math.min(maxZoom, prevScale + deltaScale));
@@ -362,15 +320,14 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
         // Update refs
         scaleRef.current = newScale;
         positionXRef.current = newPositionX;
-        markTransformInteraction(interactionIdleMs);
 
-        // Apply the transform immediately
+        // Schedule pixels and overlays together
         applyTransform();
 
         // Persist to Redux (debounced)
         persistToRedux();
 
-    }, [applyTransform, persistToRedux, markTransformInteraction]);
+    }, [applyTransform, persistToRedux, minZoom, maxZoom]);
 
     // Panning functionality
     const panOnXAxisOnly = useCallback((deltaX) => {
@@ -390,11 +347,10 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
             maxPanLeft,
             Math.min(0, positionXRef.current + deltaX)
         );
-        markTransformInteraction();
 
-        // Apply transform directly
+        // Schedule pixels and overlays together
         applyTransform();
-    }, [applyTransform, markTransformInteraction]);
+    }, [applyTransform]);
 
     // Reset to the default state
     const resetCustomTransform = useCallback(() => {
@@ -425,7 +381,7 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
 
     // Set up all event handlers
     useEffect(() => {
-        const container = containerRef.current;
+        const container = viewportRef.current;
         if (!container) return;
 
         // Wheel event for zooming
@@ -436,7 +392,9 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
                 return;
             }
             const deltaScale = -e.deltaY * 0.01;
-            zoomOnXAxisOnly(deltaScale, e.offsetX, FAST_ZOOM_INTERACTION_IDLE_MS);
+            e.preventDefault();
+            const centerX = e.clientX - container.getBoundingClientRect().left;
+            zoomOnXAxisOnly(deltaScale, centerX);
         };
 
         // Mouse events for panning
@@ -471,9 +429,6 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
 
         // Touch events
         const handleTouchStart = (e) => {
-            if (e.touches.length > 0) {
-                startTouchMeasureLoop();
-            }
             if (e.touches.length === 1) {
                 isDraggingRef.current = true;
                 lastXRef.current = e.touches[0].clientX;
@@ -486,7 +441,7 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
                     touch2.clientX - touch1.clientX,
                     touch2.clientY - touch1.clientY
                 );
-                pinchCenterXRef.current = (touch1.clientX + touch2.clientX) / 2;
+                pinchCenterXRef.current = (touch1.clientX + touch2.clientX) / 2 - container.getBoundingClientRect().left;
                 e.preventDefault();
             }
         };
@@ -512,25 +467,21 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
                 const deltaScale = (currentDistance - lastPinchDistanceRef.current) * 0.01;
                 lastPinchDistanceRef.current = currentDistance;
 
-                pinchCenterXRef.current = (touch1.clientX + touch2.clientX) / 2;
+                pinchCenterXRef.current = (touch1.clientX + touch2.clientX) / 2 - container.getBoundingClientRect().left;
 
-                zoomOnXAxisOnly(deltaScale, pinchCenterXRef.current, FAST_ZOOM_INTERACTION_IDLE_MS);
+                zoomOnXAxisOnly(deltaScale, pinchCenterXRef.current);
                 e.preventDefault();
             }
         };
 
         const handleTouchEnd = (e) => {
             isDraggingRef.current = false;
-            if (!e.touches || e.touches.length === 0) {
-                stopTouchMeasureLoop();
-            }
             // Persist after touch interaction ends
             persistToRedux();
         };
 
         const handleTouchCancel = () => {
             isDraggingRef.current = false;
-            stopTouchMeasureLoop();
             persistToRedux();
         };
 
@@ -561,7 +512,7 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
             window.removeEventListener('touchend', handleTouchEnd);
             window.removeEventListener('touchcancel', handleTouchCancel);
         };
-    }, [persistToRedux, startTouchMeasureLoop, stopTouchMeasureLoop]);
+    }, [persistToRedux, zoomOnXAxisOnly, panOnXAxisOnly]);
 
     // Expose functions to parent component
     useImperativeHandle(ref, () => ({
@@ -632,7 +583,7 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
     ]);
 
     return (
-        <Box ref={viewportRef} sx={{
+        <Box ref={viewportRef} data-waterfall-viewport sx={{
             height: 'calc(100% - 90px)',
             width: '100%',
             overflow: 'hidden',
@@ -713,7 +664,8 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
                 </Box>
             )}
 
-            {/* Canvases */}
+            {/* This container stays stationary. Only bitmap wrappers below
+                receive CSS zoom; text overlays draw the visible frequencies. */}
             <Box
                 ref={containerRef}
                 sx={{
@@ -728,24 +680,26 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
             >
                 {/* Bandscope container with relative positioning */}
                 <Box sx={{position: 'relative', height: `${bandScopeHeight + bandscopeTopPadding}px`}}>
-                    <canvas
-                        className={"bandscope-canvas"}
-                        ref={bandscopeCanvasRef}
-                        width={waterFallCanvasWidth}
-                        height={bandScopeHeight}
-                        style={{
-                            imageRendering: 'auto',
-                            width: '100%',
-                            height: `${bandScopeHeight}px`,
-                            borderBottom: `1px solid ${theme.palette.border.main}`,
-                            display: 'block',
-                            touchAction: 'pan-y',
-                            transform: 'translateZ(0)',
-                            backfaceVisibility: 'hidden',
-                            perspective: '1000px',
-                            marginTop: `${bandscopeTopPadding}px`,
-                        }}
-                    />
+                    <Box ref={bandscopeTransformRef} sx={{ transformOrigin: 'left center' }}>
+                        <canvas
+                            className={"bandscope-canvas"}
+                            ref={bandscopeCanvasRef}
+                            width={waterFallCanvasWidth}
+                            height={bandScopeHeight}
+                            style={{
+                                imageRendering: 'auto',
+                                width: '100%',
+                                height: `${bandScopeHeight}px`,
+                                borderBottom: `1px solid ${theme.palette.border.main}`,
+                                display: 'block',
+                                touchAction: 'pan-y',
+                                transform: 'translateZ(0)',
+                                backfaceVisibility: 'hidden',
+                                perspective: '1000px',
+                                marginTop: `${bandscopeTopPadding}px`,
+                            }}
+                        />
+                    </Box>
                     <RecordingBandOverlay
                         inputSampleRate={sampleRate}
                         decimationFactor={recordingDecimationFactor}
@@ -754,11 +708,8 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
                         dragStepHz={recordingBandDragStepHz}
                         onCenterOffsetChange={(offset) => dispatch(setRecordingBandCenterOffsetHz(offset))}
                         isRecording={isRecording}
-                        containerWidth={waterFallCanvasWidth}
-                        transformTick={bookmarkTransformTick}
-                        interactionActive={isTransformInteracting}
-                        allowInteractionMeasure={isTouchMeasuring}
-                        interactionMeasureTick={touchInteractionMeasureTick}
+                        containerWidth={overlayViewport.width}
+                        viewport={overlayViewport}
                         height={bandScopeHeight + bandscopeTopPadding}
                         topPadding={bandscopeTopPadding}
                     />
@@ -766,26 +717,18 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
                     <FrequencyBandOverlay
                         centerFrequency={centerFrequency}
                         sampleRate={sampleRate}
-                        containerWidth={waterFallCanvasWidth}
-                        transformTick={bookmarkTransformTick}
-                        interactionActive={isTransformInteracting}
-                        allowInteractionMeasure={isTouchMeasuring}
-                        interactionMeasureTick={touchInteractionMeasureTick}
+                        containerWidth={overlayViewport.width}
+                        viewport={overlayViewport}
                         height={bandScopeHeight + bandscopeTopPadding}
                         topPadding={bandscopeTopPadding}
                         bands={frequencyBands}
                         bandHeight={20}
-                        zoomScale={scaleRef.current}
-                        panOffset={positionXRef.current}
                     />
                     <BookmarkCanvas
                         centerFrequency={centerFrequency}
                         sampleRate={sampleRate}
-                        containerWidth={waterFallCanvasWidth}
-                        transformTick={bookmarkTransformTick}
-                        interactionActive={isTransformInteracting}
-                        allowInteractionMeasure={isTouchMeasuring}
-                        interactionMeasureTick={touchInteractionMeasureTick}
+                        containerWidth={overlayViewport.width}
+                        viewport={overlayViewport}
                         height={bandScopeHeight + bandscopeTopPadding}
                         bandOverlayHeight={20}
                         topPadding={bandscopeTopPadding}
@@ -797,106 +740,100 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
                         waterfallHeight={waterFallCanvasHeight}
                         bandscopeHeight={bandScopeHeight}
                         bandscopeTopPadding={bandscopeTopPadding}
-                        containerWidth={containerWidthRef.current}
-                        transformTick={bookmarkTransformTick}
-                        interactionActive={isTransformInteracting}
-                        allowInteractionMeasure={isTouchMeasuring}
-                        interactionMeasureTick={touchInteractionMeasureTick}
-                        zoomScale={scaleRef.current}
-                        currentPositionX={positionXRef.current}
+                        containerWidth={overlayViewport.width}
+                        viewport={overlayViewport}
                     />
                 </Box>
 
                 <FrequencyScale
                     centerFrequency={centerFrequency}
-                    containerWidth={waterFallCanvasWidth}
+                    containerWidth={overlayViewport.width}
+                    viewport={overlayViewport}
                     sampleRate={sampleRate}
-                    transformTick={bookmarkTransformTick}
-                    interactionActive={isTransformInteracting}
-                    allowInteractionMeasure={isTouchMeasuring}
-                    interactionMeasureTick={touchInteractionMeasureTick}
                 />
 
-                {waterfallRendererMode === 'dom-tiles' ? (
-                    <Box
-                        sx={{
-                            position: 'relative',
-                            width: '100%',
-                            height: `${waterFallCanvasHeight}px`,
-                            overflow: 'hidden',
-                            backgroundColor: theme.palette.background.default,
-                        }}
-                    >
-                        <canvas
-                            className={"waterfall-canvas-tile-a"}
-                            ref={waterFallTileCanvasARef}
-                            width={waterFallCanvasWidth}
-                            height={waterFallCanvasHeight}
-                            style={{
-                                imageRendering: 'pixelated',
+                <Box ref={waterfallTransformRef} sx={{ transformOrigin: 'left center' }}>
+                    {waterfallRendererMode === 'dom-tiles' ? (
+                        <Box
+                            sx={{
+                                position: 'relative',
                                 width: '100%',
                                 height: `${waterFallCanvasHeight}px`,
-                                display: 'block',
-                                position: 'absolute',
-                                top: 0,
-                                left: 0,
-                                touchAction: 'pan-y',
-                                transform: 'translate3d(0,0,0)',
-                                backfaceVisibility: 'hidden',
-                                willChange: 'transform',
+                                overflow: 'hidden',
+                                backgroundColor: theme.palette.background.default,
                             }}
-                        />
-                        <canvas
-                            className={"waterfall-canvas-tile-b"}
-                            ref={waterFallTileCanvasBRef}
-                            width={waterFallCanvasWidth}
-                            height={waterFallCanvasHeight}
-                            style={{
-                                imageRendering: 'pixelated',
-                                width: '100%',
-                                height: `${waterFallCanvasHeight}px`,
-                                display: 'block',
-                                position: 'absolute',
-                                top: 0,
-                                left: 0,
-                                touchAction: 'pan-y',
-                                transform: 'translate3d(0,0,0)',
-                                backfaceVisibility: 'hidden',
-                                willChange: 'transform',
-                            }}
-                        />
+                        >
+                            <canvas
+                                className={"waterfall-canvas-tile-a"}
+                                ref={waterFallTileCanvasARef}
+                                width={waterFallCanvasWidth}
+                                height={waterFallCanvasHeight}
+                                style={{
+                                    imageRendering: 'pixelated',
+                                    width: '100%',
+                                    height: `${waterFallCanvasHeight}px`,
+                                    display: 'block',
+                                    position: 'absolute',
+                                    top: 0,
+                                    left: 0,
+                                    touchAction: 'pan-y',
+                                    transform: 'translate3d(0,0,0)',
+                                    backfaceVisibility: 'hidden',
+                                    willChange: 'transform',
+                                }}
+                            />
+                            <canvas
+                                className={"waterfall-canvas-tile-b"}
+                                ref={waterFallTileCanvasBRef}
+                                width={waterFallCanvasWidth}
+                                height={waterFallCanvasHeight}
+                                style={{
+                                    imageRendering: 'pixelated',
+                                    width: '100%',
+                                    height: `${waterFallCanvasHeight}px`,
+                                    display: 'block',
+                                    position: 'absolute',
+                                    top: 0,
+                                    left: 0,
+                                    touchAction: 'pan-y',
+                                    transform: 'translate3d(0,0,0)',
+                                    backfaceVisibility: 'hidden',
+                                    willChange: 'transform',
+                                }}
+                            />
+                            <canvas
+                                className={"waterfall-canvas"}
+                                ref={waterFallCanvasRef}
+                                width={waterFallCanvasWidth}
+                                height={waterFallCanvasHeight}
+                                style={{
+                                    width: 0,
+                                    height: 0,
+                                    display: 'none',
+                                }}
+                            />
+                        </Box>
+                    ) : (
                         <canvas
                             className={"waterfall-canvas"}
                             ref={waterFallCanvasRef}
                             width={waterFallCanvasWidth}
                             height={waterFallCanvasHeight}
                             style={{
-                                width: 0,
-                                height: 0,
-                                display: 'none',
+                                imageRendering: 'smooth',
+                                WebkitFontSmoothing: 'antialiased',
+                                width: '100%',
+                                height: `${waterFallCanvasHeight}px`,
+                                backgroundColor: theme.palette.background.default,
+                                display: 'block',
+                                touchAction: 'pan-y',
+                                transform: 'translateZ(0)', // this it breaks box-shadow CSS
+                                backfaceVisibility: 'hidden',
+                                perspective: '1000px',
                             }}
                         />
-                    </Box>
-                ) : (
-                    <canvas
-                        className={"waterfall-canvas"}
-                        ref={waterFallCanvasRef}
-                        width={waterFallCanvasWidth}
-                        height={waterFallCanvasHeight}
-                        style={{
-                            imageRendering: 'smooth',
-                            WebkitFontSmoothing: 'antialiased',
-                            width: '100%',
-                            height: `${waterFallCanvasHeight}px`,
-                            backgroundColor: theme.palette.background.default,
-                            display: 'block',
-                            touchAction: 'pan-y',
-                            transform: 'translateZ(0)', // this it breaks box-shadow CSS
-                            backfaceVisibility: 'hidden',
-                            perspective: '1000px',
-                        }}
-                    />
-                )}
+                    )}
+                </Box>
             </Box>
 
         </Box>

@@ -8,15 +8,15 @@
  * (at your option) any later version.
  */
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useRef } from 'react';
 import { Box, useTheme } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
+import { prepareOverlayCanvas } from './overlay-canvas.js';
 
 /**
  * Draws the centered portion of the live SDR spectrum that an IQ recording
- * retains after decimation. It is intentionally visual-only: the containing
- * waterfall canvas group supplies pan and zoom through its shared transform.
+ * retains after decimation, in viewport coordinates shared by its drag target.
  */
 const RecordingBandOverlay = ({
     inputSampleRate,
@@ -27,10 +27,7 @@ const RecordingBandOverlay = ({
     onCenterOffsetChange,
     isRecording = false,
     containerWidth,
-    transformTick = 0,
-    interactionActive = false,
-    allowInteractionMeasure = false,
-    interactionMeasureTick = 0,
+    viewport,
     height,
     topPadding = 0,
 }) => {
@@ -39,8 +36,9 @@ const RecordingBandOverlay = ({
     const canvasRef = useRef(null);
     const containerRef = useRef(null);
     const dragRef = useRef(null);
-    const [actualWidth, setActualWidth] = useState(2048);
-    const lastMeasuredWidthRef = useRef(0);
+    const actualWidth = viewport?.width || containerWidth || 1;
+    const scale = viewport?.scale || 1;
+    const positionX = viewport?.positionX || 0;
     const factor = Number(decimationFactor) || 1;
     const inputRate = Number(inputSampleRate);
     const hasInputRate = Number.isFinite(inputRate) && inputRate > 0;
@@ -69,9 +67,8 @@ const RecordingBandOverlay = ({
         const rect = containerRef.current?.getBoundingClientRect();
         if (!drag || !rect?.width || !inputRate || !onCenterOffsetChange) return;
 
-        // The bandscope is transformed for pan/zoom. Its screen width already
-        // includes that transform, so this maps pointer movement back to Hz.
-        const deltaHz = ((clientX - drag.startClientX) / rect.width) * inputRate;
+        // The stationary overlay shows only inputRate / scale Hz across its width.
+        const deltaHz = ((clientX - drag.startClientX) / rect.width) * inputRate / scale;
         const rawOffsetHz = Math.max(
             -maxOffsetHz,
             Math.min(maxOffsetHz, drag.startOffsetHz + deltaHz)
@@ -81,7 +78,7 @@ const RecordingBandOverlay = ({
             ? Math.round(rawOffsetHz / stepHz) * stepHz
             : rawOffsetHz;
         onCenterOffsetChange(Math.max(-maxOffsetHz, Math.min(maxOffsetHz, snappedOffsetHz)));
-    }, [dragStepHz, inputRate, maxOffsetHz, onCenterOffsetChange]);
+    }, [dragStepHz, inputRate, maxOffsetHz, onCenterOffsetChange, scale]);
 
     const startMouseDrag = useCallback((event) => {
         event.preventDefault();
@@ -141,54 +138,25 @@ const RecordingBandOverlay = ({
         };
     }, [updateOffsetFromPointer]);
 
-    const updateActualWidth = useCallback(() => {
-        const rect = containerRef.current?.getBoundingClientRect();
-        const width = Math.round(rect?.width || 0);
-        if (width > 0 && width !== lastMeasuredWidthRef.current) {
-            lastMeasuredWidthRef.current = width;
-            setActualWidth(width);
-        }
-    }, []);
+    const recordedWidth = actualWidth * scale / factor;
+    const centerX = (0.5 + selectedOffsetHz / inputRate) * actualWidth * scale + positionX;
+    const leftEdge = centerX - recordedWidth / 2;
 
-    useEffect(() => {
-        if (!interactionActive) {
-            updateActualWidth();
-        }
-    }, [containerWidth, transformTick, interactionActive, updateActualWidth]);
-
-    useEffect(() => {
-        if (interactionActive && allowInteractionMeasure) {
-            updateActualWidth();
-        }
-    }, [interactionActive, allowInteractionMeasure, interactionMeasureTick, updateActualWidth]);
-
-    useEffect(() => {
+    useLayoutEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
 
-        const targetHeight = Math.max(1, height);
-        if (canvas.width !== actualWidth) canvas.width = actualWidth;
-        if (canvas.height !== targetHeight) canvas.height = targetHeight;
-    }, [actualWidth, height]);
-
-    useEffect(() => {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-
-        const ctx = canvas.getContext('2d');
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const ctx = prepareOverlayCanvas(canvas, actualWidth, height);
         if (!isVisible) return;
 
         const drawTop = Math.max(0, topPadding);
-        const drawHeight = Math.max(0, canvas.height - drawTop);
-        const recordedWidth = canvas.width / factor;
-        const centerX = canvas.width / 2 + (selectedOffsetHz / inputRate) * canvas.width;
-        const leftEdge = centerX - recordedWidth / 2;
+        const drawHeight = Math.max(0, height - drawTop);
         const rightEdge = leftEdge + recordedWidth;
+        if (rightEdge < 0 || leftEdge > actualWidth) return;
         // Keep the selected bandwidth legible across the full spectrum. The
         // tint deliberately fades toward the trace, so a zoomed-in retained
         // region remains readable instead of becoming a uniform grey wash.
-        const fillGradient = ctx.createLinearGradient(0, drawTop, 0, canvas.height);
+        const fillGradient = ctx.createLinearGradient(0, drawTop, 0, height);
         fillGradient.addColorStop(0, 'rgba(48, 196, 255, 0.14)');
         fillGradient.addColorStop(0.22, 'rgba(48, 196, 255, 0.065)');
         fillGradient.addColorStop(1, 'rgba(48, 196, 255, 0.012)');
@@ -197,8 +165,8 @@ const RecordingBandOverlay = ({
 
         // A full-bandwidth recording reaches both canvas boundaries. Those
         // are not recording-band edges, and the right-hand stroke would be
-        // clipped because its coordinate is canvas.width.
-        if (recordedWidth < canvas.width) {
+        // clipped because its coordinate is actualWidth.
+        if (factor > 1) {
             ctx.fillStyle = alpha(statusColor, 0.82);
             ctx.fillRect(Math.round(leftEdge), drawTop, 1, drawHeight);
             ctx.fillRect(Math.round(rightEdge), drawTop, 1, drawHeight);
@@ -209,9 +177,7 @@ const RecordingBandOverlay = ({
         ctx.fillStyle = alpha(statusColor, 0.9);
         ctx.fillRect(Math.round(centerX), drawTop, 1, drawHeight);
 
-        // Draw the status in this canvas, as bookmark and band-plan labels are.
-        // The backing store tracks the transformed width, preventing CSS zoom
-        // from stretching the pill or its text.
+        // Status text uses CSS pixels and stays the same size at every zoom.
         const pillHeight = 18;
         const pillY = drawTop + 2;
         const statusLabel = statusText.toUpperCase();
@@ -222,7 +188,7 @@ const RecordingBandOverlay = ({
         ctx.font = '10px Arial, sans-serif';
         const rateWidth = ctx.measureText(outputRate).width;
         const pillWidth = 31 + statusWidth + rateWidth;
-        const pillX = Math.max(2, Math.min(canvas.width - pillWidth - 2, centerX - pillWidth / 2));
+        const pillX = Math.max(2, Math.min(actualWidth - pillWidth - 2, centerX - pillWidth / 2));
 
         ctx.beginPath();
         ctx.roundRect(pillX, pillY, pillWidth, pillHeight, 4);
@@ -268,10 +234,13 @@ const RecordingBandOverlay = ({
         theme.palette.text.primary,
         theme.palette.text.secondary,
         topPadding,
+        viewport,
+        centerX,
+        leftEdge,
+        recordedWidth,
     ]);
 
-    // Stay mounted so transform ticks keep this layer's backing store in sync
-    // while a user turns recording-band selection on and off.
+    // Stay mounted so enabling selection preserves the shared viewport geometry.
     return (
         <Box
             ref={containerRef}
@@ -311,10 +280,9 @@ const RecordingBandOverlay = ({
                         position: 'absolute',
                         top: `${topPadding}px`,
                         bottom: 0,
-                        // Values are clamped above, so the draggable element
-                        // always remains within the available SDR bandwidth.
-                        left: `${(0.5 + selectedOffsetHz / inputRate - 1 / (2 * factor)) * 100}%`,
-                        width: `${100 / factor}%`,
+                        // Use the exact same bounds as the painted recording band.
+                        left: `${leftEdge}px`,
+                        width: `${recordedWidth}px`,
                         cursor: 'ew-resize',
                         pointerEvents: 'auto',
                         touchAction: 'none',

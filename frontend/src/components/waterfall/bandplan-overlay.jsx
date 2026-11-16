@@ -18,47 +18,29 @@
  */
 
 
-import React, {useRef, useEffect, useState, useCallback} from 'react';
+import { getOverlayFrequencyRange, prepareOverlayCanvas } from './overlay-canvas.js';
+import React, {useRef, useEffect, useLayoutEffect, useCallback} from 'react';
 import {Box} from '@mui/material';
 
 const FrequencyBandOverlay = ({
                                   centerFrequency,
                                   sampleRate,
                                   containerWidth,
-                                  transformTick = 0,
-                                  interactionActive = false,
-                                  allowInteractionMeasure = false,
-                                  interactionMeasureTick = 0,
+                                  viewport,
                                   height,
                                   topPadding = 0,
                                   bands = [],
                                   bandHeight = 20,
                                   onBandClick = null,
-                                  zoomScale = 1,
-                                  panOffset = 0,
                               }) => {
     const canvasRef = useRef(null);
     const bandContainerRef = useRef(null);
-    const [actualWidth, setActualWidth] = useState(2048);
-    const lastMeasuredWidthRef = useRef(0);
+    const actualWidth = viewport?.width || containerWidth || 1;
 
-    // Calculate frequency range (full spectrum - no zoom/pan consideration here)
-    const startFreq = centerFrequency - sampleRate / 2;
-    const endFreq = centerFrequency + sampleRate / 2;
+    // The stationary canvas covers the visible frequency window.
+    const { startFreq, endFreq } = getOverlayFrequencyRange(centerFrequency, sampleRate, viewport);
 
-    const updateActualWidth = useCallback(() => {
-        const rect = bandContainerRef.current?.getBoundingClientRect();
-        if (!rect) return;
-
-        const roundedWidth = Math.round(rect.width);
-        // Quantize width updates to avoid subpixel jitter churn.
-        if (roundedWidth > 0 && roundedWidth !== lastMeasuredWidthRef.current) {
-            lastMeasuredWidthRef.current = roundedWidth;
-            setActualWidth(roundedWidth);
-        }
-    }, []);
-
-    // Convert frequency to pixel position (full spectrum coordinates)
+    // Convert frequencies directly to screen positions.
     const frequencyToPixel = useCallback((frequency) => {
         const freqRange = endFreq - startFreq;
         return ((frequency - startFreq) / freqRange) * actualWidth;
@@ -115,47 +97,12 @@ const FrequencyBandOverlay = ({
         return abbreviated;
     }, []);
 
-    // Update width when layout or transform-driven width changes
-    useEffect(() => {
-        if (interactionActive) {
-            return;
-        }
-        updateActualWidth();
-    }, [containerWidth, transformTick, interactionActive, updateActualWidth]);
-
-    useEffect(() => {
-        if (!interactionActive || !allowInteractionMeasure) {
-            return;
-        }
-        updateActualWidth();
-    }, [interactionActive, allowInteractionMeasure, interactionMeasureTick, updateActualWidth]);
-
-    // Resize backing store only when dimensions actually change.
-    useEffect(() => {
+    // Draw before paint so labels follow the same viewport as the spectrum.
+    useLayoutEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
 
-        const targetWidth = Math.max(1, actualWidth);
-        const targetHeight = Math.max(1, height);
-        if (canvas.width !== targetWidth) {
-            canvas.width = targetWidth;
-        }
-        if (canvas.height !== targetHeight) {
-            canvas.height = targetHeight;
-        }
-    }, [actualWidth, height]);
-
-    // Draw the frequency bands
-    useEffect(() => {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-
-        const ctx = canvas.getContext('2d', {
-            willReadFrequently: true,
-        });
-
-        // Clear the canvas
-        ctx.clearRect(0, 0, canvas.width, height);
+        const ctx = prepareOverlayCanvas(canvas, actualWidth, height, { willReadFrequently: true });
 
         // Calculate the band drawing area (bottom of the canvas)
         const bandY = height - bandHeight - 1;
@@ -321,7 +268,7 @@ const FrequencyBandOverlay = ({
                 }
             }
         });
-    }, [bands, centerFrequency, sampleRate, actualWidth, height, bandHeight, startFreq, endFreq, frequencyToPixel, abbreviateLabel]);
+    }, [bands, centerFrequency, sampleRate, actualWidth, height, bandHeight, startFreq, endFreq, frequencyToPixel, abbreviateLabel, viewport]);
 
     // Handle click events on the canvas
     const handleCanvasClick = useCallback((e) => {
@@ -330,7 +277,7 @@ const FrequencyBandOverlay = ({
         const canvas = canvasRef.current;
         const rect = canvas.getBoundingClientRect();
         const clickX = e.clientX - rect.left;
-        const widthRatio = canvas.width / rect.width;
+        const widthRatio = actualWidth / rect.width;
         const canvasX = clickX * widthRatio;
         const clickY = e.clientY - rect.top;
 
@@ -339,7 +286,7 @@ const FrequencyBandOverlay = ({
         if (clickY >= bandY && clickY <= height) {
             // Calculate which frequency was clicked (full spectrum coordinates)
             const freqRange = endFreq - startFreq;
-            const clickedFreq = startFreq + (canvasX / canvas.width) * freqRange;
+            const clickedFreq = startFreq + (canvasX / actualWidth) * freqRange;
 
             // Find which band was clicked
             const clickedBand = bands.find((band) => {
@@ -350,7 +297,7 @@ const FrequencyBandOverlay = ({
                 onBandClick(clickedBand);
             }
         }
-    }, [bands, onBandClick, startFreq, endFreq, height, bandHeight]);
+    }, [bands, onBandClick, startFreq, endFreq, height, bandHeight, actualWidth]);
 
     // Set up click event listener
     useEffect(() => {

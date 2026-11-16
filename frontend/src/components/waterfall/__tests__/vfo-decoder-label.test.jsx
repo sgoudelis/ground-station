@@ -14,7 +14,7 @@ beforeEach(() => {
     vi.useFakeTimers();
     vi.stubGlobal('requestAnimationFrame', (callback) => setTimeout(callback, 0));
     vi.stubGlobal('cancelAnimationFrame', (id) => clearTimeout(id));
-    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({ clearRect: vi.fn() });
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({ clearRect: vi.fn(), setTransform: vi.fn() });
     for (const name of ['drawVFOArea', 'drawVFOLine', 'drawVFOEdges', 'drawVFOHandle', 'drawVFOLabel']) {
         vi.spyOn(canvasDrawingUtils, name).mockImplementation(() => {});
     }

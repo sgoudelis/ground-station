@@ -500,9 +500,8 @@ export const calculateVFOFrequencyBounds = (marker, startFreq, freqRange, actual
         rightEdgeX = ((markerHighFreq - startFreq) / freqRange) * actualWidth;
     }
 
-    // Ensure edges are within bounds
-    leftEdgeX = Math.max(0, leftEdgeX);
-    rightEdgeX = Math.min(actualWidth, rightEdgeX);
+    // Let the canvas clip off-screen edges. Clamping their coordinates would
+    // draw false bandwidth handles at the viewport boundary when zoomed in.
 
     return {
         markerLowFreq,

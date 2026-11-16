@@ -134,7 +134,7 @@ export const useWaterfallSnapshot = ({
         const bandscopeCanvas = bandscopeCanvasRef.current;
         // Limit discovery to this waterfall. The old document-wide search could
         // select an unrelated small canvas when another page feature was open.
-        const waterfallContainer = bandscopeCanvas?.parentElement?.parentElement;
+        const waterfallContainer = bandscopeCanvas?.closest('[data-waterfall-viewport]');
         const allCanvases = waterfallContainer?.querySelectorAll('canvas') || [];
 
         allCanvases.forEach(canvas => {
@@ -191,53 +191,38 @@ export const useWaterfallSnapshot = ({
         const bandscopeDisplayHeight = bandScopeHeight + bandscopeTopPadding;
         const totalHeight = bandscopeDisplayHeight + frequencyScaleHeight + waterFallCanvasHeight;
 
-        // Calculate visible area based on CSS transform
-        // The CSS transform is: translateX(waterFallPositionX) scaleX(waterFallScaleX)
-
-        // Bandscope and waterfall are rendered at full canvas resolution (16384px)
-        // Overlays (bookmark, bandplan, frequency scale) are rendered at visual width (actual width from canvas)
-        // BUT overlays represent the SAME frequency range, just at lower DPI
-
-        // Calculate visible area in bandscope/waterfall canvas coordinates
-        // The bandscope (16384px) shows the full frequency range regardless of zoom
-        // We need to crop it to match what's currently visible
+        // Read the displayed transform rather than the debounced Redux values.
+        // Text overlays already contain only this visible frequency window.
+        const transform = window.getComputedStyle(bandscopeCanvas.parentElement).transform;
+        const matrix = transform && transform !== 'none' ? new DOMMatrixReadOnly(transform) : null;
+        const scaleX = matrix?.m11 || waterFallScaleX;
+        const positionX = matrix?.m41 ?? waterFallPositionX;
 
         // Convert visual container width to canvas coordinates
         const visualToCanvasRatio = waterFallCanvasWidth / actualVisualWidth;
 
         // Calculate visible width in canvas pixels
-        const visibleCanvasWidth = waterFallCanvasWidth / waterFallScaleX;
+        const visibleCanvasWidth = waterFallCanvasWidth / scaleX;
 
         // Convert the pan offset from visual pixels to canvas pixels
-        const canvasSourceX = Math.max(0, (-waterFallPositionX * visualToCanvasRatio) / waterFallScaleX);
+        const canvasSourceX = Math.max(0, (-positionX * visualToCanvasRatio) / scaleX);
         const canvasSourceWidth = Math.min(visibleCanvasWidth, waterFallCanvasWidth - canvasSourceX);
 
-        // Each overlay owns a separate backing store whose width can lag or
-        // lead the others while React applies a zoom/resize update. Its crop
-        // must therefore be based on its own width, never another layer's.
-        const getOverlaySourceCrop = (canvas) => {
-            const overlayToCanvasRatio = canvas.width / waterFallCanvasWidth;
-            return {
-                x: canvasSourceX * overlayToCanvasRatio,
-                width: canvasSourceWidth * overlayToCanvasRatio,
-            };
-        };
-
-        const drawOverlay = (canvas, sourceHeight, destinationY, destinationHeight) => {
+        const drawOverlay = (canvas, destinationY, destinationHeight) => {
             if (!canvas || canvas.width <= 0 || canvas.height <= 0) {
                 return;
             }
 
-            const sourceCrop = getOverlaySourceCrop(canvas);
             ctx.drawImage(
                 canvas,
-                sourceCrop.x, 0, sourceCrop.width, sourceHeight,
-                leftMarginWidth, destinationY, canvasSourceWidth, destinationHeight
+                0, 0, canvas.width, canvas.height,
+                leftMarginWidth, destinationY, actualVisualWidth, destinationHeight
             );
         };
 
-        // Use canvas source width for total width (bandscope/waterfall are the reference)
-        const totalWidth = leftMarginWidth + canvasSourceWidth;
+        // Compose in screen coordinates so text keeps the same proportions as
+        // the display, independently of zoom and each canvas backing-store DPR.
+        const totalWidth = leftMarginWidth + actualVisualWidth;
 
         // Create composite canvas for visible area
         const compositeCanvas = document.createElement('canvas');
@@ -260,14 +245,14 @@ export const useWaterfallSnapshot = ({
         ctx.drawImage(
             bandscopeCanvas,
             canvasSourceX, 0, canvasSourceWidth, bandScopeHeight, // source crop
-            leftMarginWidth, yOffset + bandscopeTopPadding, canvasSourceWidth, bandScopeHeight // destination
+            leftMarginWidth, yOffset + bandscopeTopPadding, actualVisualWidth, bandScopeHeight // destination
         );
 
         // The bandscope overlays are painted in their DOM stacking order.
-        drawOverlay(bookmarkCanvas, bandscopeDisplayHeight, yOffset, bandscopeDisplayHeight);
-        drawOverlay(bandplanCanvas, bandscopeDisplayHeight, yOffset, bandscopeDisplayHeight);
-        drawOverlay(vfoContainerCanvas, bandScopeHeight, yOffset, bandScopeHeight);
-        drawOverlay(recordingBandCanvas, bandscopeDisplayHeight, yOffset, bandscopeDisplayHeight);
+        drawOverlay(bookmarkCanvas, yOffset, bandscopeDisplayHeight);
+        drawOverlay(bandplanCanvas, yOffset, bandscopeDisplayHeight);
+        drawOverlay(vfoContainerCanvas, yOffset, bandscopeDisplayHeight);
+        drawOverlay(recordingBandCanvas, yOffset, bandscopeDisplayHeight);
 
         yOffset += bandscopeDisplayHeight;
 
@@ -277,11 +262,11 @@ export const useWaterfallSnapshot = ({
         }
 
         if (frequencyScaleCanvas && frequencyScaleCanvas.width > 0 && frequencyScaleCanvas.height > 0) {
-            drawOverlay(frequencyScaleCanvas, frequencyScaleHeight, yOffset, frequencyScaleHeight);
+            drawOverlay(frequencyScaleCanvas, yOffset, frequencyScaleHeight);
         } else {
             // Fill with background if not available
             ctx.fillStyle = theme.palette.background.paper;
-            ctx.fillRect(leftMarginWidth, yOffset, canvasSourceWidth, frequencyScaleHeight);
+            ctx.fillRect(leftMarginWidth, yOffset, actualVisualWidth, frequencyScaleHeight);
         }
         yOffset += frequencyScaleHeight;
 
@@ -306,7 +291,7 @@ export const useWaterfallSnapshot = ({
         ctx.drawImage(
             waterfallImg,
             waterfallSourceX, 0, waterfallSourceWidth, waterFallCanvasHeight,
-            leftMarginWidth, yOffset, canvasSourceWidth, waterFallCanvasHeight
+            leftMarginWidth, yOffset, actualVisualWidth, waterFallCanvasHeight
         );
 
         return compositeCanvas;
