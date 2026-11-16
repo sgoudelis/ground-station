@@ -72,6 +72,11 @@
   Chrome that must be capitalised (MUI tab bars) builds the label in JS via
   `tabCapsLabel()`/`greekCaps()` in `frontend/src/utils/greekcaps.js`; locale values stay mixed-case
   and accented.
+- Greek title case keeps its tonos: `Κλίμακα`, `Όλα`, `Ώρα` are correct and `Κλιμακα`, `Ωρα`,
+  `Αγνωστο` are misspellings. Only words written entirely in capitals lose accents. Never strip the
+  accent from a capital initial again - a previous revision of `scripts/i18n.mjs` and
+  `scripts/repairgreek.py` did, and most `el` values are still missing that tonos because of it
+  (`scripts/repairgreek.py` rule B restores them from the curated word list).
 
 ## Code Comments
 

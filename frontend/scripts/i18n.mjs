@@ -50,41 +50,52 @@ const PLURAL_SUFFIX = /_(zero|one|two|few|many|other)$/;
 /**
  * Greek orthography, as the language actually works (see TRANSLATION_GUIDE.md, "Greek").
  *
- *   1. a word written entirely in capitals carries no accent marks at all
- *   2. an accent that sits on a capital letter is dropped (Άγνωστο -> Αγνωστο, Ώρα -> Ωρα)
- *   3. everything else keeps its accents
+ *   1. a word written entirely in capitals carries no accent marks at all (`ΡΥΘΜΙΣΕΙΣ`)
+ *   2. a mixed-case word keeps every accent it has, including one on its capital initial
+ *      (`Κλίμακα`, `Όλα`, `Ώρα`, `Ρυθμίσεις`)
  *
- * Rule 3 is the one this repo used to get wrong: an earlier revision dropped the tonos from every
- * word that merely *started* with a capital, which mangles correct Greek such as Ρυθμίσεις,
- * Διακοπή and Αυτόματη. That reading came from strings that are only uppercased by CSS
- * (`text-transform: uppercase`), which is a rendering artefact and must not decide how a stored
- * string is spelled. Nothing here touches a word that contains a lowercase letter.
+ * Both earlier revisions of this repo got rule 2 wrong in opposite directions: dropping the tonos
+ * from every word that merely *started* with a capital mangles correct Greek (Κλιμακα, Ωρα and
+ * Αγνωστο are misspellings), while CSS `text-transform: uppercase` kept the tonos on capitals and
+ * painted invalid all-caps (`ΡΥΘΜΙΣΕΊΣ`). Capital-only chrome therefore builds its string in JS
+ * (`src/utils/greekcaps.js`); stored values keep the case they were authored in.
  */
 const GREEK_UPPER_MAP = { 'Ά': 'Α', 'Έ': 'Ε', 'Ή': 'Η', 'Ί': 'Ι', 'Ό': 'Ο', 'Ύ': 'Υ', 'Ώ': 'Ω', 'Ϊ': 'Ι', 'Ϋ': 'Υ' };
 const GREEK_ACCENTED_CAPITAL = /[ΆΈΉΊΌΎΏΪΫ]/;
 const GREEK_ACCENTED_CAPITAL_G = /[ΆΈΉΊΌΎΏΪΫ]/g;
-// A word of two or more capitals, possibly carrying accented capitals (ΔΕΝ, ΕΠΕΞΕΡΓΑΣΊΑ).
-const GREEK_UPPERCASE_WORD = /(?:[Α-Ω]|ΐ|ΰ){2,}(?:[Α-Ω]|ΐ|ΰ)*/g;
+// Accented capitals live at U+0386..U+038F, OUTSIDE the Α-Ω (U+0391..) range, so every Greek letter
+// class below lists them explicitly - leaving them out silently splits words like ΠΡΟΣΟΧΉ in two.
+// A run of two or more capitals, possibly carrying accented ones (ΔΕΝ, ΕΠΕΞΕΡΓΑΣΊΑ, ΠΡΟΣΟΧΉ).
+const GREEK_UPPERCASE_WORD = /[Α-ΩΆΈΉΊΌΎΏΪΫ]{2,}/g;
+// Any Greek word, capitals + lowercase + accented forms (ΐ/ΰ count as lowercase: they carry a tonos).
+const GREEK_WORD = /[Α-ΩΆΈΉΊΌΎΏΪΫα-ωά-ώΐΰ]+/g;
+const GREEK_LETTER_IS_LOWER = /[α-ωά-ώΐΰ]/;
+// Ϊ/Ϋ are dialytika without a tonos, and are valid in all-caps Greek (ΫΠΝΟΣ), so they are not accents.
+const GREEK_LETTER_IS_ACCENTED = /[ΆΈΉΊΌΎΏά-ώ]/;
 
-/** Return the all-caps + initial-capital form Greek requires, leaving other accents alone. */
+/** Strip accents from words written entirely in capitals; mixed-case words keep every tonos. */
 function greekCaps(text) {
     if (typeof text !== 'string' || !GREEK_ACCENTED_CAPITAL.test(text)) return text;
-    // Rule 1: strip accents anywhere inside a word that is entirely uppercase.
-    const allCaps = text.replace(GREEK_UPPERCASE_WORD, (word) =>
+    // A mixed-case word keeps the tonos on its capital initial - that is the correct spelling,
+    // not an oversight, so only words with no lowercase letter at all are rewritten.
+    return text.replace(GREEK_UPPERCASE_WORD, (word) =>
         word.replace(GREEK_ACCENTED_CAPITAL_G, (ch) => (ch in GREEK_UPPER_MAP ? GREEK_UPPER_MAP[ch] : ch)));
-    // Rule 2: an accent on a capital initial letter is dropped; later accents belong to lowercase
-    // letters and are correct, so they stay (Ρυθμίσεις keeps its οξύτονος).
-    return allCaps.replace(GREEK_ACCENTED_CAPITAL_G, (ch) => GREEK_UPPER_MAP[ch]);
 }
 
 /** Values whose Greek spelling can never be right, with the offending fragment. */
 function greekOrthographyIssues(text) {
     if (typeof text !== 'string') return [];
-    // An accent that sits on a capital letter (rule 2) - Ά, Έ, Ή, Ί, Ό, Ύ, Ώ, Ϊ, Ϋ.
-    const issues = [...text.matchAll(GREEK_ACCENTED_CAPITAL_G)].map((m) => m[0]);
-    // Rule 1: a word written entirely in capitals carries no accent marks, so a word that opens
-    // with a run of capitals and then trails an accented lowercase vowel is half-uppercased.
-    for (const word of text.matchAll(/[Α-Ω]{2,}[α-ω]*[άέήίόύώ][α-ωά-ώ]*/g)) issues.push(word[0]);
+    const issues = [];
+    for (const match of text.matchAll(GREEK_WORD)) {
+        const word = match[0];
+        const hasLower = GREEK_LETTER_IS_LOWER.test(word);
+        const accented = GREEK_LETTER_IS_ACCENTED.test(word);
+        // Rule 1: an all-caps word carries no accents (ΡΥΘΜΙΣΕΊΣ, ΕΠΕΞΕΡΓΑΣΊΑ). Single letters such
+        // as the conjunctions Ο and Ή are capitals that legitimately carry a tonos.
+        if (word.length > 1 && !hasLower && accented) issues.push(word);
+        // Half-uppercased: a run of capitals followed by accented lowercase (ΕΠΕΞΕργασία).
+        else if (hasLower && /^[Α-ΩΆΈΉΊΌΎΏ]{2,}/.test(word) && /[ά-ώ]/.test(word.slice(2))) issues.push(word);
+    }
     return issues;
 }
 const PLACEHOLDER = /\{\{\s*([\w.]+)(?:\s*,[^}]*)?\s*\}\}/g;
@@ -695,9 +706,10 @@ function commandCheck() {
                 }
                 if (typeof value === 'string' && !value.trim()) violations.push(`empty-value: ${lang}/${ns}.${key}`);
             }
-            // 2b. Greek orthography: an accent on a capital letter, or a tonos inside a word written
-            //     entirely in capitals, is never valid Greek. Accents that sit on the lowercase part
-            //     of a capitalized word are correct, so this does NOT flag Ρυθμίσεις/Διακοπή.
+            // 2b. Greek orthography: an all-caps word never carries accents, and a word opening with
+            //     a run of capitals that then trails accented lowercase letters is half-uppercased.
+            //     A tonos on the capital initial of a mixed-case word is CORRECT, so Κλίμακα and
+            //     Ώρα are legal while Κλιμακα and Ωρα are the misspellings.
             if (lang === 'el') {
                 for (const [key, value] of Object.entries(report.table[lang][ns])) {
                     const issues = greekOrthographyIssues(value);

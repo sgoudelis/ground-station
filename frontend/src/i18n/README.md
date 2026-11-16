@@ -16,15 +16,18 @@ safe and regressing coverage is not. Run `npm run i18n:baseline` after a transla
 Two accent rules exist in Greek, and both are about the letters you store - not about how the UI
 renders them:
 
-- A word written **entirely in capitals** carries no accent marks at all: `ΑΠΟΘΗΚΕΥΣΗ`, `ΕΝΤΑΞΕΙ`.
-- An accent **sitting on a capital letter** is dropped: `Άγνωστο` -> `Αγνωστο`, `Ώρα` -> `Ωρα`.
-- Everything else keeps its tonos - including a tonos on a lowercase letter of a word that merely
-  *starts* with a capital. `Ρυθμίσεις`, `Διακοπή`, `Αυτόματη`, `Σελήνη`, `Υποστήριξη` are correct.
-  `Ρυθμισεις`, `Σφαλμα`, `Υποστηριξη` are misspellings.
+- A word written **entirely in capitals** carries no accent marks at all: `ΑΠΟΘΗΚΕΥΣΗ`, `ΕΝΤΑΞΕΙ`,
+  `ΡΥΘΜΙΣΕΙΣ`.
+- A **mixed-case word keeps every accent it has, including one on its capital initial**: `Κλίμακα`,
+  `Όλα`, `Ώρα`, `Άγνωστο`, `Ρυθμίσεις`, `Διακοπή`, `Σελήνη`. Writing `Κλιμακα`, `Ωρα`, `Αγνωστο` or
+  `Ρυθμισεις` is a misspelling, not a style choice.
+- `Ϊ`/`Ϋ` are dialytika without a tonos, so they survive into all caps: `ΰπνος` -> `ΫΠΝΟΣ`.
 
 `text-transform: uppercase` is a rendering artefact. Never remove a tonos from a stored string just
 because a button paints it in caps - the same string shows up in tooltips, notifications and
-sentences, where the accent has to be there.
+sentences, where the accent has to be there. Equally, never *strip* the accent from a capital initial
+to satisfy a checker: an earlier revision of `scripts/i18n.mjs` and `scripts/repairgreek.py` did that
+and left most of the `el` locale without a tonos on capital-initial words.
 
 Because browser uppercasing keeps the tonos on capitals (`Ά`) instead of producing valid all-caps
 Greek, Greek deliberately opts out of uppercase transforms: `src/i18n/config.js` mirrors the active
@@ -42,8 +45,9 @@ pre-capitalise a value to work around the transform (`src/utils/greekcaps.test.j
 Examples:
 
 - `ΑΠΟΘΗΚΕΥΣΗ` (correct - all caps, no accents)
-- `Αγνωστο σφάλμα` (correct - accent dropped on the capital, kept on the lowercase letter)
-- `ΆΘΗΝΑ` / `Άγνωστο` (not allowed - accented capital)
+- `Κλίμακα`, `Όλα τα αρχεία`, `Άγνωστο σφάλμα` (correct - the capital initial keeps its tonos)
+- `Κλιμακα`, `Ωρα`, `Αγνωστο` (wrong - accents deleted from capitals)
+- `ΡΥΘΜΙΣΕΊΣ` / `ΆΘΗΝΑ` (not allowed - accented letters inside an all-caps word)
 - `Ρυθμίσεις` (correct), `Ρυθμισεις` (wrong)
 
 Notes:

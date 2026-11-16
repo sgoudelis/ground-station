@@ -182,8 +182,9 @@ Rules that apply to every language:
   `[en, de, el, es, fr, nl, it, zh]`. `nl` sits *before* `it`; alphabetising the columns swaps
   Italian and Dutch and every coverage number still says "done".
 * Keep product names, acronyms and units untranslated.
-* Greek: an accent on a capital letter is dropped and an all-caps word carries no accents, but a
-  tonos on a lowercase letter stays even in a capitalised word (`Ρυθμίσεις`, not `Ρυθμισεις`).
+* Greek: an all-caps word carries no accents, and a mixed-case word keeps every accent it has -
+  **including one on its capital initial** (`Κλίμακα`, `Όλα`, `Ώρα`, `Ρυθμίσεις`, not `Κλιμακα`,
+  `Ωρα`, `Ρυθμισεις`).
   See `README.md` for the full rule and why CSS `uppercase` must not influence a stored string.
 
 ## 6. Adding a brand-new language

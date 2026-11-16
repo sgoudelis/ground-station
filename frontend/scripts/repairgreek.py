@@ -16,8 +16,9 @@ import json, re, glob, subprocess, sys, collections, argparse
 
 ACCS = 'άέήίόύώ'
 DEACC = str.maketrans('άέήίόύώ', 'αεηιουω')
-CAPS_TO_PLAIN = str.maketrans('ΆΈΉΊΌΎΏΪΫ', 'ΑΕΗΙΟΥΩΙΥ')
-ALLCAPS = re.compile(r'(?:[Α-Ω]|ΐ|ΰ){2,}')
+# Accented capitals sit at U+0386..U+038F, outside the Α-Ω range, so they must be listed
+# explicitly: omitting them splits words like ΠΡΟΣΟΧΉ in two and leaves the accent in place.
+ALLCAPS = re.compile(r'[Α-ΩΆΈΉΊΌΎΏΪΫΐΰ]{2,}')
 import os
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 FILES = sorted(glob.glob(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
@@ -54,10 +55,15 @@ def base_accents(word):
 
 
 def rule_a(text):
-    """Correct the two forms that are unconditionally wrong (mechanical, no dictionary needed)."""
-    stripped = ALLCAPS.sub(lambda m: m.group(0).translate(
+    """Strip accents from words written entirely in capitals (mechanical, no dictionary needed).
+
+    A tonos on the capital initial of a mixed-case word is correct Greek (Κλίμακα, Όλα, Ώρα), so
+    this deliberately does NOT de-accent capitals in general - an earlier revision did, and it
+    produced misspellings across the whole el locale. Rule B restores those accents from the
+    curated word list.
+    """
+    return ALLCAPS.sub(lambda m: m.group(0).translate(
         str.maketrans('ΆΈΉΊΌΎΏΪΫάέήίόύώ', 'ΑΕΗΙΟΥΩΙΥαεηιουω')), text)
-    return stripped.translate(CAPS_TO_PLAIN)
 
 
 def harvest():
@@ -175,7 +181,7 @@ def main():
         stats['values_rewritten'] += len(changed)
 
     print('DRY RUN' if not args.write else 'WRITTEN')
-    print(f"  rule A (accent on a capital / inside an all-caps word): {stats['rule_a_values']} values")
+    print(f"  rule A (accent inside an all-caps word):               {stats['rule_a_values']} values")
     print(f"  rule B (tonos restored on capital-initial words):      {stats['rule_b_words']} words "
           f"in {stats['rule_b_values']} values")
     print(f"  total values rewritten:                                {stats['values_rewritten']}")

@@ -96,9 +96,12 @@ describe('i18n locale integrity', () => {
 });
 
 describe('Greek orthography', () => {
-    it('drops the accent that sits on a capital letter', () => {
-        expect(greekCaps('Άγνωστο σφάλμα')).toBe('Αγνωστο σφάλμα');
-        expect(greekCaps('Ώρα εκτόξευσης')).toBe('Ωρα εκτόξευσης');
+    it('keeps a tonos that sits on the capital initial of a mixed-case word', () => {
+        // Κλίμακα / Όλα / Ώρα are the correct spellings; the old rule deleted these accents and
+        // left misspellings such as Κλιμακα, Αγνωστο and Ωρα behind.
+        expect(greekCaps('Άγνωστο σφάλμα')).toBe('Άγνωστο σφάλμα');
+        expect(greekCaps('Ώρα εκτόξευσης')).toBe('Ώρα εκτόξευσης');
+        expect(greekOrthographyIssues('Κλίμακα')).toEqual([]);
     });
 
     it('strips every accent inside a word written entirely in capitals', () => {
@@ -113,8 +116,12 @@ describe('Greek orthography', () => {
         }
     });
 
-    it('reports an accent on a capital letter as a violation', () => {
-        expect(greekOrthographyIssues('Όλα τα αρχεία').length).toBeGreaterThan(0);
+    it('reports an accented all-caps word as a violation', () => {
+        // CSS uppercasing Greek keeps the tonos (ΡΥΘΜΙΣΕΊΣ), which is never valid Greek.
+        expect(greekOrthographyIssues('ΡΥΘΜΙΣΕΊΣ').length).toBeGreaterThan(0);
+        expect(greekOrthographyIssues('ΕΠΕΞΕΡΓΑΣΊΑ').length).toBeGreaterThan(0);
+        // Capitals that stand alone may carry a tonos (conjunctions Ο, Ή, and single-letter words).
+        expect(greekOrthographyIssues('Ή')).toEqual([]);
     });
 
     it('ships no Greek value that breaks either rule', () => {
