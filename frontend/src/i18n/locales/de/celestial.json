@@ -194,6 +194,10 @@
       "show_hud_labels": {
         "label": "HUD-Beschriftungen anzeigen",
         "description": "Ansichtsfenster- und Beobachter-/Zeitstempelanzeigen anzeigen."
+      },
+      "show_unfocused_labels": {
+        "label": "Nicht ausgewählte Beschriftungen anzeigen",
+        "description": "Beschriftungen für nicht ausgewählte Objekte anzeigen."
       }
     }
   },
@@ -228,7 +232,8 @@
       "display_name": "Anzeigename",
       "color": "Farbe",
       "color_placeholder": "#06D6A0",
-      "pick_color": "Farbe auswählen"
+      "pick_color": "Farbe auswählen",
+      "parent": "Übergeordnetes Objekt"
     },
     "helper": {
       "using_static_catalog": "Verwendung eines statischen Katalogeintrags.",
@@ -290,7 +295,8 @@
     "status": {
       "visible": "Sichtbar",
       "passed": "Bestanden",
-      "upcoming": "Demnächst"
+      "upcoming": "Demnächst",
+      "projection_expired": "Projektion abgelaufen"
     },
     "columns": {
       "status": "Status",
@@ -338,7 +344,11 @@
         "metrics": "Metriken",
         "source": "Quelle"
       }
-    }
+    },
+    "projection_limit": "Projektionsgrenze",
+    "projection_expired": "Projektion abgelaufen",
+    "projection_time_remaining": "Verbleibende Zeit bis zur Projektionsgrenze",
+    "projection_window_progress": "Fortschritt des Projektionszeitraums"
   },
   "monitored": {
     "no_color": "Keine Farbe",
@@ -376,6 +386,16 @@
     "summary": {
       "source": "Quelle",
       "mode": "Modus"
+    },
+    "projection": {
+      "title": "Zeitprojektion",
+      "edit_title": "Projektion bearbeiten",
+      "description": "Wählen Sie, wie weit vor und nach jetzt berechnet wird.",
+      "exact_settings": "Exakte Einstellungen",
+      "past": "Vergangene Dauer",
+      "future": "Zukünftige Dauer",
+      "step": "Stützstellenabstand",
+      "help": "Kleinere Abstände ergeben dichtere Pfade. Sehr lange Zeiträume sind auf 1.000 Stützstellen begrenzt."
     }
   },
   "info": {
@@ -508,25 +528,104 @@
       "unknown_target": "Unbekanntes Ziel",
       "not_available": "k. A.",
       "cancel": "Abbrechen",
-      "save": "Speichern"
+      "save": "Speichern",
+      "command_failed": "Befehl {{command}} fehlgeschlagen."
     },
     "ephemeris": {
       "title": "Himmelsephemeriden synchronisieren",
       "subtitle": "Himmelsvektoren von {{provider}} aktualisieren.",
-      "actions": { "synchronize_now": "Jetzt synchronisieren" },
+      "actions": {
+        "synchronize_now": "Jetzt synchronisieren",
+        "prune_expired": "Abgelaufene Historie löschen"
+      },
       "labels": {
         "status": "Status",
         "last_update": "Letzte Aktualisierung: {{value}}",
         "synchronization_progress": "Synchronisierungsfortschritt",
         "cache_freshness": "Cache-Aktualität",
         "preparing": "Wird vorbereitet…",
-        "output": "Ausgabe:"
+        "output": "Ausgabe:",
+        "cause": "Ursache:",
+        "next_connection_attempt": "Nächster Verbindungsversuch:",
+        "last_failed_attempt": "Zuletzt fehlgeschlagener Versuch:",
+        "failed_targets_one": "Fehlgeschlagene Ziele ({{count}})",
+        "failed_targets_other": "Fehlgeschlagene Ziele ({{count}})",
+        "provider_fetched": "Provider abgerufen: {{count}}",
+        "cache_reused": "Cache wiederverwendet: {{count}}",
+        "stale_fallback": "Veralteter Rückfallwert: {{count}}"
       },
       "status": {
         "running": "Läuft",
         "completed": "Abgeschlossen",
         "action_required": "Aktion erforderlich",
         "idle": "Leerlauf"
+      },
+      "periodic": {
+        "disabled": "Deaktiviert",
+        "enabled": "Aktiviert",
+        "title": "Regelmäßige Synchronisation",
+        "interval": "Intervall",
+        "every_minutes_one": "Alle {{count}} Minute",
+        "every_minutes_other": "Alle {{count}} Minuten",
+        "past_projection": "Vergangene Projektion",
+        "hours_one": "{{count}} Stunde",
+        "hours_other": "{{count}} Stunden",
+        "next_cache_expiry": "Nächstes Cache-Ablaufdatum",
+        "last_failure": "Letzter Fehler",
+        "effective_projection": "Wirksame Projektion",
+        "next_provider_refresh": "Nächste Provider-Aktualisierung",
+        "next_scheduler_run": "Nächste Prüferläufer-Kontrolle"
+      },
+      "output": {
+        "processed_target": "{{target}} verarbeitet ({{processed}}/{{total}})",
+        "processing_target": "{{target}} wird verarbeitet ({{processed}}/{{total}})",
+        "preparing_sync": "Bereite die Synchronisation der Himmelskörper-Ephemeriden vor …",
+        "stopped_with_errors": "Die Synchronisation wurde mit Fehlern beendet. Siehe Details unten.",
+        "cache_ready": "Ephemeriden-Cache ist bereit.",
+        "using_cached_data": "Verwende zwischengespeicherte Ephemeriden, während Horizons nicht verfügbar ist.",
+        "ready": "Bereit zur Synchronisation der Ephemeriden.",
+        "pruned_one": "{{count}} abgelaufenen Snapshot entfernt.",
+        "pruned_other": "{{count}} abgelaufene Snapshots entfernt."
+      },
+      "horizons_unavailable": {
+        "title": "NASA JPL Horizons ist nicht verfügbar",
+        "detail": "{{cause}} Gespeicherte Daten bleiben verfügbar. Nächste automatische Sonde: {{value}}."
+      },
+      "metrics": {
+        "stored_snapshots": "Gespeicherte Snapshots",
+        "targets_one": "{{count}} Ziel",
+        "targets_other": "{{count}} Ziele",
+        "fresh_snapshots": "Frische Snapshots",
+        "newest": "Neuester: {{value}}",
+        "expired_snapshots": "Abgelaufene Snapshots",
+        "with_errors_one": "{{count}} mit Fehlern",
+        "with_errors_other": "{{count}} mit Fehlern",
+        "ready_targets": "Bereite Ziele",
+        "refresh_due_one": "{{count}} Aktualisierung fällig",
+        "refresh_due_other": "{{count}} Aktualisierungen fällig"
+      },
+      "targets": {
+        "title": "Ziel-Cache-Prüfung"
+      },
+      "failure": {
+        "default_summary": "Die Ephemeriden-Synchronisation konnte nicht abgeschlossen werden.",
+        "count_summary": "{{refreshed}} von {{total}} Zielen aktualisiert; {{failed}} fehlgeschlagen. Vorhandene gespeicherte Snapshots wurden behalten.",
+        "connection_title": "NASA JPL Horizons war nicht erreichbar",
+        "incomplete_title": "Ephemeriden-Synchronisation unvollständig",
+        "reasons": {
+          "default": "NASA JPL Horizons konnte die Anfrage nicht abschließen.",
+          "unavailable": "NASA JPL Horizons ist vorübergehend nicht verfügbar.",
+          "connect_timeout": "Die Verbindung zu NASA JPL Horizons lief zeitlich über.",
+          "read_timeout": "NASA JPL Horizons antwortete nicht vor Ablauf der Anfrage.",
+          "dns_failure": "Der Backend-Host ssd.jpl.nasa.gov konnte nicht aufgelöst werden.",
+          "connection_failure": "Zum Backend konnte keine Netzwerkverbindung zu ssd.jpl.nasa.gov aufgebaut werden.",
+          "tls_failure": "Die sichere Verbindung zu NASA JPL Horizons konnte nicht aufgebaut werden.",
+          "rate_limited": "NASA JPL Horizons begrenzt vorübergehend die Anfragen.",
+          "server_error": "NASA JPL Horizons meldete einen Serverfehler.",
+          "invalid_response": "NASA JPL Horizons lieferte eine ungültige Antwort.",
+          "invalid_target": "Ein oder mehrere Ziele haben keinen gültigen Horizons-Befehl.",
+          "target_error": "NASA JPL Horizons lieferte für ein oder mehrere Ziele keine brauchbaren Ephemeriden."
+        }
       }
     },
     "catalog": {
@@ -541,8 +640,19 @@
         "monitoring": "Überwachung",
         "actions": "Aktionen"
       },
-      "monitoring": { "monitored": "Überwacht", "enabled": "Aktiviert", "disabled": "Deaktiviert", "not_monitored": "Nicht überwacht" },
-      "actions": { "working": "Wird ausgeführt…", "monitor": "Überwachen", "monitor_target": "{{name}} überwachen", "unmonitor": "Überwachung beenden", "unmonitor_target": "Überwachung von {{name}} beenden" },
+      "monitoring": {
+        "monitored": "Überwacht",
+        "enabled": "Aktiviert",
+        "disabled": "Deaktiviert",
+        "not_monitored": "Nicht überwacht"
+      },
+      "actions": {
+        "working": "Wird ausgeführt…",
+        "monitor": "Überwachen",
+        "monitor_target": "{{name}} überwachen",
+        "unmonitor": "Überwachung beenden",
+        "unmonitor_target": "Überwachung von {{name}} beenden"
+      },
       "filters": {
         "catalog": "Katalog",
         "all_entries": "Alle Einträge",
@@ -572,19 +682,202 @@
         "question": "Überwachung von {{target}} beenden?",
         "this_target": "diesem Ziel",
         "description": "Das Ziel wird nicht mehr in der Sonnensystemansicht angezeigt und kann später erneut überwacht werden."
-      }
+      },
+      "bodies": {
+        "earth": "Erde",
+        "sun": "Sonne",
+        "moon": "Mond",
+        "mercury": "Merkur",
+        "venus": "Venus",
+        "mars": "Mars",
+        "ceres": "Ceres",
+        "jupiter": "Jupiter",
+        "io": "Io",
+        "europa": "Europa",
+        "ganymede": "Ganymed",
+        "callisto": "Kallisto",
+        "saturn": "Saturn",
+        "enceladus": "Enceladus",
+        "rhea": "Rhea",
+        "titan": "Titan",
+        "iapetus": "Iapetus",
+        "uranus": "Uranus",
+        "miranda": "Miranda",
+        "ariel": "Ariel",
+        "umbriel": "Umbriel",
+        "titania": "Titania",
+        "oberon": "Oberon",
+        "neptune": "Neptun",
+        "triton": "Triton",
+        "nereid": "Nereide",
+        "proteus": "Proteus",
+        "pluto": "Pluto",
+        "charon": "Charon",
+        "haumea": "Haumea",
+        "makemake": "Makemake",
+        "eris": "Eris"
+      },
+      "parent_sun": "Sonne",
+      "status": {
+        "active": "Aktiv",
+        "completed": "Vollendet",
+        "custom": "Benutzerdefiniert",
+        "failed": "Fehlgeschlagen",
+        "unknown": "Unbekannt",
+        "available": "Verfügbar"
+      },
+      "types": {
+        "spacecraft": "Raumsonden",
+        "moon": "Mond",
+        "star": "Stern",
+        "planet": "Planet",
+        "dwarf-planet": "Zwergplanet",
+        "body": "Sonnenkörper"
+      },
+      "unknown_agency": "Unbekannte Organisation",
+      "feedback": {
+        "first_refresh_failed": "{{name}} wird überwacht, die erste Datenaktualisierung schlug aber fehl: {{error}}",
+        "monitor_failed": "{{name}} konnte nicht überwacht werden: {{error}}",
+        "monitored": "{{name}} wird jetzt überwacht und die Daten wurden aktualisiert.",
+        "unmonitored": "{{name}} wird nicht mehr überwacht."
+      },
+      "summary": "{{entries}} Einträge gezeigt · {{monitored}} überwacht"
     },
     "targets": {
-      "columns": { "target": "Überwacht", "type": "Typ", "enabled": "Aktiviert", "last_refresh": "Letzte Aktualisierung", "status": "Status" },
-      "status": { "refreshing": "Wird aktualisiert", "refreshed": "Aktualisiert", "refresh_failed": "Aktualisierung fehlgeschlagen", "ready": "Bereit", "not_fetched": "Nicht abgerufen" },
-      "actions": { "refresh": "Aktualisieren", "edit": "Bearbeiten", "edit_properties": "Eigenschaften bearbeiten", "delete": "Löschen", "refresh_selected": "Ausgewählte aktualisieren", "enable": "Aktivieren", "disable": "Deaktivieren" },
+      "columns": {
+        "target": "Überwacht",
+        "type": "Typ",
+        "enabled": "Aktiviert",
+        "last_refresh": "Letzte Aktualisierung",
+        "status": "Status"
+      },
+      "status": {
+        "refreshing": "Wird aktualisiert",
+        "refreshed": "Aktualisiert",
+        "refresh_failed": "Aktualisierung fehlgeschlagen",
+        "ready": "Bereit",
+        "not_fetched": "Nicht abgerufen"
+      },
+      "actions": {
+        "refresh": "Aktualisieren",
+        "edit": "Bearbeiten",
+        "edit_properties": "Eigenschaften bearbeiten",
+        "delete": "Löschen",
+        "refresh_selected": "Ausgewählte aktualisieren",
+        "enable": "Aktivieren",
+        "disable": "Deaktivieren",
+        "vector_details": "Vektordetails"
+      },
       "search": "Überwachte Einträge durchsuchen",
       "empty": "Keine überwachten Einträge gefunden.",
       "selected_count_one": "{{count}} ausgewählt",
       "selected_count_other": "{{count}} ausgewählt",
-      "info": { "title": "Überwachte Himmelsobjekte", "description": "Verwalten Sie die Himmelskörper und Raumsonden der Sonnensystemansicht." },
-      "edit": { "title": "Überwachtes Himmelsobjekt bearbeiten", "display_name": "Anzeigename", "body_id": "Körper-ID", "horizons_command": "Horizons-Befehl", "color": "Farbe", "pick_color": "Farbe des Himmelsobjekts auswählen" },
-      "delete": { "title": "Löschen des überwachten Eintrags bestätigen", "remove_count_one": "Dieses Himmelsobjekt wird aus der Überwachungsliste entfernt.", "remove_count_other": "{{count}} Himmelsobjekte werden aus der Überwachungsliste entfernt.", "description": "Entfernte Himmelsobjekte werden nicht mehr in der Sonnensystemansicht angezeigt." }
+      "info": {
+        "title": "Überwachte Himmelsobjekte",
+        "description": "Verwalten Sie die Himmelskörper und Raumsonden der Sonnensystemansicht."
+      },
+      "edit": {
+        "title": "Überwachtes Himmelsobjekt bearbeiten",
+        "display_name": "Anzeigename",
+        "body_id": "Körper-ID",
+        "horizons_command": "Horizons-Befehl",
+        "color": "Farbe",
+        "pick_color": "Farbe des Himmelsobjekts auswählen"
+      },
+      "delete": {
+        "title": "Löschen des überwachten Eintrags bestätigen",
+        "remove_count_one": "Dieses Himmelsobjekt wird aus der Überwachungsliste entfernt.",
+        "remove_count_other": "{{count}} Himmelsobjekte werden aus der Überwachungsliste entfernt.",
+        "description": "Entfernte Himmelsobjekte werden nicht mehr in der Sonnensystemansicht angezeigt."
+      },
+      "vectors": {
+        "close": "Schließen",
+        "now": "Jetzt",
+        "retry": "Erneut versuchen",
+        "latest": "Neueste",
+        "title": "Vektordaten · {{name}}",
+        "target_type": "Art des Himmelskörpers",
+        "identifier": "Horizons-Kennung",
+        "server_time": "Aktuelle Serverzeit",
+        "load_failed": "Vektorhistorie konnte nicht geladen werden.",
+        "empty": "Für diesen überwachten Himmelskörper sind noch keine gespeicherten Horizons-Vektoren vorhanden.",
+        "available": "Vektordaten verfügbar",
+        "cache": "Datenbank-Cache",
+        "fresh": "Frisch",
+        "expired": "Abgelaufen",
+        "current_time_covered": "Aktuelle Zeit abgedeckt",
+        "requested_window_covered": "Angeforderter Zeitraum abgedeckt",
+        "timeline": "Zeitachse für Abdeckung und Gültigkeit",
+        "timeline_aria": "Zeitachse der Vektorabdeckung, angeforderter Zeiträume, Synchronisation, Cache-Ablauf und aktuellen Zeit",
+        "snapshot_number": "Snapshot {{number}}",
+        "samples": "Stützstellen",
+        "synced": "Synchronisiert",
+        "history": "Gespeicherte Snapshots ({{count}})",
+        "latest_snapshot": "Letzter Snapshot",
+        "coverage": "Stützstellenabdeckung",
+        "required_window": "Jetzt erforderlicher Zeitraum",
+        "provider_envelope": "Provider-Rahmen",
+        "cache_expiry": "Cache-Ablauf",
+        "delete_snapshot": "Snapshot löschen",
+        "clear_expired": "Abgelaufene löschen",
+        "clear_all": "Alle Snapshots löschen",
+        "delete_failed": "Die gewählten Vektor-Snapshots konnten nicht gelöscht werden.",
+        "confirm_delete_title": "Snapshot löschen?",
+        "confirm_delete_message": "Löschen Sie den um {{time}} synchronisierten Snapshot? Das Löschen des letzten brauchbaren Snapshots kann diesen überwachten Himmelskörper unbrauchbar machen.",
+        "confirm_clear_expired_title": "Abgelaufene Snapshots löschen?",
+        "confirm_clear_expired_message": "Löschen Sie die abgelaufenen Snapshot-Einträge ({{count}}) für {{name}}? Frische Snapshots bleiben erhalten.",
+        "confirm_clear_all_title": "Alle Snapshots löschen?",
+        "confirm_clear_all_message": "Löschen Sie alle Snapshots ({{count}}) für {{name}}? Dieser überwachte Himmelskörper kann unbrauchbar werden, bis die Synchronisation neu gelingt.",
+        "diagnosis": {
+          "current_missing": "Der letzte Snapshot deckt die aktuelle Serverzeit nicht ab. Aktuelle Beobachterberechnungen können ihn nicht verwenden.",
+          "window_short": "Die aktuelle Zeit ist abgedeckt, aber die Stützstellen spannen den jetzt erforderlichen Zeitraum nicht vollständig auf.",
+          "cache_expired": "Der Stützstellenzeitraum reicht aus, aber der Datenbank-Cache ist abgelaufen und wartet auf eine erfolgreiche Aktualisierung.",
+          "target_ready": "Der überwachte Snapshot ist frisch und deckt den jetzt erforderlichen Zeitraum vollständig ab."
+        },
+        "legend": {
+          "samples": "Horizons-Stützstellenabdeckung",
+          "requested": "Erforderlicher Projektionszeitraum",
+          "fresh_cache": "Lebensdauer frischer Cache",
+          "expired_cache": "Lebensdauer abgelaufener Cache",
+          "synchronized": "Synchronisationszeit",
+          "current_time": "Aktuelle Serverzeit",
+          "expiry": "Cache-Ablauf"
+        }
+      },
+      "feedback": {
+        "updated": "Überwachter Himmelskörper aktualisiert."
+      },
+      "errors": {
+        "name_identifier_required": "Name und Himmelskörper-Kennung sind erforderlich."
+      }
+    }
+  },
+  "horizons": {
+    "unavailable_title": "NASA JPL Horizons nicht verfügbar",
+    "service_message": "Automatische Horizons-Anfragen sind bis zum nächsten Versuch pausiert.",
+    "offline_message_one": "Zeigt eine genäherte Offline-Position für einen Körper. Vorbeifälle und Himmelskörper-Tracking benötigen Horizons-Daten.",
+    "offline_message_other": "Zeigt genäherte Offline-Positionen für {{count}} Körper. Vorbeifälle und Himmelskörper-Tracking benötigen Horizons-Daten.",
+    "cached_message_one": "Zeigt veraltete Cachedaten für einen Körper.",
+    "cached_message_other": "Zeigt veraltete Cachedaten für {{count}} Körper.",
+    "missing_message_one": "Für einen Körper sind keine nutzbaren Daten verfügbar.",
+    "missing_message_other": "Für {{count}} Körper sind keine nutzbaren Daten verfügbar.",
+    "retry_now": "Jetzt erneut versuchen",
+    "details": "Details",
+    "reason": "Grund",
+    "last_success": "Letzte erfolgreiche Aktualisierung",
+    "next_retry": "Nächster automatischer Versuch",
+    "affected": "Betroffene Körper",
+    "unknown_time": "unbekannt",
+    "reasons": {
+      "unavailable": "Dienst nicht verfügbar",
+      "connect_timeout": "Verbindung zeitlich über",
+      "read_timeout": "Antwort zeitlich über",
+      "dns_failure": "DNS-Suche fehlgeschlagen",
+      "connection_failure": "Verbindung fehlgeschlagen",
+      "tls_failure": "Sichere Verbindung fehlgeschlagen",
+      "rate_limited": "Ratenbegrenzung des Diensts erreicht",
+      "server_error": "Dienstfehler",
+      "invalid_response": "Ungültige Antwort des Diensts"
     }
   }
 }

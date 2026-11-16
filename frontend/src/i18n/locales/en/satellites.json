@@ -115,7 +115,6 @@
     "orbit_fetched": "Fetched",
     "orbit_first_seen": "First seen",
     "orbit_changed": "Orbit changed",
-    "actions": "Actions",
     "view": "View",
     "edit_transmitters": "Edit transmitters",
     "edit_transmitters_title": "Edit Transmitters: {{name}}",
@@ -133,7 +132,12 @@
     "deleted_success": "Satellite(s) deleted successfully",
     "failed_add": "Failed to add satellite",
     "failed_update": "Failed to update satellite",
-    "failed_delete": "Failed to delete satellite(s)"
+    "failed_delete": "Failed to delete satellite(s)",
+    "tab_general": "General",
+    "tab_orbital": "Orbital",
+    "orbit_model_kind": "Orbit Model",
+    "orbit_epoch": "Orbit Epoch (ISO 8601)",
+    "omm_payload": "OMM Payload (JSON object)"
   },
   "orbital_sources": {
     "title": "Orbital Data Sources",
@@ -246,6 +250,11 @@
       "group_required": "Group is required",
       "user_group_required": "Select a user-defined group",
       "space_track_query_filter_required": "Custom Space-Track queries must include a filter such as NORAD_CAT_ID. Use Satellite Group for curated groups."
+    },
+    "tabs": {
+      "aria": "orbital source tabs",
+      "sync_now": "Sync Now",
+      "sources": "Sources"
     }
   },
   "groups": {
@@ -400,6 +409,9 @@
       "delete_confirm_title": "Confirm Deletion",
       "delete_confirm_message": "Are you sure you want to delete the selected transmitter(s)?",
       "cancel": "Cancel"
+    },
+    "labels": {
+      "operator": "Operator"
     }
   },
   "satellite_edit_dialog": {
@@ -424,7 +436,8 @@
       "orbit_first_seen_at": "First time this orbit record appeared in the catalog; read-only.",
       "orbit_changed_at": "Last time the orbital data changed; read-only.",
       "orbit_omm_payload": "OMM orbit elements as a JSON object; required for an OMM orbit."
-    }
+    },
+    "satellite_edit_tabs": "satellite edit tabs"
   },
   "transmitter_modal": {
     "help": {
@@ -444,7 +457,39 @@
       "invert": "For a transponder, higher uplink frequencies map to lower downlink frequencies.",
       "baud": "Digital symbol rate in symbols per second; leave blank if unknown.",
       "framing": "Packet framing used by FSK decoding; Auto uses the decoder default."
-    }
+    },
+    "error": "Error:",
+    "please_fill_in_all_required_fields": "Please fill in all required fields.",
+    "basic_information": "Basic Information",
+    "description": "Description",
+    "enter_transmitter_description": "Enter transmitter description",
+    "source": "Source",
+    "type": "Type *",
+    "status": "Status *",
+    "alive": "Alive *",
+    "uplink_frequencies": "Uplink Frequencies",
+    "uplink_low_hz": "Uplink Low (Hz)",
+    "uplink_high_hz": "Uplink High (Hz)",
+    "uplink_drift_hz": "Uplink Drift (Hz)",
+    "downlink_frequencies": "Downlink Frequencies",
+    "downlink_low_hz": "Downlink Low (Hz)",
+    "downlink_high_hz": "Downlink High (Hz)",
+    "downlink_drift_hz": "Downlink Drift (Hz)",
+    "transmission_settings": "Transmission Settings",
+    "downlink_mode": "Downlink mode",
+    "uplink_mode": "Uplink mode",
+    "invert": "Invert",
+    "baud_rate": "Baud Rate",
+    "deviation_hz": "FSK deviation (Hz)",
+    "deviation_help": "Half the spacing between FSK tones; a negative value reverses polarity.",
+    "framing": "FSK framing",
+    "framing_auto": "Auto",
+    "lora_profile": "LoRa receiver profile",
+    "lora_profile_help": "Only specified values are stored; unspecified values use decoder defaults.",
+    "cancel": "Cancel",
+    "confirm_delete": "Confirm Delete",
+    "are_you_sure_you_want_to_delete_the_transmitter": "Are you sure you want to delete the transmitter \"",
+    "delete": "Delete"
   },
   "synchronize": {
     "header": {
@@ -452,7 +497,15 @@
       "subtitle": "Fetch orbital data from satellite sources",
       "button": "Synchronize",
       "cancel_button": "Cancel",
-      "last_update": "Last update: {{date}}"
+      "last_update": "Last update: {{date}}",
+      "next_scheduled_sync": "Next scheduled sync: {{when}}",
+      "next_scheduled_sync_unknown": "Next scheduled sync: Not available",
+      "next_scheduled_sync_exact": "Next scheduled sync: {{date}}",
+      "status": "Status",
+      "status_running": "Running",
+      "status_completed": "Completed",
+      "status_failed": "Action required",
+      "status_idle": "Idle"
     },
     "cancel_dialog": {
       "title": "Cancel synchronization?",
@@ -467,7 +520,8 @@
     "terminal": {
       "ready": "Ready to synchronize. Click the button to start.",
       "complete": "Synchronization complete!",
-      "syncing": "Synchronizing satellite data..."
+      "syncing": "Synchronizing satellite data...",
+      "output_label": "Output:"
     },
     "errors": {
       "title_singular": "{{count}} Error Occurred",
@@ -491,5 +545,161 @@
       "no_added_items": "No added items",
       "no_removed_items": "No removed items"
     }
+  },
+  "target_popover": {
+    "no_satellite_selected": "No satellite selected",
+    "satellite_is_not_visible_from_current_location": "Satellite is not visible from current location",
+    "currently_tracking_this_satellite": "Currently tracking this satellite",
+    "satellite_is_well_positioned_above_horizon": "Satellite is well positioned above horizon",
+    "no_upcoming_passes": "No upcoming passes",
+    "next_pass_in": "Next pass in",
+    "peak_elevation": "Peak elevation:",
+    "no_targets_configured": "No targets configured",
+    "create_a_target_from_the_track_page_to_view_live_satelli": "Create a target from the Track page to view live satellite status."
+  },
+  "satellite_info_page": {
+    "satellite_to_be_deleted": "Satellite to be deleted:",
+    "norad_id": "NORAD ID:",
+    "status": "Status:",
+    "countries": "Countries:",
+    "transmitters": "Transmitters:",
+    "transmitter_s_will_also_be_deleted": "transmitter(s) will also be deleted"
+  },
+  "satellite_map": {
+    "home": "Home",
+    "sun": "Sun",
+    "moon": "Moon"
+  },
+  "satellite_table": {
+    "space_research": "Space Research",
+    "space_operation": "Space Operation",
+    "earth_exploration": "Earth Exploration"
+  },
+  "sources_table": {
+    "amateur_radio": "Amateur radio",
+    "active_satellites": "Active satellites",
+    "analyst_satellites": "Analyst satellites",
+    "argos_data_collection_system": "ARGOS Data Collection System",
+    "cosmos_2251_debris": "COSMOS 2251 debris",
+    "disaster_monitoring": "Disaster Monitoring",
+    "chinese_asat_test_debris_fengyun_1c": "Chinese ASAT Test Debris (FENGYUN 1C)",
+    "active_geosynchronous": "Active geosynchronous",
+    "glonass_operational": "GLONASS operational",
+    "gps_operational": "GPS operational",
+    "hulianwang_digui": "Hulianwang Digui",
+    "iridium_33_debris": "IRIDIUM 33 debris",
+    "iridium_next": "Iridium NEXT",
+    "last_30_days_launches": "Last 30 Days' Launches",
+    "miscellaneous_military": "Miscellaneous military",
+    "other_communications": "Other communications",
+    "radar_calibration": "Radar calibration",
+    "earth_resources": "Earth resources",
+    "synthetic_aperture_radar": "Synthetic aperture radar",
+    "search_rescue_sarsat": "Search & Rescue (SARSAT)",
+    "satellite_based_augmentation_system_sbas": "Satellite-based augmentation system (SBAS)",
+    "space_earth_science": "Space & Earth science",
+    "space_stations": "Space stations",
+    "tracking_and_data_relay_satellite_system_tdrss": "Tracking and Data Relay Satellite System (TDRSS)",
+    "experimental_communications": "Experimental communications",
+    "url": "URL:",
+    "format": "Format:",
+    "provider": "Provider:",
+    "added": "Added:"
+  },
+  "transmitters_table": {
+    "lora_profile": "LoRa profile",
+    "deviation_hz": "Deviation (Hz)",
+    "framing": "Framing",
+    "edit_transmitter": "Edit transmitter",
+    "type": "Type:",
+    "mode": "Mode:",
+    "downlink": "Downlink:",
+    "uplink": "Uplink:",
+    "status": "Status:"
+  },
+  "target_info_island": {
+    "target_info": "Target Info",
+    "real_time_position": "Real-Time Position",
+    "elevation": "Elevation",
+    "azimuth": "Azimuth",
+    "altitude_kilometres": "Altitude, kilometres",
+    "altitude": "Altitude",
+    "velocity_kilometres_per_second": "Velocity, kilometres per second",
+    "velocity": "Velocity",
+    "added_to_db": "Added to DB",
+    "launched": "Launched",
+    "updated": "Updated",
+    "website": "Website",
+    "link": "Link ↗",
+    "citation": "Citation",
+    "more": "More",
+    "edit_details": "Edit Details",
+    "edit_transmitters": "Edit Transmitters",
+    "view_full_details": "View Full Details",
+    "waiting_for_updated_mission_body_telemetry": "Waiting for updated mission/body telemetry.",
+    "distance_from_sun": "Distance from Sun",
+    "speed_kilometres_per_second": "Speed, kilometres per second",
+    "speed": "Speed",
+    "target_geometry": "Target Geometry",
+    "visibility": "Visibility",
+    "light_time": "Light Time",
+    "target_metadata": "Target Metadata",
+    "target_type": "Target Type",
+    "target_key": "Target Key",
+    "source_mode": "Source Mode",
+    "tracking_link": "Tracking Link",
+    "rotator": "Rotator",
+    "rig": "Rig",
+    "rotator_state": "Rotator State",
+    "rig_state": "Rig State",
+    "data_source": "Data Source",
+    "source": "Source",
+    "cache": "Cache",
+    "stale": "Stale",
+    "samples": "Samples",
+    "projection": "Projection",
+    "last_refresh": "Last Refresh",
+    "close": "Close"
+  },
+  "decoded_insights_island": {
+    "united_states": "United States",
+    "european_union": "European Union",
+    "decoded": "Decoded",
+    "clear_decoded_packets_and_gnss_history": "Clear decoded packets and GNSS history",
+    "clear_all_decoded_history": "Clear all decoded history",
+    "satellite_details": "Satellite Details",
+    "select_a_satellite_row_to_inspect_its_latest_events": "Select a satellite row to inspect its latest events.",
+    "recent_events": "Recent events:",
+    "no_events_for_this_satellite_yet": "No events for this satellite yet.",
+    "gnss_summary": "GNSS Summary",
+    "verified_satellites_help": "Shown after GNSS-SDR reports a valid navigation word or pseudorange for that satellite.",
+    "verified_satellites": "Verified satellites:",
+    "fix_quality": "Fix quality:",
+    "position": "Position:",
+    "altitude": "Altitude:",
+    "utc_time": "UTC time:",
+    "current_fix_duration": "Current fix duration:",
+    "time_without_fix": "Time without fix:",
+    "fix_acquired": "Fix acquired:",
+    "fix_lost": "Fix lost:",
+    "last_fix_acquired": "Last fix acquired:",
+    "last_update": "Last update:"
+  },
+  "decoded_packets_drawer": {
+    "s_ago": "s ago (",
+    "m_ago": "m ago (",
+    "h_ago": "h ago (",
+    "inferred_satellite_identity": "Satellite identity was inferred from the locked transmitter you selected because this packet has no callsign.",
+    "packets": "PACKETS",
+    "delete_decoded_file": "Delete Decoded File",
+    "are_you_sure_you_want_to_delete_this_decoded_packet_file": "Are you sure you want to delete this decoded packet file?",
+    "file_to_be_deleted": "File to be deleted:",
+    "decoder": "Decoder:",
+    "from": "From:",
+    "to": "To:",
+    "size": "Size:",
+    "this_action_cannot_be_undone_the_file_will_be_permanentl": "This action cannot be undone! The file will be permanently deleted from the filesystem.",
+    "cancel": "Cancel",
+    "delete": "Delete"
   }
 }

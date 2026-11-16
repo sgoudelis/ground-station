@@ -30,7 +30,15 @@ import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 import Tabs from "@mui/material/Tabs";
 import i18n from '../../i18n/config';
+import { tabCapsLabel } from '../../utils/greekcaps.js';
 import { formatDateTime, formatTime } from '../../utils/date-time.js';
+
+// AntTab capitalises through tabCapsLabel so Greek still renders in capitals without
+// accents: all-caps Greek has no tonos, which CSS `text-transform: uppercase` cannot express.
+function AntTabBase({ label, ...rest }) {
+    return <Tab disableRipple label={tabCapsLabel(label)} {...rest} />;
+}
+
 
 export const SATELLITE_NUMBER_LIMIT = 50;
 
@@ -66,7 +74,7 @@ export const AntTabs = styled(Tabs)(({ theme }) => ({
     },
 }));
 
-export const AntTab = styled((props) => <Tab disableRipple {...props} />)(({ theme }) => ({
+export const AntTab = styled(AntTabBase)(({ theme }) => ({
     '&.MuiTab-root': {
         fontSize: theme.typography.pxToRem(16),
         textTransform: 'uppercase',

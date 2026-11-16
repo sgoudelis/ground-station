@@ -198,6 +198,19 @@ export function setupTheme(themeName = 'dark') {
                         position: absolute;
                     }
 
+                    /*
+                     * Greek typography: browser uppercasing keeps the tonos on capitals
+                     * (Ά), which is not valid all-caps Greek (ΡΥΘΜΙΣΕΙΣ, not ΡΥΘΜΊΣΕΊΣ).
+                     * Locale strings are authored in correct mixed case, so el opts out of
+                     * uppercase transforms (MUI buttons/tabs and our own CSS/sx rules).
+                     * <html lang> is maintained by src/i18n/config.js.
+                     */
+                    html[lang='el'] *,
+                    html[lang='el'] *::before,
+                    html[lang='el'] *::after {
+                        text-transform: none !important;
+                    }
+
                     /* Custom application styles */
                     .window-title-bar {
                         background-color: ${theme.palette.surface.titleBar};

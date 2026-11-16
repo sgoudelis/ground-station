@@ -194,6 +194,10 @@
       "show_hud_labels": {
         "label": "HUD-labels tonen",
         "description": "Toon uitlezingen van viewport en waarnemer/tijdstempel."
+      },
+      "show_unfocused_labels": {
+        "label": "Labels van niet-geselecteerde objecten tonen",
+        "description": "Toont labels van objecten die niet zijn geselecteerd."
       }
     }
   },
@@ -228,7 +232,8 @@
       "display_name": "Weergavenaam",
       "color": "Kleur",
       "color_placeholder": "#06D6A0",
-      "pick_color": "Kies kleur"
+      "pick_color": "Kies kleur",
+      "parent": "Bovenliggend object"
     },
     "helper": {
       "using_static_catalog": "Statische catalogusinvoer gebruiken.",
@@ -290,7 +295,8 @@
     "status": {
       "visible": "Zichtbaar",
       "passed": "Geslaagd",
-      "upcoming": "Aankomend"
+      "upcoming": "Aankomend",
+      "projection_expired": "Projectie verlopen"
     },
     "columns": {
       "status": "Status",
@@ -338,7 +344,11 @@
         "metrics": "Statistieken",
         "source": "Bron"
       }
-    }
+    },
+    "projection_limit": "Projectiegrens",
+    "projection_expired": "Projectie verlopen",
+    "projection_time_remaining": "Resterende tijd tot de projectiegrens",
+    "projection_window_progress": "Voortgang van projectievenster"
   },
   "monitored": {
     "no_color": "Geen kleur",
@@ -376,6 +386,16 @@
     "summary": {
       "source": "Bron",
       "mode": "Modus"
+    },
+    "projection": {
+      "title": "Tijdprojectie",
+      "edit_title": "Projectie bewerken",
+      "description": "Kies hoe ver vóór en ná nu wordt berekend.",
+      "exact_settings": "Nauwkeurige instellingen",
+      "past": "Verleden duur",
+      "future": "Toekomstige duur",
+      "step": "Monsterinterval",
+      "help": "Kleinere intervallen geven dichtere sporen. Zeer lange vensters zijn beperkt tot 1.000 monsters."
     }
   },
   "info": {
@@ -508,36 +528,356 @@
       "unknown_target": "Onbekend doel",
       "not_available": "N.v.t.",
       "cancel": "Annuleren",
-      "save": "Opslaan"
+      "save": "Opslaan",
+      "command_failed": "Opdracht {{command}} mislukt."
     },
     "ephemeris": {
       "title": "Hemelefemeriden synchroniseren",
       "subtitle": "Hemelvectoren vernieuwen vanuit {{provider}}.",
-      "actions": { "synchronize_now": "Nu synchroniseren" },
-      "labels": { "status": "Status", "last_update": "Laatst bijgewerkt: {{value}}", "synchronization_progress": "Synchronisatievoortgang", "cache_freshness": "Cacheversheid", "preparing": "Voorbereiden…", "output": "Uitvoer:" },
-      "status": { "running": "Bezig", "completed": "Voltooid", "action_required": "Actie vereist", "idle": "Inactief" }
+      "actions": {
+        "synchronize_now": "Nu synchroniseren",
+        "prune_expired": "Verlopen geschiedenis opschonen"
+      },
+      "labels": {
+        "status": "Status",
+        "last_update": "Laatst bijgewerkt: {{value}}",
+        "synchronization_progress": "Synchronisatievoortgang",
+        "cache_freshness": "Cacheversheid",
+        "preparing": "Voorbereiden…",
+        "output": "Uitvoer:",
+        "cause": "Oorzaak:",
+        "next_connection_attempt": "Volgende verbindingspoging:",
+        "last_failed_attempt": "Laatste mislukte poging:",
+        "failed_targets_one": "Gefaalde doelen ({{count}})",
+        "failed_targets_other": "Gefaalde doelen ({{count}})",
+        "provider_fetched": "Opgehaald bij provider: {{count}}",
+        "cache_reused": "Cache hergebruikt: {{count}}",
+        "stale_fallback": "Verouderde terugvalwaarde: {{count}}"
+      },
+      "status": {
+        "running": "Bezig",
+        "completed": "Voltooid",
+        "action_required": "Actie vereist",
+        "idle": "Inactief"
+      },
+      "periodic": {
+        "disabled": "Uitgeschakeld",
+        "enabled": "Ingeschakeld",
+        "title": "Periodieke synchronisatie",
+        "interval": "Interval",
+        "every_minutes_one": "Elke {{count}} minuut",
+        "every_minutes_other": "Elke {{count}} minuten",
+        "past_projection": "Verleden projectie",
+        "hours_one": "{{count}} uur",
+        "hours_other": "{{count}} uur",
+        "next_cache_expiry": "Volgende cache-verloop",
+        "last_failure": "Laatste fout",
+        "effective_projection": "Werkzame projectie",
+        "next_provider_refresh": "Volgende providerverversing",
+        "next_scheduler_run": "Volgende plannercontrole"
+      },
+      "output": {
+        "processed_target": "{{target}} verwerkt ({{processed}}/{{total}})",
+        "processing_target": "{{target}} wordt verwerkt ({{processed}}/{{total}})",
+        "preparing_sync": "Voorbereiden van de synchronisatie van hemellichaam-efemeriden…",
+        "stopped_with_errors": "Synchronisatie gestopt met fouten. Zie details hieronder.",
+        "cache_ready": "Ephemeridencache is gereed.",
+        "using_cached_data": "Gebruikt gecachete efemeriden zolang Horizons niet beschikbaar is.",
+        "ready": "Klaar om efemeriden te synchroniseren.",
+        "pruned_one": "{{count}} verlopen snapshot verwijderd.",
+        "pruned_other": "{{count}} verlopen snapshots verwijderd."
+      },
+      "horizons_unavailable": {
+        "title": "NASA JPL Horizons is niet beschikbaar",
+        "detail": "{{cause}} Opgeslagen gegevens blijven beschikbaar. Volgende automatische test: {{value}}."
+      },
+      "metrics": {
+        "stored_snapshots": "Opgeslagen snapshots",
+        "targets_one": "{{count}} doel",
+        "targets_other": "{{count}} doelen",
+        "fresh_snapshots": "Verse snapshots",
+        "newest": "Nieuwste: {{value}}",
+        "expired_snapshots": "Verlopen snapshots",
+        "with_errors_one": "{{count}} met fouten",
+        "with_errors_other": "{{count}} met fouten",
+        "ready_targets": "Gereede doelen",
+        "refresh_due_one": "{{count}} verversing nodig",
+        "refresh_due_other": "{{count}} verversingen nodig"
+      },
+      "targets": {
+        "title": "Inspectie van doelcache"
+      },
+      "failure": {
+        "default_summary": "De synchronisatie van de efemeriden kon niet worden voltooid.",
+        "count_summary": "{{refreshed}} van {{total}} doelen ververst; {{failed}} mislukt. Bestaande opgeslagen snapshots bleven behouden.",
+        "connection_title": "NASA JPL Horizons was niet bereikbaar",
+        "incomplete_title": "Synchronisatie van efemeriden onvolledig",
+        "reasons": {
+          "default": "NASA JPL Horizons kon het verzoek niet afhandelen.",
+          "unavailable": "NASA JPL Horizons is tijdelijk niet beschikbaar.",
+          "connect_timeout": "De verbinding met NASA JPL Horizons liep op tijd uit.",
+          "read_timeout": "NASA JPL Horizons reageerde niet voordat het verzoek verliep.",
+          "dns_failure": "De backend kon ssd.jpl.nasa.gov niet oplossen.",
+          "connection_failure": "De backend kon geen netwerkverbinding met ssd.jpl.nasa.gov maken.",
+          "tls_failure": "De beveiligde verbinding met NASA JPL Horizons kon niet worden opgezet.",
+          "rate_limited": "NASA JPL Horizons beperkt tijdelijk verzoeken.",
+          "server_error": "NASA JPL Horizons gaf een serverfout.",
+          "invalid_response": "NASA JPL Horizons gaf een ongeldige respons.",
+          "invalid_target": "Een of meer doelen hebben geen geldige Horizons-opdracht.",
+          "target_error": "NASA JPL Horizons leverde geen bruikbare efemeriden voor een of meer doelen."
+        }
+      }
     },
     "catalog": {
       "custom": "Aangepast doel",
-      "columns": { "name": "Naam", "type": "Type", "agency_parent": "Agentschap / Hoofdlichaam", "status": "Status", "catalog_status": "Catalogusstatus", "identifier": "Horizons-opdracht / ID", "monitoring": "Volgstatus", "actions": "Acties" },
-      "monitoring": { "monitored": "Gevolgd", "enabled": "Ingeschakeld", "disabled": "Uitgeschakeld", "not_monitored": "Niet gevolgd" },
-      "actions": { "working": "Bezig…", "monitor": "Volgen", "monitor_target": "{{name}} volgen", "unmonitor": "Stoppen met volgen", "unmonitor_target": "Stoppen met volgen van {{name}}" },
-      "filters": { "catalog": "Catalogus", "all_entries": "Alle vermeldingen", "solar_bodies": "Zonnestelsellichamen", "spacecraft": "Ruimtesondes", "status": "Status", "all_statuses": "Alle statussen", "monitoring": "Volgstatus", "all_monitoring": "Alle volgstatussen", "monitored": "Gevolgd", "enabled": "Ingeschakeld", "disabled": "Uitgeschakeld", "not_monitored": "Niet gevolgd", "clear_search": "Zoekopdracht wissen", "clear_all": "Alles wissen", "results_one": "{{count}} resultaat", "results_other": "{{count}} resultaten", "search": "Catalogus doorzoeken" },
+      "columns": {
+        "name": "Naam",
+        "type": "Type",
+        "agency_parent": "Agentschap / Hoofdlichaam",
+        "status": "Status",
+        "catalog_status": "Catalogusstatus",
+        "identifier": "Horizons-opdracht / ID",
+        "monitoring": "Volgstatus",
+        "actions": "Acties"
+      },
+      "monitoring": {
+        "monitored": "Gevolgd",
+        "enabled": "Ingeschakeld",
+        "disabled": "Uitgeschakeld",
+        "not_monitored": "Niet gevolgd"
+      },
+      "actions": {
+        "working": "Bezig…",
+        "monitor": "Volgen",
+        "monitor_target": "{{name}} volgen",
+        "unmonitor": "Stoppen met volgen",
+        "unmonitor_target": "Stoppen met volgen van {{name}}"
+      },
+      "filters": {
+        "catalog": "Catalogus",
+        "all_entries": "Alle vermeldingen",
+        "solar_bodies": "Zonnestelsellichamen",
+        "spacecraft": "Ruimtesondes",
+        "status": "Status",
+        "all_statuses": "Alle statussen",
+        "monitoring": "Volgstatus",
+        "all_monitoring": "Alle volgstatussen",
+        "monitored": "Gevolgd",
+        "enabled": "Ingeschakeld",
+        "disabled": "Uitgeschakeld",
+        "not_monitored": "Niet gevolgd",
+        "clear_search": "Zoekopdracht wissen",
+        "clear_all": "Alles wissen",
+        "results_one": "{{count}} resultaat",
+        "results_other": "{{count}} resultaten",
+        "search": "Catalogus doorzoeken"
+      },
       "empty": "Geen catalogusvermeldingen passen bij de filters.",
-      "info": { "title": "Hemelcatalogus", "description": "Bekijk zonnestelsellichamen en ruimtesondes en kies wat u wilt volgen." },
-      "confirm": { "title": "Stoppen met volgen bevestigen", "question": "Stoppen met het volgen van {{target}}?", "this_target": "dit doel", "description": "Het doel verdwijnt uit de zonnestelselweergave en kan later opnieuw worden gevolgd." }
+      "info": {
+        "title": "Hemelcatalogus",
+        "description": "Bekijk zonnestelsellichamen en ruimtesondes en kies wat u wilt volgen."
+      },
+      "confirm": {
+        "title": "Stoppen met volgen bevestigen",
+        "question": "Stoppen met het volgen van {{target}}?",
+        "this_target": "dit doel",
+        "description": "Het doel verdwijnt uit de zonnestelselweergave en kan later opnieuw worden gevolgd."
+      },
+      "bodies": {
+        "earth": "Aarde",
+        "sun": "Zon",
+        "moon": "Maan",
+        "mercury": "Mercurius",
+        "venus": "Venus",
+        "mars": "Mars",
+        "ceres": "Ceres",
+        "jupiter": "Jupiter",
+        "io": "Io",
+        "europa": "Europa",
+        "ganymede": "Ganymedes",
+        "callisto": "Callisto",
+        "saturn": "Saturnus",
+        "enceladus": "Enceladus",
+        "rhea": "Rhea",
+        "titan": "Titan",
+        "iapetus": "Iapetus",
+        "uranus": "Uranus",
+        "miranda": "Miranda",
+        "ariel": "Ariel",
+        "umbriel": "Umbriel",
+        "titania": "Titania",
+        "oberon": "Oberon",
+        "neptune": "Neptunus",
+        "triton": "Triton",
+        "nereid": "Nereïde",
+        "proteus": "Proteus",
+        "pluto": "Pluto",
+        "charon": "Charon",
+        "haumea": "Haumea",
+        "makemake": "Makemake",
+        "eris": "Eris"
+      },
+      "parent_sun": "Zon",
+      "status": {
+        "active": "Actief",
+        "completed": "Voltooid",
+        "custom": "Aangepast",
+        "failed": "Mislukt",
+        "unknown": "Onbekend",
+        "available": "Beschikbaar"
+      },
+      "types": {
+        "spacecraft": "Ruimtesondes",
+        "moon": "Maan",
+        "star": "Ster",
+        "planet": "Planeet",
+        "dwarf-planet": "Dwergplaneet",
+        "body": "Zonnelichaam"
+      },
+      "unknown_agency": "Onbekende organisatie",
+      "feedback": {
+        "first_refresh_failed": "{{name}} wordt bewaakt, maar de eerste gegevensverversing mislukte: {{error}}",
+        "monitor_failed": "{{name}} kon niet worden bewaakt: {{error}}",
+        "monitored": "{{name}} wordt nu bewaakt en de gegevens zijn ververst.",
+        "unmonitored": "{{name}} wordt niet meer bewaakt."
+      },
+      "summary": "{{entries}} items getoond · {{monitored}} bewaakt"
     },
     "targets": {
-      "columns": { "target": "Gevolgd", "type": "Type", "enabled": "Ingeschakeld", "last_refresh": "Laatste vernieuwing", "status": "Status" },
-      "status": { "refreshing": "Vernieuwen", "refreshed": "Vernieuwd", "refresh_failed": "Vernieuwen mislukt", "ready": "Gereed", "not_fetched": "Niet opgehaald" },
-      "actions": { "refresh": "Vernieuwen", "edit": "Bewerken", "edit_properties": "Eigenschappen bewerken", "delete": "Verwijderen", "refresh_selected": "Selectie vernieuwen", "enable": "Inschakelen", "disable": "Uitschakelen" },
+      "columns": {
+        "target": "Gevolgd",
+        "type": "Type",
+        "enabled": "Ingeschakeld",
+        "last_refresh": "Laatste vernieuwing",
+        "status": "Status"
+      },
+      "status": {
+        "refreshing": "Vernieuwen",
+        "refreshed": "Vernieuwd",
+        "refresh_failed": "Vernieuwen mislukt",
+        "ready": "Gereed",
+        "not_fetched": "Niet opgehaald"
+      },
+      "actions": {
+        "refresh": "Vernieuwen",
+        "edit": "Bewerken",
+        "edit_properties": "Eigenschappen bewerken",
+        "delete": "Verwijderen",
+        "refresh_selected": "Selectie vernieuwen",
+        "enable": "Inschakelen",
+        "disable": "Uitschakelen",
+        "vector_details": "Vectordetails"
+      },
       "search": "Gevolgde items zoeken",
       "empty": "Geen gevolgde items gevonden.",
       "selected_count_one": "{{count}} geselecteerd",
       "selected_count_other": "{{count}} geselecteerd",
-      "info": { "title": "Gevolgde hemelobjecten", "description": "Beheer de lichamen en ruimtesondes in de zonnestelselweergave." },
-      "edit": { "title": "Gevolgd hemelobject bewerken", "display_name": "Weergavenaam", "body_id": "Lichaam-ID", "horizons_command": "Horizons-opdracht", "color": "Kleur", "pick_color": "Kleur van hemelobject kiezen" },
-      "delete": { "title": "Verwijderen van gevolgd item bevestigen", "remove_count_one": "Dit hemelobject wordt uit de volglijst verwijderd.", "remove_count_other": "{{count}} hemelobjecten worden uit de volglijst verwijderd.", "description": "Verwijderde hemelobjecten verschijnen niet meer in de zonnestelselweergave." }
+      "info": {
+        "title": "Gevolgde hemelobjecten",
+        "description": "Beheer de lichamen en ruimtesondes in de zonnestelselweergave."
+      },
+      "edit": {
+        "title": "Gevolgd hemelobject bewerken",
+        "display_name": "Weergavenaam",
+        "body_id": "Lichaam-ID",
+        "horizons_command": "Horizons-opdracht",
+        "color": "Kleur",
+        "pick_color": "Kleur van hemelobject kiezen"
+      },
+      "delete": {
+        "title": "Verwijderen van gevolgd item bevestigen",
+        "remove_count_one": "Dit hemelobject wordt uit de volglijst verwijderd.",
+        "remove_count_other": "{{count}} hemelobjecten worden uit de volglijst verwijderd.",
+        "description": "Verwijderde hemelobjecten verschijnen niet meer in de zonnestelselweergave."
+      },
+      "vectors": {
+        "close": "Dichtbij",
+        "now": "Nu",
+        "retry": "Opnieuw proberen",
+        "latest": "Nieuwste",
+        "title": "Vectorgegevens · {{name}}",
+        "target_type": "Soort hemellichaam",
+        "identifier": "Horizons-identificatie",
+        "server_time": "Huidige servertijd",
+        "load_failed": "Vectorgeschiedenis kon niet worden geladen.",
+        "empty": "Er zijn nog geen vastgelegde Horizons-vectoren voor dit bewaakte hemellichaam.",
+        "available": "Vectorgegevens beschikbaar",
+        "cache": "Databankcache",
+        "fresh": "Vers",
+        "expired": "Verlopen",
+        "current_time_covered": "Huidige tijd afgedekt",
+        "requested_window_covered": "Aangevraagd venster afgedekt",
+        "timeline": "Tijdlijn van dekking en geldigheid",
+        "timeline_aria": "Tijdlijn van monsterdekking van vectoren, aangevraagde vensters, synchronisatie, cache-verloop en huidige tijd",
+        "snapshot_number": "Snapshot {{number}}",
+        "samples": "monsters",
+        "synced": "Gesynchroniseerd",
+        "history": "Vastgelegde snapshots ({{count}})",
+        "latest_snapshot": "Laatste snapshot",
+        "coverage": "Monsterdekking",
+        "required_window": "Nu vereist venster",
+        "provider_envelope": "Providerkader",
+        "cache_expiry": "Cache-verloop",
+        "delete_snapshot": "Snapshot verwijderen",
+        "clear_expired": "Verlopen opschonen",
+        "clear_all": "Alle snapshots verwijderen",
+        "delete_failed": "De geselecteerde vector-snapshots konden niet worden verwijderd.",
+        "confirm_delete_title": "Snapshot verwijderen?",
+        "confirm_delete_message": "Verwijder de om {{time}} gesynchroniseerde snapshot? Het verwijderen van de laatste bruikbare snapshot kan dit bewaakte hemellichaam onbruikbaar maken.",
+        "confirm_clear_expired_title": "Verlopen snapshots opschonen?",
+        "confirm_clear_expired_message": "Verwijder de verlopen snapshotrecords ({{count}}) voor {{name}}? Verse snapshots blijven behouden.",
+        "confirm_clear_all_title": "Alle snapshots verwijderen?",
+        "confirm_clear_all_message": "Verwijder alle snapshots ({{count}}) voor {{name}}? Dit bewaakte hemellichaam kan onbruikbaar worden totdat de synchronisatie lukt.",
+        "diagnosis": {
+          "current_missing": "De laatste snapshot dekt de huidige servertijd niet. Huidige waarnemerberekeningen kunnen hem niet gebruiken.",
+          "window_short": "De huidige tijd is afgedekt, maar de monsters spannen het nu vereiste venster niet volledig.",
+          "cache_expired": "Het monsterwindow is voldoende, maar de databankcache is verlopen en wacht op een geslaagde verversing.",
+          "target_ready": "De bewaakte snapshot is vers en dekt het nu vereiste venster volledig."
+        },
+        "legend": {
+          "samples": "Horizons-monsterdekking",
+          "requested": "Vereist projectievenster",
+          "fresh_cache": "Levensduur verse cache",
+          "expired_cache": "Levensduur verlopen cache",
+          "synchronized": "Synchronisatietijd",
+          "current_time": "Huidige servertijd",
+          "expiry": "Cache-verloop"
+        }
+      },
+      "feedback": {
+        "updated": "Bewaakt hemellichaam bijgewerkt."
+      },
+      "errors": {
+        "name_identifier_required": "Naam en hemellichaam-identificatie zijn verplicht."
+      }
+    }
+  },
+  "horizons": {
+    "unavailable_title": "NASA JPL Horizons niet beschikbaar",
+    "service_message": "Automatische Horizons-verzoeken zijn gepauzeerd tot de volgende poging.",
+    "offline_message_one": "Toont een benaderde offlinepositie voor één lichaam. Overgangen en hemellichaam-tracking vereisen Horizons-gegevens.",
+    "offline_message_other": "Toont benaderde offlineposities voor {{count}} lichamen. Overgangen en hemellichaam-tracking vereisen Horizons-gegevens.",
+    "cached_message_one": "Toont verouderde cachegegevens voor één lichaam.",
+    "cached_message_other": "Toont verouderde cachegegevens voor {{count}} lichamen.",
+    "missing_message_one": "Geen bruikbare gegevens beschikbaar voor één lichaam.",
+    "missing_message_other": "Geen bruikbare gegevens beschikbaar voor {{count}} lichamen.",
+    "retry_now": "Nu opnieuw proberen",
+    "details": "Details",
+    "reason": "Reden",
+    "last_success": "Laatste geslaagde update",
+    "next_retry": "Volgende automatische poging",
+    "affected": "Getroffen lichamen",
+    "unknown_time": "onbekend",
+    "reasons": {
+      "unavailable": "dienst niet beschikbaar",
+      "connect_timeout": "verbinding liep op tijd uit",
+      "read_timeout": "reactie liep op tijd uit",
+      "dns_failure": "DNS-zoeken mislukt",
+      "connection_failure": "verbinding mislukt",
+      "tls_failure": "beveiligde verbinding mislukt",
+      "rate_limited": "verkeersbegrenzing van de dienst bereikt",
+      "server_error": "dienstfout",
+      "invalid_response": "ongeldige dienstrespons"
     }
   }
 }

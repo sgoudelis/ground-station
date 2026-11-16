@@ -6,6 +6,7 @@ import { configureStore } from '@reduxjs/toolkit';
 import { I18nextProvider } from 'react-i18next';
 import { createInstance } from 'i18next';
 import settings from '../../../i18n/locales/en/settings.json';
+import common from '../../../i18n/locales/en/common.json';
 import locationReducer from '../location-slice.jsx';
 import LocationPage from '../location-form.jsx';
 
@@ -25,7 +26,7 @@ vi.mock('react-map-gl/maplibre', () => ({
 }));
 
 const i18n = createInstance();
-await i18n.init({ lng: 'en', resources: { en: { settings } }, interpolation: { escapeValue: false } });
+await i18n.init({ lng: 'en', resources: { en: { settings, common } }, interpolation: { escapeValue: false } });
 
 const renderWizard = () => {
     const store = configureStore({
@@ -52,6 +53,7 @@ const renderWizard = () => {
 };
 
 const advanceToIdentity = () => {
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }));
     fireEvent.change(screen.getByLabelText(/^username/i), { target: { value: 'admin' } });
     fireEvent.change(screen.getByLabelText(/^password/i), { target: { value: 'password123' } });
     fireEvent.change(screen.getByLabelText(/confirm password/i), { target: { value: 'password123' } });
@@ -134,7 +136,10 @@ describe('wizard timezone', () => {
         expect(census).not.toBeChecked();
         expect(screen.queryByText('Installation environment')).not.toBeInTheDocument();
         expect(screen.queryByRole('switch', { name: /share performance metrics/i })).not.toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', { name: 'What is shared?' }));
         expect(screen.getByText(/pseudonymous, not fully anonymous/i)).toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', { name: 'Close', exact: true }));
+        await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
         fireEvent.click(census);
         expect(socket.emitWithAck.mock.calls.some(([, request]) => request.cmd === 'feedback.update')).toBe(false);
         fireEvent.click(screen.getByRole('button', { name: 'Next' }));

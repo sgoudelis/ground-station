@@ -35,6 +35,7 @@ import SearchIcon from '@mui/icons-material/Search';
 import WarningIcon from '@mui/icons-material/Warning';
 import { useSelector, useDispatch } from 'react-redux';
 import { useTranslation } from 'react-i18next';
+import { tabCapsLabel } from '../../../utils/greekcaps.js';
 
 const ReduxStateInspectorCard = () => {
     const { t } = useTranslation('settings');
@@ -287,8 +288,8 @@ const ReduxStateInspectorCard = () => {
             <Divider sx={{ mb: 2 }} />
 
             <Tabs value={activeTab} onChange={(e, newValue) => setActiveTab(newValue)} sx={{ mb: 2 }}>
-                <Tab label={t('redux_state_inspector_card.inspector', { defaultValue: 'Inspector' })} />
-                <Tab label={t('redux_state_inspector_card.raw_json', { defaultValue: 'Raw JSON' })} />
+                <Tab label={tabCapsLabel(t('redux_state_inspector_card.inspector', { defaultValue: 'Inspector' }))} />
+                <Tab label={tabCapsLabel(t('redux_state_inspector_card.raw_json', { defaultValue: 'Raw JSON' }))} />
             </Tabs>
 
                 {/* Tab 0: Inspector with View and Edit side by side */}

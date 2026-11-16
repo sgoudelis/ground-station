@@ -99,7 +99,9 @@
     "warning": "此操作无法撤消！",
     "confirm": "您确定要删除",
     "cancel": "取消",
-    "delete": "删除"
+    "delete": "删除",
+    "title_decoded_folder": "删除解码文件夹",
+    "title_transcription": "删除转录"
   },
   "batch_delete_dialog": {
     "title": "批量删除",
@@ -122,7 +124,8 @@
     "audio_deleted": "音频录制 \"{{name}}\" 已成功删除",
     "delete_failed": "删除失败：{{error}}",
     "batch_delete_partial": "部分项目无法删除",
-    "batch_delete_failed": "删除项目失败：{{error}}"
+    "batch_delete_failed": "删除项目失败：{{error}}",
+    "details_failed": "加载文件详情失败：{{error}}"
   },
   "audio_dialog": {
     "audio_properties": "音频属性",
@@ -211,7 +214,14 @@
     "generate_waterfall_image": "生成瀑布图",
     "recording": "录制：",
     "storage": "存储：已用",
-    "used_of": "/"
+    "used_of": "/",
+    "satellite": "卫星",
+    "transmitter": "发射机",
+    "audio_sample_rate": "音频采样率",
+    "nominal_downlink": "标称下行链路",
+    "generating_waterfall": "正在生成瀑布图",
+    "tuned_frequency": "已调谐频率",
+    "norad_id": "NORAD 编号"
   },
   "meteor_hrpt_folder_dialog": {
     "close": "关闭",
@@ -299,7 +309,13 @@
       "error_hint": "此数据包无法解析。是否包含遥测数据未知。",
       "unknown": "未知",
       "unknown_hint": "无法确定此文件是否包含遥测数据。"
-    }
+    },
+    "decoded_products": "解码产物",
+    "generate_waterfall_image": "生成瀑布图",
+    "processing": "处理中",
+    "recording_actions": "录音操作",
+    "product_summary": "{{count}} 张图像 · {{size}}",
+    "processing_failed": "后处理失败或已中断。保留的文件见下方。"
   },
   "processing_dialog": {
     "background_task": "后台任务",
@@ -421,7 +437,8 @@
     "dec": "十进制：",
     "hex_0x": "十六进制：0x",
     "offset_0x": "偏移：0x",
-    "tip_hover_over_bytes_to_see_detailed_information_click_t": "💡 提示：将鼠标悬停在字节上可查看详细信息，点击可选中。ASCII 列显示可打印字符（不可打印字符显示为 ·）。"
+    "tip_hover_over_bytes_to_see_detailed_information_click_t": "💡 提示：将鼠标悬停在字节上可查看详细信息，点击可选中。ASCII 列显示可打印字符（不可打印字符显示为 ·）。",
+    "ascii_field": "ASCII："
   },
   "telemetry_integers_tab": {
     "as_uint16_little_endian": "按 Uint16（小端）显示",
@@ -485,7 +502,14 @@
     "geoscan_frames_include_ti_cc11xx_crc_and_pn9_scrambling_": "ℹ️ GEOSCAN 帧包含 TI CC11xx CRC 和 PN9 加扰。配置的帧大小通常包含一个 2 字节 CC11xx CRC，校验后会被移除。",
     "packets_include_phy_layer_crc_validation_and_forward_err": "数据包包含 PHY 层 CRC 校验和前向纠错（FEC）。无效数据包会被",
     "spreading_factor_sf": "扩频因子：SF",
-    "lora_frame_information": "LoRa 帧信息"
+    "lora_frame_information": "LoRa 帧信息",
+    "unknown": "未知",
+    "unknown_protocol": "未知协议",
+    "header_information": "头部信息",
+    "envelope_status": "分组结构",
+    "payload_status": "分组内容",
+    "crc_valid": "有效",
+    "crc_unchecked": "未勾选或不可用"
   },
   "telemetry_strings_tab": {
     "actions": "操作",
@@ -541,7 +565,13 @@
       "other": "其他遥测"
     },
     "message_header": "消息 {{id}} · 设备 {{source}} → {{destination}} · {{length}} 字节",
-    "legacy_metadata": "连接后端以处理此已保存的遥测数据。原始字节仍可在 Hex + ASCII 视图中查看。"
+    "legacy_metadata": "连接后端以处理此已保存的遥测数据。原始字节仍可在 Hex + ASCII 视图中查看。",
+    "no": "否",
+    "unavailable": "不可用",
+    "yes": "是",
+    "non_telemetry_message": "该消息不含卫星遥测数据。其字节可在 Hex + ASCII 中查看。",
+    "unsupported_message": "该消息类型尚未解码。其字节可在 Hex + ASCII 中查看。",
+    "meshtastic_position": "Meshtastic 位置"
   },
   "telemetry_viewer_dialog": {
     "analysis": "分析",
@@ -578,14 +608,23 @@
     "translated_to": "翻译为",
     "vfo": "VFO",
     "failed_to_load_transcription": "加载转写失败：",
-    "transcription_details": "转写详情"
+    "transcription_details": "转写详情",
+    "translation_service": "翻译服务"
   },
   "waterfall_viewer": {
     "download_snapshot": "下载快照",
     "reset_view": "重置视图",
     "scroll_or_pinch_to_zoom_x_axis_drag_to_pan": "滚动或双指缩放可缩放 X 轴，拖动可平移",
     "zoom_in_x": "放大 X 轴",
-    "zoom_out_x": "缩小 X 轴"
+    "zoom_out_x": "缩小 X 轴",
+    "transmitter_details": "发射机详情",
+    "unnamed_transmitter": "发射机",
+    "transmitters": "发射机",
+    "close_transmitter_details": "关闭发射机详情",
+    "estimated_search_area": "估计搜索区域",
+    "doppler_allowance": "多普勒容限",
+    "leo_estimate": "低轨估计",
+    "signal_width_allowance": "信号宽度容限"
   },
   "purge_dialog": {
     "item_type": "项目类型",
@@ -621,7 +660,8 @@
       "audio": "音频",
       "transcription": "转录文本"
     },
-    "retry": "重试"
+    "retry": "重试",
+    "progress": "删除进度"
   },
   "bundle_types": {
     "adsb": "飞机 · ADS-B",
@@ -875,5 +915,9 @@
     "count_other": "{{count, number}} 个记录位置",
     "sampled": "为性能考虑仅显示 {{count, number}} 个位置",
     "gaps": "接收间隔超过 15 分钟时路径线会断开。标记点显示首个和最新记录位置。"
+  },
+  "view_mode": {
+    "card": "卡片视图",
+    "table": "表格视图"
   }
 }

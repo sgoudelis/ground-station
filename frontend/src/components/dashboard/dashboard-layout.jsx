@@ -59,6 +59,7 @@ import {
 } from "@mui/material";
 import {Account, AccountPopoverFooter, AccountPreview, SignOutButton} from "@toolpad/core";
 import {GroundStationLogoMeridianTiny} from "../common/logo-dataurl.js";
+import {APP_NAME} from "../../config/branding.jsx";
 import {stringAvatar} from "../common/string-avatar.js";
 import Grid from "@mui/material/Grid";
 import BorderColorIcon from '@mui/icons-material/BorderColor';
@@ -611,16 +612,17 @@ SidebarFooter.propTypes = {
     mini: PropTypes.bool.isRequired,
 };
 
+// No useTranslation here on purpose: the app title is the brand name, not UI copy.
 function CustomAppTitle() {
-    const { t } = useTranslation('dashboard');
     return (
         <Grid container direction="row">
             <Grid row={1} column={1} sx={{display: 'flex', alignItems: 'center'}}>
                 <Stack direction="row" alignItems="center" spacing={2}>
                     <Box display={{xs: "none", sm: "block"}}>
                         <Box display="flex" alignItems="center" gap={1}>
-                            <img src={GroundStationLogoMeridianTiny} alt={t('dashboard_layout.ground_station', { defaultValue: 'Ground Station' })} width="30" height="30" />
-                            <Typography variant="h6">{t('dashboard_layout.ground_station', { defaultValue: 'Ground Station' })}</Typography>
+                            {/* Brand name is never translated; see APP_NAME in config/branding.jsx. */}
+                            <img src={GroundStationLogoMeridianTiny} alt={APP_NAME} width="30" height="30" />
+                            <Typography variant="h6">{APP_NAME}</Typography>
                             {/* Hide version indicator on phones and small tablets; show from ~768px and up */}
                             <Box sx={{
                                 display: 'none',
@@ -796,9 +798,19 @@ function SidebarFooterAccountPopover() {
 }
 
 function SidebarFooterAccount({ mini }) {
+    const { t } = useTranslation('dashboard');
     const PreviewComponent = React.useMemo(() => createPreviewComponent(mini), [mini]);
+    // Toolpad owns these four strings and ships them in English, so feed them from i18n.
+    // The popover body itself ("Accounts", project list) is translated in SidebarFooterAccountPopover.
+    const localeText = React.useMemo(() => ({
+        accountPreviewIconButtonLabel: t('dashboard_layout.account_menu_label', { defaultValue: 'Current user' }),
+        accountPreviewTitle: t('dashboard_layout.account_title', { defaultValue: 'Account' }),
+        accountSignInLabel: t('dashboard_layout.account_sign_in', { defaultValue: 'Sign In' }),
+        accountSignOutLabel: t('dashboard_layout.account_sign_out', { defaultValue: 'Logout' }),
+    }), [t]);
     return (
         <Account
+            localeText={localeText}
             slots={{
                 preview: PreviewComponent,
                 popoverContent: SidebarFooterAccountPopover,
@@ -1543,7 +1555,7 @@ export default function Layout() {
                     </ListItemIcon>
                     <ListItemText
                         sx={{ my: 0 }}
-                        primary="Preferences"
+                        primary={t('user_menu.preferences', { defaultValue: 'Preferences' })}
                         primaryTypographyProps={{ variant: 'body2', fontWeight: 500, lineHeight: 1.2 }}
                     />
                 </MenuItem>
@@ -1556,7 +1568,7 @@ export default function Layout() {
                     </ListItemIcon>
                     <ListItemText
                         sx={{ my: 0 }}
-                        primary={t('api_tokens.menu', { defaultValue: 'API Tokens' })}
+                        primary={t('dashboard:api_tokens.menu', { defaultValue: 'API Tokens' })}
                         primaryTypographyProps={{ variant: 'body2', fontWeight: 500, lineHeight: 1.2 }}
                     />
                 </MenuItem>
@@ -1569,7 +1581,7 @@ export default function Layout() {
                     </ListItemIcon>
                     <ListItemText
                         sx={{ my: 0 }}
-                        primary="Logout"
+                        primary={t('auth.logout', { defaultValue: 'Logout' })}
                         primaryTypographyProps={{ variant: 'body2', fontWeight: 500, lineHeight: 1.2 }}
                     />
                 </MenuItem>

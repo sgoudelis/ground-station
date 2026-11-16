@@ -18,6 +18,7 @@
     "about": "关于",
     "catalog": "目录",
     "general": "通用",
+    "users": "用户",
     "configuration_tabs": "配置选项卡",
     "main_settings_tabs": "主设置选项卡",
     "celestial": "天体数据",
@@ -26,7 +27,9 @@
     "celestial_targets": "监控天体",
     "api_tokens": "API 令牌",
     "user_settings": "用户设置",
-    "feedback": "反馈"
+    "feedback": "反馈",
+    "orbital_data": "轨道数据",
+    "sources": "数据源"
   },
   "preferences": {
     "title": "用户偏好设置",
@@ -257,6 +260,8 @@
     "station_type_stationary": "固定式",
     "wizard_admin_help": "创建第一个管理员账户凭据。账户将在设置流程结束时创建。",
     "wizard_admin_notice": "该账户将成为此 Ground Station 实例的初始管理员。",
+    "wizard_language_title": "选择界面语言",
+    "wizard_language_help": "立即更改界面语言，并在设置完成时保存到您的管理员账户中。",
     "wizard_admin_title": "创建管理员账户",
     "wizard_map_click_hint": "点击地图设置你的地面站位置。",
     "wizard_review_help": "核对站点身份与坐标，然后保存并继续。",
@@ -265,7 +270,8 @@
     "wizard_step_coordinates": "位置",
     "wizard_step_finalize": "完成设置",
     "wizard_step_identity": "站点身份",
-    "wizard_step_review": "核对"
+    "wizard_step_review": "核对",
+    "map_recenter_aria": "重新居中地图"
   },
   "maintenance": {
     "title": "维护",
@@ -298,7 +304,8 @@
       "message_log_subtitle": "实时事件流和控制台输出",
       "risk_danger": "危险",
       "updates": "更新",
-      "updates_subtitle": "GitHub 发布状态与 Docker 更新说明"
+      "updates_subtitle": "GitHub 发布状态与 Docker 更新说明",
+      "system": "系统"
     },
     "danger_zone_title": "危险区域",
     "danger_zone_subtitle": "此区域中的操作可能会修改或移除系统状态。请谨慎操作。",
@@ -490,7 +497,10 @@
     "uhd_usrp_radios_via_a_uhd_worker": "通过 UHD 工作进程接入 UHD/USRP 电台",
     "ui_component_framework_for_react": "用于 React 的 UI 组件框架。",
     "ui_library_for_component_based_interfaces": "用于组件化界面的 UI 库。",
-    "vendor_neutral_sdr_support_library": "厂商中立的 SDR 支持库。"
+    "vendor_neutral_sdr_support_library": "厂商中立的 SDR 支持库。",
+    "rs_radiosonde_decoder": "RS41、DFM 和 M10/M20 的探空仪检测与遥测解码。",
+    "aircraft_icons_title": "航空器地图图标",
+    "aircraft_icons_credits": "完整致谢与许可证"
   },
   "map_controls": {
     "zoom_in": "放大",
@@ -594,7 +604,9 @@
     "resets_the_widget_layout_on_the_earth_view_page": "重置地球视图页面上的部件布局",
     "resets_the_widget_layout_on_the_target_page": "重置目标页面上的部件布局",
     "resets_the_widget_layout_on_the_waterfall_page": "重置瀑布图页面上的部件布局",
-    "resets_the_widget_layout_on_the_celestial_page": "重置天体页面上的部件布局"
+    "resets_the_widget_layout_on_the_celestial_page": "重置天体页面上的部件布局",
+    "packet_map": "重置地图页面的部件布局",
+    "clear_all_grid_layouts_confirm": "清除所有网格布局？"
   },
   "library_versions_card": {
     "backend": "后端",
@@ -660,7 +672,19 @@
     "user_preferences_timezone_theme": "用户偏好设置（时区、主题）",
     "vfo_settings_markers_frequencies_modes_active_states": "VFO 设置（标记、频率、模式、活跃状态）",
     "waterfall_settings_frequency_gain_sample_rate_colormap_f": "瀑布图设置（频率、增益、采样率、色图、FFT）",
-    "weather_settings": "天气设置"
+    "weather_settings": "天气设置",
+    "clear_map_settings": "清除地图设置",
+    "clear_map": "清除地图",
+    "resets_map_redux_settings": "重置时间范围和发射机列表筛选、排序以及页面大小",
+    "clear_map_settings_confirmation": "清除地图设置？",
+    "clear_map_settings_description": "将重置地图页面的时间范围和发射机列表筛选、排序以及页面大小。",
+    "clear_tracking_settings": "清除实时跟踪设置",
+    "resets_tracking_redux_settings": "重置过境表排序、所选跟踪器、目标锁定以及自动星象视图切换",
+    "clear_tracking_settings_confirmation": "清除实时跟踪设置？",
+    "clear_tracking_settings_description": "将重置实时跟踪页面的过境表排序、所选跟踪器、目标锁定以及自动星象视图切换。",
+    "clear_tracking": "清除实时跟踪",
+    "map_settings": "地图设置（时间范围与发射机列表偏好）",
+    "tracking_settings": "实时跟踪设置（过境表排序、所选跟踪器、目标锁定、星象视图切换）"
   },
   "redux_state_inspector_card": {
     "apply_change": "应用更改",
@@ -729,7 +753,8 @@
     "transcription": "转写",
     "translate_to": "翻译为",
     "update_mode": "更新模式",
-    "volume": "音量"
+    "volume": "音量",
+    "translation_service": "翻译服务"
   },
   "setup": {
     "confirm_password": "确认密码",
@@ -825,6 +850,8 @@
   },
   "feedback": {
     "title": "帮助改进 Ground Station",
+    "wizard_summary": "分享一份简短的安装情况报告，帮助改进 Ground Station。分享完全自愿，默认关闭，之后可随时在“设置 > 反馈”中更改。",
+    "wizard_details": "会分享哪些数据？",
     "introduction": "愿意帮助我们了解 Ground Station 运行在哪些系统上吗？分享一份简短的安装概况报告，能帮助我们选择需要支持和测试的硬件及操作系统。感谢你的考虑。",
     "optional": "此功能完全自愿，默认关闭。拒绝分享不会影响 Ground Station 的任何功能。此选择适用于当前安装，管理员可以随时在“设置 > 反馈”中更改。在你保存选择或完成初始设置之前，不会发送任何报告。",
     "choices": "你的选择",

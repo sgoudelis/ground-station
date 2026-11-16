@@ -507,7 +507,8 @@
       "playback_position": "回放位置",
       "latest_details": "最新接收详情",
       "latest_telemetry": "最新遥测",
-      "additional_details": "其他遥测与接收机数据"
+      "additional_details": "其他遥测与接收机数据",
+      "use_kmh": "使用 km/h 和米"
     },
     "close": "关闭",
     "fit_all": "显示全部",
@@ -520,6 +521,17 @@
     "packet_count_other": "{{count}} 个位置",
     "transmitter_count_one": "{{count}} 个发射机",
     "transmitter_count_other": "{{count}} 个发射机",
-    "no_home": "请在地面站设置中设置你的本地位置。"
+    "no_home": "请在地面站设置中设置你的本地位置。",
+    "filters": "筛选",
+    "columns": "列",
+    "live_recent_description": "跟踪最近 30 分钟的分组",
+    "radio_horizon": "无线电地平线（0°）",
+    "five_degree_horizon": "5° 仰角",
+    "visibility_radius": "{{radius}} 千米"
+  },
+  "map_settings": {
+    "apply": "应用",
+    "reset_defaults": "恢复默认",
+    "section_base_map": "底图"
   }
 }

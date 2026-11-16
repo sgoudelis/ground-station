@@ -139,6 +139,7 @@ def _normalize_finalize_payload(payload: Any) -> Dict[str, Any]:
     return {
         "feedback": feedback,
         "location": location,
+        "language": str(payload.get("language") or "").strip() or None,
         # Older clients omit the selection and keep coordinate-based detection.
         "timezone": (
             validate_timezone(payload["timezone"])
@@ -239,10 +240,15 @@ async def _run_finalize_job(
 
         _set_step("admin", CALL_STATUS_PENDING, "Creating admin user...")
         await _emit_setup_status(sio, sid)
+        initial_preferences = {"timezone": payload["timezone"]}
+        # Older clients omit language, preserving any legacy bootstrap value.
+        # Explicit selections are stored in the account-creation transaction.
+        if payload.get("language"):
+            initial_preferences["language"] = payload["language"]
         admin_reply = await authsvc.bootstrap_admin(
             username=payload["admin"]["username"],
             password=payload["admin"]["password"],
-            initial_preferences={"timezone": payload["timezone"]},
+            initial_preferences=initial_preferences,
         )
         if not admin_reply.get("success"):
             error_message = str(

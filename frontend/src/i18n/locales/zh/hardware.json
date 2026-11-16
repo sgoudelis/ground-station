@@ -115,12 +115,15 @@
       "tracking_lead_range": "跟踪提前量必须在 0 到 10 秒之间"
     },
     "saved_success": "旋转器保存成功",
+    "error_saving": "保存旋转器失败",
     "deleted_success": "旋转器删除成功",
     "no_rotators": "未配置天线旋转器。点击'添加'以配置一个旋转器。",
     "azimuth_mode_0_450": "0° 至 450°",
     "azimuth_mode_help_0_450": "发送最大 450° 的绝对方位角指令，并跟踪重叠圈数状态。需要控制器/rotctld 支持扩展方位角。",
     "tracking_lead": "卫星跟踪提前量",
-    "tracking_lead_helper": "提前指向以补偿旋转器延迟。设为 0 可禁用；允许范围为 0–10 秒。"
+    "tracking_lead_helper": "提前指向以补偿旋转器延迟。设为 0 可禁用；允许范围为 0–10 秒。",
+    "stop_supported": "控制器支持 Stop",
+    "stop_unsupported_help": "请对忽略 Stop 的控制器使用此选项。暂停跟踪会阻止新命令，但正在进行的天线动作可能会继续。"
   },
   "camera": {
     "title": "摄像头集成设置",
@@ -255,6 +258,21 @@
     "probe_complete": "已成功读取 SDR 能力。",
     "probe_cached": "SDR 正在收流。显示的是缓存的设备能力。",
     "probe_summary": "{{rates}} 种采样率 · {{gains}} 个增益档位 · RX: {{rx}} · TX: {{tx}}",
-    "soapy_discovery_subtitle": "发现服务器和设备，然后探测所选 SDR 的能力。"
+    "soapy_discovery_subtitle": "发现服务器和设备，然后探测所选 SDR 的能力。",
+    "antenna_labels_title": "天线端口标签",
+    "antenna_labels_subtitle": "内部端口名称从硬件探测得到。标签是你自己的备忘。",
+    "antenna_label": "标签",
+    "discovery_failed": "启动 SoapySDR 发现失败",
+    "select_sdr_type": "选择 SDR 类型",
+    "probing_uhd": "正在探测本地 UHD/USRP 设备...",
+    "select_uhd_device": "UHD/USRP 设备",
+    "refresh_uhd_devices": "刷新 UHD/USRP 设备",
+    "no_uhd_devices": "未检测到本地 UHD/USRP 设备。请连接设备后刷新。",
+    "no_antenna_ports_found": "所选设备未返回任何天线端口。",
+    "rx_antenna_ports": "接收天线端口",
+    "tx_antenna_ports": "发射天线端口"
+  },
+  "common": {
+    "type_delete_to_confirm": "输入 DELETE 以确认"
   }
 }

@@ -33,7 +33,20 @@
     "status_reentered": "Re-entered",
     "invalid_date": "Invalid date",
     "na": "N/A",
-    "no_group_selected": "Please select a satellite group to view satellites"
+    "no_group_selected": "Please select a satellite group to view satellites",
+    "visibility": "Visibility",
+    "visible": "Visible",
+    "below_horizon": "Below Horizon",
+    "all_satellites_alt_1": "All satellites (Alt+1)",
+    "all_satellites": "All satellites",
+    "visible_satellites_alt_2": "Visible satellites (Alt+2)",
+    "visible_satellites": "Visible satellites",
+    "rising_satellites_alt_3": "Rising satellites (Alt+3)",
+    "rising_satellites": "Rising satellites",
+    "satellites_with_active_transmitters_alt_4": "Satellites with active transmitters (Alt+4)",
+    "satellites_with_active_transmitters": "Satellites with active transmitters",
+    "decayed_satellites_alt_5": "Decayed satellites (Alt+5)",
+    "decayed_satellites": "Decayed satellites"
   },
   "satellites_table_settings": {
     "title": "Satellites Table Settings",
@@ -117,7 +130,8 @@
     },
     "no_value": "no value",
     "no_data": "No data",
-    "no_passes": "No passes detected for the next {{hours}} hours"
+    "no_passes": "No passes detected for the next {{hours}} hours",
+    "tracked_tooltip": "Current target satellite"
   },
   "passes_table_settings": {
     "title": "Passes Table Settings",
@@ -139,7 +153,8 @@
     "user_groups": "User defined satellite groups",
     "tle_groups": "Orbital source satellite groups",
     "failed_load_groups": "Failed to load satellite groups",
-    "none_defined": "None defined"
+    "none_defined": "None defined",
+    "grouping": "Grouping"
   },
   "satellite_info": {
     "title": "Satellite Information",
@@ -177,7 +192,10 @@
   },
   "map_settings": {
     "title": "Map Settings",
-    "close": "Close"
+    "close": "Close",
+    "section_base_map": "Base Map",
+    "reset_defaults": "Reset Defaults",
+    "apply": "Apply"
   },
   "map_target": {
     "already_tracking": "Already tracking this satellite",
@@ -213,5 +231,42 @@
   "weather_errors": {
     "fetch_failed": "Weather data could not be fetched",
     "failed_to_fetch": "Failed to fetch weather data"
+  },
+  "earthview_map_maplibre": {
+    "home": "Home",
+    "sun": "Sun",
+    "moon": "Moon"
+  },
+  "satellite_group_selector_bar": {
+    "select_group": "[select group]",
+    "rising": "Rising:",
+    "peak": "Peak:",
+    "falling": "Falling:"
+  },
+  "satellite_passes": {
+    "all_passes_alt_1": "All passes (Alt+1)",
+    "all_passes": "All passes",
+    "live_passes_alt_2": "Live passes (Alt+2)",
+    "live_passes": "Live passes",
+    "live_or_next_30_minutes_alt_3": "Live or next 30 minutes (Alt+3)",
+    "next_30_minutes": "Next 30 minutes",
+    "highest_elevation_first_alt_4": "Highest elevation first (Alt+4)",
+    "highest_elevation_first": "Highest elevation first",
+    "tracked_satellites_only_alt_5": "Tracked satellites only (Alt+5)",
+    "tracked_satellites_only": "Tracked satellites only",
+    "refresh_passes_force_recalculate": "Refresh passes (force recalculate)"
+  },
+  "next_passes": {
+    "all_passes_alt_1": "All passes (Alt+1)",
+    "all_passes": "All passes",
+    "live_passes_alt_2": "Live passes (Alt+2)",
+    "live_passes": "Live passes",
+    "live_or_next_30_minutes_alt_3": "Live or next 30 minutes (Alt+3)",
+    "next_30_minutes": "Next 30 minutes",
+    "highest_elevation_first_alt_4": "Highest elevation first (Alt+4)",
+    "highest_elevation_first": "Highest elevation first",
+    "refresh_passes_force_recalculate": "Refresh passes (force recalculate)",
+    "no_targets_configured": "No targets configured",
+    "add_a_target_to_load_upcoming_passes_and_visibility_wind": "Add a target to load upcoming passes and visibility windows."
   }
 }

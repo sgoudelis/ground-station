@@ -22,6 +22,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { updatePreferences, setPreference } from './preferences-slice.jsx';
 import { tz } from 'moment-timezone';
 import { useTranslation } from 'react-i18next';
+import { languageOptions } from '../../i18n/languages.js';
 import {
     Accordion,
     AccordionDetails,
@@ -73,17 +74,6 @@ const SYSTEM_EDITABLE_KEYS = [
     'gemini_api_key',
     'deepgram_api_key',
     'google_translate_api_key',
-];
-
-const languageOptions = [
-    { name: 'English', value: 'en_US' },
-    { name: 'Ελληνικά', value: 'el_GR' },
-    { name: 'Français', value: 'fr_FR' },
-    { name: 'Español', value: 'es_ES' },
-    { name: 'Deutsch', value: 'de_DE' },
-    { name: 'Italiano', value: 'it_IT' },
-    { name: 'Nederlands', value: 'nl_NL' },
-    { name: '中文（简体）', value: 'zh_CN' },
 ];
 
 const localeOptions = [

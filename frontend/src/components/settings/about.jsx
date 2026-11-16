@@ -40,6 +40,7 @@ import GitHubIcon from '@mui/icons-material/GitHub';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import { useTranslation } from 'react-i18next';
 import { GroundStationLogoMeridian } from '../common/logo-dataurl.js';
+import { APP_NAME } from '../../config/branding.jsx';
 
 const AboutPage = () => {
     const theme = useTheme();
@@ -118,10 +119,11 @@ const AboutPage = () => {
                     <Grid container spacing={2} columns={12} alignItems="center">
                         <Grid size={{ xs: 12, md: 8 }}>
                             <Stack direction="row" spacing={2} alignItems="center">
-                                <img src={GroundStationLogoMeridian} alt={t('about.ground_station_logo', { defaultValue: 'Ground Station Logo' })} style={{ height: '56px', width: 'auto' }} />
+                                {/* Brand name: APP_NAME stays English in every language. */}
+                                <img src={GroundStationLogoMeridian} alt={APP_NAME} style={{ height: '56px', width: 'auto' }} />
                                 <Box>
                                     <Typography variant="h4" sx={{ fontWeight: 700 }}>
-                                        {t('about.ground_station', { defaultValue: 'Ground Station' })}
+                                        {APP_NAME}
                                     </Typography>
                                     <Typography variant="body2" color="text.secondary">
                                         {t('about.intro', { defaultValue: 'Open-source, browser-based application for tracking satellites and celestial targets, controlling station hardware, and receiving, decoding, and recording SDR signals.' })}

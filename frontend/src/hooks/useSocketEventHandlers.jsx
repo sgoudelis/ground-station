@@ -527,7 +527,7 @@ export const useSocketEventHandlers = (socket, enabled = true) => {
         // File browser errors
         socket.on("file_browser_error", (errorData) => {
             console.error('File browser error:', errorData);
-            toast.error(errorData.error || t('notifications.file_browser.error'));
+            toast.error(errorData.error || t('notifications.file_browser.error', { defaultValue: 'File browser error' }));
         });
 
         // Recording state updates (pub/sub model)
@@ -540,7 +540,7 @@ export const useSocketEventHandlers = (socket, enabled = true) => {
                         store.dispatch(setIsRecording(true));
                         store.dispatch(setRecordingDuration(0));
                         store.dispatch(setRecordingStartTime(new Date().toISOString()));
-                        toast.success(t('notifications.recording.started'));
+                        toast.success(t('notifications.recording.started', { defaultValue: 'Recording started' }));
                     }
                     break;
 
@@ -549,16 +549,16 @@ export const useSocketEventHandlers = (socket, enabled = true) => {
                         store.dispatch(setIsRecording(false));
                         store.dispatch(setRecordingDuration(0));
                         store.dispatch(setRecordingStartTime(null));
-                        toast.success(t('notifications.recording.stopped'));
+                        toast.success(t('notifications.recording.stopped', { defaultValue: 'Recording stopped' }));
                     }
                     break;
 
                 case 'start-failed':
-                    toast.error(t('notifications.recording.start_failed', { error: state.error }));
+                    toast.error(t('notifications.recording.start_failed', { error: state.error, defaultValue: 'Failed to start recording: {{error}}' }));
                     break;
 
                 case 'stop-failed':
-                    toast.error(t('notifications.recording.stop_failed', { error: state.error }));
+                    toast.error(t('notifications.recording.stop_failed', { error: state.error, defaultValue: 'Failed to stop recording: {{error}}' }));
                     break;
             }
         });

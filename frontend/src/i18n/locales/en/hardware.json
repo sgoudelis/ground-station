@@ -119,8 +119,11 @@
       "tracking_lead_range": "Tracking lead must be between 0 and 10 seconds"
     },
     "saved_success": "Rotator saved successfully",
+    "error_saving": "Error saving rotator",
     "deleted_success": "Rotator(s) deleted successfully",
-    "no_rotators": "No antenna rotators configured. Click 'Add' to configure a rotator."
+    "no_rotators": "No antenna rotators configured. Click 'Add' to configure a rotator.",
+    "stop_supported": "Controller supports Stop",
+    "stop_unsupported_help": "Use this for controllers that ignore Stop. Pausing tracking prevents new commands, but an ongoing antenna movement may continue."
   },
   "camera": {
     "title": "Camera Integration Setup",
@@ -255,6 +258,21 @@
     "probe_complete": "SDR capabilities read successfully.",
     "probe_cached": "SDR is streaming. Showing cached capabilities.",
     "probe_summary": "{{rates}} sample rates · {{gains}} gain values · RX: {{rx}} · TX: {{tx}}",
-    "soapy_discovery_subtitle": "Discover servers and devices, then probe a selected SDR for capabilities."
+    "soapy_discovery_subtitle": "Discover servers and devices, then probe a selected SDR for capabilities.",
+    "discovery_failed": "Failed to start SoapySDR discovery",
+    "select_sdr_type": "Select SDR type",
+    "probing_uhd": "Probing for local UHD/USRP devices...",
+    "select_uhd_device": "UHD/USRP Device",
+    "refresh_uhd_devices": "Refresh UHD/USRP devices",
+    "no_uhd_devices": "No local UHD/USRP devices detected. Please connect a device and refresh.",
+    "no_antenna_ports_found": "No antenna ports were returned by the selected device.",
+    "rx_antenna_ports": "RX Antenna Ports",
+    "tx_antenna_ports": "TX Antenna Ports",
+    "antenna_labels_title": "Antenna Port Labels",
+    "antenna_labels_subtitle": "Internal port names are probed from hardware. Labels are your own reminders.",
+    "antenna_label": "Label"
+  },
+  "common": {
+    "type_delete_to_confirm": "Type DELETE to confirm"
   }
 }

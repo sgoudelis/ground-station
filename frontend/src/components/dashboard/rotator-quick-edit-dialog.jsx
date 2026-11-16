@@ -49,7 +49,7 @@ export default function RotatorQuickEditDialog({ open, onClose, rotator }) {
             toast.success(t("rotator.saved_success"), { autoClose: 5000 });
             onClose();
         } catch (error) {
-            toast.error(error?.message || t("rotator.error_saving"), { autoClose: 5000 });
+            toast.error(error?.message || t("rotator.error_saving", { defaultValue: "Error saving rotator" }), { autoClose: 5000 });
         } finally {
             setSaving(false);
         }

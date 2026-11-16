@@ -274,7 +274,7 @@ const GridLayoutStorageCard = () => {
                     >
                         !
                     </Box>
-                    {t('grid_layout_storage_card.clear_all_grid_layouts', { defaultValue: 'Clear All Grid Layouts?' })}
+                    {t('grid_layout_storage_card.clear_all_grid_layouts_confirm', { defaultValue: 'Clear All Grid Layouts?' })}
                 </DialogTitle>
                 <DialogContent sx={{ px: 3, pt: '32px !important', pb: 3 }}>
                     <Alert severity="info" sx={{ mb: 2 }}>

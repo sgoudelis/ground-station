@@ -400,7 +400,7 @@ const RotaryEncoder = ({
                                 fill={theme.palette.warning.main}
                                 fontFamily="sans-serif"
                             >
-                                {t('rotator_encoder.offset', { defaultValue: 'OFFSET' })}
+                                {t('rotator_encoder.offset_upper', { defaultValue: 'OFFSET' })}
                             </text>
                         </g>
                     )}

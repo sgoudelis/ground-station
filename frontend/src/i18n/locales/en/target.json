@@ -1,7 +1,12 @@
 {
   "map_settings": {
     "title": "Map Settings",
-    "close": "Close"
+    "close": "Close",
+    "saving": "Saving…",
+    "saved": "Saved",
+    "save_failed": "Save failed",
+    "reset_defaults": "Reset Defaults",
+    "apply": "Apply"
   },
   "view_picker": {
     "label": "View",
@@ -81,7 +86,18 @@
     "no_data": "No data",
     "geo_stat": "GEO Stat",
     "geo_sync": "GEO Sync",
-    "no_satellite_selected": "Please select a satellite to view passes"
+    "no_satellite_selected": "Please select a satellite to view passes",
+    "all_passes_alt_1": "All passes (Alt+1)",
+    "all_passes": "All passes",
+    "live_passes_alt_2": "Live passes (Alt+2)",
+    "live_passes": "Live passes",
+    "live_or_next_30_minutes_alt_3": "Live or next 30 minutes (Alt+3)",
+    "next_30_minutes": "Next 30 minutes",
+    "highest_elevation_first_alt_4": "Highest elevation first (Alt+4)",
+    "highest_elevation_first": "Highest elevation first",
+    "refresh_passes_force_recalculate": "Refresh passes (force recalculate)",
+    "no_targets_configured": "No targets configured",
+    "add_a_target_to_load_upcoming_passes_and_visibility_wind": "Add a target to load upcoming passes and visibility windows."
   },
   "passes_table_settings": {
     "title": "Passes Table Settings",
@@ -95,7 +111,8 @@
     "close": "Close"
   },
   "pass_timeline": {
-    "title": "Pass Timeline for {{name}} - Next {{hours}} hours"
+    "title": "Pass Timeline for {{name}} - Next {{hours}} hours",
+    "refresh_passes_force_recalculate": "Refresh passes (force recalculate)"
   },
   "timeline": {
     "zoomIn": "Zoom In",
@@ -127,7 +144,14 @@
     "disconnect": "DISCONNECT",
     "track_radio": "TRACK RADIO",
     "stop": "STOP",
-    "pause_tracking": "Pause tracking"
+    "pause_tracking": "Pause tracking",
+    "none": "None",
+    "vfo_1": "VFO 1",
+    "none_option": "[none]",
+    "uplink": "Uplink:",
+    "downlink": "Downlink:",
+    "vfo_2": "VFO 2",
+    "swap_vfo_1_and_vfo_2": "Swap VFO 1 and VFO 2"
   },
   "rotator_control": {
     "title": "Rotator control",
@@ -150,15 +174,20 @@
     "tracking_lead": "Satellite tracking lead",
     "tracking_lead_short": "Lead",
     "move": "MOVE",
-    "close": "CLOSE"
+    "close": "CLOSE",
+    "none": "None",
+    "target_offset": "Target offset"
   },
   "manual_rotator_dialog": {
     "current": "Current",
     "requested": "Requested",
-    "readout_label": "{{axis}} position"
+    "readout_label": "{{axis}} position",
+    "azimuth_dial": "Azimuth dial",
+    "elevation_dial": "Elevation dial"
   },
   "satellite_search": {
-    "search_label": "Search satellites (by name or NORAD ID)"
+    "search_label": "Search satellites (by name or NORAD ID)",
+    "monitored": "Monitored"
   },
   "satellite_dropdown": {
     "label": "Satellite"
@@ -182,7 +211,8 @@
       "added_to_db": "ADDED TO DB",
       "countries": "COUNTRIES",
       "alternative_name": "ALTERNATIVE NAME",
-      "satellite_id": "SATELLITE ID"
+      "satellite_id": "SATELLITE ID",
+      "operator": "Operator"
     },
     "values": {
       "yes": "YES",
@@ -227,7 +257,20 @@
     "title": "Target tracking"
   },
   "target_retarget_dialog": {
-    "title": "Retarget slot or create a new target"
+    "title": "Retarget slot or create a new target",
+    "this_target": "this target",
+    "subtitle": "Choose to retarget the active slot or create a new one",
+    "no_rotator": "No rotator control",
+    "no_target": "No target selected",
+    "no_slots": "No active target slots available to retarget.",
+    "or": "or",
+    "option_new_title": "Create new target slot",
+    "no_rig": "No rig control",
+    "cancel": "Cancel",
+    "submit_failed": "Failed to apply target selection.",
+    "submitting": "Applying...",
+    "confirm_create": "Create New Target",
+    "confirm_retarget": "Retarget Selected Slot"
   },
   "satellite_transmitters": {
     "title": "Transmitters",
@@ -250,6 +293,122 @@
       "frequency_violation": "⚠️ FREQUENCY VIOLATION",
       "no_transmitters": "No Transmitters Available",
       "no_transmitters_desc": "This satellite doesn't have any registered transmitters."
-    }
+    },
+    "uplink": "Uplink",
+    "inverted": "Inverted",
+    "unconfirmed": "Unconfirmed"
+  },
+  "rotator_utils": {
+    "target_below_minimum_elevation": "Target below minimum elevation",
+    "target_above_maximum_elevation": "Target above maximum elevation",
+    "target_below_minimum_azimuth": "Target below minimum azimuth",
+    "target_above_maximum_azimuth": "Target above maximum azimuth",
+    "target_below_the_horizon": "Target below the horizon"
+  },
+  "target_search": {
+    "retarget_hint": "Search satellites, missions, or bodies. Selecting a result immediately retargets the active target.",
+    "search_label": "Search satellites, missions, or bodies"
+  },
+  "target_earth_maplibre_view": {
+    "home": "Home",
+    "sun": "Sun",
+    "moon": "Moon"
+  },
+  "target_info_island": {
+    "target_info": "Target Info",
+    "real_time_position": "Real-Time Position",
+    "elevation": "Elevation",
+    "azimuth": "Azimuth",
+    "altitude_kilometres": "Altitude, kilometres",
+    "altitude": "Altitude",
+    "velocity_kilometres_per_second": "Velocity, kilometres per second",
+    "velocity": "Velocity",
+    "added_to_db": "Added to DB",
+    "launched": "Launched",
+    "updated": "Updated",
+    "website": "Website",
+    "link": "Link ↗",
+    "citation": "Citation",
+    "more": "More",
+    "edit_details": "Edit Details",
+    "edit_transmitters": "Edit Transmitters",
+    "view_full_details": "View Full Details",
+    "waiting_for_updated_mission_body_telemetry": "Waiting for updated mission/body telemetry.",
+    "distance_from_sun": "Distance from Sun",
+    "speed_kilometres_per_second": "Speed, kilometres per second",
+    "speed": "Speed",
+    "target_geometry": "Target Geometry",
+    "visibility": "Visibility",
+    "light_time": "Light Time",
+    "target_metadata": "Target Metadata",
+    "target_type": "Target Type",
+    "target_key": "Target Key",
+    "source_mode": "Source Mode",
+    "tracking_link": "Tracking Link",
+    "rotator": "Rotator",
+    "rig": "Rig",
+    "rotator_state": "Rotator State",
+    "rig_state": "Rig State",
+    "data_source": "Data Source",
+    "source": "Source",
+    "cache": "Cache",
+    "stale": "Stale",
+    "samples": "Samples",
+    "projection": "Projection",
+    "last_refresh": "Last Refresh",
+    "close": "Close"
+  },
+  "target_map_composite_view": {
+    "refresh_target_scene": "Refresh target scene",
+    "select_a_mission_body_target_to_render_the_solar_system_": "Select a mission/body target to render the solar-system viewport."
+  },
+  "target_selector_bar": {
+    "delete_target": "Delete Target",
+    "this_will_remove_the_target_tracking_state_and_stop_its_": "This will remove the target tracking state and stop its tracker process.",
+    "deleting_target": "Deleting target...",
+    "cancel": "Cancel",
+    "are_you_sure_you_want_to_stop_the_observation": "Are you sure you want to stop the observation",
+    "are_you_sure_you_want_to_abort_the_observation": "Are you sure you want to abort the observation",
+    "processing_observation": "Processing observation...",
+    "add_new_target": "Add New Target",
+    "configure_target_and_hardware_in_two_quick_steps": "Configure target and hardware in two quick steps",
+    "step_1_target": "Step 1 · Target",
+    "select_a_target_type_and_choose_a_satellite_mission_or_b": "Select a target type and choose a satellite, mission, or body.",
+    "target_type": "Target Type",
+    "satellite": "Satellite",
+    "mission": "Mission",
+    "body": "Body",
+    "satellite_target": "Satellite Target",
+    "search_satellite_by_name_or_norad_id": "Search satellite by name or NORAD ID",
+    "mission_target": "Mission Target",
+    "search_mission_name_or_command": "Search mission name or command",
+    "body_target": "Body Target",
+    "search_body_name_or_id": "Search body name or ID",
+    "loading_body_catalog": "Loading body catalog...",
+    "step_2_hardware_optional": "Step 2 · Hardware (Optional)",
+    "assign_hardware_now_or_leave_as_none": "Assign hardware now, or leave as none.",
+    "rotator": "Rotator",
+    "no_rotator_control": "No rotator control",
+    "none": "None",
+    "rig": "Rig",
+    "no_rig_control": "No rig control",
+    "create_target": "Create Target",
+    "add_target_slot_satellite_mission_or_body": "Add target slot (satellite, mission, or body)",
+    "add_target_slot": "add target slot"
+  },
+  "target_sky_planetarium_view": {
+    "refresh_target_scene": "Refresh target scene",
+    "loading_planetarium_vectors": "Loading planetarium vectors..."
+  },
+  "target_view_router": {
+    "no_targets_configured": "No targets configured",
+    "add_a_target_to_view_the_planetarium_or_globe": "Add a target to view the planetarium or globe."
+  },
+  "tracker_command_state": {
+    "not_connected_to_backend": "Not connected to backend",
+    "acknowledgement_missing_checking_command_status": "Acknowledgement missing; checking command status"
+  },
+  "tracker_instances_panel": {
+    "trackers": "Trackers"
   }
 }

@@ -26,7 +26,10 @@
     "bookmark_source_gr_satellites": "gr-satellites",
     "bookmark_source_satdump": "Satdump",
     "bookmark_source_tinygs": "TinyGS",
-    "leave_stream": "退出数据流"
+    "leave_stream": "退出数据流",
+    "bookmark_source_filters": "来源筛选书签",
+    "disable_recording_band": "禁用录音频段选择",
+    "enable_recording_band": "启用录音频段选择"
   },
   "frequency": {
     "title": "频率控制",
@@ -124,7 +127,7 @@
     "overlap_25": "开启（25%）",
     "overlap_75": "开启（75%）",
     "overlap_depth": "重叠深度",
-    "overlap_depth_segments": "16 段",
+    "overlap_depth_segments": "{{count}} 段",
     "overlap_off": "关闭",
     "overlap_on_50": "开启（50%）",
     "smoothing_high": "高",
@@ -171,7 +174,8 @@
       "gfsk": "GFSK",
       "bpsk": "BPSK",
       "geoscanimage": "Geoscan 图像",
-      "aprs": "APRS"
+      "aprs": "APRS",
+      "radiosonde": "探空仪"
     },
     "lock_to_transmitter": "锁定到发射机",
     "none": "无",
@@ -191,14 +195,33 @@
       "uk": "乌克兰语",
       "ja": "日语",
       "zh": "中文",
-      "ar": "阿拉伯语"
+      "ar": "阿拉伯语",
+      "hr": "克罗地亚语",
+      "sk": "斯洛伐克语",
+      "tl": "菲律宾语",
+      "tr": "土耳其语",
+      "zh-Hant": "中文（繁体）"
     },
     "transcription_options": "转写选项",
     "decoder_options": "解码器选项",
     "decoder_parameters_off": "关闭",
     "parakeet_language_info": "Parakeet 会将音频发送到已配置的服务并自动检测支持的语言。源语言选择仅用于翻译。",
     "external_translation_info": "翻译使用 Google Translate API（在设置中配置）。",
-    "doppler_unavailable": "多普勒不可用"
+    "doppler_unavailable": "多普勒不可用",
+    "mute": "静音",
+    "muted": "已静音",
+    "source_language": "源语言",
+    "transcription_mode": "转录",
+    "transcription_modes": {
+      "none": "无",
+      "gemini": "Gemini AI",
+      "deepgram": "Deepgram",
+      "parakeet": "Parakeet"
+    },
+    "translate_to": "翻译为",
+    "activate": "启用",
+    "transcription_help": "使用 AI 转录音频",
+    "decoders_unsupported": "尚不支持"
   },
   "error_dialog": {
     "title": "发生错误",
@@ -224,7 +247,15 @@
     "storageFormatInt16Help": "体积缩小 50%。仅当极强样本削顶时才有损。",
     "statusRecording": "录制中",
     "statusReady": "未录制",
-    "statusAriaLabel": "IQ 录制{{status}}，{{rate}}"
+    "statusAriaLabel": "IQ 录制{{status}}，{{rate}}",
+    "available": "可用",
+    "dragBand": "拖动录音频段",
+    "selectedBandwidthHelp": "已启用录音频段选择。录制前请在频段图中拖动高亮频段。",
+    "centerFrequency": "录音中心（MHz）",
+    "dragStep": "拖动步长",
+    "diskSpace": "磁盘空间",
+    "disableBandSelection": "停用",
+    "enableBandSelection": "启用"
   },
   "playback": {
     "title": "IQ 回放",
@@ -236,7 +267,10 @@
     "sort_created": "创建日期",
     "sort_name": "名称",
     "sort_size": "大小",
-    "sort_sample_rate": "采样率"
+    "sort_sample_rate": "采样率",
+    "details": "查看详情",
+    "stop": "停止",
+    "play": "播放"
   },
   "decoded_insights_island": {
     "altitude": "高度：",
@@ -261,7 +295,9 @@
     "time_without_fix": "未定位时长：",
     "utc_time": "UTC 时间：",
     "united_states": "美国",
-    "european_union": "欧盟"
+    "european_union": "欧盟",
+    "verified_satellites_help": "在 GNSS-SDR 报告该卫星的有效导航字或伪距后显示。",
+    "verified_satellites": "已验证卫星："
   },
   "decoded_packets_drawer": {
     "are_you_sure_you_want_to_delete_this_decoded_packet_file": "确定要删除此解码数据包文件吗？",
@@ -287,11 +323,13 @@
     "s_ago": "秒前 (",
     "sample_rate": "采样率：",
     "sstv_mode": "SSTV 模式：",
-    "vfo_bandwidth": "VFO 带宽："
+    "vfo_bandwidth": "VFO 带宽：",
+    "inferred_satellite_identity": "由于该分组没有呼号，卫星身份是从你选定的已锁定发射机推断得出的。"
   },
   "decoder_params_dialog": {
     "enable_parameter_overrides": "启用参数覆盖",
-    "parameters": "参数"
+    "parameters": "参数",
+    "use_suggestion": "使用建议"
   },
   "gnss_fix_quality_timeline": {
     "fix_quality_30m": "定位质量（30 分钟）"
@@ -301,7 +339,8 @@
     "corrected": "已校正：",
     "not_configured": "未配置",
     "offset_mode": "🔒 偏移模式",
-    "step": "- 步进："
+    "step": "- 步进：",
+    "offset_upper": "偏移"
   },
   "settings_frequency": {
     "tune_or_pick_one": "调谐或选择其一",
@@ -317,7 +356,9 @@
     "not_configured": "[未配置]",
     "soapysdr_local": "SoapySDR（本地）",
     "soapysdr_remote": "SoapySDR（远程）",
-    "sigmf_playback": "SigMF 回放"
+    "sigmf_playback": "SigMF 回放",
+    "lna_attenuation_state": "LNA 衰减状态（RFGR）",
+    "if_gain_reduction": "中频增益衰减（IFGR）"
   },
   "transcription_subtitles": {
     "clear_subtitles": "清除字幕",
@@ -518,7 +559,9 @@
     "gfsk_decoder_gaussian_fsk_processes_raw_iq_no_de": "GFSK 解码器（高斯 FSK，处理原始 IQ，无解调器）",
     "fsk_decoder_frequency_shift_keying_processes_raw": "FSK 解码器（频移键控，处理原始 IQ，无解调器）",
     "bpsk_decoder_with_ax_25_support_processes_raw_iq": "支持 AX.25 的 BPSK 解码器（处理原始 IQ，无解调器）",
-    "aprs_bell_202_decoder_processes_raw_iq_with_inte": "APRS Bell 202 解码器（处理原始 IQ，内置 FM 解调）"
+    "aprs_bell_202_decoder_processes_raw_iq_with_inte": "APRS Bell 202 解码器（处理原始 IQ，内置 FM 解调）",
+    "adsb": "1090 MHz 航空器解码器（readsb）",
+    "radiosonde": "自动解码 RS41、DFM 和 M10/M20 探空仪"
   },
   "lora_profiles": {
     "label": "LoRa 配置",
@@ -540,5 +583,55 @@
     "adopt_description": "接管正在运行的观测，并替换你当前的 VFO。",
     "take_control": "接管控制",
     "join_description": "加入无人值守的观测后，你将获得其运行中 VFO 和解码器的控制权。频率保持不变，除非你手动更改。"
+  },
+  "adsb": {
+    "country": "国家",
+    "distance": "距离（km）",
+    "emergency": "紧急",
+    "latitude": "纬度",
+    "longitude": "经度",
+    "stats_aircraft_short": "架",
+    "stats_aircraft": "已追踪航空器",
+    "stats_positions_short": "位置",
+    "stats_positions": "已解码位置的航空器",
+    "stats_callsigns_short": "呼号",
+    "stats_callsigns": "带有呼号的航空器",
+    "stats_ground_short": "地面",
+    "stats_ground": "报告位于地面的航空器",
+    "stats_range_short": "最远",
+    "stats_range": "距本站最远的航空器",
+    "country_description": "根据 ICAO 地址推断的注册国家",
+    "distance_description": "距已配置站点位置的地面距离",
+    "altitude": "气压高度（米）",
+    "speed": "速度（米/秒）",
+    "no_aircraft": "尚未解码到航空器"
+  },
+  "processing_dialog": {
+    "background_task": "后台任务",
+    "baseband_format": "基带格式",
+    "completed": "已完成",
+    "complex_float32_f32": "复数 Float32（f32）",
+    "complex_int16_i16": "复数 Int16（i16）",
+    "complex_int16_wav_w16": "复数 Int16 WAV（w16）",
+    "complex_int8_i8": "复数 Int8（i8）",
+    "complex_int8_wav_w8": "复数 Int8 WAV（w8）",
+    "duration": "时长：",
+    "ensure_the_signal_is_centered_at_the_recording_s_center_": "ⓘ 请确保信号位于录制中心频率处，以便成功解码。",
+    "failed": "失败",
+    "generate_products_after_decoding": "解码后生成产物",
+    "note": "注意：",
+    "process_iq_recording": "处理 IQ 录制",
+    "process_this_iq_recording_using_satdump_satellite_decode": "使用 SatDump 卫星解码器处理此 IQ 录制",
+    "processing_will_run_in_the_background_you_can_monitor_pr": "处理将在后台运行。您可以在任务面板中监控进度。",
+    "progress": "进度：",
+    "running": "运行中",
+    "sample_rate_hz": "采样率（Hz）",
+    "satdump_processing": "SatDump 处理",
+    "satellite_pipeline": "卫星 / 管线",
+    "starting": "启动中",
+    "stopped": "已停止",
+    "task_output": "任务输出",
+    "this_dialog_stays_open_to_show_task_updates_you_can_clos": "此对话框会保持打开以显示任务更新。您可以随时关闭它。",
+    "waiting_for_task_output": "等待任务输出..."
   }
 }

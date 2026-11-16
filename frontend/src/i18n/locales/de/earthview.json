@@ -36,7 +36,17 @@
     },
     "below_horizon": "Unter dem Horizont",
     "visibility": "Sichtbarkeit",
-    "visible": "Sichtbar"
+    "visible": "Sichtbar",
+    "all_satellites": "Alle Satelliten",
+    "all_satellites_alt_1": "Alle Satelliten (Alt+1)",
+    "decayed_satellites": "Verglühte Satelliten",
+    "decayed_satellites_alt_5": "Verglühte Satelliten (Alt+5)",
+    "rising_satellites": "Steigende Satelliten",
+    "rising_satellites_alt_3": "Steigende Satelliten (Alt+3)",
+    "satellites_with_active_transmitters": "Satelliten mit aktiven Sendern",
+    "satellites_with_active_transmitters_alt_4": "Satelliten mit aktiven Sendern (Alt+4)",
+    "visible_satellites": "Sichtbare Satelliten",
+    "visible_satellites_alt_2": "Sichtbare Satelliten (Alt+2)"
   },
   "passes_table": {
     "title": "Überflüge für die nächsten {{hours}} Stunden",
@@ -121,7 +131,8 @@
     "user_groups": "Benutzerdefinierte Satellitengruppen",
     "tle_groups": "Satellitengruppen aus Orbitquellen",
     "failed_load_groups": "Fehler beim Laden der Satellitengruppen",
-    "none_defined": "Keine definiert"
+    "none_defined": "Keine definiert",
+    "grouping": "Gruppierung"
   },
   "satellite_info": {
     "title": "Satellitenmonitor",
@@ -159,7 +170,10 @@
   },
   "map_settings": {
     "title": "Karteneinstellungen",
-    "close": "Schließen"
+    "close": "Schließen",
+    "apply": "Übernehmen",
+    "reset_defaults": "Standardwerte zurücksetzen",
+    "section_base_map": "Basiskarte"
   },
   "map_target": {
     "already_tracking": "Dieser Satellit wird bereits verfolgt",
@@ -186,7 +200,11 @@
     "show_past_path": "Vergangene Umlaufbahnen anzeigen",
     "show_future_path": "Zukünftige Umlaufbahnen anzeigen",
     "show_coverage": "Satellitenabdeckung anzeigen",
-    "show_grid": "Koordinatengitter anzeigen"
+    "show_grid": "Koordinatengitter anzeigen",
+    "pan_down": "Nach unten schieben",
+    "pan_left": "Nach links schieben",
+    "pan_right": "Nach rechts schieben",
+    "pan_up": "Nach oben schieben"
   },
   "weather_errors": {
     "fetch_failed": "Wetterdaten konnten nicht abgerufen werden",
@@ -213,5 +231,42 @@
     "category_orbital": "Orbitalinformationen",
     "always_visible": "immer sichtbar",
     "close": "Schließen"
+  },
+  "earthview_map_maplibre": {
+    "sun": "Sonne",
+    "home": "Heimatstation",
+    "moon": "Mond"
+  },
+  "next_passes": {
+    "all_passes": "Alle Pässe",
+    "all_passes_alt_1": "Alle Durchgänge (Alt+1)",
+    "highest_elevation_first": "Höchste Erhebung zuerst",
+    "highest_elevation_first_alt_4": "Höchste Erhebung zuerst (Alt+4)",
+    "live_or_next_30_minutes_alt_3": "Live oder nächste 30 Minuten (Alt+3)",
+    "live_passes": "Live-Pässe",
+    "live_passes_alt_2": "Live-Pässe (Alt+2)",
+    "next_30_minutes": "Nächste 30 Minuten",
+    "add_a_target_to_load_upcoming_passes_and_visibility_wind": "Füge ein Ziel hinzu, um kommende Vorbeiflüge und Sichtfenster zu laden.",
+    "no_targets_configured": "Keine Ziele konfiguriert",
+    "refresh_passes_force_recalculate": "Vorbeiflüge aktualisieren (Neuberechnung erzwingen)"
+  },
+  "satellite_passes": {
+    "all_passes": "Alle Pässe",
+    "all_passes_alt_1": "Alle Durchgänge (Alt+1)",
+    "highest_elevation_first": "Höchste Erhebung zuerst",
+    "highest_elevation_first_alt_4": "Höchste Erhebung zuerst (Alt+4)",
+    "live_or_next_30_minutes_alt_3": "Live oder nächste 30 Minuten (Alt+3)",
+    "live_passes": "Live-Pässe",
+    "live_passes_alt_2": "Live-Pässe (Alt+2)",
+    "next_30_minutes": "Nächste 30 Minuten",
+    "refresh_passes_force_recalculate": "Vorbeiflüge aktualisieren (Neuberechnung erzwingen)",
+    "tracked_satellites_only": "Nur verfolgte Satelliten",
+    "tracked_satellites_only_alt_5": "Nur verfolgte Satelliten (Alt+5)"
+  },
+  "satellite_group_selector_bar": {
+    "falling": "Fallend:",
+    "peak": "Maximum:",
+    "rising": "Steigend:",
+    "select_group": "[Gruppe auswählen]"
   }
 }

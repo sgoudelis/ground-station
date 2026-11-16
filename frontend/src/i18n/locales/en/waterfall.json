@@ -47,7 +47,10 @@
     "bookmark_source_satnogs": "SATNOGS",
     "bookmark_source_gr_satellites": "gr-satellites",
     "bookmark_source_satdump": "Satdump",
-    "bookmark_source_tinygs": "TinyGS"
+    "bookmark_source_tinygs": "TinyGS",
+    "bookmark_source_filters": "Bookmark source filters",
+    "disable_recording_band": "Disable recording-band selection",
+    "enable_recording_band": "Enable recording-band selection"
   },
   "frequency": {
     "title": "Frequency control",
@@ -74,7 +77,14 @@
     "not_configured": "[not configured]",
     "clock_source": "Clock Source",
     "time_source": "Time Source",
-    "bit_packing": "Bit Packing"
+    "bit_packing": "Bit Packing",
+    "lna_attenuation_state": "LNA attenuation state (RFGR)",
+    "if_gain_reduction": "IF gain reduction (IFGR)",
+    "soapysdr_local": "SoapySDR (Local)",
+    "soapysdr_remote": "SoapySDR (Remote)",
+    "sigmf_playback": "SigMF Playback",
+    "ref_clock_lock": "Ref Clock Lock",
+    "temperature": "Temperature"
   },
   "sdr": {
     "title": "SDR",
@@ -130,7 +140,13 @@
     "enable_tuner_agc": "Enable tuner AGC",
     "enable_agc": "Enable AGC",
     "enable_rtl_agc": "Enable RTL AGC",
-    "refresh_params": "Reload SDR parameters (uses cached capabilities when available)"
+    "refresh_params": "Reload SDR parameters (uses cached capabilities when available)",
+    "in_use_badge": "in use",
+    "unknown_date": "Unknown date",
+    "playback_recording": "IQ Recording",
+    "no_playback_recording_selected": "[no recording selected]",
+    "loading_recordings": "Loading recordings...",
+    "no_playback_recordings": "No IQ recordings found"
   },
   "fft": {
     "title": "FFT",
@@ -139,7 +155,19 @@
     "fft_averaging": "FFT Averaging",
     "averaging_none": "None",
     "averaging_samples": "{{count}} samples",
-    "color_map": "Color Map"
+    "color_map": "Color Map",
+    "fft_overlap": "FFT Overlap",
+    "overlap_off": "Off",
+    "overlap_25": "On (25%)",
+    "overlap_on_50": "On (50%)",
+    "overlap_75": "On (75%)",
+    "overlap_depth": "Overlap Depth",
+    "overlap_depth_segments": "{{count}} segments",
+    "bandscope_smoothing": "Bandscope Smoothing",
+    "smoothing_off": "Off",
+    "smoothing_low": "Low",
+    "smoothing_medium": "Medium",
+    "smoothing_high": "High"
   },
   "vfo": {
     "title": "VFO Controls",
@@ -185,7 +213,8 @@
       "aprs": "APRS",
       "gmsk": "GMSK",
       "gfsk": "GFSK",
-      "bpsk": "BPSK"
+      "bpsk": "BPSK",
+      "radiosonde": "Radiosonde"
     },
     "lock_to_transmitter": "Lock to Transmitter",
     "none": "None",
@@ -206,8 +235,27 @@
       "uk": "Ukrainian",
       "ja": "Japanese",
       "zh": "Chinese",
-      "ar": "Arabic"
-    }
+      "ar": "Arabic",
+      "zh-Hant": "Chinese (Traditional)",
+      "tl": "Filipino",
+      "tr": "Turkish",
+      "sk": "Slovak",
+      "hr": "Croatian"
+    },
+    "activate": "Activate",
+    "mute": "Mute",
+    "muted": "Muted",
+    "source_language": "Source Language",
+    "translate_to": "Translate To",
+    "transcription_mode": "Transcription",
+    "transcription_help": "Transcribe audio using AI",
+    "transcription_modes": {
+      "none": "None",
+      "gemini": "Gemini AI",
+      "deepgram": "Deepgram",
+      "parakeet": "Parakeet"
+    },
+    "decoders_unsupported": "Not supported yet"
   },
   "error_dialog": {
     "title": "SDR issue",
@@ -233,7 +281,15 @@
     "statusReady": "Not recording",
     "statusAriaLabel": "IQ recording {{status}}, {{rate}}",
     "start": "REC",
-    "stop": "Stop"
+    "stop": "Stop",
+    "dragBand": "Drag recording band",
+    "selectedBandwidthHelp": "Recording-band selection is enabled. Drag the highlighted band in the bandscope before recording.",
+    "centerFrequency": "Recording Centre (MHz)",
+    "dragStep": "Drag Step",
+    "diskSpace": "Disk Space",
+    "available": "available",
+    "disableBandSelection": "DISABLE",
+    "enableBandSelection": "ENABLE"
   },
   "playback": {
     "title": "IQ Playback",
@@ -245,6 +301,212 @@
     "sort_created": "Date Created",
     "sort_name": "Name",
     "sort_size": "Size",
-    "sort_sample_rate": "Sample Rate"
+    "sort_sample_rate": "Sample Rate",
+    "play": "Play",
+    "stop": "Stop",
+    "details": "View Details"
+  },
+  "adsb": {
+    "stats_aircraft_short": "ac",
+    "stats_aircraft": "Tracked aircraft",
+    "stats_positions_short": "pos",
+    "stats_positions": "Aircraft with a decoded position",
+    "stats_callsigns_short": "calls",
+    "stats_callsigns": "Aircraft with a callsign",
+    "stats_ground_short": "gnd",
+    "stats_ground": "Aircraft reporting they are on the ground",
+    "stats_range_short": "max",
+    "stats_range": "Farthest aircraft from your station",
+    "country": "Country",
+    "country_description": "Registration country inferred from the ICAO address",
+    "distance": "Distance (km)",
+    "distance_description": "Ground distance from your configured station location",
+    "altitude": "Baro altitude (m)",
+    "speed": "Speed (m/s)",
+    "emergency": "Emergency",
+    "latitude": "Latitude",
+    "longitude": "Longitude",
+    "no_aircraft": "No decoded aircraft yet"
+  },
+  "processing_dialog": {
+    "complex_int16_i16": "Complex Int16 (i16)",
+    "complex_int8_i8": "Complex Int8 (i8)",
+    "complex_float32_f32": "Complex Float32 (f32)",
+    "complex_int16_wav_w16": "Complex Int16 WAV (w16)",
+    "complex_int8_wav_w8": "Complex Int8 WAV (w8)",
+    "running": "Running",
+    "completed": "Completed",
+    "failed": "Failed",
+    "stopped": "Stopped",
+    "process_iq_recording": "Process IQ Recording",
+    "satdump_processing": "SatDump Processing",
+    "process_this_iq_recording_using_satdump_satellite_decode": "Process this IQ recording using SatDump satellite decoder",
+    "satellite_pipeline": "Satellite / Pipeline",
+    "baseband_format": "Baseband Format",
+    "sample_rate_hz": "Sample Rate (Hz)",
+    "generate_products_after_decoding": "Generate products after decoding",
+    "background_task": "Background Task",
+    "this_dialog_stays_open_to_show_task_updates_you_can_clos": "This dialog stays open to show task updates. You can close it anytime.",
+    "starting": "Starting",
+    "progress": "Progress:",
+    "duration": "Duration:",
+    "task_output": "Task Output",
+    "waiting_for_task_output": "Waiting for task output...",
+    "note": "Note:",
+    "processing_will_run_in_the_background_you_can_monitor_pr": "Processing will run in the background. You can monitor progress in the Tasks panel.",
+    "ensure_the_signal_is_centered_at_the_recording_s_center_": "ⓘ Ensure the signal is centered at the recording's center frequency for a successful decoding."
+  },
+  "decoded_insights_island": {
+    "united_states": "United States",
+    "european_union": "European Union",
+    "decoded": "Decoded",
+    "clear_decoded_packets_and_gnss_history": "Clear decoded packets and GNSS history",
+    "clear_all_decoded_history": "Clear all decoded history",
+    "satellite_details": "Satellite Details",
+    "select_a_satellite_row_to_inspect_its_latest_events": "Select a satellite row to inspect its latest events.",
+    "recent_events": "Recent events:",
+    "no_events_for_this_satellite_yet": "No events for this satellite yet.",
+    "gnss_summary": "GNSS Summary",
+    "verified_satellites_help": "Shown after GNSS-SDR reports a valid navigation word or pseudorange for that satellite.",
+    "verified_satellites": "Verified satellites:",
+    "fix_quality": "Fix quality:",
+    "position": "Position:",
+    "altitude": "Altitude:",
+    "utc_time": "UTC time:",
+    "current_fix_duration": "Current fix duration:",
+    "time_without_fix": "Time without fix:",
+    "fix_acquired": "Fix acquired:",
+    "fix_lost": "Fix lost:",
+    "last_fix_acquired": "Last fix acquired:",
+    "last_update": "Last update:"
+  },
+  "decoded_packets_drawer": {
+    "s_ago": "s ago (",
+    "m_ago": "m ago (",
+    "h_ago": "h ago (",
+    "inferred_satellite_identity": "Satellite identity was inferred from the locked transmitter you selected because this packet has no callsign.",
+    "packets": "PACKETS",
+    "delete_decoded_file": "Delete Decoded File",
+    "are_you_sure_you_want_to_delete_this_decoded_packet_file": "Are you sure you want to delete this decoded packet file?",
+    "file_to_be_deleted": "File to be deleted:",
+    "decoder": "Decoder:",
+    "from": "From:",
+    "to": "To:",
+    "size": "Size:",
+    "this_action_cannot_be_undone_the_file_will_be_permanentl": "This action cannot be undone! The file will be permanently deleted from the filesystem.",
+    "cancel": "Cancel",
+    "delete": "Delete"
+  },
+  "decoder_params_dialog": {
+    "parameters": "Parameters",
+    "use_suggestion": "Use suggestion",
+    "enable_parameter_overrides": "Enable Parameter Overrides"
+  },
+  "gnss_fix_quality_timeline": {
+    "fix_quality_30m": "Fix quality (30m)"
+  },
+  "rotator_encoder": {
+    "step": "- Step:",
+    "offset_mode": "🔒 OFFSET MODE",
+    "corrected": "Corrected:",
+    "offset": "Offset:",
+    "offset_upper": "OFFSET",
+    "not_configured": "not configured"
+  },
+  "settings_frequency": {
+    "custom_value": "Custom value"
+  },
+  "transcription_subtitles": {
+    "decrease_font_size": "Decrease font size",
+    "increase_font_size": "Increase font size",
+    "clear_subtitles": "Clear subtitles"
+  },
+  "use_sdr_takeover_dialog": {
+    "sdr_in_use": "SDR in use",
+    "you_are_about_to": "You are about to",
+    "on_this_sdr_joining_lets_you_use_its_current_stream_and_": "on this SDR. Joining lets you use its current stream and your own VFOs. The stream stays live while any participant remains. Taking over may disrupt active sessions.",
+    "automated_observation_active": "Automated observation active",
+    "taking_over_this_sdr_can_interrupt_an_ongoing_scheduled_": "Taking over this SDR can interrupt an ongoing scheduled observation.",
+    "active_sessions_on_this_sdr": "Active sessions on this SDR",
+    "internal": "Internal",
+    "session": "Session:",
+    "cancel": "Cancel",
+    "join": "Join",
+    "take_over": "Take Over"
+  },
+  "vfo_config": {
+    "no_demodulation_center_line_only": "No demodulation - center line only",
+    "frequency_modulation_double_sideband": "Frequency Modulation - Double Sideband",
+    "stereo_frequency_modulation": "Stereo Frequency Modulation",
+    "amplitude_modulation_double_sideband": "Amplitude Modulation - Double Sideband",
+    "upper_sideband_single_sideband": "Upper Sideband - Single Sideband",
+    "lower_sideband_single_sideband": "Lower Sideband - Single Sideband",
+    "continuous_wave_morse_single_sideband": "Continuous Wave (Morse) - Single Sideband",
+    "no_decoder": "No decoder",
+    "slow_scan_television_decoder": "Slow Scan Television decoder",
+    "geoscan_alferov_packetised_jpeg_image_decoder_fs": "Geoscan/Alferov packetised JPEG image decoder (FSK)",
+    "morse_code_cw_decoder": "Morse code (CW) decoder",
+    "automatic_picture_transmission_noaa_weather_sate": "Automatic Picture Transmission (NOAA weather satellites)",
+    "lora_decoder_processes_raw_iq_no_demodulator": "LoRa decoder (processes raw IQ, no demodulator)",
+    "adsb": "1090 MHz aircraft decoder (readsb)",
+    "radiosonde": "Automatic RS41, DFM and M10/M20 radiosonde decoder",
+    "gnss_sdr_decoder_wideband_raw_iq_no_demodulator": "GNSS-SDR decoder (wideband raw IQ, no demodulator)",
+    "gmsk_decoder_gaussian_msk_processes_raw_iq_no_de": "GMSK decoder (Gaussian MSK, processes raw IQ, no demodulator)",
+    "gfsk_decoder_gaussian_fsk_processes_raw_iq_no_de": "GFSK decoder (Gaussian FSK, processes raw IQ, no demodulator)",
+    "fsk_decoder_frequency_shift_keying_processes_raw": "FSK decoder (Frequency Shift Keying, processes raw IQ, no demodulator)",
+    "bpsk_decoder_with_ax_25_support_processes_raw_iq": "BPSK decoder with AX.25 support (processes raw IQ, no demodulator)",
+    "aprs_bell_202_decoder_processes_raw_iq_with_inte": "APRS Bell 202 decoder (processes raw IQ with integrated FM demodulation)"
+  },
+  "vfo_dialogs": {
+    "transcription_parameters": "- Transcription Parameters",
+    "audio_chunks_sent": "Audio chunks sent:",
+    "captions": "• Captions:",
+    "errors": "Errors:"
+  },
+  "vfo_meters": {
+    "rf_power": "RF Power",
+    "audio_level": "Audio Level",
+    "audio_buffer": "Audio Buffer"
+  },
+  "vfo_sliders": {
+    "squelch_type": "Squelch Type",
+    "open_by_received_rf_power_threshold_only": "Open by received RF power threshold only",
+    "rf_power": "RF power",
+    "open_only_when_voice_like_audio_is_detected": "Open only when voice-like audio is detected",
+    "voice": "Voice",
+    "open_only_when_both_rf_power_and_voice_detection_pass": "Open only when both RF power and voice detection pass",
+    "hybrid": "Hybrid",
+    "auto_squelch_noise_floor_5db": "Auto Squelch (Noise Floor + 5dB)",
+    "voice_sensitivity": "Voice Sensitivity",
+    "least_sensitive_voice_detection_fewer_false_opens": "Least sensitive voice detection (fewer false opens)",
+    "low": "Low",
+    "balanced_voice_detection_for_typical_repeater_use": "Balanced voice detection for typical repeater use",
+    "medium": "Medium",
+    "most_sensitive_voice_detection_opens_fastest": "Most sensitive voice detection (opens fastest)",
+    "high": "High",
+    "close_delay": "Close Delay",
+    "voice_close_delay": "Voice close delay"
+  },
+  "vfo_transmitter_lock": {
+    "retune_sdr": "Retune SDR?",
+    "the_transmitter_frequency": "The transmitter frequency",
+    "is_outside_the_current_sdr_bandwidth": "is outside the current SDR bandwidth.",
+    "would_you_like_to_retune_the_sdr_center_frequency_to_rec": "Would you like to retune the SDR center frequency to receive this transmitter?",
+    "note_the_sdr_will_be_offset_by_25_of_the_sample_rate_to_": "Note: The SDR will be offset by 25% of the sample rate to avoid DC spike artifacts.",
+    "cancel": "Cancel",
+    "retune_sdr_2": "Retune SDR"
+  },
+  "waterfall_island": {
+    "playback_position": "Playback position"
+  },
+  "waterfall_right_sidebar": {
+    "zoom": "Zoom",
+    "range": "Range",
+    "auto_once": "Auto once",
+    "auto_db": "Auto dB"
+  },
+  "waterfall_statusbar": {
+    "fps": "FPS:",
+    "ffts_s": "FFTs/s:"
   }
 }

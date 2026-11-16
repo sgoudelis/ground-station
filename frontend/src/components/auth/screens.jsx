@@ -23,6 +23,7 @@ import HttpsOutlinedIcon from '@mui/icons-material/HttpsOutlined';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import LockOpenOutlinedIcon from '@mui/icons-material/LockOpenOutlined';
 import SyncProblemIcon from '@mui/icons-material/SyncProblem';
+import TuneRoundedIcon from '@mui/icons-material/TuneRounded';
 import { keyframes } from '@emotion/react';
 import {
     Alert,
@@ -581,36 +582,45 @@ function SetupWizardScreen() {
             fullWidth
             PaperProps={{
                 sx: {
-                    borderRadius: 2,
+                    borderRadius: { xs: 2, sm: 3 },
+                    border: '1px solid',
+                    borderColor: 'divider',
                     boxShadow: 24,
                     display: 'flex',
                     flexDirection: 'column',
-                    height: 'min(800px, calc(100vh - 24px))',
-                    maxHeight: 'calc(100vh - 24px)',
+                    m: { xs: 1, sm: 3 },
+                    width: { xs: 'calc(100% - 16px)', sm: 'calc(100% - 48px)' },
+                    height: { xs: 'calc(100dvh - 16px)', sm: 'min(820px, calc(100dvh - 48px))' },
+                    maxHeight: 'calc(100dvh - 16px)',
                 },
             }}
         >
             <DialogTitle
                 id="setup-flow-dialog-title"
                 sx={{
-                    py: 1.5,
-                    px: 2.5,
+                    py: 2,
+                    px: { xs: 2, sm: 3 },
                     display: 'flex',
                     alignItems: 'center',
                     lineHeight: 1.2,
-                    fontSize: '1.35rem',
-                    fontWeight: 600,
-                    color: 'primary.main',
+                    gap: 1.5,
+                    fontSize: { xs: '1.1rem', sm: '1.25rem' },
+                    fontWeight: 650,
+                    color: 'text.primary',
                 }}
             >
+                <Box sx={{ display: 'flex', p: 1, borderRadius: 1.5, bgcolor: (theme) => alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}>
+                    <TuneRoundedIcon fontSize="small" />
+                </Box>
                 {t('screens.ground_station_setup', { defaultValue: 'Ground Station Setup' })}
             </DialogTitle>
             <DialogContent
                 dividers
                 sx={{
-                    px: 2.5,
-                    pt: '10px !important',
-                    pb: 2.5,
+                    px: { xs: 1.5, sm: 3 },
+                    pt: '0 !important',
+                    pb: { xs: 1.5, sm: 2.5 },
+                    bgcolor: 'background.default',
                     display: 'flex',
                     flexDirection: 'column',
                     flex: 1,

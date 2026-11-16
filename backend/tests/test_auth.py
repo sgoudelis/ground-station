@@ -20,6 +20,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from common import auth
+from crud import preferences as preferencescrud
 from db.models import Locations, Preferences, PreferenceScope
 
 
@@ -68,6 +69,35 @@ async def test_bootstrap_admin_uses_initial_timezone_preference(patch_auth_sessi
         ).scalar_one()
 
     assert timezone_row.value == "America/New_York"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("bootstrap_language", [None, "fr_FR"])
+async def test_bootstrap_admin_saves_initial_language_preference(
+    patch_auth_session, bootstrap_language
+):
+    if bootstrap_language:
+        async with patch_auth_session() as session:
+            session.add(
+                Preferences(
+                    name="language",
+                    value=bootstrap_language,
+                    scope=PreferenceScope.BOOTSTRAP.value,
+                    user_id=None,
+                )
+            )
+            await session.commit()
+
+    result = await auth.bootstrap_admin(
+        "admin", "password123", initial_preferences={"language": "el_GR"}
+    )
+    assert result["success"] is True
+
+    # A new session must read the setup choice from the new user's saved preferences.
+    async with patch_auth_session() as session:
+        reply = await preferencescrud.fetch_user_preferences(session, result["user"]["id"])
+    assert reply["success"] is True
+    assert next(item["value"] for item in reply["data"] if item["name"] == "language") == "el_GR"
 
 
 @pytest.mark.asyncio

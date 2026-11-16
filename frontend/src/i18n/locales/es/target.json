@@ -73,7 +73,18 @@
       "unknown": "{{count}} transmisor(s) sin banda de enlace ascendente o de enlace descendente",
       "details": "Detalles: {{descriptions}}"
     },
-    "no_data": "No hay datos"
+    "no_data": "No hay datos",
+    "all_passes": "Todos los pases",
+    "all_passes_alt_1": "Todos los pases (Alt+1)",
+    "highest_elevation_first": "La elevación más alta primero",
+    "highest_elevation_first_alt_4": "La elevación más alta primero (Alt+4)",
+    "live_or_next_30_minutes_alt_3": "En vivo o próximos 30 minutos (Alt+3)",
+    "live_passes": "pases en vivo",
+    "live_passes_alt_2": "Pases en vivo (Alt+2)",
+    "next_30_minutes": "Próximos 30 minutos",
+    "add_a_target_to_load_upcoming_passes_and_visibility_wind": "Añade un objetivo para cargar los próximos pasos y las ventanas de visibilidad.",
+    "no_targets_configured": "No hay objetivos configurados",
+    "refresh_passes_force_recalculate": "Actualizar pasos (forzar recálculo)"
   },
   "rig_control": {
     "title": "Control de radio",
@@ -88,7 +99,15 @@
     "connect": "CONECTAR",
     "disconnect": "DESCONECTAR",
     "track_radio": "SEGUIR RADIO",
-    "stop": "DETENER"
+    "stop": "DETENER",
+    "none": "Ninguno",
+    "downlink": "Enlace descendente:",
+    "none_option": "[ninguno]",
+    "pause_tracking": "Pausar seguimiento",
+    "swap_vfo_1_and_vfo_2": "Intercambiar VFO 1 y VFO 2",
+    "uplink": "Enlace ascendente:",
+    "vfo_1": "VFO 1",
+    "vfo_2": "VFO 2"
   },
   "rotator_control": {
     "title": "Control del rotador",
@@ -109,10 +128,15 @@
     "manual_azimuth": "Azimut ({{min}}°–{{max}}°)",
     "manual_elevation": "Elevación ({{min}}°–{{max}}°)",
     "move": "MOVER",
-    "close": "CERRAR"
+    "close": "CERRAR",
+    "none": "Ninguno",
+    "target_offset": "Desplazamiento del objetivo",
+    "tracking_lead": "Adelanto de seguimiento satelital",
+    "tracking_lead_short": "Adelanto"
   },
   "satellite_search": {
-    "search_label": "Buscar satélites (por nombre o ID NORAD)"
+    "search_label": "Buscar satélites (por nombre o ID NORAD)",
+    "monitored": "Monitorizado"
   },
   "satellite_dropdown": {
     "label": "Satélite"
@@ -136,7 +160,8 @@
       "added_to_db": "AGREGADO A LA BD",
       "countries": "PAÍSES",
       "alternative_name": "NOMBRE ALTERNATIVO",
-      "satellite_id": "ID DEL SATÉLITE"
+      "satellite_id": "ID DEL SATÉLITE",
+      "operator": "Operador"
     },
     "values": {
       "yes": "SÍ",
@@ -197,7 +222,8 @@
     "this_target": "este objetivo"
   },
   "pass_timeline": {
-    "title": "Línea de tiempo de pasadas para {{name}} - Próximas {{hours}} horas"
+    "title": "Línea de tiempo de pasadas para {{name}} - Próximas {{hours}} horas",
+    "refresh_passes_force_recalculate": "Actualizar pasos (forzar recálculo)"
   },
   "timeline": {
     "zoomIn": "Acercar",
@@ -236,7 +262,10 @@
       "frequency_violation": "⚠️ VIOLACIÓN DE FRECUENCIA",
       "no_transmitters": "No hay transmisores disponibles",
       "no_transmitters_desc": "Este satélite no tiene transmisores registrados."
-    }
+    },
+    "inverted": "Invertido",
+    "unconfirmed": "Sin confirmar",
+    "uplink": "Ascendente"
   },
   "view_picker": {
     "label": "Vista",
@@ -268,5 +297,121 @@
   "target_search": {
     "retarget_hint": "Busque satélites, misiones o órganos. Seleccionar un resultado inmediatamente retargets el objetivo activo.",
     "search_label": "Buscar satélites, misiones o órganos"
+  },
+  "rotator_utils": {
+    "target_above_maximum_azimuth": "Objetivo por encima del máximo azimut",
+    "target_above_maximum_elevation": "Objetivo por encima de la elevación máxima",
+    "target_below_minimum_azimuth": "Objetivo por debajo del azimut mínimo",
+    "target_below_minimum_elevation": "Objetivo por debajo de la elevación mínima",
+    "target_below_the_horizon": "Objetivo bajo el horizonte"
+  },
+  "target_earth_maplibre_view": {
+    "sun": "Sol",
+    "home": "Estación base",
+    "moon": "Luna"
+  },
+  "target_info_island": {
+    "altitude": "Altitud",
+    "azimuth": "Azimut",
+    "close": "Cerca",
+    "data_source": "Fuente de datos",
+    "distance_from_sun": "Distancia desde el sol",
+    "edit_details": "Editar detalles",
+    "edit_transmitters": "Editar transmisores",
+    "elevation": "Elevación",
+    "last_refresh": "Última actualización",
+    "launched": "Lanzado",
+    "projection": "Proyección",
+    "rotator": "Rotador",
+    "samples": "Muestras",
+    "source": "Fuente",
+    "source_mode": "Modo fuente",
+    "stale": "Duro",
+    "target_type": "Tipo de objetivo",
+    "updated": "Actualizado",
+    "velocity": "Velocidad",
+    "visibility": "Visibilidad",
+    "website": "Sitio web",
+    "added_to_db": "Añadido a la BD",
+    "altitude_kilometres": "Altitud, kilómetros",
+    "cache": "Caché",
+    "citation": "Cita",
+    "light_time": "Tiempo de luz",
+    "link": "Enlace ↗",
+    "more": "Más",
+    "real_time_position": "Posición en tiempo real",
+    "rig": "Radio",
+    "rig_state": "Estado de la radio",
+    "rotator_state": "Estado del rotador",
+    "speed": "Velocidad",
+    "speed_kilometres_per_second": "Velocidad, kilómetros por segundo",
+    "target_geometry": "Geometría del objetivo",
+    "target_info": "Info del objetivo",
+    "target_key": "Clave del objetivo",
+    "target_metadata": "Metadatos del objetivo",
+    "tracking_link": "Enlace de seguimiento",
+    "velocity_kilometres_per_second": "Velocidad, kilómetros por segundo",
+    "view_full_details": "Ver detalles completos",
+    "waiting_for_updated_mission_body_telemetry": "Esperando telemetría actualizada de la misión o cuerpo."
+  },
+  "target_selector_bar": {
+    "body": "Cuerpo",
+    "cancel": "Cancelar",
+    "loading_body_catalog": "Cargando catálogo de carrocerías...",
+    "mission": "Misión",
+    "no_rig_control": "Sin control de plataformas",
+    "no_rotator_control": "No hay control de rotación",
+    "none": "Ninguno",
+    "rotator": "Rotador",
+    "satellite": "Satélite",
+    "target_type": "Tipo de objetivo",
+    "add_new_target": "Añadir nuevo objetivo",
+    "add_target_slot": "añadir ranura de objetivo",
+    "add_target_slot_satellite_mission_or_body": "Añadir ranura de objetivo (satélite, misión o cuerpo)",
+    "are_you_sure_you_want_to_abort_the_observation": "¿Seguro que quieres interrumpir la observación",
+    "are_you_sure_you_want_to_stop_the_observation": "¿Seguro que quieres detener la observación",
+    "assign_hardware_now_or_leave_as_none": "Asigna hardware ahora o déjalo sin asignar.",
+    "body_target": "Objetivo de cuerpo",
+    "configure_target_and_hardware_in_two_quick_steps": "Configura el objetivo y el hardware en dos pasos",
+    "create_target": "Crear objetivo",
+    "delete_target": "Eliminar objetivo",
+    "deleting_target": "Eliminando objetivo...",
+    "mission_target": "Objetivo de misión",
+    "processing_observation": "Procesando observación...",
+    "rig": "Radio",
+    "satellite_target": "Objetivo de satélite",
+    "search_body_name_or_id": "Buscar nombre o ID de cuerpo",
+    "search_mission_name_or_command": "Buscar nombre o comando de la misión",
+    "search_satellite_by_name_or_norad_id": "Buscar satélite por nombre o ID NORAD",
+    "select_a_target_type_and_choose_a_satellite_mission_or_b": "Selecciona un tipo de objetivo y elige un satélite, misión o cuerpo.",
+    "step_1_target": "Paso 1 · Objetivo",
+    "step_2_hardware_optional": "Paso 2 · Hardware (opcional)",
+    "this_will_remove_the_target_tracking_state_and_stop_its_": "Esto eliminará el estado de seguimiento del objetivo y detendrá su proceso de seguimiento."
+  },
+  "target_sky_planetarium_view": {
+    "loading_planetarium_vectors": "Cargando vectores de planetario...",
+    "refresh_target_scene": "Actualizar escena del objetivo"
+  },
+  "manual_rotator_dialog": {
+    "azimuth_dial": "Dial de acimut",
+    "current": "Actual",
+    "elevation_dial": "Dial de elevación",
+    "readout_label": "Posición de {{axis}}",
+    "requested": "Solicitado"
+  },
+  "target_map_composite_view": {
+    "refresh_target_scene": "Actualizar escena del objetivo",
+    "select_a_mission_body_target_to_render_the_solar_system_": "Selecciona un objetivo de misión o cuerpo para representar la vista del sistema solar."
+  },
+  "target_view_router": {
+    "add_a_target_to_view_the_planetarium_or_globe": "Añade un objetivo para ver el planetario o el globo.",
+    "no_targets_configured": "No hay objetivos configurados"
+  },
+  "tracker_command_state": {
+    "acknowledgement_missing_checking_command_status": "Falta el acuse; comprobando estado del comando",
+    "not_connected_to_backend": "No conectado al backend"
+  },
+  "tracker_instances_panel": {
+    "trackers": "Seguidores"
   }
 }

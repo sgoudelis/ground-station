@@ -32,7 +32,13 @@
     "refreshing_in": "{{seconds}} 秒后刷新...",
     "refreshing_now": "正在刷新...",
     "cancel": "取消",
-    "refresh_now": "立即刷新"
+    "refresh_now": "立即刷新",
+    "available": "更新",
+    "available_full": "有可用更新",
+    "latest": "最新",
+    "published": "发布时间",
+    "unknown_date": "未知日期",
+    "click_to_open": "点击查看版本发布"
   },
   "target_popover": {
     "sections": {
@@ -304,6 +310,10 @@
     "ground_station": "Ground Station"
   },
   "dashboard_layout": {
+    "account_menu_label": "当前用户",
+    "account_title": "账户",
+    "account_sign_in": "登录",
+    "account_sign_out": "退出登录",
     "accounts": "账户",
     "active_observation_indicator": "活跃观测指示器",
     "ground_station": "地面站",
@@ -315,7 +325,8 @@
     "starting_soon": "即将开始：",
     "starts": "• 开始",
     "toggle_drawer": "切换侧边栏",
-    "project_x": "Project X"
+    "project_x": "Project X",
+    "loading_page": "页面加载中"
   },
   "screens": {
     "authentication_is_required_to_use_this_ground_station_in": "使用此地面站实例需要身份验证。",
@@ -345,7 +356,17 @@
     "stop": "停止",
     "stopped": "已停止",
     "complete": "% 已完成",
-    "duration": "持续时间："
+    "duration": "持续时间：",
+    "socket_disconnected": "套接字已断开",
+    "no_tasks": "无后台任务",
+    "summary_empty": "无任务",
+    "finished": "已完成",
+    "show_last_line": "仅显示最后一行",
+    "show_full_output": "显示完整输出",
+    "title": "后台任务",
+    "clear_completed": "清除已完成的任务",
+    "no_tasks_message": "没有任务正在运行",
+    "no_tasks_description": "后台任务运行时会显示在这里。"
   },
   "api_tokens": {
     "menu": "API 令牌",
@@ -383,5 +404,14 @@
     "done": "完成",
     "save": "保存",
     "revoke_confirm": "撤销“{{name}}”？使用它的应用将立即失去访问权限。"
+  },
+  "dashboard": {
+    "location_wizard_title": "需要完成地面站设置"
+  },
+  "location_warning": {
+    "tooltip": "未设置位置",
+    "title": "未设置位置",
+    "message": "尚未配置地面站位置。卫星跟踪和过境预测需要位置信息。",
+    "set_location": "设置位置"
   }
 }

@@ -196,7 +196,10 @@
   },
   "map_settings": {
     "title": "地图设置",
-    "close": "关闭"
+    "close": "关闭",
+    "apply": "应用",
+    "reset_defaults": "恢复默认",
+    "section_base_map": "底图"
   },
   "map_target": {
     "already_tracking": "已在此跟踪该卫星",

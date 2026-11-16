@@ -20,6 +20,14 @@
 import {GroundStationLogoMeridian} from "../components/common/logo-dataurl.js";
 import { useTranslation } from 'react-i18next';
 
+/**
+ * Project/product name. This is a brand string rather than UI copy, so it is never
+ * translated: the dashboard top bar renders `APP_NAME` directly, and the locale keys
+ * that hold translated variants (`*.ground_station`) stay in the locale files for the
+ * sentences that legitimately talk about a ground station.
+ */
+export const APP_NAME = 'Ground Station';
+
 // The logo is wrapped in a component so its alt text reacts to language changes
 // (a hook cannot be called in the module-level branding factory).
 const BrandingLogo = () => {

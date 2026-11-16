@@ -136,10 +136,10 @@ const FftAccordion = ({
                                 value={fftOverlapDepth}
                                 onChange={(e) => onFFTOverlapDepthChange(e.target.value)}
                                 label={t('fft.overlap_depth', { defaultValue: 'Overlap Depth' })} variant={'outlined'}>
-                                <MenuItem value={4}>{t('fft.overlap_depth_segments', { count: 4, defaultValue: '4 segments' })}</MenuItem>
-                                <MenuItem value={8}>{t('fft.overlap_depth_segments', { count: 8, defaultValue: '8 segments' })}</MenuItem>
-                                <MenuItem value={16}>{t('fft.overlap_depth_segments', { count: 16, defaultValue: '16 segments' })}</MenuItem>
-                                <MenuItem value={32}>{t('fft.overlap_depth_segments', { count: 32, defaultValue: '32 segments' })}</MenuItem>
+                                <MenuItem value={4}>{t('fft.overlap_depth_segments', { count: 4, defaultValue: '{{count}} segments' })}</MenuItem>
+                                <MenuItem value={8}>{t('fft.overlap_depth_segments', { count: 8, defaultValue: '{{count}} segments' })}</MenuItem>
+                                <MenuItem value={16}>{t('fft.overlap_depth_segments', { count: 16, defaultValue: '{{count}} segments' })}</MenuItem>
+                                <MenuItem value={32}>{t('fft.overlap_depth_segments', { count: 32, defaultValue: '{{count}} segments' })}</MenuItem>
                             </Select>
                         </FormControl>
 

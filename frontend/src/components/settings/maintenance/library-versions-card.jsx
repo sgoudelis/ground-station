@@ -10,6 +10,7 @@ import { useSocket } from "../../common/socket.jsx";
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchLibraryVersions, fetchFrontendLibraryVersions } from '../library-versions-slice.jsx';
 import { useTranslation } from 'react-i18next';
+import { tabCapsLabel } from '../../../utils/greekcaps.js';
 
 const LibraryVersionsCard = () => {
     const { t } = useTranslation('settings');
@@ -65,8 +66,8 @@ const LibraryVersionsCard = () => {
             <Divider sx={{ mb: 2 }} />
 
             <Tabs value={libraryVersionsTab} onChange={(e, newValue) => setLibraryVersionsTab(newValue)} sx={{ mb: 2 }}>
-                <Tab label={t('library_versions_card.backend', { defaultValue: 'Backend' })} />
-                <Tab label={t('library_versions_card.frontend', { defaultValue: 'Frontend' })} />
+                <Tab label={tabCapsLabel(t('library_versions_card.backend', { defaultValue: 'Backend' }))} />
+                <Tab label={tabCapsLabel(t('library_versions_card.frontend', { defaultValue: 'Frontend' }))} />
             </Tabs>
 
             {/* Backend Tab */}

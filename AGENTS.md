@@ -43,7 +43,31 @@
 - Default to read-only `gh` usage (list/view/status/check) unless explicit write permission is given in the current turn.
 - If there is any ambiguity, stop and ask before running any `gh` command that mutates remote state.
 
+## i18n Decisions
+- Frontend translations live in `frontend/src/i18n/locales/<lang>/<ns>.json`; read
+  `frontend/src/i18n/TRANSLATION_GUIDE.md` before translating (tooling, rules, glossary).
+- Squawk-code prose (`navigation.packet_map.squawk.codes.*.description`, `regional_note`) stays
+  English in every locale. Do not translate it; dialog chrome may be translated.
+- No native reviewer gates Italian (or other locales): values ship unreviewed and get fixed from
+  user feedback. Reuse the guide's EN->IT glossary so wording stays internally consistent.
+- Coverage is a ratchet: `npm run i18n:baseline` may only go down. Keys are a contract; never rename
+  a key just to translate it, and never drop a `{{placeholder}}`.
+- Every non-English locale is at 0 counted missing, so the ratchet floor is zero: a new `en` key
+  fails `npm test` for all seven languages until each one is translated.
+- Tab strips built from `{ labelKey, defaultLabel }` arrays must have their key in `en/<ns>.json`
+  (and in every locale); otherwise the English default renders in all languages. `i18n check` fails on
+  `dynamic-label-missing`.
+- Never bulk-delete locale keys reported by `i18n check` as `unknown-keys`. The static reference scan
+  misses template-literal keys (for example `preferences.theme_${name}`), so some are live.
+- Greek must not be uppercased by CSS (browser uppercasing keeps the tonos, `Ά`). `src/i18n/config.js`
+  mirrors the language to `<html lang>` and `src/theme.js` disables `text-transform` for `el`.
+  Never "fix" Greek accents by editing stored strings to match what an uppercasing button paints.
+  Chrome that must be capitalised (MUI tab bars) builds the label in JS via
+  `tabCapsLabel()`/`greekCaps()` in `frontend/src/utils/greekcaps.js`; locale values stay mixed-case
+  and accented.
+
 ## Code Comments
+
 - Add code comments more proactively when touching logic that is not immediately obvious.
 - Prefer more comments over fewer comments when in doubt, especially around control flow, state transitions, and worker/lifecycle behavior.
 - Keep comments brief and clear (avoid verbose explanations).

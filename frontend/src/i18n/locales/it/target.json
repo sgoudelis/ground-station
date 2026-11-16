@@ -1,7 +1,12 @@
 {
   "map_settings": {
     "title": "Impostazioni Mappa",
-    "close": "Chiudi"
+    "close": "Chiudi",
+    "apply": "Applica",
+    "reset_defaults": "Ripristina le impostazioni predefinite",
+    "saving": "Salvataggio…",
+    "saved": "Salvato",
+    "save_failed": "Salvataggio non riuscito"
   },
   "map_controls": {
     "map_settings": "Impostazioni mappa",
@@ -22,7 +27,61 @@
     "automatic_observation_tooltip": "Questo passaggio verrà osservato automaticamente",
     "geo_stat": "GEO Stat",
     "geo_sync": "GEO Sync",
-    "no_satellite_selected": "Selezionare un satellite per visualizzare i passaggi"
+    "no_satellite_selected": "Selezionare un satellite per visualizzare i passaggi",
+    "all_passes": "Tutto passa",
+    "all_passes_alt_1": "Tutti i passaggi (Alt+1)",
+    "highest_elevation_first": "Prima la quota più alta",
+    "highest_elevation_first_alt_4": "Prima l'elevazione più alta (Alt+4)",
+    "live_or_next_30_minutes_alt_3": "Dal vivo o nei prossimi 30 minuti (Alt+3)",
+    "live_passes": "Passaggi dal vivo",
+    "live_passes_alt_2": "Passaggi live (Alt+2)",
+    "next_30_minutes": "Prossimi 30 minuti",
+    "no_data": "Nessun dato",
+    "no_targets_configured": "Nessun bersaglio configurato",
+    "direction": "Direzione",
+    "direction_values": {
+      "cw": "Senso orario",
+      "ccw": "Antiorario",
+      "mixed": "Misto"
+    },
+    "pass_types": "Tipi di passaggio",
+    "pass_tag_labels": {
+      "north_crossing": "Attraversamento nord",
+      "south_crossing": "Attraversamento sud",
+      "direction_cw": "Senso orario",
+      "direction_ccw": "Antiorario",
+      "direction_mixed": "Misto",
+      "direction_e_to_w": "E>O",
+      "direction_w_to_e": "O>E",
+      "elevation_low": "ELV bassa",
+      "elevation_medium": "ELV media",
+      "elevation_high": "ELV alta",
+      "elevation_overhead": "Zenit"
+    },
+    "pass_tag_tooltips": {
+      "north_crossing": "Il passaggio attraversa il nord (azimut 0°).",
+      "south_crossing": "Il passaggio attraversa il sud (azimut 180°).",
+      "direction_cw": "Il satellite si muove in senso orario nel cielo.",
+      "direction_ccw": "Il satellite si muove in senso antiorario nel cielo.",
+      "direction_mixed": "Il satellite cambia direzione durante il passaggio.",
+      "direction_e_to_w": "Il satellite si sposta da est a ovest.",
+      "direction_w_to_e": "Il satellite si sposta da ovest a est.",
+      "elevation_low": "L'elevazione massima è inferiore a 30°.",
+      "elevation_medium": "L'elevazione massima è da 30° a meno di 60°.",
+      "elevation_high": "L'elevazione massima è da 60° a meno di 80°.",
+      "elevation_overhead": "L'elevazione massima è 80° o superiore."
+    },
+    "transmitter_link_tooltips": {
+      "same_band": "{{count}} trasmettitori con uplink e downlink su {{band}}",
+      "split_band": "{{count}} trasmettitori con uplink su {{uplinkBand}} e downlink su {{downlinkBand}}",
+      "uplink_only": "{{count}} trasmettitori con solo uplink su {{uplinkBand}}",
+      "downlink_only": "{{count}} trasmettitori con solo downlink su {{downlinkBand}}",
+      "unknown": "{{count}} trasmettitori senza banda di uplink o downlink indicata",
+      "details": "Dettagli: {{descriptions}}"
+    },
+    "refresh_passes_force_recalculate": "Aggiorna passaggi (ricalcolo forzato)",
+    "add_a_target_to_load_upcoming_passes_and_visibility_wind": "Aggiungi un bersaglio per caricare i passaggi imminenti e le finestre di visibilità.",
+    "transmitter_links": "Collegamenti"
   },
   "rig_control": {
     "title": "Controllo radio rig",
@@ -37,7 +96,15 @@
     "connect": "CONNETTI",
     "disconnect": "DISCONNETTI",
     "track_radio": "TRACCIA RADIO",
-    "stop": "FERMA"
+    "stop": "FERMA",
+    "none": "Nessuno",
+    "uplink": "Uplink:",
+    "downlink": "Downlink:",
+    "pause_tracking": "Metti in pausa il tracciamento",
+    "vfo_1": "VFO 1",
+    "none_option": "[nessuno]",
+    "vfo_2": "VFO 2",
+    "swap_vfo_1_and_vfo_2": "Scambia VFO 1 e VFO 2"
   },
   "rotator_control": {
     "title": "Controllo rotatore",
@@ -58,10 +125,15 @@
     "manual_azimuth": "Azimut ({{min}}°–{{max}}°)",
     "manual_elevation": "Elevazione ({{min}}°–{{max}}°)",
     "move": "MUOVI",
-    "close": "CHIUDI"
+    "close": "CHIUDI",
+    "none": "Nessuno",
+    "tracking_lead": "Anticipo del tracciamento del satellite",
+    "tracking_lead_short": "Anticipo",
+    "target_offset": "Offset del bersaglio"
   },
   "satellite_search": {
-    "search_label": "Cerca satelliti (per nome o ID NORAD)"
+    "search_label": "Cerca satelliti (per nome o ID NORAD)",
+    "monitored": "Monitorato"
   },
   "satellite_dropdown": {
     "label": "Satellite"
@@ -85,7 +157,8 @@
       "added_to_db": "AGGIUNTO AL DB",
       "countries": "PAESI",
       "alternative_name": "NOME ALTERNATIVO",
-      "satellite_id": "ID SATELLITE"
+      "satellite_id": "ID SATELLITE",
+      "operator": "Operatore"
     },
     "values": {
       "yes": "SÌ",
@@ -110,7 +183,10 @@
     "select_sdr": "seleziona un SDR",
     "no_frequency_control": "[nessun controllo frequenza]",
     "select_transmitter": "seleziona un trasmettitore",
-    "no_transmitters": "Nessun trasmettitore disponibile per questo satellite"
+    "no_transmitters": "Nessun trasmettitore disponibile per questo satellite",
+    "vfo_label": "VFO",
+    "no_vfo_control": "[nessun controllo VFO]",
+    "select_vfo": "seleziona un VFO"
   },
   "rotator_control_labels": {
     "rotator_label": "Rotatore",
@@ -127,10 +203,24 @@
     "title": "Tracciamento target"
   },
   "target_retarget_dialog": {
-    "title": "Riassegna slot o crea un nuovo bersaglio"
+    "title": "Riassegna slot o crea un nuovo bersaglio",
+    "cancel": "Annulla",
+    "this_target": "questo obiettivo",
+    "subtitle": "Scegli se riposizionare lo slot attivo o crearne uno nuovo",
+    "no_rotator": "Nessun controllo del rotore",
+    "no_target": "Nessun bersaglio selezionato",
+    "no_slots": "Nessuno slot di bersaglio attivo disponibile da riposizionare.",
+    "or": "oppure",
+    "option_new_title": "Crea un nuovo slot di bersaglio",
+    "no_rig": "Nessun controllo del rig",
+    "submit_failed": "Applicazione della selezione del bersaglio non riuscita.",
+    "submitting": "Applicazione...",
+    "confirm_create": "Crea nuovo bersaglio",
+    "confirm_retarget": "Riposiziona lo slot selezionato"
   },
   "pass_timeline": {
-    "title": "Cronologia dei passaggi per {{name}} - Prossime {{hours}} ore"
+    "title": "Cronologia dei passaggi per {{name}} - Prossime {{hours}} ore",
+    "refresh_passes_force_recalculate": "Aggiorna passaggi (ricalcolo forzato)"
   },
   "timeline": {
     "zoomIn": "Ingrandisci",
@@ -169,6 +259,156 @@
       "frequency_violation": "⚠️ VIOLAZIONE FREQUENZA",
       "no_transmitters": "Nessun Trasmettitore Disponibile",
       "no_transmitters_desc": "Questo satellite non ha trasmettitori registrati."
-    }
+    },
+    "uplink": "Uplink",
+    "inverted": "Invertito",
+    "unconfirmed": "Non confermato"
+  },
+  "passes_table_settings": {
+    "category_basic": "Informazioni di base",
+    "close": "Vicino",
+    "rows_per_page": "Righe per pagina",
+    "always_visible": "sempre visibile",
+    "title": "Impostazioni della tabella dei passaggi",
+    "description": "Scegli quali colonne mostrare nella tabella dei passaggi",
+    "category_time": "Informazioni temporali",
+    "category_distance": "Informazioni sulla distanza",
+    "category_orbital": "Informazioni orbitali"
+  },
+  "rotator_utils": {
+    "target_below_minimum_elevation": "Target sotto l'elevazione minima",
+    "target_above_maximum_elevation": "Bersaglio sopra l'elevazione massima",
+    "target_below_minimum_azimuth": "Bersaglio sotto l'azimut minimo",
+    "target_above_maximum_azimuth": "Bersaglio sopra l'azimut massimo",
+    "target_below_the_horizon": "Bersaglio sotto l'orizzonte"
+  },
+  "target_earth_maplibre_view": {
+    "sun": "Sole",
+    "moon": "Luna",
+    "home": "Home"
+  },
+  "target_info_island": {
+    "altitude": "Altitudine",
+    "azimuth": "Azimut",
+    "close": "Vicino",
+    "data_source": "Origine dati",
+    "distance_from_sun": "Distanza dal sole",
+    "edit_details": "Modifica dettagli",
+    "edit_transmitters": "Modifica trasmettitori",
+    "elevation": "Elevazione",
+    "last_refresh": "Ultimo aggiornamento",
+    "launched": "Lanciato",
+    "projection": "Proiezione",
+    "rotator": "Rotatore",
+    "samples": "Campioni",
+    "source": "Fonte",
+    "source_mode": "Modalità sorgente",
+    "stale": "Stanco",
+    "target_type": "Tipo di obiettivo",
+    "updated": "Aggiornato",
+    "velocity": "Velocità",
+    "website": "Sito web",
+    "speed": "Velocità",
+    "rig": "Rig",
+    "target_info": "Informazioni sul bersaglio",
+    "real_time_position": "Posizione in tempo reale",
+    "altitude_kilometres": "Altitudine, chilometri",
+    "velocity_kilometres_per_second": "Velocità, chilometri al secondo",
+    "added_to_db": "Aggiunto al DB",
+    "link": "Collegamento ↗",
+    "citation": "Citazione",
+    "more": "Altro",
+    "view_full_details": "Vedi tutti i dettagli",
+    "waiting_for_updated_mission_body_telemetry": "In attesa di telemetria aggiornata della missione/corpo.",
+    "speed_kilometres_per_second": "Velocità, chilometri al secondo",
+    "target_geometry": "Geometria del bersaglio",
+    "visibility": "Visibilità",
+    "light_time": "Tempo di luce",
+    "target_metadata": "Metadati del bersaglio",
+    "target_key": "Chiave del bersaglio",
+    "tracking_link": "Collegamento di tracciamento",
+    "rotator_state": "Stato del rotore",
+    "rig_state": "Stato del rig",
+    "cache": "Cache"
+  },
+  "target_selector_bar": {
+    "body": "Corpo",
+    "cancel": "Annulla",
+    "loading_body_catalog": "Caricamento catalogo carrozzerie...",
+    "mission": "Missione",
+    "none": "Nessuno",
+    "rotator": "Rotatore",
+    "target_type": "Tipo di obiettivo",
+    "satellite": "Satellite",
+    "rig": "Rig",
+    "no_rotator_control": "Nessun controllo del rotore",
+    "delete_target": "Elimina bersaglio",
+    "this_will_remove_the_target_tracking_state_and_stop_its_": "Rimuoverà lo stato di tracciamento del bersaglio e fermerà il suo processo di tracciamento.",
+    "deleting_target": "Eliminazione del bersaglio...",
+    "are_you_sure_you_want_to_stop_the_observation": "Vuoi interrompere l'osservazione",
+    "are_you_sure_you_want_to_abort_the_observation": "Vuoi annullare l'osservazione",
+    "processing_observation": "Elaborazione dell'osservazione...",
+    "add_new_target": "Aggiungi nuovo bersaglio",
+    "configure_target_and_hardware_in_two_quick_steps": "Configura bersaglio e hardware in due rapidi passaggi",
+    "step_1_target": "Passaggio 1 · Bersaglio",
+    "select_a_target_type_and_choose_a_satellite_mission_or_b": "Seleziona un tipo di bersaglio e scegli un satellite, una missione o un corpo.",
+    "satellite_target": "Bersaglio satellitare",
+    "search_satellite_by_name_or_norad_id": "Cerca il satellite per nome o ID NORAD",
+    "mission_target": "Bersaglio di missione",
+    "search_mission_name_or_command": "Cerca il nome o il comando della missione",
+    "body_target": "Bersaglio di corpo celeste",
+    "search_body_name_or_id": "Cerca il nome o l'ID del corpo",
+    "step_2_hardware_optional": "Passaggio 2 · Hardware (facoltativo)",
+    "assign_hardware_now_or_leave_as_none": "Assegna l'hardware ora, oppure lascia nessuno.",
+    "no_rig_control": "Nessun controllo del rig",
+    "create_target": "Crea bersaglio",
+    "add_target_slot_satellite_mission_or_body": "Aggiungi slot di bersaglio (satellite, missione o corpo)",
+    "add_target_slot": "aggiungi slot di bersaglio"
+  },
+  "target_sky_planetarium_view": {
+    "loading_planetarium_vectors": "Caricamento vettori planetario...",
+    "refresh_target_scene": "Aggiorna la scena del bersaglio"
+  },
+  "view_picker": {
+    "label": "Visualizzazione",
+    "map": "Mappa 2D",
+    "globe": "Globo",
+    "sky": "Cielo",
+    "automatic": "Automatico per visibilità",
+    "solar_system": "Sistema solare"
+  },
+  "target_view_router": {
+    "no_targets_configured": "Nessun bersaglio configurato",
+    "add_a_target_to_view_the_planetarium_or_globe": "Aggiungi un bersaglio per vedere il planetario o il globo."
+  },
+  "view_settings": {
+    "customize_title": "Personalizza la vista attuale",
+    "interaction_title": "Interazione",
+    "interaction_description": "Controlla l'interazione diretta con il puntatore nella vista attuale.",
+    "map_preferences": "Preferenze della mappa",
+    "map_preferences_description": "Scegli una mappa di base e controlla l'interazione diretta con la mappa.",
+    "sky_interaction_description": "Controlla l'interazione con il puntatore nella vista del cielo."
+  },
+  "manual_rotator_dialog": {
+    "current": "Attuale",
+    "requested": "Richiesto",
+    "readout_label": "Posizione {{axis}}",
+    "azimuth_dial": "Quadrante azimut",
+    "elevation_dial": "Quadrante elevazione"
+  },
+  "target_search": {
+    "search_label": "Cerca satelliti, missioni o corpi",
+    "retarget_hint": "Cerca satelliti, missioni o corpi. Selezionando un risultato viene riposizionato immediatamente il bersaglio attivo."
+  },
+  "target_map_composite_view": {
+    "refresh_target_scene": "Aggiorna la scena del bersaglio",
+    "select_a_mission_body_target_to_render_the_solar_system_": "Seleziona un bersaglio missione/corpo per visualizzare la vista del sistema solare."
+  },
+  "tracker_command_state": {
+    "not_connected_to_backend": "Non connesso al backend",
+    "acknowledgement_missing_checking_command_status": "Conferma mancante; verifica dello stato del comando"
+  },
+  "tracker_instances_panel": {
+    "trackers": "Tracciatori"
   }
 }

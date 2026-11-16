@@ -34,7 +34,7 @@ function HexByte({ byte, offset, onClick, selected }) {
             <div>{t('telemetry_hex_ascii_tab.hex_0x', { defaultValue: 'Hex: 0x' })}{byteValue.toString(16).padStart(2, '0').toUpperCase()}</div>
             <div>{t('telemetry_hex_ascii_tab.dec', { defaultValue: 'Dec:' })} {byteValue}</div>
             <div>{t('telemetry_hex_ascii_tab.binary', { defaultValue: 'Binary:' })} {byteValue.toString(2).padStart(8, '0')}</div>
-            <div>{t('telemetry_hex_ascii_tab.ascii', { defaultValue: 'ASCII:' })} {byteValue >= 32 && byteValue < 127 ? String.fromCharCode(byteValue) : '·'}</div>
+            <div>{t('telemetry_hex_ascii_tab.ascii_field', { defaultValue: 'ASCII:' })} {byteValue >= 32 && byteValue < 127 ? String.fromCharCode(byteValue) : '·'}</div>
         </Box>
     );
 

@@ -73,7 +73,18 @@
       "unknown": "{{count}} zender(s) zonder vermelde uplink- of downlinkband",
       "details": "Details: {{descriptions}}"
     },
-    "no_data": "Geen gegevens"
+    "no_data": "Geen gegevens",
+    "all_passes": "Alle passen",
+    "all_passes_alt_1": "Alle passen (Alt+1)",
+    "highest_elevation_first": "Hoogste hoogte eerst",
+    "highest_elevation_first_alt_4": "Hoogste hoogte eerst (Alt+4)",
+    "live_or_next_30_minutes_alt_3": "Live of volgende 30 minuten (Alt+3)",
+    "live_passes": "Levende passen",
+    "live_passes_alt_2": "Live passen (Alt+2)",
+    "next_30_minutes": "Volgende 30 minuten",
+    "add_a_target_to_load_upcoming_passes_and_visibility_wind": "Voeg een doel toe om aankomende passes en zichtvensters te laden.",
+    "no_targets_configured": "Geen doelen geconfigureerd",
+    "refresh_passes_force_recalculate": "Passes vernieuwen (herberekening forceren)"
   },
   "rig_control": {
     "title": "Radio rig controle",
@@ -88,7 +99,15 @@
     "connect": "VERBINDEN",
     "disconnect": "VERBREKEN",
     "track_radio": "RADIO VOLGEN",
-    "stop": "STOPPEN"
+    "stop": "STOPPEN",
+    "none": "Geen",
+    "downlink": "Downlink:",
+    "none_option": "[geen]",
+    "pause_tracking": "Tracking pauzeren",
+    "swap_vfo_1_and_vfo_2": "VFO 1 en VFO 2 wisselen",
+    "uplink": "Uplink:",
+    "vfo_1": "VFO 1",
+    "vfo_2": "VFO 2"
   },
   "rotator_control": {
     "title": "Rotator controle",
@@ -109,10 +128,15 @@
     "manual_azimuth": "Azimut ({{min}}°–{{max}}°)",
     "manual_elevation": "Elevatie ({{min}}°–{{max}}°)",
     "move": "VERPLAATSEN",
-    "close": "SLUITEN"
+    "close": "SLUITEN",
+    "none": "Geen",
+    "target_offset": "Doeloffset",
+    "tracking_lead": "Lead voor satelliettracking",
+    "tracking_lead_short": "Lead"
   },
   "satellite_search": {
-    "search_label": "Zoek satellieten (op naam of NORAD ID)"
+    "search_label": "Zoek satellieten (op naam of NORAD ID)",
+    "monitored": "Gevolgd"
   },
   "satellite_dropdown": {
     "label": "Satelliet"
@@ -136,7 +160,8 @@
       "added_to_db": "TOEGEVOEGD AAN DB",
       "countries": "LANDEN",
       "alternative_name": "ALTERNATIEVE NAAM",
-      "satellite_id": "SATELLIET ID"
+      "satellite_id": "SATELLIET ID",
+      "operator": "Exploitant"
     },
     "values": {
       "yes": "JA",
@@ -197,7 +222,8 @@
     "this_target": "dit doel"
   },
   "pass_timeline": {
-    "title": "Passage Tijdlijn voor {{name}} - Volgende {{hours}} uur"
+    "title": "Passage Tijdlijn voor {{name}} - Volgende {{hours}} uur",
+    "refresh_passes_force_recalculate": "Passes vernieuwen (herberekening forceren)"
   },
   "timeline": {
     "zoomIn": "Inzoomen",
@@ -236,7 +262,10 @@
       "frequency_violation": "⚠️ FREQUENTIE OVERTREDING",
       "no_transmitters": "Geen Zenders Beschikbaar",
       "no_transmitters_desc": "Deze satelliet heeft geen geregistreerde zenders."
-    }
+    },
+    "inverted": "Omgekeerd",
+    "unconfirmed": "Niet bevestigd",
+    "uplink": "Uplink"
   },
   "view_picker": {
     "label": "Weergave",
@@ -268,5 +297,121 @@
   "target_search": {
     "retarget_hint": "Zoek satellieten, missies of hemellichamen. Als u een resultaat selecteert, wordt het actieve doel onmiddellijk opnieuw gericht.",
     "search_label": "Satellieten, missies of hemellichamen zoeken"
+  },
+  "rotator_utils": {
+    "target_above_maximum_azimuth": "Doel boven maximum azimut",
+    "target_above_maximum_elevation": "Doel boven maximumhoogte",
+    "target_below_minimum_azimuth": "Doel onder minimum azimut",
+    "target_below_minimum_elevation": "Doel onder minimale elevatie",
+    "target_below_the_horizon": "Doel onder de horizon"
+  },
+  "target_earth_maplibre_view": {
+    "sun": "Zon",
+    "home": "Thuisstation",
+    "moon": "Maan"
+  },
+  "target_info_island": {
+    "altitude": "Hoogte",
+    "azimuth": "Azimut",
+    "close": "Dichtbij",
+    "data_source": "Gegevensbron",
+    "distance_from_sun": "Afstand vanaf zon",
+    "edit_details": "Details bewerken",
+    "edit_transmitters": "Zenders bewerken",
+    "elevation": "Hoogte",
+    "last_refresh": "Laatste vernieuwing",
+    "launched": "Gelanceerd",
+    "projection": "Projectie",
+    "samples": "Monsters",
+    "source": "Bron",
+    "source_mode": "Bronmodus",
+    "stale": "Muf",
+    "target_type": "Doeltype",
+    "updated": "Bijgewerkt",
+    "velocity": "Snelheid",
+    "visibility": "Zichtbaarheid",
+    "added_to_db": "Toegevoegd aan DB",
+    "altitude_kilometres": "Hoogte, kilometer",
+    "cache": "Cache",
+    "citation": "Verwijzing",
+    "light_time": "Lichtlooptijd",
+    "link": "Link ↗",
+    "more": "Meer",
+    "real_time_position": "Positie in realtime",
+    "rig": "Rig",
+    "rig_state": "Rig-status",
+    "rotator_state": "Rotatorstatus",
+    "speed": "Snelheid",
+    "speed_kilometres_per_second": "Snelheid, kilometer per seconde",
+    "target_geometry": "Doelmeetkunde",
+    "target_info": "Doelinfo",
+    "target_key": "Doelsleutel",
+    "target_metadata": "Doelmetadata",
+    "tracking_link": "Trackinglink",
+    "velocity_kilometres_per_second": "Snelheid, kilometer per seconde",
+    "view_full_details": "Volledige details weergeven",
+    "waiting_for_updated_mission_body_telemetry": "Wacht op bijgewerkte telemetrie van missie of lichaam.",
+    "rotator": "Rotator",
+    "website": "Website"
+  },
+  "target_selector_bar": {
+    "body": "Lichaam",
+    "cancel": "Annuleren",
+    "loading_body_catalog": "Carrosseriecatalogus laden...",
+    "mission": "Missie",
+    "no_rig_control": "Geen rigbesturing",
+    "no_rotator_control": "Geen rotatorbesturing",
+    "none": "Geen",
+    "satellite": "Satelliet",
+    "target_type": "Doeltype",
+    "add_new_target": "Nieuw doel toevoegen",
+    "add_target_slot": "doelslot toevoegen",
+    "add_target_slot_satellite_mission_or_body": "Doelslot toevoegen (satellite, missie of lichaam)",
+    "are_you_sure_you_want_to_abort_the_observation": "Weet u zeker dat u de observatie wilt afbreken",
+    "are_you_sure_you_want_to_stop_the_observation": "Weet u zeker dat u de observatie wilt stoppen",
+    "assign_hardware_now_or_leave_as_none": "Wijs nu hardware toe of laat het op geen staan.",
+    "body_target": "Lichaamsdoel",
+    "configure_target_and_hardware_in_two_quick_steps": "Stel doel en hardware in twee stappen in",
+    "create_target": "Doel maken",
+    "delete_target": "Doel verwijderen",
+    "deleting_target": "Doel wordt verwijderd...",
+    "mission_target": "Missiedoel",
+    "processing_observation": "Observatie wordt verwerkt...",
+    "rig": "Rig",
+    "satellite_target": "Satellietdoel",
+    "search_body_name_or_id": "Zoek naam of ID van lichaam",
+    "search_mission_name_or_command": "Zoek missienaam of commando",
+    "search_satellite_by_name_or_norad_id": "Zoek satellite op naam of NORAD-ID",
+    "select_a_target_type_and_choose_a_satellite_mission_or_b": "Kies een doeltype en een satellite, missie of lichaam.",
+    "step_1_target": "Stap 1 · Doel",
+    "step_2_hardware_optional": "Stap 2 · Hardware (optioneel)",
+    "this_will_remove_the_target_tracking_state_and_stop_its_": "Dit verwijdert de trackingstatus van het doel en stopt het trackerproces.",
+    "rotator": "Rotator"
+  },
+  "target_sky_planetarium_view": {
+    "loading_planetarium_vectors": "Planetariumvectoren laden...",
+    "refresh_target_scene": "Scène van het doel vernieuwen"
+  },
+  "manual_rotator_dialog": {
+    "azimuth_dial": "Azimut-knop",
+    "current": "Huidige",
+    "elevation_dial": "Elevatie-knop",
+    "readout_label": "{{axis}}-positie",
+    "requested": "Verzocht"
+  },
+  "target_map_composite_view": {
+    "refresh_target_scene": "Scène van het doel vernieuwen",
+    "select_a_mission_body_target_to_render_the_solar_system_": "Kies een missie- of lichaamsdoel om de zonnestelselweergave te tonen."
+  },
+  "target_view_router": {
+    "add_a_target_to_view_the_planetarium_or_globe": "Voeg een doel toe om het planetarium of de bol te bekijken.",
+    "no_targets_configured": "Geen doelen geconfigureerd"
+  },
+  "tracker_command_state": {
+    "acknowledgement_missing_checking_command_status": "Bevestiging ontbreekt; commandostatus wordt gecontroleerd",
+    "not_connected_to_backend": "Niet verbonden met backend"
+  },
+  "tracker_instances_panel": {
+    "trackers": "Trackers"
   }
 }

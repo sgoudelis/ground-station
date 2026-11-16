@@ -36,7 +36,17 @@
     },
     "below_horizon": "Onder Horizon",
     "visibility": "Zichtbaarheid",
-    "visible": "Zichtbaar"
+    "visible": "Zichtbaar",
+    "all_satellites": "Alle satellieten",
+    "all_satellites_alt_1": "Alle satellieten (Alt+1)",
+    "decayed_satellites": "Vergane satellieten",
+    "decayed_satellites_alt_5": "Vergane satellieten (Alt+5)",
+    "rising_satellites": "Stijgende satellieten",
+    "rising_satellites_alt_3": "Stijgende satellieten (Alt+3)",
+    "satellites_with_active_transmitters": "Satellieten met actieve zenders",
+    "satellites_with_active_transmitters_alt_4": "Satellieten met actieve zenders (Alt+4)",
+    "visible_satellites": "Zichtbare satellieten",
+    "visible_satellites_alt_2": "Zichtbare satellieten (Alt+2)"
   },
   "passes_table": {
     "title": "Overvluchten voor de komende {{hours}} uur",
@@ -121,7 +131,8 @@
     "user_groups": "Gebruiker gedefinieerde satelliet groepen",
     "tle_groups": "Satellietgroepen uit baanbronnen",
     "failed_load_groups": "Laden van satelliet groepen mislukt",
-    "none_defined": "Geen gedefinieerd"
+    "none_defined": "Geen gedefinieerd",
+    "grouping": "Groepering"
   },
   "satellite_info": {
     "title": "Satelliet Monitor",
@@ -159,7 +170,10 @@
   },
   "map_settings": {
     "title": "Kaart Instellingen",
-    "close": "Sluiten"
+    "close": "Sluiten",
+    "apply": "Toepassen",
+    "reset_defaults": "Standaardinstellingen resetten",
+    "section_base_map": "Basiskaart"
   },
   "map_target": {
     "already_tracking": "Volgt deze satelliet al",
@@ -186,7 +200,11 @@
     "show_past_path": "Eerdere banen tonen",
     "show_future_path": "Toekomstige banen tonen",
     "show_coverage": "Satellietdekking tonen",
-    "show_grid": "Coördinatenraster tonen"
+    "show_grid": "Coördinatenraster tonen",
+    "pan_down": "Naar beneden schuiven",
+    "pan_left": "Naar links schuiven",
+    "pan_right": "Naar rechts schuiven",
+    "pan_up": "Naar boven schuiven"
   },
   "weather_errors": {
     "fetch_failed": "Weer gegevens konden niet worden opgehaald",
@@ -213,5 +231,42 @@
     "category_orbital": "Orbitale informatie",
     "always_visible": "altijd zichtbaar",
     "close": "Sluiten"
+  },
+  "earthview_map_maplibre": {
+    "sun": "Zon",
+    "home": "Thuisstation",
+    "moon": "Maan"
+  },
+  "next_passes": {
+    "all_passes": "Alle passen",
+    "all_passes_alt_1": "Alle passen (Alt+1)",
+    "highest_elevation_first": "Hoogste hoogte eerst",
+    "highest_elevation_first_alt_4": "Hoogste hoogte eerst (Alt+4)",
+    "live_or_next_30_minutes_alt_3": "Live of volgende 30 minuten (Alt+3)",
+    "live_passes": "Levende passen",
+    "live_passes_alt_2": "Live passen (Alt+2)",
+    "next_30_minutes": "Volgende 30 minuten",
+    "add_a_target_to_load_upcoming_passes_and_visibility_wind": "Voeg een doel toe om aankomende passes en zichtvensters te laden.",
+    "no_targets_configured": "Geen doelen geconfigureerd",
+    "refresh_passes_force_recalculate": "Passes vernieuwen (herberekening forceren)"
+  },
+  "satellite_passes": {
+    "all_passes": "Alle passen",
+    "all_passes_alt_1": "Alle passen (Alt+1)",
+    "highest_elevation_first": "Hoogste hoogte eerst",
+    "highest_elevation_first_alt_4": "Hoogste hoogte eerst (Alt+4)",
+    "live_or_next_30_minutes_alt_3": "Live of volgende 30 minuten (Alt+3)",
+    "live_passes": "Levende passen",
+    "live_passes_alt_2": "Live passen (Alt+2)",
+    "next_30_minutes": "Volgende 30 minuten",
+    "refresh_passes_force_recalculate": "Passes vernieuwen (herberekening forceren)",
+    "tracked_satellites_only": "Alleen gevolgde satellieten",
+    "tracked_satellites_only_alt_5": "Alleen gevolgde satellieten (Alt+5)"
+  },
+  "satellite_group_selector_bar": {
+    "falling": "Dalend:",
+    "peak": "Maximum:",
+    "rising": "Stijgend:",
+    "select_group": "[groep selecteren]"
   }
 }

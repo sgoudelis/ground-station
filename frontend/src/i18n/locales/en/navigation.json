@@ -495,7 +495,13 @@
     "packet_count_other": "{{count}} positions",
     "transmitter_count_one": "{{count}} transmitter",
     "transmitter_count_other": "{{count}} transmitters",
-    "no_home": "Set your home location in station settings."
+    "no_home": "Set your home location in station settings.",
+    "columns": "Columns",
+    "filters": "Filters",
+    "live_recent_description": "Follow the last 30 minutes of packets",
+    "radio_horizon": "Radio horizon (0°)",
+    "five_degree_horizon": "5° elevation",
+    "visibility_radius": "{{radius}} km"
   },
   "hardware": "Hardware",
   "data_administration": "Data Administration",
@@ -520,5 +526,11 @@
   "integrations": "Integrations",
   "location": "Location",
   "maintenance": "Maintenance",
-  "about": "About"
+  "about": "About",
+  "map_settings": {
+    "section_base_map": "Base Map",
+    "reset_defaults": "Reset Defaults",
+    "apply": "Apply"
+  },
+  "sources": "Sources"
 }

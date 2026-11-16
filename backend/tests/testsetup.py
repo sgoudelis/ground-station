@@ -51,8 +51,9 @@ async def _reset_setup_state():
 @pytest.mark.asyncio
 @pytest.mark.parametrize("legacy_discover_soapy", [False, True])
 @pytest.mark.parametrize("selected_timezone", [None, "Asia/Kathmandu"])
+@pytest.mark.parametrize("selected_language", [None, "el_GR", "zh_CN"])
 async def test_setup_finalize_runs_backend_orchestration(
-    monkeypatch, selected_timezone, legacy_discover_soapy
+    monkeypatch, selected_timezone, legacy_discover_soapy, selected_language
 ):
     sio = _Sio()
     logger = _Logger()
@@ -80,7 +81,10 @@ async def test_setup_finalize_runs_backend_orchestration(
         nonlocal setup_completed
         assert username == "testadmin"
         assert password == "12345678"
-        assert initial_preferences == {"timezone": selected_timezone or "America/New_York"}
+        assert initial_preferences == {
+            "timezone": selected_timezone or "America/New_York",
+            **({"language": selected_language} if selected_language else {}),
+        }
         setup_completed = True
         return {"success": True, "token": "token"}
 
@@ -94,6 +98,7 @@ async def test_setup_finalize_runs_backend_orchestration(
         sio,
         {
             **({"timezone": selected_timezone} if selected_timezone else {}),
+            **({"language": selected_language} if selected_language else {}),
             # Older clients may still send the removed option; setup must ignore it.
             **({"discover_soapy": True} if legacy_discover_soapy else {}),
             "location": {

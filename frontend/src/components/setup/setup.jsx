@@ -23,6 +23,7 @@ import {
     Box,
     Button,
     CircularProgress,
+    LinearProgress,
     Stack,
     Step,
     StepLabel,
@@ -35,14 +36,24 @@ import Grid from '@mui/material/Grid';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import HourglassEmptyIcon from '@mui/icons-material/HourglassEmpty';
+import AdminPanelSettingsOutlinedIcon from '@mui/icons-material/AdminPanelSettingsOutlined';
+import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
+import ArrowForwardRoundedIcon from '@mui/icons-material/ArrowForwardRounded';
+import ChecklistRoundedIcon from '@mui/icons-material/ChecklistRounded';
+import FactCheckOutlinedIcon from '@mui/icons-material/FactCheckOutlined';
+import SyncOutlinedIcon from '@mui/icons-material/SyncOutlined';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
 import { toast } from '../../utils/toast-with-timestamp.jsx';
 import { loginUser } from '../auth/auth-slice.jsx';
 import { useSocket } from '../common/socket.jsx';
-import { SettingsActionFooter, SettingsSection } from '../settings/shared/index.js';
-import FeedbackDisclosure, { CENSUS_NOTICE_VERSION } from '../settings/feedback-disclosure.jsx';
+import { SettingsActionFooter } from '../settings/shared/index.js';
+import { setPreference } from '../settings/preferences-slice.jsx';
+import { CENSUS_NOTICE_VERSION } from '../settings/feedback-disclosure.jsx';
+import FeedbackStep from './feedback-step.jsx';
+import LanguageStep from './language-step.jsx';
+import WizardSection from './section.jsx';
 
 const WIZARD_STEP_IDENTITY = 0;
 const WIZARD_STEP_COORDINATES = 1;
@@ -50,6 +61,7 @@ const WIZARD_STEP_REVIEW = 2;
 const WIZARD_STEP_ADMIN = 3;
 const WIZARD_STEP_FINALIZE = 4;
 const WIZARD_STEP_FEEDBACK = 5;
+const WIZARD_STEP_LANGUAGE = 6;
 
 const CALL_STATUS_IDLE = 'idle';
 const CALL_STATUS_PENDING = 'pending';
@@ -94,15 +106,19 @@ const SetupWizard = ({
 }) => {
     const { socket } = useSocket();
     const dispatch = useDispatch();
-    const { t } = useTranslation('settings');
+    const { t, i18n } = useTranslation('settings');
+    const languagePreference = useSelector((state) =>
+        state.preferences.preferences.find((preference) => preference.name === 'language')?.value || 'en_US'
+    );
     const { syncState, synchronizing, error: syncError } = useSelector(
         (state) => state.syncSatellite
     );
     const { loadingAction: authLoadingAction, error: authError } = useSelector((state) => state.auth);
 
     const [wizardStep, setWizardStep] = React.useState(
-        wizardRequireAdminSetup ? WIZARD_STEP_ADMIN : WIZARD_STEP_IDENTITY
+        wizardRequireAdminSetup ? WIZARD_STEP_LANGUAGE : WIZARD_STEP_IDENTITY
     );
+    const wizardContentRef = React.useRef(null);
     const [adminUsername, setAdminUsername] = React.useState('');
     const [adminPassword, setAdminPassword] = React.useState('');
     const [adminConfirmPassword, setAdminConfirmPassword] = React.useState('');
@@ -115,6 +131,11 @@ const SetupWizard = ({
     const [feedbackEnvironment, setFeedbackEnvironment] = React.useState('unknown');
     const [feedbackError, setFeedbackError] = React.useState('');
 
+    React.useEffect(() => {
+        // Long pages share one scroll container; each new step starts at its heading.
+        if (wizardContentRef.current) wizardContentRef.current.scrollTop = 0;
+    }, [wizardStep]);
+
     const showWizardAdminStep = Boolean(wizardRequireAdminSetup);
     const showWizardFinalizeStep = showWizardAdminStep;
     const wizardSaveStep = WIZARD_STEP_REVIEW;
@@ -125,6 +146,7 @@ const SetupWizard = ({
 
     const wizardStepLabels = React.useMemo(
         () => ({
+            [WIZARD_STEP_LANGUAGE]: t('preferences.language'),
             [WIZARD_STEP_ADMIN]: t('location.wizard_step_admin', { defaultValue: 'Create Admin User' }),
             [WIZARD_STEP_IDENTITY]: t('location.wizard_step_identity', {
                 defaultValue: 'Station Identity',
@@ -144,6 +166,7 @@ const SetupWizard = ({
         () =>
             showWizardAdminStep
                 ? [
+                      WIZARD_STEP_LANGUAGE,
                       WIZARD_STEP_ADMIN,
                       WIZARD_STEP_IDENTITY,
                       WIZARD_STEP_COORDINATES,
@@ -425,6 +448,13 @@ const SetupWizard = ({
         return true;
     };
 
+    const handleLanguageChange = (language) => {
+        // Setup has no authenticated account yet. Apply the preference locally
+        // now and let finalization save it atomically with the first admin.
+        dispatch(setPreference({ name: 'language', value: language }));
+        void i18n.changeLanguage(language.split('_')[0]);
+    };
+
     const handleWizardNext = () => {
         if (isWizardLastStep || isWizardSaveStep || !canAdvanceWizard) return;
 
@@ -483,6 +513,7 @@ const SetupWizard = ({
         const finalizeReply = await callApi('setup.finalize', {
             location: setupLocationPayload,
             timezone: setupTimezone,
+            language: languagePreference,
             feedback: {
                 enabled: censusEnabled,
                 consent_notice_version: CENSUS_NOTICE_VERSION,
@@ -583,7 +614,8 @@ const SetupWizard = ({
     };
 
     const wizardReviewSection = (
-        <SettingsSection
+        <WizardSection
+            icon={FactCheckOutlinedIcon}
             title={t('location.wizard_review_title', { defaultValue: 'Review Configuration' })}
             description={t('location.wizard_review_help', {
                 defaultValue: 'Verify station identity and coordinates, then save to continue.',
@@ -627,49 +659,35 @@ const SetupWizard = ({
                     </Typography>
                 </Grid>
             </Grid>
-        </SettingsSection>
+        </WizardSection>
     );
 
     const wizardReviewContent = (
-        <Grid container spacing={2} columns={12} alignItems="stretch">
+        <Stack spacing={2} sx={{ flex: 1 }}>
             {showWizardAdminStep && (
-                <Grid size={12}>
-                    <Alert severity="info">
-                        {censusEnabled
-                            ? t('feedback.review_enabled', { environment: t(`feedback.environments.${feedbackEnvironment}`) })
-                            : t('feedback.review_disabled')}
-                    </Alert>
-                </Grid>
+                <Alert severity="info">
+                    {censusEnabled
+                        ? t('feedback.review_enabled', { environment: t(`feedback.environments.${feedbackEnvironment}`) })
+                        : t('feedback.review_disabled')}
+                </Alert>
             )}
-            <Grid
-                size={{ xs: 12, md: 5 }}
+            <Box
                 sx={{
-                    display: 'flex',
-                    '& > *': {
-                        width: '100%',
-                        height: '100%',
-                    },
+                    display: 'grid',
+                    gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'minmax(0, 5fr) minmax(0, 7fr)' },
+                    gap: 2,
+                    flex: 1,
                 }}
             >
                 {wizardReviewSection}
-            </Grid>
-            <Grid
-                size={{ xs: 12, md: 7 }}
-                sx={{
-                    display: 'flex',
-                    '& > *': {
-                        width: '100%',
-                        height: '100%',
-                    },
-                }}
-            >
                 {stationCoordinatesSection}
-            </Grid>
-        </Grid>
+            </Box>
+        </Stack>
     );
 
     const wizardChecklistSection = (
-        <SettingsSection
+        <WizardSection
+            icon={ChecklistRoundedIcon}
             title={t('location.setup_checklist_title', { defaultValue: 'Setup checklist' })}
             description={t('location.setup_checklist_help', {
                 defaultValue: 'Calls that were executed when you pressed Save and Continue.',
@@ -682,11 +700,12 @@ const SetupWizard = ({
                         key={item.key}
                         title={item.value.detail || undefined}
                         sx={{
-                            px: 1,
-                            py: 0.75,
-                            borderRadius: 0.75,
+                        px: 1.5,
+                        py: 1.25,
+                        borderRadius: 1.5,
                             border: '1px solid',
                             borderColor: 'divider',
+                        bgcolor: 'action.hover',
                         }}
                     >
                         <Stack
@@ -698,8 +717,7 @@ const SetupWizard = ({
                         >
                             <Typography
                                 variant="body2"
-                                noWrap
-                                sx={{ fontWeight: 600, lineHeight: 1.2, minWidth: 0, flex: 1, pr: 0.75 }}
+                                sx={{ fontWeight: 500, lineHeight: 1.5, minWidth: 0, flex: 1, pr: 1 }}
                             >
                                 {item.label}
                             </Typography>
@@ -734,7 +752,7 @@ const SetupWizard = ({
                     </Box>
                 ))}
             </Stack>
-        </SettingsSection>
+        </WizardSection>
     );
 
     const getStatusTone = (statusColor) => {
@@ -745,7 +763,8 @@ const SetupWizard = ({
     };
 
     const wizardTaskStatusSection = (
-        <SettingsSection
+        <WizardSection
+            icon={SyncOutlinedIcon}
             title={t('location.setup_task_status_title', { defaultValue: 'Background Task Status' })}
             description={t('location.setup_task_status_help', {
                 defaultValue: 'Live runtime status for orbital synchronization.',
@@ -755,14 +774,14 @@ const SetupWizard = ({
             <Stack spacing={0.75}>
                 <Box
                     sx={{
-                        px: 1,
-                        py: 0.85,
-                        borderRadius: 0.75,
+                        px: 1.5,
+                        py: 1.5,
+                        borderRadius: 1.5,
                         border: '1px solid',
                         borderColor: 'divider',
                     }}
                 >
-                    <Stack direction="row" spacing={0.75} alignItems="center" justifyContent="space-between">
+                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ xs: 'flex-start', sm: 'center' }} justifyContent="space-between">
                         <Stack direction="row" spacing={0.7} alignItems="center" sx={{ minWidth: 0 }}>
                             {orbitalSyncUiState.loading && <CircularProgress size={13} thickness={5.5} />}
                             <Typography variant="body2" sx={{ fontWeight: 600, lineHeight: 1.15 }}>
@@ -800,69 +819,34 @@ const SetupWizard = ({
                     )}
                 </Box>
             </Stack>
-        </SettingsSection>
+        </WizardSection>
     );
 
     const wizardFinalizeContent = (
-        <Grid container spacing={2} columns={12} alignItems="stretch">
-            <Grid
-                size={{ xs: 12, md: 6 }}
+        <Stack spacing={2} sx={{ flex: 1 }}>
+            <Box
                 sx={{
-                    display: 'flex',
-                    '& > *': {
-                        width: '100%',
-                        height: '100%',
-                    },
+                    display: 'grid',
+                    gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'repeat(2, minmax(0, 1fr))' },
+                    gridTemplateRows: { md: 'repeat(2, minmax(min-content, 1fr))' },
+                    gap: 2,
+                    flex: 1,
                 }}
             >
                 {wizardReviewSection}
-            </Grid>
-            <Grid
-                size={{ xs: 12, md: 6 }}
-                sx={{
-                    display: 'flex',
-                    '& > *': {
-                        width: '100%',
-                        height: '100%',
-                    },
-                }}
-            >
                 {stationCoordinatesSection}
-            </Grid>
-            <Grid
-                size={{ xs: 12, md: 6 }}
-                sx={{
-                    display: 'flex',
-                    '& > *': {
-                        width: '100%',
-                        height: '100%',
-                    },
-                }}
-            >
                 {wizardTaskStatusSection}
-            </Grid>
-            <Grid
-                size={{ xs: 12, md: 6 }}
-                sx={{
-                    display: 'flex',
-                    '& > *': {
-                        width: '100%',
-                        height: '100%',
-                    },
-                }}
-            >
                 {wizardChecklistSection}
-            </Grid>
+            </Box>
             {(adminLocalError || authError) && (
-                <Grid size={{ xs: 12, md: 12 }}>
-                    <Alert severity="error">{adminLocalError || authError}</Alert>
-                </Grid>
+                <Alert severity="error">{adminLocalError || authError}</Alert>
             )}
-        </Grid>
+        </Stack>
     );
 
     const wizardAdminSection = (
-        <SettingsSection
+        <WizardSection
+            icon={AdminPanelSettingsOutlinedIcon}
             title={t('location.wizard_admin_title', { defaultValue: 'Create Administrator Account' })}
             description={t('location.wizard_admin_help', {
                 defaultValue:
@@ -880,46 +864,54 @@ const SetupWizard = ({
                 {(adminLocalError || authError) && (
                     <Alert severity="error">{adminLocalError || authError}</Alert>
                 )}
-                <TextField
-                    label={t('setup.username', { defaultValue: 'Username' })}
-                    value={adminUsername}
-                    onChange={(event) => {
-                        setAdminUsername(event.target.value);
-                        if (adminLocalError) setAdminLocalError('');
-                    }}
-                    autoComplete="username"
-                    required
-                    fullWidth
-                    disabled={authLoadingAction}
-                />
-                <TextField
-                    label={t('setup.password', { defaultValue: 'Password' })}
-                    type="password"
-                    value={adminPassword}
-                    onChange={(event) => {
-                        setAdminPassword(event.target.value);
-                        if (adminLocalError) setAdminLocalError('');
-                    }}
-                    autoComplete="new-password"
-                    required
-                    fullWidth
-                    disabled={authLoadingAction}
-                />
-                <TextField
-                    label={t('setup.confirm_password', { defaultValue: 'Confirm password' })}
-                    type="password"
-                    value={adminConfirmPassword}
-                    onChange={(event) => {
-                        setAdminConfirmPassword(event.target.value);
-                        if (adminLocalError) setAdminLocalError('');
-                    }}
-                    autoComplete="new-password"
-                    required
-                    fullWidth
-                    disabled={authLoadingAction}
-                />
+                <Grid container spacing={2.5}>
+                    <Grid size={12}>
+                        <TextField
+                            label={t('setup.username', { defaultValue: 'Username' })}
+                            value={adminUsername}
+                            onChange={(event) => {
+                                setAdminUsername(event.target.value);
+                                if (adminLocalError) setAdminLocalError('');
+                            }}
+                            autoComplete="username"
+                            required
+                            fullWidth
+                            disabled={authLoadingAction}
+                        />
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6 }}>
+                        <TextField
+                            label={t('setup.password', { defaultValue: 'Password' })}
+                            type="password"
+                            value={adminPassword}
+                            onChange={(event) => {
+                                setAdminPassword(event.target.value);
+                                if (adminLocalError) setAdminLocalError('');
+                            }}
+                            autoComplete="new-password"
+                            required
+                            fullWidth
+                            disabled={authLoadingAction}
+                        />
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6 }}>
+                        <TextField
+                            label={t('setup.confirm_password', { defaultValue: 'Confirm password' })}
+                            type="password"
+                            value={adminConfirmPassword}
+                            onChange={(event) => {
+                                setAdminConfirmPassword(event.target.value);
+                                if (adminLocalError) setAdminLocalError('');
+                            }}
+                            autoComplete="new-password"
+                            required
+                            fullWidth
+                            disabled={authLoadingAction}
+                        />
+                    </Grid>
+                </Grid>
             </Stack>
-        </SettingsSection>
+        </WizardSection>
     );
 
     const wizardStatusText = (() => {
@@ -931,77 +923,119 @@ const SetupWizard = ({
         return '';
     })();
 
-    const saveButtonLabel = 'finalize';
+    const saveButtonLabel = t('location.wizard_step_finalize', { defaultValue: 'Finalize Setup' });
 
     return (
         <>
-            <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, minWidth: 0, width: '100%' }}>
-                <Box sx={{ px: { xs: 0, sm: 1 } }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, minWidth: 0, width: '100%', gap: 2 }}>
+                <Box sx={{ flexShrink: 0 }}>
                     <Box
                         sx={{
-                            position: 'sticky',
-                            top: 0,
-                            zIndex: 3,
-                            py: 0.75,
-                            mb: '0.5em',
-                            backgroundColor: (theme) =>
-                                theme.palette.mode === 'dark'
-                                    ? theme.palette.background.elevated
-                                    : theme.palette.background.paper,
+                            px: { xs: 1, sm: 2 },
+                            py: { xs: 1, sm: 2 },
+                            borderBottom: '1px solid',
+                            borderColor: 'divider',
                         }}
                     >
-                        <Stepper activeStep={wizardCurrentOrderIndex} alternativeLabel>
+                        <Stepper
+                            activeStep={wizardCurrentOrderIndex}
+                            alternativeLabel
+                            sx={{
+                                display: { xs: 'none', sm: 'flex' },
+                                '& .MuiStepConnector-line': { borderColor: 'divider', borderTopWidth: 2 },
+                                '& .MuiStepConnector-root.Mui-completed .MuiStepConnector-line': { borderColor: 'primary.main' },
+                                '& .MuiStepIcon-root': { fontSize: 28, color: 'action.disabledBackground' },
+                                '& .MuiStepIcon-root.Mui-active, & .MuiStepIcon-root.Mui-completed': { color: 'primary.main' },
+                                '& .MuiStepIcon-text': { fill: 'currentColor', color: 'text.secondary', fontWeight: 600 },
+                                '& .Mui-active .MuiStepIcon-text': { fill: (theme) => theme.palette.primary.contrastText },
+                            }}
+                        >
                             {wizardStepOrder.map((stepId, index) => (
                                 <Step key={stepId} completed={index < wizardCurrentOrderIndex} sx={{ minWidth: 0, px: { xs: 0.25, sm: 1 } }}>
-                                    <StepLabel sx={{ '& .MuiStepLabel-label': { overflowWrap: 'anywhere', fontSize: { xs: '0.625rem', sm: '0.875rem' } } }}>{wizardStepLabels[stepId]}</StepLabel>
+                                    <StepLabel
+                                        sx={{
+                                            '& .MuiStepLabel-label': { overflowWrap: 'anywhere', fontSize: '0.75rem', mt: '10px' },
+                                            '& .MuiStepLabel-label.Mui-active': { color: 'primary.main', fontWeight: 650 },
+                                        }}
+                                    >
+                                        {wizardStepLabels[stepId]}
+                                    </StepLabel>
                                 </Step>
                             ))}
                         </Stepper>
+                        {/* A compact indicator keeps translated step names readable on phones. */}
+                        <Stack spacing={1.25} sx={{ display: { xs: 'flex', sm: 'none' } }}>
+                            <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={2}>
+                                <Typography variant="body2" fontWeight={600}>{wizardStepLabels[wizardStep]}</Typography>
+                                <Typography variant="caption" color="text.secondary" sx={{ fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>
+                                    {String(wizardCurrentOrderIndex + 1).padStart(2, '0')} / {String(wizardStepOrder.length).padStart(2, '0')}
+                                </Typography>
+                            </Stack>
+                            <LinearProgress
+                                variant="determinate"
+                                value={((wizardCurrentOrderIndex + 1) / wizardStepOrder.length) * 100}
+                                aria-label={wizardStepLabels[wizardStep]}
+                                sx={{ height: 4, borderRadius: 2, bgcolor: 'action.hover' }}
+                            />
+                        </Stack>
                     </Box>
                 </Box>
 
-                <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
-                    {wizardStep === WIZARD_STEP_IDENTITY && (
-                        <Stack spacing={2}>{stationIdentitySection}</Stack>
-                    )}
+                <Box ref={wizardContentRef} sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflowY: 'auto', scrollbarGutter: 'stable', px: 0.5, pb: 1 }}>
+                    {/* Fill short steps and let longer forms grow into the body's scroll area. */}
+                    <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%', flex: '1 0 auto' }}>
+                        {wizardStep === WIZARD_STEP_LANGUAGE && (
+                            <LanguageStep value={languagePreference} onChange={handleLanguageChange} />
+                        )}
 
-                    {wizardStep === WIZARD_STEP_COORDINATES && (
-                        <Stack spacing={2}>{wizardMapSection}</Stack>
-                    )}
+                        {wizardStep === WIZARD_STEP_IDENTITY && (
+                            <Stack spacing={2} sx={{ flex: 1 }}>{stationIdentitySection}</Stack>
+                        )}
 
-                    {wizardStep === WIZARD_STEP_REVIEW && <Stack spacing={2}>{wizardReviewContent}</Stack>}
+                        {wizardStep === WIZARD_STEP_COORDINATES && (
+                            <Stack spacing={2} sx={{ flex: 1 }}>{wizardMapSection}</Stack>
+                        )}
 
-                    {wizardStep === WIZARD_STEP_FEEDBACK && (
-                        <FeedbackDisclosure
-                            enabled={censusEnabled}
-                            onChange={setCensusEnabled}
-                        />
-                    )}
+                        {wizardStep === WIZARD_STEP_REVIEW && wizardReviewContent}
 
-                    {wizardStep === WIZARD_STEP_ADMIN && <Stack spacing={2}>{wizardAdminSection}</Stack>}
+                        {wizardStep === WIZARD_STEP_FEEDBACK && (
+                            <FeedbackStep
+                                enabled={censusEnabled}
+                                onChange={setCensusEnabled}
+                            />
+                        )}
 
-                    {wizardStep === WIZARD_STEP_FINALIZE && (
-                        <Stack spacing={2}>
-                            {feedbackError && <Alert severity="warning">{feedbackError}</Alert>}
-                            {wizardFinalizeContent}
-                        </Stack>
-                    )}
+                        {wizardStep === WIZARD_STEP_ADMIN && <Stack spacing={2} sx={{ flex: 1 }}>{wizardAdminSection}</Stack>}
+
+                        {wizardStep === WIZARD_STEP_FINALIZE && (
+                            <Stack spacing={2} sx={{ flex: 1 }}>
+                                {feedbackError && <Alert severity="warning">{feedbackError}</Alert>}
+                                {wizardFinalizeContent}
+                            </Stack>
+                        )}
+                    </Box>
                 </Box>
 
                 <SettingsActionFooter
-                    statusText={wizardStatusText}
+                    statusText={wizardStatusText || wizardStepLabels[wizardStep]}
                     mobileInline
                     sx={{
                         mt: 'auto',
-                        zIndex: 4,
-                        backgroundColor: (theme) =>
-                            theme.palette.mode === 'dark'
-                                ? alpha(theme.palette.grey[700], 0.18)
-                                : alpha(theme.palette.grey[100], 0.9),
+                        flexShrink: 0,
+                        border: 0,
+                        borderTop: (theme) => `1px solid ${theme.palette.divider}`,
+                        borderRadius: 0,
+                        px: { xs: 0.5, sm: 1 },
+                        pt: 2,
+                        pb: 0,
+                        bgcolor: 'transparent',
+                        '& > .MuiStack-root > .MuiTypography-root': { color: 'text.secondary', fontSize: '0.8rem', whiteSpace: 'normal' },
+                        '& .MuiButton-root': { minHeight: 40, px: { xs: 1.5, sm: 2.5 }, borderRadius: 1.5, textTransform: 'none', fontWeight: 600, boxShadow: 'none' },
                     }}
                 >
                     <Button
                         variant="outlined"
+                        startIcon={<ArrowBackRoundedIcon />}
                         onClick={handleWizardBack}
                         disabled={
                             wizardCurrentOrderIndex === 0 ||
@@ -1016,6 +1050,7 @@ const SetupWizard = ({
                     {isWizardSaveStep ? (
                         <Button
                             variant="contained"
+                            endIcon={<FactCheckOutlinedIcon />}
                             disabled={!canSaveInReviewStep || wizardFinalizing}
                             aria-label={t('location.save_location')}
                             onClick={handleWizardSave}
@@ -1027,6 +1062,7 @@ const SetupWizard = ({
                     ) : isWizardFinalizeStep ? (
                         <Button
                             variant="contained"
+                            endIcon={<CheckCircleOutlineIcon />}
                             disabled={
                                 authLoadingAction ||
                                 wizardFinalizing ||
@@ -1046,6 +1082,7 @@ const SetupWizard = ({
                     ) : (
                         <Button
                             variant="contained"
+                            endIcon={<ArrowForwardRoundedIcon />}
                             onClick={handleWizardNext}
                             disabled={!canAdvanceWizard || locationSaving}
                         >

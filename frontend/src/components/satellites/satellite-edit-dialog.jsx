@@ -23,6 +23,7 @@ import { useTranslation } from 'react-i18next';
 import { submitOrEditSatellite } from './satellite-slice.jsx';
 import { useSocket } from '../common/socket.jsx';
 import { useDelayedUnmount } from '../../hooks/useDelayedUnmount.js';
+import { tabCapsLabel } from '../../utils/greekcaps.js';
 
 export const normalizeSatelliteFormValues = (satelliteData) => {
     if (!satelliteData) {
@@ -339,8 +340,8 @@ const SatelliteEditDialogContent = ({ open, onClose, satelliteData, onSaved }) =
                     aria-label={t('satellite_edit_dialog.satellite_edit_tabs', { defaultValue: 'satellite edit tabs' })}
                     sx={{ mt: 1.5, borderBottom: (theme) => `1px solid ${theme.palette.divider}` }}
                 >
-                    <Tab label={t('satellite_database.tab_general', { defaultValue: 'General' })} />
-                    <Tab label={t('satellite_database.tab_orbital', { defaultValue: 'Orbital' })} />
+                    <Tab label={tabCapsLabel(t('satellite_database.tab_general', { defaultValue: 'General' }))} />
+                    <Tab label={tabCapsLabel(t('satellite_database.tab_orbital', { defaultValue: 'Orbital' }))} />
                 </Tabs>
                 <Stack spacing={2} sx={{ mt: 2.5 }}>
                     {submitError ? (

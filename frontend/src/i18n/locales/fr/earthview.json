@@ -36,7 +36,17 @@
     },
     "below_horizon": "Sous Horizon",
     "visibility": "Visibilité",
-    "visible": "Visibilité"
+    "visible": "Visibilité",
+    "all_satellites": "Tous les satellites",
+    "all_satellites_alt_1": "Tous les satellites (Alt+1)",
+    "decayed_satellites": "Satellites désintégrés",
+    "decayed_satellites_alt_5": "Satellites désintégrés (Alt+5)",
+    "rising_satellites": "Satellites ascendants",
+    "rising_satellites_alt_3": "Satellites ascendants (Alt+3)",
+    "satellites_with_active_transmitters": "Satellites avec émetteurs actifs",
+    "satellites_with_active_transmitters_alt_4": "Satellites avec émetteurs actifs (Alt+4)",
+    "visible_satellites": "Satellites visibles",
+    "visible_satellites_alt_2": "Satellites visibles (Alt+2)"
   },
   "passes_table": {
     "title": "Passages pour les prochaines {{hours}} heures",
@@ -121,7 +131,8 @@
     "user_groups": "Groupes de satellites définis par l'utilisateur",
     "tle_groups": "Groupes de satellites provenant de sources orbitales",
     "failed_load_groups": "Échec du chargement des groupes de satellites",
-    "none_defined": "Aucun défini"
+    "none_defined": "Aucun défini",
+    "grouping": "Regroupement"
   },
   "satellite_info": {
     "title": "Surveillance de satellite",
@@ -159,7 +170,10 @@
   },
   "map_settings": {
     "title": "Paramètres de la carte",
-    "close": "Fermer"
+    "close": "Fermer",
+    "apply": "Appliquer",
+    "reset_defaults": "Réinitialiser les valeurs par défaut",
+    "section_base_map": "Carte de base"
   },
   "map_target": {
     "already_tracking": "Ce satellite est déjà en cours de poursuite",
@@ -186,7 +200,11 @@
     "show_past_path": "Afficher les trajectoires orbitales passées",
     "show_future_path": "Afficher les trajectoires orbitales futures",
     "show_coverage": "Afficher la couverture satellite",
-    "show_grid": "Afficher la grille de coordonnées"
+    "show_grid": "Afficher la grille de coordonnées",
+    "pan_down": "Déplacer vers le bas",
+    "pan_left": "Déplacer vers la gauche",
+    "pan_right": "Déplacer vers la droite",
+    "pan_up": "Déplacer vers le haut"
   },
   "weather_errors": {
     "fetch_failed": "Les données météorologiques n'ont pas pu être récupérées",
@@ -213,5 +231,42 @@
     "category_orbital": "Informations orbitales",
     "always_visible": "toujours visible",
     "close": "Fermer"
+  },
+  "earthview_map_maplibre": {
+    "sun": "Soleil",
+    "home": "Station domicile",
+    "moon": "Lune"
+  },
+  "next_passes": {
+    "all_passes": "Tous les laissez-passer",
+    "all_passes_alt_1": "Toutes les passes (Alt+1)",
+    "highest_elevation_first": "L'altitude la plus élevée en premier",
+    "highest_elevation_first_alt_4": "Altitude la plus élevée en premier (Alt+4)",
+    "live_or_next_30_minutes_alt_3": "En direct ou les 30 prochaines minutes (Alt+3)",
+    "live_passes": "Passes en direct",
+    "live_passes_alt_2": "Passes en direct (Alt+2)",
+    "next_30_minutes": "30 prochaines minutes",
+    "add_a_target_to_load_upcoming_passes_and_visibility_wind": "Ajoutez une cible pour charger les passages à venir et les fenêtres de visibilité.",
+    "no_targets_configured": "Aucune cible configurée",
+    "refresh_passes_force_recalculate": "Actualiser les passages (recalcul forcé)"
+  },
+  "satellite_passes": {
+    "all_passes": "Tous les laissez-passer",
+    "all_passes_alt_1": "Toutes les passes (Alt+1)",
+    "highest_elevation_first": "L'altitude la plus élevée en premier",
+    "highest_elevation_first_alt_4": "Altitude la plus élevée en premier (Alt+4)",
+    "live_or_next_30_minutes_alt_3": "En direct ou les 30 prochaines minutes (Alt+3)",
+    "live_passes": "Passes en direct",
+    "live_passes_alt_2": "Passes en direct (Alt+2)",
+    "next_30_minutes": "30 prochaines minutes",
+    "refresh_passes_force_recalculate": "Actualiser les passages (recalcul forcé)",
+    "tracked_satellites_only": "Satellites suivis uniquement",
+    "tracked_satellites_only_alt_5": "Satellites suivis uniquement (Alt+5)"
+  },
+  "satellite_group_selector_bar": {
+    "falling": "Descendant :",
+    "peak": "Maximum :",
+    "rising": "Ascendant :",
+    "select_group": "[sélectionner un groupe]"
   }
 }

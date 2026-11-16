@@ -73,7 +73,18 @@
       "unknown": "{{count}} 台发射机，未列出上/下行频段",
       "details": "详情：{{descriptions}}"
     },
-    "no_data": "无数据"
+    "no_data": "无数据",
+    "add_a_target_to_load_upcoming_passes_and_visibility_wind": "添加目标以加载即将到来的过境和可见性窗口。",
+    "all_passes": "所有过境",
+    "all_passes_alt_1": "所有过境 (Alt+1)",
+    "highest_elevation_first": "最高仰角优先",
+    "highest_elevation_first_alt_4": "最高仰角优先 (Alt+4)",
+    "live_or_next_30_minutes_alt_3": "实时或未来 30 分钟 (Alt+3)",
+    "live_passes": "实时过境",
+    "live_passes_alt_2": "实时过境 (Alt+2)",
+    "next_30_minutes": "未来 30 分钟",
+    "no_targets_configured": "未配置目标",
+    "refresh_passes_force_recalculate": "刷新过境（强制重新计算）"
   },
   "passes_table_settings": {
     "title": "过境表格设置",
@@ -126,7 +137,8 @@
     "vfo_2": "VFO 2",
     "downlink": "下行：",
     "uplink": "上行：",
-    "pause_tracking": "暂停跟踪"
+    "pause_tracking": "暂停跟踪",
+    "none_option": "[无]"
   },
   "rotator_control": {
     "title": "旋转器控制",
@@ -181,7 +193,8 @@
       "added_to_db": "添加到数据库",
       "countries": "国家",
       "alternative_name": "备用名称",
-      "satellite_id": "卫星 ID"
+      "satellite_id": "卫星 ID",
+      "operator": "运营方"
     },
     "values": {
       "yes": "是",

@@ -101,4 +101,14 @@ i18n
         },
     });
 
+// Mirror the active language onto <html lang>. theme.js uses this hook to disable
+// CSS `text-transform: uppercase` for Greek, where browser uppercasing keeps the
+// tonos on capitals (Ά) instead of the correct unaccented all-caps form.
+const syncDocumentLang = (lng) => {
+    document.documentElement.lang = String(lng || 'en');
+};
+
+i18n.on('languageChanged', syncDocumentLang);
+syncDocumentLang(i18n.resolvedLanguage || i18n.language);
+
 export default i18n;

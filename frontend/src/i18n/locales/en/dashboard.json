@@ -79,7 +79,13 @@
     "refreshing_in": "Refreshing in {{seconds}}s...",
     "refreshing_now": "Refreshing now...",
     "cancel": "Cancel",
-    "refresh_now": "Refresh Now"
+    "refresh_now": "Refresh Now",
+    "unknown_date": "Unknown date",
+    "latest": "Latest",
+    "published": "Published",
+    "click_to_open": "Click to open release",
+    "available": "Update",
+    "available_full": "Update available"
   },
   "target_popover": {
     "edit_satellite": "Edit satellite",
@@ -109,7 +115,16 @@
     "website": "Website:",
     "yes": "Yes",
     "no": "No",
-    "na": "N/A"
+    "na": "N/A",
+    "no_satellite_selected": "No satellite selected",
+    "satellite_is_not_visible_from_current_location": "Satellite is not visible from current location",
+    "currently_tracking_this_satellite": "Currently tracking this satellite",
+    "satellite_is_well_positioned_above_horizon": "Satellite is well positioned above horizon",
+    "no_upcoming_passes": "No upcoming passes",
+    "next_pass_in": "Next pass in",
+    "peak_elevation": "Peak elevation:",
+    "no_targets_configured": "No targets configured",
+    "create_a_target_from_the_track_page_to_view_live_satelli": "Create a target from the Track page to view live satellite status."
   },
   "version_info": {
     "version": "Version:",
@@ -117,7 +132,12 @@
     "git_commit": "Git Commit:",
     "unknown": "Unknown",
     "loading": "Loading version...",
-    "unavailable": "Version unavailable"
+    "unavailable": "Version unavailable",
+    "architecture": "Architecture:",
+    "cpu_cores": "CPU Cores:",
+    "memory_total": "Memory (total):",
+    "disk_total": "Disk (total):",
+    "os": "OS:"
   },
   "connection_popover": {
     "network_connected_ws": "Network: Connected (WebSocket)",
@@ -139,7 +159,12 @@
     "messages": "{{count}} messages",
     "transport_upgrades": "Transport Upgrades:",
     "audio_buffer": "Audio Buffer",
-    "browser_buffer_length": "Browser Buffer Length:"
+    "browser_buffer_length": "Browser Buffer Length:",
+    "memory": "Memory",
+    "disk": "Disk",
+    "load_avg": "Load Avg",
+    "cpu_temp": "CPU Temp",
+    "open_system_topology": "Open System Topology"
   },
   "hardware_popover": {
     "rotators": "Rotators",
@@ -295,5 +320,86 @@
     "transmitters": "Transmitters: {{count}}",
     "groups": "Groups: {{count}}",
     "errors": "Errors ({{count}})"
+  },
+  "screens": {
+    "ground_station": "Ground Station",
+    "transport_security_guidance": "Transport security guidance",
+    "open_transport_security_guidance": "Open transport security guidance",
+    "username": "Username",
+    "password": "Password",
+    "confirm_password": "Confirm password",
+    "sign_in": "Sign In",
+    "authentication_is_required_to_use_this_ground_station_in": "Authentication is required to use this Ground Station instance.",
+    "keep_session_alive": "Keep session alive",
+    "unchecked_sessions_expire_after_15_days": "Unchecked sessions expire after 15 days.",
+    "http_connection_detected": "HTTP connection detected",
+    "this_sign_in_page_is_currently_served_over_http": "This sign-in page is currently served over HTTP.",
+    "for_stronger_transport_security_put_ground_station_behin": "For stronger transport security, put Ground Station behind a TLS\\n                            reverse proxy (for example Nginx, Caddy, or Traefik) and access it via",
+    "https": "https://",
+    "https_also_allows_the_backend_to_issue_auth_session_cook": "HTTPS also allows the backend to issue auth session cookies with the\\n                            Secure flag.",
+    "close": "Close",
+    "create_administrator_account": "Create Administrator Account",
+    "user_accounts_are_missing_create_a_new_admin_account_to_": "User accounts are missing. Create a new admin account to restore access.",
+    "ground_station_setup": "Ground Station Setup"
+  },
+  "application_footer": {
+    "ground_station": "Ground Station",
+    "efstratios_goudelis": "Efstratios Goudelis"
+  },
+  "dashboard_layout": {
+    "active_observation_indicator": "Active observation indicator",
+    "started": "• started",
+    "peak": "• peak",
+    "upcoming_observation_indicator": "Upcoming observation indicator",
+    "starting_soon": "Starting Soon:",
+    "starts": "• starts",
+    "ground_station": "Ground Station",
+    "project_x": "Project X",
+    "account_menu_label": "Current user",
+    "account_title": "Account",
+    "account_sign_in": "Sign In",
+    "account_sign_out": "Logout",
+    "accounts": "Accounts",
+    "main_navigation": "Main navigation",
+    "application_version_and_environment": "Application version and environment",
+    "toggle_drawer": "toggle drawer",
+    "loading_page": "Loading page"
+  },
+  "auth": {
+    "logout_confirm_title": "Confirm Logout",
+    "logout_confirm_message": "Are you sure you want to log out?",
+    "logout_confirm_skip": "Don't show this again",
+    "logout": "Logout"
+  },
+  "common": {
+    "cancel": "Cancel"
+  },
+  "dashboard": {
+    "location_wizard_title": "Ground Station Setup Required"
+  },
+  "location_warning": {
+    "tooltip": "Location not set",
+    "title": "Location Not Set",
+    "message": "Your ground station location has not been configured. Location is required for satellite tracking and pass predictions.",
+    "set_location": "Set Location"
+  },
+  "tasks_popover": {
+    "socket_disconnected": "Socket Disconnected",
+    "no_tasks": "No background tasks",
+    "summary_empty": "No tasks",
+    "running": "Running",
+    "completed": "Completed",
+    "failed": "Failed",
+    "stopped": "Stopped",
+    "finished": "Finished",
+    "complete": "% complete",
+    "duration": "Duration:",
+    "stop": "Stop",
+    "show_last_line": "Show last line",
+    "show_full_output": "Show full output",
+    "title": "Background tasks",
+    "clear_completed": "Clear completed tasks",
+    "no_tasks_message": "No tasks running",
+    "no_tasks_description": "Background work will appear here while it is running."
   }
 }

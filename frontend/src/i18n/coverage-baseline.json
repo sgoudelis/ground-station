@@ -1,0 +1,34 @@
+{
+  "_comment": "Per-language string counts tracked by CI. See src/i18n/__tests__/coverage.test.js: `missing` may only go down, `unknown` (dead locale entries) may only shrink. Update with `npm run i18n:baseline` after translating; never raise `missing` to silence a failure.",
+  "languages": {
+    "de": {
+      "missing": 0,
+      "unknown": 15
+    },
+    "el": {
+      "missing": 0,
+      "unknown": 11
+    },
+    "es": {
+      "missing": 0,
+      "unknown": 15
+    },
+    "fr": {
+      "missing": 0,
+      "unknown": 15
+    },
+    "it": {
+      "missing": 0,
+      "unknown": 7
+    },
+    "nl": {
+      "missing": 0,
+      "unknown": 15
+    },
+    "zh": {
+      "missing": 0,
+      "unknown": 226
+    }
+  },
+  "rawKeyFallbacks": 0
+}

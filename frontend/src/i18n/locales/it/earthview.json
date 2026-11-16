@@ -23,7 +23,30 @@
     "status_reentered": "Rientrato",
     "invalid_date": "Data non valida",
     "na": "N/D",
-    "no_group_selected": "Selezionare un gruppo di satelliti per visualizzare i satelliti"
+    "no_group_selected": "Selezionare un gruppo di satelliti per visualizzare i satelliti",
+    "below_horizon": "Sotto l'orizzonte",
+    "visible": "Visibile",
+    "visibility": "Visibilità",
+    "context_menu": {
+      "set_as_target": "Imposta come bersaglio...",
+      "edit_properties": "Modifica proprietà...",
+      "edit_transmitters": "Modifica trasmettitori...",
+      "schedule_observation": "Pianifica osservazione...",
+      "monitor_satellite": "Monitora questo satellite...",
+      "copy_norad": "Copia ID NORAD",
+      "copy_summary": "Copia riassunto del satellite",
+      "edit_transmitters_title": "Modifica trasmettitori: {{name}}"
+    },
+    "all_satellites_alt_1": "Tutti i satelliti (Alt+1)",
+    "all_satellites": "Tutti i satelliti",
+    "visible_satellites_alt_2": "Satelliti visibili (Alt+2)",
+    "visible_satellites": "Satelliti visibili",
+    "rising_satellites_alt_3": "Satelliti in sollevamento (Alt+3)",
+    "rising_satellites": "Satelliti in sollevamento",
+    "satellites_with_active_transmitters_alt_4": "Satelliti con trasmettitori attivi (Alt+4)",
+    "satellites_with_active_transmitters": "Satelliti con trasmettitori attivi",
+    "decayed_satellites_alt_5": "Satelliti decaduti (Alt+5)",
+    "decayed_satellites": "Satelliti decaduti"
   },
   "passes_table": {
     "title": "Passaggi per le prossime {{hours}} ore",
@@ -50,7 +73,55 @@
     "automatic_observation_tooltip": "Questo passaggio verrà osservato automaticamente",
     "no_value": "nessun valore",
     "no_data": "Nessun dato",
-    "no_passes": "Nessun passaggio rilevato per le prossime {{hours}} ore"
+    "no_passes": "Nessun passaggio rilevato per le prossime {{hours}} ore",
+    "alternative_name": "Nome Alternativo",
+    "name_other": "Altro nome",
+    "direction": "Direzione",
+    "direction_values": {
+      "cw": "Senso orario",
+      "ccw": "Antiorario",
+      "mixed": "Misto"
+    },
+    "pass_types": "Tipi di passaggio",
+    "pass_tag_labels": {
+      "north_crossing": "Attraversamento nord",
+      "south_crossing": "Attraversamento sud",
+      "direction_cw": "Senso orario",
+      "direction_ccw": "Antiorario",
+      "direction_mixed": "Misto",
+      "direction_e_to_w": "E>O",
+      "direction_w_to_e": "O>E",
+      "elevation_low": "ELV bassa",
+      "elevation_medium": "ELV media",
+      "elevation_high": "ELV alta",
+      "elevation_overhead": "Zenit"
+    },
+    "pass_tag_tooltips": {
+      "north_crossing": "Il passaggio attraversa il nord (azimut 0°).",
+      "south_crossing": "Il passaggio attraversa il sud (azimut 180°).",
+      "direction_cw": "Il satellite si muove in senso orario nel cielo.",
+      "direction_ccw": "Il satellite si muove in senso antiorario nel cielo.",
+      "direction_mixed": "Il satellite cambia direzione durante il passaggio.",
+      "direction_e_to_w": "Il satellite si sposta da est a ovest.",
+      "direction_w_to_e": "Il satellite si sposta da ovest a est.",
+      "elevation_low": "L'elevazione massima è inferiore a 30°.",
+      "elevation_medium": "L'elevazione massima è da 30° a meno di 60°.",
+      "elevation_high": "L'elevazione massima è da 60° a meno di 80°.",
+      "elevation_overhead": "L'elevazione massima è 80° o superiore."
+    },
+    "transmitter_link_tooltips": {
+      "same_band": "{{count}} trasmettitori con uplink e downlink su {{band}}",
+      "split_band": "{{count}} trasmettitori con uplink su {{uplinkBand}} e downlink su {{downlinkBand}}",
+      "uplink_only": "{{count}} trasmettitori con solo uplink su {{uplinkBand}}",
+      "downlink_only": "{{count}} trasmettitori con solo downlink su {{downlinkBand}}",
+      "unknown": "{{count}} trasmettitori senza banda di uplink o downlink indicata",
+      "details": "Dettagli: {{descriptions}}"
+    },
+    "context_menu": {
+      "copy_pass_window": "Copia finestra del passaggio",
+      "copy_pass_summary": "Copia riassunto del passaggio"
+    },
+    "tracked_tooltip": "Satellite bersaglio attuale"
   },
   "satellite_selector": {
     "title": "Seleziona gruppo di satelliti",
@@ -60,7 +131,8 @@
     "user_groups": "Gruppi satelliti definiti dall'utente",
     "tle_groups": "Gruppi satelliti da fonti orbitali",
     "failed_load_groups": "Impossibile caricare i gruppi satelliti",
-    "none_defined": "Nessuno definito"
+    "none_defined": "Nessuno definito",
+    "grouping": "Raggruppamento"
   },
   "satellite_info": {
     "title": "Monitor Satelliti",
@@ -98,7 +170,10 @@
   },
   "map_settings": {
     "title": "Impostazioni Mappa",
-    "close": "Chiudi"
+    "close": "Chiudi",
+    "apply": "Applica",
+    "reset_defaults": "Ripristina le impostazioni predefinite",
+    "section_base_map": "Mappa di base"
   },
   "map_target": {
     "already_tracking": "Già tracciato questo satellite",
@@ -125,10 +200,73 @@
     "show_past_path": "Mostra le orbite passate",
     "show_future_path": "Mostra le orbite future",
     "show_coverage": "Mostra la copertura satellitare",
-    "show_grid": "Mostra la griglia delle coordinate"
+    "show_grid": "Mostra la griglia delle coordinate",
+    "pan_up": "Sposta in alto",
+    "pan_down": "Sposta in basso",
+    "pan_left": "Sposta a sinistra",
+    "pan_right": "Sposta a destra"
   },
   "weather_errors": {
     "fetch_failed": "Impossibile recuperare i dati meteo",
     "failed_to_fetch": "Impossibile recuperare i dati meteo"
+  },
+  "earthview_map_maplibre": {
+    "sun": "Sole",
+    "moon": "Luna",
+    "home": "Home"
+  },
+  "next_passes": {
+    "all_passes": "Tutto passa",
+    "all_passes_alt_1": "Tutti i passaggi (Alt+1)",
+    "highest_elevation_first": "Prima la quota più alta",
+    "highest_elevation_first_alt_4": "Prima l'elevazione più alta (Alt+4)",
+    "live_or_next_30_minutes_alt_3": "Dal vivo o nei prossimi 30 minuti (Alt+3)",
+    "live_passes": "Passaggi dal vivo",
+    "live_passes_alt_2": "Passaggi live (Alt+2)",
+    "next_30_minutes": "Prossimi 30 minuti",
+    "no_targets_configured": "Nessun bersaglio configurato",
+    "refresh_passes_force_recalculate": "Aggiorna passaggi (ricalcolo forzato)",
+    "add_a_target_to_load_upcoming_passes_and_visibility_wind": "Aggiungi un bersaglio per caricare i passaggi imminenti e le finestre di visibilità."
+  },
+  "passes_table_settings": {
+    "category_basic": "Informazioni di base",
+    "close": "Vicino",
+    "rows_per_page": "Righe per pagina",
+    "category_names": "Nomi dei satelliti",
+    "always_visible": "sempre visibile",
+    "title": "Impostazioni della tabella dei passaggi",
+    "description": "Scegli quali colonne mostrare nella tabella dei passaggi",
+    "category_time": "Informazioni temporali",
+    "category_distance": "Informazioni sulla distanza",
+    "category_orbital": "Informazioni orbitali"
+  },
+  "satellite_passes": {
+    "all_passes": "Tutto passa",
+    "all_passes_alt_1": "Tutti i passaggi (Alt+1)",
+    "highest_elevation_first": "Prima la quota più alta",
+    "highest_elevation_first_alt_4": "Prima l'elevazione più alta (Alt+4)",
+    "live_or_next_30_minutes_alt_3": "Dal vivo o nei prossimi 30 minuti (Alt+3)",
+    "live_passes": "Passaggi dal vivo",
+    "live_passes_alt_2": "Passaggi live (Alt+2)",
+    "next_30_minutes": "Prossimi 30 minuti",
+    "tracked_satellites_only_alt_5": "Solo satelliti tracciati (Alt+5)",
+    "tracked_satellites_only": "Solo satelliti tracciati",
+    "refresh_passes_force_recalculate": "Aggiorna passaggi (ricalcolo forzato)"
+  },
+  "satellites_table_settings": {
+    "category_basic": "Informazioni di base",
+    "close": "Vicino",
+    "rows_per_page": "Righe per pagina",
+    "title": "Impostazioni della tabella dei satelliti",
+    "description": "Scegli quali colonne mostrare nella tabella dei satelliti",
+    "category_names": "Nomi dei satelliti",
+    "category_metadata": "Metadati",
+    "always_visible": "sempre visibile"
+  },
+  "satellite_group_selector_bar": {
+    "select_group": "[seleziona gruppo]",
+    "rising": "Sollevamento:",
+    "peak": "Culmine:",
+    "falling": "Calo:"
   }
 }

@@ -512,7 +512,7 @@ const RigControl = React.memo(function RigControl({ trackerId: trackerIdOverride
                                     }}
                                     size="small"
                                     label={t('rig_control.vfo_1', { defaultValue: 'VFO 1' })}>
-                                    <MenuItem value="none">{t('rig_control.none', { defaultValue: '[none]' })}</MenuItem>
+                                    <MenuItem value="none">{t('rig_control.none_option', { defaultValue: '[none]' })}</MenuItem>
                                     <MenuItem value="uplink">
                                         {effectiveSelectedTransmitter && effectiveSelectedTransmitter !== "none" && effectiveRigData?.transmitters?.length > 0 ? (
                                             (() => {
@@ -548,7 +548,7 @@ const RigControl = React.memo(function RigControl({ trackerId: trackerIdOverride
                                     }}
                                     size="small"
                                     label={t('rig_control.vfo_2', { defaultValue: 'VFO 2' })}>
-                                    <MenuItem value="none">{t('rig_control.none', { defaultValue: '[none]' })}</MenuItem>
+                                    <MenuItem value="none">{t('rig_control.none_option', { defaultValue: '[none]' })}</MenuItem>
                                     <MenuItem value="downlink">
                                         {effectiveSelectedTransmitter && effectiveSelectedTransmitter !== "none" && effectiveRigData?.transmitters?.length > 0 ? (
                                             (() => {

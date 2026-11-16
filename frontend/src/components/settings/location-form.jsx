@@ -39,6 +39,8 @@ import { alpha } from '@mui/material/styles';
 import Grid from '@mui/material/Grid';
 import ZoomInIcon from '@mui/icons-material/ZoomIn';
 import ZoomOutIcon from '@mui/icons-material/ZoomOut';
+import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
+import PlaceOutlinedIcon from '@mui/icons-material/PlaceOutlined';
 import { useTranslation } from 'react-i18next';
 import { tz } from 'moment-timezone';
 import Map, { Layer, Marker, Source } from 'react-map-gl/maplibre';
@@ -67,6 +69,7 @@ import {
 import { useUserTimeSettings } from '../../hooks/useUserTimeSettings.jsx';
 import { useStationTimezone } from '../../hooks/useStationTimezone.js';
 import SetupWizard from '../setup/setup.jsx';
+import WizardSection from '../setup/section.jsx';
 
 const locationCardSx = {
     backgroundColor: (theme) => (
@@ -648,13 +651,17 @@ const LocationPage = ({
         reCenterMap(savedState.lat, savedState.lon);
     };
 
+    const LocationSection = wizardMode ? WizardSection : SettingsSection;
+    const locationSectionSx = wizardMode ? undefined : locationCardSx;
+
     const stationIdentitySection = (
-        <SettingsSection
+        <LocationSection
+            icon={BadgeOutlinedIcon}
             title={t('location.group_station_identity', { defaultValue: 'Station Identity' })}
             description={t('location.group_station_identity_help', {
                 defaultValue: 'Name, callsign, station type, and local horizon mask for this ground station.',
             })}
-            sx={locationCardSx}
+            sx={locationSectionSx}
         >
             <Grid container spacing={2} columns={12}>
                 <Grid size={{ xs: 12, sm: 6 }}>
@@ -769,16 +776,17 @@ const LocationPage = ({
                     </Grid>
                 )}
             </Grid>
-        </SettingsSection>
+        </LocationSection>
     );
 
     const stationCoordinatesSection = (
-        <SettingsSection
+        <LocationSection
+            icon={PlaceOutlinedIcon}
             title={t('location.group_station_coordinates', { defaultValue: 'Station Coordinates' })}
             description={t('location.group_station_details_help', {
                 defaultValue: 'Coordinates and derived station metadata for the selected point.',
             })}
-            sx={locationCardSx}
+            sx={locationSectionSx}
         >
             {locationLoading && !hasLocation ? (
                 <Stack spacing={1}>
@@ -838,7 +846,7 @@ const LocationPage = ({
                     </Grid>
                 </Grid>
             )}
-        </SettingsSection>
+        </LocationSection>
     );
 
     const stationActionsSection = (
@@ -895,7 +903,7 @@ const LocationPage = ({
                         variant="outlined"
                         sx={{ width: { xs: '100%', lg: 'auto' }, flex: { lg: '1 1 0' } }}
                         disabled={!hasLocation}
-                        aria-label={t('location.map_recenter', { defaultValue: 'Recenter map' })}
+                        aria-label={t('location.map_recenter_aria', { defaultValue: 'Recenter map' })}
                         onClick={() => {
                             if (hasLocation) reCenterMap(normalizedLocation.lat, normalizedLocation.lon);
                         }}
@@ -1043,20 +1051,20 @@ const LocationPage = ({
     );
 
     const wizardMapSection = (
-        <SettingsSection
-            sx={locationCardSx}
+        <WizardSection
+            icon={PlaceOutlinedIcon}
+            title={t('location.wizard_step_coordinates', { defaultValue: 'Location' })}
+            description={t('location.wizard_map_click_hint', {
+                defaultValue: 'Click on the map to set your ground station location.',
+            })}
         >
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                {t('location.wizard_map_click_hint', {
-                    defaultValue: 'Click on the map to set your ground station location.',
-                })}
-            </Typography>
             <Box
                 sx={{
                     position: 'relative',
                     width: '100%',
-                    height: { xs: 350, sm: 390, md: 450 },
-                    borderRadius: 1,
+                    flex: 1,
+                    minHeight: { xs: 350, sm: 390, md: 410 },
+                    borderRadius: 2,
                     border: '1px solid',
                     borderColor: 'divider',
                     boxShadow: 1,
@@ -1201,7 +1209,7 @@ const LocationPage = ({
                     </Stack>
                 </Box>
             </Box>
-        </SettingsSection>
+        </WizardSection>
     );
 
     const defaultLocationContent = (
@@ -1320,7 +1328,6 @@ const LocationPage = ({
                         stationCoordinatesSection={stationCoordinatesSection}
                         wizardMapSection={wizardMapSection}
                         reviewData={wizardReviewData}
-                        sectionSx={locationCardSx}
                     />
                 ) : (
                     defaultLocationContent
