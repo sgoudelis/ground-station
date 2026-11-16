@@ -137,6 +137,10 @@ describe('wizard timezone', () => {
         expect(screen.queryByText('Installation environment')).not.toBeInTheDocument();
         expect(screen.queryByRole('switch', { name: /share performance metrics/i })).not.toBeInTheDocument();
         fireEvent.click(screen.getByRole('button', { name: 'What is shared?' }));
+        // Mirror the E2E contract (e2e/setup-wizard.spec.js): the disclosure must be addressable as a
+        // named dialog. MUI spreads unknown <Dialog> props onto the Modal root, so labelling the root
+        // leaves the role="dialog" element nameless and this query fails.
+        expect(await screen.findByRole('dialog', { name: 'Help shape Ground Station' })).toBeInTheDocument();
         expect(screen.getByText(/pseudonymous, not fully anonymous/i)).toBeInTheDocument();
         fireEvent.click(screen.getByRole('button', { name: 'Close', exact: true }));
         await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());

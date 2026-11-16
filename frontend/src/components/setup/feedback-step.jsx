@@ -31,7 +31,9 @@ export default function FeedbackStep({ enabled, onChange }) {
                 fullWidth
                 maxWidth="md"
                 scroll="paper"
-                aria-label={t('feedback.title')}
+                // MUI Dialog spreads unknown props onto the Modal root, while role="dialog" sits on the
+                // Paper. Labelling the Paper (not the root) is what gives the dialog an accessible name.
+                slotProps={{ paper: { 'aria-label': t('feedback.title') } }}
             >
                 <DialogContent dividers>
                     {/* Reuse the complete notice and share the wizard's unsaved choice. */}
