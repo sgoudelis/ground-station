@@ -20,6 +20,8 @@ import { Box, Link, Typography } from '@mui/material';
 import { useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 
+import { APP_NAME } from '../../config/branding.jsx';
+
 const PROJECT_URL = 'https://github.com/sgoudelis/ground-station';
 const MAINTAINER_URL = 'https://github.com/sgoudelis';
 const SPONSOR_URL = 'https://github.com/sponsors/sgoudelis';
@@ -95,7 +97,8 @@ export default function ApplicationFooter() {
             >
                 <FooterItem>
                     <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>
-                        {t('application_footer.ground_station', { defaultValue: 'Ground Station' })}{renderedVersion ? ` ${renderedVersion}` : ''}
+                        {/* Brand name is never translated; see APP_NAME in config/branding.jsx. */}
+                        {APP_NAME}{renderedVersion ? ` ${renderedVersion}` : ''}
                     </Box>
                 </FooterItem>
                 {hostname && <FooterItem>{hostname}</FooterItem>}

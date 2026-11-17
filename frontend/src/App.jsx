@@ -44,7 +44,7 @@ import TranscriptionSubtitles from './components/waterfall/transcription-subtitl
 export default function App() {
     const dispatch = useDispatch();
     const { socket, handleAuthEpochChange } = useSocket();
-    const { t: tCommon, i18n } = useTranslation('common');
+    const { i18n } = useTranslation('common');
     const preferences = useSelector((state) => state.preferences.preferences);
     const authState = useSelector((state) => state.auth);
     const dashboardRuntimeState = useSelector((state) => state.dashboard);
@@ -59,7 +59,8 @@ export default function App() {
         [isAdmin, i18n.language],
     );
     // Branding is built per language so the app title follows the active locale.
-    const branding = React.useMemo(() => getBranding(tCommon), [tCommon]);
+    // Branding is language-independent (brand name), so this never needs to be recomputed.
+    const branding = React.useMemo(() => getBranding(), []);
 
     // Get theme preference and create theme
     const themePreference = preferences.find(pref => pref.name === 'theme');

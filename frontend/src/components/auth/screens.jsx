@@ -49,6 +49,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 
 import { GroundStationLogoMeridian } from '../common/logo-dataurl.js';
+import { APP_NAME } from '../../config/branding.jsx';
 import { useSocket } from '../common/socket.jsx';
 import { fetchLocationForUserId } from '../settings/location-slice.jsx';
 import DeferredIslandPlaceholder from '../common/deferredplaceholder.jsx';
@@ -147,7 +148,7 @@ function AuthCardHeader({ title, description }) {
             <Box
                 component="img"
                 src={GroundStationLogoMeridian}
-                alt={t('screens.ground_station', { defaultValue: 'Ground Station' })}
+                alt={APP_NAME}
                 sx={{ width: 44, height: 44, objectFit: 'contain' }}
             />
             <Box>

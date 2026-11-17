@@ -18,33 +18,20 @@
  */
 
 import {GroundStationLogoMeridian} from "../components/common/logo-dataurl.js";
-import { useTranslation } from 'react-i18next';
 
 /**
  * Project/product name. This is a brand string rather than UI copy, so it is never
- * translated: the dashboard top bar renders `APP_NAME` directly, and the locale keys
- * that hold translated variants (`*.ground_station`) stay in the locale files for the
- * sentences that legitimately talk about a ground station.
+ * translated: every surface renders `APP_NAME` directly, and the locale keys that hold
+ * translated variants (`*.ground_station`) stay in the locale files for the sentences that
+ * legitimately talk about a ground station.
  */
 export const APP_NAME = 'Ground Station';
 
-// The logo is wrapped in a component so its alt text reacts to language changes
-// (a hook cannot be called in the module-level branding factory).
-const BrandingLogo = () => {
-    const { t } = useTranslation('common');
-    return (
-        <img
-            src={GroundStationLogoMeridian}
-            alt={t('branding.ground_station', { defaultValue: 'Ground Station' })}
-            style={{height: 128}}
-        />
-    );
-};
-
-// Toolpad's Branding.title must stay a plain string (it is rendered inside a
-// Typography and interpolated by SignInPage), so the branding object is built by
-// a factory that receives `t` from the calling component instead of a hook here.
-export const getBranding = (t) => ({
-    logo: <BrandingLogo />,
-    title: t('branding.ground_station', { defaultValue: 'Ground Station' }),
+// Toolpad's Branding.title must stay a plain string (it is rendered inside a Typography and
+// interpolated by SignInPage). Nothing here depends on the language any more, because the brand
+// name is the same in all of them - an earlier version translated the title and the logo alt, so
+// the sign-in page painted e.g. "Σταθμός Εδάφους".
+export const getBranding = () => ({
+    logo: <img src={GroundStationLogoMeridian} alt={APP_NAME} style={{ height: 128 }} />,
+    title: APP_NAME,
 });
