@@ -95,7 +95,7 @@ async def test_saved_and_client_environments_cannot_override_deployment(service,
     restarted = FeedbackService(service.path)
     status = await restarted.status(preview=True)
     assert status["enabled"]
-    assert status["installation_id"] == stored["installation_id"]
+    assert status["installation_id"] == service.identity.credentials()["installation_id"]
     assert status["accepted_notice_version"] == stored["consent_notice_version"]
     assert status["environment"] == "production"
     assert status["sample"]["deployment"]["environment"] == "production"
@@ -142,8 +142,9 @@ async def test_optin_persists_identity_before_registration_and_reports_daily(ser
         assert stored["remote_possible"] is True
         if request.url.path == "/v1/installations":
             registration = json.loads(request.content)
-            assert stored["credential"] == registration["credential"]
-            assert stored["installation_id"] == registration["installation_id"]
+            identity = json.loads(service.identity.path.read_text())
+            assert identity == registration
+            assert "credential" not in stored and "installation_id" not in stored
 
     await service.configure(OPT_IN)
     assert os.stat(service.path).st_mode & 0o777 == 0o600
@@ -245,7 +246,6 @@ async def test_failed_hardware_preview_does_not_hide_consent_controls(service, m
 @pytest.mark.parametrize(
     "corruption",
     [
-        {"installation_id": 123},
         {"error": ["bad metadata"]},
         {"next_attempt_at": float("nan")},
     ],
@@ -378,7 +378,11 @@ async def test_supported_legacy_consent_continues_without_country_until_explicit
     client, calls = collector()
     async with client:
         await restarted.tick(client)
-    payloads = [json.loads(request.content) for request in calls if request.content]
+    payloads = [
+        json.loads(request.content)
+        for request in calls
+        if request.content and request.url.path != "/v1/installations"
+    ]
     assert payloads
     assert all(data["consent_notice_version"] == "census-1" for data in payloads)
     assert not restarted.state["blocked"]
@@ -390,7 +394,9 @@ async def test_supported_legacy_consent_continues_without_country_until_explicit
         await restarted.tick(renewed)
     assert [request.method for request in after] == ["POST", "PUT", "POST"]
     assert all(
-        json.loads(request.content)["consent_notice_version"] == "census-2" for request in after
+        json.loads(request.content)["consent_notice_version"] == "census-2"
+        for request in after
+        if request.url.path != "/v1/installations"
     )
     status = await restarted.status(preview=True)
     assert not status["needs_consent_review"]

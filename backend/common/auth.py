@@ -72,6 +72,7 @@ setup_allowed_commands = {
 
 # Commands that can significantly alter global system state are admin-only.
 admin_only_commands = {
+    "calendar.external.update",
     "update-app-config",
     "update-system-preferences",
     "sync-satellite-data",

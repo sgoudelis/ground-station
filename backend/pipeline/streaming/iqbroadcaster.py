@@ -23,6 +23,7 @@ import time
 from dataclasses import asdict
 from typing import Any, Dict, Optional, Union
 
+from common.streamqueue import StreamQueue
 from monitoring.timing import TimingCollector, timestamp_ns
 from vfos.state import VFOManager
 
@@ -94,11 +95,13 @@ class IQBroadcaster(threading.Thread):
             Queue that will receive copies of IQ samples (threading or multiprocessing)
         """
         with self.lock:
+            if not self.running:
+                raise RuntimeError("IQ broadcaster is stopping")
             if session_id not in self.subscribers:
                 # Create appropriate queue type based on subscriber needs
                 subscriber_queue: Union[queue.Queue[Any], multiprocessing.Queue[Any]]
                 if for_process:
-                    subscriber_queue = multiprocessing.Queue(maxsize=maxsize)
+                    subscriber_queue = StreamQueue(maxsize=maxsize)
                     queue_type = "multiprocessing"
                 else:
                     subscriber_queue = queue.Queue(maxsize=maxsize)
@@ -141,7 +144,13 @@ class IQBroadcaster(threading.Thread):
                     f"maxsize={subscriber_info.get('maxsize')} "
                     f"qsize={queue_size if queue_size is not None else 'unknown'}"
                 )
-                del self.subscribers[session_id]
+                self._remove_subscriber(session_id)
+
+    def _remove_subscriber(self, session_id: str) -> None:
+        # Call under self.lock so fanout cannot publish to a discarded queue.
+        subscriber = self.subscribers.pop(session_id)
+        if subscriber.get("is_process_queue"):
+            subscriber["queue"].discard()
 
     def get_subscriber_count(self) -> int:
         """
@@ -357,7 +366,7 @@ class IQBroadcaster(threading.Thread):
 
                     # Clean up dead subscribers
                     for dead_key in dead_subscribers:
-                        del self.subscribers[dead_key]
+                        self._remove_subscriber(dead_key)
                         self.logger.info(f"Removed dead subscriber {dead_key}")
 
                 self.timing.record_since("fanout", fanout_started)
@@ -375,5 +384,9 @@ class IQBroadcaster(threading.Thread):
         """
         Stop the broadcaster thread.
         """
-        self.running = False
+        with self.lock:
+            self.running = False
+            # Also release subscriptions left by failed consumer cleanup.
+            for session_id in list(self.subscribers):
+                self._remove_subscriber(session_id)
         self.logger.info(f"Stopping IQ broadcaster for SDR {self.sdr_id}")

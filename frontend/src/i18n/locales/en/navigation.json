@@ -532,5 +532,6 @@
     "reset_defaults": "Reset Defaults",
     "apply": "Apply"
   },
-  "sources": "Sources"
+  "sources": "Sources",
+  "calendar": "Calendar"
 }

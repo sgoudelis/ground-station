@@ -533,5 +533,6 @@
     "apply": "应用",
     "reset_defaults": "恢复默认",
     "section_base_map": "底图"
-  }
+  },
+  "calendar": "日历"
 }

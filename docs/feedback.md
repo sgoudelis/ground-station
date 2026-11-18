@@ -1,6 +1,6 @@
 # Optional installation census
 
-Census reporting is off by default for new and existing installations. The
+Census reporting is off by default; existing enabled settings stay enabled. The
 first-run wizard offers a Feedback step before Review. Administrators can change
 the installation-wide choice under **Settings → Feedback**
 (`/admin/system/feedback`; `/settings/feedback` redirects there).
@@ -43,8 +43,8 @@ configuration, recordings, logs, serial numbers and performance data are exclude
 
 The current collector stores one latest census snapshot, first/latest report
 times and a seven-day activity bitmap. The latest IP expires seven days after
-the last report; census data, derived country and consent expire after 60 days without a report.
-Hourly server cleanup implements these expiry windows. Raw IP visibility is
+the last report; census data and derived country expire after 60 days without a report.
+Inactivity does not revoke consent. Server cleanup implements these expiry windows. Raw IP visibility is
 restricted to administrators of the private statistics console.
 
 ## Consent and delivery
@@ -58,8 +58,9 @@ failure does not invalidate completed station setup; the wizard shows a warning.
 
 An opt-in must carry boolean `enabled: true` and
 `consent_notice_version: "census-2"`. The backend generates and persists a random
-UUID and a 32-byte random URL-safe credential before any request. Only the
-collector sees the credential; it never appears in frontend responses or logs.
+UUID and a 32-byte random URL-safe credential before any request. The collector
+receives the credential; the event service also receives it when independently
+enabled. It never appears in frontend responses or logs.
 Registration is retry-safe, and an explicit consent update grants census only.
 Existing valid `census-1` grants continue reporting without country inference.
 Settings permits saving the updated disclosure without changing a switch.
@@ -87,8 +88,8 @@ while opted out. If unavailable, withdrawal stays pending across restarts and
 retries automatically. An explicit new opt-in supersedes a pending withdrawal.
 
 The collector intentionally returns HTTP 401 for both a missing identity and an
-invalid credential. If an identity has already expired during a long offline
-period, a withdrawal may therefore stop with an authentication error even though
+invalid credential. If an unused identity has already expired after withdrawal,
+a repeated withdrawal may therefore stop with an authentication error even though
 the census data is already absent. The UI keeps that status visible instead of
 claiming a confirmed deletion. Renewing census consent retries registration with
 the same durable identity. No whole-installation deletion is used as a fallback,
@@ -96,21 +97,23 @@ so future reporting purposes cannot be erased by a census-only withdrawal.
 
 ## Local persistence
 
-Consent, the installation credential, pending withdrawal and delivery state live
-in `backend/data/feedback/state.json`. It is written atomically with mode `0600`
-in a private directory. Unreadable/invalid storage stops reporting and preserves
-the original file for administrator repair. Census failures never stop station
-operation. The state is outside the SQL database and SQL backup exports; the
-existing Git/Docker exclusions omit `backend/data`.
+The shared UUID and credential live in `backend/data/installationid.json`, written
+atomically with mode `0600`. The backend creates this local file at startup without
+making a network request. `GS_INSTALLATION_STATE` overrides its path; temporary
+backends use a separate sibling file. Preserve it across upgrades, and never bake
+it into images or copy it to another installation. It is outside SQLite and SQL
+backup exports. Corrupt identity storage stops remote features pending repair.
 
-Persist this directory across upgrades. Do not copy it into application images,
-station templates or other installations. Losing it also loses the credential
-needed to withdraw that installation's stored census. Ordinary Docker data
-volumes retain it alongside other backend data.
+Census consent, pending withdrawal and delivery state remain in
+`backend/data/feedback/state.json`. `GS_FEEDBACK_STATE` overrides that settings
+file only. Existing enabled census settings remain enabled and use the fresh
+shared identity; old identity fields are ignored, with no identity migration or
+historical deduplication. Events uses the same identity with separate consent.
+Registration establishes identity; the purpose-specific consent endpoint grants
+census participation. Inactivity never withdraws consent: reporting resumes with
+the stored identity when the backend returns online.
 
-`GS_FEEDBACK_STATE` can select a separate state-file path for an isolated backend
-instance. Temporary-database mode automatically uses a separate temporary state
-directory instead of the real station's consent. The reporting environment comes
+The reporting environment comes
 from `GS_FEEDBACK_ENVIRONMENT`, falling back to `GS_ENVIRONMENT`, then
 `production`. Invalid values are reported as `unknown`. The development launcher
 (`backend/startdev.sh`) defaults to `development`; pytest and the CI browser-test
@@ -119,9 +122,10 @@ backend use `test`. Operators can override the launcher default with
 deployment environment.
 
 Previously saved administrator selections and labels sent by older clients no
-longer override deployment configuration. Existing consent and installation
-identities are preserved; changing environment never opts an installation into
-reporting. Direct consent-file edits require a restart.
+longer override deployment configuration. Changing environment preserves consent
+and the shared identity and never opts an installation into reporting. The switch
+to the shared identity deliberately leaves old census identities behind, as
+described above. Direct consent-file edits require a restart.
 
 ## Verification
 
@@ -143,6 +147,7 @@ census data to the public collector. Setup E2E expectations include the new
 optional step. Performance and diagnostic reporting require separate future
 contracts, implementation and user consent.
 
-Deploy the collector/console supporting `census-2` and schema revision 3 before
-shipping this client notice. Old clients remain supported; no historical IP
+Deploy the collector/console supporting shared registration, independent consent
+and schema revision 5, and provision event tracking before shipping this client.
+Old census clients remain supported; no historical IP
 backfill is performed. Missing country data never prevents census ingestion.

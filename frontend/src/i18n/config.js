@@ -36,6 +36,7 @@ import dashboardEN from './locales/en/dashboard.json';
 import waterfallEN from './locales/en/waterfall.json';
 import filebrowserEN from './locales/en/filebrowser.json';
 import celestialEN from './locales/en/celestial.json';
+import calendarEN from './locales/en/calendar.json';
 
 const bundledResources = {
     en: {
@@ -51,6 +52,7 @@ const bundledResources = {
         waterfall: waterfallEN,
         filebrowser: filebrowserEN,
         celestial: celestialEN,
+        calendar: calendarEN,
     },
 };
 

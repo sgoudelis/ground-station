@@ -516,5 +516,6 @@
     "continuous_failed_other": "{{count}} osservazioni continue fallite",
     "active": "Attiva: {{name}} ({{remaining}} rimanenti, termina alle {{end}})",
     "next": "Prossima: {{name}} (tra {{remaining}}, inizia alle {{start}})"
-  }
+  },
+  "calendar": "Calendario"
 }

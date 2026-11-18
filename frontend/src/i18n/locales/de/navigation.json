@@ -518,5 +518,6 @@
     "scheduled_stopping_one": "{{count}} geplante Beobachtung stoppt",
     "scheduled_stopping_other": "{{count}} geplante Beobachtungen stoppen"
   },
-  "sources_sync": "Quellen & Sync"
+  "sources_sync": "Quellen & Sync",
+  "calendar": "Kalender"
 }

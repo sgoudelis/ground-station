@@ -24,6 +24,7 @@ from sqlalchemy import (
     Boolean,
     CheckConstraint,
     Column,
+    Date,
     DateTime,
     Enum,
     Float,
@@ -141,6 +142,18 @@ class PreferenceScope(str, PyEnum):
     USER = "user"
     SYSTEM = "system"
     BOOTSTRAP = "bootstrap"
+
+
+class CachedExternalEvents(Base):
+    """Disposable public announcements; installation consent stays outside SQL exports."""
+
+    __tablename__ = "cached_external_events"
+
+    id = Column(String(128), primary_key=True, nullable=False)
+    start_date = Column(Date, nullable=False, index=True)
+    end_date = Column(Date, nullable=False, index=True)
+    payload = Column(JSON, nullable=False)
+    fetched_at = Column(AwareDateTime, nullable=False)
 
 
 class Satellites(Base):

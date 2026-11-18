@@ -35,6 +35,8 @@ import traceback
 from copy import deepcopy
 from typing import Any, Dict, Optional, Union
 
+from common.streamqueue import StreamQueue
+
 # Configure logging
 logger = logging.getLogger("audio-broadcaster")
 
@@ -94,16 +96,20 @@ class AudioBroadcaster(threading.Thread):
         Returns:
             Queue that will receive audio messages (threading or multiprocessing)
         """
-        # Create appropriate queue type based on subscriber needs
         subscriber_queue: Union[queue.Queue[Any], multiprocessing.Queue[Any]]
-        if for_process:
-            subscriber_queue = multiprocessing.Queue(maxsize=maxsize)
-            queue_type = "multiprocessing"
-        else:
-            subscriber_queue = queue.Queue(maxsize=maxsize)
-            queue_type = "threading"
-
         with self.subscribers_lock:
+            if not self.running:
+                raise RuntimeError("Audio broadcaster is stopping")
+            # Create and replace under the fanout lock so stop() cannot miss a
+            # newly allocated process queue or publish to the old one.
+            if for_process:
+                subscriber_queue = StreamQueue(maxsize=maxsize)
+                queue_type = "multiprocessing"
+            else:
+                subscriber_queue = queue.Queue(maxsize=maxsize)
+                queue_type = "threading"
+            if name in self.subscribers:
+                self._remove_subscriber(name)
             self.subscribers[name] = {
                 "queue": subscriber_queue,
                 "maxsize": maxsize,
@@ -131,6 +137,10 @@ class AudioBroadcaster(threading.Thread):
             existing_queue: Pre-existing queue to receive audio messages
         """
         with self.subscribers_lock:
+            if not self.running:
+                raise RuntimeError("Audio broadcaster is stopping")
+            if name in self.subscribers:
+                self._remove_subscriber(name)
             self.subscribers[name] = {
                 "queue": existing_queue,
                 "maxsize": existing_queue._maxsize if hasattr(existing_queue, "_maxsize") else 0,
@@ -153,8 +163,15 @@ class AudioBroadcaster(threading.Thread):
         """
         with self.subscribers_lock:
             if name in self.subscribers:
-                del self.subscribers[name]
+                self._remove_subscriber(name)
                 logger.info(f"Subscriber removed: '{name}' (remaining: {len(self.subscribers)})")
+
+    def _remove_subscriber(self, name: str) -> None:
+        # Caller holds subscribers_lock. Existing queues belong to their caller;
+        # only queues created for our process subscribers are ours to discard.
+        subscriber = self.subscribers.pop(name)
+        if subscriber.get("is_process_queue"):
+            subscriber["queue"].discard()
 
     def run(self):
         """Main broadcast loop - runs in separate thread"""
@@ -246,7 +263,10 @@ class AudioBroadcaster(threading.Thread):
         logger.info(
             f"Stopping audio broadcaster for {context} (id={id(self)}, called from: {caller})"
         )
-        self.running = False
+        with self.subscribers_lock:
+            self.running = False
+            for name in list(self.subscribers):
+                self._remove_subscriber(name)
 
     def get_stats(self) -> dict:
         """

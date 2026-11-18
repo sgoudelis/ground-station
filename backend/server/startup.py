@@ -38,6 +38,7 @@ from sqlalchemy import func, select
 
 from audio.audiobroadcaster import AudioBroadcaster
 from audio.audiostreamer import WebAudioStreamer
+from calendars.external import external_events
 from celestial.syncstate import hydrate_celestial_sync_state
 from common import apitokens
 from common import auth as authsvc
@@ -62,6 +63,7 @@ from feedback.service import feedback_service
 from handlers.entities.control import restore_full_backup_file
 from hardware.lifecycle import start_hardware
 from hardware.service import hardware
+from installationid import installation_identity
 from library.inventory import get_inventory, publish_ready_artifacts
 from observations import events as obs_events
 from observations.bundle import (
@@ -340,10 +342,24 @@ async def lifespan(fastapiapp: FastAPI):
     # Start live system-info emitter task (registers into background_tasks)
     start_system_info_emitter(sio, background_tasks)
 
+    # Identity creation is entirely local, even when both features are off.
+    try:
+        installation_identity.credentials()
+    except (OSError, ValueError, KeyError, TypeError):
+        logger.error("Installation identity unavailable; remote features require storage repair")
+
     # One consent-gated sender belongs to the backend lifecycle, independent of
     # browser sessions. An opted-out installation makes no collector requests.
     feedback_task = asyncio.create_task(feedback_service.run())
     background_tasks.add(feedback_task)
+
+    async def notify_external_events():
+        await sio.emit("external-events-changed", {}, room=authsvc.AUTHENTICATED_SOCKET_ROOM)
+
+    # One shared cache/poller serves every user. Browser navigation reads SQL
+    # only; it never changes the installation's six-hour polling schedule.
+    events_task = asyncio.create_task(external_events.run(notify_external_events))
+    background_tasks.add(events_task)
 
     # Start session runtime snapshot emitter task (registers into background_tasks)
     start_session_runtime_emitter(sio, background_tasks)
@@ -354,7 +370,8 @@ async def lifespan(fastapiapp: FastAPI):
     finally:
         logger.info("FastAPI lifespan cleanup...")
         feedback_task.cancel()
-        await asyncio.gather(feedback_task, return_exceptions=True)
+        events_task.cancel()
+        await asyncio.gather(feedback_task, events_task, return_exceptions=True)
         # Prevent new scheduled work while active observations transition to a
         # durable failed state and release their runtime resources.
         try:

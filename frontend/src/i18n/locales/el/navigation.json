@@ -518,5 +518,6 @@
     "scheduled_stopping_one": "{{count}} προγραμματισμένη παρατήρηση σταματά",
     "scheduled_stopping_other": "{{count}} προγραμματισμένες παρατηρήσεις σταματούν"
   },
-  "sources_sync": "Πηγές & συγχρονισμός"
+  "sources_sync": "Πηγές & συγχρονισμός",
+  "calendar": "Ημερολόγιο"
 }

@@ -9,15 +9,12 @@ import logging
 import math
 import os
 import random
-import re
-import secrets
 import tempfile
 import time
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 from pathlib import Path
 from typing import Any
-from uuid import UUID, uuid4
 
 import httpx
 
@@ -30,6 +27,7 @@ from feedback.payload import (
     build_sample,
     reporting_environment,
 )
+from installationid import InstallationIdentity, installation_identity
 
 logger = logging.getLogger("feedback")
 
@@ -70,8 +68,11 @@ def _default_state() -> dict[str, Any]:
 
 
 class FeedbackService:
-    def __init__(self, path):
+    def __init__(self, path, identity=None):
         self.path = Path(path)
+        self.identity = identity or InstallationIdentity(
+            self.path.parent.parent / "installationid.json"
+        )
         self.lock = asyncio.Lock()
         self.wake = asyncio.Event()
         self.state = _default_state()
@@ -100,31 +101,23 @@ class FeedbackService:
                 raise ValueError("Invalid delivery time")
             if stored["enabled"] and stored["deletion_pending"]:
                 raise ValueError("Conflicting consent state")
-            if stored.get("installation_id") is not None and not isinstance(
-                stored["installation_id"], str
-            ):
-                raise ValueError("Invalid identity")
-            if stored.get("installation_id"):
-                UUID(stored["installation_id"])
-                if not re.fullmatch(r"[A-Za-z0-9_-]{43,128}", stored.get("credential") or ""):
-                    raise ValueError("Invalid identity")
-            elif any(
-                stored[key]
-                for key in (
-                    "enabled",
-                    "registered",
-                    "remote_possible",
-                    "grant_pending",
-                    "deletion_pending",
-                )
-            ):
-                raise ValueError("Missing identity")
             for key in ("last_success_at", "error", "consent_notice_version"):
                 if stored.get(key) is not None and not isinstance(stored[key], str):
                     raise ValueError("Invalid state metadata")
             # Old state files may contain an administrator-selected environment.
             # Ignore that label while retaining the installation's existing consent.
-            self.state.update({key: stored[key] for key in self.state if key in stored})
+            self.state.update(
+                {
+                    key: stored[key]
+                    for key in self.state
+                    if key in stored and key not in ("installation_id", "credential")
+                }
+            )
+            # Keep the existing opt-in, but all network features now own one
+            # fresh shared identity. Old census identities are left to expire.
+            if self.state["enabled"] or self.state["deletion_pending"]:
+                self.state["registered"] = False
+                self.state["grant_pending"] = self.state["enabled"]
             # A changed disclosure never silently renews an old grant.
             if (
                 self.state["enabled"]
@@ -137,7 +130,7 @@ class FeedbackService:
                 self.state["next_attempt_at"] = 0
         except FileNotFoundError:
             pass
-        except (OSError, ValueError, TypeError):
+        except (OSError, ValueError, TypeError, KeyError):
             self.storage_error = True
             self.state = _default_state()
             logger.error("Feedback state cannot be read; census is disabled.")
@@ -149,7 +142,14 @@ class FeedbackService:
             # mkstemp uses 0600. Replace atomically so a crash cannot leave a
             # partially written credential or accidentally restore consent.
             with os.fdopen(fd, "w") as stream:
-                json.dump(self.state, stream)
+                json.dump(
+                    {
+                        key: value
+                        for key, value in self.state.items()
+                        if key not in ("installation_id", "credential")
+                    },
+                    stream,
+                )
                 stream.flush()
                 os.fsync(stream.fileno())
             os.replace(name, self.path)
@@ -165,6 +165,13 @@ class FeedbackService:
 
     async def status(self, preview=False):
         async with self.lock:
+            # Loading settings at import must remain read-only. Startup creates
+            # the local identity; feature use binds it without copying old IDs.
+            if self.state["enabled"] or self.state["deletion_pending"]:
+                try:
+                    self.state.update(self.identity.credentials())
+                except (OSError, ValueError, KeyError, TypeError):
+                    self.storage_error = True
             result = {
                 key: self.state[key]
                 for key in (
@@ -217,9 +224,7 @@ class FeedbackService:
                 )
             previous = self.state.copy()
             if data["enabled"]:
-                if not self.state["installation_id"]:
-                    self.state["installation_id"] = str(uuid4())
-                    self.state["credential"] = secrets.token_urlsafe(32)
+                self.state.update(self.identity.credentials())
                 self.state["consent_notice_version"] = NOTICE_VERSION
                 self.state["grant_pending"] = True
                 # Retention may have expired this identity while offline.
@@ -263,6 +268,12 @@ class FeedbackService:
                 return
             if not self.state["enabled"] and not self.state["deletion_pending"]:
                 return
+            try:
+                self.state.update(self.identity.credentials())
+            except (OSError, ValueError, KeyError, TypeError):
+                self.storage_error = True
+                logger.error("Installation identity unavailable; census is stopped")
+                return
             identity = self.state["installation_id"]
             headers = {"Authorization": f"Bearer {self.state['credential']}"}
             try:
@@ -293,8 +304,6 @@ class FeedbackService:
                             json={
                                 "installation_id": identity,
                                 "credential": self.state["credential"],
-                                "purpose": "census",
-                                "consent_notice_version": self.state["consent_notice_version"],
                             },
                         )
                         self.state["registered"] = True
@@ -404,4 +413,4 @@ def _state_path():
     return Path(__file__).parents[1] / "data" / "feedback" / "state.json"
 
 
-feedback_service = FeedbackService(_state_path())
+feedback_service = FeedbackService(_state_path(), installation_identity)

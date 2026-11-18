@@ -50,6 +50,7 @@ const pages = {
     waterfall: lazyPage(() => import("./components/waterfall/main-layout.jsx")),
     packetMap: lazyPage(() => import("./components/packetmap/main-layout.jsx")),
     files: lazyPage(() => import("./components/filebrowser/filebrowser-main.jsx")),
+    calendar: lazyPage(() => import("./components/calendar/main-layout.jsx")),
     scheduler: lazyPage(() => import("./components/scheduler/main-layout.jsx")),
     solarSystem: lazyPage(() => import("./components/celestial/main-layout.jsx")),
     satelliteInfo: lazyPage(() => import("./components/satellites/satellite-info-page.jsx")),
@@ -115,6 +116,10 @@ const router = createBrowserRouter([
                     {
                         path: "scheduler/:tab?",
                         lazy: pages.scheduler,
+                    },
+                    {
+                        path: "calendar",
+                        lazy: pages.calendar,
                     },
                     {
                         path: "preferences",

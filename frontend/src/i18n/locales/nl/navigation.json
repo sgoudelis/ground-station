@@ -518,5 +518,6 @@
     "scheduled_stopping_one": "{{count}} geplande waarneming stoppend",
     "scheduled_stopping_other": "{{count}} geplande waarnemingen stoppend"
   },
-  "sources_sync": "Bronnen & sync"
+  "sources_sync": "Bronnen & sync",
+  "calendar": "Kalender"
 }

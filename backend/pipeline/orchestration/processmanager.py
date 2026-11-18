@@ -16,7 +16,6 @@
 
 import asyncio
 import logging
-import signal
 from typing import Any, Dict, List, Optional
 
 from common.constants import SocketEvents
@@ -72,9 +71,8 @@ class ProcessManager:
         if self.sio:
             self._start_metrics_emission()
 
-        # Set up signal handlers
-        signal.signal(signal.SIGINT, self._signal_handler)
-        signal.signal(signal.SIGTERM, self._signal_handler)
+        # The ASGI server owns SIGINT/SIGTERM. Cleanup runs in its lifespan;
+        # replacing those handlers swallows Ctrl+C after Uvicorn restores them.
 
     def set_sio(self, sio):
         """
@@ -550,23 +548,6 @@ class ProcessManager:
         return self.decoder_manager.get_active_decoder(sdr_id, session_id, vfo_number)
 
     # ==================== Utility Methods ====================
-
-    def _signal_handler(self, signum, frame):
-        """
-        Handle system signals for graceful shutdown
-
-        Args:
-            signum: Signal number
-            frame: Current stack frame
-        """
-        self.logger.info(f"Received signal {signum}, shutting down all SDR processes...")
-        for sdr_id in list(self.processes.keys()):
-            asyncio.create_task(self.stop_sdr_process(sdr_id))
-
-        # Stop performance monitor
-        if self.performance_monitor:
-            self.performance_monitor.stop()
-            self.logger.info("Stopped performance monitor")
 
     def shutdown(self):
         """

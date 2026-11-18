@@ -1,0 +1,88 @@
+import {useState} from 'react';
+import {useSelector} from 'react-redux';
+import {Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel,
+    Stack, Switch, Typography} from '@mui/material';
+import {useTranslation} from 'react-i18next';
+import CapsButton from '../common/capsbutton.jsx';
+import {useSocket} from '../common/socket.jsx';
+
+export default function ExternalEvents({status, onChanged, locale, timezone}) {
+    const {t} = useTranslation('calendar');
+    const {socket} = useSocket();
+    const isAdmin = useSelector(state => state.auth?.user?.role === 'admin');
+    const [open, setOpen] = useState(false);
+    const [accepted, setAccepted] = useState(false);
+    const [busy, setBusy] = useState(false);
+    const [error, setError] = useState(false);
+    const enabled = Boolean(status?.enabled);
+
+    const save = async enabled => {
+        setBusy(true);
+        setError(false);
+        try {
+            const reply = await socket.timeout(15000).emitWithAck('api.call', {
+                cmd: 'calendar.external.update',
+                data: {enabled, ...(enabled ? {terms_version: status.terms_version} : {})},
+            });
+            if (!reply?.success) throw new Error('Settings unavailable');
+            onChanged(reply.data);
+            setOpen(false);
+            setAccepted(false);
+        } catch {
+            setError(true);
+        } finally {
+            setBusy(false);
+        }
+    };
+    const close = () => {if (!busy) {setOpen(false); setAccepted(false); setError(false);}};
+    const format = value => new Date(value).toLocaleString(locale, {timeZone: timezone});
+
+    return <>
+        <Stack direction="row" alignItems="center" gap={1.5} flexWrap="wrap" sx={{px: 2, py: 1}}>
+            <FormControlLabel sx={{mr: 0}} label={t('external.label')}
+                control={<Switch size="small" checked={enabled} disabled={!isAdmin || !status || busy}
+                    slotProps={{input: {role: 'switch'}}}
+                    onChange={(_, checked) => {
+                        if (checked) {setAccepted(false); setError(false); setOpen(true);}
+                        else save(false);
+                    }} />} />
+            <CapsButton size="small" onClick={() => {setAccepted(false); setError(false); setOpen(true);}}>
+                {t('external.about')}
+            </CapsButton>
+            {!isAdmin && <Typography variant="caption" color="text.secondary">{t('external.admin_only')}</Typography>}
+            <Typography variant="caption" color={status?.error || status?.stale || status?.storage_error ? 'warning.main' : 'text.secondary'}
+                role="status" sx={{ml: {sm: 'auto'}}}>
+                {status?.storage_error ? t('external.storage_error')
+                    : status?.needs_consent_review ? t('external.review_terms')
+                        : enabled && status?.error ? t('external.sync_error')
+                            : enabled && status?.stale ? t('external.stale')
+                                : enabled && status.last_success_at ? t('external.updated', {date: format(status.last_success_at)})
+                                    : enabled ? t('external.waiting') : ''}
+            </Typography>
+            {enabled && status?.outside_coverage && <Typography variant="caption" color="text.secondary">
+                {t('external.outside_coverage')}
+            </Typography>}
+            {error && !open && <Typography variant="caption" color="error" role="alert">{t('external.save_error')}</Typography>}
+        </Stack>
+        <Dialog open={open} onClose={close} fullWidth maxWidth="sm" aria-labelledby="external-events-title">
+            <DialogTitle id="external-events-title">{t('external.title')}</DialogTitle>
+            <DialogContent dividers>
+                <Stack spacing={2}>
+                    <Typography variant="body2">{t('external.introduction')}</Typography>
+                    <Typography variant="body2">{t('external.connection')}</Typography>
+                    <Typography variant="body2">{t('external.cache')}</Typography>
+                    <Typography variant="body2">{t('external.terms')}</Typography>
+                    {isAdmin && !enabled && status && <FormControlLabel
+                        control={<Checkbox checked={accepted} onChange={event => setAccepted(event.target.checked)} disabled={busy} />}
+                        label={t('external.accept')} />}
+                    {error && <Typography color="error" role="alert">{t('external.save_error')}</Typography>}
+                </Stack>
+            </DialogContent>
+            <DialogActions>
+                <CapsButton onClick={close} disabled={busy}>{t('close')}</CapsButton>
+                {isAdmin && !enabled && status && <CapsButton variant="contained" disableElevation
+                    disabled={!accepted || busy} onClick={() => save(true)}>{t('external.enable')}</CapsButton>}
+            </DialogActions>
+        </Dialog>
+    </>;
+}
