@@ -7,18 +7,8 @@
 import * as React from 'react';
 import {useDispatch, useSelector} from 'react-redux';
 import { useTranslation } from 'react-i18next';
-import {
-    Box,
-    Button,
-    DialogActions,
-    DialogContent,
-    DialogTitle,
-    Grid,
-    IconButton,
-    Paper,
-    Portal,
-    Typography,
-} from '@mui/material';
+import CapsButton from '../common/capsbutton.jsx';
+import {Box,DialogActions,DialogContent,DialogTitle,Grid,IconButton,Paper,Portal,Typography,} from '@mui/material';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import ArrowDropUpIcon from '@mui/icons-material/ArrowDropUp';
 import {resolveHardwarePresentation} from '../common/hardware-status-presentation.jsx';
@@ -472,8 +462,8 @@ export default function ManualRotatorDialog({
                         </Grid>
                     </DialogContent>
                     <DialogActions sx={{ p: 2 }}>
-                        <Button color="error" disabled={!canStop || (stopping && command?.status !== 'unknown')} loading={stopping && command?.status !== 'unknown'} variant="contained" onClick={stop}>{stopLabel || t('rotator_control.stop')}</Button>
-                        <Button disabled={disabled || !validPosition || moving || stopping} loading={moving && command?.status !== 'unknown'} variant="contained" onClick={submit}>{t('rotator_control.move')}</Button>
+                        <CapsButton color="error" disabled={!canStop || (stopping && command?.status !== 'unknown')} loading={stopping && command?.status !== 'unknown'} variant="contained" onClick={stop}>{stopLabel || t('rotator_control.stop')}</CapsButton>
+                        <CapsButton disabled={disabled || !validPosition || moving || stopping} loading={moving && command?.status !== 'unknown'} variant="contained" onClick={submit}>{t('rotator_control.move')}</CapsButton>
                     </DialogActions>
                 </Paper>
             </Box>

@@ -5,23 +5,10 @@
  */
 
 import React from 'react';
-import {
-    Box,
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
-    Button,
-    IconButton,
-    Typography,
-    FormControl,
-    InputLabel,
-    Select,
-    MenuItem,
-    Alert
-} from '@mui/material';
+import {Box,Dialog,DialogTitle,DialogContent,DialogActions,IconButton,Typography,FormControl,InputLabel,Select,MenuItem,Alert} from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import { useTranslation } from 'react-i18next';
+import CapsButton from '../../common/capsbutton.jsx';
 import SharedTransmittersDialog from '../../satellites/transmitters-dialog.jsx';
 import { useSocket } from '../../common/socket.jsx';
 import { getLibreTargetOptions, isLibrePairSupported, resolveTranslationBackend, TranslationBackendField, useLibreTranslateCapabilities } from '../../common/translation-options.jsx';
@@ -278,10 +265,10 @@ export const TranscriptionParamsDialog = ({
                 </Box>
             </DialogContent>
             <DialogActions>
-                <Button onClick={onClose}>{t('common:cancel', { defaultValue: 'Cancel' })}</Button>
-                <Button variant="contained" onClick={handleApply} disabled={changedFields.length === 0}>
+                <CapsButton onClick={onClose}>{t('common:cancel', { defaultValue: 'Cancel' })}</CapsButton>
+                <CapsButton variant="contained" onClick={handleApply} disabled={changedFields.length === 0}>
                     {t('common:apply', { defaultValue: 'Apply' })}
-                </Button>
+                </CapsButton>
             </DialogActions>
         </Dialog>
     );

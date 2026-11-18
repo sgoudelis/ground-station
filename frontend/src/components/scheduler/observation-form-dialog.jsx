@@ -73,6 +73,7 @@ import TranscribeIcon from '@mui/icons-material/Transcribe';
 import SaveIcon from '@mui/icons-material/Save';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import ResponsiveActionButton from '../common/responsive-action-button.jsx';
+import CapsButton from '../common/capsbutton.jsx';
 import { mobileFullScreenPaperSx } from '../common/dialog-layout.js';
 import { useSocket } from '../common/socket.jsx';
 import { getLibreTargetOptions, isLibrePairSupported, resolveTranslationBackend, TranslationBackendField, useLibreTranslateCapabilities } from '../common/translation-options.jsx';
@@ -1564,14 +1565,13 @@ const ObservationFormDialog = ({ onExited }) => {
                                 />
 
                                 <Box sx={{ display: 'flex', flexDirection: 'column', flex: '1' }}>
-                                    <Button
+                                    <CapsButton
                                         variant="outlined"
                                         size="small"
                                         onClick={(e) => setTransmitterMenuAnchor(e.currentTarget)}
                                         disabled={isFormDisabled || formData.sdr.auto_center_frequency || availableTransmitters.length === 0}
                                         sx={{
                                             height: '40px',
-                                            textTransform: 'none',
                                             justifyContent: 'flex-start',
                                             px: 2,
                                             borderColor: 'primary.main',
@@ -1587,7 +1587,7 @@ const ObservationFormDialog = ({ onExited }) => {
                                         }}
                                     >
                                         {t('scheduler_dialogs.shared.select_from_transmitter_list')}
-                                    </Button>
+                                    </CapsButton>
                                     <Menu
                                         anchorEl={transmitterMenuAnchor}
                                         open={Boolean(transmitterMenuAnchor)}
@@ -2767,12 +2767,12 @@ const ObservationFormDialog = ({ onExited }) => {
                     {t('scheduler_dialogs.observation.confirm_delete_warning')}
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setOpenDeleteConfirm(false)} variant="outlined">
+                    <CapsButton onClick={() => setOpenDeleteConfirm(false)} variant="outlined">
                         {t('cancel')}
-                    </Button>
-                    <Button onClick={handleDeleteConfirm} variant="contained" color="error">
+                    </CapsButton>
+                    <CapsButton onClick={handleDeleteConfirm} variant="contained" color="error">
                         {t('delete')}
-                    </Button>
+                    </CapsButton>
                 </DialogActions>
             </Dialog>
 
@@ -2795,12 +2795,12 @@ const ObservationFormDialog = ({ onExited }) => {
                     {t('scheduler_dialogs.observation.cancel_observation_warning')}
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setOpenCancelConfirm(false)} variant="outlined">
+                    <CapsButton onClick={() => setOpenCancelConfirm(false)} variant="outlined">
                         {t('close')}
-                    </Button>
-                    <Button onClick={handleCancelConfirm} variant="contained" color="warning">
+                    </CapsButton>
+                    <CapsButton onClick={handleCancelConfirm} variant="contained" color="warning">
                         {t('scheduler_dialogs.observation.cancel_observation_button')}
-                    </Button>
+                    </CapsButton>
                 </DialogActions>
             </Dialog>
 
@@ -2822,12 +2822,12 @@ const ObservationFormDialog = ({ onExited }) => {
                     {t('scheduler_dialogs.shared.remove_sdr_session_confirm')}
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setOpenRemoveSessionConfirm(false)} variant="outlined">
+                    <CapsButton onClick={() => setOpenRemoveSessionConfirm(false)} variant="outlined">
                         {t('cancel')}
-                    </Button>
-                    <Button onClick={handleRemoveSessionConfirm} variant="contained" color="error">
+                    </CapsButton>
+                    <CapsButton onClick={handleRemoveSessionConfirm} variant="contained" color="error">
                         {t('scheduler_dialogs.shared.remove_button')}
-                    </Button>
+                    </CapsButton>
                 </DialogActions>
             </Dialog>
         </Dialog>

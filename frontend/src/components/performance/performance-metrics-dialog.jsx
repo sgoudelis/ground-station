@@ -18,16 +18,7 @@
  */
 
 import React, { useEffect, useRef, useState } from 'react';
-import {
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    IconButton,
-    Box,
-    Typography,
-    Chip,
-    Button,
-} from '@mui/material';
+import {Dialog,DialogTitle,DialogContent,IconButton,Box,Typography,Chip,} from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import AutorenewIcon from '@mui/icons-material/Autorenew';
 import { useSelector, useDispatch } from 'react-redux';
@@ -35,6 +26,7 @@ import { setDialogOpen } from './performance-slice.jsx';
 import { useSocket } from '../common/socket.jsx';
 import PerformanceFlow from './performance-flow.jsx';
 import { useTranslation } from 'react-i18next';
+import CapsButton from '../common/capsbutton.jsx';
 
 const PerformanceMetricsDialog = () => {
     const { t } = useTranslation('common');
@@ -145,7 +137,7 @@ const PerformanceMetricsDialog = () => {
                         </Typography>
                     </Box>
                     <Box display="flex" alignItems="center" gap={1}>
-                        <Button
+                        <CapsButton
                             variant="outlined"
                             size="small"
                             startIcon={<AutorenewIcon />}
@@ -153,7 +145,7 @@ const PerformanceMetricsDialog = () => {
                             disabled={!metrics}
                         >
                             {t('performance_metrics_dialog.auto_arrange', { defaultValue: 'Auto Arrange' })}
-                        </Button>
+                        </CapsButton>
                         <IconButton onClick={handleClose} size="small">
                             <CloseIcon />
                         </IconButton>

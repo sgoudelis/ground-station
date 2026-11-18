@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Paper, Typography } from '@mui/material';
+import {Box,Dialog,DialogActions,DialogContent,DialogTitle,Paper,Typography} from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import { useSocket } from '../common/socket.jsx';
 import {
@@ -14,6 +14,7 @@ import SyncTerminal from './synchronize-terminal.jsx';
 import ErrorSection from './synchronize-error.jsx';
 import SyncResultsTable from './synchronize-results.jsx';
 import { useTranslation } from 'react-i18next';
+import CapsButton from '../common/capsbutton.jsx';
 
 const SynchronizeOrbitalDataCard = function () {
     const dispatch = useDispatch();
@@ -146,17 +147,17 @@ const SynchronizeOrbitalDataCard = function () {
                     </Typography>
                 </DialogContent>
                 <DialogActions>
-                    <Button disabled={cancelling} onClick={() => setCancelDialogOpen(false)}>
+                    <CapsButton disabled={cancelling} onClick={() => setCancelDialogOpen(false)}>
                         {t('synchronize.cancel_dialog.keep_syncing')}
-                    </Button>
-                    <Button
+                    </CapsButton>
+                    <CapsButton
                         color="error"
                         variant="contained"
                         disabled={cancelling || !cancellableTaskId}
                         onClick={handleConfirmCancel}
                     >
                         {t('synchronize.cancel_dialog.confirm')}
-                    </Button>
+                    </CapsButton>
                 </DialogActions>
             </Dialog>
         </Paper>

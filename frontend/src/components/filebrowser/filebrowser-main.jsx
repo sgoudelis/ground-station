@@ -19,41 +19,7 @@
 
 import React, { useCallback, useEffect, useState, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import {
-    Box,
-    CircularProgress,
-    Alert,
-    Grid,
-    Card,
-    CardMedia,
-    CardContent,
-    CardActions,
-    Typography,
-    Chip,
-    IconButton,
-    Tooltip,
-    Button,
-    FormControl,
-    FormControlLabel,
-    InputLabel,
-    Select,
-    MenuItem,
-    Menu,
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
-    ListItemText,
-    ListItemIcon,
-    Pagination,
-    LinearProgress,
-    TextField,
-    Stack,
-    Switch,
-    ToggleButton,
-    ToggleButtonGroup,
-    useMediaQuery,
-} from '@mui/material';
+import {Box,CircularProgress,Alert,Grid,Card,CardMedia,CardContent,CardActions,Typography,Chip,IconButton,Tooltip,FormControl,FormControlLabel,InputLabel,Select,MenuItem,Menu,Dialog,DialogTitle,DialogContent,DialogActions,ListItemText,ListItemIcon,Pagination,LinearProgress,TextField,Stack,Switch,ToggleButton,ToggleButtonGroup,useMediaQuery,} from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import DeleteIcon from '@mui/icons-material/Delete';
 import DownloadIcon from '@mui/icons-material/Download';
@@ -106,6 +72,7 @@ import {
 } from './filebrowser-slice.jsx';
 import { toast } from 'react-toastify';
 import { useTranslation } from 'react-i18next';
+import CapsButton from '../common/capsbutton.jsx';
 import RecordingDialog from './recording-dialog.jsx';
 import TelemetryViewerDialog from './telemetry-viewer-dialog.jsx';
 import AudioDialog from './audio-dialog.jsx';
@@ -1171,7 +1138,7 @@ export default function FileBrowserMain() {
                         }
                     </Typography>
                     <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                        <Button
+                        <CapsButton
                             variant="outlined"
                             size="small"
                             startIcon={<SelectAllIcon />}
@@ -1187,8 +1154,8 @@ export default function FileBrowserMain() {
                             }}
                         >
                             {t('selection.select_all', 'Select All')}
-                        </Button>
-                        <Button
+                        </CapsButton>
+                        <CapsButton
                             variant="outlined"
                             size="small"
                             startIcon={<DeselectIcon />}
@@ -1204,8 +1171,8 @@ export default function FileBrowserMain() {
                             }}
                         >
                             {t('selection.clear', 'Clear')}
-                        </Button>
-                        <Button
+                        </CapsButton>
+                        <CapsButton
                             variant="contained"
                             size="small"
                             color="error"
@@ -1214,7 +1181,7 @@ export default function FileBrowserMain() {
                             disabled={selectedItems.length === 0}
                         >
                             {t('selection.delete', 'Delete Selected')}
-                        </Button>
+                        </CapsButton>
                     </Box>
                 </Box>
             )}
@@ -1275,17 +1242,17 @@ export default function FileBrowserMain() {
                                     : t('no_files.message_empty', 'Take snapshots or record IQ data from the waterfall view')}
                         </Typography>
                         {search && (
-                            <Button variant="outlined" onClick={() => dispatch(setSearch(''))} sx={{ mr: 1 }}>
+                            <CapsButton variant="outlined" onClick={() => dispatch(setSearch(''))} sx={{ mr: 1 }}>
                                 {t('search.clear', 'Clear search')}
-                            </Button>
+                            </CapsButton>
                         )}
-                        <Button
+                        <CapsButton
                             variant="outlined"
                             startIcon={<RefreshIcon />}
                             onClick={handleRefresh}
                         >
                             {t('refresh', 'Refresh')}
-                        </Button>
+                        </CapsButton>
                     </Box>
                 ) : viewMode === 'table' ? (
                     <FileTableView
@@ -2309,10 +2276,10 @@ export default function FileBrowserMain() {
 
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={handleCloseWaterfallDialog}>{t('filebrowser_main.cancel', { defaultValue: 'Cancel' })}</Button>
-                    <Button onClick={handleSubmitWaterfallDialog} variant="contained">
+                    <CapsButton onClick={handleCloseWaterfallDialog}>{t('filebrowser_main.cancel', { defaultValue: 'Cancel' })}</CapsButton>
+                    <CapsButton onClick={handleSubmitWaterfallDialog} variant="contained">
                         {t('filebrowser_main.start_generation', { defaultValue: 'Start Generation' })}
-                    </Button>
+                    </CapsButton>
                 </DialogActions>
             </Dialog>
 
@@ -2373,12 +2340,12 @@ export default function FileBrowserMain() {
                     </Typography>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setItemToDownload(null)} autoFocus>
+                    <CapsButton onClick={() => setItemToDownload(null)} autoFocus>
                         {t('download_dialog.cancel', 'Cancel')}
-                    </Button>
-                    <Button onClick={confirmDownload} variant="contained" startIcon={<DownloadIcon />}>
+                    </CapsButton>
+                    <CapsButton onClick={confirmDownload} variant="contained" startIcon={<DownloadIcon />}>
                         {t('actions.download', 'Download')}
-                    </Button>
+                    </CapsButton>
                 </DialogActions>
             </Dialog>
 
@@ -2507,32 +2474,32 @@ export default function FileBrowserMain() {
                         gap: 1.5,
                     }}
                 >
-                    <Button
+                    <CapsButton
                         onClick={handleCloseDeleteDialog}
                         disabled={isDeleting}
                         variant="outlined"
                         color="inherit"
                         sx={{
                             minWidth: 100,
-                            textTransform: 'none',
+
                             fontWeight: 500,
                         }}
                     >
                         {t('delete_dialog.cancel', 'Cancel')}
-                    </Button>
-                    <Button
+                    </CapsButton>
+                    <CapsButton
                         onClick={confirmDelete}
                         loading={isDeleting}
                         color="error"
                         variant="contained"
                         sx={{
                             minWidth: 100,
-                            textTransform: 'none',
+
                             fontWeight: 600,
                         }}
                     >
                         {t('delete_dialog.delete', 'Delete')}
-                    </Button>
+                    </CapsButton>
                 </DialogActions>
             </Dialog>
 
@@ -2654,32 +2621,32 @@ export default function FileBrowserMain() {
                         gap: 1.5,
                     }}
                 >
-                    <Button
+                    <CapsButton
                         onClick={handleCloseBatchDeleteDialog}
                         disabled={isDeleting}
                         variant="outlined"
                         color="inherit"
                         sx={{
                             minWidth: 100,
-                            textTransform: 'none',
+
                             fontWeight: 500,
                         }}
                     >
                         {t('delete_dialog.cancel', 'Cancel')}
-                    </Button>
-                    <Button
+                    </CapsButton>
+                    <CapsButton
                         onClick={confirmBatchDelete}
                         loading={isDeleting}
                         color="error"
                         variant="contained"
                         sx={{
                             minWidth: 100,
-                            textTransform: 'none',
+
                             fontWeight: 600,
                         }}
                     >
                         {t('delete_dialog.delete', 'Delete')}
-                    </Button>
+                    </CapsButton>
                 </DialogActions>
             </Dialog>
 

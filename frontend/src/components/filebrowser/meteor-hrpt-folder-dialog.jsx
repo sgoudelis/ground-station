@@ -18,29 +18,7 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
-import {
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
-    Button,
-    Box,
-    Typography,
-    Tabs,
-    Tab,
-    Grid,
-    Card,
-    CardMedia,
-    CardContent,
-    Chip,
-    IconButton,
-    Paper,
-    Table,
-    TableBody,
-    TableCell,
-    TableContainer,
-    TableRow,
-} from '@mui/material';
+import {Dialog,DialogTitle,DialogContent,DialogActions,Box,Typography,Tabs,Tab,Grid,Card,CardMedia,CardContent,Chip,IconButton,Paper,Table,TableBody,TableCell,TableContainer,TableRow,} from '@mui/material';
 import {compactDialogTitleSx, mobileFullScreenPaperSx} from '../common/dialog-layout.js';
 import CloseIcon from '@mui/icons-material/Close';
 import DownloadIcon from '@mui/icons-material/Download';
@@ -51,6 +29,7 @@ import ZoomableImage from '../common/zoomable-image.jsx';
 import { useUserTimeSettings } from '../../hooks/useUserTimeSettings.jsx';
 import { formatDateTime } from '../../utils/date-time.js';
 import { useTranslation } from 'react-i18next';
+import CapsButton from '../common/capsbutton.jsx';
 
 function TabPanel({ children, value, index }) {
     return (
@@ -426,11 +405,11 @@ export default function MeteorHrptFolderDialog({ open, onClose, folder }) {
                     }}
                 >
                     {folder.images && folder.images.length > 0 && (
-                        <Button onClick={handleDownloadFolder} startIcon={<DownloadIcon />} variant="outlined">
+                        <CapsButton onClick={handleDownloadFolder} startIcon={<DownloadIcon />} variant="outlined">
                             {t('meteor_hrpt_folder_dialog.download_zip', { defaultValue: 'DOWNLOAD ZIP (' })}{folder.image_count})
-                        </Button>
+                        </CapsButton>
                     )}
-                    <Button
+                    <CapsButton
                         onClick={onClose}
                         variant="outlined"
                         sx={{
@@ -442,7 +421,7 @@ export default function MeteorHrptFolderDialog({ open, onClose, folder }) {
                         }}
                     >
                         {t('meteor_hrpt_folder_dialog.close', { defaultValue: 'Close' })}
-                    </Button>
+                    </CapsButton>
                 </DialogActions>
             </Dialog>
 
@@ -535,14 +514,14 @@ export default function MeteorHrptFolderDialog({ open, onClose, folder }) {
                             },
                         }}
                     >
-                        <Button
+                        <CapsButton
                             onClick={() => window.open(selectedImage.url, '_blank')}
                             startIcon={<DownloadIcon />}
                             variant="outlined"
                         >
                             {t('meteor_hrpt_folder_dialog.download', { defaultValue: 'Download' })}
-                        </Button>
-                        <Button
+                        </CapsButton>
+                        <CapsButton
                             onClick={() => setSelectedImage(null)}
                             variant="outlined"
                             sx={{
@@ -554,7 +533,7 @@ export default function MeteorHrptFolderDialog({ open, onClose, folder }) {
                             }}
                         >
                             {t('meteor_hrpt_folder_dialog.close', { defaultValue: 'Close' })}
-                        </Button>
+                        </CapsButton>
                     </DialogActions>
                 </Dialog>
             )}

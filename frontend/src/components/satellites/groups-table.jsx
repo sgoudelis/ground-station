@@ -20,22 +20,7 @@
 
 
 import React, { useEffect, useCallback, useState, useRef, useMemo } from 'react';
-import {
-    Box,
-    Button,
-    Alert,
-    AlertTitle,
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
-    Stack,
-    Chip,
-    Typography,
-    IconButton,
-    Tooltip,
-    CircularProgress,
-} from '@mui/material';
+import {Box,Alert,AlertTitle,Dialog,DialogTitle,DialogContent,DialogActions,Stack,Chip,Typography,IconButton,Tooltip,CircularProgress,} from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import { DataGrid, gridClasses } from '@mui/x-data-grid';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
@@ -56,6 +41,7 @@ import {
     setDeleteConfirmDialogOpen,
 } from './groups-slice.jsx';
 import { useTranslation } from 'react-i18next';
+import CapsButton from '../common/capsbutton.jsx';
 import {toRowSelectionModel, toSelectedIds} from '../../utils/datagrid-selection.js';
 
 
@@ -368,24 +354,24 @@ const GroupsTable = () => {
                 alignItems={{xs: 'stretch', sm: 'center'}}
                 sx={{my: 2}}
             >
-                <Button variant="contained" onClick={handleAddClick}>
+                <CapsButton variant="contained" onClick={handleAddClick}>
                     {t('groups.add')}
-                </Button>
-                <Button
+                </CapsButton>
+                <CapsButton
                     variant="contained"
                     onClick={() => handleEditGroup()}
                     disabled={selected.length !== 1}
                 >
                     {t('groups.edit_selected')}
-                </Button>
-                <Button
+                </CapsButton>
+                <CapsButton
                     variant="contained"
                     color="error"
                     onClick={() => dispatch(setDeleteConfirmDialogOpen(true))}
                     disabled={selected.length === 0}
                 >
                     {t('groups.delete_selected')}
-                </Button>
+                </CapsButton>
                 {selected.length > 0 && (
                     <Chip
                         size="small"
@@ -535,19 +521,19 @@ const GroupsTable = () => {
                         gap: 1.5,
                     }}
                 >
-                    <Button
+                    <CapsButton
                         onClick={() => dispatch(setDeleteConfirmDialogOpen(false))}
                         variant="outlined"
                         color="inherit"
                         sx={{
                             minWidth: 100,
-                            textTransform: 'none',
+
                             fontWeight: 500,
                         }}
                     >
                         {t('groups.cancel')}
-                    </Button>
-                    <Button
+                    </CapsButton>
+                    <CapsButton
                         variant="contained"
                         onClick={() => {
                             handleDeleteGroup();
@@ -557,12 +543,12 @@ const GroupsTable = () => {
                         startIcon={loading ? <CircularProgress size={16} color="inherit" /> : undefined}
                         sx={{
                             minWidth: 100,
-                            textTransform: 'none',
+
                             fontWeight: 600,
                         }}
                     >
                         {t('groups.delete')}
-                    </Button>
+                    </CapsButton>
                 </DialogActions>
             </Dialog>
         </Box>

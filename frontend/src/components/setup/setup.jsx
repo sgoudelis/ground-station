@@ -18,19 +18,7 @@
  */
 
 import React from 'react';
-import {
-    Alert,
-    Box,
-    Button,
-    CircularProgress,
-    LinearProgress,
-    Stack,
-    Step,
-    StepLabel,
-    Stepper,
-    TextField,
-    Typography,
-} from '@mui/material';
+import {Alert,Box,CircularProgress,LinearProgress,Stack,Step,StepLabel,Stepper,TextField,Typography,} from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import Grid from '@mui/material/Grid';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
@@ -43,6 +31,7 @@ import ChecklistRoundedIcon from '@mui/icons-material/ChecklistRounded';
 import FactCheckOutlinedIcon from '@mui/icons-material/FactCheckOutlined';
 import SyncOutlinedIcon from '@mui/icons-material/SyncOutlined';
 import { useTranslation } from 'react-i18next';
+import CapsButton from '../common/capsbutton.jsx';
 import { useDispatch, useSelector } from 'react-redux';
 
 import { toast } from '../../utils/toast-with-timestamp.jsx';
@@ -1033,7 +1022,7 @@ const SetupWizard = ({
                         '& .MuiButton-root': { minHeight: 40, px: { xs: 1.5, sm: 2.5 }, borderRadius: 1.5, textTransform: 'none', fontWeight: 600, boxShadow: 'none' },
                     }}
                 >
-                    <Button
+                    <CapsButton
                         variant="outlined"
                         startIcon={<ArrowBackRoundedIcon />}
                         onClick={handleWizardBack}
@@ -1046,9 +1035,9 @@ const SetupWizard = ({
                         }
                     >
                         {t('location.back', { defaultValue: 'Back' })}
-                    </Button>
+                    </CapsButton>
                     {isWizardSaveStep ? (
-                        <Button
+                        <CapsButton
                             variant="contained"
                             endIcon={<FactCheckOutlinedIcon />}
                             disabled={!canSaveInReviewStep || wizardFinalizing}
@@ -1058,9 +1047,9 @@ const SetupWizard = ({
                             {wizardFinalizing
                                 ? t('location.state_working', { defaultValue: 'Working...' })
                                 : saveButtonLabel}
-                        </Button>
+                        </CapsButton>
                     ) : isWizardFinalizeStep ? (
-                        <Button
+                        <CapsButton
                             variant="contained"
                             endIcon={<CheckCircleOutlineIcon />}
                             disabled={
@@ -1078,16 +1067,16 @@ const SetupWizard = ({
                                       defaultValue: 'Signing in...',
                                   })
                                 : t('location.complete_setup', { defaultValue: 'Complete setup' })}
-                        </Button>
+                        </CapsButton>
                     ) : (
-                        <Button
+                        <CapsButton
                             variant="contained"
                             endIcon={<ArrowForwardRoundedIcon />}
                             onClick={handleWizardNext}
                             disabled={!canAdvanceWizard || locationSaving}
                         >
                             {t('location.next', { defaultValue: 'Next' })}
-                        </Button>
+                        </CapsButton>
                     )}
                 </SettingsActionFooter>
             </Box>

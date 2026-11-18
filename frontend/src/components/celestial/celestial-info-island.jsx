@@ -1,7 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Box, Button, CircularProgress, Divider, Typography } from '@mui/material';
+import {Box,CircularProgress,Divider,Typography} from '@mui/material';
 import { useTranslation } from 'react-i18next';
+import CapsButton from '../common/capsbutton.jsx';
 import { getClassNamesBasedOnGridEditing, islandTitleBarSx, TitleBar } from '../common/common.jsx';
 import { useSocket } from '../common/socket.jsx';
 import { useUserTimeSettings } from '../../hooks/useUserTimeSettings.jsx';
@@ -552,7 +553,7 @@ const CelestialInfoIsland = ({
                         bgcolor: 'background.default',
                     }}
                 >
-                    <Button
+                    <CapsButton
                         fullWidth
                         variant="contained"
                         color="primary"
@@ -565,7 +566,7 @@ const CelestialInfoIsland = ({
                         }}
                     >
                         {isCurrentlyTargeted ? t('satellite_info.currently_targeted') : t('satellite_info.set_as_target')}
-                    </Button>
+                    </CapsButton>
                 </Box>
             </Box>
             {propertiesDialog}

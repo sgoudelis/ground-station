@@ -64,14 +64,29 @@
 - Tab strips built from `{ labelKey, defaultLabel }` arrays must have their key in `en/<ns>.json`
   (and in every locale); otherwise the English default renders in all languages. `i18n check` fails on
   `dynamic-label-missing`.
+- MUI buttons/tabs are `text-transform: uppercase`, but Greek opts out of CSS uppercasing globally
+  (`src/theme.js`), so in Greek a plain `<Button>` paints whatever case the locale file stores.
+  Label-bearing buttons must use `<CapsButton>` (`frontend/src/components/common/capsbutton.jsx`),
+  which caps the label through `capsLabel()` - the same JS mechanism `AntTab` uses. Keep the plain
+  MUI `<Button>` for buttons whose child is *data* (satellite names, frequencies, counts) and for
+  link-shaped `component=` buttons; those may keep `textTransform: 'none'`. Never store uppercase in a
+  locale value to fake it. `capsLabel(label, i18n)` takes the `useTranslation()` instance -
+  `greekcaps.js` must not import the i18n singleton (it breaks tests that mock `react-i18next`).
+  Guards: `i18n check` warns `caps-chrome:` for a plain `<Button>` with a translated label and
+  `npm test` requires that list to be empty; `python3 scripts/capscodemod.py` migrates new pages
+  (idempotent). The scanner cannot see labels arriving through a variable (`{option.label}`,
+  `{children}`) - review mapped button arrays and local button wrappers by hand.
+- MUI has no theme-level hook for this: `components.MuiButton.slots.root`, `defaultProps.component`
+  and theme `slots` are all ignored for `Button` in MUI v7, so the transform has to happen at the
+  React boundary.
 - Never bulk-delete locale keys reported by `i18n check` as `unknown-keys`. The static reference scan
   misses template-literal keys (for example `preferences.theme_${name}`), so some are live.
 - Greek must not be uppercased by CSS (browser uppercasing keeps the tonos, `Ά`). `src/i18n/config.js`
   mirrors the language to `<html lang>` and `src/theme.js` disables `text-transform` for `el`.
   Never "fix" Greek accents by editing stored strings to match what an uppercasing button paints.
   Chrome that must be capitalised (MUI tab bars) builds the label in JS via
-  `tabCapsLabel()`/`greekCaps()` in `frontend/src/utils/greekcaps.js`; locale values stay mixed-case
-  and accented.
+  `capsLabel()`/`greekCaps()` in `frontend/src/utils/greekcaps.js` (`tabCapsLabel` is an alias); the
+  label-bearing button wrapper is `<CapsButton>`. Locale values stay mixed-case and accented.
 - Greek title case keeps its tonos: `Κλίμακα`, `Όλα`, `Ώρα` are correct and `Κλιμακα`, `Ωρα`,
   `Αγνωστο` are misspellings. Only words written entirely in capitals lose accents. Never strip the
   accent from a capital initial again - a previous revision of `scripts/i18n.mjs` and

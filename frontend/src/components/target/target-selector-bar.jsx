@@ -65,6 +65,7 @@ import { resolveTabLedPresentation } from "../common/hardware-status-presentatio
 import { fetchMonitoredCelestial } from "../celestial/monitored-slice.jsx";
 import { resolveTargetDisplayName } from './celestial-target-utils.js';
 import { useTranslation } from 'react-i18next';
+import CapsButton from '../common/capsbutton.jsx';
 
 const TARGET_SLOT_ID_PATTERN = /^target-(\d+)$/;
 const ADD_TARGET_TAB_VALUE = '__add-target__';
@@ -1015,7 +1016,7 @@ const TargetSelectorBar = React.memo(function TargetSelectorBar() {
                     gap: 1.5,
                 }}
             >
-                <Button
+                <CapsButton
                     variant="outlined"
                     disabled={deleteTargetBusy}
                     onClick={() => {
@@ -1025,7 +1026,7 @@ const TargetSelectorBar = React.memo(function TargetSelectorBar() {
                     }}
                 >
                     {t('target_selector_bar.cancel', { defaultValue: 'Cancel' })}
-                </Button>
+                </CapsButton>
                 <Button
                     color="error"
                     variant="contained"
@@ -1098,7 +1099,7 @@ const TargetSelectorBar = React.memo(function TargetSelectorBar() {
                     gap: 1.5,
                 }}
             >
-                <Button
+                <CapsButton
                     variant="outlined"
                     disabled={abortObservationBusy}
                     onClick={() => {
@@ -1107,7 +1108,7 @@ const TargetSelectorBar = React.memo(function TargetSelectorBar() {
                     }}
                 >
                     {t('target_selector_bar.cancel', { defaultValue: 'Cancel' })}
-                </Button>
+                </CapsButton>
                 <Button
                     color="error"
                     variant="contained"
@@ -1591,14 +1592,14 @@ const TargetSelectorBar = React.memo(function TargetSelectorBar() {
                     gap: 1.5,
                 }}
             >
-                <Button
+                <CapsButton
                     variant="outlined"
                     disabled={createTargetBusy}
                     onClick={handleCloseCreateDialog}
                 >
                     {t('target_selector_bar.cancel', { defaultValue: 'Cancel' })}
-                </Button>
-                <Button
+                </CapsButton>
+                <CapsButton
                     variant="contained"
                     color="success"
                     disabled={
@@ -1613,7 +1614,7 @@ const TargetSelectorBar = React.memo(function TargetSelectorBar() {
                     startIcon={createTargetBusy ? <CircularProgress color="inherit" size={16} /> : <AddCircleIcon />}
                 >
                     {t('target_selector_bar.create_target', { defaultValue: 'Create Target' })}
-                </Button>
+                </CapsButton>
             </DialogActions>
         </Dialog>
         <Box

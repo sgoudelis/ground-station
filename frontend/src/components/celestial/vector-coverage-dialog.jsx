@@ -9,11 +9,7 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-    Alert, Box, Button, Chip, CircularProgress, Dialog, DialogActions,
-    DialogContent, DialogContentText, DialogTitle, Divider, IconButton,
-    Paper, Stack, Tooltip, Typography,
-} from '@mui/material';
+import {Alert,Box,Chip,CircularProgress,Dialog,DialogActions,DialogContent,DialogContentText,DialogTitle,Divider,IconButton,Paper,Stack,Tooltip,Typography,} from '@mui/material';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import CachedIcon from '@mui/icons-material/Cached';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
@@ -23,6 +19,7 @@ import DeleteSweepIcon from '@mui/icons-material/DeleteSweep';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import TimelineIcon from '@mui/icons-material/Timeline';
 import { useTranslation } from 'react-i18next';
+import CapsButton from '../common/capsbutton.jsx';
 
 const parseTime = (value) => {
     const milliseconds = Date.parse(value || '');
@@ -381,7 +378,7 @@ export default function VectorCoverageDialog({ open, target, socket, timezone, l
                     <Box><Typography variant="caption" color="text.secondary">{t('admin.targets.vectors.server_time')}</Typography><Typography variant="body2">{formatTime(data?.now_utc, timezone, locale)}</Typography></Box>
                 </Box>
                 {loading ? <Stack alignItems="center" spacing={1} sx={{ py: 6 }}><CircularProgress size={32} /><Typography color="text.secondary">{t('common.loading')}</Typography></Stack> : null}
-                {error ? <Alert severity="error" action={<Button color="inherit" size="small" onClick={() => void loadHistory()}>{t('admin.targets.vectors.retry')}</Button>}>{error}</Alert> : null}
+                {error ? <Alert severity="error" action={<CapsButton color="inherit" size="small" onClick={() => void loadHistory()}>{t('admin.targets.vectors.retry')}</CapsButton>}>{error}</Alert> : null}
                 {!loading && !error && snapshots.length === 0 ? <Alert severity="info">{t('admin.targets.vectors.empty')}</Alert> : null}
                 {!loading && latest ? <>
                     <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', md: 'repeat(4, 1fr)' }, gap: 1.25 }}>
@@ -401,7 +398,7 @@ export default function VectorCoverageDialog({ open, target, socket, timezone, l
                     <Box><Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ sm: 'center' }} justifyContent="space-between" sx={{ mb: 1 }}>
                         <Typography variant="subtitle1" fontWeight={700}>{t('admin.targets.vectors.history', { count: snapshotCount })}</Typography>
                         <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
-                            <Button
+                            <CapsButton
                                 size="small"
                                 variant="outlined"
                                 startIcon={<DeleteSweepIcon />}
@@ -409,8 +406,8 @@ export default function VectorCoverageDialog({ open, target, socket, timezone, l
                                 onClick={() => setPendingDelete({ kind: 'expired' })}
                             >
                                 {t('admin.targets.vectors.clear_expired')}
-                            </Button>
-                            <Button
+                            </CapsButton>
+                            <CapsButton
                                 size="small"
                                 variant="outlined"
                                 color="error"
@@ -419,7 +416,7 @@ export default function VectorCoverageDialog({ open, target, socket, timezone, l
                                 onClick={() => setPendingDelete({ kind: 'all' })}
                             >
                                 {t('admin.targets.vectors.clear_all')}
-                            </Button>
+                            </CapsButton>
                         </Stack>
                     </Stack>
                         <Stack spacing={1}>{snapshots.map((snapshot, index) => <Paper key={snapshot.id} variant="outlined" sx={{ p: 1.5 }}>
@@ -452,8 +449,8 @@ export default function VectorCoverageDialog({ open, target, socket, timezone, l
                     </Box>
                 </> : null}
             </Stack></DialogContent>
-            <DialogActions><Button onClick={onClose}>{t('admin.targets.vectors.close')}</Button>
-                {onRefresh ? <Button variant="contained" startIcon={refreshing ? <CircularProgress size={16} color="inherit" /> : <RefreshIcon />} disabled={!socket || refreshing || deleting} onClick={handleRefresh}>{t('admin.targets.actions.refresh')}</Button> : null}
+            <DialogActions><CapsButton onClick={onClose}>{t('admin.targets.vectors.close')}</CapsButton>
+                {onRefresh ? <CapsButton variant="contained" startIcon={refreshing ? <CircularProgress size={16} color="inherit" /> : <RefreshIcon />} disabled={!socket || refreshing || deleting} onClick={handleRefresh}>{t('admin.targets.actions.refresh')}</CapsButton> : null}
             </DialogActions>
         </Dialog>
         <Dialog open={Boolean(pendingDelete)} onClose={deleting ? undefined : () => setPendingDelete(null)} maxWidth="sm" fullWidth>
@@ -462,8 +459,8 @@ export default function VectorCoverageDialog({ open, target, socket, timezone, l
                 <DialogContentText>{confirmationMessage}</DialogContentText>
             </DialogContent>
             <DialogActions>
-                <Button onClick={() => setPendingDelete(null)} disabled={deleting}>{t('admin.common.cancel')}</Button>
-                <Button
+                <CapsButton onClick={() => setPendingDelete(null)} disabled={deleting}>{t('admin.common.cancel')}</CapsButton>
+                <CapsButton
                     variant="contained"
                     color="error"
                     startIcon={deleting ? <CircularProgress size={16} color="inherit" /> : <DeleteOutlineIcon />}
@@ -471,7 +468,7 @@ export default function VectorCoverageDialog({ open, target, socket, timezone, l
                     onClick={() => void handleDelete()}
                 >
                     {confirmationAction}
-                </Button>
+                </CapsButton>
             </DialogActions>
         </Dialog>
         </>

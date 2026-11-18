@@ -1,9 +1,5 @@
 import React from 'react';
-import {
-    Alert, Box, Button, Checkbox, Chip, Dialog, DialogActions, DialogContent,
-    DialogContentText, DialogTitle, FormControlLabel, FormGroup, IconButton,
-    Link, MenuItem, Paper, Stack, TextField, Typography,
-} from '@mui/material';
+import {Alert,Box,Checkbox,Chip,Dialog,DialogActions,DialogContent,DialogContentText,DialogTitle,FormControlLabel,FormGroup,IconButton,Link,MenuItem,Paper,Stack,TextField,Typography,} from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
@@ -11,6 +7,7 @@ import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import { alpha } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
+import CapsButton from '../common/capsbutton.jsx';
 import { useSocket } from '../common/socket.jsx';
 import { SettingsSection, SettingsSurface, SettingsSurfaceHeader } from '../settings/shared/index.js';
 
@@ -160,10 +157,10 @@ export default function ApiTokensPage() {
                     title={t('api_tokens.title', { defaultValue: 'API Tokens' })}
                     subtitle={t('api_tokens.intro', { defaultValue: 'Create personal tokens for external applications. Each token has only the access you select.' })}
                     actions={(
-                        <Button size="small" variant="contained" startIcon={<AddIcon />}
+                        <CapsButton size="small" variant="contained" startIcon={<AddIcon />}
                             onClick={() => { setError(''); setCreateOpen(true); }} disabled={loading || scopes.length === 0}>
                             {t('api_tokens.create', { defaultValue: 'Create token' })}
-                        </Button>
+                        </CapsButton>
                     )}
                 />
 
@@ -266,15 +263,15 @@ export default function ApiTokensPage() {
                     </Stack>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setCreateOpen(false)}>{t('api_tokens.cancel', { defaultValue: 'Cancel' })}</Button>
-                    <Button onClick={() => {
+                    <CapsButton onClick={() => setCreateOpen(false)}>{t('api_tokens.cancel', { defaultValue: 'Cancel' })}</CapsButton>
+                    <CapsButton onClick={() => {
                         setError('');
                         setVerificationError('');
                         setCreateOpen(false);
                         setVerificationOpen(true);
                     }} variant="contained" disabled={!name.trim() || selectedScopes.length === 0}>
                         {t('api_tokens.continue', { defaultValue: 'Continue' })}
-                    </Button>
+                    </CapsButton>
                 </DialogActions>
             </Dialog>
 
@@ -300,10 +297,10 @@ export default function ApiTokensPage() {
                             onChange={(event) => setPassword(event.target.value)} />
                     </DialogContent>
                     <DialogActions sx={{ px: 3, pb: 2 }}>
-                        <Button onClick={closeVerification} disabled={busy}>{t('api_tokens.back', { defaultValue: 'Back' })}</Button>
-                        <Button type="submit" variant="contained" disabled={busy || !password}>
+                        <CapsButton onClick={closeVerification} disabled={busy}>{t('api_tokens.back', { defaultValue: 'Back' })}</CapsButton>
+                        <CapsButton type="submit" variant="contained" disabled={busy || !password}>
                             {t('api_tokens.verify_create', { defaultValue: 'Verify and create token' })}
-                        </Button>
+                        </CapsButton>
                     </DialogActions>
                 </Box>
             </Dialog>
@@ -318,7 +315,7 @@ export default function ApiTokensPage() {
                     <TextField value={createdSecret} fullWidth inputProps={{ readOnly: true, style: { fontFamily: 'monospace' } }} />
                 </DialogContent>
                 <DialogActions>
-                    <Button startIcon={<ContentCopyIcon />} onClick={async () => {
+                    <CapsButton startIcon={<ContentCopyIcon />} onClick={async () => {
                         try {
                             await navigator.clipboard.writeText(createdSecret);
                             setCopyError('');
@@ -327,10 +324,10 @@ export default function ApiTokensPage() {
                         }
                     }}>
                         {t('api_tokens.copy', { defaultValue: 'Copy' })}
-                    </Button>
-                    <Button variant="contained" onClick={() => setCreatedSecret('')}>
+                    </CapsButton>
+                    <CapsButton variant="contained" onClick={() => setCreatedSecret('')}>
                         {t('api_tokens.done', { defaultValue: 'Done' })}
-                    </Button>
+                    </CapsButton>
                 </DialogActions>
             </Dialog>
 
@@ -342,8 +339,8 @@ export default function ApiTokensPage() {
                         onChange={(event) => setRenameValue(event.target.value)} inputProps={{ maxLength: 80 }} fullWidth size="small" />
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setRenameTarget(null)} disabled={busy}>{t('api_tokens.cancel', { defaultValue: 'Cancel' })}</Button>
-                    <Button onClick={renameToken} disabled={busy || !renameValue.trim()}>{t('api_tokens.save', { defaultValue: 'Save' })}</Button>
+                    <CapsButton onClick={() => setRenameTarget(null)} disabled={busy}>{t('api_tokens.cancel', { defaultValue: 'Cancel' })}</CapsButton>
+                    <CapsButton onClick={renameToken} disabled={busy || !renameValue.trim()}>{t('api_tokens.save', { defaultValue: 'Save' })}</CapsButton>
                 </DialogActions>
             </Dialog>
 
@@ -356,8 +353,8 @@ export default function ApiTokensPage() {
                     </DialogContentText>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setRevokeTarget(null)} disabled={busy}>{t('api_tokens.cancel', { defaultValue: 'Cancel' })}</Button>
-                    <Button onClick={revokeToken} color="error" disabled={busy}>{t('api_tokens.revoke', { defaultValue: 'Revoke token' })}</Button>
+                    <CapsButton onClick={() => setRevokeTarget(null)} disabled={busy}>{t('api_tokens.cancel', { defaultValue: 'Cancel' })}</CapsButton>
+                    <CapsButton onClick={revokeToken} color="error" disabled={busy}>{t('api_tokens.revoke', { defaultValue: 'Revoke token' })}</CapsButton>
                 </DialogActions>
             </Dialog>
         </SettingsSurface>

@@ -37,6 +37,7 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import PauseIcon from '@mui/icons-material/Pause';
 import VolumeUpIcon from '@mui/icons-material/VolumeUp';
 import { useTranslation } from 'react-i18next';
+import CapsButton from '../common/capsbutton.jsx';
 import { useSelector } from 'react-redux';
 
 function formatBytes(bytes) {
@@ -743,23 +744,23 @@ export default function AudioDialog({ open, onClose, audio, metadata }) {
                     },
                 }}
             >
-                <Button
+                <CapsButton
                     onClick={handleDownloadAudio}
                     startIcon={<DownloadIcon />}
                     variant="outlined"
                 >
                     {t('audio_dialog.download_audio', { defaultValue: 'Download Audio' })}
-                </Button>
+                </CapsButton>
                 {metadata && (
-                    <Button
+                    <CapsButton
                         onClick={handleDownloadMetadata}
                         startIcon={<DownloadIcon />}
                         variant="outlined"
                     >
                         {t('audio_dialog.download_metadata', { defaultValue: 'Download Metadata' })}
-                    </Button>
+                    </CapsButton>
                 )}
-                <Button
+                <CapsButton
                     onClick={onClose}
                     variant="outlined"
                     sx={{
@@ -771,7 +772,7 @@ export default function AudioDialog({ open, onClose, audio, metadata }) {
                     }}
                 >
                     {t('audio_dialog.close', { defaultValue: 'Close' })}
-                </Button>
+                </CapsButton>
             </DialogActions>
         </Dialog>
     );

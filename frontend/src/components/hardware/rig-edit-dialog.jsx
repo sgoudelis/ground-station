@@ -15,6 +15,7 @@ import {
     TextField,
 } from "@mui/material";
 import { useTranslation } from "react-i18next";
+import CapsButton from '../common/capsbutton.jsx';
 
 export default function RigEditDialog({
     open,
@@ -158,7 +159,7 @@ export default function RigEditDialog({
                     gap: 2,
                 }}
             >
-                <Button
+                <CapsButton
                     onClick={onClose}
                     variant="outlined"
                     sx={{
@@ -170,10 +171,10 @@ export default function RigEditDialog({
                     }}
                 >
                     {t("rig.cancel")}
-                </Button>
-                <Button onClick={onSubmit} color="success" variant="contained" disabled={hasValidationErrors || loading}>
+                </CapsButton>
+                <CapsButton onClick={onSubmit} color="success" variant="contained" disabled={hasValidationErrors || loading}>
                     {t("rig.submit")}
-                </Button>
+                </CapsButton>
             </DialogActions>
         </Dialog>
     );

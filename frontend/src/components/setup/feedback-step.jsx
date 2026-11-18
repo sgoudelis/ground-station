@@ -1,11 +1,10 @@
 /** Copyright (c) 2026 Efstratios Goudelis. SPDX-License-Identifier: GPL-3.0-or-later */
 
 import React, { useState } from 'react';
-import {
-    Button, Dialog, DialogActions, DialogContent, Link, Stack,
-} from '@mui/material';
+import {Dialog,DialogActions,DialogContent,Link,Stack,} from '@mui/material';
 import FavoriteBorderOutlinedIcon from '@mui/icons-material/FavoriteBorderOutlined';
 import { useTranslation } from 'react-i18next';
+import CapsButton from '../common/capsbutton.jsx';
 import FeedbackDisclosure, { FeedbackChoices } from '../settings/feedback-disclosure.jsx';
 import WizardSection from './section.jsx';
 
@@ -40,7 +39,7 @@ export default function FeedbackStep({ enabled, onChange }) {
                     <FeedbackDisclosure enabled={enabled} onChange={onChange} />
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setDetailsOpen(false)}>{t('common:close')}</Button>
+                    <CapsButton onClick={() => setDetailsOpen(false)}>{t('common:close')}</CapsButton>
                 </DialogActions>
             </Dialog>
         </WizardSection>

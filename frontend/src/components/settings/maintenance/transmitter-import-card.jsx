@@ -18,18 +18,12 @@
  */
 
 import React, { useState } from 'react';
-import {
-    Typography,
-    Button,
-    Box,
-    Alert,
-    Divider,
-    CircularProgress
-} from '@mui/material';
+import {Typography,Box,Alert,Divider,CircularProgress} from '@mui/material';
 import DownloadIcon from '@mui/icons-material/Download';
 import { useSocket } from '../../common/socket.jsx';
 import { toast } from '../../../utils/toast-with-timestamp.jsx';
 import { useTranslation } from 'react-i18next';
+import CapsButton from '../../common/capsbutton.jsx';
 
 const TransmitterImportCard = () => {
     const { t } = useTranslation('settings');
@@ -111,7 +105,7 @@ const TransmitterImportCard = () => {
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                     {t('transmitter_import_card.scrape_the_satdump_satellite_list_page_and_upsert_transm', { defaultValue: 'Scrape the SatDump Satellite-List page and upsert transmitters into the database.' })}
                 </Typography>
-                <Button
+                <CapsButton
                     variant="contained"
                     startIcon={
                         activeSource === 'satdump' ? (
@@ -124,7 +118,7 @@ const TransmitterImportCard = () => {
                     disabled={activeSource !== null}
                 >
                     {t('transmitter_import_card.import_satdump_transmitters', { defaultValue: 'Import SatDump Transmitters' })}
-                </Button>
+                </CapsButton>
                 {renderResult('satdump')}
             </Box>
 
@@ -137,7 +131,7 @@ const TransmitterImportCard = () => {
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                     {t('transmitter_import_card.parse_satyaml_files_and_upsert_transmitters_into_the_dat', { defaultValue: 'Parse SatYAML files and upsert transmitters into the database.' })}
                 </Typography>
-                <Button
+                <CapsButton
                     variant="contained"
                     startIcon={
                         activeSource === 'gr-satellites' ? (
@@ -150,7 +144,7 @@ const TransmitterImportCard = () => {
                     disabled={activeSource !== null}
                 >
                     {t('transmitter_import_card.import_gr_satellites_transmitters', { defaultValue: 'Import gr-satellites Transmitters' })}
-                </Button>
+                </CapsButton>
                 {renderResult('gr-satellites')}
             </Box>
         </>

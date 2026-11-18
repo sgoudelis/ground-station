@@ -1,25 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import {
-    Box,
-    Button,
-    Chip,
-    Dialog,
-    DialogActions,
-    DialogContent,
-    DialogTitle,
-    Divider,
-    Grid,
-    IconButton,
-    List,
-    ListItemButton,
-    ListItemIcon,
-    ListItemText,
-    Menu,
-    MenuItem,
-    Paper,
-    Tooltip,
-    Typography,
-} from '@mui/material';
+import {Box,Chip,Dialog,DialogActions,DialogContent,DialogTitle,Divider,Grid,IconButton,List,ListItemButton,ListItemIcon,ListItemText,Menu,MenuItem,Paper,Tooltip,Typography,} from '@mui/material';
 import {
     fileDialogActionsSx,
     fileDialogContentSx,
@@ -42,6 +22,7 @@ import MoreVertIcon from '@mui/icons-material/MoreVert';
 import RadioIcon from '@mui/icons-material/Radio';
 import SatelliteAltIcon from '@mui/icons-material/SatelliteAlt';
 import { useTranslation } from 'react-i18next';
+import CapsButton from '../common/capsbutton.jsx';
 import { isWaterfallRunningForItem } from './waterfall-task-status.js';
 import WaterfallGenerationOverlay from './waterfall-generation-overlay.jsx';
 import { useObservationTelemetry } from './observation-telemetry.js';
@@ -539,10 +520,10 @@ export default function ObservationFolderDialog({
                 {!hasArtifacts && <Typography color="text.secondary">{t('observation_folder_dialog.no_files_were_produced_by_this_observation', { defaultValue: 'No files were produced by this observation.' })}</Typography>}
             </DialogContent>
             <DialogActions disableSpacing sx={fileDialogActionsSx}>
-                <Button onClick={onDelete} color="error" variant="outlined" startIcon={<DeleteIcon />} disabled={!onDelete || folder.observation_in_progress || metadata.in_progress}>
+                <CapsButton onClick={onDelete} color="error" variant="outlined" startIcon={<DeleteIcon />} disabled={!onDelete || folder.observation_in_progress || metadata.in_progress}>
                     {t('observation_folder_dialog.delete', { defaultValue: 'Delete' })}
-                </Button>
-                <Button onClick={onClose} variant="outlined">{t('observation_folder_dialog.close', { defaultValue: 'Close' })}</Button>
+                </CapsButton>
+                <CapsButton onClick={onClose} variant="outlined">{t('observation_folder_dialog.close', { defaultValue: 'Close' })}</CapsButton>
             </DialogActions>
             <Menu
                 anchorEl={recordingMenu?.anchorEl ?? null}

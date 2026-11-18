@@ -18,11 +18,7 @@
  */
 
 import React, { useState, useMemo, memo } from 'react';
-import {
-    Typography, Divider, Button, TextField, Alert, AlertTitle,
-    Tabs, Tab, Box, IconButton, Collapse, Dialog, DialogTitle,
-    DialogContent, DialogActions, Tooltip, Chip, Select, MenuItem, FormControl, InputLabel
-} from '@mui/material';
+import {Typography,Divider,TextField,Alert,AlertTitle,Tabs,Tab,Box,IconButton,Collapse,Dialog,DialogTitle,DialogContent,DialogActions,Tooltip,Chip,Select,MenuItem,FormControl,InputLabel} from '@mui/material';
 import Grid from '@mui/material/Grid';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
@@ -35,6 +31,7 @@ import SearchIcon from '@mui/icons-material/Search';
 import WarningIcon from '@mui/icons-material/Warning';
 import { useSelector, useDispatch } from 'react-redux';
 import { useTranslation } from 'react-i18next';
+import CapsButton from '../../common/capsbutton.jsx';
 import { tabCapsLabel } from '../../../utils/greekcaps.js';
 
 const ReduxStateInspectorCard = () => {
@@ -181,7 +178,7 @@ const ReduxStateInspectorCard = () => {
 
     // Memoized recursive component to render state tree
     const StateTreeNode = memo(({ data, path = '', depth = 0 }) => {
-        const { t } = useTranslation('settings');
+        const { t, i18n } = useTranslation('settings');
         if (data === null || data === undefined) {
             return (
                 <Box sx={{ color: 'text.secondary', fontFamily: 'monospace', display: 'inline' }}>
@@ -288,8 +285,8 @@ const ReduxStateInspectorCard = () => {
             <Divider sx={{ mb: 2 }} />
 
             <Tabs value={activeTab} onChange={(e, newValue) => setActiveTab(newValue)} sx={{ mb: 2 }}>
-                <Tab label={tabCapsLabel(t('redux_state_inspector_card.inspector', { defaultValue: 'Inspector' }))} />
-                <Tab label={tabCapsLabel(t('redux_state_inspector_card.raw_json', { defaultValue: 'Raw JSON' }))} />
+                <Tab label={tabCapsLabel(t('redux_state_inspector_card.inspector', { defaultValue: 'Inspector' }), i18n)} />
+                <Tab label={tabCapsLabel(t('redux_state_inspector_card.raw_json', { defaultValue: 'Raw JSON' }), i18n)} />
             </Tabs>
 
                 {/* Tab 0: Inspector with View and Edit side by side */}
@@ -395,7 +392,7 @@ const ReduxStateInspectorCard = () => {
                                         {t('redux_state_inspector_card.editing_redux_state_directly_can_cause_unexpected_behavi', { defaultValue: 'Editing Redux state directly can cause unexpected behavior.' })}
                                     </Alert>
                                     <Box sx={{ display: 'flex', gap: 1 }}>
-                                        <Button
+                                        <CapsButton
                                             variant="contained"
                                             color="primary"
                                             startIcon={<SaveIcon />}
@@ -403,15 +400,15 @@ const ReduxStateInspectorCard = () => {
                                             disabled={!editingPath}
                                         >
                                             {t('redux_state_inspector_card.save', { defaultValue: 'Save' })}
-                                        </Button>
-                                        <Button
+                                        </CapsButton>
+                                        <CapsButton
                                             variant="outlined"
                                             startIcon={<CancelIcon />}
                                             onClick={cancelEdit}
                                             disabled={!editingPath}
                                         >
                                             {t('redux_state_inspector_card.cancel', { defaultValue: 'Cancel' })}
-                                        </Button>
+                                        </CapsButton>
                                     </Box>
                                 </Box>
                         </Grid>
@@ -466,10 +463,10 @@ const ReduxStateInspectorCard = () => {
                     </Typography>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setConfirmDialogOpen(false)}>{t('redux_state_inspector_card.cancel', { defaultValue: 'Cancel' })}</Button>
-                    <Button onClick={applyEdit} color="warning" variant="contained">
+                    <CapsButton onClick={() => setConfirmDialogOpen(false)}>{t('redux_state_inspector_card.cancel', { defaultValue: 'Cancel' })}</CapsButton>
+                    <CapsButton onClick={applyEdit} color="warning" variant="contained">
                         {t('redux_state_inspector_card.apply_change', { defaultValue: 'Apply Change' })}
-                    </Button>
+                    </CapsButton>
                 </DialogActions>
             </Dialog>
         </>

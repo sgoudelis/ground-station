@@ -23,6 +23,7 @@ import { getFrequencyBand } from "../common/common.jsx";
 import FrequencyDisplay from "./frequency-dial.jsx";
 import TransmitterTargetLabel from './transmitter-target-label.jsx';
 import { useTranslation } from 'react-i18next';
+import CapsButton from '../common/capsbutton.jsx';
 
 const FrequencyControlAccordion = ({
                                        expanded,
@@ -111,7 +112,7 @@ const FrequencyControlAccordion = ({
                 </Box>
 
                 <Box sx={{ mt: 1.5 }}>
-                    <Button
+                    <CapsButton
                         id="go-to-transmitter-button"
                         variant="contained"
                         fullWidth
@@ -125,7 +126,7 @@ const FrequencyControlAccordion = ({
                         sx={{ py: 1, fontWeight: 700, letterSpacing: 0.5, justifyContent: 'space-between' }}
                     >
                         {t('frequency.go_to_transmitter')}
-                    </Button>
+                    </CapsButton>
                     <Menu
                         id="go-to-transmitter-menu"
                         anchorEl={menuAnchor}

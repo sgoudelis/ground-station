@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import React, { useCallback, useEffect, useId, useState } from 'react';
+import CapsButton from '../common/capsbutton.jsx';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import {
@@ -339,11 +340,11 @@ export default function ContinuousObservationForm({ observation, readOnly = fals
                                 </Stack>
                             </Box>;
                         })}
-                        {!readOnly && <Button startIcon={<Add />} variant="outlined" sx={{ alignSelf: 'flex-start' }}
+                        {!readOnly && <CapsButton startIcon={<Add />} variant="outlined" sx={{ alignSelf: 'flex-start' }}
                             disabled={saving || draft.vfos.length >= CONTINUOUS_VFO_LIMIT}
                             onClick={() => setDraft({ ...draft, vfos: [...draft.vfos, createContinuousVfo(draft.sdr.center_frequency)] })}>
                             {label('add_vfo')}
-                        </Button>}
+                        </CapsButton>}
                     </Stack>
                     {saveError && <Alert severity="error">{saveError}</Alert>}
                     {!connected && <Alert severity="warning">{label('offline')}</Alert>}
@@ -351,10 +352,10 @@ export default function ContinuousObservationForm({ observation, readOnly = fals
                 </Stack>
             </DialogContent>
             <DialogActions sx={{ px: 3, py: 2 }}>
-                <Button disabled={saving} onClick={onClose}>{label(readOnly ? 'close' : 'cancel')}</Button>
-                {!readOnly && <Button type="submit" variant="contained" startIcon={<SaveOutlined />} disabled={loading || saving || !connected}>
+                <CapsButton disabled={saving} onClick={onClose}>{label(readOnly ? 'close' : 'cancel')}</CapsButton>
+                {!readOnly && <CapsButton type="submit" variant="contained" startIcon={<SaveOutlined />} disabled={loading || saving || !connected}>
                     {saving ? <CircularProgress size={18} /> : label(draft.created_at ? 'save_changes' : 'save_definition')}
-                </Button>}
+                </CapsButton>}
             </DialogActions>
         </Box>
     </Dialog>;

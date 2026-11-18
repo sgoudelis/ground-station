@@ -18,20 +18,7 @@
  */
 
 import React, { useEffect, useMemo, useState } from 'react';
-import {
-    Box,
-    Typography,
-    Chip,
-    Button,
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
-    IconButton,
-    Stack,
-    Paper,
-    Tooltip,
-} from '@mui/material';
+import {Box,Typography,Chip,Dialog,DialogTitle,DialogContent,DialogActions,IconButton,Stack,Paper,Tooltip,} from '@mui/material';
 import FileDialogDetails from './file-dialog-details.jsx';
 import {
     fileDialogActionsSx,
@@ -49,6 +36,7 @@ import ImageIcon from '@mui/icons-material/Image';
 import { useSelector } from 'react-redux';
 import WaterfallViewer from './waterfall-viewer.jsx';
 import { useTranslation } from 'react-i18next';
+import CapsButton from '../common/capsbutton.jsx';
 
 function formatBytes(bytes) {
     if (!Number.isFinite(bytes) || bytes < 0) return 'Unknown size';
@@ -381,35 +369,35 @@ export default function RecordingDialog({ open, onClose, recording, socket }) {
                 disableSpacing
                 sx={fileDialogActionsSx}
             >
-                <Button
+                <CapsButton
                     onClick={() => window.open(recording?.download_urls.data, '_blank')}
                     startIcon={<DownloadIcon />}
                     variant="outlined"
                 >
                     {t('recording_dialog.download_data', { defaultValue: 'Download Data' })}
-                </Button>
-                <Button
+                </CapsButton>
+                <CapsButton
                     onClick={() => window.open(recording?.download_urls.meta, '_blank')}
                     startIcon={<DownloadIcon />}
                     variant="outlined"
                 >
                     {t('recording_dialog.download_metadata', { defaultValue: 'Download Metadata' })}
-                </Button>
+                </CapsButton>
                 {recording?.snapshot && (
-                    <Button
+                    <CapsButton
                         onClick={() => window.open(recording.snapshot.url, '_blank')}
                         startIcon={<DownloadIcon />}
                         variant="outlined"
                     >
                         {t('recording_dialog.download_snapshot', { defaultValue: 'Download Snapshot' })}
-                    </Button>
+                    </CapsButton>
                 )}
-                <Button
+                <CapsButton
                     onClick={onClose}
                     variant="outlined"
                 >
                     {t('recording_dialog.close', { defaultValue: 'Close' })}
-                </Button>
+                </CapsButton>
             </DialogActions>
         </Dialog>
     );

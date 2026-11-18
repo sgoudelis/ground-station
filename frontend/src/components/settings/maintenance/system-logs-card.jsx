@@ -42,6 +42,7 @@ import { useSocket } from '../../common/socket.jsx';
 import { useUserTimeSettings } from '../../../hooks/useUserTimeSettings.jsx';
 import { formatTime } from '../../../utils/date-time.js';
 import { useTranslation } from 'react-i18next';
+import CapsButton from '../../common/capsbutton.jsx';
 
 const LIMIT_OPTIONS = [200, 500, 1000, 2000];
 const HARD_CAP = 5000;
@@ -287,22 +288,22 @@ const SystemLogsCard = () => {
                         {isStreaming ? 'Stop' : 'Stream'}
                     </Button>
 
-                    <Button
+                    <CapsButton
                         variant="outlined"
                         startIcon={<ClearAllIcon />}
                         onClick={onClear}
                     >
                         {t('system_logs_card.clear', { defaultValue: 'Clear' })}
-                    </Button>
+                    </CapsButton>
 
-                    <Button
+                    <CapsButton
                         variant="outlined"
                         startIcon={<DownloadIcon />}
                         onClick={onDownload}
                         disabled={visibleLogs.length === 0}
                     >
                         {t('system_logs_card.export', { defaultValue: 'Export' })}
-                    </Button>
+                    </CapsButton>
                 </Stack>
 
                 <FormControl size="small" sx={{ minWidth: 120 }}>

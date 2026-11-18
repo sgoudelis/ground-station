@@ -23,28 +23,10 @@ import { updatePreferences, setPreference } from './preferences-slice.jsx';
 import { tz } from 'moment-timezone';
 import { useTranslation } from 'react-i18next';
 import { languageOptions } from '../../i18n/languages.js';
-import {
-    Accordion,
-    AccordionDetails,
-    AccordionSummary,
-    Backdrop,
-    Box,
-    Button,
-    Chip,
-    CircularProgress,
-    FormControl,
-    FormHelperText,
-    IconButton,
-    InputAdornment,
-    InputLabel,
-    MenuItem,
-    Select,
-    Stack,
-    TextField,
-    Typography,
-} from '@mui/material';
+import {Accordion,AccordionDetails,AccordionSummary,Backdrop,Box,Chip,CircularProgress,FormControl,FormHelperText,IconButton,InputAdornment,InputLabel,MenuItem,Select,Stack,TextField,Typography,} from '@mui/material';
 import Grid from '@mui/material/Grid';
 import { alpha } from '@mui/material/styles';
+import CapsButton from '../common/capsbutton.jsx';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
@@ -790,15 +772,15 @@ const PreferencesForm = ({ mode = 'preferences' }) => {
                                 mt: 1,
                             }}
                         >
-                            <Button
+                            <CapsButton
                                 variant="outlined"
                                 color="inherit"
                                 disabled={!isDirty || isSaving || isLoading}
                                 onClick={handleReset}
                             >
                                 {t('preferences.reset_changes', { defaultValue: 'Reset' })}
-                            </Button>
-                            <Button
+                            </CapsButton>
+                            <CapsButton
                                 variant="contained"
                                 color="primary"
                                 disabled={!isDirty || isSaving || isLoading}
@@ -808,7 +790,7 @@ const PreferencesForm = ({ mode = 'preferences' }) => {
                                 {isSaving || isLoading
                                     ? t('preferences.saving_button', { defaultValue: 'Saving...' })
                                     : t('preferences.save_preferences')}
-                            </Button>
+                            </CapsButton>
                         </SettingsActionFooter>
                     </Stack>
                 </Box>

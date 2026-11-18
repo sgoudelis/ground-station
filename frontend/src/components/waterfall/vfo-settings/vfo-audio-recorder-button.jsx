@@ -18,13 +18,14 @@
  */
 
 import React from 'react';
-import { Button, IconButton, Tooltip } from '@mui/material';
+import {IconButton,Tooltip} from '@mui/material';
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import StopIcon from '@mui/icons-material/Stop';
 import { useDispatch, useSelector } from 'react-redux';
 import { startAudioRecording, stopAudioRecording } from '../vfo-marker/vfo-slice';
 import { useSocket } from '../../common/socket';
 import { useTranslation } from 'react-i18next';
+import CapsButton from '../../common/capsbutton.jsx';
 
 const VFOAudioRecorderButton = ({ vfoNumber, compact = false }) => {
     const { t } = useTranslation('waterfall');
@@ -97,7 +98,7 @@ const VFOAudioRecorderButton = ({ vfoNumber, compact = false }) => {
     return (
         <Tooltip title={tooltip}>
             <span>
-                <Button
+                <CapsButton
                     size="small"
                     variant="outlined"
                     onClick={handleToggle}
@@ -130,7 +131,7 @@ const VFOAudioRecorderButton = ({ vfoNumber, compact = false }) => {
                     }}
                 >
                     {t('vfo_audio_recorder_button.rec', { defaultValue: 'REC' })}
-                </Button>
+                </CapsButton>
             </span>
         </Tooltip>
     );

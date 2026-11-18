@@ -4,17 +4,10 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-    Alert,
-    Box,
-    Button,
-    Chip,
-    Divider,
-    Stack,
-    Typography,
-} from '@mui/material';
+import {Alert,Box,Chip,Divider,Stack,Typography,} from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import { useTranslation } from 'react-i18next';
+import CapsButton from '../../common/capsbutton.jsx';
 import { useUserTimeSettings } from '../../../hooks/useUserTimeSettings.jsx';
 import { formatDateTime } from '../../../utils/date-time.js';
 import { useSocket } from '../../common/socket.jsx';
@@ -112,7 +105,7 @@ const TimeDriftCard = () => {
                 <Typography variant="h6">
                     {t('maintenance.time_drift_title', { defaultValue: 'Frontend vs Backend Time' })}
                 </Typography>
-                <Button
+                <CapsButton
                     variant="outlined"
                     size="small"
                     startIcon={<RefreshIcon />}
@@ -120,7 +113,7 @@ const TimeDriftCard = () => {
                     disabled={loading}
                 >
                     {t('maintenance.time_drift_refresh', { defaultValue: 'Refresh' })}
-                </Button>
+                </CapsButton>
             </Stack>
             <Divider sx={{ mb: 2 }} />
 

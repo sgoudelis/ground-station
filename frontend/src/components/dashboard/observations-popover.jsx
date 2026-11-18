@@ -6,6 +6,7 @@ import ScheduleOutlinedIcon from '@mui/icons-material/ScheduleOutlined';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
+import CapsButton from '../common/capsbutton.jsx';
 import { useSocket } from '../common/socket.jsx';
 import { setObservedSessionIds } from '../decoders/decoders-slice.jsx';
 import { joinSdr } from '../waterfall/sdr-join.js';
@@ -58,10 +59,10 @@ function ObservationSection({ title, children }) {
 function ObservationAction({ children, onClick, disabled }) {
     return (
         <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1, pt: 0.75, borderTop: '1px solid', borderColor: 'divider' }}>
-            <Button onClick={onClick} disabled={disabled} size="small" endIcon={<ChevronRightIcon />}
+            <CapsButton onClick={onClick} disabled={disabled} size="small" endIcon={<ChevronRightIcon />}
                 sx={{ py: 0.25 }}>
                 {children}
-            </Button>
+            </CapsButton>
         </Box>
     );
 }
@@ -391,10 +392,10 @@ export default function ObservationsPopover({ anchorEl, buttonRef, onOpen, onClo
                 </Stack>
                 <Divider />
                 <Box sx={{ px: 1.25, py: 0.75 }}>
-                    <Button fullWidth size="small" onClick={openScheduler} endIcon={<ChevronRightIcon />}
+                    <CapsButton fullWidth size="small" onClick={openScheduler} endIcon={<ChevronRightIcon />}
                         sx={{ justifyContent: 'space-between', px: 0.75 }}>
                         {t('observations.open_scheduler')}
-                    </Button>
+                    </CapsButton>
                 </Box>
             </Popover>
         </>

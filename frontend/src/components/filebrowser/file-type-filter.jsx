@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Box, Button, Checkbox, FormControlLabel, FormGroup, Popover, Typography } from '@mui/material';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import { useTranslation } from 'react-i18next';
+import CapsButton from '../common/capsbutton.jsx';
 import { FILE_TYPES } from './file-types.js';
 
 export default function FileTypeFilter({ filters, onToggle, onSetAll }) {
@@ -54,12 +55,12 @@ export default function FileTypeFilter({ filters, onToggle, onSetAll }) {
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 1, pb: 0.5 }}>
                     <Typography variant="subtitle2">{filterLabel}</Typography>
                     <Box sx={{ display: 'flex' }}>
-                        <Button size="small" disabled={selectedCount === FILE_TYPES.length} onClick={() => onSetAll(true)}>
+                        <CapsButton size="small" disabled={selectedCount === FILE_TYPES.length} onClick={() => onSetAll(true)}>
                             {t('selection.select_all', 'Select All')}
-                        </Button>
-                        <Button size="small" disabled={selectedCount === 0} onClick={() => onSetAll(false)}>
+                        </CapsButton>
+                        <CapsButton size="small" disabled={selectedCount === 0} onClick={() => onSetAll(false)}>
                             {t('selection.clear', 'Clear')}
-                        </Button>
+                        </CapsButton>
                     </Box>
                 </Box>
                 <FormGroup>

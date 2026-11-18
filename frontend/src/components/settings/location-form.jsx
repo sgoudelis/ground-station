@@ -18,23 +18,7 @@
  */
 
 import React, { useEffect } from 'react';
-import {
-    Autocomplete,
-    Box,
-    Button,
-    ButtonGroup,
-    Dialog,
-    DialogActions,
-    DialogContent,
-    DialogTitle,
-    Fab,
-    InputAdornment,
-    MenuItem,
-    Skeleton,
-    Stack,
-    TextField,
-    Typography,
-} from '@mui/material';
+import {Autocomplete,Box,ButtonGroup,Dialog,DialogActions,DialogContent,DialogTitle,Fab,InputAdornment,MenuItem,Skeleton,Stack,TextField,Typography,} from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import Grid from '@mui/material/Grid';
 import ZoomInIcon from '@mui/icons-material/ZoomIn';
@@ -42,6 +26,7 @@ import ZoomOutIcon from '@mui/icons-material/ZoomOut';
 import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
 import PlaceOutlinedIcon from '@mui/icons-material/PlaceOutlined';
 import { useTranslation } from 'react-i18next';
+import CapsButton from '../common/capsbutton.jsx';
 import { tz } from 'moment-timezone';
 import Map, { Layer, Marker, Source } from 'react-map-gl/maplibre';
 import { maplibregl } from '../common/maplibre.js';
@@ -764,13 +749,13 @@ const LocationPage = ({
                                 )}
                             />
                             {detectedTimezone && selectedTimezone !== detectedTimezone && (
-                                <Button
+                                <CapsButton
                                     size="small"
                                     sx={{ alignSelf: 'flex-start', ml: 0.75 }}
                                     onClick={() => setTimezone(null)}
                                 >
                                     {t('location.use_detected_timezone', { defaultValue: 'Use detected timezone' })}
-                                </Button>
+                                </CapsButton>
                             )}
                         </Stack>
                     </Grid>
@@ -864,7 +849,7 @@ const LocationPage = ({
                     direction={{ xs: 'column', lg: 'row' }}
                     sx={{ alignItems: 'stretch' }}
                 >
-                    <Button
+                    <CapsButton
                         variant="contained"
                         color="secondary"
                         sx={{ width: { xs: '100%', lg: 'auto' }, flex: { lg: '1 1 0' } }}
@@ -875,9 +860,9 @@ const LocationPage = ({
                         {locationLoading
                             ? t('location.state_locating', { defaultValue: 'Locating...' })
                             : t('location.get_current_location')}
-                    </Button>
+                    </CapsButton>
 
-                    <Button
+                    <CapsButton
                         variant="outlined"
                         color="primary"
                         sx={{ width: { xs: '100%', lg: 'auto' }, flex: { lg: '1 1 0' } }}
@@ -886,9 +871,9 @@ const LocationPage = ({
                         onClick={handleOpenManualCoordinatesDialog}
                     >
                         {t('location.enter_coordinates', { defaultValue: 'Enter Coordinates' })}
-                    </Button>
+                    </CapsButton>
 
-                    <Button
+                    <CapsButton
                         variant="outlined"
                         color="primary"
                         sx={{ width: { xs: '100%', lg: 'auto' }, flex: { lg: '1 1 0' } }}
@@ -897,9 +882,9 @@ const LocationPage = ({
                         onClick={handleCopyCoordinates}
                     >
                         {t('location.copy_coordinates')}
-                    </Button>
+                    </CapsButton>
 
-                    <Button
+                    <CapsButton
                         variant="outlined"
                         sx={{ width: { xs: '100%', lg: 'auto' }, flex: { lg: '1 1 0' } }}
                         disabled={!hasLocation}
@@ -909,7 +894,7 @@ const LocationPage = ({
                         }}
                     >
                         {t('location.map_recenter', { defaultValue: 'Recenter' })}
-                    </Button>
+                    </CapsButton>
                 </Stack>
 
                 {!hasLocation && (
@@ -1162,33 +1147,33 @@ const LocationPage = ({
                             sx={{ pointerEvents: 'auto' }}
                         >
                             <ButtonGroup size="small" variant="contained" aria-label={t('location.actions', { defaultValue: 'Actions' })}>
-                                <Button
+                                <CapsButton
                                     disabled={locationLoading || locationSaving}
                                     onClick={getCurrentLocation}
                                 >
                                     {locationLoading
                                         ? t('location.state_locating', { defaultValue: 'Locating...' })
                                         : t('location.get_current_location')}
-                                </Button>
-                                <Button
+                                </CapsButton>
+                                <CapsButton
                                     disabled={locationLoading || locationSaving}
                                     onClick={handleOpenManualCoordinatesDialog}
                                 >
                                     {t('location.enter_coordinates', { defaultValue: 'Enter Coordinates' })}
-                                </Button>
+                                </CapsButton>
                             </ButtonGroup>
                             <ButtonGroup size="small" variant="outlined" aria-label={t('location.actions', { defaultValue: 'Actions' })}>
-                                <Button disabled={!hasLocation} onClick={handleCopyCoordinates}>
+                                <CapsButton disabled={!hasLocation} onClick={handleCopyCoordinates}>
                                     {t('location.copy_coordinates')}
-                                </Button>
-                                <Button
+                                </CapsButton>
+                                <CapsButton
                                     disabled={!hasLocation}
                                     onClick={() => {
                                         if (hasLocation) reCenterMap(normalizedLocation.lat, normalizedLocation.lon);
                                     }}
                                 >
                                     {t('location.map_recenter', { defaultValue: 'Recenter' })}
-                                </Button>
+                                </CapsButton>
                             </ButtonGroup>
                         </Stack>
                         {!hasLocation && (
@@ -1235,14 +1220,14 @@ const LocationPage = ({
                 mobileInline
                 sx={{ bgcolor: 'surface.raised' }}
             >
-                <Button
+                <CapsButton
                     variant="outlined"
                     disabled={!canReset}
                     onClick={handleResetLocation}
                 >
                     {t('location.reset', { defaultValue: 'Reset' })}
-                </Button>
-                <Button
+                </CapsButton>
+                <CapsButton
                     variant="contained"
                     disabled={!canSave || !isDifferentFromSaved}
                     aria-label={t('location.save_location')}
@@ -1251,7 +1236,7 @@ const LocationPage = ({
                     {locationSaving
                         ? t('location.state_saving', { defaultValue: 'Saving...' })
                         : t('location.save_location', { defaultValue: 'Save location' })}
-                </Button>
+                </CapsButton>
             </SettingsActionFooter>
         </>
     );
@@ -1403,12 +1388,12 @@ const LocationPage = ({
                     </Stack>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={handleCloseManualCoordinatesDialog}>
+                    <CapsButton onClick={handleCloseManualCoordinatesDialog}>
                         {t('location.cancel', { defaultValue: 'Cancel' })}
-                    </Button>
-                    <Button type="submit" variant="contained">
+                    </CapsButton>
+                    <CapsButton type="submit" variant="contained">
                         {t('location.apply_coordinates', { defaultValue: 'Apply Coordinates' })}
-                    </Button>
+                    </CapsButton>
                 </DialogActions>
             </Dialog>
         </SettingsSurface>

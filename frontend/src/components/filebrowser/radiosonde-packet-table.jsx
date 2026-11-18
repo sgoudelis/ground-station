@@ -1,11 +1,12 @@
 /** Copyright (c) 2026 Efstratios Goudelis — GPL-3.0-or-later */
 
 import React from 'react';
-import {Box, Button, IconButton, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography} from '@mui/material';
+import {Box,IconButton,Table,TableBody,TableCell,TableContainer,TableHead,TableRow,Typography} from '@mui/material';
 import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
 import DownloadIcon from '@mui/icons-material/Download';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import {useTranslation} from 'react-i18next';
+import CapsButton from '../common/capsbutton.jsx';
 import {formatDateTime} from '../../utils/date-time.js';
 import {fileDialogPacketTableSx} from './file-dialog-styles.js';
 
@@ -46,10 +47,10 @@ export default function RadiosondePacketTable({packets, loading, error, settings
                         </Box>
                     </TableCell>
                     <TableCell align="right" sx={{whiteSpace: 'nowrap'}}>
-                        <Button size="small" disabled={loading} onClick={() => onOpenPacket(packet)} startIcon={<VisibilityOutlinedIcon />}
-                            sx={{minWidth: 0, px: 1, mr: 0.5, textTransform: 'none', fontSize: '0.75rem', '& .MuiButton-startIcon > svg': {fontSize: 16}}}>
+                        <CapsButton size="small" disabled={loading} onClick={() => onOpenPacket(packet)} startIcon={<VisibilityOutlinedIcon />}
+                            sx={{minWidth: 0, px: 1, mr: 0.5,  fontSize: '0.75rem', '& .MuiButton-startIcon > svg': {fontSize: 16}}}>
                             {t('radiosonde_folder.view', 'View')}
-                        </Button>
+                        </CapsButton>
                         <IconButton size="small" href={packet.url} download={packet.filename}
                             aria-label={t('radiosonde_folder.download_packet', 'Download {{filename}}', {filename: packet.filename})}>
                             <DownloadIcon fontSize="small" />

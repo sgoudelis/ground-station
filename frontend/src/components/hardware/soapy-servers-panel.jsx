@@ -4,10 +4,8 @@
  */
 
 import {useTranslation} from 'react-i18next';
-import {
-    Accordion, AccordionDetails, AccordionSummary, Alert, Box, Button, Chip,
-    CircularProgress, Divider, Paper, Stack, Typography,
-} from '@mui/material';
+import CapsButton from '../common/capsbutton.jsx';
+import {Accordion,AccordionDetails,AccordionSummary,Alert,Box,Chip,CircularProgress,Divider,Paper,Stack,Typography,} from '@mui/material';
 import DnsOutlinedIcon from '@mui/icons-material/DnsOutlined';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import RefreshIcon from '@mui/icons-material/Refresh';
@@ -48,14 +46,14 @@ export default function SoapyServersPanel({
                     </Box>
                 </Stack>
                 <Stack direction={{xs: 'column', sm: 'row'}} spacing={1} sx={{flexShrink: 0}}>
-                    <Button variant="outlined" size="small" onClick={onDiscover}
+                    <CapsButton variant="outlined" size="small" onClick={onDiscover}
                             disabled={disabled || discovering}
                             startIcon={discovering ? <CircularProgress size={15}/> : <RefreshIcon/>}>
                         {discovering ? t('sdr.scanning_network') : t('sdr.scan_network')}
-                    </Button>
-                    <Button size="small" onClick={onManual} disabled={disabled || discovering}>
+                    </CapsButton>
+                    <CapsButton size="small" onClick={onManual} disabled={disabled || discovering}>
                         {t('sdr.enter_server_manually')}
-                    </Button>
+                    </CapsButton>
                 </Stack>
             </Stack>
 
@@ -122,12 +120,12 @@ export default function SoapyServersPanel({
                                                 {isConfigured(sdrs, server, radio) ? (
                                                     <Chip size="small" color="success" variant="outlined" label={t('sdr.configured')}/>
                                                 ) : (
-                                                    <Button size="small" startIcon={<AddIcon/>}
+                                                    <CapsButton size="small" startIcon={<AddIcon/>}
                                                             aria-label={t('sdr.add_named', {name: radio.label || radio['remote:driver'] || radio.driver || t('sdr.sdr_device')})}
                                                             disabled={disabled || discovering}
                                                             onClick={() => onAddDevice(server, radio, index)}>
                                                         {t('sdr.add_sdr')}
-                                                    </Button>
+                                                    </CapsButton>
                                                 )}
                                             </Box>
                                         </Stack>

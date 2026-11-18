@@ -40,6 +40,7 @@ import {
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import StopIcon from '@mui/icons-material/Stop';
 import { useTranslation } from 'react-i18next';
+import CapsButton from '../common/capsbutton.jsx';
 
 const RECORDING_BAND_DRAG_STEPS = [100, 1000, 5000, 10000];
 
@@ -390,7 +391,7 @@ const RecordingAccordion = ({
                     )}
 
                     <Stack direction="row" spacing={1}>
-                        <Button
+                        <CapsButton
                             variant={recordingBandSelectionEnabled ? 'contained' : 'outlined'}
                             color={recordingBandSelectionEnabled ? 'warning' : 'primary'}
                             onClick={onRecordingBandSelectionToggle}
@@ -400,8 +401,8 @@ const RecordingAccordion = ({
                             {recordingBandSelectionEnabled
                                 ? t('recording.disableBandSelection', 'DISABLE')
                                 : t('recording.enableBandSelection', 'ENABLE')}
-                        </Button>
-                        <Button
+                        </CapsButton>
+                        <CapsButton
                             variant="contained"
                             color="error"
                             startIcon={<FiberManualRecordIcon />}
@@ -410,8 +411,8 @@ const RecordingAccordion = ({
                             fullWidth
                         >
                             {t('recording.start', 'REC')}
-                        </Button>
-                        <Button
+                        </CapsButton>
+                        <CapsButton
                             variant="outlined"
                             color="inherit"
                             startIcon={<StopIcon />}
@@ -420,7 +421,7 @@ const RecordingAccordion = ({
                             fullWidth
                         >
                             {t('recording.stop', 'Stop')}
-                        </Button>
+                        </CapsButton>
                     </Stack>
                 </Box>
             </AccordionDetails>

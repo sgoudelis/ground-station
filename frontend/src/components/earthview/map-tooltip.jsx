@@ -1,13 +1,14 @@
 
 import React, { useRef } from 'react';
 import { Marker, useMap } from 'react-leaflet';
-import { Button, Box, IconButton } from '@mui/material';
+import {Box,IconButton} from '@mui/material';
 import { ThemedLeafletTooltip } from "../common/common.jsx";
 import { styled } from '@mui/material/styles';
 import { Tooltip as LeafletTooltip } from 'react-leaflet';
 import TrackChangesIcon from '@mui/icons-material/TrackChanges';
 import InfoIcon from '@mui/icons-material/Info';
 import { useTranslation } from 'react-i18next';
+import CapsButton from '../common/capsbutton.jsx';
 import TargetNumberIcon from '../common/target-number-icon.jsx';
 import { useTooltipOrientation } from '../common/tooltip-orientation.js';
 
@@ -140,7 +141,7 @@ const SatelliteMarker = ({
                     )}
                     {isSelected && !isTracking && (
                         <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
-                            <Button
+                            <CapsButton
                                 size="small"
                                 variant="contained"
                                 color="primary"
@@ -154,7 +155,7 @@ const SatelliteMarker = ({
                                 }}
                             >
                                 {t('map_target.set_target')}
-                            </Button>
+                            </CapsButton>
                             <IconButton
                                 onClick={handleOpenSatelliteInfo}
                                 sx={{

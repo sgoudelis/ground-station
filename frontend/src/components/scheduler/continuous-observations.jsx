@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import CapsButton from '../common/capsbutton.jsx';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { joinSdr } from '../waterfall/sdr-join.js';
@@ -266,13 +267,13 @@ export default function ContinuousObservations() {
             field: 'actions', headerName: label('actions'), width: 300, align: 'right', headerAlign: 'right',
             sortable: false, filterable: false, disableColumnMenu: true,
             renderCell: ({ row: observation }) => <Stack direction="row" spacing={0.25} alignItems="center">
-                <Button size="small" startIcon={isActive(observation) ? <Stop /> : <PlayArrow />}
+                <CapsButton size="small" startIcon={isActive(observation) ? <Stop /> : <PlayArrow />}
                     disabled={busy || !connected || ['starting', 'stopping'].includes(observation.runtime?.status)}
                     onClick={(event) => { event.stopPropagation(); control(observation, isActive(observation) ? 'stop' : 'start'); }}>
                     {label(isActive(observation) ? 'stop' : 'start')}
-                </Button>
-                <Button size="small" disabled={busy || !connected || observation.runtime?.status !== 'running'}
-                    onClick={(event) => { event.stopPropagation(); join(observation); }}>{label('join')}</Button>
+                </CapsButton>
+                <CapsButton size="small" disabled={busy || !connected || observation.runtime?.status !== 'running'}
+                    onClick={(event) => { event.stopPropagation(); join(observation); }}>{label('join')}</CapsButton>
                 {[
                     ['details', VisibilityOutlined, () => openForm({ observation, readOnly: true })],
                     ['edit', EditOutlined, () => openForm({ observation, readOnly: false })],
@@ -295,21 +296,21 @@ export default function ContinuousObservations() {
         </Typography>
         <Stack spacing={2} sx={{ mb: 2 }}>
             {!connected && <Alert severity="warning">{label('offline')}</Alert>}
-            {error && <Alert severity="error" action={<Button color="inherit" disabled={!connected || loading} onClick={() => dispatch(fetchContinuousObservations({ socket }))}>{label('retry')}</Button>}>{error}</Alert>}
+            {error && <Alert severity="error" action={<CapsButton color="inherit" disabled={!connected || loading} onClick={() => dispatch(fetchContinuousObservations({ socket }))}>{label('retry')}</CapsButton>}>{error}</Alert>}
             {runtimeError && <Alert severity="error" onClose={() => setRuntimeError(null)}>{runtimeError}</Alert>}
             {startupError && <Alert severity="error" onClose={() => setStartupError(null)} sx={{ whiteSpace: 'pre-line' }}>{startupError}</Alert>}
-            {drafts.length > 0 && <Alert severity="info" action={<Button color="inherit" disabled={busy || !connected} onClick={importDrafts}>
+            {drafts.length > 0 && <Alert severity="info" action={<CapsButton color="inherit" disabled={busy || !connected} onClick={importDrafts}>
                 {busy ? <CircularProgress size={18} /> : label('import_drafts')}
-            </Button>}>{label('legacy_drafts', { count: drafts.length })}</Alert>}
+            </CapsButton>}>{label('legacy_drafts', { count: drafts.length })}</Alert>}
             {importError && <Alert severity="error">{importError}</Alert>}
             {drafts.length > 0 && <Stack direction="row" gap={1} useFlexGap flexWrap="wrap">
-                {drafts.map((draft) => <Button key={draft.id} size="small" startIcon={<EditOutlined />} disabled={busy || !connected}
+                {drafts.map((draft) => <CapsButton key={draft.id} size="small" startIcon={<EditOutlined />} disabled={busy || !connected}
                     onClick={() => {
                         const copy = structuredClone(draft);
                         delete copy.created_at;
                         delete copy.updated_at;
                         openForm({ observation: copy, readOnly: false });
-                    }}>{label('review_draft', { name: draft.name })}</Button>)}
+                    }}>{label('review_draft', { name: draft.name })}</CapsButton>)}
             </Stack>}
         </Stack>
         {!loaded ? <Stack alignItems="center" spacing={1} sx={{ py: 6 }}>
@@ -318,9 +319,9 @@ export default function ContinuousObservations() {
             <MemoryOutlined sx={{ fontSize: 44, color: 'text.disabled' }} />
             <Typography variant="subtitle1">{label('empty_title')}</Typography>
             <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 480 }}>{label('empty_description')}</Typography>
-            <Button startIcon={<Add />} disabled={busy || !connected} onClick={() => openForm({ observation: createContinuousObservation(), readOnly: false })}>
+            <CapsButton startIcon={<Add />} disabled={busy || !connected} onClick={() => openForm({ observation: createContinuousObservation(), readOnly: false })}>
                 {label('create_first')}
-            </Button>
+            </CapsButton>
         </Stack> : <Box sx={{ width: '100%', minWidth: 0, overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
             <DataGrid
                 autoHeight
@@ -342,37 +343,37 @@ export default function ContinuousObservations() {
             />
         </Box>}
         <Stack direction="row" spacing={1} sx={{ mt: '15px', flexShrink: 0, flexWrap: 'wrap' }}>
-            <Button variant="contained" startIcon={<Add />} sx={{ minWidth: 'auto', px: { xs: 1, md: 2 } }}
+            <CapsButton variant="contained" startIcon={<Add />} sx={{ minWidth: 'auto', px: { xs: 1, md: 2 } }}
                 disabled={busy || !connected} onClick={() => openForm({ observation: createContinuousObservation(), readOnly: false })}>
                 {label('create')}
-            </Button>
-            <Button variant="contained" startIcon={<EditOutlined />} sx={{ minWidth: 'auto', px: { xs: 1, md: 2 } }}
+            </CapsButton>
+            <CapsButton variant="contained" startIcon={<EditOutlined />} sx={{ minWidth: 'auto', px: { xs: 1, md: 2 } }}
                 disabled={busy || !connected || selectedRows.length !== 1 || selectedRows.some(isActive)}
                 onClick={() => openForm({ observation: selectedRows[0], readOnly: false })}>
                 {label('edit')}
-            </Button>
+            </CapsButton>
             <Tooltip title={label('enable_startup_help')}>
                 <span>
-                    <Button variant="contained" color="success" startIcon={<CheckCircle />} sx={{ minWidth: 'auto', px: { xs: 1, md: 2 } }}
+                    <CapsButton variant="contained" color="success" startIcon={<CheckCircle />} sx={{ minWidth: 'auto', px: { xs: 1, md: 2 } }}
                         disabled={busy || !connected || !selectedRows.some((observation) => !observation.auto_start)}
                         onClick={() => setStartupEnabled(true)}>
                         {t('scheduler_tables.shared.enable')}
-                    </Button>
+                    </CapsButton>
                 </span>
             </Tooltip>
             <Tooltip title={label('disable_startup_help')}>
                 <span>
-                    <Button variant="contained" color="secondary" startIcon={<Cancel />} sx={{ minWidth: 'auto', px: { xs: 1, md: 2 } }}
+                    <CapsButton variant="contained" color="secondary" startIcon={<Cancel />} sx={{ minWidth: 'auto', px: { xs: 1, md: 2 } }}
                         disabled={busy || !connected || !selectedRows.some((observation) => observation.auto_start)}
                         onClick={() => setStartupEnabled(false)}>
                         {t('scheduler_tables.shared.disable')}
-                    </Button>
+                    </CapsButton>
                 </span>
             </Tooltip>
-            <Button variant="contained" color="error" startIcon={<DeleteOutline />} sx={{ minWidth: 'auto', px: { xs: 1, md: 2 } }}
+            <CapsButton variant="contained" color="error" startIcon={<DeleteOutline />} sx={{ minWidth: 'auto', px: { xs: 1, md: 2 } }}
                 disabled={busy || !connected || selectedRows.length === 0 || selectedRows.some(isActive)} onClick={() => confirmDelete(selectedRows)}>
                 {label('delete')}
-            </Button>
+            </CapsButton>
         </Stack>
         {form && <ContinuousObservationForm key={form.observation.id} {...form} saving={busy} saveError={saveError} connected={connected} onClose={() => setForm(null)} onSave={save} />}
         <Dialog open={Boolean(deleting?.length)} onClose={() => { if (!busy) setDeleting(null); }} maxWidth="sm" fullWidth
@@ -416,12 +417,12 @@ export default function ContinuousObservations() {
                 bgcolor: (theme) => theme.palette.mode === 'dark' ? 'grey.900' : 'grey.50',
                 borderTop: '1px solid', borderColor: 'divider', px: 3, py: 2, gap: 1.5,
             }}>
-                <Button variant="outlined" color="inherit" sx={{ minWidth: 100, textTransform: 'none', fontWeight: 500 }}
-                    disabled={busy} onClick={() => setDeleting(null)}>{label('cancel')}</Button>
-                <Button color="error" variant="contained" sx={{ minWidth: 100, textTransform: 'none', fontWeight: 600 }}
+                <CapsButton variant="outlined" color="inherit" sx={{ minWidth: 100,  fontWeight: 500 }}
+                    disabled={busy} onClick={() => setDeleting(null)}>{label('cancel')}</CapsButton>
+                <CapsButton color="error" variant="contained" sx={{ minWidth: 100,  fontWeight: 600 }}
                     disabled={busy || !connected} onClick={deleteConfirmed}>
                     {busy ? <CircularProgress size={18} color="inherit" /> : label('delete')}
-                </Button>
+                </CapsButton>
             </DialogActions>
         </Dialog>
     </Paper>;

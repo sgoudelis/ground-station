@@ -33,6 +33,7 @@ import Grid from "@mui/material/Grid";
 import {Box, Button, Chip, FormControl, IconButton, InputLabel, MenuItem, Select, Tooltip} from "@mui/material";
 import Paper from "@mui/material/Paper";
 import Typography from "@mui/material/Typography";
+import CapsButton from '../common/capsbutton.jsx';
 import SettingsIcon from '@mui/icons-material/Settings';
 import { GaugeAz, GaugeEl } from '../target/rotator-gauges.jsx';
 import {
@@ -640,7 +641,7 @@ const RotatorControl = React.memo(function RotatorControl({ trackerId: trackerId
                         <Grid size="grow" style={{paddingRight: '0.5rem', flex: 1}}>
                             <Tooltip title={connectDisabled ? connectDisabledReason : ''}>
                                 <span style={{ display: 'block' }}>
-                                    <Button
+                                    <CapsButton
                                         loading={isConnectActionPending}
                                         disabled={connectDisabled}
                                         fullWidth={true}
@@ -652,14 +653,14 @@ const RotatorControl = React.memo(function RotatorControl({ trackerId: trackerId
                                         }}
                                     >
                                         {t('rotator_control.connect')}
-                                    </Button>
+                                    </CapsButton>
                                 </span>
                             </Tooltip>
                         </Grid>
                         <Grid size="grow" style={{paddingRight: '0.5rem', flex: 1.5}}>
                             <Tooltip title={disconnectDisabled ? disconnectDisabledReason : ''}>
                                 <span style={{ display: 'block' }}>
-                                    <Button
+                                    <CapsButton
                                         loading={isDisconnectActionPending}
                                         disabled={disconnectDisabled}
                                         fullWidth={true}
@@ -671,14 +672,14 @@ const RotatorControl = React.memo(function RotatorControl({ trackerId: trackerId
                                         }}
                                     >
                                         {t('rotator_control.disconnect')}
-                                    </Button>
+                                    </CapsButton>
                                 </span>
                             </Tooltip>
                         </Grid>
                         <Grid size="grow" style={{paddingRight: '0rem', flex: 1}}>
                             <Tooltip title={parkDisabled ? parkDisabledReason : ''}>
                                 <span style={{ display: 'block' }}>
-                                    <Button
+                                    <CapsButton
                                         loading={isParkActionPending}
                                         disabled={parkDisabled}
                                         fullWidth={true}
@@ -690,7 +691,7 @@ const RotatorControl = React.memo(function RotatorControl({ trackerId: trackerId
                                         }}
                                     >
                                         {t('rotator_control.park')}
-                                    </Button>
+                                    </CapsButton>
                                 </span>
                             </Tooltip>
                         </Grid>
@@ -705,7 +706,7 @@ const RotatorControl = React.memo(function RotatorControl({ trackerId: trackerId
                         <Grid size="grow" style={{paddingRight: '0.5rem'}}>
                             <Tooltip title={trackDisabled ? trackDisabledReason : ''}>
                                 <span style={{ display: 'block' }}>
-                                    <Button
+                                    <CapsButton
                                         fullWidth={true}
                                         loading={isTrackActionPending}
                                         disabled={trackDisabled}
@@ -715,14 +716,14 @@ const RotatorControl = React.memo(function RotatorControl({ trackerId: trackerId
                                         onClick={()=>{handleTrackingStart()}}
                                     >
                                         {t('rotator_control.track')}
-                                    </Button>
+                                    </CapsButton>
                                 </span>
                             </Tooltip>
                         </Grid>
                         <Grid size="grow">
                             <Tooltip title={stopDisabled ? stopDisabledReason : ''}>
                                 <span style={{ display: 'block' }}>
-                                    <Button
+                                    <CapsButton
                                         fullWidth={true}
                                         loading={isStopActionPending}
                                         disabled={stopDisabled}
@@ -732,14 +733,14 @@ const RotatorControl = React.memo(function RotatorControl({ trackerId: trackerId
                                         onClick={() => {handleTrackingStop()}}
                                     >
                                         {t('rotator_control.stop')}
-                                    </Button>
+                                    </CapsButton>
                                 </span>
                             </Tooltip>
                         </Grid>
                         <Grid size="grow" style={{paddingLeft: '0.5rem'}}>
                             <Tooltip title={manualControl.disabled ? manualControl.disabledReason : ''}>
                                 <span style={{ display: 'block' }}>
-                                    <Button
+                                    <CapsButton
                                         disabled={manualControl.disabled}
                                         fullWidth={true}
                                         variant="contained" startIcon={<OpenWithIcon />}
@@ -748,7 +749,7 @@ const RotatorControl = React.memo(function RotatorControl({ trackerId: trackerId
                                         onClick={() => setOpenManualControlDialog(true)}
                                     >
                                         {t('rotator_control.manual_control')}
-                                    </Button>
+                                    </CapsButton>
                                 </span>
                             </Tooltip>
                         </Grid>

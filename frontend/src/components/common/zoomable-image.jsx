@@ -19,6 +19,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { Box, Button, ButtonGroup } from '@mui/material';
+import CapsButton from './capsbutton.jsx';
 import ZoomInIcon from '@mui/icons-material/ZoomIn';
 import { useTranslation } from 'react-i18next';
 
@@ -326,7 +327,7 @@ export default function ZoomableImage({
                         { value: 'original', label: t('zoomable_image.original_size', { defaultValue: 'Original size (100%)' }) },
                         { value: 'contain', label: t('zoomable_image.fit_to_area', { defaultValue: 'Fit to area' }) },
                     ].map(({ value, label }) => (
-                        <Button
+                        <CapsButton
                             key={value}
                             aria-pressed={fit === value && zoom === 1}
                             variant={fit === value && zoom === 1 ? 'contained' : 'outlined'}
@@ -338,7 +339,7 @@ export default function ZoomableImage({
                             }}
                         >
                             {label}
-                        </Button>
+                        </CapsButton>
                     ))}
                 </ButtonGroup>
             )}

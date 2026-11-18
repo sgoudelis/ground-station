@@ -19,27 +19,12 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import {
-    Box,
-    Button,
-    CircularProgress,
-    Dialog,
-    DialogActions,
-    DialogContent,
-    DialogTitle,
-    FormControl,
-    InputLabel,
-    LinearProgress,
-    MenuItem,
-    Select,
-    Stack,
-    Tooltip,
-    Typography,
-} from '@mui/material';
+import {Box,CircularProgress,Dialog,DialogActions,DialogContent,DialogTitle,FormControl,InputLabel,LinearProgress,MenuItem,Select,Stack,Tooltip,Typography,} from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import { useTranslation } from 'react-i18next';
+import CapsButton from '../common/capsbutton.jsx';
 import moment from 'moment-timezone';
 import { toast } from 'react-toastify';
 import { fetchPurgePreview, startLibraryPurge, clearPurgeState } from './filebrowser-slice.jsx';
@@ -167,9 +152,9 @@ const PurgeDialog = ({ open, onClose, socket }) => {
             <Typography variant="body2" color="error.main">
                 {previewError || t('purge_dialog.failed', { defaultValue: 'Purge failed' })}
             </Typography>
-            <Button size="small" onClick={retryPreview}>
+            <CapsButton size="small" onClick={retryPreview}>
                 {t('purge_dialog.retry', { defaultValue: 'Retry' })}
-            </Button>
+            </CapsButton>
         </Stack>
     );
 
@@ -447,10 +432,10 @@ const PurgeDialog = ({ open, onClose, socket }) => {
                     </Stack>
                 </DialogContent>
                 <DialogActions sx={{ px: 3, py: 2 }}>
-                    <Button onClick={onClose} color="inherit" disabled={running}>
+                    <CapsButton onClick={onClose} color="inherit" disabled={running}>
                         {done ? t('purge_dialog.close', { defaultValue: 'Close' }) : t('common:cancel', { defaultValue: 'Cancel' })}
-                    </Button>
-                    <Button
+                    </CapsButton>
+                    <CapsButton
                         variant="contained"
                         color="error"
                         startIcon={<DeleteForeverIcon />}
@@ -458,7 +443,7 @@ const PurgeDialog = ({ open, onClose, socket }) => {
                         onClick={() => setConfirmOpen(true)}
                     >
                         {t('purge_dialog.purge', { defaultValue: 'Purge' })}
-                    </Button>
+                    </CapsButton>
                 </DialogActions>
                 {busy && (
                     <Box
@@ -512,12 +497,12 @@ const PurgeDialog = ({ open, onClose, socket }) => {
                     </Typography>
                 </DialogContent>
                 <DialogActions sx={{ px: 3, py: 2 }}>
-                    <Button onClick={() => setConfirmOpen(false)} color="inherit">
+                    <CapsButton onClick={() => setConfirmOpen(false)} color="inherit">
                         {t('common:cancel', { defaultValue: 'Cancel' })}
-                    </Button>
-                    <Button variant="contained" color="error" onClick={startPurge} disabled={!usablePreview || totalItems === 0 || busy || adjustingCutoff}>
+                    </CapsButton>
+                    <CapsButton variant="contained" color="error" onClick={startPurge} disabled={!usablePreview || totalItems === 0 || busy || adjustingCutoff}>
                         {t('common:delete', { defaultValue: 'Delete' })}
-                    </Button>
+                    </CapsButton>
                 </DialogActions>
             </Dialog>
         </>

@@ -32,6 +32,7 @@ import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import SystemUpdateAltIcon from '@mui/icons-material/SystemUpdateAlt';
 import { useTranslation } from 'react-i18next';
+import CapsButton from '../../common/capsbutton.jsx';
 import { fetchUpdateCheck } from '../../dashboard/update-slice.jsx';
 import { useSocket } from '../../common/socket.jsx';
 import { useUserTimeSettings } from '../../../hooks/useUserTimeSettings.jsx';
@@ -182,7 +183,7 @@ const UpdateCard = () => {
                         </Typography>
                     </Box>
                 </Stack>
-                <Button
+                <CapsButton
                     variant="outlined"
                     size="small"
                     startIcon={loading ? <CircularProgress size={16} /> : <RefreshIcon />}
@@ -192,7 +193,7 @@ const UpdateCard = () => {
                     {loading
                         ? t('maintenance.updates.checking', { defaultValue: 'Checking…' })
                         : t('maintenance.updates.check_now', { defaultValue: 'Check now' })}
-                </Button>
+                </CapsButton>
             </Stack>
 
             <Divider />

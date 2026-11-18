@@ -18,6 +18,7 @@
  */
 
 import React, { useEffect, useMemo, useState } from 'react';
+import CapsButton from '../common/capsbutton.jsx';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { DataGrid } from '@mui/x-data-grid';
@@ -639,9 +640,9 @@ const ObservationsTable = () => {
                     severity="error"
                     sx={{ mb: 2, flexShrink: 0 }}
                     action={
-                        <Button color="inherit" size="small" onClick={() => socket && dispatch(fetchScheduledObservations({ socket }))}>
+                        <CapsButton color="inherit" size="small" onClick={() => socket && dispatch(fetchScheduledObservations({ socket }))}>
                             {t('scheduler_tables.shared.retry')}
-                        </Button>
+                        </CapsButton>
                     }
                 >
                     {t('scheduler_tables.observations.load_error')}
@@ -653,9 +654,9 @@ const ObservationsTable = () => {
                     severity="info"
                     sx={{ mb: 2, flexShrink: 0 }}
                     action={
-                        <Button color="inherit" size="small" onClick={handleShowAllStatuses}>
+                        <CapsButton color="inherit" size="small" onClick={handleShowAllStatuses}>
                             {t('scheduler_tables.shared.show_all')}
-                        </Button>
+                        </CapsButton>
                     }
                 >
                     {t('scheduler_tables.observations.all_rows_hidden')}
@@ -707,7 +708,7 @@ const ObservationsTable = () => {
 
             {/* Actions below table */}
             <Stack direction="row" spacing={1} sx={{ marginTop: '15px', flexShrink: 0, flexWrap: 'wrap' }}>
-                <Button
+                <CapsButton
                     variant="contained"
                     onClick={handleAdd}
                     sx={{
@@ -720,8 +721,8 @@ const ObservationsTable = () => {
                         <AddIcon sx={{ mr: 1 }} />
                         {t('add')}
                     </Box>
-                </Button>
-                <Button
+                </CapsButton>
+                <CapsButton
                     variant="contained"
                     onClick={() => {
                         if (selectedIds.length === 1) {
@@ -740,8 +741,8 @@ const ObservationsTable = () => {
                         <EditIcon sx={{ mr: 1 }} />
                         {t('edit')}
                     </Box>
-                </Button>
-                <Button
+                </CapsButton>
+                <CapsButton
                     variant="contained"
                     color="secondary"
                     onClick={() => {
@@ -761,8 +762,8 @@ const ObservationsTable = () => {
                         <ContentCopyIcon sx={{ mr: 1 }} />
                         {t('scheduler_tables.shared.duplicate')}
                     </Box>
-                </Button>
-                <Button
+                </CapsButton>
+                <CapsButton
                     variant="contained"
                     color="success"
                     onClick={handleBulkEnable}
@@ -782,8 +783,8 @@ const ObservationsTable = () => {
                         <EnableIcon sx={{ mr: 1 }} />
                         {t('scheduler_tables.shared.enable')}
                     </Box>
-                </Button>
-                <Button
+                </CapsButton>
+                <CapsButton
                     variant="contained"
                     color="secondary"
                     onClick={handleBulkDisable}
@@ -803,8 +804,8 @@ const ObservationsTable = () => {
                         <DisableIcon sx={{ mr: 1 }} />
                         {t('scheduler_tables.shared.disable')}
                     </Box>
-                </Button>
-                <Button
+                </CapsButton>
+                <CapsButton
                     variant="contained"
                     color="warning"
                     onClick={() => setOpenStopConfirm(true)}
@@ -827,8 +828,8 @@ const ObservationsTable = () => {
                         <StopIcon sx={{ mr: 1 }} />
                         {t('cancel')}
                     </Box>
-                </Button>
-                <Button
+                </CapsButton>
+                <CapsButton
                     variant="contained"
                     color="error"
                     onClick={() => setOpenDeleteConfirm(true)}
@@ -843,7 +844,7 @@ const ObservationsTable = () => {
                         <DeleteIcon sx={{ mr: 1 }} />
                         {t('delete')}
                     </Box>
-                </Button>
+                </CapsButton>
             </Stack>
 
             {/* Delete Confirmation Dialog */}
@@ -962,30 +963,28 @@ const ObservationsTable = () => {
                         gap: 1.5,
                     }}
                 >
-                    <Button
+                    <CapsButton
                         onClick={() => setOpenDeleteConfirm(false)}
                         variant="outlined"
                         color="inherit"
                         sx={{
                             minWidth: 100,
-                            textTransform: 'none',
                             fontWeight: 500,
                         }}
                     >
                         {t('cancel')}
-                    </Button>
-                    <Button
+                    </CapsButton>
+                    <CapsButton
                         variant="contained"
                         onClick={handleDelete}
                         color="error"
                         sx={{
                             minWidth: 100,
-                            textTransform: 'none',
                             fontWeight: 600,
                         }}
                     >
                         {t('delete')}
-                    </Button>
+                    </CapsButton>
                 </DialogActions>
             </Dialog>
 
@@ -1023,12 +1022,12 @@ const ObservationsTable = () => {
                     )}
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setOpenStopConfirm(false)} variant="outlined">
+                    <CapsButton onClick={() => setOpenStopConfirm(false)} variant="outlined">
                         {t('close')}
-                    </Button>
-                    <Button variant="contained" onClick={handleStop} color="warning">
+                    </CapsButton>
+                    <CapsButton variant="contained" onClick={handleStop} color="warning">
                         {t('cancel')}
-                    </Button>
+                    </CapsButton>
                 </DialogActions>
             </Dialog>
 

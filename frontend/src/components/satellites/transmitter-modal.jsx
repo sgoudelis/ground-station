@@ -25,6 +25,7 @@ import {
 import { setTargetTransmitters } from "../target/target-slice.jsx";
 import {useSocket} from "../common/socket.jsx";
 import { useTranslation } from 'react-i18next';
+import CapsButton from '../common/capsbutton.jsx';
 import {getLoraParameters, isDecoderParameterValid} from '../waterfall/decoder-parameters.js';
 import {DecoderNumberField} from '../waterfall/decoder-number-field.jsx';
 
@@ -805,7 +806,7 @@ const TransmitterModal = ({
                     gap: 2,
                 }}
             >
-                <Button
+                <CapsButton
                     onClick={onClose}
                     variant="outlined"
                     disabled={loading}
@@ -818,7 +819,7 @@ const TransmitterModal = ({
                     }}
                 >
                     {t('transmitter_modal.cancel', { defaultValue: 'Cancel' })}
-                </Button>
+                </CapsButton>
                 <Button
                     onClick={handleSave}
                     variant="contained"
@@ -880,7 +881,7 @@ export const DeleteConfirmDialog = ({ open, onClose, onConfirm, transmitterName 
                     gap: 2,
                 }}
             >
-                <Button
+                <CapsButton
                     onClick={onClose}
                     variant="outlined"
                     sx={{
@@ -892,10 +893,10 @@ export const DeleteConfirmDialog = ({ open, onClose, onConfirm, transmitterName 
                     }}
                 >
                     {t('transmitter_modal.cancel', { defaultValue: 'Cancel' })}
-                </Button>
-                <Button onClick={onConfirm} variant="contained" color="error">
+                </CapsButton>
+                <CapsButton onClick={onConfirm} variant="contained" color="error">
                     {t('transmitter_modal.delete', { defaultValue: 'Delete' })}
-                </Button>
+                </CapsButton>
             </DialogActions>
         </Dialog>
     );

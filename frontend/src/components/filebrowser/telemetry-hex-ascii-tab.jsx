@@ -9,19 +9,11 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import {
-    Box,
-    Typography,
-    Paper,
-    Tooltip,
-    IconButton,
-    Stack,
-    Button,
-    useTheme,
-} from '@mui/material';
+import {Box,Typography,Paper,Tooltip,IconButton,Stack,useTheme,} from '@mui/material';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import { toast } from 'react-toastify';
 import { useTranslation } from 'react-i18next';
+import CapsButton from '../common/capsbutton.jsx';
 
 function HexByte({ byte, offset, onClick, selected }) {
     const { t } = useTranslation('filebrowser');
@@ -136,22 +128,22 @@ export default function HexAsciiTab({ packet, telemetry }) {
         <Box>
             {/* Header with actions */}
             <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
-                <Button
+                <CapsButton
                     size="small"
                     startIcon={<ContentCopyIcon />}
                     onClick={handleCopy}
                     variant="outlined"
                 >
                     {t('telemetry_hex_ascii_tab.copy_hex', { defaultValue: 'Copy Hex' })}
-                </Button>
-                <Button
+                </CapsButton>
+                <CapsButton
                     size="small"
                     startIcon={<ContentCopyIcon />}
                     onClick={handleCopyFormatted}
                     variant="outlined"
                 >
                     {t('telemetry_hex_ascii_tab.copy_formatted', { defaultValue: 'Copy Formatted' })}
-                </Button>
+                </CapsButton>
                 <Box sx={{ flexGrow: 1 }} />
                 <Typography variant="caption" color="text.secondary" sx={{ alignSelf: 'center' }}>
                     {bytes.length} {t('telemetry_hex_ascii_tab.bytes_click_byte_for_details', { defaultValue: 'bytes • Click byte for details' })}

@@ -3,6 +3,7 @@
 import React, { useEffect, useId, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { useTranslation } from 'react-i18next';
+import CapsButton from '../common/capsbutton.jsx';
 import {
     Alert, Box, Button, Dialog, DialogActions, DialogContent, LinearProgress,
     MenuItem, Pagination, Paper, TextField, Typography,
@@ -121,11 +122,11 @@ export default function RadiosondeFolderDialog({ folder, socket, onClose, onOpen
                 </Paper>
             </DialogContent>
             <DialogActions disableSpacing sx={fileDialogActionsSx}>
-                {onDelete && <Button color="error" variant="outlined" startIcon={<DeleteIcon />} onClick={() => onDelete(detail)}>{t('radiosonde_folder.delete', 'Delete sonde captures')}</Button>}
+                {onDelete && <CapsButton color="error" variant="outlined" startIcon={<DeleteIcon />} onClick={() => onDelete(detail)}>{t('radiosonde_folder.delete', 'Delete sonde captures')}</CapsButton>}
                 <Button component="a" variant="outlined" href={detail.download_url} startIcon={<DownloadIcon />}>
                     {t('radiosonde_folder.download', 'Download all captures')}
                 </Button>
-                <Button variant="outlined" onClick={onClose}>{t('radiosonde_folder.close_button', 'Close')}</Button>
+                <CapsButton variant="outlined" onClick={onClose}>{t('radiosonde_folder.close_button', 'Close')}</CapsButton>
             </DialogActions>
         </Dialog>
     );

@@ -23,6 +23,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { useSocket } from "../common/socket.jsx";
 import { betterDateTimes } from "../common/common.jsx";
 import { useTranslation } from 'react-i18next';
+import CapsButton from '../common/capsbutton.jsx';
 import { removeTask, stopBackgroundTask } from './tasks-slice.jsx';
 import {
     Badge,
@@ -516,7 +517,7 @@ const BackgroundTasksPopover = () => {
                                 <Typography variant="caption" color="text.secondary">
                                     {t('tasks_popover.duration', { defaultValue: 'Duration:' })} {formatDuration(duration)}
                                 </Typography>
-                                <Button
+                                <CapsButton
                                     size="small"
                                     color="error"
                                     variant="outlined"
@@ -524,7 +525,7 @@ const BackgroundTasksPopover = () => {
                                     onClick={() => handleStopTask(taskId)}
                                 >
                                     {t('tasks_popover.stop', { defaultValue: 'Stop' })}
-                                </Button>
+                                </CapsButton>
                             </Stack>
                         </>
                     )}

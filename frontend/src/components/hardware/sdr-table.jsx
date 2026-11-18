@@ -69,6 +69,7 @@ import {
     fetchLocalAirspyDevices,
 } from './sdr-slice.jsx';
 import Paper from "@mui/material/Paper";
+import CapsButton from '../common/capsbutton.jsx';
 import MemoryIcon from '@mui/icons-material/Memory';
 import DnsIcon from '@mui/icons-material/Dns';
 import RefreshIcon from '@mui/icons-material/Refresh';
@@ -1072,12 +1073,12 @@ export default function SDRsPage() {
         } else if (selectedType === 'soapysdrremote') {
             fields.push(
                 <Box key="discover-soapy-servers">
-                    <Button size="small" variant="outlined" onClick={handleStartSoapyDiscovery}
+                    <CapsButton size="small" variant="outlined" onClick={handleStartSoapyDiscovery}
                             disabled={!socket || discovering || isSoapyServerDiscoveryRunning || probing || isRemoteSoapyQueryLoading}
                             startIcon={<RefreshIcon/>}>
                         {discovering || isSoapyServerDiscoveryRunning
                             ? t('sdr.discovering_servers') : t('sdr.discover_servers')}
-                    </Button>
+                    </CapsButton>
                 </Box>
             );
         }
@@ -1672,13 +1673,13 @@ export default function SDRsPage() {
                 if (useManualSoapyServer) {
                     fields.push(
                         <Box key="query-soapy-server">
-                            <Button size="small" variant="outlined" onClick={handleQuerySoapyServer}
+                            <CapsButton size="small" variant="outlined" onClick={handleQuerySoapyServer}
                                     disabled={!socket || isDialogFormInputsDisabled || !String(formValues.host || '').trim()
                                         || !Number.isInteger(Number(formValues.port))
                                         || Number(formValues.port) < 1 || Number(formValues.port) > 65535}
                                     startIcon={isRemoteSoapyQueryLoading ? <CircularProgress size={16}/> : <RefreshIcon/>}>
                                 {isRemoteSoapyQueryLoading ? t('sdr.querying_server') : t('sdr.query_server')}
-                            </Button>
+                            </CapsButton>
                             {queryHasFailed && <Alert severity="error" sx={{mt: 1}}>{currentServerQuery.error}</Alert>}
                         </Box>
                     );
@@ -2059,7 +2060,7 @@ export default function SDRsPage() {
                         onClearSelection={() => setSelected([])}
                         primaryActions={
                             <>
-                                <Button
+                                <CapsButton
                                     variant="contained"
                                     onClick={() => {
                                         dispatch(resetFormValues());
@@ -2069,8 +2070,8 @@ export default function SDRsPage() {
                                     disabled={loading}
                                 >
                                     {t('sdr.add')}
-                                </Button>
-                                <Button
+                                </CapsButton>
+                                <CapsButton
                                     variant="contained"
                                     disabled={selected.length !== 1 || loading}
                                     onClick={() => {
@@ -2085,8 +2086,8 @@ export default function SDRsPage() {
                                     }}
                                 >
                                     {t('sdr.edit')}
-                                </Button>
-                                <Button
+                                </CapsButton>
+                                <CapsButton
                                     variant="contained"
                                     disabled={selected.length < 1 || loading}
                                     color="error"
@@ -2096,7 +2097,7 @@ export default function SDRsPage() {
                                     }}
                                 >
                                     {t('sdr.delete')}
-                                </Button>
+                                </CapsButton>
                             </>
                         }
                     />
@@ -2164,7 +2165,7 @@ export default function SDRsPage() {
                                     gap: 2,
                                 }}
                             >
-                                <Button
+                                <CapsButton
                                     onClick={() => dispatch(setOpenAddDialog(false))}
                                     variant="outlined"
                                     sx={{
@@ -2176,15 +2177,15 @@ export default function SDRsPage() {
                                     }}
                                 >
                                     {t('sdr.cancel')}
-                                </Button>
-                                <Button
+                                </CapsButton>
+                                <CapsButton
                                     color="success"
                                     variant="contained"
                                     onClick={handleSubmit}
                                     disabled={hasValidationErrors || isDialogFormInputsDisabled}
                                 >
                                     {t('sdr.submit')}
-                                </Button>
+                                </CapsButton>
                             </DialogActions>
                             {isDialogSoapyDiscoveryLoading && (
                                 <Box
@@ -2226,7 +2227,7 @@ export default function SDRsPage() {
                                 )}
                             </DialogContent>
                             <DialogActions>
-                                <Button onClick={() => setProbeTarget(null)}>{t('sdr.close')}</Button>
+                                <CapsButton onClick={() => setProbeTarget(null)}>{t('sdr.close')}</CapsButton>
                             </DialogActions>
                         </Dialog>
                         <Dialog
@@ -2366,31 +2367,31 @@ export default function SDRsPage() {
                                     gap: 1.5,
                                 }}
                             >
-                                <Button
+                                <CapsButton
                                     onClick={() => dispatch(setOpenDeleteConfirm(false))}
                                     variant="outlined"
                                     color="inherit"
                                     sx={{
                                         minWidth: 100,
-                                        textTransform: 'none',
+
                                         fontWeight: 500,
                                     }}
                                 >
                                     {t('sdr.cancel')}
-                                </Button>
-                                <Button
+                                </CapsButton>
+                                <CapsButton
                                     variant="contained"
                                     onClick={handleDelete}
                                     color="error"
                                     disabled={!canConfirmDelete || loading}
                                     sx={{
                                         minWidth: 100,
-                                        textTransform: 'none',
+
                                         fontWeight: 600,
                                     }}
                                 >
                                     {t('sdr.delete')}
-                                </Button>
+                                </CapsButton>
                             </DialogActions>
                         </Dialog>
                     </Stack>

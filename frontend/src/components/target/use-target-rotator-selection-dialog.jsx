@@ -1,20 +1,8 @@
 import * as React from 'react';
-import {
-    Box,
-    Button,
-    Chip,
-    CircularProgress,
-    Dialog,
-    DialogActions,
-    DialogContent,
-    DialogContentText,
-    DialogTitle,
-    Divider,
-    Stack,
-    Typography,
-} from '@mui/material';
+import {Box,Chip,CircularProgress,Dialog,DialogActions,DialogContent,DialogContentText,DialogTitle,Divider,Stack,Typography,} from '@mui/material';
 import { useSelector } from 'react-redux';
 import { Trans, useTranslation } from 'react-i18next';
+import CapsButton from '../common/capsbutton.jsx';
 import { DEFAULT_TRACKER_ID, resolveTrackerId } from './tracking-constants.js';
 
 const RETARGET_ACTIONS = Object.freeze({
@@ -362,7 +350,7 @@ export function useTargetRotatorSelectionDialog() {
                                     ? (row.rotatorName || row.rotatorId)
                                     : t('target_retarget_dialog.no_rotator', { defaultValue: 'No rotator control' });
                                 return (
-                                    <Button
+                                    <CapsButton
                                         key={row.trackerId}
                                         variant="outlined"
                                         color="inherit"
@@ -382,7 +370,7 @@ export function useTargetRotatorSelectionDialog() {
                                         disabled={submitting}
                                         sx={{
                                             justifyContent: 'flex-start',
-                                            textTransform: 'none',
+
                                             alignItems: 'stretch',
                                             px: 1.15,
                                             py: 0.9,
@@ -534,7 +522,7 @@ export function useTargetRotatorSelectionDialog() {
                                                 </Stack>
                                             </Box>
                                         </Box>
-                                    </Button>
+                                    </CapsButton>
                                 );
                             }) : (
                                 <Typography variant="caption" sx={{ color: 'text.secondary' }}>
@@ -567,7 +555,7 @@ export function useTargetRotatorSelectionDialog() {
                         }}
                     >
                         <Stack spacing={1}>
-                            <Button
+                            <CapsButton
                                 variant="outlined"
                                 color="inherit"
                                 onClick={() => {
@@ -581,7 +569,7 @@ export function useTargetRotatorSelectionDialog() {
                                 disabled={submitting}
                                 sx={{
                                     justifyContent: 'flex-start',
-                                    textTransform: 'none',
+
                                     alignItems: 'stretch',
                                     px: 1.15,
                                     py: 0.9,
@@ -668,7 +656,7 @@ export function useTargetRotatorSelectionDialog() {
                                         </Stack>
                                     </Box>
                                 </Box>
-                            </Button>
+                            </CapsButton>
                         </Stack>
                     </Box>
                 </Box>
@@ -702,14 +690,14 @@ export function useTargetRotatorSelectionDialog() {
                     gap: 1.5,
                 }}
             >
-                <Button
+                <CapsButton
                     variant="outlined"
                     disabled={submitting}
                     onClick={() => closeWithResult(null)}
                 >
                     {t('target_retarget_dialog.cancel', { defaultValue: 'Cancel' })}
-                </Button>
-                <Button
+                </CapsButton>
+                <CapsButton
                     color="success"
                     variant="contained"
                     disabled={!canConfirm || submitting}
@@ -766,7 +754,7 @@ export function useTargetRotatorSelectionDialog() {
                         : pendingAction === RETARGET_ACTIONS.NEW_SLOT
                         ? t('target_retarget_dialog.confirm_create', { defaultValue: 'Create New Target' })
                         : t('target_retarget_dialog.confirm_retarget', { defaultValue: 'Retarget Selected Slot' })}
-                </Button>
+                </CapsButton>
             </DialogActions>
         </Dialog>
     );

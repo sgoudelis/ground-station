@@ -8,6 +8,7 @@ import { setInitialDataLoading } from './dashboard-slice.jsx';
 import { useEffect, useState } from "react";
 import { useTranslation } from 'react-i18next';
 import { alpha } from '@mui/material/styles';
+import CapsButton from '../common/capsbutton.jsx';
 
 // Minimal animations
 const fadeIn = keyframes`
@@ -181,7 +182,7 @@ function VersionUpdateOverlay() {
                     gap: 1.5,
                     justifyContent: 'stretch'
                 }}>
-                    <Button
+                    <CapsButton
                         variant="outlined"
                         onClick={handleDismiss}
                         disabled={countdown === 0}
@@ -198,15 +199,15 @@ function VersionUpdateOverlay() {
                                 borderColor: 'border.main',
                                 color: (theme) => theme.palette.state.disabled,
                             },
-                            textTransform: 'none',
+
                             fontWeight: 500,
                             fontSize: '0.8rem',
                             py: 0.5
                         }}
                     >
                         {t('version_update.cancel')}
-                    </Button>
-                    <Button
+                    </CapsButton>
+                    <CapsButton
                         variant="contained"
                         onClick={handleRefresh}
                         disabled={countdown === 0}
@@ -223,14 +224,14 @@ function VersionUpdateOverlay() {
                                 backgroundColor: (theme) => theme.palette.state.disabled,
                                 color: theme.palette.mode === 'dark' ? '#0f172a' : '#ffffff',
                             },
-                            textTransform: 'none',
+
                             fontWeight: 500,
                             fontSize: '0.8rem',
                             py: 0.5
                         }}
                     >
                         {t('version_update.refresh_now')}
-                    </Button>
+                    </CapsButton>
                 </Box>
 
                 {/* Status text */}

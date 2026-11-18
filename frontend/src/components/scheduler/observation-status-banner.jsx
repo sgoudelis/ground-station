@@ -18,9 +18,10 @@
  */
 
 import React, { useMemo, useState, useEffect } from 'react';
+import CapsButton from '../common/capsbutton.jsx';
 import { useSelector, useDispatch } from 'react-redux';
 import { useTranslation } from 'react-i18next';
-import { Box, Paper, Typography, Chip, Stack, Button, Tooltip, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions } from '@mui/material';
+import { Box, Paper, Typography, Chip, Stack, Tooltip, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions } from '@mui/material';
 import { AccessTime, RadioButtonChecked, Satellite, Router, Visibility, Cancel, Stop } from '@mui/icons-material';
 import { useSocket } from '../common/socket.jsx';
 import {
@@ -162,20 +163,20 @@ export default function ObservationStatusBanner() {
                             flexWrap: 'wrap',
                         }}
                     >
-                        <Button
+                        <CapsButton
                             size="small"
                             variant="outlined"
                             onClick={handleCreateMonitoredSatellite}
                         >
                             {t('scheduler_banner.add_monitored_satellite')}
-                        </Button>
-                        <Button
+                        </CapsButton>
+                        <CapsButton
                             size="small"
                             variant="outlined"
                             onClick={handleCreateObservation}
                         >
                             {t('scheduler_banner.create_observation')}
-                        </Button>
+                        </CapsButton>
                     </Box>
                 </Box>
             </Paper>
@@ -336,7 +337,7 @@ export default function ObservationStatusBanner() {
                                     }}
                                 >
                                     <Tooltip title={t('scheduler_banner.stop_observation_tooltip')}>
-                                        <Button
+                                        <CapsButton
                                             variant="outlined"
                                             size="small"
                                             color="error"
@@ -344,7 +345,7 @@ export default function ObservationStatusBanner() {
                                             onClick={() => handleCancelClick(observation)}
                                         >
                                             {t('scheduler_banner.stop')}
-                                        </Button>
+                                        </CapsButton>
                                     </Tooltip>
                                 </Box>
                                 {nextObservation && (
@@ -433,7 +434,7 @@ export default function ObservationStatusBanner() {
                                     }}
                                 >
                                     <Tooltip title={t('scheduler_banner.abort_scheduled_tooltip')}>
-                                        <Button
+                                        <CapsButton
                                             variant="outlined"
                                             size="small"
                                             color="error"
@@ -441,7 +442,7 @@ export default function ObservationStatusBanner() {
                                             onClick={() => handleCancelClick(observation)}
                                         >
                                             {t('scheduler_banner.abort')}
-                                        </Button>
+                                        </CapsButton>
                                     </Tooltip>
                                 </Box>
                             </>
@@ -482,16 +483,16 @@ export default function ObservationStatusBanner() {
                     </DialogContentText>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={handleCloseDialog}>
+                    <CapsButton onClick={handleCloseDialog}>
                         {t('cancel')}
-                    </Button>
-                    <Button
+                    </CapsButton>
+                    <CapsButton
                         onClick={handleConfirmCancel}
                         color="error"
                         variant="contained"
                     >
                         {selectedIsRunning ? t('scheduler_banner.stop') : t('scheduler_banner.abort')}
-                    </Button>
+                    </CapsButton>
                 </DialogActions>
             </Dialog>
         </Paper>

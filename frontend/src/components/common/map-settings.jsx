@@ -18,21 +18,7 @@
  */
 
 import React, {useEffect, useMemo, useRef, useState} from 'react';
-import {
-    Box,
-    Button,
-    Chip,
-    FormControl,
-    FormControlLabel,
-    InputLabel,
-    MenuItem,
-    Paper,
-    Select,
-    Stack,
-    Switch,
-    TextField,
-    Typography,
-} from '@mui/material';
+import {Box,Chip,FormControl,FormControlLabel,InputLabel,MenuItem,Paper,Select,Stack,Switch,TextField,Typography,} from '@mui/material';
 import {
     getTileLayerById,
     getTileLayersForEngine,
@@ -41,6 +27,7 @@ import {
     resolveCompatibleTileLayerId,
 } from './tile-layers.jsx';
 import { useTranslation } from 'react-i18next';
+import CapsButton from './capsbutton.jsx';
 
 const SETTINGS_KEYS = [
     'enableMapDragging',
@@ -772,7 +759,7 @@ const MapSettingsIsland = ({ initialLockOnTarget, initialEnableMapDragging, init
                 }}
             >
                 <Box sx={FOOTER_ACTION_ROW_SX}>
-                    <Button
+                    <CapsButton
                         variant="outlined"
                         onClick={() => {
                             setDraftSettings(defaults);
@@ -780,7 +767,7 @@ const MapSettingsIsland = ({ initialLockOnTarget, initialEnableMapDragging, init
                         }}
                     >
                         {t('map_settings.reset_defaults', { defaultValue: 'Reset Defaults' })}
-                    </Button>
+                    </CapsButton>
 
                     <Box sx={{ flex: 1, minWidth: 8 }} />
                     {saveFeedbackLabel ? (
@@ -790,16 +777,16 @@ const MapSettingsIsland = ({ initialLockOnTarget, initialEnableMapDragging, init
                             label={saveFeedbackLabel}
                         />
                     ) : null}
-                    <Button variant="outlined" onClick={cancelChanges}>
+                    <CapsButton variant="outlined" onClick={cancelChanges}>
                         {t('close', { defaultValue: 'Close' })}
-                    </Button>
-                    <Button
+                    </CapsButton>
+                    <CapsButton
                         variant="contained"
                         onClick={applySettings}
                         disabled={!isDirty || saveState === 'saving'}
                     >
                         {t('map_settings.apply', { defaultValue: 'Apply' })}
-                    </Button>
+                    </CapsButton>
                 </Box>
             </Box>
         </Box>

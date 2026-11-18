@@ -25,7 +25,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
 import i18n from '../i18n/config.js';
-import { greekCaps, isGreekLocale, tabCapsLabel } from './greekcaps.js';
+import { capsLabel, greekCaps, isGreekLocale, tabCapsLabel } from './greekcaps.js';
 
 describe('greekCaps', () => {
     it('upper-cases Greek and drops the tonos', () => {
@@ -71,18 +71,27 @@ describe('isGreekLocale', () => {
     });
 });
 
-describe('tabCapsLabel', () => {
+describe('capsLabel', () => {
     afterEach(async () => {
         await i18n.changeLanguage('en');
     });
 
     it('capitalises Greek labels without accents', async () => {
         await i18n.changeLanguage('el');
-        expect(tabCapsLabel('Ρυθμίσεις')).toBe('ΡΥΘΜΙΣΕΙΣ');
+        expect(capsLabel('Ρυθμίσεις', i18n)).toBe('ΡΥΘΜΙΣΕΙΣ');
+        // tabCapsLabel is the same function under the name tab strips use.
+        expect(tabCapsLabel('Ρυθμίσεις', i18n)).toBe('ΡΥΘΜΙΣΕΙΣ');
     });
 
     it('leaves other languages to the CSS transform', async () => {
         await i18n.changeLanguage('de');
-        expect(tabCapsLabel('Rückgabe an Park')).toBe('Rückgabe an Park');
+        expect(capsLabel('Rückgabe an Park', i18n)).toBe('Rückgabe an Park');
+    });
+
+    it('leaves the label alone when the caller has no i18n instance', () => {
+        // Components read the instance from useTranslation(); a mocked hook without one must not
+        // guess a language (that is what keeps the wrapper inert in tests that stub react-i18next).
+        expect(capsLabel('Ρυθμίσεις', undefined)).toBe('Ρυθμίσεις');
+        expect(capsLabel('Ρυθμίσεις')).toBe('Ρυθμίσεις');
     });
 });

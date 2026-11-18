@@ -35,6 +35,7 @@ import AutorenewIcon from '@mui/icons-material/Autorenew';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import { useTranslation } from 'react-i18next';
+import CapsButton from '../common/capsbutton.jsx';
 import BackgroundStreamControl from './background-stream-control.jsx';
 import SdrParameterFields from '../common/sdr-parameter-fields.jsx';
 import ReceiverStatus from './receiver-status.jsx';
@@ -608,13 +609,13 @@ const SdrAccordion = ({
                         </Box>
                     )}
                 </LoadingOverlay>
-                {onCreateContinuousObservation && <Button fullWidth size="small" variant="outlined"
+                {onCreateContinuousObservation && <CapsButton fullWidth size="small" variant="outlined"
                     startIcon={<AddCircleOutlineIcon />} sx={{ mt: 2 }}
                     disabled={readOnly || !isStreaming || gettingSDRParameters || !selectedSdrRecord
                         || isSigmfPlaybackSelected || selectedSdrRecord.type === 'sigmfplayback'}
                     onClick={onCreateContinuousObservation}>
                     {t('sdr.create_continuous_observation')}
-                </Button>}
+                </CapsButton>}
                 <Dialog
                     open={biasTConfirmationOpen}
                     onClose={() => setBiasTConfirmationOpen(false)}
@@ -633,10 +634,10 @@ const SdrAccordion = ({
                         </DialogContentText>
                     </DialogContent>
                     <DialogActions>
-                        <Button autoFocus onClick={() => setBiasTConfirmationOpen(false)}>
+                        <CapsButton autoFocus onClick={() => setBiasTConfirmationOpen(false)}>
                             {t('common:cancel')}
-                        </Button>
-                        <Button
+                        </CapsButton>
+                        <CapsButton
                             color="warning"
                             variant="contained"
                             disabled={readOnly}
@@ -646,7 +647,7 @@ const SdrAccordion = ({
                             }}
                         >
                             {t('sdr.bias_t_confirm_enable')}
-                        </Button>
+                        </CapsButton>
                     </DialogActions>
                 </Dialog>
             </AccordionDetails>

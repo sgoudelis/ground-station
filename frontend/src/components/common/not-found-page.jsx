@@ -1,18 +1,10 @@
-import {
-    Alert,
-    Box,
-    Button,
-    Container,
-    Divider,
-    Paper,
-    Stack,
-    Typography,
-} from '@mui/material';
+import {Alert,Box,Container,Divider,Paper,Stack,Typography,} from '@mui/material';
 import { useNavigate } from 'react-router';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import HomeIcon from '@mui/icons-material/Home';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useTranslation } from 'react-i18next';
+import CapsButton from './capsbutton.jsx';
 
 const NotFoundPage = () => {
     const { t } = useTranslation('common');
@@ -54,20 +46,20 @@ const NotFoundPage = () => {
                     </Typography>
 
                     <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-                        <Button
+                        <CapsButton
                             variant="contained"
                             startIcon={<HomeIcon />}
                             onClick={() => navigate('/')}
                         >
                             {t('not_found_page.back_to_home', { defaultValue: 'Back to Home' })}
-                        </Button>
-                        <Button
+                        </CapsButton>
+                        <CapsButton
                             variant="outlined"
                             startIcon={<ArrowBackIcon />}
                             onClick={() => navigate(-1)}
                         >
                             {t('not_found_page.go_back', { defaultValue: 'Go Back' })}
-                        </Button>
+                        </CapsButton>
                     </Stack>
                 </Stack>
             </Paper>

@@ -1,9 +1,10 @@
 /** Copyright (c) 2026 Efstratios Goudelis — GPL-3.0-or-later */
 
 import React, {useId, useState} from 'react';
-import {Box, Button, Checkbox, FormControlLabel, FormGroup, Popover, Typography} from '@mui/material';
+import {Box,Checkbox,FormControlLabel,FormGroup,Popover,Typography} from '@mui/material';
 import ViewColumnIcon from '@mui/icons-material/ViewColumn';
 import {useTranslation} from 'react-i18next';
+import CapsButton from '../common/capsbutton.jsx';
 import ResponsiveActionButton from '../common/responsive-action-button.jsx';
 import {FILE_TABLE_COLUMNS, getFileTableColumnLabel, useFileTableColumns} from './file-table-columns.js';
 
@@ -30,7 +31,7 @@ export default function FileColumnSelector({visibility = {}, onChange, sortBy, c
         >
             <Box sx={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 1}}>
                 <Typography variant="subtitle2">{label}</Typography>
-                <Button size="small" onClick={() => onChange({})}>{t('file_table_view.reset_columns')}</Button>
+                <CapsButton size="small" onClick={() => onChange({})}>{t('file_table_view.reset_columns')}</CapsButton>
             </Box>
             <FormGroup>
                 {/* Names and row actions stay available even when every optional column is hidden. */}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Typography, Button, Chip, Stack } from '@mui/material';
+import {Box,Typography,Chip,Stack} from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import SatelliteAltIcon from '@mui/icons-material/SatelliteAlt';
 import SyncIcon from '@mui/icons-material/Sync';
@@ -12,6 +12,7 @@ import { useUserTimeSettings } from '../../hooks/useUserTimeSettings.jsx';
 import { formatDateTime } from '../../utils/date-time.js';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
+import CapsButton from '../common/capsbutton.jsx';
 
 const SyncCardHeader = ({ syncState, onSynchronize, onCancel, canCancel }) => {
     const { t } = useTranslation('satellites');
@@ -85,7 +86,7 @@ const SyncCardHeader = ({ syncState, onSynchronize, onCancel, canCancel }) => {
                     </Box>
                 </Stack>
 
-                <Button
+                <CapsButton
                     disabled={isSyncing ? !canCancel : false}
                     variant={isSyncing ? "outlined" : "contained"}
                     color={isSyncing ? "error" : "primary"}
@@ -97,7 +98,7 @@ const SyncCardHeader = ({ syncState, onSynchronize, onCancel, canCancel }) => {
                     {isSyncing
                         ? t('synchronize.header.cancel_button')
                         : t('synchronize.header.button')}
-                </Button>
+                </CapsButton>
             </Box>
 
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mt: 1 }}>

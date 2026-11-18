@@ -1,15 +1,8 @@
 import React from 'react';
-import {
-    Button,
-    Dialog,
-    DialogActions,
-    DialogContent,
-    DialogContentText,
-    DialogTitle,
-    Typography,
-} from '@mui/material';
+import {Dialog,DialogActions,DialogContent,DialogContentText,DialogTitle,Typography,} from '@mui/material';
 import ErrorIcon from '@mui/icons-material/Error';
 import {useTranslation} from 'react-i18next';
+import CapsButton from './capsbutton.jsx';
 
 export default function ErrorDialog({open, message, onClose, title}) {
     const {t} = useTranslation('common');
@@ -38,9 +31,9 @@ export default function ErrorDialog({open, message, onClose, title}) {
                 </DialogContentText>
             </DialogContent>
             <DialogActions>
-                <Button onClick={onClose} variant="contained" color="error" autoFocus>
+                <CapsButton onClick={onClose} variant="contained" color="error" autoFocus>
                     {t('close')}
-                </Button>
+                </CapsButton>
             </DialogActions>
         </Dialog>
     );

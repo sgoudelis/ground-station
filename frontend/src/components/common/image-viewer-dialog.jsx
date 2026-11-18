@@ -5,10 +5,11 @@
  */
 
 import React, { useId } from 'react';
-import { Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, IconButton, Typography } from '@mui/material';
+import {Box,Chip,Dialog,DialogActions,DialogContent,DialogTitle,IconButton,Typography} from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import DownloadIcon from '@mui/icons-material/Download';
 import { useTranslation } from 'react-i18next';
+import CapsButton from './capsbutton.jsx';
 import ZoomableImage from './zoomable-image.jsx';
 import {compactDialogTitleSx, mobileFullScreenPaperSx} from './dialog-layout.js';
 import { formatDateTime } from '../../utils/date-time.js';
@@ -146,11 +147,11 @@ export default function ImageViewerDialog({
             </DialogContent>
             <DialogActions sx={{ borderTop: '1px solid', borderColor: 'divider', px: 3, py: 2 }}>
                 {onDownload && (
-                    <Button onClick={onDownload} startIcon={<DownloadIcon />} variant="outlined">
+                    <CapsButton onClick={onDownload} startIcon={<DownloadIcon />} variant="outlined">
                         {t('filebrowser_main.download', { defaultValue: 'Download' })}
-                    </Button>
+                    </CapsButton>
                 )}
-                <Button onClick={onClose} variant="outlined">{t('filebrowser_main.close', { defaultValue: 'Close' })}</Button>
+                <CapsButton onClick={onClose} variant="outlined">{t('filebrowser_main.close', { defaultValue: 'Close' })}</CapsButton>
             </DialogActions>
         </Dialog>
     );

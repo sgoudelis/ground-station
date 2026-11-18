@@ -56,6 +56,7 @@ import {
     resetFormValues,
 } from './rotator-slice.jsx';
 import Paper from "@mui/material/Paper";
+import CapsButton from '../common/capsbutton.jsx';
 import {toRowSelectionModel, toSelectedIds} from '../../utils/datagrid-selection.js';
 import SelectionActionBar from './selection-action-bar.jsx';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -350,7 +351,7 @@ export default function AntennaRotatorTable() {
                         onClearSelection={() => setSelected([])}
                         primaryActions={
                             <>
-                                <Button
+                                <CapsButton
                                     variant="contained"
                                     onClick={() => {
                                         dispatch(resetFormValues());
@@ -359,8 +360,8 @@ export default function AntennaRotatorTable() {
                                     disabled={loading}
                                 >
                                     {t('rotator.add')}
-                                </Button>
-                                <Button
+                                </CapsButton>
+                                <CapsButton
                                     variant="contained"
                                     disabled={selected.length !== 1 || loading}
                                     onClick={() => {
@@ -372,8 +373,8 @@ export default function AntennaRotatorTable() {
                                     }}
                                 >
                                     {t('rotator.edit')}
-                                </Button>
-                                <Button
+                                </CapsButton>
+                                <CapsButton
                                     variant="contained"
                                     disabled={selected.length < 1 || loading}
                                     color="error"
@@ -383,7 +384,7 @@ export default function AntennaRotatorTable() {
                                     }}
                                 >
                                     {t('rotator.delete')}
-                                </Button>
+                                </CapsButton>
                             </>
                         }
                     />
@@ -522,31 +523,31 @@ export default function AntennaRotatorTable() {
                                     gap: 1.5,
                                 }}
                             >
-                                <Button
+                                <CapsButton
                                     onClick={() => dispatch(setOpenDeleteConfirm(false))}
                                     variant="outlined"
                                     color="inherit"
                                     sx={{
                                         minWidth: 100,
-                                        textTransform: 'none',
+
                                         fontWeight: 500,
                                     }}
                                 >
                                     {t('rotator.cancel')}
-                                </Button>
-                                <Button
+                                </CapsButton>
+                                <CapsButton
                                     variant="contained"
                                     onClick={handleDelete}
                                     color="error"
                                     disabled={!canConfirmDelete || loading}
                                     sx={{
                                         minWidth: 100,
-                                        textTransform: 'none',
+
                                         fontWeight: 600,
                                     }}
                                 >
                                     {t('rotator.delete')}
-                                </Button>
+                                </CapsButton>
                             </DialogActions>
                         </Dialog>
                     </Stack>

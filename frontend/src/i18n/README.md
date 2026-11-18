@@ -35,12 +35,29 @@ language onto `<html lang>` and `src/theme.js` neutralises `text-transform` whil
 therefore render in the mixed case they were authored in. `src/i18n/__tests__/document-lang.test.js`
 guards the language mirror.
 
-Chrome that must stay in capitals (MUI tab bars) cannot use CSS at all, so it builds the string in
-JS: `src/utils/greekcaps.js` exports `greekCaps()` (upper-case + drop every tonos, keeping the
-dialytika of `ΰ`/`ΐ`) and `tabCapsLabel()`, which applies it only when the language is Greek.
-`AntTab` in `src/components/common/common.jsx` runs every tab label through `tabCapsLabel`, as do the
-card/dialog tabs that use a raw `<Tab>`. Store mixed-case accented Greek in the locale files; never
-pre-capitalise a value to work around the transform (`src/utils/greekcaps.test.js` covers the rule).
+Chrome that must stay in capitals (MUI tab bars and buttons) cannot use CSS at all, so it builds the
+string in JS: `src/utils/greekcaps.js` exports `greekCaps()` (upper-case + drop every tonos, keeping
+the dialytika of `ΰ`/`ΐ`) and `capsLabel(label, i18n)`, which applies it only when the language is
+Greek (`tabCapsLabel` is the same function, named for tabs). Pass the instance from
+`useTranslation()` - `greekcaps.js` deliberately does not import `src/i18n/config.js`, because pulling
+the app singleton into a component graph breaks tests that mock `react-i18next` (the singleton calls
+`i18next.use(initReactI18next)` on the mocked module), and an unknown instance leaves the label alone.
+`AntTab` in `src/components/common/common.jsx` runs every tab label through it, as do the card/dialog
+tabs that use a raw `<Tab>`. Button chrome goes through `<CapsButton>`
+(`src/components/common/capsbutton.jsx`) for the same reason: MUI uppercases buttons in CSS, Greek has
+that transform disabled, and a plain `<Button>` would paint the stored case, so `ΑΚΥΡΩΣΗ` would sit
+next to `Απενεργοποίηση`. MUI v7 offers no theme-level hook for this
+(`components.MuiButton.slots.root`, `defaultProps.component` and theme `slots` are all ignored for
+`Button`), so the transform belongs at the React boundary. Roughly 400 label buttons now use it; a
+plain `<Button>` is kept for buttons whose child is data (a satellite name, a frequency) and for
+link-shaped `component=` buttons. `i18n check` warns `caps-chrome:` for a plain `<Button>` carrying a
+translated label and `npm test` requires that list to be empty; `python3 scripts/capscodemod.py`
+migrates new pages (idempotent). The scanner cannot see labels that arrive through a variable
+(`{option.label}`, `{children}`), so mapped button arrays and local button wrappers need a human.
+`<ToggleButton>`, `<StepLabel>`, `<AccordionSummary>` and hand-written `textTransform: 'uppercase'`
+`sx` blocks are still mixed case in Greek. Store mixed-case accented Greek in the locale files; never
+pre-capitalise a value to work around the transform
+(`src/utils/greekcaps.test.js`, `src/components/common/__tests__/capsbutton.test.jsx` cover the rule).
 
 Examples:
 

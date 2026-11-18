@@ -9,27 +9,11 @@
  */
 
 import React, { useMemo } from 'react';
-import {
-    Box,
-    Typography,
-    Paper,
-    Table,
-    TableBody,
-    TableCell,
-    TableContainer,
-    TableHead,
-    TableRow,
-    Chip,
-    Stack,
-    Button,
-    Divider,
-    useTheme,
-    Tooltip,
-    IconButton,
-} from '@mui/material';
+import {Box,Typography,Paper,Table,TableBody,TableCell,TableContainer,TableHead,TableRow,Chip,Stack,Divider,useTheme,Tooltip,IconButton,} from '@mui/material';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import { toast } from 'react-toastify';
 import { useTranslation } from 'react-i18next';
+import CapsButton from '../common/capsbutton.jsx';
 
 function getConfidenceColor(confidence) {
     switch (confidence) {
@@ -228,7 +212,7 @@ export default function StringsTab({ packet, telemetry }) {
 
             {/* Action buttons */}
             <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
-                <Button
+                <CapsButton
                     size="small"
                     startIcon={<ContentCopyIcon />}
                     onClick={handleCopyAll}
@@ -236,8 +220,8 @@ export default function StringsTab({ packet, telemetry }) {
                     disabled={strings.length === 0}
                 >
                     {t('telemetry_strings_tab.copy_all_strings', { defaultValue: 'Copy All Strings' })}
-                </Button>
-                <Button
+                </CapsButton>
+                <CapsButton
                     size="small"
                     startIcon={<ContentCopyIcon />}
                     onClick={handleCopyReport}
@@ -245,7 +229,7 @@ export default function StringsTab({ packet, telemetry }) {
                     disabled={strings.length === 0}
                 >
                     {t('telemetry_strings_tab.copy_full_report', { defaultValue: 'Copy Full Report' })}
-                </Button>
+                </CapsButton>
             </Stack>
 
             {/* Strings table */}

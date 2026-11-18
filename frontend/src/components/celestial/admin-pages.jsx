@@ -68,6 +68,7 @@ import VisibilityOffOutlinedIcon from '@mui/icons-material/VisibilityOffOutlined
 import WbSunnyOutlinedIcon from '@mui/icons-material/WbSunnyOutlined';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
+import CapsButton from '../common/capsbutton.jsx';
 import { useSocket } from '../common/socket.jsx';
 import { humanizeDate } from '../common/common.jsx';
 import ErrorDialog from '../common/error-dialog.jsx';
@@ -554,12 +555,12 @@ export function CelestialEphemerisPage() {
                             </Box>
                         </Stack>
                         <Stack direction="row" spacing={1}>
-                            <Button size="small" variant="contained" startIcon={refreshing ? <CircularProgress size={16} color="inherit" /> : <SyncIcon />} onClick={handleRefreshCache} disabled={!socket || loading || syncIsRunning}>
+                            <CapsButton size="small" variant="contained" startIcon={refreshing ? <CircularProgress size={16} color="inherit" /> : <SyncIcon />} onClick={handleRefreshCache} disabled={!socket || loading || syncIsRunning}>
                                 {t('admin.ephemeris.actions.synchronize_now')}
-                            </Button>
-                            <Button size="small" variant="outlined" startIcon={pruning ? <CircularProgress size={16} /> : <DeleteOutlineIcon />} onClick={handlePruneCache} disabled={!socket || loading || pruning || syncIsRunning}>
+                            </CapsButton>
+                            <CapsButton size="small" variant="outlined" startIcon={pruning ? <CircularProgress size={16} /> : <DeleteOutlineIcon />} onClick={handlePruneCache} disabled={!socket || loading || pruning || syncIsRunning}>
                                 {t('admin.ephemeris.actions.prune_expired', { defaultValue: 'Prune expired history' })}
-                            </Button>
+                            </CapsButton>
                         </Stack>
                     </Box>
 
@@ -1433,9 +1434,9 @@ export function CelestialCatalogPage() {
                             />
                         ))}
                         {activeFilters.length > 1 ? (
-                            <Button size="small" onClick={clearAllFilters} sx={{ flexShrink: 0 }}>
+                            <CapsButton size="small" onClick={clearAllFilters} sx={{ flexShrink: 0 }}>
                                 {t('admin.catalog.filters.clear_all')}
-                            </Button>
+                            </CapsButton>
                         ) : null}
                     </Stack>
                     <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'nowrap', flexShrink: 0 }}>
@@ -1475,7 +1476,7 @@ export function CelestialCatalogPage() {
                 >
                     {tSat('satellite_database.edit_transmitters')}
                 </Button>
-                <Button
+                <CapsButton
                     variant="contained"
                     disabled={
                         !socket
@@ -1487,8 +1488,8 @@ export function CelestialCatalogPage() {
                     {busyCatalogId
                         ? t('admin.catalog.actions.working')
                         : t('admin.catalog.actions.monitor')}
-                </Button>
-                <Button
+                </CapsButton>
+                <CapsButton
                     variant="contained"
                     color="error"
                     disabled={
@@ -1502,7 +1503,7 @@ export function CelestialCatalogPage() {
                     }}
                 >
                     {t('admin.catalog.actions.unmonitor')}
-                </Button>
+                </CapsButton>
                 <ResponsiveActionButton
                     label={t('admin.targets.actions.refresh_selected')}
                     icon={<RefreshIcon />}
@@ -1633,10 +1634,10 @@ export function CelestialCatalogPage() {
                         gap: 1,
                     }}
                 >
-                    <Button variant="outlined" onClick={() => setPendingUnmonitor(null)} disabled={Boolean(busyCatalogId)}>
+                    <CapsButton variant="outlined" onClick={() => setPendingUnmonitor(null)} disabled={Boolean(busyCatalogId)}>
                         {t('admin.common.cancel')}
-                    </Button>
-                    <Button
+                    </CapsButton>
+                    <CapsButton
                         variant="contained"
                         color="error"
                         startIcon={<VisibilityOffOutlinedIcon />}
@@ -1644,7 +1645,7 @@ export function CelestialCatalogPage() {
                         onClick={handleConfirmUnmonitor}
                     >
                         {t('admin.catalog.actions.unmonitor')}
-                    </Button>
+                    </CapsButton>
                 </DialogActions>
             </Dialog>
         </Paper>

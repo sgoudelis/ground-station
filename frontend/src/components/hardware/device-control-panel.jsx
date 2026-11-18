@@ -2,10 +2,8 @@
 import React, {useEffect, useId, useState} from 'react';
 import {useDispatch, useSelector} from 'react-redux';
 import {useTranslation} from 'react-i18next';
-import {
-    Alert, Box, Button, ButtonBase, CircularProgress, Collapse, Divider,
-    IconButton, Menu, MenuItem, Stack, Tooltip, Typography,
-} from '@mui/material';
+import CapsButton from '../common/capsbutton.jsx';
+import {Alert,Box,ButtonBase,CircularProgress,Collapse,Divider,IconButton,Menu,MenuItem,Stack,Tooltip,Typography,} from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
@@ -53,8 +51,8 @@ function TelemetryValue({label, value}) {
 }
 
 function DeviceAction({reason, children, sx, ...props}) {
-    return <Button fullWidth size="small" variant="outlined" disabled={Boolean(reason)}
-        sx={[{minWidth: 0, minHeight: 34, px: 1, lineHeight: 1.3}, ...(Array.isArray(sx) ? sx : [sx])]} {...props}>{children}</Button>;
+    return <CapsButton fullWidth size="small" variant="outlined" disabled={Boolean(reason)}
+        sx={[{minWidth: 0, minHeight: 34, px: 1, lineHeight: 1.3}, ...(Array.isArray(sx) ? sx : [sx])]} {...props}>{children}</CapsButton>;
 }
 
 function DeviceFeedback({message, severity, pending}) {
@@ -327,8 +325,8 @@ export default function DeviceControlPanel({kind, onManage, onViewOwner, onManua
         <Box sx={{overflowY: 'auto', p: 1.25, minHeight: 0}}>
             {!socket?.connected && <Alert severity="warning" sx={{mb: 1}}>{t('hardware_popover.station_offline')}</Alert>}
             {control.error && <Alert severity="error" sx={{mb: 1}}
-                action={<Button size="small" disabled={!socket?.connected || control.loading}
-                    onClick={() => dispatch(fetchHardwareState({socket}))}>{t('hardware_popover.retry')}</Button>}>
+                action={<CapsButton size="small" disabled={!socket?.connected || control.loading}
+                    onClick={() => dispatch(fetchHardwareState({socket}))}>{t('hardware_popover.retry')}</CapsButton>}>
                 {t('hardware_popover.status_load_failed')}
             </Alert>}
             {config.length === 0 && <Box sx={{py: 2, px: 1, textAlign: 'center'}}>
@@ -350,10 +348,10 @@ export default function DeviceControlPanel({kind, onManage, onViewOwner, onManua
             </Stack>
         </Box>
         <Divider />
-        <Button size="small" startIcon={<SettingsOutlinedIcon />} endIcon={<OpenInNewIcon />}
+        <CapsButton size="small" startIcon={<SettingsOutlinedIcon />} endIcon={<OpenInNewIcon />}
             disabled={!onManage} onClick={onManage} sx={{justifyContent: 'flex-start', px: 1.5, py: 1}}>
             {t(`hardware_popover.${kind === 'rotator' ? 'manage_rotators' : 'manage_rigs'}`)}
-        </Button>
+        </CapsButton>
         {!onManualControl && <DeviceManualRotatorDialog deviceId={manualId} onClose={() => setManualId(null)} />}
     </Box>;
 }

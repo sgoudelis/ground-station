@@ -24,6 +24,7 @@ import {Polyline, Tooltip as LeafletTooltip} from "react-leaflet";
 import React, {useEffect, useRef, useState} from "react";
 import Tooltip from "@mui/material/Tooltip";
 import {Box, Chip, Fab, Stack, Tab} from "@mui/material";
+import {useTranslation} from "react-i18next";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
@@ -36,7 +37,9 @@ import { formatDateTime, formatTime } from '../../utils/date-time.js';
 // AntTab capitalises through tabCapsLabel so Greek still renders in capitals without
 // accents: all-caps Greek has no tonos, which CSS `text-transform: uppercase` cannot express.
 function AntTabBase({ label, ...rest }) {
-    return <Tab disableRipple label={tabCapsLabel(label)} {...rest} />;
+    // Instance from the render tree; see src/utils/greekcaps.js for why not the singleton.
+    const translation = useTranslation();
+    return <Tab disableRipple label={tabCapsLabel(label, translation?.i18n)} {...rest} />;
 }
 
 

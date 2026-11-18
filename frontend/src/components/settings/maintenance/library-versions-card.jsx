@@ -4,16 +4,17 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Typography, Divider, Button, Alert, CircularProgress, Box, Tabs, Tab, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material';
+import {Typography,Divider,Alert,CircularProgress,Box,Tabs,Tab,Table,TableBody,TableCell,TableContainer,TableHead,TableRow} from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import { useSocket } from "../../common/socket.jsx";
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchLibraryVersions, fetchFrontendLibraryVersions } from '../library-versions-slice.jsx';
 import { useTranslation } from 'react-i18next';
+import CapsButton from '../../common/capsbutton.jsx';
 import { tabCapsLabel } from '../../../utils/greekcaps.js';
 
 const LibraryVersionsCard = () => {
-    const { t } = useTranslation('settings');
+    const { t, i18n } = useTranslation('settings');
     const { socket } = useSocket();
     const dispatch = useDispatch();
     const libraryVersions = useSelector((state) => state.libraryVersions);
@@ -49,7 +50,7 @@ const LibraryVersionsCard = () => {
                 <Typography variant="h6">
                     {t('library_versions_card.library_versions', { defaultValue: 'Library Versions' })}
                 </Typography>
-                <Button
+                <CapsButton
                     variant="outlined"
                     size="small"
                     startIcon={
@@ -61,13 +62,13 @@ const LibraryVersionsCard = () => {
                     disabled={libraryVersionsTab === 0 ? libraryVersions.backend.loading : libraryVersions.frontend.loading}
                 >
                     {t('library_versions_card.refresh', { defaultValue: 'Refresh' })}
-                </Button>
+                </CapsButton>
             </Box>
             <Divider sx={{ mb: 2 }} />
 
             <Tabs value={libraryVersionsTab} onChange={(e, newValue) => setLibraryVersionsTab(newValue)} sx={{ mb: 2 }}>
-                <Tab label={tabCapsLabel(t('library_versions_card.backend', { defaultValue: 'Backend' }))} />
-                <Tab label={tabCapsLabel(t('library_versions_card.frontend', { defaultValue: 'Frontend' }))} />
+                <Tab label={tabCapsLabel(t('library_versions_card.backend', { defaultValue: 'Backend' }), i18n)} />
+                <Tab label={tabCapsLabel(t('library_versions_card.frontend', { defaultValue: 'Frontend' }), i18n)} />
             </Tabs>
 
             {/* Backend Tab */}

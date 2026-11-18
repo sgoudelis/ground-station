@@ -1,6 +1,7 @@
 import React from 'react';
-import {Box, Button, Chip, Stack, Typography} from '@mui/material';
+import {Box,Chip,Stack,Typography} from '@mui/material';
 import { useTranslation } from 'react-i18next';
+import CapsButton from '../common/capsbutton.jsx';
 
 export default function SelectionActionBar({
     selectedCount,
@@ -27,9 +28,9 @@ export default function SelectionActionBar({
                 </Typography>
                 <Chip size="small" color={selectedCount > 0 ? 'primary' : 'default'} label={`${selectedCount} selected`} />
                 {selectedCount > 0 && (
-                    <Button size="small" variant="text" onClick={onClearSelection}>
+                    <CapsButton size="small" variant="text" onClick={onClearSelection}>
                         {t('selection_action_bar.clear', { defaultValue: 'Clear' })}
-                    </Button>
+                    </CapsButton>
                 )}
             </Stack>
             <Stack direction={{xs: 'column', sm: 'row'}} spacing={1} sx={{flexWrap: 'wrap'}}>

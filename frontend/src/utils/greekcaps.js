@@ -17,8 +17,6 @@
  *
  */
 
-import i18n from '../i18n/config.js';
-
 /**
  * All-caps Greek orthography for strings that UI chrome paints in capitals.
  *
@@ -53,10 +51,25 @@ export function isGreekLocale(i18nInstance) {
 }
 
 /**
- * Capitalise a MUI tab label the way the tab CSS does - in JS when the language is
- * Greek, because all-caps Greek has no tonos and CSS cannot remove it. Every other
- * language returns the label untouched and still relies on `text-transform: uppercase`.
+ * Capitalise a label the way MUI's chrome CSS does - in JS when the language is Greek, because
+ * all-caps Greek has no tonos and CSS cannot remove it (`theme.js` neutralises `text-transform`
+ * while `lang="el"`, which otherwise leaves such labels in the stored mixed case).
+ *
+ * Every other language returns the label untouched and still relies on `text-transform: uppercase`.
+ *
+ * Use it at the label boundary: `tabCapsLabel` for tab strips and `capsLabel` for the
+ * `<CapsButton>` wrapper (`src/components/common/capsbutton.jsx`). Both change the accessible
+ * name in Greek (`Ακύρωση` -> `ΑΚΥΡΩΣΗ`), which CSS capitalisation would not - the trade-off is
+ * deliberate so buttons and tabs look identical to every other language.
+ *
+ * `i18nInstance` is the instance the caller renders with (`useTranslation().i18n`). This module
+ * deliberately does not import `src/i18n/config.js`: pulling the app singleton into a component
+ * graph breaks tests that mock `react-i18next` (the singleton calls `i18next.use(initReactI18next)`
+ * on the mocked module), and an unknown instance simply means "do not touch the label".
  */
-export function tabCapsLabel(label) {
-    return isGreekLocale(i18n) ? greekCaps(label) : label;
+export function capsLabel(label, i18nInstance) {
+    return isGreekLocale(i18nInstance) ? greekCaps(label) : label;
 }
+
+/** Kept as a name for tab strips; identical to {@link capsLabel}. */
+export const tabCapsLabel = capsLabel;

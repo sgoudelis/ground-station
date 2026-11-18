@@ -17,6 +17,7 @@ import {
 } from "@mui/material";
 import WarningAmberOutlinedIcon from "@mui/icons-material/WarningAmberOutlined";
 import { useTranslation } from "react-i18next";
+import CapsButton from '../common/capsbutton.jsx';
 import { isEmptyRotatorValue } from "./rotator-edit-logic.js";
 
 export default function RotatorEditDialog({
@@ -230,7 +231,7 @@ export default function RotatorEditDialog({
                     gap: 2,
                 }}
             >
-                <Button
+                <CapsButton
                     onClick={onClose}
                     variant="outlined"
                     sx={{
@@ -242,10 +243,10 @@ export default function RotatorEditDialog({
                     }}
                 >
                     {t("rotator.cancel")}
-                </Button>
-                <Button color="success" variant="contained" onClick={onSubmit} disabled={hasValidationErrors || loading}>
+                </CapsButton>
+                <CapsButton color="success" variant="contained" onClick={onSubmit} disabled={hasValidationErrors || loading}>
                     {t("rotator.submit")}
-                </Button>
+                </CapsButton>
             </DialogActions>
         </Dialog>
     );

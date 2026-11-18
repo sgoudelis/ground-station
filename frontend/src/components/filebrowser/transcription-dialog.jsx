@@ -18,24 +18,12 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import {
-    Box,
-    Typography,
-    Chip,
-    Button,
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
-    CircularProgress,
-    Alert,
-    Divider,
-    IconButton,
-} from '@mui/material';
+import {Box,Typography,Chip,Dialog,DialogTitle,DialogContent,DialogActions,CircularProgress,Alert,Divider,IconButton,} from '@mui/material';
 import {compactDialogTitleSx, mobileFullScreenPaperSx} from '../common/dialog-layout.js';
 import CloseIcon from '@mui/icons-material/Close';
 import DownloadIcon from '@mui/icons-material/Download';
 import { useTranslation } from 'react-i18next';
+import CapsButton from '../common/capsbutton.jsx';
 import { useSelector } from 'react-redux';
 
 function formatBytes(bytes) {
@@ -352,14 +340,14 @@ export default function TranscriptionDialog({ open, onClose, transcription }) {
                     },
                 }}
             >
-                <Button
+                <CapsButton
                     onClick={handleDownload}
                     startIcon={<DownloadIcon />}
                     variant="outlined"
                 >
                     {t('transcription_dialog.download', { defaultValue: 'Download' })}
-                </Button>
-                <Button
+                </CapsButton>
+                <CapsButton
                     onClick={onClose}
                     variant="outlined"
                     sx={{
@@ -371,7 +359,7 @@ export default function TranscriptionDialog({ open, onClose, transcription }) {
                     }}
                 >
                     {t('transcription_dialog.close', { defaultValue: 'Close' })}
-                </Button>
+                </CapsButton>
             </DialogActions>
         </Dialog>
     );

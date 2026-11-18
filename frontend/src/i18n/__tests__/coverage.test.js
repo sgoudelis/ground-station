@@ -31,7 +31,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
-import { analyze, check, collectDynamicLabels, crossLanguageIssues, greekCaps, greekOrthographyIssues } from '../../../scripts/i18n.mjs';
+import { analyze, check, collectDynamicLabels, collectPlainLabelButtons, crossLanguageIssues, greekCaps, greekOrthographyIssues } from '../../../scripts/i18n.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const BASELINE = path.resolve(HERE, '..', 'coverage-baseline.json');
@@ -146,5 +146,17 @@ describe('cross-language contamination', () => {
     it('ships no Italian or Dutch value borrowed from the other language', () => {
         const issues = warnings.filter((line) => line.startsWith('lang-mismatch:'));
         expect(issues, issues.join('\n')).toEqual([]);
+    });
+});
+
+describe('capitalised chrome', () => {
+    it('routes translated button labels through CapsButton so Greek chrome stays consistent', () => {
+        // Greek disables the CSS uppercase transform (it would keep the tonos and paint invalid
+        // all-caps), so a plain <Button> shows the stored case and `ΑΚΥΡΩΣΗ` would sit next to
+        // `Απενεργοποίηση`. Label buttons therefore go through <CapsButton>, which caps in JS.
+        // Data-bearing buttons (row names, frequencies) and link-shaped `component=` buttons are
+        // exempt inside the scanner, so an empty list is the expected steady state.
+        const sites = collectPlainLabelButtons().map((site) => `${site.file}:${site.line}`);
+        expect(sites, sites.join('\n')).toEqual([]);
     });
 });

@@ -46,6 +46,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { useSocket } from '../../common/socket.jsx';
 import { toast } from '../../../utils/toast-with-timestamp.jsx';
 import { useTranslation } from 'react-i18next';
+import CapsButton from '../../common/capsbutton.jsx';
 
 const FULL_RESTORE_MAX_FILE_SIZE_BYTES = 1024 * 1024 * 1024;
 const FULL_RESTORE_MAX_FILE_SIZE_MB = FULL_RESTORE_MAX_FILE_SIZE_BYTES / (1024 * 1024);
@@ -361,7 +362,7 @@ const DatabaseBackupCard = () => {
                         </Typography>
 
                         <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                            <Button
+                            <CapsButton
                                 variant="contained"
                                 color="primary"
                                 startIcon={<Backup />}
@@ -369,8 +370,8 @@ const DatabaseBackupCard = () => {
                                 disabled={loading || fullBackup.isRunning}
                             >
                                 {t('database_backup_card.full_database_backup', { defaultValue: 'Full Database Backup' })}
-                            </Button>
-                            <Button
+                            </CapsButton>
+                            <CapsButton
                                 variant="contained"
                                 color="warning"
                                 startIcon={<Upload />}
@@ -378,7 +379,7 @@ const DatabaseBackupCard = () => {
                                 disabled={loading || fullBackup.isRunning}
                             >
                                 {t('database_backup_card.full_database_restore', { defaultValue: 'Full Database Restore' })}
-                            </Button>
+                            </CapsButton>
                         </Box>
                     </Box>
 
@@ -432,7 +433,7 @@ const DatabaseBackupCard = () => {
                                                     </Typography>
                                                 </TableCell>
                                                 <TableCell align="right">
-                                                    <Button
+                                                    <CapsButton
                                                         size="small"
                                                         startIcon={<Download />}
                                                         onClick={() => handleBackupTable(table.name)}
@@ -440,8 +441,8 @@ const DatabaseBackupCard = () => {
                                                         disabled={fullBackup.isRunning}
                                                     >
                                                         {t('database_backup_card.backup', { defaultValue: 'Backup' })}
-                                                    </Button>
-                                                    <Button
+                                                    </CapsButton>
+                                                    <CapsButton
                                                         size="small"
                                                         startIcon={<Upload />}
                                                         onClick={() => handleRestoreTable(table.name)}
@@ -449,7 +450,7 @@ const DatabaseBackupCard = () => {
                                                         disabled={fullBackup.isRunning}
                                                     >
                                                         {t('database_backup_card.restore', { defaultValue: 'Restore' })}
-                                                    </Button>
+                                                    </CapsButton>
                                                 </TableCell>
                                             </TableRow>
                                         ))}
@@ -500,17 +501,17 @@ const DatabaseBackupCard = () => {
                     </Box>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setRestoreDialog({ open: false, table: null })}>
+                    <CapsButton onClick={() => setRestoreDialog({ open: false, table: null })}>
                         {t('database_backup_card.cancel', { defaultValue: 'Cancel' })}
-                    </Button>
-                    <Button
+                    </CapsButton>
+                    <CapsButton
                         onClick={handleRestoreConfirm}
                         variant="contained"
                         color="warning"
                         disabled={!selectedFile}
                     >
                         {t('database_backup_card.restore', { defaultValue: 'Restore' })}
-                    </Button>
+                    </CapsButton>
                 </DialogActions>
             </Dialog>
 
@@ -565,9 +566,9 @@ const DatabaseBackupCard = () => {
                     </Box>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setFullRestoreDialog(false)} disabled={loading}>
+                    <CapsButton onClick={() => setFullRestoreDialog(false)} disabled={loading}>
                         {t('database_backup_card.cancel', { defaultValue: 'Cancel' })}
-                    </Button>
+                    </CapsButton>
                     <Button
                         onClick={handleFullRestoreConfirm}
                         variant="contained"

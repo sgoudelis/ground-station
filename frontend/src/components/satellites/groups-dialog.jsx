@@ -31,6 +31,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import {toRowSelectionModel, toSelectedIds} from '../../utils/datagrid-selection.js';
 import {useDispatch} from 'react-redux';
 import {useTranslation} from 'react-i18next';
+import CapsButton from '../common/capsbutton.jsx';
 import {AddOrEditSatelliteGroup, fetchSatelliteGroups} from './groups-slice.jsx';
 
 
@@ -345,7 +346,7 @@ export function AddEditDialog({formDialogOpen, handleRowsCallback, handleDialogO
                         gap: 2,
                     }}
                 >
-                    <Button
+                    <CapsButton
                         onClick={handleDialogClose}
                         variant="outlined"
                         sx={{
@@ -357,12 +358,12 @@ export function AddEditDialog({formDialogOpen, handleRowsCallback, handleDialogO
                         }}
                     >
                         {t('groups.cancel')}
-                    </Button>
-                    <Button type="submit" variant="contained" disabled={submitting || !canSubmit}>
+                    </CapsButton>
+                    <CapsButton type="submit" variant="contained" disabled={submitting || !canSubmit}>
                         {t(submitting
                             ? (formDialogValues.id ? 'groups.saving' : 'groups.adding')
                             : (formDialogValues.id ? 'groups.save' : 'groups.submit'))}
-                    </Button>
+                    </CapsButton>
                 </DialogActions>
             </form>
         </Dialog>

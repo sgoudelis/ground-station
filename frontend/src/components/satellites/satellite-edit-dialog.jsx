@@ -20,6 +20,7 @@ import Button from '@mui/material/Button';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { useTranslation } from 'react-i18next';
+import CapsButton from '../common/capsbutton.jsx';
 import { submitOrEditSatellite } from './satellite-slice.jsx';
 import { useSocket } from '../common/socket.jsx';
 import { useDelayedUnmount } from '../../hooks/useDelayedUnmount.js';
@@ -115,7 +116,7 @@ export const normalizeSatelliteFormValues = (satelliteData) => {
 };
 
 const SatelliteEditDialogContent = ({ open, onClose, satelliteData, onSaved }) => {
-    const { t } = useTranslation('satellites');
+    const { t, i18n } = useTranslation('satellites');
     const dispatch = useDispatch();
     const { socket } = useSocket();
 
@@ -340,8 +341,8 @@ const SatelliteEditDialogContent = ({ open, onClose, satelliteData, onSaved }) =
                     aria-label={t('satellite_edit_dialog.satellite_edit_tabs', { defaultValue: 'satellite edit tabs' })}
                     sx={{ mt: 1.5, borderBottom: (theme) => `1px solid ${theme.palette.divider}` }}
                 >
-                    <Tab label={tabCapsLabel(t('satellite_database.tab_general', { defaultValue: 'General' }))} />
-                    <Tab label={tabCapsLabel(t('satellite_database.tab_orbital', { defaultValue: 'Orbital' }))} />
+                    <Tab label={tabCapsLabel(t('satellite_database.tab_general', { defaultValue: 'General' }), i18n)} />
+                    <Tab label={tabCapsLabel(t('satellite_database.tab_orbital', { defaultValue: 'Orbital' }), i18n)} />
                 </Tabs>
                 <Stack spacing={2} sx={{ mt: 2.5 }}>
                     {submitError ? (
@@ -616,17 +617,17 @@ const SatelliteEditDialogContent = ({ open, onClose, satelliteData, onSaved }) =
                     gap: 2,
                 }}
             >
-                <Button onClick={handleClose} variant="outlined" disabled={isSubmitting}>
+                <CapsButton onClick={handleClose} variant="outlined" disabled={isSubmitting}>
                     {t('satellite_database.cancel')}
-                </Button>
-                <Button
+                </CapsButton>
+                <CapsButton
                     variant="contained"
                     onClick={handleSubmit}
                     color="success"
                     disabled={isSubmitDisabled || isSubmitting}
                 >
                     {formValues.id ? t('satellite_database.edit') : t('satellite_database.submit')}
-                </Button>
+                </CapsButton>
             </DialogActions>
         </Dialog>
     );

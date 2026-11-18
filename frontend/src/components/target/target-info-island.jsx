@@ -60,6 +60,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import CellTowerIcon from '@mui/icons-material/CellTower';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import Grid from "@mui/material/Grid";
+import CapsButton from '../common/capsbutton.jsx';
 import React from "react";
 import TransmittersDialog from "../satellites/transmitters-dialog.jsx";
 import SatelliteEditDialog from "../satellites/satellite-edit-dialog.jsx";
@@ -1058,19 +1059,19 @@ const TargetInfoIsland = () => {
                                                     </Tooltip>
                                                 )}
                                                 {citationPresentation.text && (
-                                                    <Button
+                                                    <CapsButton
                                                         size="small"
                                                         onClick={() => setCitationDialogOpen(true)}
                                                         sx={{
                                                             px: 0.5,
                                                             py: 0,
                                                             fontSize: '0.65rem',
-                                                            textTransform: 'none',
+
                                                             flexShrink: 0,
                                                         }}
                                                     >
                                                         {t('target_info_island.more', { defaultValue: 'More' })}
-                                                    </Button>
+                                                    </CapsButton>
                                                 )}
                                             </Box>
                                             {citationPresentation.text && (
@@ -1104,7 +1105,7 @@ const TargetInfoIsland = () => {
                 {/* View Details Button */}
                 {satelliteData && satelliteData['details'] && satelliteData['details']['norad_id'] && (
                     <Box sx={{ mt: 1.5, display: 'flex', alignItems: 'center', gap: 0.5, width: '100%' }}>
-                        <Button
+                        <CapsButton
                             variant="text"
                             size="small"
                             startIcon={<EditIcon sx={{ fontSize: 14 }} />}
@@ -1114,7 +1115,7 @@ const TargetInfoIsland = () => {
                                 flex: 1,
                                 minWidth: 0,
                                 fontSize: '0.65rem',
-                                textTransform: 'none',
+
                                 color: 'text.secondary',
                                 '&:hover': {
                                     color: 'primary.main',
@@ -1123,8 +1124,8 @@ const TargetInfoIsland = () => {
                             }}
                         >
                             {t('target_info_island.edit_details', { defaultValue: 'Edit Details' })}
-                        </Button>
-                        <Button
+                        </CapsButton>
+                        <CapsButton
                             variant="text"
                             size="small"
                             startIcon={<CellTowerIcon sx={{ fontSize: 14 }} />}
@@ -1134,7 +1135,7 @@ const TargetInfoIsland = () => {
                                 flex: 1,
                                 minWidth: 0,
                                 fontSize: '0.65rem',
-                                textTransform: 'none',
+
                                 color: 'text.secondary',
                                 '&:hover': {
                                     color: 'primary.main',
@@ -1143,8 +1144,8 @@ const TargetInfoIsland = () => {
                             }}
                         >
                             {t('target_info_island.edit_transmitters', { defaultValue: 'Edit Transmitters' })}
-                        </Button>
-                        <Button
+                        </CapsButton>
+                        <CapsButton
                             variant="text"
                             size="small"
                             startIcon={<InfoOutlinedIcon sx={{ fontSize: 14 }} />}
@@ -1153,7 +1154,7 @@ const TargetInfoIsland = () => {
                                 flex: 1,
                                 minWidth: 0,
                                 fontSize: '0.65rem',
-                                textTransform: 'none',
+
                                 color: 'text.secondary',
                                 '&:hover': {
                                     color: 'primary.main',
@@ -1162,7 +1163,7 @@ const TargetInfoIsland = () => {
                             }}
                         >
                             {t('target_info_island.view_full_details', { defaultValue: 'View Full Details' })}
-                        </Button>
+                        </CapsButton>
                     </Box>
                 )}
             </Box>
@@ -1486,7 +1487,7 @@ const TargetInfoIsland = () => {
                     </Typography>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setCitationDialogOpen(false)}>{t('target_info_island.close', { defaultValue: 'Close' })}</Button>
+                    <CapsButton onClick={() => setCitationDialogOpen(false)}>{t('target_info_island.close', { defaultValue: 'Close' })}</CapsButton>
                 </DialogActions>
             </Dialog>
             <TransmittersDialog

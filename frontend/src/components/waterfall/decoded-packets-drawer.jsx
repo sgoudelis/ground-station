@@ -20,7 +20,7 @@
 import React, { startTransition, useMemo, useRef, useState, useEffect, useCallback } from 'react';
 import { resolveDecodedAssetUrl } from '../../utils/decoded-assets.js';
 export { resolveDecodedAssetUrl } from '../../utils/decoded-assets.js';
-import { Box, Typography, Chip, Tooltip, Link, CircularProgress, useTheme, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Button, Alert } from '@mui/material';
+import {Box,Typography,Chip,Tooltip,Link,CircularProgress,useTheme,IconButton,Dialog,DialogTitle,DialogContent,DialogActions,Alert} from '@mui/material';
 import { DataGrid, gridClasses } from '@mui/x-data-grid';
 import { useSelector, useDispatch, useStore } from 'react-redux';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
@@ -46,6 +46,7 @@ import { toast } from 'react-toastify';
 import { useUserTimeSettings } from '../../hooks/useUserTimeSettings.jsx';
 import { formatTime } from '../../utils/date-time.js';
 import { useTranslation } from 'react-i18next';
+import CapsButton from '../common/capsbutton.jsx';
 import { SatelliteInfoDialog } from '../satellites/satellite-info-page.jsx';
 import { fetchSatellite } from '../satellites/satellite-slice.jsx';
 
@@ -1173,30 +1174,30 @@ const DecodedPacketsDrawer = React.memo(function DecodedPacketsDrawer({ embedded
                         gap: 1.5,
                     }}
                 >
-                    <Button
+                    <CapsButton
                         onClick={() => setDeleteDialogOpen(false)}
                         variant="outlined"
                         color="inherit"
                         sx={{
                             minWidth: 100,
-                            textTransform: 'none',
+
                             fontWeight: 500,
                         }}
                     >
                         {t('decoded_packets_drawer.cancel', { defaultValue: 'Cancel' })}
-                    </Button>
-                    <Button
+                    </CapsButton>
+                    <CapsButton
                         variant="contained"
                         onClick={confirmDeletePacket}
                         color="error"
                         sx={{
                             minWidth: 100,
-                            textTransform: 'none',
+
                             fontWeight: 600,
                         }}
                     >
                         {t('decoded_packets_drawer.delete', { defaultValue: 'Delete' })}
-                    </Button>
+                    </CapsButton>
                 </DialogActions>
             </Dialog>
         </Box>

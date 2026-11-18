@@ -1,16 +1,14 @@
 /** Copyright (c) 2026 Efstratios Goudelis. SPDX-License-Identifier: GPL-3.0-or-later */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import {
-    Accordion, AccordionDetails, AccordionSummary, Alert, Box, Button, Chip,
-    CircularProgress, Stack, Typography,
-} from '@mui/material';
+import {Accordion,AccordionDetails,AccordionSummary,Alert,Box,Chip,CircularProgress,Stack,Typography,} from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import SaveOutlinedIcon from '@mui/icons-material/SaveOutlined';
 import ScheduleOutlinedIcon from '@mui/icons-material/ScheduleOutlined';
 import CodeOutlinedIcon from '@mui/icons-material/CodeOutlined';
 import { useTranslation } from 'react-i18next';
+import CapsButton from '../common/capsbutton.jsx';
 import { useSocket } from '../common/socket.jsx';
 import {
     CensusDisclosure, CENSUS_NOTICE_VERSION, FeedbackChoices, FeedbackDelivery, FeedbackIntroduction,
@@ -94,7 +92,7 @@ export default function FeedbackForm() {
                             color={status.enabled ? 'success' : 'default'}
                             aria-live="polite"
                         />}
-                        <Button
+                        <CapsButton
                             size="small"
                             variant="outlined"
                             onClick={load}
@@ -102,7 +100,7 @@ export default function FeedbackForm() {
                             startIcon={busy ? <CircularProgress size={16} color="inherit" aria-label={t('feedback.loading')} /> : <RefreshIcon />}
                         >
                             {t('feedback.refresh')}
-                        </Button>
+                        </CapsButton>
                     </Stack>
                 )} />
                 {error && <Alert severity="error">{error}</Alert>}
@@ -120,7 +118,7 @@ export default function FeedbackForm() {
                             actions={(
                                 <Stack spacing={1.5}>
                                     {dirty && <Typography variant="body2" color="warning.main" role="status">{t('feedback.unsaved')}</Typography>}
-                                    <Button
+                                    <CapsButton
                                         fullWidth
                                         variant="contained"
                                         disableElevation
@@ -129,7 +127,7 @@ export default function FeedbackForm() {
                                         disabled={busy || !status || status.storage_error || (!dirty && !status.blocked && !status.needs_consent_review)}
                                     >
                                         {t('feedback.save')}
-                                    </Button>
+                                    </CapsButton>
                                 </Stack>
                             )}
                         />

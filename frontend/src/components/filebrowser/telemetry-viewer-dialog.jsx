@@ -39,6 +39,7 @@ import TelemetryValuesTab from './telemetry-values-tab';
 import APRSTab from './telemetry-aprs-tab.jsx';
 import RadiosondeTab from './telemetry-radiosonde-tab.jsx';
 import { useTranslation } from 'react-i18next';
+import CapsButton from '../common/capsbutton.jsx';
 
 function TabPanel({ children, value, index, ...other }) {
     return (
@@ -330,12 +331,12 @@ export default function TelemetryViewerDialog({ open, onClose, file, metadata, s
                 }}
             >
                 {onMetadataChange && file.url.endsWith('.bin') && (
-                    <Button startIcon={<RefreshIcon />} onClick={handleReparse}
+                    <CapsButton startIcon={<RefreshIcon />} onClick={handleReparse}
                         disabled={reparsing || activePreview?.loading || !socket?.connected} variant="outlined">
                         {reparsing
                             ? t('telemetry_viewer_dialog.reparsing', { defaultValue: 'Reparsing…' })
                             : t('telemetry_viewer_dialog.reparse', { defaultValue: 'Reparse telemetry' })}
-                    </Button>
+                    </CapsButton>
                 )}
                 <Button
                     startIcon={<DownloadIcon />}
@@ -355,7 +356,7 @@ export default function TelemetryViewerDialog({ open, onClose, file, metadata, s
                 >
                     {t('telemetry_viewer_dialog.download_metadata', { defaultValue: 'Download Metadata' })}
                 </Button>
-                <Button
+                <CapsButton
                     onClick={onClose}
                     variant="outlined"
                     sx={{
@@ -367,7 +368,7 @@ export default function TelemetryViewerDialog({ open, onClose, file, metadata, s
                     }}
                 >
                     {t('telemetry_viewer_dialog.close', { defaultValue: 'Close' })}
-                </Button>
+                </CapsButton>
             </DialogActions>
         </Dialog>
     );

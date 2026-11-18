@@ -18,28 +18,14 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-    Alert,
-    AlertTitle,
-    Box,
-    Button,
-    Chip,
-    CircularProgress,
-    FormControlLabel,
-    IconButton,
-    InputAdornment,
-    MenuItem,
-    Stack,
-    Switch,
-    TextField,
-    Typography,
-} from '@mui/material';
+import {Alert,AlertTitle,Box,Chip,CircularProgress,FormControlLabel,IconButton,InputAdornment,MenuItem,Stack,Switch,TextField,Typography,} from '@mui/material';
 import Grid from '@mui/material/Grid';
 import { alpha } from '@mui/material/styles';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
+import CapsButton from '../common/capsbutton.jsx';
 import { useSocket } from '../common/socket.jsx';
 import { toast } from '../../utils/toast-with-timestamp.jsx';
 import {
@@ -632,13 +618,13 @@ const AppSettingsForm = () => {
                             })}
                         </Typography>
                         {saveResult.restartRequired && (
-                            <Button
+                            <CapsButton
                                 size="small"
                                 sx={{ mt: 1 }}
                                 onClick={() => navigate('/admin/system/maintenance/system')}
                             >
                                 {t('app_settings.open_restart', { defaultValue: 'Open Maintenance' })}
-                            </Button>
+                            </CapsButton>
                         )}
                     </SettingsBanner>
                 )}
@@ -764,14 +750,14 @@ const AppSettingsForm = () => {
                             : '0 0 12px rgba(0, 0, 0, 0.16)',
                     }}
                 >
-                    <Button variant="outlined" onClick={handleReset} disabled={saving || loading || !isDirty}>
+                    <CapsButton variant="outlined" onClick={handleReset} disabled={saving || loading || !isDirty}>
                         {t('app_settings.reset', { defaultValue: 'Reset' })}
-                    </Button>
-                    <Button variant="contained" onClick={handleSave} disabled={saving || loading || !isDirty}>
+                    </CapsButton>
+                    <CapsButton variant="contained" onClick={handleSave} disabled={saving || loading || !isDirty}>
                         {saving
                             ? t('app_settings.saving', { defaultValue: 'Saving...' })
                             : t('app_settings.save', { defaultValue: 'Save Settings' })}
-                    </Button>
+                    </CapsButton>
                 </SettingsActionFooter>
             </Stack>
         </SettingsSurface>

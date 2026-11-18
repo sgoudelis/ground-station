@@ -44,6 +44,7 @@ import LoraProfileSelect from './lora-profile-select.jsx';
 import { DecoderConfigSuggestion } from '../scheduler/decoder-config-suggestion.jsx';
 import { selectRunningRigTransmitters } from '../target/transmitter-selectors.js';
 import { useTranslation } from 'react-i18next';
+import CapsButton from '../common/capsbutton.jsx';
 import {
     formatGnssFrequency,
     formatGnssRate,
@@ -490,15 +491,15 @@ const DecoderParamsDialog = ({
                 </Box>
             </DialogContent>
             <DialogActions>
-                <Button onClick={onClose}>{t('common:cancel', { defaultValue: 'Cancel' })}</Button>
+                <CapsButton onClick={onClose}>{t('common:cancel', { defaultValue: 'Cancel' })}</CapsButton>
                 {gnssAdvice?.band && canTuneReceiver && gnssAdvice.needsTune && (
                     <Button variant="outlined" onClick={handleApplyAndTune} disabled={hardwareBusy || !parametersValid}>
                         Apply and tune receiver
                     </Button>
                 )}
-                <Button variant="contained" onClick={() => commitDraft()} disabled={!hasChanges || !parametersValid || hardwareBusy || gnssAdvice?.bandCount === 0}>
+                <CapsButton variant="contained" onClick={() => commitDraft()} disabled={!hasChanges || !parametersValid || hardwareBusy || gnssAdvice?.bandCount === 0}>
                     {t('common:apply', { defaultValue: 'Apply' })}
-                </Button>
+                </CapsButton>
             </DialogActions>
         </Dialog>
     );

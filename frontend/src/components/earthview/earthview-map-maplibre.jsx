@@ -20,7 +20,7 @@
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import Map, {Marker, Popup, Source, Layer} from 'react-map-gl/maplibre';
 import { maplibregl } from '../common/maplibre.js';
-import {Box, useTheme, Typography, IconButton, Button} from '@mui/material';
+import {Box,useTheme,Typography,IconButton} from '@mui/material';
 import TrackChangesIcon from '@mui/icons-material/TrackChanges';
 import InfoIcon from '@mui/icons-material/Info';
 import {useDispatch, useSelector} from 'react-redux';
@@ -66,6 +66,7 @@ import {getSunMoonCoords} from '../common/sunmoon.jsx';
 import {useSocket} from '../common/socket.jsx';
 import {store} from '../common/store.jsx';
 import {CircularProgress, Backdrop} from '@mui/material';
+import CapsButton from '../common/capsbutton.jsx';
 import {pickTooltipDirection} from '../common/tooltip-orientation.js';
 
 const viewSatelliteLimit = 100;
@@ -1246,7 +1247,7 @@ const MapLibreEarthViewMapRenderer = ({
                                             )}
                                             {marker.isSelected && !marker.isTracked ? (
                                                 <Box sx={{display: 'flex', gap: 0.5, alignItems: 'center'}}>
-                                                    <Button
+                                                    <CapsButton
                                                         size="small"
                                                         variant="contained"
                                                         color="primary"
@@ -1266,7 +1267,7 @@ const MapLibreEarthViewMapRenderer = ({
                                                         }}
                                                     >
                                                         {t('map_target.set_target')}
-                                                    </Button>
+                                                    </CapsButton>
                                                     <IconButton
                                                         onClick={(event) => {
                                                             event.stopPropagation();

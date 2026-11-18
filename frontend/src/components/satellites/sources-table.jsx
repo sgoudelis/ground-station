@@ -47,6 +47,7 @@ import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import CancelOutlinedIcon from '@mui/icons-material/CancelOutlined';
 import { useTranslation } from 'react-i18next';
+import CapsButton from '../common/capsbutton.jsx';
 import {useDispatch, useSelector} from 'react-redux';
 import {
     clearSourceSession,
@@ -910,16 +911,16 @@ export default function SourcesTable({ showTabs = true }) {
                     }}
                 />
                 <Stack direction="row" spacing={2} sx={{marginTop: 2}}>
-                    <Button variant="contained" onClick={handleAddClick}>
+                    <CapsButton variant="contained" onClick={handleAddClick}>
                         {t('orbital_sources.add')}
-                    </Button>
-                    <Button variant="contained" disabled={selected.length !== 1} onClick={handleEditClick}>
+                    </CapsButton>
+                    <CapsButton variant="contained" disabled={selected.length !== 1} onClick={handleEditClick}>
                         {t('orbital_sources.edit')}
-                    </Button>
-                    <Button variant="contained" color="error" disabled={selected.length < 1}
+                    </CapsButton>
+                    <CapsButton variant="contained" color="error" disabled={selected.length < 1}
                             onClick={() => dispatch(setOpenDeleteConfirm(true))}>
                         {t('orbital_sources.delete')}
-                    </Button>
+                    </CapsButton>
                     <Dialog
                         open={Boolean(syncStatusSource)}
                         onClose={() => setSyncStatusSource(null)}
@@ -963,7 +964,7 @@ export default function SourcesTable({ showTabs = true }) {
                             })()}
                         </DialogContent>
                         <DialogActions>
-                            <Button onClick={() => setSyncStatusSource(null)}>{t('orbital_sources.close')}</Button>
+                            <CapsButton onClick={() => setSyncStatusSource(null)}>{t('orbital_sources.close')}</CapsButton>
                         </DialogActions>
                     </Dialog>
                     <Dialog
@@ -1092,30 +1093,30 @@ export default function SourcesTable({ showTabs = true }) {
                                 gap: 1.5,
                             }}
                         >
-                            <Button
+                            <CapsButton
                                 onClick={() => dispatch(setOpenDeleteConfirm(false))}
                                 variant="outlined"
                                 color="inherit"
                                 sx={{
                                     minWidth: 100,
-                                    textTransform: 'none',
+
                                     fontWeight: 500,
                                 }}
                             >
                                 {t('orbital_sources.cancel')}
-                            </Button>
-                            <Button
+                            </CapsButton>
+                            <CapsButton
                                 variant="contained"
                                 color="error"
                                 onClick={handleDeleteClick}
                                 sx={{
                                     minWidth: 100,
-                                    textTransform: 'none',
+
                                     fontWeight: 600,
                                 }}
                             >
                                 {t('orbital_sources.delete')}
-                            </Button>
+                            </CapsButton>
                         </DialogActions>
                     </Dialog>
                 </Stack>
@@ -1458,7 +1459,7 @@ export default function SourcesTable({ showTabs = true }) {
                             gap: 2,
                         }}
                     >
-                        <Button
+                        <CapsButton
                             onClick={handleClose}
                             variant="outlined"
                             sx={{
@@ -1470,12 +1471,12 @@ export default function SourcesTable({ showTabs = true }) {
                             }}
                         >
                             {t('orbital_sources.cancel')}
-                        </Button>
-                        <Button
+                        </CapsButton>
+                        <CapsButton
                             variant="contained"
                             onClick={handleSubmit}
                             disabled={hasValidationErrors}
-                                color="success">{formValues.id ? t('orbital_sources.edit') : t('orbital_sources.submit')}</Button>
+                                color="success">{formValues.id ? t('orbital_sources.edit') : t('orbital_sources.submit')}</CapsButton>
                     </DialogActions>
                 </Dialog>
             </Box>

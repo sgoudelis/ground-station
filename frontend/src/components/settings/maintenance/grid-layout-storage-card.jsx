@@ -18,23 +18,10 @@
  */
 
 import React, {useMemo, useState} from 'react';
-import {
-    Typography,
-    Divider,
-    Button,
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
-    Alert,
-    AlertTitle,
-    Backdrop,
-    Box,
-    CircularProgress,
-    Stack,
-} from '@mui/material';
+import {Typography,Divider,Dialog,DialogTitle,DialogContent,DialogActions,Alert,AlertTitle,Backdrop,Box,CircularProgress,Stack,} from '@mui/material';
 import Grid from '@mui/material/Grid';
 import {useTranslation} from 'react-i18next';
+import CapsButton from '../../common/capsbutton.jsx';
 import {gridLayoutStoreName as earthViewGridLayoutName} from "../../earthview/main-layout.jsx";
 import {gridLayoutStoreName as targetGridLayoutName} from "../../target/main-layout.jsx";
 import {gridLayoutStoreName as waterfallGridLayoutName} from "../../waterfall/main-layout.jsx";
@@ -179,7 +166,7 @@ const GridLayoutStorageCard = () => {
                     </Typography>
                 </Grid>
                 <Grid size={6}>
-                    <Button
+                    <CapsButton
                         variant="contained"
                         color="error"
                         onClick={() => setConfirmClearLayoutOpen(true)}
@@ -187,7 +174,7 @@ const GridLayoutStorageCard = () => {
                         size="small"
                     >
                         {t('maintenance.clear_layout_button')}
-                    </Button>
+                    </CapsButton>
                 </Grid>
 
                 <Grid size={16}>
@@ -207,7 +194,7 @@ const GridLayoutStorageCard = () => {
                         </Grid>
                         <Grid size={6}>
                             <Stack direction={{xs: 'column', xl: 'row'}} spacing={1}>
-                                <Button
+                                <CapsButton
                                     variant="outlined"
                                     color="warning"
                                     onClick={() => openSingleClearDialog(layout)}
@@ -215,8 +202,8 @@ const GridLayoutStorageCard = () => {
                                     size="small"
                                 >
                                     {t('grid_layout_storage_card.clear', { defaultValue: 'Clear' })}
-                                </Button>
-                                <Button
+                                </CapsButton>
+                                <CapsButton
                                     variant="outlined"
                                     color="info"
                                     startIcon={<ContentCopyIcon fontSize="small"/>}
@@ -225,7 +212,7 @@ const GridLayoutStorageCard = () => {
                                     size="small"
                                 >
                                     {t('grid_layout_storage_card.export_json', { defaultValue: 'Export JSON' })}
-                                </Button>
+                                </CapsButton>
                             </Stack>
                         </Grid>
                     </React.Fragment>
@@ -312,30 +299,30 @@ const GridLayoutStorageCard = () => {
                         gap: 1.5,
                     }}
                 >
-                    <Button
+                    <CapsButton
                         onClick={() => setConfirmClearLayoutOpen(false)}
                         variant="outlined"
                         color="inherit"
                         sx={{
                             minWidth: 100,
-                            textTransform: 'none',
+
                             fontWeight: 500,
                         }}
                     >
                         {t('grid_layout_storage_card.cancel', { defaultValue: 'Cancel' })}
-                    </Button>
-                    <Button
+                    </CapsButton>
+                    <CapsButton
                         onClick={clearLayoutLocalStorage}
                         color="error"
                         variant="contained"
                         sx={{
                             minWidth: 100,
-                            textTransform: 'none',
+
                             fontWeight: 600,
                         }}
                     >
                         {t('grid_layout_storage_card.clear_layouts', { defaultValue: 'Clear Layouts' })}
-                    </Button>
+                    </CapsButton>
                 </DialogActions>
             </Dialog>
 
@@ -381,30 +368,30 @@ const GridLayoutStorageCard = () => {
                         gap: 1.5,
                     }}
                 >
-                    <Button
+                    <CapsButton
                         onClick={closeSingleClearDialog}
                         variant="outlined"
                         color="inherit"
                         sx={{
                             minWidth: 100,
-                            textTransform: 'none',
+
                             fontWeight: 500,
                         }}
                     >
                         {t('grid_layout_storage_card.cancel', { defaultValue: 'Cancel' })}
-                    </Button>
-                    <Button
+                    </CapsButton>
+                    <CapsButton
                         onClick={confirmSingleClearLayout}
                         color="warning"
                         variant="contained"
                         sx={{
                             minWidth: 100,
-                            textTransform: 'none',
+
                             fontWeight: 600,
                         }}
                     >
                         {t('grid_layout_storage_card.clear', { defaultValue: 'Clear' })}
-                    </Button>
+                    </CapsButton>
                 </DialogActions>
             </Dialog>
 

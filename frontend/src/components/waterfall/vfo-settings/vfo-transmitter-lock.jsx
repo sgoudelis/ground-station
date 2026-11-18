@@ -6,25 +6,12 @@
 
 import React, { useState, useMemo } from 'react';
 import { useStore } from 'react-redux';
-import {
-    Box,
-    FormControl,
-    InputLabel,
-    Select,
-    MenuItem,
-    Alert,
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogContentText,
-    DialogActions,
-    Button,
-    ListSubheader
-} from '@mui/material';
+import {Box,FormControl,InputLabel,Select,MenuItem,Alert,Dialog,DialogTitle,DialogContent,DialogContentText,DialogActions,ListSubheader} from '@mui/material';
 import LockIcon from '@mui/icons-material/Lock';
 import LockOpenIcon from '@mui/icons-material/LockOpen';
 import TuneIcon from '@mui/icons-material/Tune';
 import { useTranslation } from 'react-i18next';
+import CapsButton from '../../common/capsbutton.jsx';
 import { getFrequencyBand } from '../../common/common.jsx';
 import { selectRunningRigTransmitters } from '../../target/transmitter-selectors.js';
 import TransmitterTargetLabel from '../transmitter-target-label.jsx';
@@ -286,12 +273,12 @@ export const TransmitterLockSelect = ({
                     </DialogContentText>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={handleRetuneCancel} color="inherit">
+                    <CapsButton onClick={handleRetuneCancel} color="inherit">
                         {t('vfo_transmitter_lock.cancel', { defaultValue: 'Cancel' })}
-                    </Button>
-                    <Button onClick={handleRetuneConfirm} variant="contained" color="primary" autoFocus>
+                    </CapsButton>
+                    <CapsButton onClick={handleRetuneConfirm} variant="contained" color="primary" autoFocus>
                         {t('vfo_transmitter_lock.retune_sdr_2', { defaultValue: 'Retune SDR' })}
-                    </Button>
+                    </CapsButton>
                 </DialogActions>
             </Dialog>
         </>

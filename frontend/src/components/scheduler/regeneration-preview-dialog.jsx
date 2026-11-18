@@ -18,6 +18,7 @@
  */
 
 import React, { useState } from 'react';
+import CapsButton from '../common/capsbutton.jsx';
 import {
     Dialog,
     DialogTitle,
@@ -479,15 +480,15 @@ const RegenerationPreviewDialog = ({ open, onClose, previewData, onConfirm, isGe
             </DialogContent>
 
             <DialogActions>
-                <Button onClick={onClose} variant="outlined" disabled={isGenerating}>
+                <CapsButton onClick={onClose} variant="outlined" disabled={isGenerating}>
                     {t('regeneration_preview_dialog.cancel', { defaultValue: 'Cancel' })}
-                </Button>
+                </CapsButton>
                 {hasConflicts && (
-                    <Button onClick={handleApplyStrategy} variant="outlined" color="info" disabled={isGenerating}>
+                    <CapsButton onClick={handleApplyStrategy} variant="outlined" color="info" disabled={isGenerating}>
                         {t('regeneration_preview_dialog.reset_to_strategy_defaults', { defaultValue: 'Reset to Strategy Defaults' })}
-                    </Button>
+                    </CapsButton>
                 )}
-                <Button
+                <CapsButton
                     onClick={handleConfirm}
                     variant="contained"
                     color="primary"
@@ -495,7 +496,7 @@ const RegenerationPreviewDialog = ({ open, onClose, previewData, onConfirm, isGe
                     startIcon={isGenerating ? <CircularProgress size={20} color="inherit" /> : null}
                 >
                     {t('regeneration_preview_dialog.confirm_generate', { defaultValue: 'Confirm & Generate' })}
-                </Button>
+                </CapsButton>
             </DialogActions>
         </Dialog>
     );

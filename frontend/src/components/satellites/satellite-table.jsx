@@ -81,6 +81,7 @@ import {
 } from "./satellite-slice.jsx";
 import {useSocket} from "../common/socket.jsx";
 import { useTranslation } from 'react-i18next';
+import CapsButton from '../common/capsbutton.jsx';
 import {toSelectedIds} from '../../utils/datagrid-selection.js';
 import SearchIcon from '@mui/icons-material/Search';
 import ClearIcon from '@mui/icons-material/Clear';
@@ -1048,7 +1049,7 @@ const SatelliteTable = React.memo(function SatelliteTable() {
                         </Select>
                     </FormControl>
 
-                    <Button
+                    <CapsButton
                         variant={activeFilterCount ? 'contained' : 'outlined'}
                         startIcon={<TuneRoundedIcon />}
                         endIcon={filtersExpanded ? <ExpandLessRoundedIcon /> : <ExpandMoreRoundedIcon />}
@@ -1056,7 +1057,7 @@ const SatelliteTable = React.memo(function SatelliteTable() {
                         sx={{whiteSpace: 'nowrap', minHeight: 40}}
                     >
                         {t('satellite_database.filters', {defaultValue: 'Filters'})}{activeFilterCount ? ` (${activeFilterCount})` : ''}
-                    </Button>
+                    </CapsButton>
                 </Box>
 
                 <Collapse in={filtersExpanded}>
@@ -1102,7 +1103,7 @@ const SatelliteTable = React.memo(function SatelliteTable() {
                             <FormControlLabel control={<Checkbox size="small" checked={catalogFilters.frequencyViolation} onChange={(event) => updateCatalogFilter('frequencyViolation', event.target.checked)} />} label={t('satellite_database.frequency_violation')} />
                             <FormControlLabel control={<Checkbox size="small" checked={catalogFilters.unconfirmed} onChange={(event) => updateCatalogFilter('unconfirmed', event.target.checked)} />} label={t('satellite_database.unconfirmed_transmitter')} />
                         </Stack>
-                        <Button size="small" onClick={clearAllFilters}>{t('satellite_database.clear_all')}</Button>
+                        <CapsButton size="small" onClick={clearAllFilters}>{t('satellite_database.clear_all')}</CapsButton>
                     </Stack>
                 </Collapse>
 
@@ -1135,7 +1136,7 @@ const SatelliteTable = React.memo(function SatelliteTable() {
                             </Stack>
                         )}
                         {activeFilterChips.map(filter => <Chip key={filter.key} label={filter.label} onDelete={filter.onDelete} size="small" sx={{flexShrink: 0}} />)}
-                        {activeFilterChips.length > 1 && <Button size="small" onClick={clearAllFilters} sx={{flexShrink: 0}}>{t('satellite_database.clear_all')}</Button>}
+                        {activeFilterChips.length > 1 && <CapsButton size="small" onClick={clearAllFilters} sx={{flexShrink: 0}}>{t('satellite_database.clear_all')}</CapsButton>}
                     </Stack>
                     <Typography variant="body2" color="text.secondary" sx={{whiteSpace: 'nowrap', flexShrink: 0}}>
                         {localSearchValue.trim().length === 1
@@ -1237,13 +1238,13 @@ const SatelliteTable = React.memo(function SatelliteTable() {
                     }}
                 />
                 <Stack direction="row" spacing={2} sx={{marginTop: 2}}>
-                    <Button variant="contained" onClick={handleAddClick} disabled={catalogLoading}>
+                    <CapsButton variant="contained" onClick={handleAddClick} disabled={catalogLoading}>
                         {t('satellite_database.add')}
-                    </Button>
-                    <Button variant="contained" disabled={selected.length !== 1} onClick={handleEditClick}>
+                    </CapsButton>
+                    <CapsButton variant="contained" disabled={selected.length !== 1} onClick={handleEditClick}>
                         {t('satellite_database.edit')}
-                    </Button>
-                    <Button
+                    </CapsButton>
+                    <CapsButton
                         variant="contained"
                         disabled={selected.length !== 1}
                         onClick={() => {
@@ -1259,15 +1260,15 @@ const SatelliteTable = React.memo(function SatelliteTable() {
                         }}
                     >
                         {t('satellite_database.edit_transmitters')}
-                    </Button>
-                    <Button
+                    </CapsButton>
+                    <CapsButton
                         variant="contained"
                         color="error"
                         disabled={selected.length < 1}
                         onClick={() => dispatch(setOpenDeleteConfirm(true))}
                     >
                         {t('satellite_database.delete')}
-                    </Button>
+                    </CapsButton>
                 </Stack>
             </div>
             <Alert severity="info" sx={{ mt: 2 }}>
@@ -1387,30 +1388,30 @@ const SatelliteTable = React.memo(function SatelliteTable() {
                         gap: 1.5,
                     }}
                 >
-                    <Button
+                    <CapsButton
                         onClick={() => dispatch(setOpenDeleteConfirm(false))}
                         variant="outlined"
                         color="inherit"
                         sx={{
                             minWidth: 100,
-                            textTransform: 'none',
+
                             fontWeight: 500,
                         }}
                     >
                         {t('satellite_database.cancel')}
-                    </Button>
-                    <Button
+                    </CapsButton>
+                    <CapsButton
                         variant="contained"
                         color="error"
                         onClick={handleDeleteClick}
                         sx={{
                             minWidth: 100,
-                            textTransform: 'none',
+
                             fontWeight: 600,
                         }}
                     >
                         {t('satellite_database.delete')}
-                    </Button>
+                    </CapsButton>
                 </DialogActions>
             </Dialog>
             <SatelliteEditDialog

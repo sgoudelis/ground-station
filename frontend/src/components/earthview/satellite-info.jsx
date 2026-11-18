@@ -13,15 +13,7 @@ import ArrowDownwardRoundedIcon from '@mui/icons-material/ArrowDownwardRounded';
 import MyLocationIcon from '@mui/icons-material/MyLocation';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import { getModulationDisplay } from '../../constants/modulations';
-import {
-    Box,
-    Typography,
-    Chip,
-    Button,
-    CircularProgress,
-    Divider,
-    IconButton
-} from '@mui/material';
+import {Box,Typography,Chip,CircularProgress,Divider,IconButton} from '@mui/material';
 import {
     betterDateTimes,
     getClassNamesBasedOnGridEditing,
@@ -39,6 +31,7 @@ import {useSocket} from "../common/socket.jsx";
 import SettingsInputAntennaIcon from "@mui/icons-material/SettingsInputAntenna";
 import PublicIcon from "@mui/icons-material/Public";
 import { useTranslation } from 'react-i18next';
+import CapsButton from '../common/capsbutton.jsx';
 import { SatelliteInfoDialog } from '../satellites/satellite-info-page.jsx';
 import SatelliteEditDialog from "../satellites/satellite-edit-dialog.jsx";
 import TransmittersDialog from "../satellites/transmitters-dialog.jsx";
@@ -500,7 +493,7 @@ const EarthViewSatelliteInfoCard = () => {
                         bgcolor: 'background.default'
                     }}>
                         <Box sx={{ display: 'flex', gap: 1 }}>
-                            <Button
+                            <CapsButton
                                 disabled={!selectedSatelliteId || isCurrentlyTargeted}
                                 variant="contained"
                                 color="primary"
@@ -513,7 +506,7 @@ const EarthViewSatelliteInfoCard = () => {
                                 }}
                             >
                                 {isCurrentlyTargeted ? t('satellite_info.currently_targeted') : t('satellite_info.set_as_target')}
-                            </Button>
+                            </CapsButton>
                             <IconButton
                                 disabled={!selectedSatelliteId}
                                 onClick={() => setDialogOpen(true)}

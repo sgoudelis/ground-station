@@ -19,9 +19,10 @@
 
 
 import {useCallback, useEffect, useRef, useState} from 'react';
-import {Alert, Box, Button, CircularProgress, Stack, Typography} from '@mui/material';
+import {Alert,Box,CircularProgress,Stack,Typography} from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import {useTranslation} from 'react-i18next';
+import CapsButton from '../common/capsbutton.jsx';
 
 export default function SoapyProbeControls({
     socket, values, discovering = false, onDiscover, onParameters, onProbingChange, selector,
@@ -98,17 +99,17 @@ export default function SoapyProbeControls({
                    sx={{flexWrap: selector ? 'nowrap' : 'wrap', gap: 1}}>
                 {selector && <Box sx={{flex: 1, minWidth: 0}}>{selector}</Box>}
                 {isRemote && onDiscover && (
-                    <Button size="small" variant="outlined" onClick={onDiscover}
+                    <CapsButton size="small" variant="outlined" onClick={onDiscover}
                             disabled={!socket || discovering || probing} startIcon={<RefreshIcon/>}>
                         {discovering ? t('sdr.discovering_servers') : t('sdr.discover_servers')}
-                    </Button>
+                    </CapsButton>
                 )}
-                <Button size={selector ? 'medium' : 'small'} variant="outlined" onClick={probe}
+                <CapsButton size={selector ? 'medium' : 'small'} variant="outlined" onClick={probe}
                         disabled={!socket || !ready || discovering || probing}
                         sx={{flexShrink: 0, whiteSpace: 'nowrap', alignSelf: selector ? 'stretch' : undefined}}
                         startIcon={probing ? <CircularProgress size={16}/> : <RefreshIcon/>}>
                     {probing ? t('sdr.probing_selected') : t('sdr.probe_selected')}
-                </Button>
+                </CapsButton>
             </Stack>
             {showHelp && <Typography variant="caption" color="text.secondary">{t('sdr.probe_help')}</Typography>}
             {error && <Alert severity="error">{error}</Alert>}

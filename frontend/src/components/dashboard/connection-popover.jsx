@@ -21,6 +21,7 @@ import {useCallback, useEffect, useState} from "react";
 import {setConnected, setConnecting, setConnectionError, setReConnectAttempt} from "./dashboard-slice.jsx";
 import Tooltip from "@mui/material/Tooltip";
 import { useTranslation } from 'react-i18next';
+import CapsButton from '../common/capsbutton.jsx';
 import { setDialogOpen } from '../performance/performance-slice.jsx';
 
 function ConnectionStatus() {
@@ -400,14 +401,14 @@ function ConnectionStatus() {
                     <Divider sx={{ my: 2 }} />
 
                     <Box>
-                        <Button
+                        <CapsButton
                             variant="outlined"
                             size="small"
                             fullWidth
                             startIcon={<AccountTreeIcon />}
                             onClick={handleOpenTopology}
                             sx={{
-                                textTransform: 'none',
+
                                 borderColor: 'border.main',
                                 '&:hover': {
                                     borderColor: 'primary.main',
@@ -415,7 +416,7 @@ function ConnectionStatus() {
                             }}
                         >
                             {t('connection_popover.open_system_topology', { defaultValue: 'Open System Topology' })}
-                        </Button>
+                        </CapsButton>
                     </Box>
                 </Box>
             </Popover>

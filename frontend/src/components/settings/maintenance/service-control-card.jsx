@@ -18,25 +18,12 @@
  */
 
 import React, { useEffect, useRef, useState } from 'react';
-import {
-    Alert,
-    AlertTitle,
-    Box,
-    Button,
-    Chip,
-    CircularProgress,
-    Dialog,
-    DialogActions,
-    DialogContent,
-    DialogTitle,
-    Divider,
-    Stack,
-    Typography,
-} from '@mui/material';
+import {Alert,AlertTitle,Box,Chip,CircularProgress,Dialog,DialogActions,DialogContent,DialogTitle,Divider,Stack,Typography,} from '@mui/material';
 import Grid from '@mui/material/Grid';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import { useSocket } from '../../common/socket.jsx';
 import { useTranslation } from 'react-i18next';
+import CapsButton from '../../common/capsbutton.jsx';
 
 const RESTART_COUNTDOWN_SECONDS = 15;
 
@@ -192,7 +179,7 @@ const ServiceControlCard = () => {
                 </Grid>
 
                 <Grid size={{ xs: 12, md: 4 }} sx={{ display: 'flex', alignItems: 'center' }}>
-                    <Button
+                    <CapsButton
                         variant="contained"
                         color="error"
                         startIcon={isRestarting ? <CircularProgress size={20} color="inherit" /> : <RestartAltIcon />}
@@ -201,7 +188,7 @@ const ServiceControlCard = () => {
                         fullWidth
                     >
                         {isRestarting ? t('maintenance.restarting') : t('maintenance.restart_service_button')}
-                    </Button>
+                    </CapsButton>
                 </Grid>
 
             </Grid>
@@ -261,13 +248,13 @@ const ServiceControlCard = () => {
                     </Stack>
                 </DialogContent>
                 <DialogActions>
-                    <Button
+                    <CapsButton
                         onClick={() => setConfirmRestartOpen(false)}
                         disabled={isRestarting}
                     >
                         {t('maintenance.cancel')}
-                    </Button>
-                    <Button
+                    </CapsButton>
+                    <CapsButton
                         onClick={handleServiceRestart}
                         color="error"
                         variant="contained"
@@ -275,7 +262,7 @@ const ServiceControlCard = () => {
                         startIcon={isRestarting ? <CircularProgress size={18} color="inherit" /> : null}
                     >
                         {t('maintenance.yes_restart')}
-                    </Button>
+                    </CapsButton>
                 </DialogActions>
             </Dialog>
         </>

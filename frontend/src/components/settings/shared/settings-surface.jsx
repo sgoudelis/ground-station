@@ -18,7 +18,8 @@
  */
 
 import React from 'react';
-import { Alert, Box, Button, Chip, Paper, Stack, Typography } from '@mui/material';
+import {Alert,Box,Chip,Paper,Stack,Typography} from '@mui/material';
+import CapsButton from '../../common/capsbutton.jsx';
 
 export const SettingsSurface = ({ children, sx, ...paperProps }) => {
     return (
@@ -56,9 +57,9 @@ export const SettingsSurfaceHeader = ({
     ) : null;
 
     const headerActions = actions ?? (onReload ? (
-        <Button size="small" onClick={onReload} disabled={reloadDisabled}>
+        <CapsButton size="small" onClick={onReload} disabled={reloadDisabled}>
             {reloadLabel}
-        </Button>
+        </CapsButton>
     ) : null);
 
     return (

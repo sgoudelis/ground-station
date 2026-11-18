@@ -1,7 +1,7 @@
 /** Copyright (c) 2026 Efstratios Goudelis — GPL-3.0-or-later */
 
 import React, {useEffect, useMemo, useRef, useState} from 'react';
-import {Alert, Box, Button, FormControlLabel, LinearProgress, MenuItem, Paper, Select, Switch, Tooltip, Typography} from '@mui/material';
+import {Alert,Box,FormControlLabel,LinearProgress,MenuItem,Paper,Select,Switch,Tooltip,Typography} from '@mui/material';
 import {useTheme} from '@mui/material/styles';
 import RouteIcon from '@mui/icons-material/Route';
 import FitScreenIcon from '@mui/icons-material/FitScreen';
@@ -10,6 +10,7 @@ import {maplibregl} from '../common/maplibre.js';
 import {MapRendererErrorBoundary, useMapLoadFailure} from '../common/map-load-error.jsx';
 import {MapStatusBar, SimpleTruncatedHtml} from '../common/common.jsx';
 import {useTranslation} from 'react-i18next';
+import CapsButton from '../common/capsbutton.jsx';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import {getMapLibreTileURL, getTileLayerById} from '../common/tile-layers.jsx';
 import {formatDateTime} from '../../utils/date-time.js';
@@ -157,9 +158,9 @@ export default function FlightPathMap({socket, folderId, run, runs = [], setting
         </Box>
         <Box sx={{px: {xs: 2, sm: 2.5}, py: 1, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1.5}}>
             <Typography variant="caption" fontWeight={600} sx={{flexGrow: 1}}>{t('flight_paths.title', 'Recorded path')}</Typography>
-            <Button size="small" startIcon={<FitScreenIcon />} disabled={!positions.length} onClick={() => setFitVersion(value => value + 1)}>
+            <CapsButton size="small" startIcon={<FitScreenIcon />} disabled={!positions.length} onClick={() => setFitVersion(value => value + 1)}>
                 {t('flight_paths.fit', 'Fit paths')}
-            </Button>
+            </CapsButton>
             <FormControlLabel sx={{m: 0}} label={<Typography variant="caption">{t('flight_paths.zoom', 'Zoom gestures')}</Typography>}
                 control={<Switch size="small" checked={zoomGestures} onChange={event => setZoomGestures(event.target.checked)}
                     slotProps={{input: {role: 'switch', 'aria-label': t('flight_paths.zoom', 'Zoom gestures')}}} />} />
@@ -172,9 +173,9 @@ export default function FlightPathMap({socket, folderId, run, runs = [], setting
             </Select>
         </Box>
         <Box sx={{height: 2}}>{loading && <LinearProgress aria-label={labels.loading} sx={{height: 2}} />}</Box>
-        {error && <Alert severity="error" sx={{m: 2}} action={<Button size="small" color="inherit" onClick={refresh}>{t('flight_paths.retry', 'Retry')}</Button>}>{error}</Alert>}
+        {error && <Alert severity="error" sx={{m: 2}} action={<CapsButton size="small" color="inherit" onClick={refresh}>{t('flight_paths.retry', 'Retry')}</CapsButton>}>{error}</Alert>}
         {failure && <Alert severity="error" sx={{m: 2}}
-            action={<Button size="small" color="inherit" onClick={retry}>{t('flight_paths.retry', 'Retry')}</Button>}>{failure.message}</Alert>}
+            action={<CapsButton size="small" color="inherit" onClick={retry}>{t('flight_paths.retry', 'Retry')}</CapsButton>}>{failure.message}</Alert>}
         {positions.length > 0 ? <>
             <Box role="region" aria-label={labels.map}
                 sx={{height: {xs: 260, sm: 320}, position: 'relative', isolation: 'isolate',

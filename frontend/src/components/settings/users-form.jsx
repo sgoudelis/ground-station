@@ -19,26 +19,7 @@
 
 import * as React from 'react';
 import Box from '@mui/material/Box';
-import {
-    Alert,
-    AlertTitle,
-    Button,
-    Dialog,
-    DialogActions,
-    DialogContent,
-    DialogTitle,
-    FormControl,
-    FormControlLabel,
-    FormHelperText,
-    InputLabel,
-    MenuItem,
-    Paper,
-    Select,
-    Stack,
-    Switch,
-    TextField,
-    Typography,
-} from '@mui/material';
+import {Alert,AlertTitle,Dialog,DialogActions,DialogContent,DialogTitle,FormControl,FormControlLabel,FormHelperText,InputLabel,MenuItem,Paper,Select,Stack,Switch,TextField,Typography,} from '@mui/material';
 import { DataGrid, gridClasses } from '@mui/x-data-grid';
 import { alpha } from '@mui/material/styles';
 import { useDispatch, useSelector } from 'react-redux';
@@ -54,6 +35,7 @@ import {
     updateUser,
 } from '../auth/auth-slice.jsx';
 import { useTranslation } from 'react-i18next';
+import CapsButton from '../common/capsbutton.jsx';
 
 const defaultCreateForm = {
     username: '',
@@ -341,17 +323,17 @@ function UsersForm() {
                         onClearSelection={() => setSelected([])}
                         primaryActions={
                             <>
-                                <Button variant="contained" onClick={handleOpenCreateDialog} disabled={isBusy}>
+                                <CapsButton variant="contained" onClick={handleOpenCreateDialog} disabled={isBusy}>
                                     {t('users_form.add', { defaultValue: 'Add' })}
-                                </Button>
-                                <Button
+                                </CapsButton>
+                                <CapsButton
                                     variant="contained"
                                     onClick={handleOpenEditDialog}
                                     disabled={selected.length !== 1 || isBusy}
                                 >
                                     {t('users_form.edit', { defaultValue: 'Edit' })}
-                                </Button>
-                                <Button
+                                </CapsButton>
+                                <CapsButton
                                     variant="contained"
                                     color="error"
                                     onClick={() => {
@@ -361,7 +343,7 @@ function UsersForm() {
                                     disabled={selected.length < 1 || isBusy}
                                 >
                                     {t('users_form.delete', { defaultValue: 'Delete' })}
-                                </Button>
+                                </CapsButton>
                             </>
                         }
                     />
@@ -492,7 +474,7 @@ function UsersForm() {
                         borderTop: (theme) => `1px solid ${theme.palette.divider}`,
                     }}
                 >
-                    <Button
+                    <CapsButton
                         variant="outlined"
                         onClick={() => {
                             setOpenUserDialog(false);
@@ -500,10 +482,10 @@ function UsersForm() {
                         }}
                     >
                         {t('users_form.cancel', { defaultValue: 'Cancel' })}
-                    </Button>
-                    <Button variant="contained" onClick={handleSaveUser} disabled={isBusy}>
+                    </CapsButton>
+                    <CapsButton variant="contained" onClick={handleSaveUser} disabled={isBusy}>
                         {t('users_form.save', { defaultValue: 'Save' })}
-                    </Button>
+                    </CapsButton>
                 </DialogActions>
             </Dialog>
 
@@ -646,23 +628,23 @@ function UsersForm() {
                         gap: 1.5,
                     }}
                 >
-                    <Button
+                    <CapsButton
                         onClick={() => setOpenDeleteConfirm(false)}
                         variant="outlined"
                         color="inherit"
-                        sx={{ minWidth: 100, textTransform: 'none', fontWeight: 500 }}
+                        sx={{ minWidth: 100,  fontWeight: 500 }}
                     >
                         {t('users_form.cancel', { defaultValue: 'Cancel' })}
-                    </Button>
-                    <Button
+                    </CapsButton>
+                    <CapsButton
                         variant="contained"
                         color="error"
                         onClick={handleDeleteUsers}
                         disabled={!canConfirmDelete || isBusy}
-                        sx={{ minWidth: 100, textTransform: 'none', fontWeight: 600 }}
+                        sx={{ minWidth: 100,  fontWeight: 600 }}
                     >
                         {t('users_form.delete', { defaultValue: 'Delete' })}
-                    </Button>
+                    </CapsButton>
                 </DialogActions>
             </Dialog>
         </Paper>

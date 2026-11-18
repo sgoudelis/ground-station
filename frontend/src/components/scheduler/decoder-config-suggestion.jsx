@@ -18,6 +18,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
+import CapsButton from '../common/capsbutton.jsx';
 import { Box, Typography, CircularProgress, Alert, Link, Button } from '@mui/material';
 import { Lightbulb as LightbulbIcon, Info as InfoIcon } from '@mui/icons-material';
 import { useSocket } from '../common/socket.jsx';
@@ -274,7 +275,7 @@ export const DecoderConfigSuggestion = ({ decoderType, satellite, transmitter, s
                     </Typography>
                 </Box>
                 {onApply && (
-                    <Button
+                    <CapsButton
                         size="small"
                         variant="contained"
                         onClick={handleApply}
@@ -297,7 +298,7 @@ export const DecoderConfigSuggestion = ({ decoderType, satellite, transmitter, s
                         }}
                     >
                         {applyLabel || t('decoder_config_suggestion.apply', { defaultValue: 'Apply' })}
-                    </Button>
+                    </CapsButton>
                 )}
             </Box>
 

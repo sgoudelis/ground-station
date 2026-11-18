@@ -17,6 +17,7 @@ import {
 } from '@mui/material';
 import { useDispatch } from 'react-redux';
 import { useTranslation } from 'react-i18next';
+import CapsButton from '../common/capsbutton.jsx';
 import {
     DEFAULT_PLANETARIUM_DISPLAY_OPTIONS,
     DEFAULT_SOLAR_SYSTEM_DISPLAY_OPTIONS,
@@ -490,7 +491,7 @@ function SolarSystemLayoutOptionsDialog({
                         }}
                     >
                         <Box sx={FOOTER_ACTION_ROW_SX}>
-                            <Button
+                            <CapsButton
                                 variant="outlined"
                                 onClick={() => {
                                     setDraftSolarSettings({ ...DEFAULT_SOLAR_SYSTEM_DISPLAY_OPTIONS });
@@ -500,15 +501,15 @@ function SolarSystemLayoutOptionsDialog({
                                 }}
                             >
                                 {t('layout_options.reset_defaults')}
-                            </Button>
+                            </CapsButton>
 
                             <Box sx={{ flex: 1, minWidth: 8 }} />
                             <Button variant="outlined" onClick={handleCancel}>
                                 {tCommon('close')}
                             </Button>
-                            <Button variant="contained" onClick={handleApply} disabled={!isDirty}>
+                            <CapsButton variant="contained" onClick={handleApply} disabled={!isDirty}>
                                 {t('layout_options.apply')}
-                            </Button>
+                            </CapsButton>
                         </Box>
                     </Box>
                 </Box>

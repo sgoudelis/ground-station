@@ -18,21 +18,10 @@
  */
 
 import React, { useEffect, useMemo, useState } from 'react';
-import {
-    Box,
-    Button,
-    Chip,
-    Dialog,
-    DialogContent,
-    DialogTitle,
-    FormControlLabel,
-    Paper,
-    Stack,
-    Switch,
-    Typography,
-} from '@mui/material';
+import {Box,Chip,Dialog,DialogContent,DialogTitle,FormControlLabel,Paper,Stack,Switch,Typography,} from '@mui/material';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
+import CapsButton from '../common/capsbutton.jsx';
 import {
     setOpenMapSettingsDialog,
     setTargetViewEnableDragging,
@@ -235,9 +224,9 @@ function TargetSkyViewSettingsDialog({ updateBackend }) {
                     }}
                 >
                     <Box sx={FOOTER_ACTION_ROW_SX}>
-                        <Button variant="outlined" onClick={handleReset}>
+                        <CapsButton variant="outlined" onClick={handleReset}>
                             {t('map_settings.reset_defaults', { defaultValue: 'Reset Defaults' })}
-                        </Button>
+                        </CapsButton>
                         <Box sx={{ flex: 1, minWidth: 8 }} />
                         {saveFeedbackLabel ? (
                             <Chip
@@ -246,16 +235,16 @@ function TargetSkyViewSettingsDialog({ updateBackend }) {
                                 label={saveFeedbackLabel}
                             />
                         ) : null}
-                        <Button variant="outlined" onClick={handleClose}>
+                        <CapsButton variant="outlined" onClick={handleClose}>
                             {t('close', { defaultValue: 'Close' })}
-                        </Button>
-                        <Button
+                        </CapsButton>
+                        <CapsButton
                             variant="contained"
                             onClick={handleApply}
                             disabled={!isDirty || saveState === 'saving'}
                         >
                             {t('map_settings.apply', { defaultValue: 'Apply' })}
-                        </Button>
+                        </CapsButton>
                     </Box>
                 </Box>
             </DialogContent>

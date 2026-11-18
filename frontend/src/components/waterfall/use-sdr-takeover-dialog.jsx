@@ -1,21 +1,8 @@
 import React from 'react';
-import {
-    Alert,
-    AlertTitle,
-    Box,
-    Button,
-    Chip,
-    Dialog,
-    DialogActions,
-    DialogContent,
-    DialogTitle,
-    List,
-    ListItem,
-    ListItemText,
-    Typography,
-} from '@mui/material';
+import {Alert,AlertTitle,Box,Chip,Dialog,DialogActions,DialogContent,DialogTitle,List,ListItem,ListItemText,Typography,} from '@mui/material';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import { useTranslation } from 'react-i18next';
+import CapsButton from '../common/capsbutton.jsx';
 
 const normalizeSessions = (sessions) => {
     if (!Array.isArray(sessions)) {
@@ -161,15 +148,15 @@ export const useSdrTakeoverDialog = ({ defaultSdrId } = {}) => {
                 )}
             </DialogContent>
             <DialogActions>
-                <Button onClick={() => closeWithResult('cancel')}>
+                <CapsButton onClick={() => closeWithResult('cancel')}>
                     {t('use_sdr_takeover_dialog.cancel', { defaultValue: 'Cancel' })}
-                </Button>
-                <Button onClick={() => closeWithResult('join')} variant="outlined">
+                </CapsButton>
+                <CapsButton onClick={() => closeWithResult('join')} variant="outlined">
                     {t('use_sdr_takeover_dialog.join', { defaultValue: 'Join' })}
-                </Button>
-                <Button disabled={continuous} onClick={() => closeWithResult('takeover')} color="warning" variant="contained">
+                </CapsButton>
+                <CapsButton disabled={continuous} onClick={() => closeWithResult('takeover')} color="warning" variant="contained">
                     {t('use_sdr_takeover_dialog.take_over', { defaultValue: 'Take Over' })}
-                </Button>
+                </CapsButton>
             </DialogActions>
         </Dialog>
     );

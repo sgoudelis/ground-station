@@ -6,6 +6,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import i18n from '../../../i18n/config.js';
 import { languageOptions } from '../../../i18n/languages.js';
+import { capsLabel } from '../../../utils/greekcaps.js';
 import { setupTheme } from '../../../theme.js';
 import preferencesReducer from '../../settings/preferences-slice.jsx';
 import SetupWizard from '../setup.jsx';
@@ -17,8 +18,11 @@ vi.mock('../../common/socket.jsx', () => ({ useSocket: () => ({ socket }) }));
 vi.mock('../../../utils/toast-with-timestamp.jsx', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 const tr = (key) => i18n.t(key, { ns: 'settings' });
-const next = () => fireEvent.click(screen.getByRole('button', { name: tr('location.next') }));
-const back = () => fireEvent.click(screen.getByRole('button', { name: tr('location.back') }));
+// Buttons render through <CapsButton>, which capitalises Greek labels in JS (src/utils/greekcaps.js),
+// so accessible names in el are tonos-free capitals while form labels stay as authored.
+const btn = (key) => capsLabel(tr(key), i18n);
+const next = () => fireEvent.click(screen.getByRole('button', { name: btn('location.next') }));
+const back = () => fireEvent.click(screen.getByRole('button', { name: btn('location.back') }));
 const field = (key) => screen.getByLabelText(new RegExp(`^${tr(key)}\\s*\\*?$`));
 
 const renderWizard = (props = {}) => {
@@ -78,7 +82,7 @@ describe('Setup wizard language selection', () => {
         expect(store.getState().preferences.userPreferences).toContainEqual(
             expect.objectContaining({ name: 'language', value: 'el_GR' })
         );
-        expect(screen.getByRole('button', { name: 'Επόμενο' })).toBeEnabled();
+        expect(screen.getByRole('button', { name: btn('location.next') })).toBeEnabled();
 
         next();
         fireEvent.change(field('setup.username'), { target: { value: 'wizard-admin' } });
@@ -104,6 +108,8 @@ describe('Setup wizard language selection', () => {
         next();
         expect(screen.getByRole('heading', { name: tr('feedback.title') })).toBeVisible();
         next();
+        // This one is an IconButton labelled by aria-label, not by capped child text, so it keeps
+        // the authored mixed case.
         fireEvent.click(screen.getByRole('button', { name: tr('location.save_location') }));
 
         await waitFor(() => expect(socket.emitWithAck).toHaveBeenCalledWith('api.call', {

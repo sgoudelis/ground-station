@@ -35,6 +35,7 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import {store} from './store.jsx';
 import { useTranslation } from 'react-i18next';
+import CapsButton from './capsbutton.jsx';
 
 const MAX_ERROR_TEXT_LENGTH = 8000;
 
@@ -131,12 +132,12 @@ const ErrorPage = () => {
                     </Typography>
 
                     <Stack direction={{xs: 'column', sm: 'row'}} spacing={1.5}>
-                        <Button variant="contained" startIcon={<HomeIcon/>} onClick={() => navigate('/')}>
+                        <CapsButton variant="contained" startIcon={<HomeIcon/>} onClick={() => navigate('/')}>
                             {t('error_page.back_to_home', { defaultValue: 'Back to Home' })}
-                        </Button>
-                        <Button variant="outlined" startIcon={<RefreshIcon/>} onClick={() => window.location.reload()}>
+                        </CapsButton>
+                        <CapsButton variant="outlined" startIcon={<RefreshIcon/>} onClick={() => window.location.reload()}>
                             {t('error_page.reload_page', { defaultValue: 'Reload Page' })}
-                        </Button>
+                        </CapsButton>
                     </Stack>
 
                     <Box>

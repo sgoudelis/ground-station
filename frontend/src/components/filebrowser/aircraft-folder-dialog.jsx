@@ -6,6 +6,7 @@ import DownloadIcon from '@mui/icons-material/Download';
 import HistoryIcon from '@mui/icons-material/History';
 import LastPageIcon from '@mui/icons-material/LastPage';
 import {useTranslation} from 'react-i18next';
+import CapsButton from '../common/capsbutton.jsx';
 import {callLibrary} from '../packetmap/use-packet-positions.js';
 import {useUserTimeSettings} from '../../hooks/useUserTimeSettings.jsx';
 import AircraftOverview, {AircraftOverviewHeader} from './aircraft-overview.jsx';
@@ -126,17 +127,17 @@ export default function AircraftFolderDialog({folder, socket, onClose, onDelete}
                     px: {xs: 2, sm: 2.5}, py: 1.5, borderTop: '1px solid', borderColor: 'divider'}}>
                     <Typography variant="caption" color="text.secondary">{t('adsb.select_update_hint', 'Select a row to view update details.')}</Typography>
                     <Box sx={{display: 'flex', gap: 1, flexWrap: 'wrap'}}>
-                        <Button size="small" variant="outlined" startIcon={<ChevronLeftIcon />} disabled={start === 0}
-                            onClick={() => {setSelected(null); setPageStart(Math.max(0, start - 50));}}>{t('adsb.older_updates', 'Older updates')}</Button>
-                        <Button size="small" variant="outlined" endIcon={<LastPageIcon />} onClick={showLatest}>{t('adsb.latest_updates', 'Latest updates')}</Button>
+                        <CapsButton size="small" variant="outlined" startIcon={<ChevronLeftIcon />} disabled={start === 0}
+                            onClick={() => {setSelected(null); setPageStart(Math.max(0, start - 50));}}>{t('adsb.older_updates', 'Older updates')}</CapsButton>
+                        <CapsButton size="small" variant="outlined" endIcon={<LastPageIcon />} onClick={showLatest}>{t('adsb.latest_updates', 'Latest updates')}</CapsButton>
                     </Box>
                 </Box>
             </Paper>
         </DialogContent>
         <DialogActions disableSpacing sx={fileDialogActionsSx}>
-            {onDelete && <Button color="error" variant="outlined" startIcon={<DeleteIcon />} onClick={() => onDelete(detail)}>{t('adsb.delete', 'Delete aircraft captures')}</Button>}
+            {onDelete && <CapsButton color="error" variant="outlined" startIcon={<DeleteIcon />} onClick={() => onDelete(detail)}>{t('adsb.delete', 'Delete aircraft captures')}</CapsButton>}
             <Button component="a" variant="outlined" href={detail.download_url} startIcon={<DownloadIcon />}>{t('adsb.download', 'Download captures')}</Button>
-            <Button variant="outlined" onClick={onClose}>{t('adsb.close', 'Close')}</Button>
+            <CapsButton variant="outlined" onClick={onClose}>{t('adsb.close', 'Close')}</CapsButton>
         </DialogActions>
     </Dialog>;
 }

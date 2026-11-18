@@ -47,6 +47,7 @@ import {
 import { alpha } from '@mui/material/styles';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
+import CapsButton from '../common/capsbutton.jsx';
 
 import { GroundStationLogoMeridian } from '../common/logo-dataurl.js';
 import { APP_NAME } from '../../config/branding.jsx';
@@ -426,9 +427,9 @@ export function LoginScreen() {
                     </Stack>
                 </DialogContent>
                 <DialogActions sx={{ px: 3, pb: 2 }}>
-                    <Button onClick={() => setShowTlsGuidance(false)} autoFocus>
+                    <CapsButton onClick={() => setShowTlsGuidance(false)} autoFocus>
                         {t('screens.close', { defaultValue: 'Close' })}
-                    </Button>
+                    </CapsButton>
                 </DialogActions>
             </Dialog>
         </Box>

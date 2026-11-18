@@ -17,16 +17,9 @@
  */
 
 import React, {useCallback, useEffect, useRef, useState} from 'react';
-import {
-    Alert,
-    Button,
-    Dialog,
-    DialogActions,
-    DialogContent,
-    DialogTitle,
-    Typography,
-} from '@mui/material';
+import {Alert,Dialog,DialogActions,DialogContent,DialogTitle,Typography,} from '@mui/material';
 import {useTranslation} from 'react-i18next';
+import CapsButton from './capsbutton.jsx';
 
 const DEFAULT_MAP_LOAD_TIMEOUT_MS = 20000;
 
@@ -172,13 +165,13 @@ export function MapLoadErrorDialog({failure, onClose, onRetry, onSwitchEngine, s
                 </Typography>
             </DialogContent>
             <DialogActions>
-                <Button onClick={onClose}>{t('close')}</Button>
+                <CapsButton onClick={onClose}>{t('close')}</CapsButton>
                 {onSwitchEngine ? (
-                    <Button onClick={onSwitchEngine}>{switchEngineLabel}</Button>
+                    <CapsButton onClick={onSwitchEngine}>{switchEngineLabel}</CapsButton>
                 ) : null}
-                <Button variant="contained" onClick={onRetry}>
+                <CapsButton variant="contained" onClick={onRetry}>
                     {t('map_load_error.retry', {defaultValue: 'Retry'})}
-                </Button>
+                </CapsButton>
             </DialogActions>
         </Dialog>
     );

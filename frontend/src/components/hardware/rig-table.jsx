@@ -54,6 +54,7 @@ import {
 import { toast } from '../../utils/toast-with-timestamp.jsx';
 import {DataGrid, gridClasses} from "@mui/x-data-grid";
 import Paper from "@mui/material/Paper";
+import CapsButton from '../common/capsbutton.jsx';
 import {toRowSelectionModel, toSelectedIds} from '../../utils/datagrid-selection.js';
 import SelectionActionBar from './selection-action-bar.jsx';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -267,7 +268,7 @@ export default function RigTable() {
                         onClearSelection={() => dispatch(setSelected([]))}
                         primaryActions={
                             <>
-                                <Button
+                                <CapsButton
                                     variant="contained"
                                     onClick={() => {
                                         dispatch(setFormValues(DEFAULT_RIG));
@@ -276,8 +277,8 @@ export default function RigTable() {
                                     disabled={loading}
                                 >
                                     {t('rig.add')}
-                                </Button>
-                                <Button
+                                </CapsButton>
+                                <CapsButton
                                     variant="contained"
                                     disabled={selected.length !== 1 || loading}
                                     onClick={() => {
@@ -289,8 +290,8 @@ export default function RigTable() {
                                     }}
                                 >
                                     {t('rig.edit')}
-                                </Button>
-                                <Button
+                                </CapsButton>
+                                <CapsButton
                                     variant="contained"
                                     disabled={selected.length < 1 || loading}
                                     color="error"
@@ -300,7 +301,7 @@ export default function RigTable() {
                                     }}
                                 >
                                     {t('rig.delete')}
-                                </Button>
+                                </CapsButton>
                             </>
                         }
                     />
@@ -438,19 +439,19 @@ export default function RigTable() {
                                 gap: 1.5,
                             }}
                         >
-                            <Button
+                            <CapsButton
                                 onClick={() => dispatch(setOpenDeleteConfirm(false))}
                                 variant="outlined"
                                 color="inherit"
                                 sx={{
                                     minWidth: 100,
-                                    textTransform: 'none',
+
                                     fontWeight: 500,
                                 }}
                             >
                                 {t('rig.cancel')}
-                            </Button>
-                            <Button
+                            </CapsButton>
+                            <CapsButton
                                 variant="contained"
                                 onClick={() => {
                                     handleDelete();
@@ -459,12 +460,12 @@ export default function RigTable() {
                                 disabled={!canConfirmDelete || loading}
                                 sx={{
                                     minWidth: 100,
-                                    textTransform: 'none',
+
                                     fontWeight: 600,
                                 }}
                             >
                                 {t('rig.delete')}
-                            </Button>
+                            </CapsButton>
                         </DialogActions>
                     </Dialog>
                 </Box>

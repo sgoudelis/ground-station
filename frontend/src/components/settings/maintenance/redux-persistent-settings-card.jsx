@@ -34,6 +34,7 @@ import {
 } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import {useTranslation} from 'react-i18next';
+import CapsButton from '../../common/capsbutton.jsx';
 
 const ReduxPersistentSettingsCard = () => {
     const {t} = useTranslation('settings');
@@ -153,7 +154,7 @@ const ReduxPersistentSettingsCard = () => {
                     </Typography>
                 </Grid>
                 <Grid size={6}>
-                    <Button
+                    <CapsButton
                         variant="contained"
                         color="error"
                         onClick={() => setConfirmClearReduxOpen(true)}
@@ -161,7 +162,7 @@ const ReduxPersistentSettingsCard = () => {
                         size="small"
                     >
                         {t('maintenance.clear_redux_button')}
-                    </Button>
+                    </CapsButton>
                 </Grid>
 
                 <Grid size={16}>
@@ -178,7 +179,7 @@ const ReduxPersistentSettingsCard = () => {
                     </Typography>
                 </Grid>
                 <Grid size={6}>
-                    <Button
+                    <CapsButton
                         variant="outlined"
                         color="warning"
                         onClick={() => openIndividualConfirmDialog(
@@ -191,7 +192,7 @@ const ReduxPersistentSettingsCard = () => {
                         size="small"
                     >
                         {t('redux_persistent_settings_card.clear', { defaultValue: 'Clear' })}
-                    </Button>
+                    </CapsButton>
                 </Grid>
 
                 <Grid size={10}>
@@ -201,7 +202,7 @@ const ReduxPersistentSettingsCard = () => {
                     </Typography>
                 </Grid>
                 <Grid size={6}>
-                    <Button
+                    <CapsButton
                         variant="outlined"
                         color="warning"
                         onClick={() => openIndividualConfirmDialog(
@@ -214,7 +215,7 @@ const ReduxPersistentSettingsCard = () => {
                         size="small"
                     >
                         {t('redux_persistent_settings_card.clear', { defaultValue: 'Clear' })}
-                    </Button>
+                    </CapsButton>
                 </Grid>
 
                 <Grid size={10}>
@@ -224,7 +225,7 @@ const ReduxPersistentSettingsCard = () => {
                     </Typography>
                 </Grid>
                 <Grid size={6}>
-                    <Button
+                    <CapsButton
                         variant="outlined"
                         color="warning"
                         onClick={() => openIndividualConfirmDialog(
@@ -237,7 +238,7 @@ const ReduxPersistentSettingsCard = () => {
                         size="small"
                     >
                         {t('redux_persistent_settings_card.clear', { defaultValue: 'Clear' })}
-                    </Button>
+                    </CapsButton>
                 </Grid>
 
                 <Grid size={10}>
@@ -247,7 +248,7 @@ const ReduxPersistentSettingsCard = () => {
                     </Typography>
                 </Grid>
                 <Grid size={6}>
-                    <Button
+                    <CapsButton
                         variant="outlined"
                         color="warning"
                         onClick={() => openIndividualConfirmDialog(
@@ -260,7 +261,7 @@ const ReduxPersistentSettingsCard = () => {
                         size="small"
                     >
                         {t('redux_persistent_settings_card.clear', { defaultValue: 'Clear' })}
-                    </Button>
+                    </CapsButton>
                 </Grid>
 
                 <Grid size={10}>
@@ -270,7 +271,7 @@ const ReduxPersistentSettingsCard = () => {
                     </Typography>
                 </Grid>
                 <Grid size={6}>
-                    <Button
+                    <CapsButton
                         variant="outlined"
                         color="warning"
                         onClick={() => openIndividualConfirmDialog(
@@ -283,7 +284,7 @@ const ReduxPersistentSettingsCard = () => {
                         size="small"
                     >
                         {t('redux_persistent_settings_card.clear', { defaultValue: 'Clear' })}
-                    </Button>
+                    </CapsButton>
                 </Grid>
 
                 <Grid size={10}>
@@ -293,7 +294,7 @@ const ReduxPersistentSettingsCard = () => {
                     </Typography>
                 </Grid>
                 <Grid size={6}>
-                    <Button
+                    <CapsButton
                         variant="outlined"
                         color="warning"
                         onClick={() => openIndividualConfirmDialog(
@@ -306,7 +307,7 @@ const ReduxPersistentSettingsCard = () => {
                         size="small"
                     >
                         {t('redux_persistent_settings_card.clear', { defaultValue: 'Clear' })}
-                    </Button>
+                    </CapsButton>
                 </Grid>
 
                 <Grid size={10}>
@@ -316,7 +317,7 @@ const ReduxPersistentSettingsCard = () => {
                     </Typography>
                 </Grid>
                 <Grid size={6}>
-                    <Button
+                    <CapsButton
                         variant="outlined"
                         color="warning"
                         onClick={() => openIndividualConfirmDialog(
@@ -329,7 +330,7 @@ const ReduxPersistentSettingsCard = () => {
                         size="small"
                     >
                         {t('redux_persistent_settings_card.clear', { defaultValue: 'Clear' })}
-                    </Button>
+                    </CapsButton>
                 </Grid>
 
                 <Grid size={10}>
@@ -339,7 +340,7 @@ const ReduxPersistentSettingsCard = () => {
                     </Typography>
                 </Grid>
                 <Grid size={6}>
-                    <Button
+                    <CapsButton
                         variant="outlined"
                         color="warning"
                         onClick={() => openIndividualConfirmDialog(
@@ -352,7 +353,7 @@ const ReduxPersistentSettingsCard = () => {
                         size="small"
                     >
                         {t('redux_persistent_settings_card.clear', { defaultValue: 'Clear' })}
-                    </Button>
+                    </CapsButton>
                 </Grid>
             </Grid>
 
@@ -453,30 +454,30 @@ const ReduxPersistentSettingsCard = () => {
                         gap: 1.5,
                     }}
                 >
-                    <Button
+                    <CapsButton
                         onClick={() => setConfirmClearReduxOpen(false)}
                         variant="outlined"
                         color="inherit"
                         sx={{
                             minWidth: 100,
-                            textTransform: 'none',
+
                             fontWeight: 500,
                         }}
                     >
                         {t('redux_persistent_settings_card.cancel', { defaultValue: 'Cancel' })}
-                    </Button>
-                    <Button
+                    </CapsButton>
+                    <CapsButton
                         onClick={clearReduxPersistentState}
                         color="error"
                         variant="contained"
                         sx={{
                             minWidth: 100,
-                            textTransform: 'none',
+
                             fontWeight: 600,
                         }}
                     >
                         {t('redux_persistent_settings_card.clear_all_settings', { defaultValue: 'Clear All Settings' })}
-                    </Button>
+                    </CapsButton>
                 </DialogActions>
             </Dialog>
 
@@ -546,18 +547,18 @@ const ReduxPersistentSettingsCard = () => {
                         gap: 1.5,
                     }}
                 >
-                    <Button
+                    <CapsButton
                         onClick={() => setConfirmIndividualAction(null)}
                         variant="outlined"
                         color="inherit"
                         sx={{
                             minWidth: 100,
-                            textTransform: 'none',
+
                             fontWeight: 500,
                         }}
                     >
                         {t('redux_persistent_settings_card.cancel', { defaultValue: 'Cancel' })}
-                    </Button>
+                    </CapsButton>
                     <Button
                         onClick={handleConfirmIndividualAction}
                         color="error"

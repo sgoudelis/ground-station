@@ -78,6 +78,7 @@ import { addStreamingVFO, removeStreamingVFO } from "../waterfall/vfo-marker/vfo
 import WakeLockStatus from "./wake-lock-icon.jsx";
 import ConnectionStatus from "./connection-popover.jsx";
 import Tooltip from "@mui/material/Tooltip";
+import CapsButton from '../common/capsbutton.jsx';
 import { AudioProvider, useAudio } from "./audio-provider.jsx";
 import HardwareSettingsPopover from "./hardware-popover.jsx";
 import LocationWarningPopover from "./location-popover.jsx";
@@ -1615,12 +1616,12 @@ export default function Layout() {
                     />
                 </DialogContent>
                 <DialogActions sx={{ px: 3, pb: 2 }}>
-                    <Button onClick={handleLogoutDialogClose} color="inherit">
+                    <CapsButton onClick={handleLogoutDialogClose} color="inherit">
                         {t('common.cancel', { defaultValue: 'Cancel' })}
-                    </Button>
-                    <Button onClick={handleLogoutDialogConfirm} color="error" variant="contained" autoFocus>
+                    </CapsButton>
+                    <CapsButton onClick={handleLogoutDialogConfirm} color="error" variant="contained" autoFocus>
                         {t('auth.logout', { defaultValue: 'Logout' })}
-                    </Button>
+                    </CapsButton>
                 </DialogActions>
             </Dialog>
 

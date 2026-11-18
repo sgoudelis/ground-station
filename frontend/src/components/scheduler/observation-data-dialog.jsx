@@ -18,6 +18,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
+import CapsButton from '../common/capsbutton.jsx';
 import {
     Dialog,
     DialogTitle,
@@ -528,7 +529,7 @@ const ObservationDataDialog = ({ open, onClose, observation }) => {
                     gap: 2,
                 }}
             >
-                <Button
+                <CapsButton
                     onClick={onClose}
                     variant="outlined"
                     sx={{
@@ -540,7 +541,7 @@ const ObservationDataDialog = ({ open, onClose, observation }) => {
                     }}
                 >
                     {t('observation_data_dialog.close', { defaultValue: 'Close' })}
-                </Button>
+                </CapsButton>
             </DialogActions>
 
             {/* File Detail Dialogs */}
@@ -643,13 +644,13 @@ const ObservationDataDialog = ({ open, onClose, observation }) => {
                             gap: 2,
                         }}
                     >
-                        <Button
+                        <CapsButton
                             onClick={() => window.open(selectedFile.url, '_blank')}
                             variant="contained"
                         >
                             {t('observation_data_dialog.download', { defaultValue: 'Download' })}
-                        </Button>
-                        <Button
+                        </CapsButton>
+                        <CapsButton
                             onClick={() => setFileDetailsOpen(false)}
                             variant="outlined"
                             sx={{
@@ -661,7 +662,7 @@ const ObservationDataDialog = ({ open, onClose, observation }) => {
                             }}
                         >
                             {t('observation_data_dialog.close', { defaultValue: 'Close' })}
-                        </Button>
+                        </CapsButton>
                     </DialogActions>
                 </Dialog>
             )}

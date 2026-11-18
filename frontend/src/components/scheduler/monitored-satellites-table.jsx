@@ -18,6 +18,7 @@
  */
 
 import React, { useEffect, useMemo, useState } from 'react';
+import CapsButton from '../common/capsbutton.jsx';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { DataGrid } from '@mui/x-data-grid';
@@ -462,7 +463,7 @@ const MonitoredSatellitesTable = () => {
 
             {/* Actions below table */}
             <Stack direction="row" spacing={1} sx={{ marginTop: '15px', flexShrink: 0, flexWrap: 'wrap', width: '100%' }}>
-                <Button
+                <CapsButton
                     variant="contained"
                     onClick={handleAdd}
                     sx={{
@@ -475,8 +476,8 @@ const MonitoredSatellitesTable = () => {
                         <AddIcon sx={{ mr: 1 }} />
                         {t('add')}
                     </Box>
-                </Button>
-                <Button
+                </CapsButton>
+                <CapsButton
                     variant="contained"
                     onClick={() => {
                         if (selectedIds.length === 1) {
@@ -495,8 +496,8 @@ const MonitoredSatellitesTable = () => {
                         <EditIcon sx={{ mr: 1 }} />
                         {t('edit')}
                     </Box>
-                </Button>
-                <Button
+                </CapsButton>
+                <CapsButton
                     variant="contained"
                     color="success"
                     onClick={handleBulkEnable}
@@ -511,8 +512,8 @@ const MonitoredSatellitesTable = () => {
                         <EnableIcon sx={{ mr: 1 }} />
                         {t('scheduler_tables.shared.enable')}
                     </Box>
-                </Button>
-                <Button
+                </CapsButton>
+                <CapsButton
                     variant="contained"
                     color="secondary"
                     onClick={handleBulkDisable}
@@ -527,7 +528,7 @@ const MonitoredSatellitesTable = () => {
                         <DisableIcon sx={{ mr: 1 }} />
                         {t('scheduler_tables.shared.disable')}
                     </Box>
-                </Button>
+                </CapsButton>
                 <Tooltip
                     title={
                         selectedIds.length === 1
@@ -537,7 +538,7 @@ const MonitoredSatellitesTable = () => {
                     arrow
                 >
                     <span>
-                        <Button
+                        <CapsButton
                             variant="contained"
                             color="warning"
                             onClick={handleRegenerateSelectedClick}
@@ -552,10 +553,10 @@ const MonitoredSatellitesTable = () => {
                                 <RefreshIcon sx={{ mr: 1 }} />
                                 {isLoadingPreview ? t('scheduler_tables.monitored.loading_preview') : t('scheduler_tables.monitored.regenerate')}
                             </Box>
-                        </Button>
+                        </CapsButton>
                     </span>
                 </Tooltip>
-                <Button
+                <CapsButton
                     variant="contained"
                     color="error"
                     onClick={() => setOpenDeleteConfirm(true)}
@@ -570,7 +571,7 @@ const MonitoredSatellitesTable = () => {
                         <DeleteIcon sx={{ mr: 1 }} />
                         {t('delete')}
                     </Box>
-                </Button>
+                </CapsButton>
                 <Box sx={{ flexGrow: 1 }} />
                 <Box sx={{ display: 'flex' }}>
                     <Tooltip
@@ -578,7 +579,7 @@ const MonitoredSatellitesTable = () => {
                         arrow
                     >
                         <span>
-                            <Button
+                            <CapsButton
                                 variant="contained"
                                 color="warning"
                                 onClick={handleRegenerateAllEnabledClick}
@@ -593,7 +594,7 @@ const MonitoredSatellitesTable = () => {
                                     <RefreshIcon sx={{ mr: 1 }} />
                                     {t('scheduler_tables.monitored.regenerate_all_enabled')}
                                 </Box>
-                            </Button>
+                            </CapsButton>
                         </span>
                     </Tooltip>
                 </Box>
@@ -720,7 +721,7 @@ const MonitoredSatellitesTable = () => {
                         gap: 1.5,
                     }}
                 >
-                    <Button
+                    <CapsButton
                         onClick={() => {
                             setOpenDeleteConfirm(false);
                             setDeleteObservations(false);
@@ -729,24 +730,22 @@ const MonitoredSatellitesTable = () => {
                         color="inherit"
                         sx={{
                             minWidth: 100,
-                            textTransform: 'none',
                             fontWeight: 500,
                         }}
                     >
                         {t('cancel')}
-                    </Button>
-                    <Button
+                    </CapsButton>
+                    <CapsButton
                         variant="contained"
                         onClick={handleDelete}
                         color="error"
                         sx={{
                             minWidth: 100,
-                            textTransform: 'none',
                             fontWeight: 600,
                         }}
                     >
                         {t('delete')}
-                    </Button>
+                    </CapsButton>
                 </DialogActions>
             </Dialog>
 
@@ -785,9 +784,9 @@ const MonitoredSatellitesTable = () => {
                     </Typography>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setOpenNoEnabledDialog(false)} variant="contained">
+                    <CapsButton onClick={() => setOpenNoEnabledDialog(false)} variant="contained">
                         {t('scheduler_tables.shared.ok')}
-                    </Button>
+                    </CapsButton>
                 </DialogActions>
             </Dialog>
         </Paper>

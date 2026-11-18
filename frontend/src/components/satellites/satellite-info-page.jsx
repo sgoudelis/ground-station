@@ -54,6 +54,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import SettingsInputAntennaIcon from '@mui/icons-material/SettingsInputAntenna';
 import { toast } from '../../utils/toast-with-timestamp.jsx';
 import { useTranslation } from 'react-i18next';
+import CapsButton from '../common/capsbutton.jsx';
 import { formatAlternativeSatelliteNames } from '../common/satellite-names.js';
 import { formatDateTime } from '../../utils/date-time.js';
 import { useSatelliteLiveOrbit } from '../../hooks/liveorbit.js';
@@ -304,13 +305,13 @@ const SatelliteInfoContent = ({
             {/* Delete button - render in slot if provided, otherwise show here */}
             {showDeleteButton && !deleteButtonSlot && (
                 <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
-                    <Button
+                    <CapsButton
                         variant="contained"
                         color="error"
                         onClick={() => setDeleteSatelliteConfirmOpen(true)}
                     >
                         {t('satellite_info.delete_satellite')}
-                    </Button>
+                    </CapsButton>
                 </Box>
             )}
 
@@ -426,19 +427,19 @@ const SatelliteInfoContent = ({
                         gap: 1.5,
                     }}
                 >
-                    <Button
+                    <CapsButton
                         onClick={() => setDeleteSatelliteConfirmOpen(false)}
                         variant="outlined"
                         color="inherit"
                         sx={{
                             minWidth: 100,
-                            textTransform: 'none',
+
                             fontWeight: 500,
                         }}
                     >
                         {t('satellite_info.transmitters.cancel')}
-                    </Button>
-                    <Button
+                    </CapsButton>
+                    <CapsButton
                         variant="contained"
                         color="error"
                         onClick={async () => {
@@ -461,12 +462,12 @@ const SatelliteInfoContent = ({
                         }}
                         sx={{
                             minWidth: 100,
-                            textTransform: 'none',
+
                             fontWeight: 600,
                         }}
                     >
                         {t('satellite_info.transmitters.delete')}
-                    </Button>
+                    </CapsButton>
                 </DialogActions>
             </Dialog>
 
@@ -483,7 +484,7 @@ const SatelliteInfoContent = ({
                     useFlexGap
                     sx={{ mb: 2, alignItems: { xs: 'stretch', sm: 'center' } }}
                 >
-                    <Button
+                    <CapsButton
                         variant="contained"
                         color="primary"
                         startIcon={<SatelliteAltIcon />}
@@ -494,23 +495,23 @@ const SatelliteInfoContent = ({
                         {isCurrentlyTargeted
                             ? t('earthview:satellite_info.currently_targeted')
                             : t('earthview:satellite_info.set_as_target')}
-                    </Button>
-                    <Button
+                    </CapsButton>
+                    <CapsButton
                         variant="outlined"
                         startIcon={<EditIcon />}
                         onClick={onEditSatellite}
                         sx={{ width: { xs: '100%', sm: 'auto' } }}
                     >
                         {t('edit_satellite')}
-                    </Button>
-                    <Button
+                    </CapsButton>
+                    <CapsButton
                         variant="outlined"
                         startIcon={<SettingsInputAntennaIcon />}
                         onClick={onManageTransmitters}
                         sx={{ width: { xs: '100%', sm: 'auto' } }}
                     >
                         {t('satellite_info.manage_transmitters')}
-                    </Button>
+                    </CapsButton>
                 </Stack>
             )}
 
@@ -915,13 +916,13 @@ const SatelliteInfoPage = () => {
                 <Typography variant="body1" sx={{ mt: 2 }}>
                     {t('satellite_info.not_found_message', { noradId })}
                 </Typography>
-                <Button
+                <CapsButton
                     variant="contained"
                     onClick={() => navigate('/admin/satellites/catalog')}
                     sx={{ mt: 2 }}
                 >
                     {t('satellite_info.go_to_list')}
-                </Button>
+                </CapsButton>
             </Box>
         );
     }
@@ -966,13 +967,13 @@ const SatelliteInfoPage = () => {
                                 {t('satellite_info.title')}
                             </Typography>
                         </Box>
-                        <Button
+                        <CapsButton
                             variant="contained"
                             color="error"
                             onClick={onDeleteClick}
                         >
                             {t('satellite_info.delete_satellite')}
-                        </Button>
+                        </CapsButton>
                     </Box>
                 )}
             />

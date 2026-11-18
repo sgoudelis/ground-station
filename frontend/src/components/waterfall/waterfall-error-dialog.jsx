@@ -1,7 +1,8 @@
 import React from 'react';
-import { Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Typography } from '@mui/material';
+import {Alert,Box,Dialog,DialogActions,DialogContent,DialogTitle,Typography} from '@mui/material';
 import ErrorIcon from '@mui/icons-material/Error';
 import { useTranslation } from 'react-i18next';
+import CapsButton from '../common/capsbutton.jsx';
 
 const WaterfallErrorDialog = ({ open, message, onClose }) => {
     const { t } = useTranslation('waterfall');
@@ -71,9 +72,9 @@ const WaterfallErrorDialog = ({ open, message, onClose }) => {
                 )}
             </DialogContent>
             <DialogActions sx={{ px: 3, py: 1.5 }}>
-                <Button onClick={onClose} variant="contained" color="error" autoFocus>
+                <CapsButton onClick={onClose} variant="contained" color="error" autoFocus>
                     {t('error_dialog.close')}
-                </Button>
+                </CapsButton>
             </DialogActions>
         </Dialog>
     );

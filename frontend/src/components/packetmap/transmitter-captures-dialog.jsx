@@ -1,8 +1,9 @@
 /** Copyright (c) 2026 Efstratios Goudelis — GPL-3.0-or-later */
 
 import React, {lazy, Suspense, useEffect, useState} from 'react';
-import {Alert, Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle} from '@mui/material';
+import {Alert,CircularProgress,Dialog,DialogActions,DialogContent,DialogTitle} from '@mui/material';
 import {useTranslation} from 'react-i18next';
+import CapsButton from '../common/capsbutton.jsx';
 import {callLibrary} from './use-packet-positions.js';
 import {captureFile, captureItemId} from './transmitter-actions.js';
 
@@ -77,7 +78,7 @@ export default function TransmitterCapturesDialog({transmitter, socket, onClose}
         <DialogTitle>{label('captures', 'Open captures')}</DialogTitle>
         <DialogContent>{error ? <Alert severity="info">{error}</Alert> : <CircularProgress size={24}
             aria-label={label('loading_captures', 'Loading captures…')} />}</DialogContent>
-        <DialogActions><Button onClick={folder ? closePacket : onClose}>{label('close', 'Close')}</Button></DialogActions>
+        <DialogActions><CapsButton onClick={folder ? closePacket : onClose}>{label('close', 'Close')}</CapsButton></DialogActions>
     </Dialog>;
     return <Suspense fallback={pending}>
         {FolderDialog && <FolderDialog folder={folder} socket={socket} onClose={onClose} onOpenPacket={setPacketFile} />}

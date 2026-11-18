@@ -28,6 +28,7 @@ import 'react-json-view-lite/dist/index.css';
 import { useUserTimeSettings } from '../../../hooks/useUserTimeSettings.jsx';
 import { formatTime } from '../../../utils/date-time.js';
 import { useTranslation } from 'react-i18next';
+import CapsButton from '../../common/capsbutton.jsx';
 
 const LIMIT_OPTIONS = [200, 500, 1000];
 const HARD_CAP = 5000;
@@ -252,9 +253,9 @@ const EventLogConsoleCard = () => {
                     <Button variant="contained" color={isPlaying ? 'secondary' : 'primary'} startIcon={isPlaying ? <StopIcon/> : <PlayArrowIcon/>} onClick={onTogglePlay}>
                         {isPlaying ? 'Stop' : 'listen'}
                     </Button>
-                    <Button variant="outlined" startIcon={<ClearAllIcon/>} onClick={onClear}>
+                    <CapsButton variant="outlined" startIcon={<ClearAllIcon/>} onClick={onClear}>
                         {t('event_log_console_card.clear', { defaultValue: 'Clear' })}
-                    </Button>
+                    </CapsButton>
                 </Stack>
 
                 <FormControlLabel control={<Checkbox checked={includeOutgoing} onChange={(e) => setIncludeOutgoing(e.target.checked)} />} label={t('event_log_console_card.include_outgoing', { defaultValue: 'Include outgoing' })} />

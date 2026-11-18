@@ -9,17 +9,9 @@
  */
 
 import React from 'react';
-import {
-    Alert,
-    Button,
-    Dialog,
-    DialogActions,
-    DialogContent,
-    DialogTitle,
-    Stack,
-    TextField,
-} from '@mui/material';
+import {Alert,Dialog,DialogActions,DialogContent,DialogTitle,Stack,TextField,} from '@mui/material';
 import { useTranslation } from 'react-i18next';
+import CapsButton from '../common/capsbutton.jsx';
 import TargetProjectionFields from './targetprojectionfields.jsx';
 
 const CelestialEditDialog = ({
@@ -93,8 +85,8 @@ const CelestialEditDialog = ({
                 </Stack>
             </DialogContent>
             <DialogActions>
-                <Button onClick={onClose} disabled={saving}>{t('admin.common.cancel')}</Button>
-                <Button variant="contained" onClick={onSave} disabled={saving}>{t('admin.common.save')}</Button>
+                <CapsButton onClick={onClose} disabled={saving}>{t('admin.common.cancel')}</CapsButton>
+                <CapsButton variant="contained" onClick={onSave} disabled={saving}>{t('admin.common.save')}</CapsButton>
             </DialogActions>
         </Dialog>
     );

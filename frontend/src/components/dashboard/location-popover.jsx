@@ -8,6 +8,7 @@ import LocationOnIcon from '@mui/icons-material/LocationOn';
 import WarningIcon from '@mui/icons-material/Warning';
 import Tooltip from "@mui/material/Tooltip";
 import { useTranslation } from 'react-i18next';
+import CapsButton from '../common/capsbutton.jsx';
 
 function LocationWarningPopover() {
     const { t } = useTranslation('dashboard');
@@ -93,7 +94,7 @@ function LocationWarningPopover() {
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                         {t('location_warning.message', 'Your ground station location has not been configured. Location is required for satellite tracking and pass predictions.')}
                     </Typography>
-                    <Button
+                    <CapsButton
                         variant="contained"
                         fullWidth
                         startIcon={<LocationOnIcon />}
@@ -101,7 +102,7 @@ function LocationWarningPopover() {
                         sx={{ fontWeight: 600 }}
                     >
                         {t('location_warning.set_location', 'Set Location')}
-                    </Button>
+                    </CapsButton>
                 </Box>
             </Popover>
         </>

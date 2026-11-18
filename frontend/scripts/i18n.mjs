@@ -677,6 +677,13 @@ function commandCheck() {
         }
     }
 
+    // 1b2. Greek sees the stored case of a plain <Button> label (CSS uppercase is disabled for el),
+    // so label buttons must go through <CapsButton>. Warning: a plain button is fine for data and
+    // for link-shaped `component=` buttons, which the scanner already skips.
+    for (const site of collectPlainLabelButtons()) {
+        warnings.push(`caps-chrome: ${site.file}:${site.line} plain <Button> carries a translated label -> Greek renders the stored case, use <CapsButton> from components/common/capsbutton.jsx`);
+    }
+
     // 1c. keys whose reference cannot reach them: the key lives in a different namespace than the one the
     // calling code binds, so `t()` falls through to its inline English default in *every* language. The
     // coverage ratchet cannot see this (the key is fully translated in its own namespace) and English
@@ -799,4 +806,70 @@ if (invokedDirectly) {
     }
 }
 
-export { commandCheck as check, greekCaps, greekOrthographyIssues, crossLanguageIssues };
+/**
+ * Plain `<Button>` elements that still render a translated label.
+ *
+ * MUI uppercases buttons in CSS and Greek disables that transform app-wide (src/theme.js), so a
+ * plain `<Button>` shows whatever case the locale file stores - `ΑΚΥΡΩΣΗ` next to `Απενεργοποίηση`.
+ * Label buttons therefore go through `<CapsButton>` (src/components/common/capsbutton.jsx), which
+ * caps in JS. Buttons that render data (row names, frequencies) or link-shaped `component=` buttons
+ * are correct as plain MUI buttons and are skipped here.
+ */
+function collectPlainLabelButtons() {
+    const hits = [];
+    for (const file of walk(SRC)) {
+        if (!file.endsWith('.jsx')) continue;
+        const text = fs.readFileSync(file, 'utf8');
+        if (!text.includes('<Button')) continue;
+        const relative = path.relative(SRC, file).replaceAll(path.sep, '/');
+        let cursor = 0;
+        for (;;) {
+            const start = text.indexOf('<Button', cursor);
+            if (start === -1) break;
+            // `<ButtonGroup`/`<ButtonBase` share the prefix; only the exact element counts.
+            const nextChar = text[start + '<Button'.length];
+            cursor = start + 1;
+            if (/^[\w$]/.test(nextChar)) continue;
+            const end = jsxTagEnd(text, start);
+            cursor = (end === -1 ? start : end) + 1;
+            if (end === -1 || relative.endsWith('capsbutton.jsx')) continue;
+            const tag = text.slice(start, end);
+            if (tag.trimEnd().endsWith('/>')) continue;      // self-closing: no label child
+            if (tag.includes('component=')) continue;        // link-shaped button: caps is wrong
+            const close = text.indexOf('</Button>', end);
+            if (close === -1) continue;
+            // Drop element markup so a t() living in a child's attribute (tooltip, aria-label) is
+            // not mistaken for the button's own label.
+            const body = text.slice(end, close).replace(/<[^>]*>/gs, '');
+            if (/\b(?:t|label)\s*\(/.test(body)) {
+                hits.push({ file: relative, line: text.slice(0, start).split('\n').length });
+                cursor = close + 1;
+            }
+        }
+    }
+    return hits;
+}
+
+/** Index just past the `>` that closes the JSX tag starting at `start` (ignores `=>` in props). */
+function jsxTagEnd(text, start) {
+    let depth = 0;
+    let quote = null;
+    for (let i = start; i < text.length; i += 1) {
+        const ch = text[i];
+        if (quote) {
+            if (ch === '\\') i += 1;
+            else if (ch === quote) quote = null;
+        } else if (ch === '"' || ch === "'" || ch === '`') {
+            quote = ch;
+        } else if (ch === '(' || ch === '{' || ch === '[') {
+            depth += 1;
+        } else if (ch === ')' || ch === '}' || ch === ']') {
+            depth -= 1;
+        } else if (ch === '>' && depth === 0) {
+            return i + 1;
+        }
+    }
+    return -1;
+}
+
+export { commandCheck as check, collectPlainLabelButtons, crossLanguageIssues, greekCaps, greekOrthographyIssues };

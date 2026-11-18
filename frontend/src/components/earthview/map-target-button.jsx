@@ -1,10 +1,11 @@
 
 import React from 'react';
-import { Box, Button, Typography, Paper, IconButton } from '@mui/material';
+import {Box,Typography,Paper,IconButton} from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import TrackChangesIcon from '@mui/icons-material/TrackChanges';
 import InfoIcon from '@mui/icons-material/Info';
 import { useTranslation } from 'react-i18next';
+import CapsButton from '../common/capsbutton.jsx';
 
 const SatelliteTrackSuggestion = ({
                                       selectedSatelliteId,
@@ -50,7 +51,7 @@ const SatelliteTrackSuggestion = ({
                 </Typography>
 
                 <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                    <Button
+                    <CapsButton
                         disabled={!selectedSatelliteId || trackingSatelliteId === selectedSatelliteId}
                         variant="contained"
                         color="primary"
@@ -68,7 +69,7 @@ const SatelliteTrackSuggestion = ({
                         title={t('map_target.start_tracking_tooltip', { name: selectedSatellite['name'] || 'this satellite' })}
                     >
                         {t('map_target.set_target')}
-                    </Button>
+                    </CapsButton>
 
                     <IconButton
                         onClick={handleOpenSatelliteInfo}

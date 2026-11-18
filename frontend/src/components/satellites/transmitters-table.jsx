@@ -33,6 +33,7 @@ import { setTargetTransmitters } from "../target/target-slice.jsx";
 import {useSocket} from "../common/socket.jsx";
 import TransmitterModal from "./transmitter-modal.jsx";
 import { useTranslation } from 'react-i18next';
+import CapsButton from '../common/capsbutton.jsx';
 import {toSelectedIds} from '../../utils/datagrid-selection.js';
 import {formatLoraConfig} from '../../utils/lora-config.js';
 
@@ -486,16 +487,16 @@ const TransmittersTable = ({ satelliteData, inDialog = false, actionsPortalTarge
                     {actionsPortalTarget
                         ? createPortal(
                             <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-                                <Button variant="contained" size="small" onClick={handleAddClick}>
+                                <CapsButton variant="contained" size="small" onClick={handleAddClick}>
                                     {t('satellite_info.transmitters.add')}
-                                </Button>
-                                <Button variant="contained" size="small" disabled={selected.length !== 1} onClick={handleEditClick}>
+                                </CapsButton>
+                                <CapsButton variant="contained" size="small" disabled={selected.length !== 1} onClick={handleEditClick}>
                                     {t('satellite_info.transmitters.edit')}
-                                </Button>
-                                <Button variant="contained" size="small" disabled={selected.length !== 1} onClick={handleDuplicateClick}>
+                                </CapsButton>
+                                <CapsButton variant="contained" size="small" disabled={selected.length !== 1} onClick={handleDuplicateClick}>
                                     {t('satellite_info.transmitters.duplicate')}
-                                </Button>
-                                <Button
+                                </CapsButton>
+                                <CapsButton
                                     variant="contained"
                                     size="small"
                                     color="error"
@@ -503,25 +504,25 @@ const TransmittersTable = ({ satelliteData, inDialog = false, actionsPortalTarge
                                     onClick={handleDeleteClick}
                                 >
                                     {t('satellite_info.transmitters.delete')}
-                                </Button>
+                                </CapsButton>
                             </Stack>,
                             actionsPortalTarget
                         )
                         : (
                             <Stack direction="row" spacing={2} sx={{ marginTop: 2 }}>
-                                <Button variant="contained" onClick={handleAddClick}>
+                                <CapsButton variant="contained" onClick={handleAddClick}>
                                     {t('satellite_info.transmitters.add')}
-                                </Button>
-                                <Button variant="contained" disabled={selected.length !== 1} onClick={handleEditClick}>
+                                </CapsButton>
+                                <CapsButton variant="contained" disabled={selected.length !== 1} onClick={handleEditClick}>
                                     {t('satellite_info.transmitters.edit')}
-                                </Button>
-                                <Button variant="contained" disabled={selected.length !== 1} onClick={handleDuplicateClick}>
+                                </CapsButton>
+                                <CapsButton variant="contained" disabled={selected.length !== 1} onClick={handleDuplicateClick}>
                                     {t('satellite_info.transmitters.duplicate')}
-                                </Button>
-                                <Button variant="contained" color="error" disabled={selected.length < 1}
+                                </CapsButton>
+                                <CapsButton variant="contained" color="error" disabled={selected.length < 1}
                                         onClick={handleDeleteClick}>
                                     {t('satellite_info.transmitters.delete')}
-                                </Button>
+                                </CapsButton>
                             </Stack>
                         )
                     }
@@ -672,30 +673,30 @@ const TransmittersTable = ({ satelliteData, inDialog = false, actionsPortalTarge
                                 gap: 1.5,
                             }}
                         >
-                            <Button
+                            <CapsButton
                                 onClick={() => setDeleteConfirmOpen(false)}
                                 variant="outlined"
                                 color="inherit"
                                 sx={{
                                     minWidth: 100,
-                                    textTransform: 'none',
+
                                     fontWeight: 500,
                                 }}
                             >
                                 {t('satellite_info.transmitters.cancel')}
-                            </Button>
-                            <Button
+                            </CapsButton>
+                            <CapsButton
                                 variant="contained"
                                 color="error"
                                 onClick={handleDeleteConfirm}
                                 sx={{
                                     minWidth: 100,
-                                    textTransform: 'none',
+
                                     fontWeight: 600,
                                 }}
                             >
                                 {t('satellite_info.transmitters.delete')}
-                            </Button>
+                            </CapsButton>
                         </DialogActions>
                     </Dialog>
                 </Box>

@@ -61,6 +61,7 @@ import TranscribeIcon from '@mui/icons-material/Transcribe';
 import SaveIcon from '@mui/icons-material/Save';
 import EventRepeatIcon from '@mui/icons-material/EventRepeat';
 import ResponsiveActionButton from '../common/responsive-action-button.jsx';
+import CapsButton from '../common/capsbutton.jsx';
 import { mobileFullScreenPaperSx } from '../common/dialog-layout.js';
 import {
     setMonitoredSatelliteDialogOpen,
@@ -1503,14 +1504,13 @@ export default function MonitoredSatelliteDialog({ onExited }) {
                                 />
 
                                 <Box sx={{ display: 'flex', flexDirection: 'column', flex: '1' }}>
-                                    <Button
+                                    <CapsButton
                                         variant="outlined"
                                         size="small"
                                         onClick={(e) => setTransmitterMenuAnchor(e.currentTarget)}
                                         disabled={formData.sdr.auto_center_frequency || availableTransmitters.length === 0}
                                         sx={{
                                             height: '40px',
-                                            textTransform: 'none',
                                             justifyContent: 'flex-start',
                                             px: 2,
                                             borderColor: 'primary.main',
@@ -1526,7 +1526,7 @@ export default function MonitoredSatelliteDialog({ onExited }) {
                                         }}
                                     >
                                         {t('scheduler_dialogs.shared.select_from_transmitter_list')}
-                                    </Button>
+                                    </CapsButton>
                                     <Menu
                                         anchorEl={transmitterMenuAnchor}
                                         open={Boolean(transmitterMenuAnchor)}
@@ -2675,10 +2675,10 @@ export default function MonitoredSatelliteDialog({ onExited }) {
                     />
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setOpenDeleteConfirm(false)} variant="outlined" disabled={isBusy}>
+                    <CapsButton onClick={() => setOpenDeleteConfirm(false)} variant="outlined" disabled={isBusy}>
                         {t('cancel')}
-                    </Button>
-                    <Button
+                    </CapsButton>
+                    <CapsButton
                         onClick={handleDeleteConfirm}
                         variant="contained"
                         color="error"
@@ -2686,7 +2686,7 @@ export default function MonitoredSatelliteDialog({ onExited }) {
                         startIcon={pendingAction === 'delete' && <CircularProgress size={20} color="inherit" />}
                     >
                         {t('delete')}
-                    </Button>
+                    </CapsButton>
                 </DialogActions>
             </Dialog>
 
@@ -2708,12 +2708,12 @@ export default function MonitoredSatelliteDialog({ onExited }) {
                     {t('scheduler_dialogs.shared.remove_sdr_session_confirm')}
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setOpenRemoveSessionConfirm(false)} variant="outlined">
+                    <CapsButton onClick={() => setOpenRemoveSessionConfirm(false)} variant="outlined">
                         {t('cancel')}
-                    </Button>
-                    <Button onClick={handleRemoveSessionConfirm} variant="contained" color="error">
+                    </CapsButton>
+                    <CapsButton onClick={handleRemoveSessionConfirm} variant="contained" color="error">
                         {t('scheduler_dialogs.shared.remove_button')}
-                    </Button>
+                    </CapsButton>
                 </DialogActions>
             </Dialog>
         </Dialog>

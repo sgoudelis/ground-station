@@ -1,9 +1,9 @@
 /** Copyright (c) 2026 Efstratios Goudelis — GPL-3.0-or-later */
 
 import React, {useId, useState} from 'react';
-import {Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, FormControlLabel,
-    InputLabel, MenuItem, Paper, Select, Stack, Switch, Typography} from '@mui/material';
+import {Box,Dialog,DialogActions,DialogContent,DialogTitle,FormControl,FormControlLabel,InputLabel,MenuItem,Paper,Select,Stack,Switch,Typography} from '@mui/material';
 import {useTranslation} from 'react-i18next';
+import CapsButton from '../common/capsbutton.jsx';
 import {defaultMapSettings} from './storage.js';
 import {typeLabel} from './transmitters.js';
 
@@ -73,14 +73,14 @@ export default function PacketMapSettingsDialog({settings, hiddenTypes = [], tra
         </DialogContent>
         <DialogActions sx={{p: 2, borderTop: 1, borderColor: 'divider', gap: 1, overflowX: 'auto',
             '& > *': {flexShrink: 0, whiteSpace: 'nowrap'}}}>
-            <Button variant="outlined" onClick={() => {setDraft({...defaultMapSettings}); setDraftHiddenTypes([]);}}>
+            <CapsButton variant="outlined" onClick={() => {setDraft({...defaultMapSettings}); setDraftHiddenTypes([]);}}>
                 {t('map_settings.reset_defaults', {defaultValue: 'Reset Defaults'})}
-            </Button>
+            </CapsButton>
             <Box sx={{flex: 1}} />
-            <Button variant="outlined" onClick={onClose}>{t('close', {defaultValue: 'Close'})}</Button>
-            <Button variant="contained" disabled={!dirty} onClick={() => onApply(draft, draftHiddenTypes)}>
+            <CapsButton variant="outlined" onClick={onClose}>{t('close', {defaultValue: 'Close'})}</CapsButton>
+            <CapsButton variant="contained" disabled={!dirty} onClick={() => onApply(draft, draftHiddenTypes)}>
                 {t('map_settings.apply', {defaultValue: 'Apply'})}
-            </Button>
+            </CapsButton>
         </DialogActions>
     </Dialog>;
 }

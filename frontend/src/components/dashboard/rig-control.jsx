@@ -41,6 +41,7 @@ import Grid from "@mui/material/Grid";
 import {Box, Button, Chip, FormControl, IconButton, InputLabel, ListSubheader, MenuItem, Select, Tooltip} from "@mui/material";
 import SwapVertIcon from '@mui/icons-material/SwapVert';
 import Typography from "@mui/material/Typography";
+import CapsButton from '../common/capsbutton.jsx';
 import LCDFrequencyDisplay from "../common/lcd-frequency-display.jsx";
 import SettingsIcon from '@mui/icons-material/Settings';
 import { RIG_STATES } from '../target/tracking-constants.js';
@@ -662,7 +663,7 @@ const RigControl = React.memo(function RigControl({ trackerId: trackerIdOverride
                         <Grid size="grow" style={{paddingRight: '0.5rem', flex: 1}}>
                             <Tooltip title={connectRigDisabled ? connectRigDisabledReason : ''}>
                                 <span style={{ display: 'block' }}>
-                                    <Button
+                                    <CapsButton
                                         disabled={connectRigDisabled}
                                         fullWidth={true}
                                         variant="outlined"
@@ -674,14 +675,14 @@ const RigControl = React.memo(function RigControl({ trackerId: trackerIdOverride
                                         }}
                                     >
                                         {t('rig_control.connect')}
-                                    </Button>
+                                    </CapsButton>
                                 </span>
                             </Tooltip>
                         </Grid>
                         <Grid size="grow" style={{paddingRight: '0rem', flex: 1}}>
                             <Tooltip title={disconnectRigDisabled ? disconnectRigDisabledReason : ''}>
                                 <span style={{ display: 'block' }}>
-                                    <Button
+                                    <CapsButton
                                         disabled={disconnectRigDisabled}
                                         fullWidth={true}
                                         variant="outlined"
@@ -693,7 +694,7 @@ const RigControl = React.memo(function RigControl({ trackerId: trackerIdOverride
                                         }}
                                     >
                                         {t('rig_control.disconnect')}
-                                    </Button>
+                                    </CapsButton>
                                 </span>
                             </Tooltip>
                         </Grid>
@@ -708,7 +709,7 @@ const RigControl = React.memo(function RigControl({ trackerId: trackerIdOverride
                         <Grid size="grow" style={{paddingRight: '0.5rem'}}>
                             <Tooltip title={trackRigDisabled ? trackRigDisabledReason : ''}>
                                 <span style={{ display: 'block' }}>
-                                    <Button
+                                    <CapsButton
                                         fullWidth={true}
                                         disabled={trackRigDisabled}
                                         variant="contained"
@@ -718,14 +719,14 @@ const RigControl = React.memo(function RigControl({ trackerId: trackerIdOverride
                                         onClick={()=>{handleTrackingStart()}}
                                     >
                                         {t('rig_control.track_radio')}
-                                    </Button>
+                                    </CapsButton>
                                 </span>
                             </Tooltip>
                         </Grid>
                         <Grid size="grow">
                             <Tooltip title={stopRigDisabled ? stopRigDisabledReason : ''}>
                                 <span style={{ display: 'block' }}>
-                                    <Button
+                                    <CapsButton
                                         fullWidth={true}
                                         disabled={stopRigDisabled}
                                         variant="outlined"
@@ -735,7 +736,7 @@ const RigControl = React.memo(function RigControl({ trackerId: trackerIdOverride
                                         onClick={() => {handleTrackingStop()}}
                                     >
                                         {t('rig_control.pause_tracking', {defaultValue: 'Pause tracking'})}
-                                    </Button>
+                                    </CapsButton>
                                 </span>
                             </Tooltip>
                         </Grid>

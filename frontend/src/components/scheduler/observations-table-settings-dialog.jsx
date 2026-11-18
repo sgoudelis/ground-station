@@ -18,6 +18,7 @@
  */
 
 import React from 'react';
+import CapsButton from '../common/capsbutton.jsx';
 import { useTranslation } from 'react-i18next';
 import {
     Dialog,
@@ -126,9 +127,9 @@ const ObservationsTableSettingsDialog = ({ open, onClose }) => {
                 ))}
             </DialogContent>
             <DialogActions>
-                <Button onClick={onClose} variant="contained">
+                <CapsButton onClick={onClose} variant="contained">
                     {t('close')}
-                </Button>
+                </CapsButton>
             </DialogActions>
         </Dialog>
     );

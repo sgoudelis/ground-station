@@ -1,7 +1,7 @@
 /** Copyright (c) 2026 Efstratios Goudelis — GPL-3.0-or-later */
 
 import React, {useId, useMemo} from 'react';
-import {Alert, Box, Button, Chip, CircularProgress, IconButton, Tooltip, Typography} from '@mui/material';
+import {Alert,Box,Chip,CircularProgress,IconButton,Tooltip,Typography} from '@mui/material';
 import {alpha, useTheme} from '@mui/material/styles';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import ExploreIcon from '@mui/icons-material/Explore';
@@ -10,6 +10,7 @@ import SensorsIcon from '@mui/icons-material/Sensors';
 import SettingsInputAntennaIcon from '@mui/icons-material/SettingsInputAntenna';
 import CloseIcon from '@mui/icons-material/Close';
 import {useTranslation} from 'react-i18next';
+import CapsButton from '../common/capsbutton.jsx';
 import {getClassNamesBasedOnGridEditing, islandTitleBarCompactSx, TitleBar} from '../common/common.jsx';
 import {useUserTimeSettings} from '../../hooks/useUserTimeSettings.jsx';
 import {formatDateTime} from '../../utils/date-time.js';
@@ -172,11 +173,11 @@ export default function TransmitterInfo({transmitter, selectedTransmitterId = nu
                     {reception.status === 'expired' ? t('packet_map.reception.no_position', {
                         defaultValue: 'No position received for {{minutes}} minutes.', minutes: Math.floor(reception.age / 60000),
                     }) : aircraftReceptionLabel(reception, t)}
-                    {!isLive && absent && onJumpToPosition && Number.isFinite(reception.jumpTime) && <Button
+                    {!isLive && absent && onJumpToPosition && Number.isFinite(reception.jumpTime) && <CapsButton
                         size="small" onClick={() => onJumpToPosition(reception.jumpTime)} sx={{display: 'block', mt: 0.5}}>
                         {reception.status === 'upcoming' ? label('reception.jump_first', 'Jump to first position')
                             : label('reception.jump_last', 'Jump to last position')}
-                    </Button>}
+                    </CapsButton>}
                 </Alert>}
                 {emergency && <Alert severity={emergency.severity} sx={{mb: 1.5}}>
                     <Typography variant="body2" sx={{fontWeight: 700}}>
