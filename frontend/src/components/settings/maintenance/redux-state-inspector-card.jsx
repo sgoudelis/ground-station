@@ -35,7 +35,7 @@ import CapsButton from '../../common/capsbutton.jsx';
 import { tabCapsLabel } from '../../../utils/greekcaps.js';
 
 const ReduxStateInspectorCard = () => {
-    const { t } = useTranslation('settings');
+    const { t, i18n } = useTranslation('settings');
     const fullState = useSelector((state) => state);
     const dispatch = useDispatch();
 
@@ -178,7 +178,7 @@ const ReduxStateInspectorCard = () => {
 
     // Memoized recursive component to render state tree
     const StateTreeNode = memo(({ data, path = '', depth = 0 }) => {
-        const { t, i18n } = useTranslation('settings');
+        const { t } = useTranslation('settings');
         if (data === null || data === undefined) {
             return (
                 <Box sx={{ color: 'text.secondary', fontFamily: 'monospace', display: 'inline' }}>

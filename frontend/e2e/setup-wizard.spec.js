@@ -153,9 +153,10 @@ test.describe('Setup Wizard', () => {
     await page.getByRole('option', { name: 'Ελληνικά', exact: true }).click();
     await expect(page.locator('html')).toHaveAttribute('lang', 'el');
     await expect(setupDialog.getByRole('heading', { name: 'Επιλέξτε τη γλώσσα σας' })).toBeVisible();
-    await setupDialog.getByRole('button', { name: 'Επόμενο', exact: true }).click();
+    // CapsButton renders Greek accessible names in capitals without tonos.
+    await setupDialog.getByRole('button', { name: 'ΕΠΟΜΕΝΟ', exact: true }).click();
     await expect(setupDialog.getByLabel(/^Ονομα χρήστη/)).toBeVisible();
-    await setupDialog.getByRole('button', { name: 'Πίσω', exact: true }).click();
+    await setupDialog.getByRole('button', { name: 'ΠΙΣΩ', exact: true }).click();
     await expect(setupDialog.getByRole('combobox')).toContainText('Ελληνικά');
     await setupDialog.getByRole('combobox').click();
     await page.getByRole('option', { name: 'English', exact: true }).click();
