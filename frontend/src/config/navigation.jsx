@@ -19,7 +19,6 @@
 
 import PublicIcon from '@mui/icons-material/Public';
 import MapIcon from '@mui/icons-material/Map';
-import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import EngineeringIcon from '@mui/icons-material/Engineering';
 import {Satellite03Icon, Saturn01Icon} from "hugeicons-react";
 import InfoIcon from '@mui/icons-material/Info';
@@ -199,11 +198,7 @@ export const getNavigation = ({ isAdmin = false } = {}) => {
             title: i18n.t('files', { ns: 'navigation', defaultValue: 'Files' }),
             icon: <FileBrowserIconWithStatus />,
         },
-        {
-            segment: 'calendar',
-            title: i18n.t('calendar', { ns: 'navigation', defaultValue: 'Calendar' }),
-            icon: <CalendarMonthIcon />,
-        },
+        // Keep Calendar out of the sidebar until the feature is ready to ship.
         {
             segment: 'scheduler',
             title: i18n.t('scheduler', { ns: 'navigation', defaultValue: 'Scheduler' }),

@@ -586,6 +586,15 @@ RUN apt-get remove -y --purge \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
+# Upgrade cached nginx installs and require Ubuntu Noble's HTTP/2 RCE fixes (USN-9159-1).
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        --only-upgrade nginx nginx-common && \
+    dpkg --compare-versions "$(dpkg-query -W -f='${Version}' nginx)" ge 1.24.0-2ubuntu7.20 && \
+    dpkg --compare-versions "$(dpkg-query -W -f='${Version}' nginx-common)" ge 1.24.0-2ubuntu7.20 && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
 # Copy backend code
