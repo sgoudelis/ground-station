@@ -2,7 +2,7 @@ import React from 'react';
 import { configureStore } from '@reduxjs/toolkit';
 import { Provider } from 'react-redux';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import '../../i18n/config.js';
 import schedulerReducer, { setDialogOpen } from './scheduler-slice.jsx';
 import ObservationFormDialog from './observation-form-dialog.jsx';
@@ -60,7 +60,9 @@ function renderForm({ editing = false, passSelected = true, availablePasses = [p
 describe('observation form validation and save errors', () => {
     beforeEach(() => {
         socket.emit.mockReset();
+        vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-11-06T11:00:00Z'));
     });
+    afterEach(() => vi.restoreAllMocks());
 
     it('blocks saving without a pass, explains why, and allows saving after selecting one', async () => {
         const { save, pendingSaves } = renderForm({ passSelected: false });

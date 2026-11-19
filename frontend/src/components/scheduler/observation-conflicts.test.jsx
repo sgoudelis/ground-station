@@ -2,7 +2,7 @@ import React from 'react';
 import { configureStore } from '@reduxjs/toolkit';
 import { Provider } from 'react-redux';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import '../../i18n/config.js';
 import schedulerReducer from './scheduler-slice.jsx';
 import ObservationFormDialog from './observation-form-dialog.jsx';
@@ -17,7 +17,10 @@ function selectOption(label, name) {
 }
 
 describe('observation hardware conflicts', () => {
+    afterEach(() => vi.restoreAllMocks());
+
     it('allows the Meteor/UMKA overlap and updates both pass options and saving when hardware changes', async () => {
+        vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-10-30T18:00:00Z'));
         const pass = {
             id: 'meteor-pass', event_start: '2026-10-30T18:39:32Z',
             event_end: '2026-10-30T18:54:42Z', peak_altitude: 61.77,

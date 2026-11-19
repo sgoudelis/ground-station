@@ -386,6 +386,8 @@ const PassSelector = ({ onPassSelect, initialPass, observation, required = false
         state.preferences?.preferences?.find(p => p.name === 'timezone')?.value || 'Europe/Athens'
     );
     const [hasSetInitialPass, setHasSetInitialPass] = React.useState(false);
+    // Historical passes are recorded data, not choices from the upcoming-pass list.
+    const isPastObservation = Boolean(observation?.id && Date.parse(initialPass?.event_end) <= Date.now());
 
     // Detect if we're waiting for the correct satellite's passes
     const hasWrongSatellitePasses = React.useMemo(() => {
@@ -421,6 +423,7 @@ const PassSelector = ({ onPassSelect, initialPass, observation, required = false
 
     // Fetch passes when satellite changes
     React.useEffect(() => {
+        if (isPastObservation) return;
         if (satelliteId && socket) {
             dispatch(fetchNextPassesForScheduler({ socket, noradId: satelliteId, hours: 24, minElevation: 0 }));
             setHasSetInitialPass(false);
@@ -428,11 +431,11 @@ const PassSelector = ({ onPassSelect, initialPass, observation, required = false
             // Clear passes if no satellite selected
             dispatch(setSelectedPassId(null));
         }
-    }, [satelliteId, socket, dispatch]);
+    }, [satelliteId, socket, dispatch, isPastObservation]);
 
     // Set initial pass after passes are loaded
     React.useEffect(() => {
-        if (initialPass && passes.length > 0 && !hasSetInitialPass && satelliteId) {
+        if (!isPastObservation && initialPass && passes.length > 0 && !hasSetInitialPass && satelliteId) {
             // Try to find a matching pass by comparing start times (with tolerance for calculation differences)
             const matchingPass = passes.find(p => {
                 const passStartTime = new Date(p.event_start).getTime();
@@ -451,7 +454,7 @@ const PassSelector = ({ onPassSelect, initialPass, observation, required = false
                 }
             }
         }
-    }, [initialPass, passes, hasSetInitialPass, satelliteId, dispatch, onPassSelect]);
+    }, [initialPass, passes, hasSetInitialPass, satelliteId, dispatch, onPassSelect, isPastObservation]);
 
     const handlePassClick = (pass) => {
         const newPassId = pass ? pass.id : null;
@@ -530,12 +533,12 @@ const PassSelector = ({ onPassSelect, initialPass, observation, required = false
         };
     };
 
-    if (!satelliteId) {
+    if (!satelliteId && !isPastObservation) {
         return null; // Don't show pass selector if no satellite selected
     }
 
     // An empty completed result must show the no-passes message, not a spinner.
-    const isLoading = passesLoading;
+    const isLoading = !isPastObservation && passesLoading;
 
     return (
         <Box>
@@ -550,7 +553,7 @@ const PassSelector = ({ onPassSelect, initialPass, observation, required = false
                                 : 'Fetching satellite passes...'}
                     </Typography>
                 </Box>
-            ) : passes.length === 0 ? (
+            ) : !isPastObservation && passes.length === 0 ? (
                 <Typography variant="body2" color="text.secondary" sx={{ p: 2 }}>
                     {t('satellite_selector.no_passes_found_in_the_next_24_hours', { defaultValue: 'No passes found in the next 24 hours' })}
                 </Typography>
@@ -559,14 +562,14 @@ const PassSelector = ({ onPassSelect, initialPass, observation, required = false
                     <FormControl
                         fullWidth
                         size="small"
-                        required={required}
-                        error={Boolean((required && !effectiveSelectedPassId)
+                        required={required && !isPastObservation}
+                        error={!isPastObservation && Boolean((required && !effectiveSelectedPassId)
                             || (effectiveSelectedPassId && isPassOverlapping(passes.find(p => p.id === effectiveSelectedPassId))))}
-                        disabled={disabled}
+                        disabled={disabled || isPastObservation}
                     >
                         <InputLabel>{t('satellite_selector.select_pass', { defaultValue: 'Select Pass' })}</InputLabel>
                         <Select
-                            value={effectiveSelectedPassId || ''}
+                            value={isPastObservation ? '' : effectiveSelectedPassId || ''}
                             onChange={(e) => {
                                 const passId = e.target.value;
                                 const selectedPass = passes.find(p => p.id === passId);
@@ -575,7 +578,7 @@ const PassSelector = ({ onPassSelect, initialPass, observation, required = false
                             label={t('satellite_selector.select_pass', { defaultValue: 'Select Pass' })}
                         >
                             {/* Future passes */}
-                            {passes.map((pass) => {
+                            {!isPastObservation && passes.map((pass) => {
                                 const info = formatPassInfo(pass);
                                 const conflictingObs = getPassConflict(pass);
                                 const isOverlapping = conflictingObs !== null;
@@ -630,7 +633,9 @@ const PassSelector = ({ onPassSelect, initialPass, observation, required = false
                                 );
                             })}
                         </Select>
-                        {required && !effectiveSelectedPassId && (
+                        {isPastObservation ? (
+                            <FormHelperText>{t('satellite_selector.past_observation_pass')}</FormHelperText>
+                        ) : required && !effectiveSelectedPassId && (
                             <FormHelperText>{t('scheduler_dialogs.observation.validation.pass_required')}</FormHelperText>
                         )}
                     </FormControl>

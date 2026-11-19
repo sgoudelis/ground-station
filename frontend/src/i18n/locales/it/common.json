@@ -828,7 +828,8 @@
     "search_satellite": "Cerca satellite",
     "no_passes_found_in_the_next_24_hours": "Nessun passaggio trovato nelle prossime 24 ore",
     "select_pass": "Seleziona passaggio",
-    "conflicts_with": "⚠️ Conflitto con:"
+    "conflicts_with": "⚠️ Conflitto con:",
+    "past_observation_pass": "Non applicabile — questa osservazione è già terminata."
   },
   "scheduler_dialogs": {
     "observation": {

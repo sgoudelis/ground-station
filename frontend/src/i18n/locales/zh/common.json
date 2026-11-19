@@ -751,7 +751,8 @@
     "search_satellite": "搜索卫星",
     "select_pass": "选择过境",
     "conflicts_with": "⚠️ 与以下冲突：",
-    "orbital_source_groups": "轨道数据源卫星分组"
+    "orbital_source_groups": "轨道数据源卫星分组",
+    "past_observation_pass": "不适用 — 此观测已结束。"
   },
   "selection_action_bar": {
     "clear": "清除",

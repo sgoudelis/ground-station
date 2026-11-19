@@ -1061,7 +1061,8 @@
     "search_satellite": "Search Satellite",
     "no_passes_found_in_the_next_24_hours": "No passes found in the next 24 hours",
     "select_pass": "Select Pass",
-    "conflicts_with": "⚠️ Conflicts with:"
+    "conflicts_with": "⚠️ Conflicts with:",
+    "past_observation_pass": "Not applicable — this observation has already ended."
   },
   "about": {
     "real_time_orbit_tracking": "Real-time Orbit Tracking: Track Earth-orbiting targets using Skyfield/SGP4 propagation from stored orbital elements.",

@@ -1010,7 +1010,8 @@
     "search_satellite": "Rechercher un satellite",
     "no_passes_found_in_the_next_24_hours": "Aucun passage trouvé dans les 24 prochaines heures",
     "select_pass": "Sélectionner un passage",
-    "conflicts_with": "⚠️ En conflit avec :"
+    "conflicts_with": "⚠️ En conflit avec :",
+    "past_observation_pass": "Sans objet — cette observation est déjà terminée."
   },
   "selection_action_bar": {
     "clear": "Clair",

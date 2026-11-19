@@ -1036,7 +1036,8 @@
     "search_satellite": "Buscar satélite",
     "no_passes_found_in_the_next_24_hours": "No se encontraron pasos en las próximas 24 horas",
     "select_pass": "Seleccionar paso",
-    "conflicts_with": "⚠️ Conflicto con:"
+    "conflicts_with": "⚠️ Conflicto con:",
+    "past_observation_pass": "No aplicable — esta observación ya ha finalizado."
   },
   "selection_action_bar": {
     "clear": "Claro",

@@ -1036,7 +1036,8 @@
     "search_satellite": "Satellit suchen",
     "no_passes_found_in_the_next_24_hours": "Keine Durchgänge in den nächsten 24 Stunden gefunden",
     "select_pass": "Durchgang auswählen",
-    "conflicts_with": "⚠️ Konflikt mit:"
+    "conflicts_with": "⚠️ Konflikt mit:",
+    "past_observation_pass": "Nicht zutreffend — diese Beobachtung ist bereits beendet."
   },
   "selection_action_bar": {
     "clear": "Klar",

@@ -1054,7 +1054,8 @@
     "search_satellite": "Αναζήτηση δορυφόρου",
     "no_passes_found_in_the_next_24_hours": "Δεν βρέθηκαν διελεύσεις στις επόμενες 24 ώρες",
     "select_pass": "Επιλογή διέλευσης",
-    "conflicts_with": "⚠️ Συγκρούεται με:"
+    "conflicts_with": "⚠️ Συγκρούεται με:",
+    "past_observation_pass": "Δεν εφαρμόζεται — αυτή η παρατήρηση έχει ήδη ολοκληρωθεί."
   },
   "selection_action_bar": {
     "clear": "Σαφής",

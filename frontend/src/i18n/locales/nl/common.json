@@ -1027,7 +1027,8 @@
     "search_satellite": "Satelliet zoeken",
     "no_passes_found_in_the_next_24_hours": "Geen passages gevonden in de komende 24 uur",
     "select_pass": "Passage selecteren",
-    "conflicts_with": "⚠️ Conflicteert met:"
+    "conflicts_with": "⚠️ Conflicteert met:",
+    "past_observation_pass": "Niet van toepassing — deze waarneming is al afgelopen."
   },
   "selection_action_bar": {
     "clear": "Duidelijk",
