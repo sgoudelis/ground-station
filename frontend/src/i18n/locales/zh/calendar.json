@@ -96,6 +96,7 @@
     "provider": "提供方",
     "open_error": "无法打开观测，请重试。",
     "open_observation": "打开观测",
+    "view_results": "查看结果",
     "open_source": "打开原始来源"
   }
 }

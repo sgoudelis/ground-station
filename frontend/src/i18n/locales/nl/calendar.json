@@ -96,6 +96,7 @@
     "provider": "Aanbieder",
     "open_error": "De waarneming kon niet worden geopend. Probeer het opnieuw.",
     "open_observation": "Waarneming openen",
+    "view_results": "Resultaten bekijken",
     "open_source": "Oorspronkelijke bron openen"
   }
 }

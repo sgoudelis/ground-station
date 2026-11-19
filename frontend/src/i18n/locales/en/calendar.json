@@ -96,6 +96,7 @@
     "provider": "Provider",
     "open_error": "Could not open the observation. Please try again.",
     "open_observation": "Open observation",
+    "view_results": "View results",
     "open_source": "Open original source"
   }
 }

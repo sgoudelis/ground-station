@@ -12,7 +12,7 @@ import schedulerReducer from '../scheduler/scheduler-slice.jsx';
 
 const {socket, handlers} = vi.hoisted(() => {
     const handlers = new Map();
-    const socket = {timeout: vi.fn(), emitWithAck: vi.fn(),
+    const socket = {timeout: vi.fn(), emitWithAck: vi.fn(), emit: vi.fn(),
         on: vi.fn((name, callback) => handlers.set(name, callback)),
         off: vi.fn((name, callback) => {if (handlers.get(name) === callback) handlers.delete(name);}),
     };
@@ -38,6 +38,7 @@ const reply = events => ({success: true, data: {events, sources: [{id: 'observat
 beforeEach(() => {
     vi.spyOn(Date, 'now').mockReturnValue(new Date('2026-11-18T12:00:00Z').getTime());
     handlers.clear();
+    socket.emit.mockReset();
     socket.timeout.mockReset().mockReturnValue(socket);
     socket.emitWithAck.mockReset().mockImplementation((_event, {data}) => Promise.resolve(reply(
         fixtures.filter(event => dayKey(event.start, data.timezone) < data.end && dayKey(event.end, data.timezone) >= data.start),
@@ -93,7 +94,7 @@ it('combines search and activity filters and recovers from an empty result', asy
     expect(within(calendar).getByRole('button', {name: /AO-91/})).toBeVisible();
 });
 
-it('expands crowded days and shows real task, pass, frequency, status, and origin details', async () => {
+it('expands crowded days and shows task, pass, frequency, and status details without origin', async () => {
     const user = userEvent.setup();
     await renderCalendar();
     const today = screen.getByLabelText('Wednesday, 18 November 2026', {selector: 'div'});
@@ -112,7 +113,8 @@ it('expands crowded days and shows real task, pass, frequency, status, and origi
     expect(within(dialog).getByRole('region', {name: 'Scheduled task'})).toBeVisible();
     expect(within(dialog).getByRole('region', {name: 'Satellite pass'})).toBeVisible();
     expect(within(dialog).getByText('Duration: 10 mins')).toBeVisible();
-    expect(within(dialog).getByText('Generated from a monitored satellite')).toBeVisible();
+    expect(within(dialog).queryByRole('region', {name: 'Origin'})).not.toBeInTheDocument();
+    expect(within(dialog).queryByText('Generated from a monitored satellite')).not.toBeInTheDocument();
     expect(within(dialog).getByText('Scheduled')).toBeVisible();
     expect(within(dialog).getByText('72.5°')).toBeVisible();
     expect(within(dialog).queryByText(/fictional|sample/i)).not.toBeInTheDocument();
@@ -156,6 +158,7 @@ it('shows cached announcements with source links and date precision across timez
     expect(within(dialog).getByRole('link', {name: 'example.org'})).toHaveAttribute('href', 'https://example.org/activity');
     expect(within(dialog).getByRole('link', {name: 'Open original source'})).toHaveAttribute('href', 'https://example.org/activity');
     expect(within(dialog).queryByRole('button', {name: 'Open observation'})).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole('button', {name: 'View results'})).not.toBeInTheDocument();
     expect(within(dialog).queryByText(/Duration:/)).not.toBeInTheDocument();
     expect(socket.emitWithAck.mock.calls.every(([, request]) => request.cmd === 'get-calendar-events')).toBe(true);
 });
@@ -189,13 +192,46 @@ it('opens the existing observation editor with a freshly loaded complete record'
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
 });
 
-it('keeps details open when loading the full observation fails and allows retry', async () => {
+it('opens the scheduler results dialog with the selected observation timeline and products', async () => {
+    const user = userEvent.setup();
+    const {store} = await renderCalendar();
+    await user.click(screen.getByRole('button', {name: /ISS pass earlier/}));
+    const fullObservation = {id: 'earlier', name: 'ISS pass earlier', satellite: {name: 'ISS'},
+        status: 'completed', execution_log: [{timestamp: '2026-11-17T09:10:00Z', level: 'info', event: 'IQ recording complete'}]};
+    socket.emitWithAck.mockResolvedValueOnce({success: true, data: fullObservation});
+    socket.emit.mockImplementation((_event, {cmd}, callback) => callback({success: true,
+        data: cmd === 'filebrowser.query' ? {items: [{type: 'snapshot', name: 'ISS waterfall.png',
+            url: '/files/ISS-waterfall.png', size: 2048}]} : fullObservation}));
+
+    await user.click(screen.getByRole('button', {name: 'View results'}));
+
+    expect(socket.emitWithAck).toHaveBeenLastCalledWith('api.call', {
+        cmd: 'get-scheduled-observations', data: {observation_id: 'earlier'},
+    });
+    expect(await screen.findByText('IQ recording complete')).toBeVisible();
+    expect(screen.getByRole('tab', {name: 'Execution Timeline'})).toHaveAttribute('aria-selected', 'true');
+    expect(socket.emit).toHaveBeenCalledWith('api.call', expect.objectContaining({cmd: 'filebrowser.query',
+        data: expect.objectContaining({observationId: 'earlier', sessionId: 'internal:earlier'})}), expect.any(Function));
+    expect(store.getState().scheduler.dialogOpen).toBe(false);
+
+    await user.click(screen.getByRole('tab', {name: 'Downloaded Data'}));
+    await user.click(screen.getByRole('button', {name: /ISS waterfall.png/}));
+    expect(screen.getByRole('img', {name: 'ISS waterfall.png'})).toHaveAttribute('src', '/files/ISS-waterfall.png');
+    // Close the product preview, then the results dialog, and return to the calendar.
+    await user.click(within(screen.getAllByRole('dialog').at(-1)).getByRole('button', {name: 'Close'}));
+    await waitFor(() => expect(screen.queryByRole('img', {name: 'ISS waterfall.png'})).not.toBeInTheDocument());
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', {name: 'Close'}));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(screen.getByRole('region', {name: 'Satellite events calendar'})).toBeVisible();
+});
+
+it.each(['Open observation', 'View results'])('keeps details open when %s fails and allows retry', async button => {
     const user = userEvent.setup();
     const {store} = await renderCalendar();
     await user.click(screen.getByRole('button', {name: /ISS pass earlier/}));
     socket.emitWithAck.mockRejectedValueOnce(new Error('timeout'));
 
-    await user.click(screen.getByRole('button', {name: 'Open observation'}));
+    await user.click(screen.getByRole('button', {name: button}));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Could not open the observation');
     expect(store.getState().scheduler.dialogOpen).toBe(false);
@@ -204,18 +240,19 @@ it('keeps details open when loading the full observation fails and allows retry'
     await waitFor(() => expect(store.getState().scheduler.dialogOpen).toBe(true));
 });
 
-it('ignores a full-record response after its calendar dialog has been closed', async () => {
+it.each(['Open observation', 'View results'])('ignores a %s response after its calendar dialog has been closed', async button => {
     const user = userEvent.setup();
     const {store} = await renderCalendar();
     await user.click(screen.getByRole('button', {name: /ISS pass earlier/}));
     let resolveRecord;
     socket.emitWithAck.mockReturnValueOnce(new Promise(resolve => {resolveRecord = resolve;}));
-    await user.click(screen.getByRole('button', {name: 'Open observation'}));
+    await user.click(screen.getByRole('button', {name: button}));
     expect(screen.getByRole('button', {name: 'Open observation'})).toBeDisabled();
     await user.click(within(screen.getByRole('dialog')).getAllByRole('button', {name: 'Close', exact: true}).at(-1));
     await act(async () => resolveRecord({success: true, data: {id: 'earlier', sessions: []}}));
     expect(store.getState().scheduler.dialogOpen).toBe(false);
     expect(store.getState().scheduler.selectedObservation).toBeNull();
+    expect(screen.queryByRole('tab', {name: 'Execution Timeline'})).not.toBeInTheDocument();
 });
 
 it('preserves uncertain source timing without inventing precise times or empty reception fields', async () => {

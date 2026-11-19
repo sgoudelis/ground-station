@@ -96,6 +96,7 @@
     "provider": "Fournisseur",
     "open_error": "Impossible d’ouvrir l’observation. Veuillez réessayer.",
     "open_observation": "Ouvrir l’observation",
+    "view_results": "Voir les résultats",
     "open_source": "Ouvrir la source originale"
   }
 }

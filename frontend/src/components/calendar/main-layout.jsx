@@ -10,6 +10,7 @@ import SearchIcon from '@mui/icons-material/Search';
 import EventBusyIcon from '@mui/icons-material/EventBusy';
 import {useTranslation} from 'react-i18next';
 import CapsButton from '../common/capsbutton.jsx';
+import ObservationDataDialog from '../scheduler/observation-data-dialog.jsx';
 import {useUserTimeSettings} from '../../hooks/useUserTimeSettings.jsx';
 import {activityLabels} from './activities.js';
 import {addDays, civilDate, dayKey, groupEventsByDay, isCalendarDay, movePeriod, visibleDays} from './dates.js';
@@ -49,6 +50,7 @@ export default function CalendarPage() {
     const [satellite, setSatellite] = useState('all');
     const [kind, setKind] = useState('all');
     const [selectedId, setSelectedId] = useState(null);
+    const [resultsObservation, setResultsObservation] = useState(null);
     const labels = useMemo(() => activityLabels(t), [t]);
     const views = {month: t('views.month'), week: t('views.week'), agenda: t('views.agenda')};
     // Compact screens use the same period and filters in an agenda layout.
@@ -176,7 +178,10 @@ export default function CalendarPage() {
                 </Stack>
             </Paper>
             {events.some(event => !isLocalObservation(event)) && <Typography variant="caption" color="text.secondary" display="block" sx={{mt: 1.5}}>{t('window_note')}</Typography>}
-            <EventDetails key={selected?.id || 'closed'} event={selected} onClose={() => setSelectedId(null)} timezone={timezone} locale={locale} />
+            <EventDetails key={selected?.id || 'closed'} event={selected} onClose={() => setSelectedId(null)}
+                onViewResults={setResultsObservation} timezone={timezone} locale={locale} />
+            {resultsObservation && <ObservationDataDialog open observation={resultsObservation}
+                onClose={() => setResultsObservation(null)} />}
         </Box>
     );
 }

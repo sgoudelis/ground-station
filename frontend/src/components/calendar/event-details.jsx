@@ -8,6 +8,7 @@ import {alpha} from '@mui/material/styles';
 import CloseIcon from '@mui/icons-material/Close';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import {useTranslation} from 'react-i18next';
 import CapsButton from '../common/capsbutton.jsx';
 import {useSocket} from '../common/socket.jsx';
@@ -73,11 +74,11 @@ function TimeWindow({event, timezone, locale, format}) {
     </Box>;
 }
 
-export default function EventDetails({event, onClose, timezone, locale}) {
+export default function EventDetails({event, onClose, onViewResults, timezone, locale}) {
     const {t} = useTranslation(['calendar', 'common']);
     const {socket} = useSocket();
     const dispatch = useDispatch();
-    const [opening, setOpening] = useState(false);
+    const [opening, setOpening] = useState(null);
     const [openError, setOpenError] = useState(false);
     const pendingRequest = useRef(0);
     // The parent keys details by event ID. A late reply must not reopen an
@@ -96,13 +97,13 @@ export default function EventDetails({event, onClose, timezone, locale}) {
         hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
     }) : null;
 
-    const openObservation = async () => {
+    const openObservation = async target => {
         const request = ++pendingRequest.current;
-        setOpening(true);
+        setOpening(target);
         setOpenError(false);
         try {
             // The calendar is a summary. Fetch the complete, current record
-            // before handing it to the existing observation management form.
+            // before handing it to the existing editor or results dialog.
             const reply = await socket.timeout(15000).emitWithAck('api.call', {
                 cmd: 'get-scheduled-observations', data: {observation_id: event.source_id},
             });
@@ -110,13 +111,17 @@ export default function EventDetails({event, onClose, timezone, locale}) {
             if (!reply?.success || !reply.data || String(reply.data.id) !== String(event.source_id)) {
                 throw new Error('Observation unavailable');
             }
-            dispatch(setSelectedObservation(reply.data));
-            dispatch(setDialogOpen(true));
+            if (target === 'results') {
+                onViewResults(reply.data);
+            } else {
+                dispatch(setSelectedObservation(reply.data));
+                dispatch(setDialogOpen(true));
+            }
             onClose();
         } catch {
             if (request === pendingRequest.current) setOpenError(true);
         } finally {
-            if (request === pendingRequest.current) setOpening(false);
+            if (request === pendingRequest.current) setOpening(null);
         }
     };
 
@@ -150,12 +155,6 @@ export default function EventDetails({event, onClose, timezone, locale}) {
                                 : `${event.observation.peak_altitude.toLocaleString(locale, {maximumFractionDigits: 1})}°`],
                         ]} />
                     </DetailSection>}
-                    <Divider />
-                    <DetailSection title={t('origin')}>
-                        <Typography variant="body2" color="text.secondary">
-                            {event.observation?.monitored_satellite_id ? t('generated') : t('manual')}
-                        </Typography>
-                    </DetailSection>
                 </> : <>
                     <Divider />
                     <DetailSection title={t('source')}>
@@ -170,10 +169,16 @@ export default function EventDetails({event, onClose, timezone, locale}) {
         </DialogContent>
         <DialogActions sx={{px: {xs: 2, sm: 3}, py: 1.75, gap: 1, flexWrap: 'wrap'}}>
             <CapsButton onClick={onClose}>{t('close')}</CapsButton>
-            {local && event.source_id && <CapsButton variant="contained" disableElevation onClick={openObservation}
-                disabled={opening || !socket} endIcon={opening ? <CircularProgress size={16} color="inherit" /> : <ArrowForwardIcon />}>
-                {t('details.open_observation')}
-            </CapsButton>}
+            {local && event.source_id && <>
+                <CapsButton variant="outlined" onClick={() => openObservation('results')}
+                    disabled={Boolean(opening) || !socket} endIcon={opening === 'results' ? <CircularProgress size={16} color="inherit" /> : <FolderOpenIcon />}>
+                    {t('details.view_results')}
+                </CapsButton>
+                <CapsButton variant="contained" disableElevation onClick={() => openObservation('edit')}
+                    disabled={Boolean(opening) || !socket} endIcon={opening === 'edit' ? <CircularProgress size={16} color="inherit" /> : <ArrowForwardIcon />}>
+                    {t('details.open_observation')}
+                </CapsButton>
+            </>}
             {!local && source && <CapsButton component="a" href={source.href} target="_blank" rel="noopener noreferrer"
                 variant="contained" disableElevation endIcon={<OpenInNewIcon />}>
                 {t('details.open_source')}

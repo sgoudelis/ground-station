@@ -96,6 +96,7 @@
     "provider": "Proveedor",
     "open_error": "No se pudo abrir la observación. Inténtelo de nuevo.",
     "open_observation": "Abrir observación",
+    "view_results": "Ver resultados",
     "open_source": "Abrir fuente original"
   }
 }

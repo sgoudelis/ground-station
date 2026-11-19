@@ -96,6 +96,7 @@
     "provider": "Anbieter",
     "open_error": "Die Beobachtung konnte nicht geöffnet werden. Bitte versuchen Sie es erneut.",
     "open_observation": "Beobachtung öffnen",
+    "view_results": "Ergebnisse anzeigen",
     "open_source": "Originalquelle öffnen"
   }
 }
