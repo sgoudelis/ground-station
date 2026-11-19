@@ -207,10 +207,9 @@ async def test_late_socket_binding_publishes_aircraft_and_library_changes(tmp_pa
     monkeypatch.setattr("common.adsblive.aircraft", {})
 
     # Startup creates the manager before Socket.IO exists. Disable unrelated
-    # monitoring and signal handlers while exercising that initialization order.
+    # monitoring while exercising that initialization order.
     with (
         patch("pipeline.orchestration.processmanager.PerformanceMonitor"),
-        patch("pipeline.orchestration.processmanager.signal.signal"),
         patch.object(ProcessManager, "_start_metrics_emission"),
     ):
         manager = ProcessManager()
