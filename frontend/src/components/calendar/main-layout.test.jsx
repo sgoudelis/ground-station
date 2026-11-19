@@ -144,7 +144,7 @@ it('shows cached announcements with source links and date precision across timez
         sources: [{id: 'gscontrol', enabled: true, terms_version: 'events-1'}],
     }});
     await renderCalendar();
-    expect(screen.getByRole('switch', {name: 'External satellite events'})).toBeChecked();
+    expect(screen.getByRole('switch', {name: 'Satellite announcements'})).toBeChecked();
     await user.click(screen.getByRole('combobox', {name: 'Timezone'}));
     await user.click(screen.getByRole('option', {name: 'Asia/Tokyo'}));
     await waitFor(() => expect(screen.getByRole('region')).toHaveAttribute('aria-busy', 'false'));
@@ -154,7 +154,7 @@ it('shows cached announcements with source links and date precision across timez
     expect(within(dialog).getByText('18 Nov 2026')).toBeVisible();
     expect(within(dialog).getByText('19 Nov 2026')).toBeVisible();
     expect(within(dialog).getByText('Date only')).toBeVisible();
-    expect(within(dialog).getByText('GS Control events')).toBeVisible();
+    expect(within(dialog).getByText('GS Control')).toBeVisible();
     expect(within(dialog).getByRole('link', {name: 'example.org'})).toHaveAttribute('href', 'https://example.org/activity');
     expect(within(dialog).getByRole('link', {name: 'Open original source'})).toHaveAttribute('href', 'https://example.org/activity');
     expect(within(dialog).queryByRole('button', {name: 'Open observation'})).not.toBeInTheDocument();

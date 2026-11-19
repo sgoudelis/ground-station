@@ -46,7 +46,7 @@
   "source": "来源",
   "sources": {
     "observations": "本地观测",
-    "gscontrol": "GS Control 事件"
+    "gscontrol": "GS Control"
   },
   "status": "状态",
   "disabled": "已禁用",
@@ -58,17 +58,17 @@
   "peak_elevation": "最大仰角",
   "load_error": "无法加载日历事件，请重试。",
   "external": {
-    "label": "外部卫星事件",
+    "label": "卫星活动公告",
     "about": "关于此服务",
     "admin_only": "管理员为所有用户管理此设置。",
-    "storage_error": "无法存储同意状态。外部事件服务已停止。",
+    "storage_error": "无法存储同意状态，公告下载已停止。",
     "review_terms": "管理员必须接受更新后的条款。",
     "sync_error": "同步失败。已缓存的事件可能已过时。",
     "updated": "上次同步：{{date}}",
     "waiting": "正在等待首次同步。",
     "outside_coverage": "此视图超出了事件缓存的日期范围。",
     "save_error": "无法保存设置。请检查连接后重试。",
-    "title": "GS Control 卫星事件",
+    "title": "GS Control 公告",
     "introduction": "此可选服务提供集中收集并经批准的卫星活动公告。启用后将适用于此 Ground Station 实例的所有用户。",
     "connection": "接受后，后端会向 reports.gscontrol.net 注册共享的安装标识，并从 events.gscontrol.net 下载数据。服务会接收此标识及身份验证凭据、部署环境、公共 IP 地址和请求的日期范围。事件请求详情（包括 IP 地址）保留 7 天；最近联系时间和通过本地 IP 查询推断的大致国家保留 60 天；不含安装标识或 IP 地址的汇总数据最多保留一年。如果另行启用硬件普查，相同标识会关联事件使用与普查参与情况。不会发送账户详情、地面站坐标或本地观测。",
     "cache": "后端将立即下载事件，之后每六小时下载一次，并在本地缓存过去 30 天和未来 180 天的事件。撤回操作会在下次成功同步后生效。禁用服务将停止下载并清除此缓存。",
@@ -83,7 +83,7 @@
   },
   "source_types": {
     "local": "本地观测",
-    "external": "外部事件"
+    "external": "公告"
   },
   "details": {
     "scheduled_task": "计划任务",

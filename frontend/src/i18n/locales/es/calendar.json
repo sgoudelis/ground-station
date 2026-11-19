@@ -46,7 +46,7 @@
   "source": "Fuente",
   "sources": {
     "observations": "Observaciones locales",
-    "gscontrol": "Eventos de GS Control"
+    "gscontrol": "GS Control"
   },
   "status": "Estado",
   "disabled": "Desactivada",
@@ -58,17 +58,17 @@
   "peak_elevation": "Elevación máxima",
   "load_error": "No se pudieron cargar los eventos del calendario. Inténtalo de nuevo.",
   "external": {
-    "label": "Eventos de satélites externos",
+    "label": "Anuncios de actividad satelital",
     "about": "Acerca del servicio",
     "admin_only": "Los administradores gestionan este ajuste para todos los usuarios.",
-    "storage_error": "El almacenamiento del consentimiento no está disponible. Los eventos externos están detenidos.",
+    "storage_error": "El almacenamiento del consentimiento no está disponible. Las descargas de anuncios están detenidas.",
     "review_terms": "Un administrador debe aceptar las condiciones actualizadas.",
     "sync_error": "La sincronización falló. Los eventos guardados pueden estar desactualizados.",
     "updated": "Última sincronización: {{date}}",
     "waiting": "Esperando la primera sincronización.",
     "outside_coverage": "Esta vista supera el intervalo de eventos guardados.",
     "save_error": "No se pudo guardar el ajuste. Comprueba la conexión e inténtalo de nuevo.",
-    "title": "Eventos de satélites de GS Control",
+    "title": "Anuncios de GS Control",
     "introduction": "Este servicio opcional ofrece anuncios de actividades de satélites recopilados y aprobados de forma centralizada. La activación se aplica a todos los usuarios de esta instalación de Ground Station.",
     "connection": "Tras la aceptación, el backend registra un identificador de instalación compartido en reports.gscontrol.net y descarga datos de events.gscontrol.net. Los servicios reciben este identificador y la credencial de autenticación, el entorno de despliegue, la dirección IP pública y el intervalo solicitado. Los detalles de las solicitudes de eventos, incluidas las direcciones IP, se conservan durante 7 días; el último contacto y el país aproximado deducido localmente de su IP se conservan durante 60 días; los datos agregados sin identificadores de instalación ni IP se conservan hasta un año. El mismo identificador vincula el uso de eventos con la participación en el censo de hardware cuando se activa por separado. No se envían datos de cuentas, coordenadas de la estación ni observaciones locales.",
     "cache": "El backend descarga eventos inmediatamente y cada seis horas, manteniendo una caché local de los últimos 30 días y los próximos 180 días. Las retiradas se reflejan tras la siguiente sincronización correcta. Desactivar el servicio detiene las descargas y borra esta caché.",
@@ -83,7 +83,7 @@
   },
   "source_types": {
     "local": "Observación local",
-    "external": "Evento externo"
+    "external": "Anuncio"
   },
   "details": {
     "scheduled_task": "Tarea programada",

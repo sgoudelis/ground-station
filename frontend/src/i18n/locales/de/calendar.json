@@ -46,7 +46,7 @@
   "source": "Quelle",
   "sources": {
     "observations": "Lokale Beobachtungen",
-    "gscontrol": "GS Control Ereignisse"
+    "gscontrol": "GS Control"
   },
   "status": "Status",
   "disabled": "Deaktiviert",
@@ -58,17 +58,17 @@
   "peak_elevation": "Maximale Elevation",
   "load_error": "Kalenderereignisse konnten nicht geladen werden. Versuchen Sie es erneut.",
   "external": {
-    "label": "Externe Satellitenereignisse",
+    "label": "Ankündigungen zu Satellitenaktivitäten",
     "about": "Über diesen Dienst",
     "admin_only": "Administratoren verwalten diese Einstellung für alle Benutzer.",
-    "storage_error": "Die Zustimmung kann nicht gespeichert werden. Externe Ereignisse sind angehalten.",
+    "storage_error": "Der Einwilligungsspeicher ist nicht verfügbar. Das Herunterladen von Ankündigungen wurde gestoppt.",
     "review_terms": "Ein Administrator muss die aktualisierten Bedingungen akzeptieren.",
     "sync_error": "Synchronisierung fehlgeschlagen. Gespeicherte Ereignisse können veraltet sein.",
     "updated": "Zuletzt synchronisiert: {{date}}",
     "waiting": "Warten auf die erste Synchronisierung.",
     "outside_coverage": "Diese Ansicht reicht über den gespeicherten Ereigniszeitraum hinaus.",
     "save_error": "Die Einstellung konnte nicht gespeichert werden. Verbindung prüfen und erneut versuchen.",
-    "title": "GS Control Satellitenereignisse",
+    "title": "Ankündigungen von GS Control",
     "introduction": "Dieser optionale Dienst stellt zentral gesammelte und genehmigte Ankündigungen zu Satellitenaktivitäten bereit. Die Aktivierung gilt für alle Benutzer dieser Ground Station-Installation.",
     "connection": "Nach der Zustimmung registriert das Backend eine gemeinsame Installations-ID bei reports.gscontrol.net und lädt Daten von events.gscontrol.net herunter. Die Dienste erhalten diese ID und die Zugangsdaten, die Bereitstellungsumgebung, die öffentliche IP-Adresse und den angeforderten Zeitraum. Details zu Ereignisabrufen einschließlich IP-Adressen werden 7 Tage gespeichert; der letzte Kontakt und das lokal aus der IP geschätzte Land werden 60 Tage gespeichert; zusammengefasste Daten ohne Installations-IDs oder IP-Adressen bis zu einem Jahr. Dieselbe ID verknüpft die Ereignisnutzung mit dem Hardware-Zensus, wenn dieser separat aktiviert ist. Kontodaten, Stationskoordinaten und lokale Beobachtungen werden nicht übertragen.",
     "cache": "Das Backend lädt Ereignisse sofort und danach alle sechs Stunden herunter und speichert sie für die vergangenen 30 und kommenden 180 Tage lokal. Zurückgezogene Einträge verschwinden nach der nächsten erfolgreichen Synchronisierung. Das Deaktivieren beendet Downloads und löscht diesen Zwischenspeicher.",
@@ -83,7 +83,7 @@
   },
   "source_types": {
     "local": "Lokale Beobachtung",
-    "external": "Externes Ereignis"
+    "external": "Ankündigung"
   },
   "details": {
     "scheduled_task": "Geplante Aufgabe",

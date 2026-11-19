@@ -46,7 +46,7 @@
   "source": "Source",
   "sources": {
     "observations": "Local observations",
-    "gscontrol": "GS Control events"
+    "gscontrol": "GS Control"
   },
   "status": "Status",
   "disabled": "Disabled",
@@ -58,17 +58,17 @@
   "peak_elevation": "Peak elevation",
   "load_error": "Could not load calendar events. Try again.",
   "external": {
-    "label": "External satellite events",
+    "label": "Satellite announcements",
     "about": "About this service",
     "admin_only": "Administrators manage this setting for all users.",
-    "storage_error": "Consent storage is unavailable. External events are stopped.",
+    "storage_error": "Consent storage is unavailable. Announcement downloads are stopped.",
     "review_terms": "An administrator must accept the updated terms.",
     "sync_error": "Synchronization failed. Previously cached events may be outdated.",
     "updated": "Last synchronized: {{date}}",
     "waiting": "Waiting for the first synchronization.",
     "outside_coverage": "This view extends beyond the cached event window.",
     "save_error": "Could not save the setting. Check the connection and try again.",
-    "title": "GS Control satellite events",
+    "title": "GS Control announcements",
     "introduction": "This optional service provides centrally collected and approved satellite activity announcements. Enabling it applies to every user of this Ground Station installation.",
     "connection": "After acceptance, the backend registers a shared installation ID with reports.gscontrol.net and downloads from events.gscontrol.net. The services receive this ID and authentication credential, the deployment environment, public IP address and requested date range. Event request details, including IP addresses, are retained for 7 days; the latest contact and approximate country inferred locally from its IP are retained for 60 days; aggregates without installation IDs or IPs are retained for up to one year. The same ID links event use with hardware census participation when separately enabled. No account details, station coordinates or local observations are sent.",
     "cache": "The backend downloads events immediately and every six hours, storing a local cache for the previous 30 days and next 180 days. Withdrawals appear after the next successful synchronization. Disabling the service stops downloads and clears this cache.",
@@ -83,7 +83,7 @@
   },
   "source_types": {
     "local": "Local observation",
-    "external": "External event"
+    "external": "Announcement"
   },
   "details": {
     "scheduled_task": "Scheduled task",

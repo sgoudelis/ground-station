@@ -46,7 +46,7 @@
   "source": "Bron",
   "sources": {
     "observations": "Lokale observaties",
-    "gscontrol": "GS Control-gebeurtenissen"
+    "gscontrol": "GS Control"
   },
   "status": "Status",
   "disabled": "Uitgeschakeld",
@@ -58,17 +58,17 @@
   "peak_elevation": "Maximale elevatie",
   "load_error": "De kalendergebeurtenissen konden niet worden geladen. Probeer het opnieuw.",
   "external": {
-    "label": "Externe satellietgebeurtenissen",
+    "label": "Aankondigingen van satellietactiviteiten",
     "about": "Over deze dienst",
     "admin_only": "Beheerders beheren deze instelling voor alle gebruikers.",
-    "storage_error": "Toestemming kan niet worden opgeslagen. Externe gebeurtenissen zijn gestopt.",
+    "storage_error": "De toestemmingsopslag is niet beschikbaar. Het downloaden van aankondigingen is gestopt.",
     "review_terms": "Een beheerder moet de bijgewerkte voorwaarden accepteren.",
     "sync_error": "Synchronisatie mislukt. Gebeurtenissen in de cache kunnen verouderd zijn.",
     "updated": "Laatst gesynchroniseerd: {{date}}",
     "waiting": "Wachten op de eerste synchronisatie.",
     "outside_coverage": "Deze weergave valt gedeeltelijk buiten het opgeslagen tijdvak.",
     "save_error": "De instelling kon niet worden opgeslagen. Controleer de verbinding en probeer opnieuw.",
-    "title": "GS Control-satellietgebeurtenissen",
+    "title": "Aankondigingen van GS Control",
     "introduction": "Deze optionele dienst biedt centraal verzamelde en goedgekeurde aankondigingen van satellietactiviteiten. Inschakelen geldt voor alle gebruikers van deze Ground Station-installatie.",
     "connection": "Na toestemming registreert de backend een gedeelde installatie-ID bij reports.gscontrol.net en downloadt gegevens van events.gscontrol.net. De diensten ontvangen deze ID en het authenticatiegegeven, de implementatieomgeving, het openbare IP-adres en de opgevraagde periode. Details van gebeurtenisverzoeken, inclusief IP-adressen, worden 7 dagen bewaard; het laatste contact en het lokaal uit het IP geschatte land worden 60 dagen bewaard; totalen zonder installatie-ID’s of IP-adressen worden maximaal een jaar bewaard. Dezelfde ID koppelt het gebruik van gebeurtenissen aan deelname aan de hardwaretelling wanneer die afzonderlijk is ingeschakeld. Accountgegevens, stationscoördinaten en lokale waarnemingen worden niet verzonden.",
     "cache": "De backend downloadt gebeurtenissen direct en daarna elke zes uur en bewaart lokaal de afgelopen 30 dagen en komende 180 dagen. Ingetrokken gebeurtenissen verdwijnen na de volgende geslaagde synchronisatie. Uitschakelen stopt downloads en wist deze cache.",
@@ -83,7 +83,7 @@
   },
   "source_types": {
     "local": "Lokale waarneming",
-    "external": "Externe gebeurtenis"
+    "external": "Aankondiging"
   },
   "details": {
     "scheduled_task": "Geplande taak",
