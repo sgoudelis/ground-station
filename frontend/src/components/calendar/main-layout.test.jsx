@@ -189,7 +189,7 @@ it('opens the existing observation editor with a freshly loaded complete record'
     });
     await waitFor(() => expect(store.getState().scheduler.dialogOpen).toBe(true));
     expect(store.getState().scheduler.selectedObservation).toEqual(fullObservation);
-    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(screen.getByRole('dialog', {name: 'ISS'})).toBeVisible();
 });
 
 it('opens the scheduler results dialog with the selected observation timeline and products', async () => {
@@ -217,12 +217,12 @@ it('opens the scheduler results dialog with the selected observation timeline an
     await user.click(screen.getByRole('tab', {name: 'Downloaded Data'}));
     await user.click(screen.getByRole('button', {name: /ISS waterfall.png/}));
     expect(screen.getByRole('img', {name: 'ISS waterfall.png'})).toHaveAttribute('src', '/files/ISS-waterfall.png');
-    // Close the product preview, then the results dialog, and return to the calendar.
+    // Close the product preview, then the results dialog, and return to the observation details.
     await user.click(within(screen.getAllByRole('dialog').at(-1)).getByRole('button', {name: 'Close'}));
     await waitFor(() => expect(screen.queryByRole('img', {name: 'ISS waterfall.png'})).not.toBeInTheDocument());
     await user.click(within(screen.getByRole('dialog')).getByRole('button', {name: 'Close'}));
-    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
-    expect(screen.getByRole('region', {name: 'Satellite events calendar'})).toBeVisible();
+    await waitFor(() => expect(screen.getByRole('dialog', {name: 'ISS'})).toBeVisible());
+    expect(screen.getByRole('region', {name: 'Scheduled task'})).toBeVisible();
 });
 
 it.each(['Open observation', 'View results'])('keeps details open when %s fails and allows retry', async button => {

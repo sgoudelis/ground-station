@@ -111,13 +111,13 @@ export default function EventDetails({event, onClose, onViewResults, timezone, l
             if (!reply?.success || !reply.data || String(reply.data.id) !== String(event.source_id)) {
                 throw new Error('Observation unavailable');
             }
+            // Keep the calendar details open beneath either child dialog.
             if (target === 'results') {
                 onViewResults(reply.data);
             } else {
                 dispatch(setSelectedObservation(reply.data));
                 dispatch(setDialogOpen(true));
             }
-            onClose();
         } catch {
             if (request === pendingRequest.current) setOpenError(true);
         } finally {
