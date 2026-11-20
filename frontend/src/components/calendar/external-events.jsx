@@ -1,10 +1,10 @@
 import {useState} from 'react';
-import {useSelector} from 'react-redux';
-import {Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel,
-    Stack, Switch, Typography} from '@mui/material';
+import {Box, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControlLabel,
+    IconButton, Link, Stack, Typography} from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
 import {useTranslation} from 'react-i18next';
 import CapsButton from '../common/capsbutton.jsx';
-import {useSocket} from '../common/socket.jsx';
+import FeedRow from './feed-row.jsx';
 
 export function ExternalEventsStatus({status, locale, timezone}) {
     const {t} = useTranslation('calendar');
@@ -24,81 +24,92 @@ export function ExternalEventsStatus({status, locale, timezone}) {
     </Typography>;
 }
 
-export default function ExternalEvents({status, onChanged, locale, timezone}) {
+export default function ExternalEvents({status, isAdmin, pending, error, onSave, onClearError}) {
     const {t} = useTranslation('calendar');
-    const {socket} = useSocket();
-    const isAdmin = useSelector(state => state.auth?.user?.role === 'admin');
     const [open, setOpen] = useState(false);
     const [accepted, setAccepted] = useState(false);
-    const [busy, setBusy] = useState(false);
-    const [error, setError] = useState(false);
-    const consented = Boolean(status?.consented);
     const [pendingFeed, setPendingFeed] = useState(null);
+    const consented = Boolean(status?.consented);
+    const busy = pending !== null;
     const definitions = [
-        ['announcements', 'external.label'], ['space_weather', 'feeds.space_weather'], ['launches', 'feeds.launches'],
+        {id: 'announcements', label: t('external.label'), description: t('feeds.announcements_description')},
+        {id: 'space_weather', label: t('feeds.space_weather'), description: t('feeds.weather_description')},
+        {id: 'launches', label: t('feeds.launches'), description: t('feeds.launches_description')},
+    ];
+    const sections = [
+        [t('external.service_heading'), t('external.introduction')],
+        [t('external.privacy_heading'), t('external.connection')],
+        [t('external.controls_heading'), t('external.cache')],
+        [t('external.terms_heading'), t('external.terms')],
     ];
 
-    const save = async (feed, enabled, revoke = false) => {
-        setBusy(true);
-        setError(false);
-        try {
-            const reply = await socket.timeout(15000).emitWithAck('api.call', {
-                cmd: 'calendar.external.update',
-                data: revoke ? {revoke: true} : {feed_id: feed, enabled,
-                    ...(enabled && !consented ? {terms_version: status.terms_version} : {})},
-            });
-            if (!reply?.success) throw new Error('Settings unavailable');
-            onChanged(reply.data);
+    const save = async (feed, enabled) => {
+        if (await onSave(feed, enabled)) {
             setOpen(false);
             setAccepted(false);
-        } catch {
-            setError(true);
-        } finally {
-            setBusy(false);
+            setPendingFeed(null);
         }
     };
-    const close = () => {if (!busy) {setOpen(false); setAccepted(false); setError(false);}};
+    const openDisclosure = (feed = null) => {
+        setPendingFeed(feed);
+        setAccepted(false);
+        onClearError();
+        setOpen(true);
+    };
+    const close = () => {
+        if (!busy) {setOpen(false); setAccepted(false); setPendingFeed(null); onClearError();}
+    };
 
     return <>
-        <Stack spacing={1} alignItems="flex-start">
-            {definitions.map(([id, label]) => <FormControlLabel key={id} label={t(label)}
-                control={<Switch size="small" checked={status?.feeds?.find(feed => feed.id === id)?.enabled ?? (id === 'announcements' && Boolean(status?.enabled))}
-                    disabled={!isAdmin || !status || busy} slotProps={{input: {role: 'switch'}}}
-                    onChange={(_, checked) => {
-                        if (checked && !consented) {
-                            setPendingFeed(id); setAccepted(false); setError(false); setOpen(true);
-                        } else save(id, checked);
-                    }} />} />)}
-            <Typography variant="body2" color="text.secondary">{t('feeds.announcements_hint')}</Typography>
-            <CapsButton size="small" onClick={() => {setPendingFeed(!consented ? definitions.find(([id]) => status?.feeds?.find(feed => feed.id === id)?.enabled)?.[0] || null : null); setAccepted(false); setError(false); setOpen(true);}}>
-                {t('external.about')}
-            </CapsButton>
-            {!isAdmin && <Typography variant="caption" color="text.secondary">{t('external.admin_only')}</Typography>}
-            <ExternalEventsStatus status={status} locale={locale} timezone={timezone} />
-            {status?.enabled && status?.outside_coverage && <Typography variant="caption" color="text.secondary">
-                {t('external.outside_coverage')}
-            </Typography>}
-            {isAdmin && consented && <CapsButton size="small" color="warning" disabled={busy} onClick={() => save(null, false, true)}>{t('feeds.withdraw')}</CapsButton>}
-            {error && !open && <Typography variant="caption" color="error" role="alert">{t('external.save_error')}</Typography>}
-        </Stack>
-        <Dialog open={open} onClose={close} fullWidth maxWidth="sm" aria-labelledby="external-events-title">
-            <DialogTitle id="external-events-title">{t('external.title')}</DialogTitle>
-            <DialogContent dividers>
-                <Stack spacing={2}>
-                    <Typography variant="body2">{t('external.introduction')}</Typography>
-                    <Typography variant="body2">{t('external.connection')}</Typography>
-                    <Typography variant="body2">{t('external.cache')}</Typography>
-                    <Typography variant="body2">{t('external.terms')}</Typography>
-                    {isAdmin && !consented && status && pendingFeed && <FormControlLabel
-                        control={<Checkbox checked={accepted} onChange={event => setAccepted(event.target.checked)} disabled={busy} />}
-                        label={t('external.accept')} />}
+        <Box component="section" aria-labelledby="calendar-external-feeds-title">
+            <Typography id="calendar-external-feeds-title" component="h3" variant="subtitle2">{t('feeds.external_feeds')}</Typography>
+            <Typography variant="body2" color="text.secondary" sx={{mt: 0.5, mb: 1.5, lineHeight: 1.6}}>{t('feeds.announcements_hint')}</Typography>
+            <Stack divider={<Divider />} sx={{border: '1px solid', borderColor: 'divider', borderRadius: 1.5, overflow: 'hidden'}}>
+                {definitions.map(({id, label, description}) => <FeedRow key={id}
+                    event={{source: 'gscontrol', feed_id: id}} label={label} description={description}
+                    checked={status?.feeds?.find(feed => feed.id === id)?.enabled ?? (id === 'announcements' && Boolean(status?.enabled))}
+                    disabled={!isAdmin || !status || busy} busy={pending === id} error={error === id && !open}
+                    onChange={enabled => {
+                        if (enabled && !consented) openDisclosure(id);
+                        else save(id, enabled);
+                    }} />)}
+            </Stack>
+            <Box sx={{mt: 1.5}}>
+                <Link component="button" type="button" variant="caption" underline="hover" disabled={busy}
+                    onClick={() => openDisclosure(!consented ? definitions.find(({id}) => status?.feeds?.find(feed => feed.id === id)?.enabled)?.id || null : null)}
+                    sx={{textAlign: 'start', '&:disabled': {color: 'text.disabled', cursor: 'default'}}}>
+                    {t('external.about')}
+                </Link>
+            </Box>
+        </Box>
+        <Dialog open={open} onClose={close} fullWidth maxWidth="sm" aria-labelledby="external-events-title"
+            slotProps={{paper: {sx: {borderRadius: 2, m: {xs: 1.5, sm: 4}, maxWidth: 600,
+                width: {xs: 'calc(100% - 24px)', sm: 'calc(100% - 64px)'},
+                maxHeight: {xs: 'calc(100% - 24px)', sm: 'calc(100% - 64px)'}}}}}>
+            <DialogTitle id="external-events-header" component="div" sx={{p: {xs: 2, sm: 3}, pr: {xs: 6, sm: 7}}}>
+                <Typography id="external-events-title" component="h2" variant="h6" fontWeight={650}>{t('external.title')}</Typography>
+                <IconButton aria-label={t('close')} onClick={close} disabled={busy}
+                    sx={{position: 'absolute', right: 12, top: 14}}><CloseIcon /></IconButton>
+            </DialogTitle>
+            <DialogContent dividers sx={{p: {xs: 2, sm: 3}}}>
+                <Stack spacing={2.5}>
+                    {sections.map(([heading, body]) => <Box component="section" aria-label={heading} key={heading}>
+                        <Typography component="h3" variant="subtitle2" sx={{mb: 0.75}}>{heading}</Typography>
+                        <Typography variant="body2" sx={{lineHeight: 1.75}}>{body}</Typography>
+                    </Box>)}
+                    {isAdmin && !consented && status && pendingFeed && <Box sx={{p: 1.5, border: '1px solid',
+                        borderColor: 'divider', borderRadius: 1.5, bgcolor: 'action.hover'}}>
+                        <FormControlLabel sx={{m: 0, alignItems: 'flex-start', '& .MuiFormControlLabel-label': {pt: 0.5}}}
+                            control={<Checkbox checked={accepted} onChange={event => setAccepted(event.target.checked)} disabled={busy} sx={{p: 0.5, mr: 1}} />}
+                            label={<Typography variant="body2" sx={{lineHeight: 1.6}}>{t('external.accept')}</Typography>} />
+                    </Box>}
                     {error && <Typography color="error" role="alert">{t('external.save_error')}</Typography>}
                 </Stack>
             </DialogContent>
-            <DialogActions>
+            <DialogActions sx={{px: {xs: 2, sm: 3}, py: 1.5, flexWrap: 'wrap', gap: 1}}>
                 <CapsButton onClick={close} disabled={busy}>{t('close')}</CapsButton>
                 {isAdmin && !consented && status && pendingFeed && <CapsButton variant="contained" disableElevation
-                    disabled={!accepted || busy} onClick={() => save(pendingFeed, true)}>{t('external.enable')}</CapsButton>}
+                    loading={pending === pendingFeed} disabled={!accepted || busy} onClick={() => save(pendingFeed, true)}>{t('external.enable')}</CapsButton>}
             </DialogActions>
         </Dialog>
     </>;

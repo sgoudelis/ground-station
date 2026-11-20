@@ -74,6 +74,15 @@ All three external feeds share one acceptance of the in-app `events-1` disclosur
 {"feed_id": "announcements", "enabled": true, "terms_version": "events-1"}
 ```
 
+The dialog groups station data separately from external feeds, using the calendar's
+icons and colors with descriptions and right-aligned switches. Changes save
+immediately, with progress and errors beside the affected feed; switches share one
+pending update to avoid overwriting station selections. The external group has
+a service-information link without consent status badges or a withdrawal control.
+The consent dialog retains the full disclosure under section headings and opens
+above settings. Sync status
+and coverage warnings remain in the calendar footer.
+
 The backend records feed selections in `calendar_feeds` and the shared receipt,
 installation binding and polling metadata in `calendar_services`. It imports
 the legacy `backend/data/events/state.json` once and removes that file after
@@ -124,8 +133,12 @@ Explicit event expiry is enforced even offline. The calendar footer shows the
 last synchronization or error. Withdrawal reaches a station at its next successful
 sync. Local observations remain available when the external service/cache fails.
 
-Turning every external feed off pauses downloads and retains the shared consent.
-Explicit withdrawal (`{"revoke": true}`) persists the global choice before
+Turning off the last enabled external feed withdraws the shared consent, regardless
+of the local-observations switch. Enabling any external feed afterward requires
+fresh acceptance. The backend decides against the latest station settings, so a
+stale browser cannot determine whether other external feeds are still selected.
+Withdrawal (also supported explicitly with `{"revoke": true}`) persists the global
+choice before
 deleting the external cache, cancels an active download and rejects late results.
 A durable pending withdrawal removes only event consent and event details at the
 registry, retrying after outages. Census consent and the shared identity remain.

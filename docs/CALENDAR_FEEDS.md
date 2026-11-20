@@ -25,10 +25,13 @@ commit. An invalid receipt cannot grant network access. Database settings are
 authoritative even if a leftover legacy file exists.
 
 An external feed needs current shared consent before it can be enabled. Later
-external switches reuse that acceptance. Pausing all external feeds stops polling
-and retains consent and cache. The separate withdrawal action disables all
-external feeds, clears their cache and schedules the existing remote withdrawal;
-only withdrawal retries can contact the service after consent is revoked.
+external switches reuse that acceptance while any external feed remains enabled.
+Turning off the last external feed withdraws the shared consent, stops polling,
+clears the external cache and schedules the existing remote withdrawal. Local
+observations have no effect on that decision. Enabling an external feed afterward
+requires fresh acceptance. There is no separate withdrawal control or consent
+status badge in the dialog; only withdrawal retries can contact the service after
+consent is revoked.
 
 Full database restores and calendar-settings table imports invalidate external
 consent and selections. They retain receipt details for inspection, require fresh
@@ -56,6 +59,6 @@ The normal station polling interval is ten minutes, honoring longer provider
 retry delays and the bounded interval recommended by gscontrol. Manual refresh
 joins an ongoing poll and returns the completed calendar, including observations.
 
-The footer shows the station's shared synchronization/error state. Settings also
-expose the shared service status. Local observations remain available when the
+The footer shows the station's shared synchronization/error state. Settings link
+to the service information. Local observations remain available when the
 external source or cache cannot be read.

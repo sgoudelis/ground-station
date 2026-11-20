@@ -3,11 +3,21 @@
   "refresh": "Aktualisieren",
   "feeds": {
     "title": "Kalender-Feeds",
-    "observations_hint": "Die geplanten Beobachtungen dieser Station für alle Benutzer anzeigen.",
-    "announcements_hint": "Die Feed-Auswahl gilt für alle Stationsbenutzer. Externe Feeds teilen einen Download und eine Einwilligung.",
+    "observations_hint": "Geplante Beobachtungen dieser Station.",
+    "announcements_hint": "Wählen Sie, welche externen Feeds angezeigt werden. Sind alle ausgeschaltet, werden keine Daten mehr heruntergeladen.",
     "space_weather": "Weltraumwetter",
     "launches": "Raketenstarts",
-    "withdraw": "Einwilligung für externe Dienste widerrufen"
+    "withdraw": "Einwilligung für externe Dienste widerrufen",
+    "station_wide": "Die Einstellungen gelten für alle Nutzer dieser Station.",
+    "station_data": "Stationsdaten",
+    "external_feeds": "Externe Feeds",
+    "announcements_description": "Funkaktivitäten und Satellitenereignisse.",
+    "weather_description": "Warnungen und Vorhersagen der NOAA.",
+    "launches_description": "Bevorstehende Starttermine.",
+    "consent_granted": "Einwilligung erteilt",
+    "consent_required": "Einwilligung erforderlich",
+    "autosave": "Änderungen werden automatisch gespeichert.",
+    "saving": "Wird gespeichert…"
   },
   "previous": "Vorheriger Zeitraum",
   "next": "Nächster Zeitraum",
@@ -83,7 +93,7 @@
     "title": "Externe Kalender-Feeds",
     "introduction": "GS Control liefert Satellitenankündigungen, Weltraumwetterinformationen von NOAA SWPC und Starttermine von Launch Library 2. Die Einwilligung gilt für alle drei externen Feeds und alle Benutzer dieser Station. Jeder Download enthält alle drei Feeds; die Schalter bestimmen die Anzeige im Kalender.",
     "connection": "Nach der Zustimmung registriert das Backend eine gemeinsame Installations-ID bei reports.gscontrol.net und lädt Daten von events.gscontrol.net herunter. Die Dienste erhalten diese ID und die Zugangsdaten, die Bereitstellungsumgebung, die öffentliche IP-Adresse und den angeforderten Zeitraum. Details zu Ereignisabrufen einschließlich IP-Adressen werden 7 Tage gespeichert; der letzte Kontakt und das lokal aus der IP geschätzte Land werden 60 Tage gespeichert; zusammengefasste Daten ohne Installations-IDs oder IP-Adressen bis zu einem Jahr. Dieselbe ID verknüpft die Ereignisnutzung mit dem Hardware-Zensus, wenn dieser separat aktiviert ist. Kontodaten, Stationskoordinaten und lokale Beobachtungen werden nicht übertragen.",
-    "cache": "Downloads erfolgen, solange mindestens ein externer Feed aktiviert ist, normalerweise alle zehn Minuten. Der Cache umfasst die letzten 30 und nächsten 180 Tage, abhängig von Verfügbarkeit und Gültigkeit. Werden alle Feeds deaktiviert, pausieren Downloads; die Einwilligung bleibt bestehen. Ein Widerruf stoppt Downloads und leert den externen Cache.",
+    "cache": "Downloads erfolgen, solange mindestens ein externer Feed aktiviert ist, normalerweise alle zehn Minuten. Der Cache umfasst die letzten 30 und nächsten 180 Tage, abhängig von Verfügbarkeit und Gültigkeit. Werden alle externen Feeds deaktiviert, wird die Einwilligung widerrufen, Downloads werden gestoppt und ihr Cache wird geleert. Beim erneuten Aktivieren eines externen Feeds müssen diese Dienstinformationen erneut akzeptiert werden.",
     "terms": "Ankündigungen dienen zur Information, können sich ändern und ungenaue Zeitangaben enthalten. Prüfen Sie die verlinkten Quellen, bevor Sie sich darauf verlassen. Beobachtungen werden nicht automatisch geplant. Bei einem Ausfall bleiben gespeicherte Ankündigungen mit einer Synchronisierungswarnung sichtbar.",
     "accept": "Ich akzeptiere diese Bedingungen und aktiviere den externen Kalenderdienst für alle Benutzer dieser Station.",
     "enable": "Zustimmen und aktivieren",
@@ -92,7 +102,11 @@
     "source_link": "Originalquelle",
     "timing_note": "Zeitangabe der Quelle",
     "stale": "Gespeicherte Ereignisse warten auf eine Aktualisierung.",
-    "end_unspecified": "Nicht angegeben"
+    "end_unspecified": "Nicht angegeben",
+    "service_heading": "Dienst",
+    "privacy_heading": "Übermittelte Daten und Aufbewahrung",
+    "controls_heading": "Speicherung und Ihre Einstellungen",
+    "terms_heading": "Nutzung dieser Informationen"
   },
   "source_types": {
     "local": "Lokale Beobachtung",

@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 
 import httpx
 import pytest
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from calendars.consent import default_state, invalidate_consent
@@ -74,7 +75,12 @@ async def cached(service):
         return await service.cached_events(session, WINDOW)
 
 
-async def test_one_acceptance_covers_all_external_feeds_and_survives_pause(service):
+@pytest.mark.parametrize("observations_enabled", [True, False])
+async def test_last_external_feed_withdraws_consent_and_requires_fresh_acceptance(
+    service, observations_enabled
+):
+    if not observations_enabled:
+        await service.configure({"feed_id": "observations", "enabled": False})
     with pytest.raises(ValueError):
         await service.configure({"feed_id": "space_weather", "enabled": True})
     first = await service.configure(
@@ -88,14 +94,36 @@ async def test_one_acceptance_covers_all_external_feeds_and_survives_pause(servi
     async with transport:
         await service.tick(transport)
         assert [request.method for request in calls] == ["POST", "PUT", "GET"]
-        await service.configure({"feed_id": "space_weather", "enabled": False})
-        paused = await service.configure({"feed_id": "launches", "enabled": False})
-        assert paused["consented"] and not paused["enabled"]
+        partial = await service.configure({"feed_id": "space_weather", "enabled": False})
+        assert partial["consented"] and partial["enabled"]
+        assert service.consent.state["accepted_at"] == receipt
+        withdrawn = await service.configure({"feed_id": "launches", "enabled": False})
+        assert not withdrawn["consented"] and not withdrawn["enabled"]
+        assert (
+            next(row["enabled"] for row in withdrawn["feeds"] if row["id"] == "observations")
+            == observations_enabled
+        )
+        assert service.consent.state["deletion_pending"]
+        async with service.sessions() as session:
+            assert not (await session.execute(select(CachedExternalEvents))).scalars().all()
+            stored = await session.get(CalendarServices, "gscontrol")
+            assert not stored.enabled and stored.revoked_at is not None
+        restarted = ExternalEventsService(service.consent.path, service.sessions)
+        assert not (await restarted.status())["consented"]
         assert not await service.tick(transport, force=True)
-        await service.configure({"feed_id": "announcements", "enabled": True})
+        # A normal lifecycle tick completes the existing durable withdrawal.
+        await service.tick(transport)
+        assert calls[-1].method == "DELETE"
+        assert not service.consent.state["deletion_pending"]
+        with pytest.raises(ValueError):
+            await service.configure({"feed_id": "announcements", "enabled": True})
+        await service.configure(
+            {"feed_id": "announcements", "enabled": True, "terms_version": "events-1"},
+            "another-admin",
+        )
         await service.tick(transport, force=True)
-    assert sum(request.method == "PUT" for request in calls) == 1
-    assert service.consent.state["accepted_at"] == receipt
+    assert sum(request.method == "PUT" for request in calls) == 2
+    assert service.consent.state["accepted_by"] == "another-admin"
     assert [row["feed_id"] for row in (await cached(service))[0]] == ["announcements"]
 
 
@@ -106,6 +134,17 @@ async def test_local_feed_needs_no_consent_or_identity_and_is_station_wide(servi
     second = ExternalEventsService(service.consent.path, service.sessions)
     state = await second.status()
     assert not next(row["enabled"] for row in state["feeds"] if row["id"] == "observations")
+
+
+async def test_local_observations_do_not_revoke_an_active_external_feed(service):
+    await service.configure(
+        {"feed_id": "space_weather", "enabled": True, "terms_version": "events-1"}
+    )
+    receipt = service.consent.state["accepted_at"]
+    changed = await service.configure({"feed_id": "observations", "enabled": False})
+    assert changed["consented"] and changed["enabled"]
+    assert service.consent.state["accepted_at"] == receipt
+    assert next(row["enabled"] for row in changed["feeds"] if row["id"] == "space_weather")
 
 
 async def test_failed_feed_retains_cache_while_complete_empty_feed_clears(service):

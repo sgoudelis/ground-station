@@ -134,7 +134,7 @@ export default function CalendarPage() {
                             variant={view === value ? 'contained' : 'outlined'} disableElevation
                             aria-pressed={view === value} onClick={() => setView(value)}>{label}</CapsButton>)}
                     </ButtonGroup>
-                    <FeedSettings observationsEnabled={observationsEnabled} status={external} onChanged={updateExternal} locale={locale} timezone={timezone} />
+                    <FeedSettings observationsEnabled={observationsEnabled} status={external} onChanged={updateExternal} />
                 </Stack>
                 <Divider />
                 <Stack direction="row" gap={1.5} flexWrap="wrap" sx={{p: 2, bgcolor: 'action.hover'}}>

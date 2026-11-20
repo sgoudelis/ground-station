@@ -2,11 +2,21 @@
   "refresh": "Actualiser",
   "feeds": {
     "title": "Flux du calendrier",
-    "observations_hint": "Afficher les observations programmées de cette station pour tous les utilisateurs.",
-    "announcements_hint": "La sélection des flux s’applique à tous les utilisateurs de la station. Les flux externes partagent un téléchargement et un consentement.",
+    "observations_hint": "Observations programmées de cette station.",
+    "announcements_hint": "Choisissez les flux externes affichés. Les désactiver tous arrête les téléchargements.",
     "space_weather": "Météo spatiale",
     "launches": "Lancements",
-    "withdraw": "Retirer le consentement au service externe"
+    "withdraw": "Retirer le consentement au service externe",
+    "station_wide": "Les réglages s’appliquent à tous les utilisateurs de cette station.",
+    "station_data": "Données de la station",
+    "external_feeds": "Flux externes",
+    "announcements_description": "Activités radio et événements satellitaires.",
+    "weather_description": "Alertes et prévisions de la NOAA.",
+    "launches_description": "Calendrier des prochains lancements.",
+    "consent_granted": "Consentement accordé",
+    "consent_required": "Consentement requis",
+    "autosave": "Les modifications sont enregistrées automatiquement.",
+    "saving": "Enregistrement…"
   },
   "today": "Aujourd’hui",
   "previous": "Période précédente",
@@ -83,7 +93,7 @@
     "title": "Flux externes du calendrier",
     "introduction": "GS Control fournit les annonces de satellites, la météo spatiale de NOAA SWPC et les calendriers de lancement de Launch Library 2. Le consentement couvre les trois flux externes pour tous les utilisateurs de cette station. Chaque téléchargement contient les trois flux ; les interrupteurs déterminent leur affichage dans le calendrier.",
     "connection": "Après acceptation, le backend enregistre un identifiant d’installation partagé auprès de reports.gscontrol.net et télécharge les données depuis events.gscontrol.net. Les services reçoivent cet identifiant et le justificatif d’authentification, l’environnement de déploiement, l’adresse IP publique et la période demandée. Les détails des requêtes d’événements, y compris les adresses IP, sont conservés pendant 7 jours ; le dernier contact et le pays approximatif déduit localement de son IP sont conservés pendant 60 jours ; les données agrégées sans identifiants d’installation ni IP sont conservées jusqu’à un an. Le même identifiant relie l’utilisation des événements à la participation au recensement matériel lorsque celui-ci est activé séparément. Aucune information de compte, coordonnée de station ou observation locale n’est envoyée.",
-    "cache": "Les téléchargements ont lieu tant qu’au moins un flux externe est activé, normalement toutes les dix minutes. Le cache couvre les 30 derniers jours et les 180 prochains, selon la disponibilité et l’expiration des sources. Désactiver tous les flux suspend les téléchargements et conserve le consentement. Le retirer arrête les téléchargements et vide le cache externe.",
+    "cache": "Les téléchargements ont lieu tant qu’au moins un flux externe est activé, normalement toutes les dix minutes. Le cache couvre les 30 derniers jours et les 180 prochains, selon la disponibilité et l’expiration des sources. Désactiver tous les flux externes retire le consentement, arrête les téléchargements et vide leur cache. Réactiver un flux externe nécessite d’accepter à nouveau ces informations sur le service.",
     "terms": "Les annonces sont fournies à titre informatif et peuvent changer ou contenir des horaires incertains. Consultez les sources liées avant de vous y fier. Elles ne planifient pas automatiquement d’observations. En cas de panne, les annonces en cache restent visibles avec un avertissement de synchronisation.",
     "accept": "J’accepte ces conditions et active le service de calendrier externe pour tous les utilisateurs de cette station.",
     "enable": "Accepter et activer",
@@ -92,7 +102,11 @@
     "source_link": "Source originale",
     "timing_note": "Horaire de la source",
     "stale": "Les événements en cache sont en attente de mise à jour.",
-    "end_unspecified": "Non précisée"
+    "end_unspecified": "Non précisée",
+    "service_heading": "Service",
+    "privacy_heading": "Données partagées et conservation",
+    "controls_heading": "Stockage et options de contrôle",
+    "terms_heading": "Utilisation de ces informations"
   },
   "source_types": {
     "local": "Observation locale",

@@ -2,11 +2,21 @@
   "refresh": "Actualizar",
   "feeds": {
     "title": "Fuentes del calendario",
-    "observations_hint": "Mostrar las observaciones programadas de esta estación para todos los usuarios.",
-    "announcements_hint": "La selección de fuentes se aplica a todos los usuarios de la estación. Las fuentes externas comparten una descarga y un consentimiento.",
+    "observations_hint": "Observaciones programadas de esta estación.",
+    "announcements_hint": "Elige qué fuentes externas se muestran. Desactivarlas todas detiene las descargas.",
     "space_weather": "Meteorología espacial",
     "launches": "Lanzamientos",
-    "withdraw": "Retirar consentimiento del servicio externo"
+    "withdraw": "Retirar consentimiento del servicio externo",
+    "station_wide": "La configuración se aplica a todos los usuarios de esta estación.",
+    "station_data": "Datos de la estación",
+    "external_feeds": "Fuentes externas",
+    "announcements_description": "Actividad de radio y eventos de satélites.",
+    "weather_description": "Alertas y pronósticos de NOAA.",
+    "launches_description": "Calendario de próximos lanzamientos.",
+    "consent_granted": "Consentimiento otorgado",
+    "consent_required": "Se requiere consentimiento",
+    "autosave": "Los cambios se guardan automáticamente.",
+    "saving": "Guardando…"
   },
   "today": "Hoy",
   "previous": "Período anterior",
@@ -83,7 +93,7 @@
     "title": "Fuentes externas del calendario",
     "introduction": "GS Control proporciona anuncios de satélites, información meteorológica espacial de NOAA SWPC y programas de lanzamientos de Launch Library 2. El consentimiento cubre las tres fuentes externas para todos los usuarios de esta estación. Cada descarga contiene las tres fuentes; los interruptores controlan cuáles aparecen en el calendario.",
     "connection": "Tras la aceptación, el backend registra un identificador de instalación compartido en reports.gscontrol.net y descarga datos de events.gscontrol.net. Los servicios reciben este identificador y la credencial de autenticación, el entorno de despliegue, la dirección IP pública y el intervalo solicitado. Los detalles de las solicitudes de eventos, incluidas las direcciones IP, se conservan durante 7 días; el último contacto y el país aproximado deducido localmente de su IP se conservan durante 60 días; los datos agregados sin identificadores de instalación ni IP se conservan hasta un año. El mismo identificador vincula el uso de eventos con la participación en el censo de hardware cuando se activa por separado. No se envían datos de cuentas, coordenadas de la estación ni observaciones locales.",
-    "cache": "Las descargas se realizan mientras haya alguna fuente externa activada, normalmente cada diez minutos. La caché cubre los últimos 30 días y los próximos 180, según la disponibilidad y caducidad de las fuentes. Desactivar todas las fuentes pausa las descargas y conserva el consentimiento. Retirarlo detiene las descargas y borra la caché externa.",
+    "cache": "Las descargas se realizan mientras haya alguna fuente externa activada, normalmente cada diez minutos. La caché cubre los últimos 30 días y los próximos 180, según la disponibilidad y caducidad de las fuentes. Desactivar todas las fuentes externas retira el consentimiento, detiene las descargas y borra su caché. Volver a activar una fuente externa requiere aceptar esta información del servicio.",
     "terms": "Los anuncios son informativos y pueden cambiar o contener horarios inciertos. Consulta las fuentes enlazadas antes de utilizarlos. No programan observaciones automáticamente. Durante una interrupción, los anuncios guardados siguen visibles con un aviso de sincronización.",
     "accept": "Acepto estos términos y activo el servicio de calendario externo para todos los usuarios de esta estación.",
     "enable": "Aceptar y activar",
@@ -92,7 +102,11 @@
     "source_link": "Fuente original",
     "timing_note": "Horario de la fuente",
     "stale": "Los eventos guardados están pendientes de actualización.",
-    "end_unspecified": "Sin especificar"
+    "end_unspecified": "Sin especificar",
+    "service_heading": "Servicio",
+    "privacy_heading": "Datos compartidos y conservación",
+    "controls_heading": "Almacenamiento y opciones de control",
+    "terms_heading": "Uso de esta información"
   },
   "source_types": {
     "local": "Observación local",

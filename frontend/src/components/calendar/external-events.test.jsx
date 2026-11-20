@@ -1,7 +1,7 @@
 import {useState} from 'react';
 import {configureStore} from '@reduxjs/toolkit';
 import {Provider} from 'react-redux';
-import {render, screen, waitFor, within} from '@testing-library/react';
+import {act, render, screen, waitFor, within} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {beforeEach, expect, it, vi} from 'vitest';
 import '../../i18n/config.js';
@@ -18,10 +18,11 @@ beforeEach(() => {
     server = initial();
     socket.timeout.mockReset().mockReturnValue(socket);
     socket.emitWithAck.mockReset().mockImplementation((_event, {data}) => {
-        server = {...server, consented: data.revoke ? false : server.consented || Boolean(data.terms_version),
-            feeds: server.feeds.map(feed => data.revoke && feed.id !== 'observations' ? {...feed, enabled: false}
-                : feed.id === data.feed_id ? {...feed, enabled: data.enabled} : feed)};
-        server.enabled = server.consented && server.feeds.some(feed => feed.id !== 'observations' && feed.enabled);
+        const feeds = server.feeds.map(feed => feed.id === data.feed_id ? {...feed, enabled: data.enabled} : feed);
+        const selected = feeds.some(feed => feed.id !== 'observations' && feed.enabled);
+        const withdraw = data.feed_id !== 'observations' && data.enabled === false && !selected;
+        server = {...server, feeds, consented: !withdraw && (server.consented || Boolean(data.terms_version))};
+        server.enabled = server.consented && selected;
         return Promise.resolve({success: true, data: server});
     });
 });
@@ -33,7 +34,7 @@ function show(role = 'admin', changes = {}) {
     function Feeds() {
         const [current, setCurrent] = useState(server);
         return <FeedSettings status={current} onChanged={next => {setCurrent(next); changed(next);}}
-            observationsEnabled={current.feeds.find(feed => feed.id === 'observations').enabled} locale="en-GB" timezone="UTC" />;
+            observationsEnabled={current.feeds.find(feed => feed.id === 'observations').enabled} />;
     }
     render(<Provider store={store}><Feeds /></Provider>);
     return changed;
@@ -65,6 +66,9 @@ it('accepts once for all external feeds while preserving independent selections'
     expect(settings.closest('[aria-hidden="true"]')).not.toBeNull();
     expect(within(dialog).getByText(/NOAA SWPC/)).toHaveTextContent('Each download contains all three feeds');
     expect(within(dialog).getByText(/public IP address/)).toBeVisible();
+    for (const name of ['Service', 'Data shared and retention', 'Storage and your controls', 'Using this information']) {
+        expect(within(dialog).getByRole('heading', {name})).toBeVisible();
+    }
     const enable = within(dialog).getByRole('button', {name: 'Agree and enable'});
     expect(enable).toBeDisabled();
     expect(socket.emitWithAck).not.toHaveBeenCalled();
@@ -89,7 +93,7 @@ it('canceling consent keeps all external feeds off and resets acceptance', async
     await user.click(screen.getByRole('button', {name: 'Calendar feeds'}));
     await user.click(screen.getByRole('switch', {name: 'Satellite announcements'}));
     await user.click(screen.getByRole('checkbox'));
-    await user.click(screen.getByRole('button', {name: 'Close'}));
+    await user.click(screen.getAllByRole('button', {name: 'Close'}).at(-1));
     await waitFor(() => expect(screen.getByRole('dialog', {name: 'Calendar feeds'})).toBeVisible());
     expect(socket.emitWithAck).not.toHaveBeenCalled();
     await user.click(screen.getByRole('switch', {name: 'Launches'}));
@@ -112,17 +116,52 @@ it('keeps acceptance open when persistence fails', async () => {
     expect(announcements).not.toBeChecked();
 });
 
-it('pauses feeds without revoking consent and exposes a separate withdrawal action', async () => {
+it('withdraws consent when the last external feed is switched off and requires consent again', async () => {
     const user = userEvent.setup();
     show('admin', {consented: true, enabled: true, feeds: initial().feeds.map(feed => ({...feed, enabled: true}))});
     await user.click(screen.getByRole('button', {name: 'Calendar feeds'}));
-    for (const name of ['Satellite announcements', 'Space weather', 'Launches']) {
+    expect(screen.queryByRole('button', {name: 'Withdraw external-service consent'})).not.toBeInTheDocument();
+    for (const name of ['Satellite announcements', 'Space weather']) {
         await user.click(screen.getByRole('switch', {name}));
+        expect(server.consented).toBe(true);
+        expect(server.enabled).toBe(true);
     }
-    expect(server.consented).toBe(true);
+    await user.click(screen.getByRole('switch', {name: 'Launches'}));
     expect(server.enabled).toBe(false);
-    await user.click(screen.getByRole('button', {name: 'Withdraw external-service consent'}));
-    expect(socket.emitWithAck).toHaveBeenLastCalledWith('api.call', {cmd: 'calendar.external.update', data: {revoke: true}});
+    expect(server.consented).toBe(false);
+    expect(screen.getByRole('switch', {name: 'Local observations'})).toBeChecked();
+    expect(socket.emitWithAck).toHaveBeenLastCalledWith('api.call', {
+        cmd: 'calendar.external.update', data: {feed_id: 'launches', enabled: false},
+    });
+    await user.click(screen.getByRole('switch', {name: 'Space weather'}));
+    expect(screen.getByRole('dialog', {name: 'External calendar feeds'})).toBeVisible();
+    expect(screen.getByRole('button', {name: 'Agree and enable'})).toBeDisabled();
+    expect(socket.emitWithAck).toHaveBeenCalledTimes(3);
+});
+
+it('does not withdraw external consent when local observations are switched off', async () => {
+    const user = userEvent.setup();
+    show('admin', {consented: true, enabled: true, feeds: initial().feeds.map(feed => ({...feed,
+        enabled: ['observations', 'space_weather'].includes(feed.id)}))});
+    await user.click(screen.getByRole('button', {name: 'Calendar feeds'}));
+    await user.click(screen.getByRole('switch', {name: 'Local observations'}));
+    expect(server.consented).toBe(true);
+    expect(screen.getByRole('switch', {name: 'Space weather'})).toBeChecked();
+});
+
+it('preserves consent and the last external feed if saving the off switch fails', async () => {
+    const user = userEvent.setup();
+    show('admin', {consented: true, enabled: true, feeds: initial().feeds.map(feed => ({...feed,
+        enabled: ['observations', 'launches'].includes(feed.id)}))});
+    socket.emitWithAck.mockResolvedValueOnce({success: false});
+    await user.click(screen.getByRole('button', {name: 'Calendar feeds'}));
+    const launches = screen.getByRole('switch', {name: 'Launches'});
+    await user.click(launches);
+    expect(await screen.findByRole('alert')).toHaveTextContent('Could not save');
+    expect(launches).toBeChecked();
+    expect(server.consented).toBe(true);
+    await user.click(launches);
+    await waitFor(() => expect(launches).not.toBeChecked());
     expect(server.consented).toBe(false);
 });
 
@@ -132,15 +171,61 @@ it('operators can inspect the disclosure but cannot change station-wide feeds', 
     await user.click(screen.getByRole('button', {name: 'Calendar feeds'}));
     expect(screen.getAllByRole('switch')).toHaveLength(4);
     screen.getAllByRole('switch').forEach(control => expect(control).toBeDisabled());
+    expect(screen.getAllByText('Administrators manage this setting for all users.')).toHaveLength(1);
     await user.click(screen.getByRole('button', {name: 'About this service'}));
     expect(screen.getByRole('dialog', {name: 'External calendar feeds'})).toBeVisible();
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
     expect(socket.emitWithAck).not.toHaveBeenCalled();
 });
 
-it('shows upstream errors inside feed settings', async () => {
+it('shows feed groups without consent indicators or duplicate synchronization messages', async () => {
     const user = userEvent.setup();
     show('admin', {enabled: true, consented: true, error: 'source_unavailable'});
     await user.click(screen.getByRole('button', {name: 'Calendar feeds'}));
-    expect(screen.getByRole('status')).toHaveTextContent('Previously cached events may be outdated');
+    expect(screen.getByRole('heading', {name: 'Station data'})).toBeVisible();
+    expect(screen.getByRole('heading', {name: 'External feeds', exact: true})).toBeVisible();
+    expect(screen.getByText('Settings apply to everyone using this station.')).toBeVisible();
+    expect(screen.queryByText('Consent granted')).not.toBeInTheDocument();
+    expect(screen.queryByText('Consent required')).not.toBeInTheDocument();
+    expect(screen.getByText('Changes save automatically.')).toBeVisible();
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Previously cached events may be outdated/)).not.toBeInTheDocument();
+});
+
+it('indicates which feed is saving and prevents overlapping changes', async () => {
+    const user = userEvent.setup();
+    show('admin', {consented: true});
+    let finish;
+    socket.emitWithAck.mockReturnValueOnce(new Promise(resolve => {finish = resolve;}));
+    await user.click(screen.getByRole('button', {name: 'Calendar feeds'}));
+    const observations = screen.getByRole('switch', {name: 'Local observations'});
+    await user.click(observations);
+    expect(screen.getByRole('progressbar', {name: 'Saving…'})).toBeVisible();
+    expect(observations).toHaveAttribute('aria-busy', 'true');
+    screen.getAllByRole('switch').forEach(control => expect(control).toBeDisabled());
+    await user.click(screen.getByText('Launches'));
+    await user.keyboard('{Escape}');
+    expect(socket.emitWithAck).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('dialog', {name: 'Calendar feeds'})).toBeVisible();
+    await act(async () => finish({success: true, data: {...server,
+        feeds: server.feeds.map(feed => feed.id === 'observations' ? {...feed, enabled: false} : feed)}}));
+    expect(observations).not.toBeChecked();
+    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+    screen.getAllByRole('switch').forEach(control => expect(control).toBeEnabled());
+});
+
+it.each(['Local observations', 'Space weather'])('keeps %s unchanged on save failure and allows retry', async name => {
+    const user = userEvent.setup();
+    show('admin', {consented: true});
+    socket.emitWithAck.mockResolvedValueOnce({success: false});
+    await user.click(screen.getByRole('button', {name: 'Calendar feeds'}));
+    const control = screen.getByRole('switch', {name});
+    const checked = control.checked;
+    await user.click(control);
+    expect(await screen.findByRole('alert')).toHaveTextContent('Could not save');
+    expect(control.checked).toBe(checked);
+    expect(control).toHaveAccessibleDescription(/Could not save/);
+    await user.click(control);
+    await waitFor(() => expect(control.checked).toBe(!checked));
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
 });

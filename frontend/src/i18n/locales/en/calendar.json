@@ -3,11 +3,21 @@
   "refresh": "Refresh",
   "feeds": {
     "title": "Calendar feeds",
-    "observations_hint": "Show this station's scheduled observations for all users.",
-    "announcements_hint": "Feed selections apply to all station users. External feeds share one download and one consent.",
+    "observations_hint": "Scheduled observations from this station.",
+    "announcements_hint": "Choose which external feeds appear. Turning them all off stops downloads.",
     "space_weather": "Space weather",
     "launches": "Launches",
-    "withdraw": "Withdraw external-service consent"
+    "withdraw": "Withdraw external-service consent",
+    "station_wide": "Settings apply to everyone using this station.",
+    "station_data": "Station data",
+    "external_feeds": "External feeds",
+    "announcements_description": "Radio activity and satellite events.",
+    "weather_description": "NOAA alerts and forecasts.",
+    "launches_description": "Upcoming launch schedules.",
+    "consent_granted": "Consent granted",
+    "consent_required": "Consent required",
+    "autosave": "Changes save automatically.",
+    "saving": "Saving…"
   },
   "previous": "Previous period",
   "next": "Next period",
@@ -83,7 +93,7 @@
     "title": "External calendar feeds",
     "introduction": "GS Control provides satellite announcements, NOAA SWPC space-weather information and Launch Library 2 launch schedules. Consent covers all three external feeds for every user of this station. Each download contains all three feeds; the switches control which feeds appear in the calendar.",
     "connection": "After acceptance, the backend registers a shared installation ID with reports.gscontrol.net and downloads from events.gscontrol.net. The services receive this ID and authentication credential, the deployment environment, public IP address and requested date range. Event request details, including IP addresses, are retained for 7 days; the latest contact and approximate country inferred locally from its IP are retained for 60 days; aggregates without installation IDs or IPs are retained for up to one year. The same ID links event use with hardware census participation when separately enabled. No account details, station coordinates or local observations are sent.",
-    "cache": "Downloads run while at least one external feed is enabled, normally every ten minutes. The cache covers the previous 30 days and next 180 days, subject to source availability and expiry. Turning all feeds off pauses downloads and retains consent. Withdrawing consent stops downloads and clears the external cache.",
+    "cache": "Downloads run while at least one external feed is enabled, normally every ten minutes. The cache covers the previous 30 days and next 180 days, subject to source availability and expiry. Turning all external feeds off withdraws consent, stops downloads and clears their cache. Enabling an external feed again requires acceptance of this service information.",
     "terms": "Announcements are provided for information and may change or contain uncertain timing. Check the linked sources before relying on them. They do not automatically schedule observations. During an outage, previously cached announcements remain visible with a synchronization warning.",
     "accept": "I accept these terms and enable the external calendar service for all users of this station.",
     "enable": "Agree and enable",
@@ -92,7 +102,11 @@
     "source_link": "Original source",
     "timing_note": "Source timing",
     "stale": "Cached events are awaiting an update.",
-    "end_unspecified": "Not specified"
+    "end_unspecified": "Not specified",
+    "service_heading": "Service",
+    "privacy_heading": "Data shared and retention",
+    "controls_heading": "Storage and your controls",
+    "terms_heading": "Using this information"
   },
   "source_types": {
     "local": "Local observation",

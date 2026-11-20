@@ -590,13 +590,14 @@ async def test_existing_cached_start_only_announcement_works_before_publisher_up
     assert cached[0]["start_at"] == "2026-11-20T12:00:00Z"
 
 
-async def test_disable_clears_cache_and_persists_across_restart(service):
+@pytest.mark.parametrize("choice", [{"revoke": True}, {"enabled": False}])
+async def test_disable_clears_cache_and_persists_across_restart(service, choice):
     await service.configure(OPT_IN)
     client, calls = client_for()
     async with client:
         await service.tick(client, NOW)
         assert (await read_cache(service))[0]
-        assert not (await service.configure({"revoke": True}))["enabled"]
+        assert not (await service.configure(choice))["enabled"]
         assert not (await read_cache(service))[0]
         assert not await service.tick(client, NOW + 60, force=True)
         restarted = ExternalEventsService(service.consent.path, service.sessions)
@@ -608,7 +609,8 @@ async def test_disable_clears_cache_and_persists_across_restart(service):
         assert not (await session.execute(select(CachedExternalEvents))).scalars().all()
 
 
-async def test_disable_cancels_inflight_and_ignores_a_late_response(service):
+@pytest.mark.parametrize("choice", [{"revoke": True}, {"enabled": False}])
+async def test_disable_cancels_inflight_and_ignores_a_late_response(service, choice):
     requested = asyncio.Event()
     finish = asyncio.Event()
 
@@ -634,7 +636,7 @@ async def test_disable_cancels_inflight_and_ignores_a_late_response(service):
     async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
         polling = asyncio.create_task(service.tick(client, NOW))
         await requested.wait()
-        await service.configure({"revoke": True})
+        await service.configure(choice)
         finish.set()
         await polling
     assert (await read_cache(service))[0] == []

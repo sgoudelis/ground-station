@@ -2,11 +2,21 @@
   "refresh": "Aggiorna",
   "feeds": {
     "title": "Feed del calendario",
-    "observations_hint": "Mostra le osservazioni pianificate di questa stazione a tutti gli utenti.",
-    "announcements_hint": "La scelta dei feed vale per tutti gli utenti della stazione. I feed esterni condividono un download e un consenso.",
+    "observations_hint": "Osservazioni programmate da questa stazione.",
+    "announcements_hint": "Scegli quali feed esterni visualizzare. Disattivarli tutti interrompe i download.",
     "space_weather": "Meteo spaziale",
     "launches": "Lanci",
-    "withdraw": "Revoca il consenso al servizio esterno"
+    "withdraw": "Revoca il consenso al servizio esterno",
+    "station_wide": "Le impostazioni si applicano a tutti gli utenti di questa stazione.",
+    "station_data": "Dati della stazione",
+    "external_feeds": "Feed esterni",
+    "announcements_description": "Attività radio ed eventi satellitari.",
+    "weather_description": "Avvisi e previsioni della NOAA.",
+    "launches_description": "Calendario dei prossimi lanci.",
+    "consent_granted": "Consenso concesso",
+    "consent_required": "Consenso richiesto",
+    "autosave": "Le modifiche vengono salvate automaticamente.",
+    "saving": "Salvataggio…"
   },
   "today": "Oggi",
   "previous": "Periodo precedente",
@@ -83,7 +93,7 @@
     "title": "Feed esterni del calendario",
     "introduction": "GS Control fornisce annunci satellitari, informazioni sul meteo spaziale da NOAA SWPC e programmi di lancio da Launch Library 2. Il consenso copre tutti e tre i feed esterni per tutti gli utenti di questa stazione. Ogni download contiene tutti e tre i feed; gli interruttori ne controllano la visualizzazione nel calendario.",
     "connection": "Dopo l’accettazione, il backend registra un identificativo di installazione condiviso su reports.gscontrol.net e scarica i dati da events.gscontrol.net. I servizi ricevono questo identificativo e la credenziale di autenticazione, l’ambiente di distribuzione, l’indirizzo IP pubblico e l’intervallo richiesto. I dettagli delle richieste di eventi, inclusi gli indirizzi IP, vengono conservati per 7 giorni; l’ultimo contatto e il paese approssimativo dedotto localmente dall’IP vengono conservati per 60 giorni; i dati aggregati senza identificativi di installazione o IP vengono conservati fino a un anno. Lo stesso identificativo collega l’uso degli eventi alla partecipazione al censimento hardware quando questo viene attivato separatamente. Non vengono inviati dati degli account, coordinate della stazione o osservazioni locali.",
-    "cache": "I download vengono eseguiti finché almeno un feed esterno è attivo, normalmente ogni dieci minuti. La cache copre gli ultimi 30 giorni e i prossimi 180, secondo disponibilità e scadenza delle fonti. Disattivare tutti i feed sospende i download e conserva il consenso. Revocarlo arresta i download e cancella la cache esterna.",
+    "cache": "I download vengono eseguiti finché almeno un feed esterno è attivo, normalmente ogni dieci minuti. La cache copre gli ultimi 30 giorni e i prossimi 180, secondo disponibilità e scadenza delle fonti. Disattivare tutti i feed esterni revoca il consenso, arresta i download e cancella la loro cache. Per riattivare un feed esterno è necessario accettare nuovamente queste informazioni sul servizio.",
     "terms": "Gli annunci sono informativi e possono cambiare o contenere orari incerti. Consulta le sorgenti collegate prima di farvi affidamento. Non pianificano automaticamente osservazioni. Durante un’interruzione, gli annunci memorizzati restano visibili con un avviso di sincronizzazione.",
     "accept": "Accetto questi termini e attivo il servizio di calendario esterno per tutti gli utenti di questa stazione.",
     "enable": "Accetta e attiva",
@@ -92,7 +102,11 @@
     "source_link": "Sorgente originale",
     "timing_note": "Orario della sorgente",
     "stale": "Gli eventi memorizzati sono in attesa di aggiornamento.",
-    "end_unspecified": "Non specificata"
+    "end_unspecified": "Non specificata",
+    "service_heading": "Servizio",
+    "privacy_heading": "Dati condivisi e conservazione",
+    "controls_heading": "Archiviazione e opzioni di controllo",
+    "terms_heading": "Uso di queste informazioni"
   },
   "source_types": {
     "local": "Osservazione locale",

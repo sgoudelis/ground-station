@@ -121,6 +121,16 @@ class ExternalEventsService:
             raise ValueError("Invalid calendar feed setting")
         async with self.lock:
             await self.consent.load()
+            # Decide against the latest station settings, not a browser's
+            # possibly stale switches. Local observations never affect consent.
+            if (
+                not revoke
+                and feed in EXTERNAL_FEEDS
+                and not choice["enabled"]
+                and self.consent.state["enabled"]
+                and not any(self.consent.feeds.get(name) for name in EXTERNAL_FEEDS if name != feed)
+            ):
+                revoke = True
             if (
                 not revoke
                 and self.consent.feeds.get(feed) == choice["enabled"]

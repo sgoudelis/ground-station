@@ -2,11 +2,21 @@
   "refresh": "Vernieuwen",
   "feeds": {
     "title": "Kalenderfeeds",
-    "observations_hint": "Toon de geplande waarnemingen van dit station voor alle gebruikers.",
-    "announcements_hint": "De feedkeuze geldt voor alle stationsgebruikers. Externe feeds delen één download en één toestemming.",
+    "observations_hint": "Geplande waarnemingen van dit station.",
+    "announcements_hint": "Kies welke externe feeds worden weergegeven. Als je ze allemaal uitschakelt, stoppen de downloads.",
     "space_weather": "Ruimteweer",
     "launches": "Lanceringen",
-    "withdraw": "Toestemming voor externe dienst intrekken"
+    "withdraw": "Toestemming voor externe dienst intrekken",
+    "station_wide": "De instellingen gelden voor iedereen die dit station gebruikt.",
+    "station_data": "Stationsgegevens",
+    "external_feeds": "Externe feeds",
+    "announcements_description": "Radioverkeer en satellietevenementen.",
+    "weather_description": "Waarschuwingen en voorspellingen van NOAA.",
+    "launches_description": "Planning van komende lanceringen.",
+    "consent_granted": "Toestemming verleend",
+    "consent_required": "Toestemming vereist",
+    "autosave": "Wijzigingen worden automatisch opgeslagen.",
+    "saving": "Opslaan…"
   },
   "today": "Vandaag",
   "previous": "Vorige periode",
@@ -83,7 +93,7 @@
     "title": "Externe kalenderfeeds",
     "introduction": "GS Control levert satellietaankondigingen, ruimteweerinformatie van NOAA SWPC en lanceerschema’s van Launch Library 2. De toestemming geldt voor alle drie de externe feeds en alle gebruikers van dit station. Elke download bevat alle drie de feeds; de schakelaars bepalen welke in de kalender verschijnen.",
     "connection": "Na toestemming registreert de backend een gedeelde installatie-ID bij reports.gscontrol.net en downloadt gegevens van events.gscontrol.net. De diensten ontvangen deze ID en het authenticatiegegeven, de implementatieomgeving, het openbare IP-adres en de opgevraagde periode. Details van gebeurtenisverzoeken, inclusief IP-adressen, worden 7 dagen bewaard; het laatste contact en het lokaal uit het IP geschatte land worden 60 dagen bewaard; totalen zonder installatie-ID’s of IP-adressen worden maximaal een jaar bewaard. Dezelfde ID koppelt het gebruik van gebeurtenissen aan deelname aan de hardwaretelling wanneer die afzonderlijk is ingeschakeld. Accountgegevens, stationscoördinaten en lokale waarnemingen worden niet verzonden.",
-    "cache": "Downloads worden uitgevoerd zolang minstens één externe feed is ingeschakeld, normaal elke tien minuten. De cache bevat de afgelopen 30 en komende 180 dagen, afhankelijk van beschikbaarheid en geldigheid. Alle feeds uitschakelen pauzeert downloads en behoudt toestemming. Toestemming intrekken stopt downloads en wist de externe cache.",
+    "cache": "Downloads worden uitgevoerd zolang minstens één externe feed is ingeschakeld, normaal elke tien minuten. De cache bevat de afgelopen 30 en komende 180 dagen, afhankelijk van beschikbaarheid en geldigheid. Alle externe feeds uitschakelen trekt de toestemming in, stopt downloads en wist hun cache. Als je een externe feed opnieuw inschakelt, moet je deze service-informatie opnieuw accepteren.",
     "terms": "Aankondigingen dienen ter informatie en kunnen veranderen of onzekere tijden bevatten. Controleer de gekoppelde bronnen voordat u erop vertrouwt. Ze plannen niet automatisch waarnemingen. Bij een storing blijven opgeslagen aankondigingen zichtbaar met een synchronisatiewaarschuwing.",
     "accept": "Ik accepteer deze voorwaarden en schakel de externe kalenderdienst in voor alle gebruikers van dit station.",
     "enable": "Akkoord en inschakelen",
@@ -92,7 +102,11 @@
     "source_link": "Oorspronkelijke bron",
     "timing_note": "Tijd volgens de bron",
     "stale": "Gebeurtenissen in de cache wachten op een update.",
-    "end_unspecified": "Niet opgegeven"
+    "end_unspecified": "Niet opgegeven",
+    "service_heading": "Dienst",
+    "privacy_heading": "Gedeelde gegevens en bewaartermijnen",
+    "controls_heading": "Opslag en je instellingen",
+    "terms_heading": "Gebruik van deze informatie"
   },
   "source_types": {
     "local": "Lokale waarneming",
