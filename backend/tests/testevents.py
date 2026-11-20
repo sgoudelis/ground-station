@@ -20,7 +20,7 @@ from alembic.config import Config
 from calendars.consent import EventsConsent
 from calendars.external import ExternalEventsService, rolling_window
 from calendars.protocol import POLL_SECONDS, TERMS_VERSION
-from calendars.schemas import CalendarRange
+from calendars.schemas import CalendarEvent, CalendarRange
 from common import auth
 from db.models import CachedExternalEvents, CalendarFeeds, CalendarServices
 from handlers.entities import calendar
@@ -494,6 +494,100 @@ async def test_partial_start_is_exclusive_at_the_next_day_boundary(service):
     assert not (await read_cache(service))[0]
     next_day = CalendarRange(start="2026-11-19", end="2026-11-20")
     assert len((await read_cache(service, next_day))[0]) == 1
+
+
+@pytest.mark.parametrize("clock,zone", [("12:00", "UTC"), ("12:00:30", "GMT"), ("12:00", "Z")])
+def test_legacy_publisher_note_retains_a_known_start(clock, zone):
+    published = event(
+        start="2026-11-18",
+        end="2026-11-19",
+        time_precision="unspecified",
+        timing_note=f"Start: 2026-11-18 {clock} {zone}; End time not stated; Source recurrence: Every Friday",
+    )
+    parsed = CalendarEvent.model_validate({**published, "source": "gscontrol", "source_id": "sstv"})
+    assert parsed.start_at == datetime.fromisoformat(f"2026-11-18T{clock}+00:00")
+    assert parsed.end == WINDOW.end
+
+
+@pytest.mark.parametrize(
+    "note",
+    [
+        "End time not stated",
+        "Start: 2026-11-18 UTC; End time not stated",
+        "Start: 2026-11-18 12:00 (timezone not stated); End time not stated",
+        "Start: 2026-11-18 12:00 CST; End time not stated",
+        "Start: 2026-11-19 12:00 UTC; End time not stated",
+        "Start: 2026-11-18 25:00 UTC; End time not stated",
+        "The article says Start: 2026-11-18 12:00 UTC; End time not stated",
+    ],
+)
+def test_legacy_start_does_not_guess_missing_or_ambiguous_information(note):
+    parsed = CalendarEvent.model_validate(
+        {
+            **event(
+                start="2026-11-18", end="2026-11-19", time_precision="unspecified", timing_note=note
+            ),
+            "source": "gscontrol",
+            "source_id": "sstv",
+        }
+    )
+    assert parsed.start_at is None
+
+
+def test_structured_start_takes_priority_over_legacy_note():
+    parsed = CalendarEvent.model_validate(
+        {
+            **event(
+                start="2026-11-18",
+                end="2026-11-19",
+                time_precision="unspecified",
+                start_at="2026-11-18T13:00:00Z",
+                timing_note="Start: 2026-11-18 12:00 UTC; End time not stated",
+            ),
+            "source": "gscontrol",
+            "source_id": "sstv",
+        }
+    )
+    assert parsed.start_at.hour == 13
+
+
+async def test_existing_cached_start_only_announcement_works_before_publisher_upgrade(service):
+    await service.configure(OPT_IN)
+    window = CalendarRange(start="2026-11-20", end="2026-11-21")
+    published = event(
+        "weekly",
+        title="XU7AMO weekly QO-100 operation",
+        start="2026-11-20",
+        end="2026-11-21",
+        time_precision="unspecified",
+        timing_note="Start: 2026-11-20 12:00 UTC; End time not stated; Source recurrence: Every Friday",
+    )
+    async with service.sessions() as session:
+        session.add(
+            CachedExternalEvents(
+                id="weekly",
+                feed_id="announcements",
+                start_date=window.start,
+                end_date=window.end,
+                payload={
+                    **published,
+                    "id": "gscontrol:weekly",
+                    "source": "gscontrol",
+                    "source_id": "weekly",
+                    "start_at": None,
+                },
+                fetched_at=datetime.fromtimestamp(NOW, timezone.utc),
+            )
+        )
+        await session.commit()
+    cached, _ = await read_cache(service, window)
+    assert cached[0]["start_at"] == "2026-11-20T12:00:00Z"
+    # A refresh from the unchanged public service must not reintroduce the warning.
+    client, _ = client_for([published])
+    async with client:
+        await service.tick(client, NOW, force=True)
+    cached, _ = await read_cache(service, window)
+    assert cached[0]["start_at"] == "2026-11-20T12:00:00Z"
 
 
 async def test_disable_clears_cache_and_persists_across_restart(service):

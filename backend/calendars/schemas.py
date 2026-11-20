@@ -3,6 +3,7 @@
 
 """Source-independent calendar entries, with observation details kept separate."""
 
+import re
 from datetime import date, datetime, time, timedelta, timezone
 from typing import Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -80,6 +81,34 @@ class CalendarEvent(BaseModel):
     expires_at: AwareDatetime | None = None
     source_updated_at: AwareDatetime | None = None
     publication_method: str | None = None
+
+    @model_validator(mode="after")
+    def recover_published_start(self):
+        # Older GS Control snapshots put a known start only in this generated
+        # prefix. Recover it on reads too, so existing cached events work before
+        # the publisher is upgraded. Explicit structured timestamps take priority.
+        if (
+            self.start_at is not None
+            or self.source != "gscontrol"
+            or self.time_precision != "unspecified"
+            or type(self.start) is not date
+        ):
+            return self
+        prefix = (self.timing_note or "").split(";", 1)[0]
+        match = re.fullmatch(
+            r"Start: (\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}(?::\d{2})?) (?:UTC|GMT|Z)",
+            prefix,
+        )
+        # Match the occurrence's own date; never extract arbitrary article
+        # prose, infer a timezone, or reuse another recurrence's start.
+        if match and match[1] == self.start.isoformat():
+            try:
+                self.start_at = datetime.fromisoformat(f"{match[1]}T{match[2]}").replace(
+                    tzinfo=timezone.utc
+                )
+            except ValueError:
+                pass  # An invalid legacy clock keeps its missing-time warning.
+        return self
 
     @property
     def has_known_date(self):

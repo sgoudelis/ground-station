@@ -182,8 +182,12 @@ unknown. If the start instant is known but the end is not, optional `start_at`
 retains that timezone-aware timestamp. The calendar shows a single start marker
 on the viewer's local start day, with no assumed end or duration and no missing-start
 warning. Date boundaries remain source coverage metadata in that case. Without
-`start_at`, non-instant dates stay fixed when the viewer changes timezone and
-show the missing-time/timezone notice. `change: "cancellation"` remains visible
+`start_at`, the station also recognizes an older publisher's exact generated
+`Start: YYYY-MM-DD HH:MM UTC` timing-note prefix (also accepting GMT/Z and seconds),
+provided its date matches the occurrence. This works with existing cached rows
+without waiting for a publisher upgrade. Other non-instant dates stay fixed when
+the viewer changes timezone and show the missing-time/timezone notice.
+`change: "cancellation"` remains visible
 as a cancelled announcement when explicitly approved for publication.
 
 The public API address is `https://events.gscontrol.net` (health check:
