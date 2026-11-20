@@ -19,7 +19,7 @@ export default function EventCard({event, day, timezone, locale, onOpen, compact
         timeZone: timezone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
     });
     const dated = event.time_precision && event.time_precision !== 'instant';
-    const time = dated ? t(event.time_precision === 'date' ? 'external.date_only' : 'external.time_unspecified')
+    const time = event.start_at ? clock(event.start_at) : dated ? t('external.time_unspecified')
         : dayKey(event.start, timezone) < day ? t('continues') : clock(event.start);
     const endsHere = dayKey(new Date(event.end).getTime() - 1, timezone) === day;
     const timeRange = dated || (time === t('continues') && !endsHere) ? time

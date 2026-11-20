@@ -91,7 +91,8 @@
     "time_unspecified": "Heure ou fuseau horaire non précisé",
     "source_link": "Source originale",
     "timing_note": "Horaire de la source",
-    "stale": "Les événements en cache sont en attente de mise à jour."
+    "stale": "Les événements en cache sont en attente de mise à jour.",
+    "end_unspecified": "Non précisée"
   },
   "source_types": {
     "local": "Observation locale",

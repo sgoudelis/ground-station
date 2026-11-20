@@ -302,6 +302,13 @@ async def test_manual_refresh_respects_provider_retry_after_across_restart(servi
         event(end="2026-11-18T09:00:00Z"),
         event(start="2026-11-18T10:00:00"),
         event(time_precision="date"),
+        event(
+            start="2026-11-18",
+            end="2026-11-19",
+            time_precision="unspecified",
+            start_at="2026-11-18T12:00:00",
+        ),
+        event(start_at="2026-11-18T12:00:00Z"),
     ],
 )
 async def test_invalid_or_unapproved_snapshot_retains_previous_cache(service, bad):
@@ -443,6 +450,50 @@ async def test_cache_queries_respect_timezone_boundaries(service):
     assert not (await read_cache(service))[0]
     tokyo = CalendarRange(start="2026-11-18", end="2026-11-19", timezone="Asia/Tokyo")
     assert len((await read_cache(service, tokyo))[0]) == 1
+
+
+async def test_partial_start_survives_refresh_and_restart_without_inventing_an_interval(service):
+    await service.configure(OPT_IN)
+    client, _ = client_for(
+        [
+            event(
+                start="2026-11-17",
+                end="2026-11-18",
+                time_precision="unspecified",
+                start_at="2026-11-17T18:00:00Z",
+                timing_note="End time not stated",
+            ),
+        ]
+    )
+    async with client:
+        await service.tick(client, NOW)
+    restarted = ExternalEventsService(service.consent.path, service.sessions)
+    tokyo = CalendarRange(start="2026-11-18", end="2026-11-19", timezone="Asia/Tokyo")
+    assert not (await read_cache(restarted))[0]
+    cached, _ = await read_cache(restarted, tokyo)
+    assert len(cached) == 1
+    assert cached[0]["start_at"] == "2026-11-17T18:00:00Z"
+    assert (cached[0]["start"], cached[0]["end"]) == ("2026-11-17", "2026-11-18")
+    assert cached[0]["time_precision"] == "unspecified"
+
+
+async def test_partial_start_is_exclusive_at_the_next_day_boundary(service):
+    await service.configure(OPT_IN)
+    client, _ = client_for(
+        [
+            event(
+                start="2026-11-19",
+                end="2026-11-20",
+                time_precision="unspecified",
+                start_at="2026-11-19T00:00:00Z",
+            ),
+        ]
+    )
+    async with client:
+        await service.tick(client, NOW)
+    assert not (await read_cache(service))[0]
+    next_day = CalendarRange(start="2026-11-19", end="2026-11-20")
+    assert len((await read_cache(service, next_day))[0]) == 1
 
 
 async def test_disable_clears_cache_and_persists_across_restart(service):

@@ -20,6 +20,24 @@ describe('satellite calendar dates', () => {
             }
         }
     });
+    it('places known starts with unknown ends on the start day in the selected timezone', () => {
+        const event = {id: 'start-only', start: '2026-11-18', end: '2026-11-19',
+            time_precision: 'unspecified', start_at: '2026-11-18T23:00:00Z'};
+        expect(eventsOnDay([event], '2026-11-18', 'UTC')).toEqual([event]);
+        expect(eventsOnDay([event], '2026-11-19', 'UTC')).toEqual([]);
+        expect(eventsOnDay([event], '2026-11-18', 'Asia/Tokyo')).toEqual([]);
+        expect(eventsOnDay([event], '2026-11-19', 'Asia/Tokyo')).toEqual([event]);
+        const midnight = {...event, start_at: '2026-11-18T00:00:00Z'};
+        expect(eventsOnDay([midnight], '2026-11-17', 'America/Los_Angeles')).toEqual([midnight]);
+        expect(eventsOnDay([midnight], '2026-11-18', 'America/Los_Angeles')).toEqual([]);
+    });
+
+    it('sorts known starts alongside complete intervals using their actual times', () => {
+        const partial = {id: 'partial', start: '2026-11-18', end: '2026-11-19',
+            time_precision: 'unspecified', start_at: '2026-11-18T12:00:00Z'};
+        const earlier = {id: 'earlier', start: '2026-11-18T11:00:00Z', end: '2026-11-18T11:30:00Z'};
+        expect(eventsOnDay([partial, earlier], '2026-11-18', 'UTC')).toEqual([earlier, partial]);
+    });
     it('keeps month navigation and six-week grids stable at month and year boundaries', () => {
         expect(movePeriod('2026-01-31', 1, 'month')).toBe('2026-02-01');
         expect(movePeriod('2026-01-31', -1, 'agenda')).toBe('2025-12-01');

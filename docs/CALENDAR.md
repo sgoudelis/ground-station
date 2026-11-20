@@ -41,8 +41,8 @@ badges, details and filter swatches. Source labels and execution-status badges
 remain visible; status changes do not change the activity color. Launch cards
 use their existing source label without a repeated activity pill.
 
-The Activity menu supports checking multiple types independently, selecting all
-or none, and resetting filters. These display choices survive calendar navigation
+The Activity menu supports checking multiple types independently and selecting
+all or none. These display choices survive calendar navigation
 and refreshes without changing the station-wide feed selections.
 
 Local details emphasize the scheduled task window and duration, followed by
@@ -178,8 +178,12 @@ The client also rejects unapproved, superseded, duplicate or noncanonical entrie
 if included accidentally. Frequencies are Hz. End boundaries are always exclusive.
 `time_precision: "date"` uses date-only boundaries; `"unspecified"` also uses
 civil dates, with optional `timing_note` preserving source times whose timezone is
-unknown. Those dates stay fixed when the viewer changes timezone and never
-pretend to be precise UTC appointments. `change: "cancellation"` remains visible
+unknown. If the start instant is known but the end is not, optional `start_at`
+retains that timezone-aware timestamp. The calendar shows a single start marker
+on the viewer's local start day, with no assumed end or duration and no missing-start
+warning. Date boundaries remain source coverage metadata in that case. Without
+`start_at`, non-instant dates stay fixed when the viewer changes timezone and
+show the missing-time/timezone notice. `change: "cancellation"` remains visible
 as a cancelled announcement when explicitly approved for publication.
 
 The public API address is `https://events.gscontrol.net` (health check:

@@ -220,7 +220,11 @@ class ExternalEventsService:
                         continue  # Hide estimates already cached before the source fix.
                     # SQL dates over-select precise instants; compare against
                     # the user's actual timezone-aware day boundaries.
-                    if isinstance(event.start, datetime):
+                    if event.start_at is not None:
+                        # Without an end instant this is a start marker, not a
+                        # window lasting until the civil-date coverage end.
+                        overlaps = start <= event.start_at < end
+                    elif isinstance(event.start, datetime):
                         overlaps = event.start < end and event.end > start
                     else:
                         overlaps = event.start < window.end and event.end > window.start
@@ -415,7 +419,10 @@ class ExternalEventsService:
                         for event in snapshot.events:
                             if event.feed_id not in complete or not event.has_known_date:
                                 continue
-                            if isinstance(event.start, datetime) and isinstance(
+                            if event.start_at is not None:
+                                event_first = event.start_at.astimezone(timezone.utc).date()
+                                event_last = event_first + timedelta(days=1)
+                            elif isinstance(event.start, datetime) and isinstance(
                                 event.end, datetime
                             ):
                                 event_first = event.start.astimezone(timezone.utc).date()

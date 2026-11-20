@@ -100,7 +100,6 @@ export default function CalendarPage() {
     const periodLabel = view === 'week'
         ? `${dateLabel(days[0], {month: 'short', day: 'numeric'})} – ${dateLabel(days.at(-1), {year: 'numeric', month: 'short', day: 'numeric'})}`
         : dateLabel(anchor, {month: 'long', year: 'numeric'});
-    const filtersActive = search || satellite !== 'all' || hiddenKinds.length > 0;
 
     useEffect(() => {
         // Refresh the today marker if the calendar stays open across midnight.
@@ -169,7 +168,6 @@ export default function CalendarPage() {
                     <TextField select label={t('timezone')} value={zoneChoice} onChange={event => setZoneChoice(event.target.value)} size="small" sx={{minWidth: 150}}>
                         {timezones.map(zone => <MenuItem key={zone} value={zone}>{zone}</MenuItem>)}
                     </TextField>
-                    {filtersActive && <CapsButton size="small" onClick={() => {setSearch(''); setSatellite('all'); setHiddenKinds([]);}}>{t('reset_filters')}</CapsButton>}
                 </Stack>
                 <Divider />
 

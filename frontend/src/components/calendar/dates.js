@@ -38,14 +38,16 @@ export function groupEventsByDay(events, days, timezone) {
     // End instants are exclusive: an event ending at midnight belongs to the
     // previous day, while a window crossing midnight appears on both days.
     const groups = new Map(days.map(day => [day, []]));
-    const sorted = events.filter(hasCalendarDate).sort((a, b) => new Date(a.start) - new Date(b.start));
+    const sorted = events.filter(hasCalendarDate).sort((a, b) => new Date(a.start_at || a.start) - new Date(b.start_at || b.start));
     for (const event of sorted) {
         // Convert each boundary once, rather than once for every calendar cell.
         // Date-only and unspecified-zone announcements stay on their source
         // civil dates; treating them as UTC would shift them in western zones.
         const dated = event.time_precision && event.time_precision !== 'instant';
-        const first = dated ? event.start : dayKey(event.start, timezone);
-        const last = dated ? addDays(event.end, -1) : dayKey(new Date(event.end).getTime() - 1, timezone);
+        const first = event.start_at ? dayKey(event.start_at, timezone) : dated ? event.start : dayKey(event.start, timezone);
+        // A known start with an unknown end is a single start marker. Its
+        // coverage dates must not create extra tiles or imply a duration.
+        const last = event.start_at ? first : dated ? addDays(event.end, -1) : dayKey(new Date(event.end).getTime() - 1, timezone);
         for (const day of days) {
             if (first <= day && last >= day) groups.get(day).push(event);
         }

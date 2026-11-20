@@ -80,6 +80,8 @@ class PublishedEvent(CalendarEvent):
         if self.canonical_id is not None and self.canonical_id != self.id:
             raise ValueError("An attached source is not a canonical event")
         precise = self.time_precision == "instant"
+        if self.start_at is not None and self.time_precision != "unspecified":
+            raise ValueError("A partial start requires unspecified interval precision")
         if isinstance(self.start, datetime) != precise or isinstance(self.end, datetime) != precise:
             raise ValueError("Timing precision must match both boundaries")
         if self.end <= self.start:

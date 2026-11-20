@@ -120,7 +120,11 @@ it('combines search and activity filters and recovers from an empty result', asy
     await user.keyboard('{Escape}');
     await waitFor(() => expect(screen.queryByRole('listbox')).not.toBeInTheDocument());
     expect(within(calendar).getByText('No events in this view')).toBeVisible();
-    await user.click(screen.getByRole('button', {name: 'Reset filters'}));
+    await user.clear(screen.getByRole('textbox', {name: 'Search events'}));
+    await user.click(screen.getByRole('combobox', {name: 'Activity'}));
+    await user.click(screen.getByRole('option', {name: 'All activities'}));
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('listbox')).not.toBeInTheDocument());
     expect(within(calendar).getByRole('button', {name: /AO-91/})).toBeVisible();
 });
 
@@ -155,7 +159,7 @@ it('checks and unchecks activities independently, retaining choices across views
     expect(screen.getByRole('button', {name: /ISS SSTV activity/})).toBeVisible();
 });
 
-it('can hide every activity, select all again, and reset the checklist', async () => {
+it('can hide every activity and restore the checklist using All activities', async () => {
     const user = userEvent.setup();
     socket.emitWithAck.mockResolvedValue(reply(mixedEvents));
     await renderCalendar();
@@ -173,7 +177,10 @@ it('can hide every activity, select all again, and reset the checklist', async (
     await user.click(screen.getByRole('option', {name: 'Launches'}));
     await user.keyboard('{Escape}');
     await waitFor(() => expect(screen.queryByRole('listbox')).not.toBeInTheDocument());
-    await user.click(screen.getByRole('button', {name: 'Reset filters'}));
+    await user.click(screen.getByRole('combobox', {name: 'Activity'}));
+    await user.click(screen.getByRole('option', {name: 'All activities'}));
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('listbox')).not.toBeInTheDocument());
     expect(screen.getByRole('combobox', {name: 'Activity'})).toHaveTextContent('All activities');
     expect(screen.getByRole('button', {name: /Satellite launch/})).toBeVisible();
 });
@@ -300,7 +307,7 @@ it('shows cached announcements with source links and date precision across timez
     const dialog = screen.getByRole('dialog');
     expect(within(dialog).getByText('18 Nov 2026')).toBeVisible();
     expect(within(dialog).getByText('19 Nov 2026')).toBeVisible();
-    expect(within(dialog).getByText('Date only')).toBeVisible();
+    expect(within(dialog).getByText('Time or timezone unspecified')).toBeVisible();
     expect(within(dialog).queryByText('GS Control')).not.toBeInTheDocument();
     expect(within(dialog).getByRole('link', {name: 'example.org'})).toHaveAttribute('href', 'https://example.org/activity');
     expect(within(dialog).getByRole('link', {name: 'Open original source'})).toHaveAttribute('href', 'https://example.org/activity');
@@ -422,4 +429,28 @@ it('preserves uncertain source timing without inventing precise times or empty r
     expect(dialog.queryByText(/Duration:/)).not.toBeInTheDocument();
     expect(dialog.queryByRole('link', {name: 'Open original source'})).not.toBeInTheDocument();
     expect(dialog.queryByRole('button', {name: 'Open observation'})).not.toBeInTheDocument();
+});
+
+it('shows a known start without a timing warning or an invented end in every calendar view', async () => {
+    const user = userEvent.setup();
+    socket.emitWithAck.mockResolvedValue(reply([{
+        id: 'gscontrol:weekly', source: 'gscontrol', source_id: 'weekly', kind: 'transponder',
+        title: 'XU7AMO weekly QO-100 operation', start: '2026-11-20', end: '2026-11-21',
+        time_precision: 'unspecified', start_at: '2026-11-20T12:00:00Z',
+        timing_note: 'Start: 2026-11-20 12:00 UTC; End time not stated; Source recurrence: Every Friday',
+    }]));
+    await renderCalendar();
+    for (const view of ['Month', 'Week', 'Agenda']) {
+        await user.click(screen.getByRole('button', {name: view, exact: true}));
+        const card = screen.getByRole('button', {name: /XU7AMO weekly QO-100 operation/});
+        expect(card).toHaveTextContent('12:00');
+        expect(screen.queryByText('Time or timezone unspecified')).not.toBeInTheDocument();
+    }
+    await user.click(screen.getByRole('button', {name: /XU7AMO weekly QO-100 operation/}));
+    const dialog = within(screen.getByRole('dialog'));
+    expect(dialog.getByText('Fri, 20 Nov 2026, 12:00')).toBeVisible();
+    expect(dialog.getByText('Not specified')).toBeVisible();
+    expect(dialog.queryByText('Time or timezone unspecified')).not.toBeInTheDocument();
+    expect(dialog.queryByText(/Duration:/)).not.toBeInTheDocument();
+    expect(dialog.queryByText('21 Nov 2026')).not.toBeInTheDocument();
 });

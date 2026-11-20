@@ -50,10 +50,10 @@ function TimeWindow({event, timezone, locale, format}) {
             {local ? t('details.scheduled_task') : t('details.activity_window')}
         </Typography>
         <Box component="dl" sx={{display: 'grid', gridTemplateColumns: {xs: '1fr', sm: '1fr 1fr'}, gap: 2, m: 0}}>
-            {[[t('starts'), dated ? formatDate(event.start) : format(event.start)],
+            {[[t('starts'), event.start_at ? format(event.start_at) : dated ? formatDate(event.start) : format(event.start)],
                 // Feed boundaries are exclusive, while an announcement's date
                 // range is presented with an inclusive final civil date.
-                [t('ends'), dated ? formatDate(addDays(event.end, -1)) : format(event.end)]]
+                [t('ends'), event.start_at ? t('external.end_unspecified') : dated ? formatDate(addDays(event.end, -1)) : format(event.end)]]
                 .map(([label, value]) => <Box key={label}>
                     <Typography component="dt" variant="caption" color="text.secondary" sx={{mb: 0.5}}>{label}</Typography>
                     <Typography component="dd" variant="body1" fontWeight={650} sx={{m: 0, fontVariantNumeric: 'tabular-nums'}}>{value}</Typography>
@@ -61,7 +61,7 @@ function TimeWindow({event, timezone, locale, format}) {
         </Box>
         <Stack direction="row" gap={2} useFlexGap flexWrap="wrap" sx={{mt: 1.5}}>
             <Typography variant="caption" color="text.secondary">
-                {dated ? t(event.time_precision === 'date' ? 'external.date_only' : 'external.time_unspecified') : timezone}
+                {dated && !event.start_at ? t('external.time_unspecified') : timezone}
             </Typography>
             {duration && <Typography variant="caption" color="text.secondary">{t('details.duration', {duration})}</Typography>}
         </Stack>

@@ -91,7 +91,8 @@
     "time_unspecified": "时间或时区未指定",
     "source_link": "原始来源",
     "timing_note": "来源时间说明",
-    "stale": "已缓存的事件正在等待更新。"
+    "stale": "已缓存的事件正在等待更新。",
+    "end_unspecified": "未指定"
   },
   "source_types": {
     "local": "本地观测",

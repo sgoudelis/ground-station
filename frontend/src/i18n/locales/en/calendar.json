@@ -91,7 +91,8 @@
     "time_unspecified": "Time or timezone unspecified",
     "source_link": "Original source",
     "timing_note": "Source timing",
-    "stale": "Cached events are awaiting an update."
+    "stale": "Cached events are awaiting an update.",
+    "end_unspecified": "Not specified"
   },
   "source_types": {
     "local": "Local observation",

@@ -65,6 +65,9 @@ class CalendarEvent(BaseModel):
     start: AwareDatetime | date
     end: AwareDatetime | date
     time_precision: Literal["instant", "date", "unspecified"] = "instant"
+    # Optional known start when the source cannot supply a complete interval.
+    # Date boundaries still describe source coverage, not an assumed duration.
+    start_at: AwareDatetime | None = None
     satellites: list[CalendarSatellite] = Field(default_factory=list)
     frequencies: list[CalendarFrequency] = Field(default_factory=list)
     description: str | None = None

@@ -91,7 +91,8 @@
     "time_unspecified": "Ora o fuso orario non specificati",
     "source_link": "Sorgente originale",
     "timing_note": "Orario della sorgente",
-    "stale": "Gli eventi memorizzati sono in attesa di aggiornamento."
+    "stale": "Gli eventi memorizzati sono in attesa di aggiornamento.",
+    "end_unspecified": "Non specificata"
   },
   "source_types": {
     "local": "Osservazione locale",

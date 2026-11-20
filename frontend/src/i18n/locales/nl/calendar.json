@@ -91,7 +91,8 @@
     "time_unspecified": "Tijd of tijdzone niet opgegeven",
     "source_link": "Oorspronkelijke bron",
     "timing_note": "Tijd volgens de bron",
-    "stale": "Gebeurtenissen in de cache wachten op een update."
+    "stale": "Gebeurtenissen in de cache wachten op een update.",
+    "end_unspecified": "Niet opgegeven"
   },
   "source_types": {
     "local": "Lokale waarneming",

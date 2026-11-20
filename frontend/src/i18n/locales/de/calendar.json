@@ -91,7 +91,8 @@
     "time_unspecified": "Uhrzeit oder Zeitzone nicht angegeben",
     "source_link": "Originalquelle",
     "timing_note": "Zeitangabe der Quelle",
-    "stale": "Gespeicherte Ereignisse warten auf eine Aktualisierung."
+    "stale": "Gespeicherte Ereignisse warten auf eine Aktualisierung.",
+    "end_unspecified": "Nicht angegeben"
   },
   "source_types": {
     "local": "Lokale Beobachtung",

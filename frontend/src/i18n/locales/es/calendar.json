@@ -91,7 +91,8 @@
     "time_unspecified": "Hora o zona horaria sin especificar",
     "source_link": "Fuente original",
     "timing_note": "Horario de la fuente",
-    "stale": "Los eventos guardados están pendientes de actualización."
+    "stale": "Los eventos guardados están pendientes de actualización.",
+    "end_unspecified": "Sin especificar"
   },
   "source_types": {
     "local": "Observación local",
