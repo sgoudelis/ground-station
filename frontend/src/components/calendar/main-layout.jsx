@@ -133,7 +133,10 @@ export default function CalendarPage() {
                     <TextField type="date" label={t('go_to_date')} size="small" value={anchor}
                         onChange={event => {if (isCalendarDay(event.target.value)) setAnchor(event.target.value);}}
                         slotProps={{inputLabel: {shrink: true}, htmlInput: {min: '1900-01-01', max: '9999-12-31'}}}
-                        sx={{width: 162}} />
+                        sx={{width: 162,
+                            // Match the small toolbar buttons' text and height.
+                            '& .MuiInputBase-root': {fontSize: theme.typography.pxToRem(13), height: 'calc(1.75em + 8px)'},
+                            '& .MuiInputBase-input': {py: 0.5}}} />
                     <ButtonGroup size="small" aria-label={t('calendar_view')}>
                         {Object.entries(views).map(([value, label]) => <CapsButton key={value}
                             variant={view === value ? 'contained' : 'outlined'} disableElevation
