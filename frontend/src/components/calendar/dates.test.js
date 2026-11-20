@@ -2,6 +2,14 @@ import {describe, expect, it} from 'vitest';
 import {addDays, dayKey, eventsOnDay, isCalendarDay, movePeriod, visibleDays} from './dates.js';
 
 describe('satellite calendar dates', () => {
+    it('hides cached launch estimates and retains known days, timed windows and real activity periods', () => {
+        const estimate = {id: 'estimate', kind: 'launch', start: '2026-01-01', end: '2027-01-01', time_precision: 'date'};
+        const dated = {...estimate, id: 'dated', start: '2026-11-20', end: '2026-11-21'};
+        const overnight = {...estimate, id: 'overnight', start: '2026-11-20T23:30:00Z', end: '2026-11-21T00:30:00Z', time_precision: 'instant'};
+        const activity = {...estimate, id: 'activity', kind: 'sstv'};
+        expect(eventsOnDay([estimate, dated, overnight, activity], '2026-11-20', 'UTC')).toEqual([activity, dated, overnight]);
+        expect(eventsOnDay([estimate, dated, overnight, activity], '2026-11-21', 'UTC')).toEqual([activity, overnight]);
+    });
     it('keeps date-only and unspecified-time announcements on their source dates', () => {
         for (const time_precision of ['date', 'unspecified']) {
             const event = {id: 'dated', start: '2026-11-18', end: '2026-11-19', time_precision};

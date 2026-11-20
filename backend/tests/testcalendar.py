@@ -197,7 +197,12 @@ async def test_manual_refresh_queries_new_observations_after_downloading(
     # them after syncing, rather than returning an earlier local snapshot.
     remote = Mock(
         refresh=AsyncMock(),
-        cached_events=AsyncMock(return_value=([{"id": "gscontrol:fresh"}], {"id": "gscontrol"})),
+        cached_events=AsyncMock(
+            return_value=(
+                [{"id": "gscontrol:fresh"}],
+                {"id": "gscontrol", "feeds": [{"id": "observations", "enabled": True}]},
+            )
+        ),
     )
 
     async def download():
@@ -237,6 +242,18 @@ async def test_manual_refresh_queries_new_observations_after_downloading(
 
 async def test_registered_query_uses_shared_authorization_and_is_read_only(db_session, monkeypatch):
     await insert_observations(db_session)
+    monkeypatch.setattr(
+        calendar,
+        "external_events",
+        Mock(
+            cached_events=AsyncMock(
+                return_value=(
+                    [],
+                    {"id": "gscontrol", "feeds": [{"id": "observations", "enabled": True}]},
+                )
+            )
+        ),
+    )
 
     @asynccontextmanager
     async def session_factory():

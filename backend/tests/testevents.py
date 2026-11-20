@@ -22,7 +22,7 @@ from calendars.external import ExternalEventsService, rolling_window
 from calendars.protocol import POLL_SECONDS, TERMS_VERSION
 from calendars.schemas import CalendarRange
 from common import auth
-from db.models import CachedExternalEvents
+from db.models import CachedExternalEvents, CalendarFeeds, CalendarServices
 from handlers.entities import calendar
 from handlers.routing.dispatcher import dispatch_request
 from handlers.routing.registry import HandlerRegistry
@@ -30,6 +30,7 @@ from handlers.routing.registry import HandlerRegistry
 pytestmark = pytest.mark.unit
 NOW = datetime(2026, 11, 18, 12, tzinfo=timezone.utc).timestamp()
 OPT_IN = {"enabled": True, "terms_version": TERMS_VERSION}
+FEEDS = [{"id": feed, "complete": True} for feed in ("announcements", "space_weather", "launches")]
 WINDOW = CalendarRange(start="2026-11-18", end="2026-11-19")
 
 
@@ -66,6 +67,7 @@ def client_for(events=None, handler=None):
             200,
             json={
                 "schema_version": 1,
+                "feeds": FEEDS,
                 "range": dict(request.url.params),
                 "events": events if events is not None else [event()],
             },
@@ -106,15 +108,17 @@ async def test_explicit_versioned_consent_required(service, choice):
     assert not service.consent.path.exists()
 
 
-async def test_consent_is_atomic_private_and_separate_from_database(service):
+async def test_consent_is_atomic_and_stored_with_station_feed_flags(service):
     status = await service.configure(OPT_IN, actor="admin-id")
-    stored = json.loads(service.consent.path.read_text())
-    assert stored["enabled"] is True
-    assert stored["accepted_by"] == "admin-id"
-    assert stored["accepted_terms_version"] == TERMS_VERSION
-    assert os.stat(service.consent.path).st_mode & 0o777 == 0o600
+    assert not service.consent.path.exists()
+    async with service.sessions() as session:
+        stored = await session.get(CalendarServices, "gscontrol")
+        assert stored.enabled and stored.accepted_by == "admin-id"
+        assert stored.accepted_terms_version == TERMS_VERSION
+        assert (await session.get(CalendarFeeds, "announcements")).enabled
+    restarted = ExternalEventsService(service.consent.path, service.sessions)
+    assert (await restarted.status())["consented"]
     assert "accepted_by" not in status
-    assert EventsConsent(service.consent.path).active
 
 
 async def test_poll_every_six_hours_and_restart_preserves_schedule(service):
@@ -224,7 +228,12 @@ async def test_manual_refresh_waits_for_inflight_poll_to_commit(service):
             await finish.wait()
         return httpx.Response(
             200,
-            json={"schema_version": 1, "range": dict(request.url.params), "events": [event()]},
+            json={
+                "schema_version": 1,
+                "feeds": FEEDS,
+                "range": dict(request.url.params),
+                "events": [event()],
+            },
         )
 
     async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
@@ -242,6 +251,7 @@ async def test_manual_refresh_waits_for_inflight_poll_to_commit(service):
 async def test_manual_refresh_still_fetches_when_overlapping_poll_only_prunes(service, monkeypatch):
     await service.configure(OPT_IN)
     service.consent.state["next_poll_at"] = NOW + POLL_SECONDS
+    await service.consent.save()
     pruning, finish = asyncio.Event(), asyncio.Event()
     original_prune = service._prune
 
@@ -314,10 +324,11 @@ async def test_failed_or_redirected_requests_wait_six_hours(service):
     )
     async with client:
         await service.tick(client, NOW)
-        await service.tick(client, NOW + 3600)
+        await service.tick(client, NOW + POLL_SECONDS - 1)
     assert len(calls) == 1
     assert (await service.status())["error"] == "service_unavailable"
     restarted = ExternalEventsService(service.consent.path, service.sessions)
+    await restarted.status()
     assert restarted.consent.state["next_poll_at"] == NOW + POLL_SECONDS
 
 
@@ -345,6 +356,7 @@ async def test_incomplete_snapshot_does_not_replace_cache(service):
             200,
             json={
                 "schema_version": 1,
+                "feeds": FEEDS,
                 "range": {"start": str(first), "end": str(last - timedelta(days=1))},
                 "events": [],
             },
@@ -439,7 +451,7 @@ async def test_disable_clears_cache_and_persists_across_restart(service):
     async with client:
         await service.tick(client, NOW)
         assert (await read_cache(service))[0]
-        assert not (await service.configure({"enabled": False}))["enabled"]
+        assert not (await service.configure({"revoke": True}))["enabled"]
         assert not (await read_cache(service))[0]
         assert not await service.tick(client, NOW + 60, force=True)
         restarted = ExternalEventsService(service.consent.path, service.sessions)
@@ -464,36 +476,44 @@ async def test_disable_cancels_inflight_and_ignores_a_late_response(service):
             # must independently prevent a late response from restoring data.
             pass
         return httpx.Response(
-            200, json={"schema_version": 1, "range": dict(request.url.params), "events": [event()]}
+            200,
+            json={
+                "schema_version": 1,
+                "feeds": FEEDS,
+                "range": dict(request.url.params),
+                "events": [event()],
+            },
         )
 
     await service.configure(OPT_IN)
     async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
         polling = asyncio.create_task(service.tick(client, NOW))
         await requested.wait()
-        await service.configure({"enabled": False})
+        await service.configure({"revoke": True})
         finish.set()
         await polling
     assert (await read_cache(service))[0] == []
 
 
-async def test_missing_corrupt_or_outdated_consent_never_uses_cache(service):
+async def test_outdated_or_restored_consent_never_uses_cache(service):
+    from calendars.consent import invalidate_consent
+
     await service.configure(OPT_IN)
     client, _ = client_for()
     async with client:
         await service.tick(client, NOW)
-    state = json.loads(service.consent.path.read_text())
-    state["accepted_terms_version"] = "old-terms"
-    service.consent.path.write_text(json.dumps(state))
+    async with service.sessions() as session:
+        row = await session.get(CalendarServices, "gscontrol")
+        row.accepted_terms_version = "old-terms"
+        await session.commit()
     outdated = ExternalEventsService(service.consent.path, service.sessions)
     assert not (await read_cache(outdated))[0]
     assert (await outdated.status())["needs_consent_review"]
-    service.consent.path.write_text("invalid json")
-    corrupt = ExternalEventsService(service.consent.path, service.sessions)
-    assert corrupt.consent.storage_error and not corrupt.consent.active
-    service.consent.path.unlink()
-    restored_db = ExternalEventsService(service.consent.path, service.sessions)
-    assert not (await read_cache(restored_db))[0]
+    async with service.sessions() as session:
+        await invalidate_consent(session)
+        await session.commit()
+    assert not (await service.status())["consented"]
+    assert not (await read_cache(service))[0]
 
 
 async def test_expired_rows_are_pruned_even_when_download_fails(service):
@@ -510,9 +530,9 @@ async def test_expired_rows_are_pruned_even_when_download_fails(service):
 
 async def test_consent_save_failure_stops_networking(service, monkeypatch):
     await service.configure(OPT_IN)
-    monkeypatch.setattr(service.consent, "save", Mock(side_effect=OSError("disk full")))
+    monkeypatch.setattr(service.consent, "save", AsyncMock(side_effect=OSError("disk full")))
     with pytest.raises(ValueError):
-        await service.configure({"enabled": False})
+        await service.configure({"revoke": True})
     client, calls = client_for()
     async with client:
         await service.tick(client, NOW)

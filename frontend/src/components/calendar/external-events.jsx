@@ -32,15 +32,20 @@ export default function ExternalEvents({status, onChanged, locale, timezone}) {
     const [accepted, setAccepted] = useState(false);
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState(false);
-    const enabled = Boolean(status?.enabled);
+    const consented = Boolean(status?.consented);
+    const [pendingFeed, setPendingFeed] = useState(null);
+    const definitions = [
+        ['announcements', 'external.label'], ['space_weather', 'feeds.space_weather'], ['launches', 'feeds.launches'],
+    ];
 
-    const save = async enabled => {
+    const save = async (feed, enabled, revoke = false) => {
         setBusy(true);
         setError(false);
         try {
             const reply = await socket.timeout(15000).emitWithAck('api.call', {
                 cmd: 'calendar.external.update',
-                data: {enabled, ...(enabled ? {terms_version: status.terms_version} : {})},
+                data: revoke ? {revoke: true} : {feed_id: feed, enabled,
+                    ...(enabled && !consented ? {terms_version: status.terms_version} : {})},
             });
             if (!reply?.success) throw new Error('Settings unavailable');
             onChanged(reply.data);
@@ -56,22 +61,24 @@ export default function ExternalEvents({status, onChanged, locale, timezone}) {
 
     return <>
         <Stack spacing={1} alignItems="flex-start">
-            <FormControlLabel label={t('external.label')}
-                control={<Switch size="small" checked={enabled} disabled={!isAdmin || !status || busy}
-                    slotProps={{input: {role: 'switch'}}}
+            {definitions.map(([id, label]) => <FormControlLabel key={id} label={t(label)}
+                control={<Switch size="small" checked={status?.feeds?.find(feed => feed.id === id)?.enabled ?? (id === 'announcements' && Boolean(status?.enabled))}
+                    disabled={!isAdmin || !status || busy} slotProps={{input: {role: 'switch'}}}
                     onChange={(_, checked) => {
-                        if (checked) {setAccepted(false); setError(false); setOpen(true);}
-                        else save(false);
-                    }} />} />
+                        if (checked && !consented) {
+                            setPendingFeed(id); setAccepted(false); setError(false); setOpen(true);
+                        } else save(id, checked);
+                    }} />} />)}
             <Typography variant="body2" color="text.secondary">{t('feeds.announcements_hint')}</Typography>
-            <CapsButton size="small" onClick={() => {setAccepted(false); setError(false); setOpen(true);}}>
+            <CapsButton size="small" onClick={() => {setPendingFeed(!consented ? definitions.find(([id]) => status?.feeds?.find(feed => feed.id === id)?.enabled)?.[0] || null : null); setAccepted(false); setError(false); setOpen(true);}}>
                 {t('external.about')}
             </CapsButton>
             {!isAdmin && <Typography variant="caption" color="text.secondary">{t('external.admin_only')}</Typography>}
             <ExternalEventsStatus status={status} locale={locale} timezone={timezone} />
-            {enabled && status?.outside_coverage && <Typography variant="caption" color="text.secondary">
+            {status?.enabled && status?.outside_coverage && <Typography variant="caption" color="text.secondary">
                 {t('external.outside_coverage')}
             </Typography>}
+            {isAdmin && consented && <CapsButton size="small" color="warning" disabled={busy} onClick={() => save(null, false, true)}>{t('feeds.withdraw')}</CapsButton>}
             {error && !open && <Typography variant="caption" color="error" role="alert">{t('external.save_error')}</Typography>}
         </Stack>
         <Dialog open={open} onClose={close} fullWidth maxWidth="sm" aria-labelledby="external-events-title">
@@ -82,7 +89,7 @@ export default function ExternalEvents({status, onChanged, locale, timezone}) {
                     <Typography variant="body2">{t('external.connection')}</Typography>
                     <Typography variant="body2">{t('external.cache')}</Typography>
                     <Typography variant="body2">{t('external.terms')}</Typography>
-                    {isAdmin && !enabled && status && <FormControlLabel
+                    {isAdmin && !consented && status && pendingFeed && <FormControlLabel
                         control={<Checkbox checked={accepted} onChange={event => setAccepted(event.target.checked)} disabled={busy} />}
                         label={t('external.accept')} />}
                     {error && <Typography color="error" role="alert">{t('external.save_error')}</Typography>}
@@ -90,8 +97,8 @@ export default function ExternalEvents({status, onChanged, locale, timezone}) {
             </DialogContent>
             <DialogActions>
                 <CapsButton onClick={close} disabled={busy}>{t('close')}</CapsButton>
-                {isAdmin && !enabled && status && <CapsButton variant="contained" disableElevation
-                    disabled={!accepted || busy} onClick={() => save(true)}>{t('external.enable')}</CapsButton>}
+                {isAdmin && !consented && status && pendingFeed && <CapsButton variant="contained" disableElevation
+                    disabled={!accepted || busy} onClick={() => save(pendingFeed, true)}>{t('external.enable')}</CapsButton>}
             </DialogActions>
         </Dialog>
     </>;

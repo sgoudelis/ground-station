@@ -12,7 +12,7 @@ export function SourceLabel({event, compact = false}) {
     return <Stack component="span" direction="row" alignItems="center" gap={0.65} sx={{minWidth: 0}}>
         <Icon sx={theme => ({fontSize: compact ? 13 : 16, flexShrink: 0, color: sourceAccent(event, theme)})} />
         <Typography component="span" variant="caption" noWrap sx={{fontSize: compact ? 10 : 12, color: 'text.secondary'}}>
-            {isLocalObservation(event) ? t('source_types.local') : t('source_types.external')}
+            {isLocalObservation(event) ? t('source_types.local') : event.feed_id === 'space_weather' ? t('feeds.space_weather') : event.feed_id === 'launches' ? t('feeds.launches') : t('source_types.external')}
         </Typography>
     </Stack>;
 }

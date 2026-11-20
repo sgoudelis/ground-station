@@ -33,6 +33,13 @@ async def get_calendar_events(
         announcements, status = await external_events.cached_events(session, window)
     result["events"].extend(announcements)
     result["sources"].append(status)
+    result["feeds"] = status["feeds"]
+    if not next(
+        (feed["enabled"] for feed in status["feeds"] if feed["id"] == "observations"), True
+    ):
+        result["events"] = [
+            event for event in result["events"] if event["source"] != "observations"
+        ]
     return {"success": True, "data": result, "error": None}
 
 

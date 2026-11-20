@@ -82,6 +82,20 @@ it('requests the visible range, navigates periods and views, and returns to toda
     });
 });
 
+it('omits uncertain launches from month, week and agenda views', async () => {
+    const user = userEvent.setup();
+    socket.emitWithAck.mockResolvedValue(reply([
+        {id: 'gscontrol:uncertain', source: 'gscontrol', source_id: 'uncertain', kind: 'launch', feed_id: 'launches', title: 'Uncertain launch', start: '2026-01-01', end: '2027-01-01', time_precision: 'date'},
+        {id: 'gscontrol:dated', source: 'gscontrol', source_id: 'dated', kind: 'launch', feed_id: 'launches', title: 'Known launch day', start: '2026-11-18', end: '2026-11-19', time_precision: 'date'},
+    ]));
+    await renderCalendar();
+    for (const view of ['Month', 'Week', 'Agenda']) {
+        await user.click(screen.getByRole('button', {name: view, exact: true}));
+        expect(screen.queryByRole('button', {name: /Uncertain launch/})).not.toBeInTheDocument();
+        expect(await screen.findByRole('button', {name: /Known launch day/})).toBeVisible();
+    }
+});
+
 it('combines search and activity filters and recovers from an empty result', async () => {
     const user = userEvent.setup();
     await renderCalendar();
@@ -123,40 +137,35 @@ it('refreshes announcements and observations while preserving the visible period
     expect(screen.getByRole('heading', {name: 'November 2026'})).toBeVisible();
 });
 
-it('remembers the local feed choice per user while keeping announcements and refresh available', async () => {
+it('shares the local feed selection across users and keeps refresh available', async () => {
     const user = userEvent.setup();
-    const announcement = {id: 'gscontrol:feed', source: 'gscontrol', source_id: 'feed', kind: 'sstv',
-        title: 'Subscribed announcement', start: '2026-11-18', end: '2026-11-19',
-        time_precision: 'date', satellites: [{name: 'ISS'}]};
-    socket.emitWithAck.mockResolvedValue({success: true, data: {
-        events: [fixtures[0], announcement], sources: [{id: 'gscontrol', enabled: true}],
-    }});
+    let enabled = true;
+    const status = () => ({id: 'gscontrol', enabled: false, consented: false, feeds: [{id: 'observations', enabled}]});
+    socket.emitWithAck.mockImplementation((_event, {cmd, data}) => {
+        if (cmd === 'calendar.external.update') {
+            enabled = data.enabled;
+            return Promise.resolve({success: true, data: status()});
+        }
+        return Promise.resolve({success: true, data: {events: enabled ? [fixtures[0]] : [], sources: [status()]}});
+    });
     const {unmount} = await renderCalendar();
-    await user.click(screen.getByRole('button', {name: 'Agenda', exact: true}));
-    expect(screen.queryByRole('switch')).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', {name: 'Calendar feeds'}));
     await user.click(screen.getByRole('switch', {name: 'Local observations'}));
-    expect(screen.getByRole('switch', {name: 'Local observations'})).not.toBeChecked();
+    await waitFor(() => expect(screen.getByRole('switch', {name: 'Local observations'})).not.toBeChecked());
     await user.click(within(screen.getByRole('dialog', {name: 'Calendar feeds'})).getByRole('button', {name: 'Close'}));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(screen.queryByRole('button', {name: /ISS pass earlier/})).not.toBeInTheDocument();
-    expect(screen.getByRole('button', {name: /Subscribed announcement/})).toBeVisible();
-    expect(screen.getByText('Events in this period: 1')).toBeVisible();
-    expect(socket.emitWithAck.mock.calls.every(([, request]) => request.cmd === 'get-calendar-events')).toBe(true);
+    expect(localStorage.getItem('calendar.observations.admin-1')).toBeNull();
     await user.click(screen.getByRole('button', {name: 'Refresh', exact: true}));
     await waitFor(() => expect(screen.getByRole('region')).toHaveAttribute('aria-busy', 'false'));
-    expect(screen.queryByRole('button', {name: /ISS pass earlier/})).not.toBeInTheDocument();
     unmount();
-    const other = await renderCalendar('admin-2');
-    expect(screen.getByRole('button', {name: /ISS pass earlier/})).toBeVisible();
-    other.unmount();
-    await renderCalendar();
+    await renderCalendar('admin-2');
     expect(screen.queryByRole('button', {name: /ISS pass earlier/})).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', {name: 'Calendar feeds'}));
+    expect(screen.getByRole('switch', {name: 'Local observations'})).not.toBeChecked();
     await user.click(screen.getByRole('switch', {name: 'Local observations'}));
     await user.click(within(screen.getByRole('dialog', {name: 'Calendar feeds'})).getByRole('button', {name: 'Close'}));
-    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
-    expect(screen.getByRole('button', {name: /ISS pass earlier/})).toBeVisible();
+    await waitFor(() => expect(screen.getByRole('button', {name: /ISS pass earlier/})).toBeVisible());
 });
 
 it('expands crowded days and shows task, pass, frequency, and status details without origin', async () => {

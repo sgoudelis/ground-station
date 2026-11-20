@@ -38,7 +38,7 @@ export function groupEventsByDay(events, days, timezone) {
     // End instants are exclusive: an event ending at midnight belongs to the
     // previous day, while a window crossing midnight appears on both days.
     const groups = new Map(days.map(day => [day, []]));
-    const sorted = [...events].sort((a, b) => new Date(a.start) - new Date(b.start));
+    const sorted = events.filter(hasCalendarDate).sort((a, b) => new Date(a.start) - new Date(b.start));
     for (const event of sorted) {
         // Convert each boundary once, rather than once for every calendar cell.
         // Date-only and unspecified-zone announcements stay on their source
@@ -51,6 +51,15 @@ export function groupEventsByDay(events, days, timezone) {
         }
     }
     return groups;
+}
+
+export function hasCalendarDate(event) {
+    // A broad date-only launch estimate has no known day. Keep timed windows
+    // and known-day launches, including those with no stated clock time.
+    return event.kind !== 'launch' || Boolean(event.start && event.end && (
+        (event.time_precision === 'instant' || (!event.time_precision && event.start.includes('T')))
+        || event.end === addDays(event.start, 1)
+    ));
 }
 
 export const eventsOnDay = (events, day, timezone) => groupEventsByDay(events, [day], timezone).get(day);

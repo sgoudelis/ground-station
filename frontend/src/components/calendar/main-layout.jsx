@@ -1,5 +1,4 @@
 import {useEffect, useMemo, useState} from 'react';
-import {useSelector} from 'react-redux';
 import {
     Alert, Box, ButtonBase, ButtonGroup, Divider, IconButton, InputAdornment, LinearProgress, MenuItem, Paper, Stack,
     TextField, Tooltip, Typography, useMediaQuery,
@@ -15,7 +14,7 @@ import CapsButton from '../common/capsbutton.jsx';
 import ObservationDataDialog from '../scheduler/observation-data-dialog.jsx';
 import {useUserTimeSettings} from '../../hooks/useUserTimeSettings.jsx';
 import {activityLabels} from './activities.js';
-import {addDays, civilDate, dayKey, groupEventsByDay, isCalendarDay, movePeriod, visibleDays} from './dates.js';
+import {addDays, civilDate, dayKey, groupEventsByDay, hasCalendarDate, isCalendarDay, movePeriod, visibleDays} from './dates.js';
 import {frequencyLabel, satelliteNames} from './events.js';
 import useCalendarEvents from './use-calendar-events.js';
 import EventCard from './event-card.jsx';
@@ -57,28 +56,6 @@ export default function CalendarPage() {
     const [search, setSearch] = useState('');
     const [satellite, setSatellite] = useState('all');
     const [kind, setKind] = useState('all');
-    const userId = useSelector(state => state.auth?.user?.id) || 'station';
-    const observationsKey = `calendar.observations.${userId}`;
-    const savedObservationsEnabled = useMemo(() => {
-        try {
-            return localStorage.getItem(observationsKey) !== 'false';
-        } catch {
-            return true;
-        }
-    }, [observationsKey]);
-    const [observationsChoice, setObservationsChoice] = useState(null);
-    // Display choices belong to the current user; hiding local observations
-    // never disables their jobs or changes the station's announcement consent.
-    const observationsEnabled = observationsChoice?.key === observationsKey
-        ? observationsChoice.enabled : savedObservationsEnabled;
-    const setObservationsEnabled = enabled => {
-        setObservationsChoice({key: observationsKey, enabled});
-        try {
-            localStorage.setItem(observationsKey, String(enabled));
-        } catch {
-            // Restricted browser storage must not prevent filtering this view.
-        }
-    };
     const [selectedId, setSelectedId] = useState(null);
     const [resultsObservation, setResultsObservation] = useState(null);
     const labels = useMemo(() => activityLabels(t), [t]);
@@ -87,7 +64,8 @@ export default function CalendarPage() {
     const agendaLayout = view === 'agenda' || smallScreen;
     const days = useMemo(() => visibleDays(anchor, view), [anchor, view]);
     const {events, external, loading, error, refresh, updateExternal} = useCalendarEvents({start: days[0], end: addDays(days.at(-1), 1), timezone});
-    const subscribedEvents = useMemo(() => events.filter(event => observationsEnabled || !isLocalObservation(event)),
+    const observationsEnabled = external?.feeds?.find(feed => feed.id === 'observations')?.enabled ?? true;
+    const subscribedEvents = useMemo(() => events.filter(event => hasCalendarDate(event) && (observationsEnabled || !isLocalObservation(event))),
         [events, observationsEnabled]);
     // Keep an open details dialog in sync when a job changes or its feed is hidden.
     const selected = subscribedEvents.find(event => event.id === selectedId) || null;
@@ -142,8 +120,7 @@ export default function CalendarPage() {
                             variant={view === value ? 'contained' : 'outlined'} disableElevation
                             aria-pressed={view === value} onClick={() => setView(value)}>{label}</CapsButton>)}
                     </ButtonGroup>
-                    <FeedSettings observationsEnabled={observationsEnabled} onObservationsChanged={setObservationsEnabled}
-                        status={external} onChanged={updateExternal} locale={locale} timezone={timezone} />
+                    <FeedSettings observationsEnabled={observationsEnabled} status={external} onChanged={updateExternal} locale={locale} timezone={timezone} />
                 </Stack>
                 <Divider />
                 <Stack direction="row" gap={1.5} flexWrap="wrap" sx={{p: 2, bgcolor: 'action.hover'}}>
@@ -211,7 +188,7 @@ export default function CalendarPage() {
                 </Box>
                 <Stack component="footer" direction="row" gap={2} alignItems="center" useFlexGap flexWrap="wrap" sx={{px: 2, py: 1.5, borderTop: 1, borderColor: 'divider'}}>
                     {observationsEnabled && <SourceLabel event={{source: 'observations'}} />}
-                    {external?.enabled && <SourceLabel event={{source: 'gscontrol'}} />}
+                    {external?.enabled && (external.feeds || [{id: 'announcements', enabled: true}]).filter(feed => feed.id !== 'observations' && feed.enabled).map(feed => <SourceLabel key={feed.id} event={{source: 'gscontrol', feed_id: feed.id}} />)}
                     <ExternalEventsStatus status={external} locale={locale} timezone={timezone} />
                     <Typography variant="caption" color="text.secondary" aria-live="polite" sx={{ml: 'auto'}}>{t('event_count', {count: eventCount})}</Typography>
                 </Stack>

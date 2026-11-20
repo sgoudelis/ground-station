@@ -58,6 +58,7 @@ class CalendarEvent(BaseModel):
     # local jobs even when their upstream identifiers happen to be identical.
     id: str
     source: str
+    feed_id: str | None = None
     source_id: str
     title: str
     kind: str
@@ -73,3 +74,19 @@ class CalendarEvent(BaseModel):
     source_url: str | None = None
     timing_note: str | None = None
     change: str | None = None
+    expires_at: AwareDatetime | None = None
+    source_updated_at: AwareDatetime | None = None
+    publication_method: str | None = None
+
+    @property
+    def has_known_date(self):
+        """Coarse launch estimates from older snapshots must not become appointments."""
+        if self.kind != "launch":
+            return True
+        if isinstance(self.start, datetime) and isinstance(self.end, datetime):
+            return True  # A real timed launch window can cross midnight.
+        return (
+            type(self.start) is date
+            and type(self.end) is date
+            and self.end - self.start == timedelta(days=1)
+        )

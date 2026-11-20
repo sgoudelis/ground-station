@@ -7,6 +7,7 @@ from datetime import date, datetime
 from typing import Literal
 
 from pydantic import (
+    AwareDatetime,
     BaseModel,
     ConfigDict,
     Field,
@@ -20,10 +21,11 @@ from calendars.schemas import CalendarEvent
 
 EVENTS_URL = "https://events.gscontrol.net"
 TERMS_VERSION = "events-1"
-POLL_SECONDS = 6 * 60 * 60
+POLL_SECONDS = 10 * 60
 PAST_DAYS = 30
 FUTURE_DAYS = 180
 SOURCE: Literal["gscontrol"] = "gscontrol"
+EXTERNAL_FEEDS = ("announcements", "space_weather", "launches")
 
 
 class PublishedEvent(CalendarEvent):
@@ -42,6 +44,8 @@ class PublishedEvent(CalendarEvent):
         "audio",
         "broadcast",
         "other_radio",
+        "space_weather",
+        "launch",
     ]
     review_status: Literal["approved"]
     revision: int = Field(ge=1)
@@ -53,6 +57,10 @@ class PublishedEvent(CalendarEvent):
     description: str | None = Field(default=None, max_length=10000)
     timing_note: str | None = Field(default=None, max_length=1000)
     change: Literal["announcement", "correction", "cancellation", "outage"] = "announcement"
+    feed_id: Literal["announcements", "space_weather", "launches"] = "announcements"
+    expires_at: datetime | None = None
+    source_updated_at: datetime | None = None
+    publication_method: Literal["manual_review", "source_validation"] = "manual_review"
 
     @field_validator("source_url")
     @classmethod
@@ -61,6 +69,14 @@ class PublishedEvent(CalendarEvent):
 
     @model_validator(mode="after")
     def published_boundaries(self):
+        expected = {"space_weather": "space_weather", "launch": "launches"}.get(
+            self.kind, "announcements"
+        )
+        if self.feed_id != expected:
+            raise ValueError("Event kind does not match its feed")
+        for value in (self.expires_at, self.source_updated_at):
+            if value is not None and value.tzinfo is None:
+                raise ValueError("Source timestamps must include timezone")
         if self.canonical_id is not None and self.canonical_id != self.id:
             raise ValueError("An attached source is not a canonical event")
         precise = self.time_precision == "instant"
@@ -95,9 +111,29 @@ class EventSnapshot(BaseModel):
     schema_version: Literal[1]
     range: SnapshotRange
     events: list[PublishedEvent] = Field(max_length=10000)
+    feeds: list["FeedSnapshot"] = Field(min_length=3, max_length=3)
+    refresh_after_seconds: int = Field(default=POLL_SECONDS, ge=60, le=21600)
 
     @model_validator(mode="after")
     def unique_events(self):
         if len({event.id for event in self.events}) != len(self.events):
             raise ValueError("Snapshot contains duplicate IDs")
+        if len({feed.id for feed in self.feeds}) != len(self.feeds):
+            raise ValueError("Snapshot contains duplicate feeds")
+        if self.feeds and {feed.id for feed in self.feeds} != set(EXTERNAL_FEEDS):
+            raise ValueError("Snapshot must describe every external feed")
         return self
+
+
+class FeedSnapshot(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    id: Literal["announcements", "space_weather", "launches"]
+    complete: bool
+    stale: bool = False
+    error: str | None = None
+    last_success_at: AwareDatetime | None = None
+    coverage_start: date | None = None
+    coverage_end: date | None = None
+
+
+EventSnapshot.model_rebuild()

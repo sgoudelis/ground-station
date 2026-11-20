@@ -60,24 +60,24 @@ when they concern the same satellite and time window.
 
 ## External events and global consent
 
-The calendar includes a station-wide **External satellite events** switch. Only
-administrators can change it, through `calendar.external.update`; all authenticated
-users can read its status and see announcements when enabled. There is no per-user
-consent. Enabling requires explicit acceptance of the in-app `events-1` disclosure:
+The calendar's gear dialog contains station-wide switches for observations,
+satellite announcements, space weather and launches. Only administrators can
+change them through `calendar.external.update`. Observations need no consent.
+All three external feeds share one acceptance of the in-app `events-1` disclosure:
 
 ```json
-{"enabled": true, "terms_version": "events-1"}
+{"feed_id": "announcements", "enabled": true, "terms_version": "events-1"}
 ```
 
-The backend records this choice atomically in `backend/data/events/state.json`,
-using the census service's owner-only file and directory permissions and fsync /
-atomic replacement pattern. `GS_EVENTS_STATE` overrides that path. Temporary
-backends use a sibling `<database stem>.events/state.json` instead, preventing
-demo runs from inheriting real consent. Acceptance version/time and the accepting
-administrator's account ID stay in this file, together with polling metadata;
-consent is never included in SQL database exports. Missing, unreadable, invalid,
-or outdated consent prevents requests and hides downloaded events. A changed
-terms version requires fresh administrator acceptance.
+The backend records feed selections in `calendar_feeds` and the shared receipt,
+installation binding and polling metadata in `calendar_services`. It imports
+the legacy `backend/data/events/state.json` once and removes that file after
+committing. `GS_EVENTS_STATE` overrides only this legacy input path. SQL settings
+are authoritative. Database restores invalidate consent; an installation binding
+prevents copied receipts from authorizing a different station. Missing, unreadable,
+invalid or outdated consent prevents downloads and hides external events.
+Later feed switches reuse the same acceptance. See [CALENDAR_FEEDS.md](CALENDAR_FEEDS.md)
+for migration and restore details.
 
 No requests to the external service are made before acceptance, including health
 probes or registrations. After acceptance, event downloads use backend HTTPS GETs
@@ -99,12 +99,12 @@ A valid event request counts as contact even if publication fails.
 ## Local cache and polling
 
 `cached_external_events` stores a disposable, shared snapshot. It contains no
-consent. A single backend lifecycle task fetches immediately after enabling and
-then every **21,600 seconds (six hours)**, independently of open browsers. Each
-attempt reserves the next poll in the state file before networking; restart,
-calendar navigation, repeated enabling and failures cannot accelerate it. An
-overdue installation makes one catch-up attempt. A longer HTTP 429 `Retry-After`
-delays the next attempt further. Requests have a 15-second I/O timeout, a
+consent. A single backend lifecycle task fetches while any external feed is
+enabled, normally every **600 seconds (ten minutes)**, independently of open
+browsers. Each attempt reserves its next poll in SQL before networking. Calendar
+navigation reads the cache; the refresh button explicitly requests an update and
+joins an ongoing download. HTTP 429 `Retry-After` also applies to manual refresh.
+Requests have a 15-second I/O timeout, a
 45-second total deadline, an 8 MiB decoded body limit, and never follow redirects.
 
 The requested interval is `[UTC today - 30 days, UTC today + 180 days)`. Calendar
@@ -112,17 +112,19 @@ navigation reads SQL only. Source metadata reports coverage and whether a view
 extends beyond it. Date bounds prune expired cache rows daily even while the
 provider is unavailable; reads also enforce the rolling bounds immediately.
 
-Complete, valid snapshots replace the cache in one transaction. Missing IDs
+Complete, valid feed snapshots replace that feed's cache in one transaction. Missing IDs
 disappear, including withdrawals or events whose approval was revoked upstream.
-Failures retain the previous cache and expose a stale/error status alongside the
-calendar controls. Withdrawal therefore reaches a station at its next successful
+Failures retain the affected feed's previous cache while healthy feeds update.
+Explicit event expiry is enforced even offline. The calendar footer shows the
+last synchronization or error. Withdrawal reaches a station at its next successful
 sync. Local observations remain available when the external service/cache fails.
 
-Disabling persists the global choice before deleting cached announcements,
-cancels an active download, and rejects late results by consent generation.
+Turning every external feed off pauses downloads and retains the shared consent.
+Explicit withdrawal (`{"revoke": true}`) persists the global choice before
+deleting the external cache, cancels an active download and rejects late results.
 A durable pending withdrawal removes only event consent and event details at the
 registry, retrying after outages. Census consent and the shared identity remain.
-This withdrawal request is the only permitted traffic after disabling events.
+This withdrawal request is the only permitted traffic after withdrawing consent.
 All browsers refresh on `external-events-changed`. No local observation is
 created, modified or deleted by this integration.
 
@@ -136,11 +138,18 @@ snapshot for exactly the requested interval:
 {
   "schema_version": 1,
   "range": {"start": "2026-10-19", "end": "2027-05-17"},
+  "refresh_after_seconds": 600,
+  "feeds": [
+    {"id": "announcements", "complete": true, "stale": false},
+    {"id": "space_weather", "complete": true, "stale": false},
+    {"id": "launches", "complete": true, "stale": false}
+  ],
   "events": [{
     "id": "stable-occurrence-id",
     "revision": 1,
     "review_status": "approved",
     "title": "Satellite activity announcement",
+    "feed_id": "announcements",
     "kind": "sstv",
     "start": "2026-11-18T10:00:00Z",
     "end": "2026-11-18T11:00:00Z",
@@ -168,8 +177,7 @@ unknown. Those dates stay fixed when the viewer changes timezone and never
 pretend to be precise UTC appointments. `change: "cancellation"` remains visible
 as a cancelled announcement when explicitly approved for publication.
 
-The public API is deployed at `https://events.gscontrol.net` (health check:
-`GET /health`). Its live snapshots have been validated against this client's
-publication contract. Stations contact it only after an administrator accepts
-the calendar terms and enables the installation-wide switch; the local cache
-then refreshes every six hours.
+The public API address is `https://events.gscontrol.net` (health check:
+`GET /health`). The bundled version-1 contract requires updating server and station
+together. Stations contact it only after an administrator accepts the shared
+calendar terms and selects at least one external feed.

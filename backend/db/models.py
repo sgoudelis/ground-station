@@ -144,12 +144,50 @@ class PreferenceScope(str, PyEnum):
     BOOTSTRAP = "bootstrap"
 
 
+class CalendarServices(Base):
+    """Station-wide permission and polling state for a bundled calendar service."""
+
+    __tablename__ = "calendar_services"
+    id = Column(String(32), primary_key=True)
+    enabled = Column(Boolean, nullable=False, default=False)
+    installation_id = Column(String(36), nullable=True)
+    accepted_terms_version = Column(String(64), nullable=True)
+    accepted_at = Column(String, nullable=True)
+    accepted_by = Column(String(36), nullable=True)
+    revoked_at = Column(String, nullable=True)
+    grant_pending = Column(Boolean, nullable=False, default=False)
+    deletion_pending = Column(Boolean, nullable=False, default=False)
+    remote_possible = Column(Boolean, nullable=False, default=False)
+    last_attempt_at = Column(String, nullable=True)
+    last_success_at = Column(String, nullable=True)
+    next_poll_at = Column(Float, nullable=False, default=0)
+    retry_after_at = Column(Float, nullable=False, default=0)
+    coverage_start = Column(String(10), nullable=True)
+    coverage_end = Column(String(10), nullable=True)
+    error = Column(String(100), nullable=True)
+    feed_status = Column(JSON, nullable=False, default=dict)
+    revision = Column(Integer, nullable=False, default=0)
+    updated_at = Column(AwareDateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+
+
+class CalendarFeeds(Base):
+    """Feed visibility is shared by all accounts, independently of service consent."""
+
+    __tablename__ = "calendar_feeds"
+    id = Column(String(32), primary_key=True)
+    service_id = Column(String(32), ForeignKey("calendar_services.id"), nullable=True)
+    enabled = Column(Boolean, nullable=False, default=False)
+    updated_at = Column(AwareDateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+
+
 class CachedExternalEvents(Base):
-    """Disposable public announcements; installation consent stays outside SQL exports."""
+    """Disposable external records, replaced independently for each complete feed."""
 
     __tablename__ = "cached_external_events"
 
     id = Column(String(128), primary_key=True, nullable=False)
+    feed_id = Column(String(32), nullable=False, default="announcements", index=True)
+    expires_at = Column(AwareDateTime, nullable=True, index=True)
     start_date = Column(Date, nullable=False, index=True)
     end_date = Column(Date, nullable=False, index=True)
     payload = Column(JSON, nullable=False)

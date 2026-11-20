@@ -1,10 +1,9 @@
 # Copyright (c) 2026 Efstratios Goudelis
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""One consent-gated, six-hour poller and a shared disposable SQL event cache."""
+"""One consent-gated bundled poller and a shared disposable SQL event cache."""
 
 import asyncio
-import copy
 import logging
 import math
 import time
@@ -18,6 +17,7 @@ from sqlalchemy import delete, select
 from calendars.consent import EventsConsent, state_path
 from calendars.protocol import (
     EVENTS_URL,
+    EXTERNAL_FEEDS,
     FUTURE_DAYS,
     PAST_DAYS,
     POLL_SECONDS,
@@ -42,10 +42,10 @@ def rolling_window(now):
 
 class ExternalEventsService:
     def __init__(self, path, sessions=AsyncSessionLocal, identity=None):
-        self.consent = EventsConsent(path)
         self.identity = identity or InstallationIdentity(
             Path(path).parent.parent / "installationid.json"
         )
+        self.consent = EventsConsent(path, sessions, self.identity)
         self.sessions = sessions
         self.lock = asyncio.Lock()
         self.poll_lock = asyncio.Lock()
@@ -66,12 +66,15 @@ class ExternalEventsService:
             coverage_end = min(coverage_end, str(last))
         return {
             "id": SOURCE,
-            "enabled": bool(self.consent.active),
+            "enabled": bool(self.consent.active and self.consent.selected),
+            "consented": bool(self.consent.active),
+            "feeds": [
+                {"id": feed, "enabled": enabled} for feed, enabled in self.consent.feeds.items()
+            ],
+            "feed_status": state["feed_status"],
             "terms_version": TERMS_VERSION,
             "accepted_terms_version": state["accepted_terms_version"],
-            "needs_consent_review": bool(
-                state["enabled"] and state["accepted_terms_version"] != TERMS_VERSION
-            ),
+            "needs_consent_review": bool(state["enabled"] and not self.consent.active),
             "storage_error": self.consent.storage_error,
             "deletion_pending": state["deletion_pending"],
             "service_url": EVENTS_URL,
@@ -96,67 +99,86 @@ class ExternalEventsService:
 
     async def status(self):
         async with self.lock:
+            try:
+                await self.consent.load()
+            except OSError:
+                pass
             return self._status()
 
     async def configure(self, choice, actor=None):
-        if (
-            not isinstance(choice, dict)
-            or set(choice) - {"enabled", "terms_version"}
-            or type(choice.get("enabled")) is not bool
-        ):
-            raise ValueError("Invalid external event settings")
-        if choice["enabled"] and choice.get("terms_version") != TERMS_VERSION:
-            raise ValueError("Accept the current event service terms before enabling")
+        if not isinstance(choice, dict) or set(choice) - {
+            "enabled",
+            "terms_version",
+            "feed_id",
+            "revoke",
+        }:
+            raise ValueError("Invalid calendar feed settings")
+        revoke = choice.get("revoke", False)
+        feed = choice.get("feed_id", "announcements")
+        if type(revoke) is not bool or feed not in ("observations", *EXTERNAL_FEEDS):
+            raise ValueError("Unknown calendar feed")
+        if not revoke and type(choice.get("enabled")) is not bool:
+            raise ValueError("Invalid calendar feed setting")
         async with self.lock:
-            previous = copy.deepcopy(self.consent.state)
-            if choice["enabled"] and self.consent.active:
+            await self.consent.load()
+            if (
+                not revoke
+                and self.consent.feeds.get(feed) == choice["enabled"]
+                and (feed == "observations" or self.consent.active)
+            ):
                 return self._status()
-            if choice["enabled"]:
-                self.identity.credentials()
-            self.consent.state.update(enabled=choice["enabled"], next_poll_at=0, error=None)
-            if choice["enabled"]:
-                self.consent.state.update(grant_pending=True, deletion_pending=False)
+            if choice.get("enabled") and feed in EXTERNAL_FEEDS and not self.consent.active:
+                if choice.get("terms_version") != TERMS_VERSION:
+                    raise ValueError(
+                        "Accept the current external calendar service terms before enabling"
+                    )
+                identity = self.identity.credentials()
                 self.consent.state.update(
+                    enabled=True,
+                    installation_id=identity["installation_id"],
                     accepted_terms_version=TERMS_VERSION,
                     accepted_at=datetime.now(timezone.utc).isoformat(),
                     accepted_by=actor,
+                    revoked_at=None,
+                    grant_pending=True,
+                    deletion_pending=False,
                 )
-            if not choice["enabled"]:
-                self.consent.state["deletion_pending"] = self.consent.state["remote_possible"]
-                self.consent.state["grant_pending"] = False
+            if revoke:
+                self.consent.state.update(
+                    enabled=False,
+                    grant_pending=False,
+                    revoked_at=datetime.now(timezone.utc).isoformat(),
+                    deletion_pending=self.consent.state["remote_possible"],
+                )
+                for name in EXTERNAL_FEEDS:
+                    self.consent.feeds[name] = False
+            else:
+                self.consent.feeds[feed] = choice["enabled"]
+            self.consent.state.update(next_poll_at=0, error=None)
             try:
-                self.consent.save()
+                # Selection and its shared acceptance are one SQL transaction.
+                await self.consent.save()
             except OSError as exc:
-                self.consent.state = previous
-                self.consent.storage_error = True
-                # Fail closed even if permission could not be saved or revoked.
+                self.consent.storage_error = self.consent.blocked = True
                 if self.fetch_task:
                     self.fetch_task.cancel()
-                raise ValueError("Could not safely save external event consent") from exc
-            self.consent.storage_error = False
+                raise ValueError("Could not save calendar feed settings") from exc
             self.generation += 1
             if self.fetch_task:
                 self.fetch_task.cancel()
-            if not choice["enabled"]:
-                # Persist disabled before SQL cleanup. A cleanup error cannot
-                # resurrect network permission or expose cached announcements.
-                self.consent.state.update(
-                    coverage_start=None, coverage_end=None, last_success_at=None
-                )
-                try:
-                    async with self.sessions() as session:
-                        await session.execute(delete(CachedExternalEvents))
-                        await session.commit()
-                    self.consent.save()
-                except Exception:
-                    self.consent.state["error"] = "cache_clear_failed"
-                    self.pruned_day = None
-                    logger.error("External event cache cleanup failed; service remains disabled")
+            if revoke:
+                async with self.sessions() as session:
+                    await session.execute(delete(CachedExternalEvents))
+                    await session.commit()
             self.wake.set()
             return self._status()
 
     async def cached_events(self, session, window):
         async with self.lock:
+            try:
+                await self.consent.load()
+            except OSError:
+                return [], self._status(window)
             status = self._status(window)
             if not self.consent.active:
                 return [], status
@@ -166,6 +188,20 @@ class ExternalEventsService:
                     (
                         await session.execute(
                             select(CachedExternalEvents).where(
+                                CachedExternalEvents.feed_id.in_(
+                                    [
+                                        feed
+                                        for feed in EXTERNAL_FEEDS
+                                        if self.consent.feeds.get(feed)
+                                    ]
+                                ),
+                                (
+                                    (CachedExternalEvents.expires_at.is_(None))
+                                    | (
+                                        CachedExternalEvents.expires_at
+                                        > datetime.fromtimestamp(time.time(), timezone.utc)
+                                    )
+                                ),
                                 CachedExternalEvents.start_date < window.end + timedelta(days=1),
                                 CachedExternalEvents.end_date > window.start - timedelta(days=1),
                                 CachedExternalEvents.start_date < last,
@@ -180,6 +216,8 @@ class ExternalEventsService:
                 events = []
                 for row in rows:
                     event = CalendarEvent.model_validate(row.payload)
+                    if not event.has_known_date:
+                        continue  # Hide estimates already cached before the source fix.
                     # SQL dates over-select precise instants; compare against
                     # the user's actual timezone-aware day boundaries.
                     if isinstance(event.start, datetime):
@@ -200,7 +238,7 @@ class ExternalEventsService:
         if self.consent.state["grant_pending"]:
             await self.identity.enroll(client, "events", TERMS_VERSION)
             self.consent.state["grant_pending"] = False
-            self.consent.save()
+            await self.consent.save()
         # Authentication is installation-wide. Local observations, accounts and
         # station coordinates never enter the event request.
         async with client.stream(
@@ -242,7 +280,10 @@ class ExternalEventsService:
 
     async def refresh(self):
         async with httpx.AsyncClient(timeout=15, follow_redirects=False, trust_env=False) as client:
-            return await self.tick(client, force=True)
+            try:
+                return await self.tick(client, force=True)
+            except OSError:
+                return False
 
     async def tick(self, client, now=None, *, force=False):
         # A manual refresh joins an ongoing poll through its SQL commit, so its
@@ -260,13 +301,20 @@ class ExternalEventsService:
         now = time.time() if now is None else now
         first, last = rolling_window(now)
         async with self.lock:
+            await self.consent.load()
             # Refreshing the calendar cannot grant consent or trigger requests
             # for a disabled source, including pending consent withdrawals.
-            if force and not self.consent.active:
+            if force and not (self.consent.active and self.consent.selected):
                 return False
             # Withdrawal is the sole request permitted after opt-out. Persist
             # its retry state independently of the disabled polling schedule.
             if self.consent.state["deletion_pending"] and not self.consent.storage_error:
+                if self.consent.state["installation_id"] != self.consent.identity_id():
+                    # A foreign database cannot authorize any network request,
+                    # including a withdrawal using this installation's identity.
+                    self.consent.state.update(deletion_pending=False, remote_possible=False)
+                    await self.consent.save()
+                    return False
                 if now < self.consent.state["next_poll_at"]:
                     return False
                 try:
@@ -282,7 +330,7 @@ class ExternalEventsService:
                 except (httpx.HTTPError, OSError, ValueError):
                     self.consent.state["error"] = "service_unavailable"
                 self.consent.state["next_poll_at"] = now + POLL_SECONDS
-                self.consent.save()
+                await self.consent.save()
                 return False
             # Also remove expired rows while offline, without waiting for a
             # successful download. Calendar reads enforce the same rolling bound.
@@ -291,6 +339,7 @@ class ExternalEventsService:
                 self.pruned_day = first
             if (
                 not self.consent.active
+                or not self.consent.selected
                 or (not force and now < self.consent.state["next_poll_at"])
                 or now < self.consent.state["retry_after_at"]
                 or self.fetch_task is not None
@@ -303,8 +352,8 @@ class ExternalEventsService:
             )
             try:
                 # Reserve the next attempt before networking, so restarts and
-                # failures cannot turn the six-hour schedule into rapid retries.
-                self.consent.save()
+                # failures cannot turn the polling schedule into rapid retries.
+                await self.consent.save()
             except OSError:
                 self.consent.storage_error = True
                 return False
@@ -338,7 +387,7 @@ class ExternalEventsService:
                         retry_after = max(0, parsedate_to_datetime(value).timestamp() - now)
                     except (ValueError, TypeError, OverflowError):
                         pass
-        except (httpx.RequestError, ValueError, TimeoutError):
+        except (httpx.RequestError, ValueError, TimeoutError, OSError):
             error = "service_unavailable"
         finally:
             # Only the owner may release a request after disable/re-enable.
@@ -346,13 +395,26 @@ class ExternalEventsService:
                 self.fetch_task = None
 
         async with self.lock:
-            if generation != self.generation or not self.consent.active:
+            receipt_revision = self.consent.revision
+            await self.consent.load()
+            if (
+                generation != self.generation
+                or receipt_revision != self.consent.revision
+                or not self.consent.active
+            ):
                 return False
             if snapshot is not None:
                 try:
                     async with self.sessions() as session:
-                        await session.execute(delete(CachedExternalEvents))
+                        complete = {feed.id for feed in snapshot.feeds if feed.complete}
+                        await session.execute(
+                            delete(CachedExternalEvents).where(
+                                CachedExternalEvents.feed_id.in_(complete)
+                            )
+                        )
                         for event in snapshot.events:
+                            if event.feed_id not in complete or not event.has_known_date:
+                                continue
                             if isinstance(event.start, datetime) and isinstance(
                                 event.end, datetime
                             ):
@@ -367,6 +429,8 @@ class ExternalEventsService:
                             session.add(
                                 CachedExternalEvents(
                                     id=event.id,
+                                    feed_id=event.feed_id,
+                                    expires_at=event.expires_at,
                                     start_date=event_first,
                                     end_date=event_last,
                                     payload=event.calendar_payload(),
@@ -376,6 +440,14 @@ class ExternalEventsService:
                         # One complete transaction replaces the full window,
                         # removing withdrawn approvals and absent event IDs.
                         await session.commit()
+                    self.consent.state["feed_status"] = {
+                        feed.id: feed.model_dump(mode="json") for feed in snapshot.feeds
+                    }
+                    if any(
+                        feed.error or feed.stale or not feed.complete for feed in snapshot.feeds
+                    ):
+                        error = "upstream_feed_unavailable"
+                    self.consent.state["next_poll_at"] = now + snapshot.refresh_after_seconds
                     self.consent.state.update(
                         last_success_at=datetime.fromtimestamp(now, timezone.utc).isoformat(),
                         coverage_start=str(first),
@@ -392,7 +464,7 @@ class ExternalEventsService:
                 self.consent.state["next_poll_at"], now + retry_after
             )
             try:
-                self.consent.save()
+                await self.consent.save()
             except OSError:
                 self.consent.storage_error = True
             return True

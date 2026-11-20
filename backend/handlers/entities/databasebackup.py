@@ -24,6 +24,7 @@ from typing import Any, AsyncIterator, Dict, List, Optional
 
 from sqlalchemy import text
 
+from calendars.consent import invalidate_consent
 from db import AsyncSessionLocal
 from db.models import Base
 
@@ -419,6 +420,8 @@ async def restore_table(table_name: str, sql: str, delete_first: bool = True) ->
                     await (await session.connection()).exec_driver_sql(line)
                     rows_inserted += 1
 
+                if table_name in {"calendar_services", "calendar_feeds"}:
+                    await invalidate_consent(session)
                 await session.commit()
                 return {"success": True, "rows_inserted": rows_inserted}
             except Exception as e:
@@ -641,6 +644,7 @@ async def full_restore(sql: str, drop_tables: bool = True) -> Dict[str, Any]:
                     indexes_created += 1
 
                 # Normalize malformed legacy JSON payloads that can break ORM deserialization.
+                await invalidate_consent(session)
                 normalized_rows = await _normalize_transmitters_itu_notification(session)
 
                 # Re-enable foreign key constraints
@@ -745,6 +749,7 @@ async def full_restore_file(sql_path: Path, drop_tables: bool = True) -> Dict[st
                     await (await session.connection()).exec_driver_sql(statement)
                     indexes_created += 1
 
+                await invalidate_consent(session)
                 normalized_rows = await _normalize_transmitters_itu_notification(session)
                 await session.execute(text("PRAGMA foreign_keys = ON"))
                 await session.commit()

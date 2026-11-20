@@ -69,7 +69,11 @@ export default function useCalendarEvents({start, end, timezone}) {
         // A successful global opt-out removes announcements immediately while
         // the next SQL snapshot catches up, including any open details dialog.
         setResult(previous => ({...previous, external,
-            events: external.enabled ? previous.events : previous.events.filter(event => event.source !== 'gscontrol')}));
+            events: previous.events.filter(event => {
+                const feed = event.source === 'observations' ? 'observations' : event.feed_id || 'announcements';
+                return (external.feeds?.find(item => item.id === feed)?.enabled ?? (feed === 'observations' || external.enabled))
+                    && (feed === 'observations' || external.consented !== false);
+            })}));
         setRevision(value => value + 1);
     }, []);
     // Hide the previous range immediately, before the next effect starts.
