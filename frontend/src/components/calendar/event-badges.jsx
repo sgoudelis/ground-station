@@ -1,4 +1,5 @@
 import {Chip, Stack, SvgIcon, Typography} from '@mui/material';
+import {alpha} from '@mui/material/styles';
 import {FaSatelliteDish} from 'react-icons/fa6';
 import ImageIcon from '@mui/icons-material/Image';
 import PhotoLibraryIcon from '@mui/icons-material/PhotoLibrary';
@@ -61,9 +62,10 @@ export function ActivityBadge({event, compact = false}) {
     if (event.kind === 'launch' || event.feed_id === 'launches') return null;
     const label = activityLabels(t)[event.kind] || event.kind;
     return label ? <Chip component="span" size="small" variant="outlined" label={label}
-        sx={theme => ({height: compact ? 18 : 23, fontSize: compact ? 10 : 11,
-            borderColor: eventAccent(event, theme), maxWidth: '100%',
-            '& .MuiChip-label': {px: 0.75}})} /> : null;
+        sx={theme => ({height: compact ? 16 : 23, fontSize: compact ? 9.5 : 11,
+            color: compact ? 'text.secondary' : 'text.primary',
+            borderColor: compact ? alpha(eventAccent(event, theme), 0.28) : eventAccent(event, theme), maxWidth: '100%',
+            '& .MuiChip-label': {px: compact ? 0.5 : 0.75}})} /> : null;
 }
 
 export function ObservationBadges({event, compact = false}) {

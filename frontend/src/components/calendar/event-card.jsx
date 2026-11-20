@@ -50,7 +50,7 @@ export default function EventCard({event, day, timezone, locale, onOpen, compact
             </Box>
             <Stack component="span" direction="row" alignItems="center" gap={0.65} useFlexGap flexWrap="wrap" sx={{mt: 0.65}}>
                 <SourceLabel event={event} compact={compact} />
-                {local ? <ObservationBadges event={event} compact={compact} /> : <ActivityBadge event={event} compact={compact} />}
+                {local ? <ObservationBadges event={event} compact={compact} /> : <ActivityBadge event={event} compact />}
             </Stack>
             {frequency && <Typography component="span" display="block" noWrap sx={{fontSize: 12, mt: 0.5, color: 'text.secondary'}}>
                 {frequency}
