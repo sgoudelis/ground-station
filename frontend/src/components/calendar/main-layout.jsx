@@ -213,7 +213,6 @@ export default function CalendarPage() {
                     <Typography variant="caption" color="text.secondary" aria-live="polite" sx={{ml: 'auto'}}>{t('event_count', {count: eventCount})}</Typography>
                 </Stack>
             </Paper>
-            {subscribedEvents.some(event => !isLocalObservation(event)) && <Typography variant="caption" color="text.secondary" display="block" sx={{mt: 1.5}}>{t('window_note')}</Typography>}
             <EventDetails key={selected?.id || 'closed'} event={selected} onClose={() => setSelectedId(null)}
                 onViewResults={setResultsObservation} timezone={timezone} locale={locale} />
             {resultsObservation && <ObservationDataDialog open observation={resultsObservation}
