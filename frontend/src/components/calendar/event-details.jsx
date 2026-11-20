@@ -155,11 +155,10 @@ export default function EventDetails({event, onClose, onViewResults, timezone, l
                                 : `${event.observation.peak_altitude.toLocaleString(locale, {maximumFractionDigits: 1})}°`],
                         ]} />
                     </DetailSection>}
-                </> : <>
+                </> : source && <>
                     <Divider />
                     <DetailSection title={t('source')}>
                         <DetailFields fields={[
-                            [t('details.provider'), event.source === 'gscontrol' ? t('sources.gscontrol') : event.source],
                             [t('external.source_link'), source ? <Link href={source.href} target="_blank" rel="noopener noreferrer">{source.hostname}</Link> : null],
                         ]} />
                     </DetailSection>

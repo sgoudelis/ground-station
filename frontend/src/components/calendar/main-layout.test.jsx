@@ -154,7 +154,7 @@ it('shows cached announcements with source links and date precision across timez
     expect(within(dialog).getByText('18 Nov 2026')).toBeVisible();
     expect(within(dialog).getByText('19 Nov 2026')).toBeVisible();
     expect(within(dialog).getByText('Date only')).toBeVisible();
-    expect(within(dialog).getByText('GS Control')).toBeVisible();
+    expect(within(dialog).queryByText('GS Control')).not.toBeInTheDocument();
     expect(within(dialog).getByRole('link', {name: 'example.org'})).toHaveAttribute('href', 'https://example.org/activity');
     expect(within(dialog).getByRole('link', {name: 'Open original source'})).toHaveAttribute('href', 'https://example.org/activity');
     expect(within(dialog).queryByRole('button', {name: 'Open observation'})).not.toBeInTheDocument();
