@@ -1,11 +1,15 @@
-// Source colors stay stable when activity or execution status changes.
+import {darken, lighten} from '@mui/material/styles';
+import {ACTIVITY_COLORS} from './activities.js';
+
 export const isLocalObservation = event => event.source === 'observations';
 
-export function sourceAccent(event, theme) {
-    const dark = theme.palette.mode === 'dark';
-    return isLocalObservation(event)
-        ? dark ? '#60a5fa' : '#2563eb'
-        : dark ? '#b39ddb' : '#7c3aed';
+export function eventAccent(event, theme) {
+    // Keep an activity's color consistent across cards, icons and details,
+    // independently of execution status or changes to its scheduled time.
+    const kind = isLocalObservation(event) ? 'observation' : event.kind;
+    const feedKind = {space_weather: 'space_weather', launches: 'launch'}[event.feed_id];
+    const color = ACTIVITY_COLORS[kind] || ACTIVITY_COLORS[feedKind] || ACTIVITY_COLORS.other_radio;
+    return theme.palette.mode === 'dark' ? lighten(color, 0.18) : darken(color, 0.12);
 }
 
 export function observationStatusSx(status, theme) {

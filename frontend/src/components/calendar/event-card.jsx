@@ -5,7 +5,7 @@ import {activityLabels} from './activities.js';
 import {dayKey} from './dates.js';
 import {frequencyLabel, observationStatuses, satelliteNames} from './events.js';
 import {ActivityBadge, ObservationBadges, SourceLabel} from './event-badges.jsx';
-import {isLocalObservation, sourceAccent} from './presentation.js';
+import {eventAccent, isLocalObservation} from './presentation.js';
 
 export default function EventCard({event, day, timezone, locale, onOpen, compact = false}) {
     const {t} = useTranslation(['calendar', 'common']);
@@ -30,7 +30,7 @@ export default function EventCard({event, day, timezone, locale, onOpen, compact
             onClick={() => onOpen(event)}
             aria-label={[title, source, label, status, time].filter(Boolean).join(' · ')}
             sx={theme => {
-                const color = sourceAccent(event, theme);
+                const color = eventAccent(event, theme);
                 const inactive = event.enabled === false || event.status === 'cancelled';
                 return {
                     display: 'block', width: '100%', minWidth: 0, textAlign: 'start',

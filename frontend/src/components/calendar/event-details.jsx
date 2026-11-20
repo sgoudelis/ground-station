@@ -16,7 +16,7 @@ import {setDialogOpen, setSelectedObservation} from '../scheduler/scheduler-slic
 import {addDays, civilDate} from './dates.js';
 import {frequencyLabel, satelliteNames} from './events.js';
 import {ActivityBadge, ObservationBadges, SourceLabel} from './event-badges.jsx';
-import {isLocalObservation, sourceAccent, sourceLink, windowDuration} from './presentation.js';
+import {eventAccent, isLocalObservation, sourceLink, windowDuration} from './presentation.js';
 
 function DetailFields({fields}) {
     return <Box component="dl" sx={{display: 'grid', gridTemplateColumns: {xs: '1fr', sm: '145px minmax(0, 1fr)'},
@@ -44,8 +44,8 @@ function TimeWindow({event, timezone, locale, format}) {
     const formatDate = value => civilDate(value).toLocaleDateString(locale, {timeZone: 'UTC', dateStyle: 'medium'});
     const duration = windowDuration(event, locale);
     return <Box component="section" aria-label={local ? t('details.scheduled_task') : t('details.activity_window')}
-        sx={theme => ({p: 2, borderRadius: 1.5, bgcolor: alpha(sourceAccent(event, theme), theme.palette.mode === 'dark' ? 0.1 : 0.055),
-            border: '1px solid', borderColor: alpha(sourceAccent(event, theme), 0.22)})}>
+        sx={theme => ({p: 2, borderRadius: 1.5, bgcolor: alpha(eventAccent(event, theme), theme.palette.mode === 'dark' ? 0.1 : 0.055),
+            border: '1px solid', borderColor: alpha(eventAccent(event, theme), 0.22)})}>
         <Typography component="h3" variant="subtitle2" fontWeight={650} sx={{mb: 1.5}}>
             {local ? t('details.scheduled_task') : t('details.activity_window')}
         </Typography>
@@ -127,7 +127,7 @@ export default function EventDetails({event, onClose, onViewResults, timezone, l
 
     return <Dialog open onClose={onClose} fullWidth maxWidth={false} aria-labelledby="calendar-event-title"
         slotProps={{paper: {sx: theme => ({width: 640, maxWidth: 'calc(100% - 32px)', m: 2,
-            borderTop: `4px solid ${sourceAccent(event, theme)}`})}}}>
+            borderTop: `4px solid ${eventAccent(event, theme)}`})}}}>
         <DialogTitle id="calendar-event-header" component="div" sx={{p: {xs: 2, sm: 3}, pr: {xs: 6, sm: 7}}}>
             <Stack direction="row" gap={1} alignItems="center" useFlexGap flexWrap="wrap" sx={{mb: 1.25}}>
                 <SourceLabel event={event} />

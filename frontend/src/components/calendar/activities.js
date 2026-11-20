@@ -1,10 +1,10 @@
 // Both color and text identify an activity; color is never the only cue.
 export const ACTIVITY_COLORS = {
-    observation: '#7f9ec4', space_weather: '#df9b50', launch: '#56b7ce',
-    sstv: '#9b8bea', voice: '#5eafdf', digipeater: '#51b49a',
-    transponder: '#d9a64e', telemetry: '#d583a9',
-    ssdv: '#a28bd2', voice_contact: '#5eafdf', audio: '#d583a9',
-    broadcast: '#d2a35a', other_radio: '#849aa6',
+    observation: '#3b82f6', space_weather: '#ea580c', launch: '#0891b2',
+    sstv: '#8b5cf6', voice: '#16a34a', digipeater: '#0d9488',
+    transponder: '#ca8a04', telemetry: '#4f46e5',
+    ssdv: '#d946ef', voice_contact: '#16a34a', audio: '#db2777',
+    broadcast: '#dc2626', other_radio: '#64748b',
 };
 
 export function activityLabels(t) {

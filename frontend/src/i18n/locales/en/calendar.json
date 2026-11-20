@@ -23,6 +23,7 @@
   "all_satellites": "All satellites",
   "activity": "Activity",
   "all_activities": "All activities",
+  "no_activities": "No activities",
   "timezone": "Timezone",
   "reset_filters": "Reset filters",
   "events_calendar": "Satellite events calendar",

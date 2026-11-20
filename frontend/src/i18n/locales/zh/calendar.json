@@ -23,6 +23,7 @@
   "all_satellites": "所有卫星",
   "activity": "活动",
   "all_activities": "所有活动",
+  "no_activities": "无活动",
   "timezone": "时区",
   "reset_filters": "重置筛选",
   "events_calendar": "卫星事件日历",

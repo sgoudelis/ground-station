@@ -33,6 +33,13 @@ const fixtures = [
     ...Array.from({length: 4}, (_, index) => observation(String(index), index === 1 ? 'AO-91' : 'ISS',
         `2026-11-18T${10 + index}:00:00Z`, `2026-11-18T${10 + index}:10:00Z`)),
 ];
+const mixedEvents = [
+    fixtures[1],
+    {id: 'gscontrol:sstv', source: 'gscontrol', source_id: 'sstv', feed_id: 'announcements', kind: 'sstv',
+        title: 'ISS SSTV activity', satellites: [{name: 'ISS'}], start: '2026-11-18', end: '2026-11-19', time_precision: 'date'},
+    {id: 'gscontrol:launch', source: 'gscontrol', source_id: 'launch', feed_id: 'launches', kind: 'launch',
+        title: 'Satellite launch', start: '2026-11-18', end: '2026-11-19', time_precision: 'date'},
+];
 const reply = events => ({success: true, data: {events, sources: [{id: 'observations'}]}});
 
 beforeEach(() => {
@@ -92,8 +99,12 @@ it('omits uncertain launches from month, week and agenda views', async () => {
     for (const view of ['Month', 'Week', 'Agenda']) {
         await user.click(screen.getByRole('button', {name: view, exact: true}));
         expect(screen.queryByRole('button', {name: /Uncertain launch/})).not.toBeInTheDocument();
-        expect(await screen.findByRole('button', {name: /Known launch day/})).toBeVisible();
+        const card = await screen.findByRole('button', {name: /Known launch day/});
+        expect(card).toBeVisible();
+        expect(within(card).getAllByText('Launches', {exact: true})).toHaveLength(1);
     }
+    await user.click(screen.getByRole('button', {name: /Known launch day/}));
+    expect(within(screen.getByRole('dialog')).getAllByText('Launches', {exact: true})).toHaveLength(1);
 });
 
 it('combines search and activity filters and recovers from an empty result', async () => {
@@ -104,10 +115,67 @@ it('combines search and activity filters and recovers from an empty result', asy
     const calendar = screen.getByRole('region');
     expect(within(calendar).queryByRole('button', {name: /AO-91/})).not.toBeInTheDocument();
     await user.click(screen.getByRole('combobox', {name: 'Activity'}));
+    await user.click(screen.getByRole('option', {name: 'All activities'}));
     await user.click(screen.getByRole('option', {name: 'Telemetry'}));
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('listbox')).not.toBeInTheDocument());
     expect(within(calendar).getByText('No events in this view')).toBeVisible();
     await user.click(screen.getByRole('button', {name: 'Reset filters'}));
     expect(within(calendar).getByRole('button', {name: /AO-91/})).toBeVisible();
+});
+
+it('checks and unchecks activities independently, retaining choices across views and refresh', async () => {
+    const user = userEvent.setup();
+    socket.emitWithAck.mockResolvedValue(reply(mixedEvents));
+    await renderCalendar();
+    await user.click(screen.getByRole('button', {name: 'Agenda', exact: true}));
+    const cards = mixedEvents.map(event => screen.getByRole('button', {name: new RegExp(event.title)}));
+    // The cards themselves must use the activity palette, not just their pills.
+    expect(new Set(cards.map(card => getComputedStyle(card).borderLeftColor)).size).toBe(3);
+    const requestsBeforeFiltering = socket.emitWithAck.mock.calls.length;
+    await user.click(screen.getByRole('combobox', {name: 'Activity'}));
+    expect(screen.getByRole('listbox')).toHaveAttribute('aria-multiselectable', 'true');
+    expect(screen.getByRole('option', {name: 'All activities'})).toHaveAttribute('aria-selected', 'true');
+    await user.click(screen.getByRole('option', {name: 'Launches'}));
+    expect(screen.getByRole('option', {name: 'Launches'})).toHaveAttribute('aria-selected', 'false');
+    await user.click(screen.getByRole('option', {name: 'SSTV', exact: true}));
+    expect(screen.getByRole('option', {name: 'SSTV', exact: true})).toHaveAttribute('aria-selected', 'false');
+    await user.click(screen.getByRole('option', {name: 'SSTV', exact: true}));
+    expect(screen.getByRole('option', {name: 'SSTV', exact: true})).toHaveAttribute('aria-selected', 'true');
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('listbox')).not.toBeInTheDocument());
+    expect(screen.getByRole('button', {name: /ISS pass 0/})).toBeVisible();
+    expect(screen.getByRole('button', {name: /ISS SSTV activity/})).toBeVisible();
+    expect(screen.queryByRole('button', {name: /Satellite launch/})).not.toBeInTheDocument();
+    expect(socket.emitWithAck.mock.calls).toHaveLength(requestsBeforeFiltering);
+    await user.click(screen.getByRole('button', {name: 'Week', exact: true}));
+    await user.click(screen.getByRole('button', {name: 'Refresh', exact: true}));
+    await waitFor(() => expect(screen.getByRole('region')).toHaveAttribute('aria-busy', 'false'));
+    expect(screen.queryByRole('button', {name: /Satellite launch/})).not.toBeInTheDocument();
+    expect(screen.getByRole('button', {name: /ISS SSTV activity/})).toBeVisible();
+});
+
+it('can hide every activity, select all again, and reset the checklist', async () => {
+    const user = userEvent.setup();
+    socket.emitWithAck.mockResolvedValue(reply(mixedEvents));
+    await renderCalendar();
+    await user.click(screen.getByRole('combobox', {name: 'Activity'}));
+    await user.click(screen.getByRole('option', {name: 'All activities'}));
+    expect(screen.getAllByRole('option').every(option => option.getAttribute('aria-selected') === 'false')).toBe(true);
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('listbox')).not.toBeInTheDocument());
+    expect(screen.getByRole('combobox', {name: 'Activity'})).toHaveTextContent('No activities');
+    expect(screen.getByText('No events in this view')).toBeVisible();
+    expect(screen.getByText('Events in this period: 0')).toBeVisible();
+    await user.click(screen.getByRole('combobox', {name: 'Activity'}));
+    await user.click(screen.getByRole('option', {name: 'All activities'}));
+    expect(screen.getAllByRole('option').every(option => option.getAttribute('aria-selected') === 'true')).toBe(true);
+    await user.click(screen.getByRole('option', {name: 'Launches'}));
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('listbox')).not.toBeInTheDocument());
+    await user.click(screen.getByRole('button', {name: 'Reset filters'}));
+    expect(screen.getByRole('combobox', {name: 'Activity'})).toHaveTextContent('All activities');
+    expect(screen.getByRole('button', {name: /Satellite launch/})).toBeVisible();
 });
 
 it('refreshes announcements and observations while preserving the visible period and filters', async () => {

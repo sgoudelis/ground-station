@@ -1,6 +1,6 @@
 import {useEffect, useMemo, useState} from 'react';
 import {
-    Alert, Box, ButtonBase, ButtonGroup, Divider, IconButton, InputAdornment, LinearProgress, MenuItem, Paper, Stack,
+    Alert, Box, ButtonBase, ButtonGroup, Checkbox, Divider, IconButton, InputAdornment, LinearProgress, MenuItem, Paper, Stack,
     TextField, Tooltip, Typography, useMediaQuery,
 } from '@mui/material';
 import {alpha, useTheme} from '@mui/material/styles';
@@ -22,7 +22,7 @@ import FeedSettings from './feed-settings.jsx';
 import {ExternalEventsStatus} from './external-events.jsx';
 import EventDetails from './event-details.jsx';
 import {SourceLabel} from './event-badges.jsx';
-import {isLocalObservation} from './presentation.js';
+import {eventAccent, isLocalObservation} from './presentation.js';
 
 function EmptyCalendar() {
     const {t} = useTranslation(['calendar', 'common']);
@@ -55,7 +55,7 @@ export default function CalendarPage() {
     const [view, setView] = useState('month');
     const [search, setSearch] = useState('');
     const [satellite, setSatellite] = useState('all');
-    const [kind, setKind] = useState('all');
+    const [hiddenKinds, setHiddenKinds] = useState([]);
     const [selectedId, setSelectedId] = useState(null);
     const [resultsObservation, setResultsObservation] = useState(null);
     const labels = useMemo(() => activityLabels(t), [t]);
@@ -67,15 +67,30 @@ export default function CalendarPage() {
     const observationsEnabled = external?.feeds?.find(feed => feed.id === 'observations')?.enabled ?? true;
     const subscribedEvents = useMemo(() => events.filter(event => hasCalendarDate(event) && (observationsEnabled || !isLocalObservation(event))),
         [events, observationsEnabled]);
+    // Exclusions default to showing new activity types after a refresh, too.
+    const activityOptions = useMemo(() => ({...labels, ...Object.fromEntries(
+        subscribedEvents.filter(event => !labels[event.kind]).map(event => [event.kind, event.kind]),
+    )}), [labels, subscribedEvents]);
+    const activityKinds = Object.keys(activityOptions);
+    const visibleKinds = activityKinds.filter(kind => !hiddenKinds.includes(kind));
+    const allActivitiesVisible = visibleKinds.length === activityKinds.length;
+    const changeActivities = (event, option) => {
+        if (option?.props.value === 'all') {
+            setHiddenKinds(allActivitiesVisible ? activityKinds : []);
+        } else {
+            const values = typeof event.target.value === 'string' ? event.target.value.split(',') : event.target.value;
+            setHiddenKinds(activityKinds.filter(kind => !values.includes(kind)));
+        }
+    };
     // Keep an open details dialog in sync when a job changes or its feed is hidden.
     const selected = subscribedEvents.find(event => event.id === selectedId) || null;
     const satellites = [...new Set(events.flatMap(satelliteNames))].sort();
     const filteredEvents = useMemo(() => {
         const query = search.trim().toLocaleLowerCase(locale);
         return subscribedEvents.filter(event => (satellite === 'all' || satelliteNames(event).includes(satellite))
-            && (kind === 'all' || event.kind === kind)
+            && !hiddenKinds.includes(event.kind)
             && (!query || `${event.title} ${satelliteNames(event).join(' ')} ${labels[event.kind] || event.kind} ${frequencyLabel(event, locale)}`.toLocaleLowerCase(locale).includes(query)));
-    }, [subscribedEvents, satellite, kind, search, locale, labels]);
+    }, [subscribedEvents, satellite, hiddenKinds, search, locale, labels]);
     const dayEvents = useMemo(() => groupEventsByDay(filteredEvents, days, timezone), [filteredEvents, days, timezone]);
     // Adjacent month cells offer context, but do not leak into the month's agenda.
     const agendaDays = days.filter(day => (view === 'week' || day.slice(0, 7) === anchor.slice(0, 7)) && dayEvents.get(day).length);
@@ -85,7 +100,7 @@ export default function CalendarPage() {
     const periodLabel = view === 'week'
         ? `${dateLabel(days[0], {month: 'short', day: 'numeric'})} – ${dateLabel(days.at(-1), {year: 'numeric', month: 'short', day: 'numeric'})}`
         : dateLabel(anchor, {month: 'long', year: 'numeric'});
-    const filtersActive = search || satellite !== 'all' || kind !== 'all';
+    const filtersActive = search || satellite !== 'all' || hiddenKinds.length > 0;
 
     useEffect(() => {
         // Refresh the today marker if the calendar stays open across midnight.
@@ -131,14 +146,30 @@ export default function CalendarPage() {
                         <MenuItem value="all">{t('all_satellites')}</MenuItem>
                         {satellites.map(name => <MenuItem key={name} value={name}>{name}</MenuItem>)}
                     </TextField>
-                    <TextField select label={t('activity')} value={kind} onChange={event => setKind(event.target.value)} size="small" sx={{flex: '1 1 160px'}}>
-                        <MenuItem value="all">{t('all_activities')}</MenuItem>
-                        {Object.entries(labels).map(([value, label]) => <MenuItem key={value} value={value}>{label}</MenuItem>)}
+                    <TextField select label={t('activity')} value={allActivitiesVisible ? ['all', ...visibleKinds] : visibleKinds}
+                        onChange={changeActivities} size="small" sx={{flex: '1 1 180px', minWidth: 160,
+                            '& .MuiSelect-select': {whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}}}
+                        slotProps={{inputLabel: {shrink: true}, select: {multiple: true, displayEmpty: true,
+                            renderValue: () => allActivitiesVisible ? t('all_activities')
+                                : visibleKinds.map(kind => activityOptions[kind]).join(', ') || t('no_activities')}}}>
+                        <MenuItem value="all">
+                            <Checkbox size="small" checked={allActivitiesVisible}
+                                indeterminate={!allActivitiesVisible && visibleKinds.length > 0}
+                                tabIndex={-1} disableRipple slotProps={{input: {'aria-hidden': true}}} />
+                            {t('all_activities')}
+                        </MenuItem>
+                        {Object.entries(activityOptions).map(([value, label]) => <MenuItem key={value} value={value}>
+                            <Checkbox size="small" checked={!hiddenKinds.includes(value)} tabIndex={-1} disableRipple
+                                slotProps={{input: {'aria-hidden': true}}} />
+                            <Box component="span" aria-hidden="true" sx={{width: 9, height: 9, mr: 1, borderRadius: '50%',
+                                flexShrink: 0, bgcolor: eventAccent({kind: value}, theme)}} />
+                            {label}
+                        </MenuItem>)}
                     </TextField>
                     <TextField select label={t('timezone')} value={zoneChoice} onChange={event => setZoneChoice(event.target.value)} size="small" sx={{minWidth: 150}}>
                         {timezones.map(zone => <MenuItem key={zone} value={zone}>{zone}</MenuItem>)}
                     </TextField>
-                    {filtersActive && <CapsButton size="small" onClick={() => {setSearch(''); setSatellite('all'); setKind('all');}}>{t('reset_filters')}</CapsButton>}
+                    {filtersActive && <CapsButton size="small" onClick={() => {setSearch(''); setSatellite('all'); setHiddenKinds([]);}}>{t('reset_filters')}</CapsButton>}
                 </Stack>
                 <Divider />
 

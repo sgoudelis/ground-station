@@ -36,9 +36,14 @@ out after 15 seconds, and late responses cannot replace a newer snapshot.
 Navigating dates/timezones clears the previous range immediately. Open details
 follow refreshed records and close when a record disappears.
 
-Cards use blue accents for local observations and violet for external events,
-with source icons and labels in every view. Activity and execution status appear
-as separate badges; a status change never changes a card's source color.
+Each activity type has its own accent color, shared by its cards, icons, activity
+badges, details and filter swatches. Source labels and execution-status badges
+remain visible; status changes do not change the activity color. Launch cards
+use their existing source label without a repeated activity pill.
+
+The Activity menu supports checking multiple types independently, selecting all
+or none, and resetting filters. These display choices survive calendar navigation
+and refreshes without changing the station-wide feed selections.
 
 Local details emphasize the scheduled task window and duration, followed by
 reception details, the satellite pass, and manual/monitored origin. **Open
