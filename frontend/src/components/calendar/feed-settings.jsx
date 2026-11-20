@@ -9,9 +9,8 @@ import ExternalEvents from './external-events.jsx';
 import FeedRow from './feed-row.jsx';
 import {useSocket} from '../common/socket.jsx';
 
-export default function FeedSettings({observationsEnabled, status, onChanged}) {
+export default function FeedSettings({observationsEnabled, status, onChanged, open, onOpen, onClose}) {
     const {t} = useTranslation('calendar');
-    const [open, setOpen] = useState(false);
     const {socket} = useSocket();
     const isAdmin = useSelector(state => state.auth?.user?.role === 'admin');
     const [pending, setPending] = useState(null);
@@ -39,11 +38,11 @@ export default function FeedSettings({observationsEnabled, status, onChanged}) {
             setPending(null);
         }
     };
-    const close = () => {if (!busy) {setOpen(false); setError(null);}};
+    const close = () => {if (!busy) {onClose(); setError(null);}};
 
     return <>
         <Tooltip title={t('feeds.title')}>
-            <IconButton size="small" aria-label={t('feeds.title')} onClick={() => {setError(null); setOpen(true);}}>
+            <IconButton size="small" aria-label={t('feeds.title')} onClick={() => {setError(null); onOpen();}}>
                 <SettingsIcon />
             </IconButton>
         </Tooltip>

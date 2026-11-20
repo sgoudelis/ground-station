@@ -16,7 +16,8 @@
     "consent_granted": "Toestemming verleend",
     "consent_required": "Toestemming vereist",
     "autosave": "Wijzigingen worden automatisch opgeslagen.",
-    "saving": "Opslaan…"
+    "saving": "Opslaan…",
+    "open": "Kalenderfeeds openen"
   },
   "today": "Vandaag",
   "previous": "Vorige periode",
@@ -125,5 +126,6 @@
     "open_observation": "Waarneming openen",
     "view_results": "Resultaten bekijken",
     "open_source": "Oorspronkelijke bron openen"
-  }
+  },
+  "empty_feeds_hint": "Schakel een feed in om de evenementen ervan hier te tonen."
 }

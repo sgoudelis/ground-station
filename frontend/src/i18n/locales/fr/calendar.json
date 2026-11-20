@@ -16,7 +16,8 @@
     "consent_granted": "Consentement accordé",
     "consent_required": "Consentement requis",
     "autosave": "Les modifications sont enregistrées automatiquement.",
-    "saving": "Enregistrement…"
+    "saving": "Enregistrement…",
+    "open": "Ouvrir les flux du calendrier"
   },
   "today": "Aujourd’hui",
   "previous": "Période précédente",
@@ -125,5 +126,6 @@
     "open_observation": "Ouvrir l’observation",
     "view_results": "Voir les résultats",
     "open_source": "Ouvrir la source originale"
-  }
+  },
+  "empty_feeds_hint": "Activez un flux pour afficher ses événements ici."
 }

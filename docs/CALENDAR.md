@@ -45,6 +45,10 @@ The Activity menu supports checking multiple types independently and selecting
 all or none. These display choices survive calendar navigation
 and refreshes without changing the station-wide feed selections.
 
+When every station feed is switched off, the empty overlay offers an action to
+open the same feed settings dialog as the toolbar gear. Empty dates or display
+filters keep the usual empty-state message when any feed is selected.
+
 Local details emphasize the scheduled task window and duration, followed by
 reception details, the satellite pass, and manual/monitored origin. **Open
 observation** reads the complete current record before opening the existing

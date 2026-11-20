@@ -16,7 +16,8 @@
     "consent_granted": "已同意",
     "consent_required": "需要同意",
     "autosave": "更改会自动保存。",
-    "saving": "正在保存…"
+    "saving": "正在保存…",
+    "open": "打开日历订阅源"
   },
   "today": "今天",
   "previous": "上一时段",
@@ -125,5 +126,6 @@
     "open_observation": "打开观测",
     "view_results": "查看结果",
     "open_source": "打开原始来源"
-  }
+  },
+  "empty_feeds_hint": "启用订阅源即可在此显示其事件。"
 }

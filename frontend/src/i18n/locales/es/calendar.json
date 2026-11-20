@@ -16,7 +16,8 @@
     "consent_granted": "Consentimiento otorgado",
     "consent_required": "Se requiere consentimiento",
     "autosave": "Los cambios se guardan automáticamente.",
-    "saving": "Guardando…"
+    "saving": "Guardando…",
+    "open": "Abrir fuentes del calendario"
   },
   "today": "Hoy",
   "previous": "Período anterior",
@@ -125,5 +126,6 @@
     "open_observation": "Abrir observación",
     "view_results": "Ver resultados",
     "open_source": "Abrir fuente original"
-  }
+  },
+  "empty_feeds_hint": "Activa una fuente para mostrar sus eventos aquí."
 }

@@ -171,6 +171,7 @@ it('can hide every activity and restore the checklist using All activities', asy
     expect(screen.getByRole('combobox', {name: 'Activity'})).toHaveTextContent('No activities');
     expect(screen.getByText('No events in this view')).toBeVisible();
     expect(screen.getByText('Events in this period: 0')).toBeVisible();
+    expect(screen.queryByRole('button', {name: 'Open calendar feeds'})).not.toBeInTheDocument();
     await user.click(screen.getByRole('combobox', {name: 'Activity'}));
     await user.click(screen.getByRole('option', {name: 'All activities'}));
     expect(screen.getAllByRole('option').every(option => option.getAttribute('aria-selected') === 'true')).toBe(true);
@@ -282,7 +283,56 @@ it('shows an honest empty state when the backend has no observations for the sel
     await user.click(screen.getByRole('button', {name: 'Agenda', exact: true}));
     await waitFor(() => expect(screen.getByText('No events in this view')).toBeVisible());
     expect(screen.getByText('Events in this period: 0')).toBeVisible();
+    expect(screen.queryByRole('button', {name: 'Open calendar feeds'})).not.toBeInTheDocument();
 });
+
+it('opens the same feed settings from the empty overlay and removes the setup prompt after selecting a feed', async () => {
+    const user = userEvent.setup();
+    let observationsEnabled = false;
+    const status = () => ({id: 'gscontrol', enabled: false, consented: false, feeds: [
+        {id: 'observations', enabled: observationsEnabled},
+        ...['announcements', 'space_weather', 'launches'].map(id => ({id, enabled: false})),
+    ]});
+    socket.emitWithAck.mockImplementation((_event, {cmd, data}) => {
+        if (cmd === 'calendar.external.update') {
+            observationsEnabled = data.enabled;
+            return Promise.resolve({success: true, data: status()});
+        }
+        return Promise.resolve({success: true, data: {events: observationsEnabled ? [fixtures[0]] : [], sources: [status()]}});
+    });
+    await renderCalendar();
+    for (const view of ['Month', 'Week', 'Agenda']) {
+        await user.click(screen.getByRole('button', {name: view, exact: true}));
+        expect(await screen.findByRole('button', {name: 'Open calendar feeds'})).toBeVisible();
+    }
+    expect(screen.getByText('Enable a feed to show its events here.')).toBeVisible();
+    expect(screen.queryByText('Try another date or adjust the filters.')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', {name: 'Open calendar feeds'}));
+    expect(screen.getAllByRole('dialog')).toHaveLength(1);
+    const dialog = screen.getByRole('dialog', {name: 'Calendar feeds'});
+    within(dialog).getAllByRole('switch').forEach(control => expect(control).not.toBeChecked());
+    await user.click(within(dialog).getByRole('switch', {name: 'Local observations'}));
+    await user.click(within(dialog).getAllByRole('button', {name: 'Close'}).at(-1));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(screen.queryByRole('button', {name: 'Open calendar feeds'})).not.toBeInTheDocument();
+    expect(screen.getByRole('button', {name: /ISS pass earlier/})).toBeVisible();
+    await user.click(screen.getByRole('button', {name: 'Calendar feeds'}));
+    expect(screen.getAllByRole('dialog')).toHaveLength(1);
+    expect(screen.getByRole('switch', {name: 'Local observations'})).toBeChecked();
+});
+
+it.each(['observations', 'announcements', 'space_weather', 'launches'])(
+    'does not offer feed setup for an empty calendar when %s is selected', async selected => {
+        socket.emitWithAck.mockResolvedValue({success: true, data: {events: [], sources: [{
+            id: 'gscontrol', enabled: selected !== 'observations', feeds:
+                ['observations', 'announcements', 'space_weather', 'launches'].map(id => ({id, enabled: id === selected})),
+        }]}});
+        await renderCalendar();
+        expect(screen.getByText('No events in this view')).toBeVisible();
+        expect(screen.getByText('Try another date or adjust the filters.')).toBeVisible();
+        expect(screen.queryByRole('button', {name: 'Open calendar feeds'})).not.toBeInTheDocument();
+    },
+);
 
 it('shows cached announcements with source links and date precision across timezones', async () => {
     const user = userEvent.setup();

@@ -24,7 +24,7 @@ import EventDetails from './event-details.jsx';
 import {SourceLabel} from './event-badges.jsx';
 import {eventAccent, isLocalObservation} from './presentation.js';
 
-function EmptyCalendar() {
+function EmptyCalendar({onOpenFeeds}) {
     const {t} = useTranslation(['calendar', 'common']);
     // Keep the grid's height and leave date navigation usable beneath the overlay.
     return (
@@ -34,7 +34,10 @@ function EmptyCalendar() {
                 bgcolor: theme => alpha(theme.palette.background.paper, 0.95), color: 'text.secondary', textAlign: 'center'}}>
                 <EventBusyIcon sx={{fontSize: 36, mb: 0.5, opacity: 0.6}} />
                 <Typography color="text.primary" fontWeight={600}>{t('empty_title')}</Typography>
-                <Typography variant="body2">{t('empty_hint')}</Typography>
+                <Typography variant="body2">{onOpenFeeds ? t('empty_feeds_hint') : t('empty_hint')}</Typography>
+                {onOpenFeeds && <CapsButton size="small" onClick={onOpenFeeds} sx={{pointerEvents: 'auto'}}>
+                    {t('feeds.open')}
+                </CapsButton>}
             </Stack>
         </Box>
     );
@@ -58,6 +61,7 @@ export default function CalendarPage() {
     const [hiddenKinds, setHiddenKinds] = useState([]);
     const [selectedId, setSelectedId] = useState(null);
     const [resultsObservation, setResultsObservation] = useState(null);
+    const [feedsOpen, setFeedsOpen] = useState(false);
     const labels = useMemo(() => activityLabels(t), [t]);
     const views = {month: t('views.month'), week: t('views.week'), agenda: t('views.agenda')};
     // Compact screens use the same period and filters in an agenda layout.
@@ -65,6 +69,10 @@ export default function CalendarPage() {
     const days = useMemo(() => visibleDays(anchor, view), [anchor, view]);
     const {events, external, loading, error, refresh, updateExternal} = useCalendarEvents({start: days[0], end: addDays(days.at(-1), 1), timezone});
     const observationsEnabled = external?.feeds?.find(feed => feed.id === 'observations')?.enabled ?? true;
+    // An empty date range or a display filter is not a missing subscription.
+    // Offer setup only when the station explicitly has every feed switched off.
+    const noFeedsSelected = Array.isArray(external?.feeds) && !observationsEnabled
+        && external.feeds.every(feed => !feed.enabled);
     const subscribedEvents = useMemo(() => events.filter(event => hasCalendarDate(event) && (observationsEnabled || !isLocalObservation(event))),
         [events, observationsEnabled]);
     // Exclusions default to showing new activity types after a refresh, too.
@@ -134,7 +142,8 @@ export default function CalendarPage() {
                             variant={view === value ? 'contained' : 'outlined'} disableElevation
                             aria-pressed={view === value} onClick={() => setView(value)}>{label}</CapsButton>)}
                     </ButtonGroup>
-                    <FeedSettings observationsEnabled={observationsEnabled} status={external} onChanged={updateExternal} />
+                    <FeedSettings observationsEnabled={observationsEnabled} status={external} onChanged={updateExternal}
+                        open={feedsOpen} onOpen={() => setFeedsOpen(true)} onClose={() => setFeedsOpen(false)} />
                 </Stack>
                 <Divider />
                 <Stack direction="row" gap={1.5} flexWrap="wrap" sx={{p: 2, bgcolor: 'action.hover'}}>
@@ -213,7 +222,8 @@ export default function CalendarPage() {
                             })}
                         </Box>
                     </>}
-                    {!loading && !error && (agendaLayout ? !agendaDays.length : !eventCount) && <EmptyCalendar />}
+                    {!loading && !error && (agendaLayout ? !agendaDays.length : !eventCount)
+                        && <EmptyCalendar onOpenFeeds={noFeedsSelected ? () => setFeedsOpen(true) : undefined} />}
                 </Box>
                 <Stack component="footer" direction="row" gap={2} alignItems="center" useFlexGap flexWrap="wrap" sx={{px: 2, py: 1.5, borderTop: 1, borderColor: 'divider'}}>
                     {observationsEnabled && <SourceLabel event={{source: 'observations'}} />}

@@ -33,8 +33,10 @@ function show(role = 'admin', changes = {}) {
     const store = configureStore({reducer: {auth: () => ({user: {role}})}});
     function Feeds() {
         const [current, setCurrent] = useState(server);
+        const [open, setOpen] = useState(false);
         return <FeedSettings status={current} onChanged={next => {setCurrent(next); changed(next);}}
-            observationsEnabled={current.feeds.find(feed => feed.id === 'observations').enabled} />;
+            observationsEnabled={current.feeds.find(feed => feed.id === 'observations').enabled}
+            open={open} onOpen={() => setOpen(true)} onClose={() => setOpen(false)} />;
     }
     render(<Provider store={store}><Feeds /></Provider>);
     return changed;

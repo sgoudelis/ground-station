@@ -17,7 +17,8 @@
     "consent_granted": "Einwilligung erteilt",
     "consent_required": "Einwilligung erforderlich",
     "autosave": "Änderungen werden automatisch gespeichert.",
-    "saving": "Wird gespeichert…"
+    "saving": "Wird gespeichert…",
+    "open": "Kalender-Feeds öffnen"
   },
   "previous": "Vorheriger Zeitraum",
   "next": "Nächster Zeitraum",
@@ -125,5 +126,6 @@
     "open_observation": "Beobachtung öffnen",
     "view_results": "Ergebnisse anzeigen",
     "open_source": "Originalquelle öffnen"
-  }
+  },
+  "empty_feeds_hint": "Aktivieren Sie einen Feed, um seine Ereignisse hier anzuzeigen."
 }

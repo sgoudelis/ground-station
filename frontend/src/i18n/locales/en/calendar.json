@@ -17,7 +17,8 @@
     "consent_granted": "Consent granted",
     "consent_required": "Consent required",
     "autosave": "Changes save automatically.",
-    "saving": "Saving…"
+    "saving": "Saving…",
+    "open": "Open calendar feeds"
   },
   "previous": "Previous period",
   "next": "Next period",
@@ -125,5 +126,6 @@
     "open_observation": "Open observation",
     "view_results": "View results",
     "open_source": "Open original source"
-  }
+  },
+  "empty_feeds_hint": "Enable a feed to show its events here."
 }
