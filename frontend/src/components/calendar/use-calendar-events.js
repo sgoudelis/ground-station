@@ -1,9 +1,10 @@
-import {useCallback, useEffect, useState} from 'react';
+import {useCallback, useEffect, useRef, useState} from 'react';
 import {useSocket} from '../common/socket.jsx';
 
 export default function useCalendarEvents({start, end, timezone}) {
     const {socket} = useSocket();
     const [revision, setRevision] = useState(0);
+    const loadRef = useRef(null);
     const [result, setResult] = useState({key: null, events: [], external: null, loading: true, error: false});
     const key = `${start}/${end}/${timezone}`;
 
@@ -11,13 +12,18 @@ export default function useCalendarEvents({start, end, timezone}) {
         let disposed = false;
         let requestId = 0;
         let refreshTimer;
-        const load = async () => {
+        let refreshingExternal = false;
+        const load = async (refreshExternal = false) => {
+            // Socket notifications can arrive during a remote refresh. Its
+            // response already includes the latest observations and cache.
+            if (refreshingExternal) return;
+            refreshingExternal = refreshExternal;
             const currentRequest = ++requestId;
             setResult(previous => ({key, events: previous.key === key ? previous.events : [], external: previous.external, loading: true, error: false}));
             try {
                 if (!socket) throw new Error('Socket unavailable');
-                const reply = await socket.timeout(15000).emitWithAck('api.call', {
-                    cmd: 'get-calendar-events', data: {start, end, timezone},
+                const reply = await socket.timeout(refreshExternal ? 60000 : 15000).emitWithAck('api.call', {
+                    cmd: refreshExternal ? 'refresh-calendar-events' : 'get-calendar-events', data: {start, end, timezone},
                 });
                 if (!reply?.success || !Array.isArray(reply.data?.events)) throw new Error('Calendar unavailable');
                 // A slower previous request must not overwrite a newer period,
@@ -31,6 +37,8 @@ export default function useCalendarEvents({start, end, timezone}) {
                 if (!disposed && currentRequest === requestId) {
                     setResult(previous => ({key, events: [], external: previous.external, loading: false, error: true}));
                 }
+            } finally {
+                if (currentRequest === requestId) refreshingExternal = false;
             }
         };
         const refresh = () => {
@@ -39,6 +47,7 @@ export default function useCalendarEvents({start, end, timezone}) {
             clearTimeout(refreshTimer);
             refreshTimer = setTimeout(load, 150);
         };
+        loadRef.current = load;
         load();
         socket?.on('scheduled-observations-changed', refresh);
         socket?.on('observation-status-update', refresh);
@@ -46,6 +55,7 @@ export default function useCalendarEvents({start, end, timezone}) {
         socket?.on('connect', refresh);
         return () => {
             disposed = true;
+            loadRef.current = null;
             clearTimeout(refreshTimer);
             socket?.off('scheduled-observations-changed', refresh);
             socket?.off('observation-status-update', refresh);
@@ -54,7 +64,7 @@ export default function useCalendarEvents({start, end, timezone}) {
         };
     }, [socket, key, start, end, timezone, revision]);
 
-    const refresh = useCallback(() => setRevision(value => value + 1), []);
+    const refresh = useCallback(() => {loadRef.current?.(true);}, []);
     const updateExternal = useCallback(external => {
         // A successful global opt-out removes announcements immediately while
         // the next SQL snapshot catches up, including any open details dialog.

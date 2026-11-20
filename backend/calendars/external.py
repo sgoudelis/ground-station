@@ -48,6 +48,8 @@ class ExternalEventsService:
         )
         self.sessions = sessions
         self.lock = asyncio.Lock()
+        self.poll_lock = asyncio.Lock()
+        self.poll_revision = 0
         self.wake = asyncio.Event()
         self.generation = 0
         self.fetch_task: asyncio.Task | None = None
@@ -238,10 +240,30 @@ class ExternalEventsService:
                 )
             await session.commit()
 
-    async def tick(self, client, now=None):
+    async def refresh(self):
+        async with httpx.AsyncClient(timeout=15, follow_redirects=False, trust_env=False) as client:
+            return await self.tick(client, force=True)
+
+    async def tick(self, client, now=None, *, force=False):
+        # A manual refresh joins an ongoing poll through its SQL commit, so its
+        # caller reads the completed snapshot and does not start a second fetch.
+        revision = self.poll_revision
+        async with self.poll_lock:
+            if force and revision != self.poll_revision:
+                return False
+            changed = await self._tick(client, now, force=force)
+            if changed:
+                self.poll_revision += 1
+            return changed
+
+    async def _tick(self, client, now=None, *, force=False):
         now = time.time() if now is None else now
         first, last = rolling_window(now)
         async with self.lock:
+            # Refreshing the calendar cannot grant consent or trigger requests
+            # for a disabled source, including pending consent withdrawals.
+            if force and not self.consent.active:
+                return False
             # Withdrawal is the sole request permitted after opt-out. Persist
             # its retry state independently of the disabled polling schedule.
             if self.consent.state["deletion_pending"] and not self.consent.storage_error:
@@ -269,7 +291,8 @@ class ExternalEventsService:
                 self.pruned_day = first
             if (
                 not self.consent.active
-                or now < self.consent.state["next_poll_at"]
+                or (not force and now < self.consent.state["next_poll_at"])
+                or now < self.consent.state["retry_after_at"]
                 or self.fetch_task is not None
             ):
                 return False
@@ -362,6 +385,9 @@ class ExternalEventsService:
                     error = "cache_write_failed"
                     logger.error("External event cache update failed")
             self.consent.state["error"] = error
+            # Explicit refreshes bypass our polling interval, but still honor
+            # the provider's Retry-After across refreshes and backend restarts.
+            self.consent.state["retry_after_at"] = now + retry_after if retry_after else 0
             self.consent.state["next_poll_at"] = max(
                 self.consent.state["next_poll_at"], now + retry_after
             )

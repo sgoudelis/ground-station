@@ -1,4 +1,10 @@
 {
+  "refresh": "Vernieuwen",
+  "feeds": {
+    "title": "Kalenderfeeds",
+    "observations_hint": "Toon de geplande waarnemingen van dit station in de kalender.",
+    "announcements_hint": "Aankondigingen van satellietactiviteiten van GS Control. Voor het inschakelen van deze feed moeten de servicevoorwaarden worden geaccepteerd."
+  },
   "today": "Vandaag",
   "previous": "Vorige periode",
   "next": "Volgende periode",

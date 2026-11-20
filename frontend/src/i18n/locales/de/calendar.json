@@ -1,5 +1,11 @@
 {
   "today": "Heute",
+  "refresh": "Aktualisieren",
+  "feeds": {
+    "title": "Kalender-Feeds",
+    "observations_hint": "Geplante Beobachtungen dieser Station im Kalender anzeigen.",
+    "announcements_hint": "Ankündigungen zu Satellitenaktivitäten von GS Control. Zum Aktivieren dieses Feeds müssen die Nutzungsbedingungen akzeptiert werden."
+  },
   "previous": "Vorheriger Zeitraum",
   "next": "Nächster Zeitraum",
   "go_to_date": "Datum auswählen",

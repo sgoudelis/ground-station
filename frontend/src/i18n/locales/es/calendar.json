@@ -1,4 +1,10 @@
 {
+  "refresh": "Actualizar",
+  "feeds": {
+    "title": "Fuentes del calendario",
+    "observations_hint": "Mostrar las observaciones programadas de esta estación en el calendario.",
+    "announcements_hint": "Anuncios de actividades de satélites de GS Control. Activar esta fuente requiere aceptar los términos del servicio."
+  },
   "today": "Hoy",
   "previous": "Período anterior",
   "next": "Período siguiente",

@@ -74,6 +74,34 @@ it('retains the latest snapshot when an older refresh finishes later', async () 
     expect(result.current.events).toEqual([{id: 'fresh'}]);
 });
 
+it('requests a fresh remote snapshot only for manual refresh and waits through notifications', async () => {
+    const {result} = renderHook(useCalendarEvents, {initialProps});
+    await act(async () => {});
+    const updated = deferred();
+    socket.emitWithAck.mockReturnValueOnce(updated.promise);
+    act(() => result.current.refresh());
+    expect(result.current.loading).toBe(true);
+    expect(socket.timeout).toHaveBeenLastCalledWith(60000);
+    expect(socket.emitWithAck).toHaveBeenLastCalledWith('api.call', {
+        cmd: 'refresh-calendar-events', data: initialProps,
+    });
+    act(() => {
+        result.current.refresh();
+        handlers.get('external-events-changed')();
+        handlers.get('observation-status-update')();
+    });
+    await act(async () => vi.advanceTimersByTimeAsync(150));
+    expect(socket.emitWithAck).toHaveBeenCalledTimes(2);
+    await act(async () => updated.resolve(reply([{id: 'fresh-observation'}, {id: 'fresh-announcement'}])));
+    expect(result.current.loading).toBe(false);
+    expect(result.current.events).toEqual([{id: 'fresh-observation'}, {id: 'fresh-announcement'}]);
+    act(() => handlers.get('scheduled-observations-changed')());
+    await act(async () => vi.advanceTimersByTimeAsync(150));
+    expect(socket.emitWithAck).toHaveBeenLastCalledWith('api.call', {
+        cmd: 'get-calendar-events', data: initialProps,
+    });
+});
+
 it('refreshes shared external state and immediately removes announcements on opt-out', async () => {
     socket.emitWithAck.mockResolvedValue({success: true, data: {
         events: [{id: 'local', source: 'observations'}, {id: 'remote', source: 'gscontrol'}],

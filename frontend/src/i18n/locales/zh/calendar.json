@@ -1,4 +1,10 @@
 {
+  "refresh": "刷新",
+  "feeds": {
+    "title": "日历订阅源",
+    "observations_hint": "在日历中显示本站安排的观测。",
+    "announcements_hint": "来自 GS Control 的卫星活动公告。启用此订阅源需要接受服务条款。"
+  },
   "today": "今天",
   "previous": "上一时段",
   "next": "下一时段",

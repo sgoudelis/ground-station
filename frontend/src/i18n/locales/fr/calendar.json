@@ -1,4 +1,10 @@
 {
+  "refresh": "Actualiser",
+  "feeds": {
+    "title": "Flux du calendrier",
+    "observations_hint": "Afficher les observations programmées de cette station dans le calendrier.",
+    "announcements_hint": "Annonces d'activités satellitaires de GS Control. L'activation de ce flux nécessite l'acceptation des conditions du service."
+  },
   "today": "Aujourd’hui",
   "previous": "Période précédente",
   "next": "Période suivante",

@@ -6,6 +6,24 @@ import {useTranslation} from 'react-i18next';
 import CapsButton from '../common/capsbutton.jsx';
 import {useSocket} from '../common/socket.jsx';
 
+export function ExternalEventsStatus({status, locale, timezone}) {
+    const {t} = useTranslation('calendar');
+    const enabled = Boolean(status?.enabled);
+    const format = value => new Date(value).toLocaleString(locale, {timeZone: timezone});
+    // Failures that prevent syncing take priority over the last successful timestamp.
+    const label = status?.storage_error ? t('external.storage_error')
+        : status?.needs_consent_review ? t('external.review_terms')
+            : enabled && status?.error ? t('external.sync_error')
+                : enabled && status?.stale ? t('external.stale')
+                    : enabled && status.last_success_at ? t('external.updated', {date: format(status.last_success_at)})
+                        : enabled ? t('external.waiting') : '';
+    if (!label) return null;
+    return <Typography variant="caption" role="status"
+        color={status?.error || status?.stale || status?.storage_error || status?.needs_consent_review ? 'warning.main' : 'text.secondary'}>
+        {label}
+    </Typography>;
+}
+
 export default function ExternalEvents({status, onChanged, locale, timezone}) {
     const {t} = useTranslation('calendar');
     const {socket} = useSocket();
@@ -35,30 +53,22 @@ export default function ExternalEvents({status, onChanged, locale, timezone}) {
         }
     };
     const close = () => {if (!busy) {setOpen(false); setAccepted(false); setError(false);}};
-    const format = value => new Date(value).toLocaleString(locale, {timeZone: timezone});
 
     return <>
-        <Stack direction="row" alignItems="center" gap={1.5} flexWrap="wrap" sx={{px: 2, py: 1}}>
-            <FormControlLabel sx={{mr: 0}} label={t('external.label')}
+        <Stack spacing={1} alignItems="flex-start">
+            <FormControlLabel label={t('external.label')}
                 control={<Switch size="small" checked={enabled} disabled={!isAdmin || !status || busy}
                     slotProps={{input: {role: 'switch'}}}
                     onChange={(_, checked) => {
                         if (checked) {setAccepted(false); setError(false); setOpen(true);}
                         else save(false);
                     }} />} />
+            <Typography variant="body2" color="text.secondary">{t('feeds.announcements_hint')}</Typography>
             <CapsButton size="small" onClick={() => {setAccepted(false); setError(false); setOpen(true);}}>
                 {t('external.about')}
             </CapsButton>
             {!isAdmin && <Typography variant="caption" color="text.secondary">{t('external.admin_only')}</Typography>}
-            <Typography variant="caption" color={status?.error || status?.stale || status?.storage_error ? 'warning.main' : 'text.secondary'}
-                role="status" sx={{ml: {sm: 'auto'}}}>
-                {status?.storage_error ? t('external.storage_error')
-                    : status?.needs_consent_review ? t('external.review_terms')
-                        : enabled && status?.error ? t('external.sync_error')
-                            : enabled && status?.stale ? t('external.stale')
-                                : enabled && status.last_success_at ? t('external.updated', {date: format(status.last_success_at)})
-                                    : enabled ? t('external.waiting') : ''}
-            </Typography>
+            <ExternalEventsStatus status={status} locale={locale} timezone={timezone} />
             {enabled && status?.outside_coverage && <Typography variant="caption" color="text.secondary">
                 {t('external.outside_coverage')}
             </Typography>}

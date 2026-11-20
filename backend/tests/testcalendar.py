@@ -2,7 +2,7 @@
 
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
-from unittest.mock import Mock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 from pydantic import ValidationError
@@ -166,15 +166,73 @@ def test_calendar_days_respect_dst(day, hours):
         {"start": "2026-11-18", "end": "2026-11-19", "surprise": True},
     ],
 )
-async def test_invalid_queries_are_rejected_before_database_access(monkeypatch, payload):
+@pytest.mark.parametrize("refresh_external", [False, True])
+async def test_invalid_queries_are_rejected_before_database_access(
+    monkeypatch, payload, refresh_external
+):
     factory = Mock(side_effect=AssertionError("Database should not be opened"))
     monkeypatch.setattr(calendar, "AsyncSessionLocal", factory)
+    remote = Mock(refresh=AsyncMock())
+    monkeypatch.setattr(calendar, "external_events", remote)
     with pytest.raises(ValidationError):
         CalendarRange.model_validate(payload)
-    response = await calendar.get_calendar_events(None, payload, Mock(), "sid")
+    response = await calendar.get_calendar_events(
+        None, payload, Mock(), "sid", refresh_external=refresh_external
+    )
     assert response["success"] is False
     assert response["error"]
     factory.assert_not_called()
+    remote.refresh.assert_not_awaited()
+
+
+@pytest.mark.parametrize("role", ["operator", "admin"])
+async def test_manual_refresh_queries_new_observations_after_downloading(
+    db_session, monkeypatch, role
+):
+    @asynccontextmanager
+    async def session_factory():
+        yield db_session
+
+    # Insert observations during the download to verify the response queries
+    # them after syncing, rather than returning an earlier local snapshot.
+    remote = Mock(
+        refresh=AsyncMock(),
+        cached_events=AsyncMock(return_value=([{"id": "gscontrol:fresh"}], {"id": "gscontrol"})),
+    )
+
+    async def download():
+        await insert_observations(db_session)
+        return True
+
+    remote.refresh.side_effect = download
+    monkeypatch.setattr(calendar, "external_events", remote)
+    monkeypatch.setattr(calendar, "AsyncSessionLocal", session_factory)
+    monkeypatch.setattr(auth, "is_setup_required", AsyncMock(return_value=False))
+    registry = HandlerRegistry()
+    calendar.register_handlers(registry)
+    payload = {"start": "2026-11-18", "end": "2026-11-19", "timezone": "UTC"}
+    sio = Mock(emit=AsyncMock())
+    denied = await dispatch_request(
+        None, "refresh-calendar-events", payload, Mock(), "sid", registry
+    )
+    assert denied["success"] is False
+    remote.refresh.assert_not_awaited()
+    response = await dispatch_request(
+        sio,
+        "refresh-calendar-events",
+        payload,
+        Mock(),
+        "sid",
+        registry,
+        auth_context={"role": role},
+    )
+    assert response["success"] is True
+    assert response["data"]["events"][1]["source_id"] == "generated"
+    assert response["data"]["events"][-1]["id"] == "gscontrol:fresh"
+    remote.refresh.assert_awaited_once()
+    sio.emit.assert_awaited_once_with(
+        "external-events-changed", {}, room=auth.AUTHENTICATED_SOCKET_ROOM
+    )
 
 
 async def test_registered_query_uses_shared_authorization_and_is_read_only(db_session, monkeypatch):

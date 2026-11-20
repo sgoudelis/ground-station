@@ -36,6 +36,7 @@ def default_state() -> dict[str, Any]:
         "last_attempt_at": None,
         "last_success_at": None,
         "next_poll_at": 0,
+        "retry_after_at": 0,
         "coverage_start": None,
         "coverage_end": None,
         "error": None,
@@ -51,15 +52,17 @@ class EventsConsent:
             stored = json.loads(self.path.read_text())
             if not isinstance(stored, dict) or type(stored.get("enabled")) is not bool:
                 raise ValueError("Invalid consent")
-            next_poll = stored.get("next_poll_at", 0)
-            if type(next_poll) not in (int, float) or not math.isfinite(next_poll) or next_poll < 0:
-                raise ValueError("Invalid polling time")
+            for key in ("next_poll_at", "retry_after_at"):
+                value = stored.get(key, 0)
+                if type(value) not in (int, float) or not math.isfinite(value) or value < 0:
+                    raise ValueError("Invalid polling time")
             for key in ("grant_pending", "deletion_pending", "remote_possible"):
                 if key in stored and type(stored[key]) is not bool:
                     raise ValueError("Invalid consent state")
             for key in self.state.keys() - {
                 "enabled",
                 "next_poll_at",
+                "retry_after_at",
                 "grant_pending",
                 "deletion_pending",
                 "remote_possible",

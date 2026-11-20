@@ -15,17 +15,29 @@ from db import AsyncSessionLocal
 from handlers.routing.dispatcher import get_auth_context
 
 
-async def get_calendar_events(sio: Any, data: Any, logger: Any, sid: str) -> dict[str, Any]:
+async def get_calendar_events(
+    sio: Any, data: Any, logger: Any, sid: str, *, refresh_external: bool = False
+) -> dict[str, Any]:
     try:
         window = CalendarRange.model_validate(data)
     except ValidationError as exc:
         return {"success": False, "data": None, "error": exc.errors()[0]["msg"]}
+    if refresh_external:
+        changed = await external_events.refresh()
+        if changed:
+            await sio.emit("external-events-changed", {}, room=AUTHENTICATED_SOCKET_ROOM)
+    # Read observations after the remote download so changes made while it was
+    # in flight are included in the refreshed calendar as well.
     async with AsyncSessionLocal() as session:
         result = await calendar_events(session, window)
         announcements, status = await external_events.cached_events(session, window)
     result["events"].extend(announcements)
     result["sources"].append(status)
     return {"success": True, "data": result, "error": None}
+
+
+async def refresh_calendar_events(sio: Any, data: Any, logger: Any, sid: str) -> dict[str, Any]:
+    return await get_calendar_events(sio, data, logger, sid, refresh_external=True)
 
 
 async def update_external_events(sio: Any, data: Any, logger: Any, sid: str):
@@ -41,6 +53,13 @@ async def update_external_events(sio: Any, data: Any, logger: Any, sid: str):
 def register_handlers(registry):
     registry.register(
         "get-calendar-events", get_calendar_events, "api_call", action="read", resource="calendar"
+    )
+    registry.register(
+        "refresh-calendar-events",
+        refresh_calendar_events,
+        "api_call",
+        action="read",
+        resource="calendar",
     )
     registry.register(
         "calendar.external.update",

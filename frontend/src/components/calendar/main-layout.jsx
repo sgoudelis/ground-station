@@ -1,4 +1,5 @@
 import {useEffect, useMemo, useState} from 'react';
+import {useSelector} from 'react-redux';
 import {
     Alert, Box, ButtonBase, ButtonGroup, Divider, IconButton, InputAdornment, LinearProgress, MenuItem, Paper, Stack,
     TextField, Tooltip, Typography, useMediaQuery,
@@ -8,6 +9,7 @@ import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import SearchIcon from '@mui/icons-material/Search';
 import EventBusyIcon from '@mui/icons-material/EventBusy';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import {useTranslation} from 'react-i18next';
 import CapsButton from '../common/capsbutton.jsx';
 import ObservationDataDialog from '../scheduler/observation-data-dialog.jsx';
@@ -17,19 +19,25 @@ import {addDays, civilDate, dayKey, groupEventsByDay, isCalendarDay, movePeriod,
 import {frequencyLabel, satelliteNames} from './events.js';
 import useCalendarEvents from './use-calendar-events.js';
 import EventCard from './event-card.jsx';
-import ExternalEvents from './external-events.jsx';
+import FeedSettings from './feed-settings.jsx';
+import {ExternalEventsStatus} from './external-events.jsx';
 import EventDetails from './event-details.jsx';
 import {SourceLabel} from './event-badges.jsx';
 import {isLocalObservation} from './presentation.js';
 
 function EmptyCalendar() {
     const {t} = useTranslation(['calendar', 'common']);
+    // Keep the grid's height and leave date navigation usable beneath the overlay.
     return (
-        <Stack alignItems="center" spacing={1} sx={{py: 7, px: 2, color: 'text.secondary', textAlign: 'center'}}>
-            <EventBusyIcon sx={{fontSize: 36, mb: 0.5, opacity: 0.6}} />
-            <Typography color="text.primary" fontWeight={600}>{t('empty_title')}</Typography>
-            <Typography variant="body2">{t('empty_hint')}</Typography>
-        </Stack>
+        <Box sx={{position: 'absolute', inset: 0, zIndex: 1, display: 'flex', alignItems: 'center',
+            justifyContent: 'center', pointerEvents: 'none', p: 2}}>
+            <Stack alignItems="center" spacing={1} sx={{py: 3, px: 4, borderRadius: 2,
+                bgcolor: theme => alpha(theme.palette.background.paper, 0.95), color: 'text.secondary', textAlign: 'center'}}>
+                <EventBusyIcon sx={{fontSize: 36, mb: 0.5, opacity: 0.6}} />
+                <Typography color="text.primary" fontWeight={600}>{t('empty_title')}</Typography>
+                <Typography variant="body2">{t('empty_hint')}</Typography>
+            </Stack>
+        </Box>
     );
 }
 
@@ -49,6 +57,28 @@ export default function CalendarPage() {
     const [search, setSearch] = useState('');
     const [satellite, setSatellite] = useState('all');
     const [kind, setKind] = useState('all');
+    const userId = useSelector(state => state.auth?.user?.id) || 'station';
+    const observationsKey = `calendar.observations.${userId}`;
+    const savedObservationsEnabled = useMemo(() => {
+        try {
+            return localStorage.getItem(observationsKey) !== 'false';
+        } catch {
+            return true;
+        }
+    }, [observationsKey]);
+    const [observationsChoice, setObservationsChoice] = useState(null);
+    // Display choices belong to the current user; hiding local observations
+    // never disables their jobs or changes the station's announcement consent.
+    const observationsEnabled = observationsChoice?.key === observationsKey
+        ? observationsChoice.enabled : savedObservationsEnabled;
+    const setObservationsEnabled = enabled => {
+        setObservationsChoice({key: observationsKey, enabled});
+        try {
+            localStorage.setItem(observationsKey, String(enabled));
+        } catch {
+            // Restricted browser storage must not prevent filtering this view.
+        }
+    };
     const [selectedId, setSelectedId] = useState(null);
     const [resultsObservation, setResultsObservation] = useState(null);
     const labels = useMemo(() => activityLabels(t), [t]);
@@ -57,15 +87,17 @@ export default function CalendarPage() {
     const agendaLayout = view === 'agenda' || smallScreen;
     const days = useMemo(() => visibleDays(anchor, view), [anchor, view]);
     const {events, external, loading, error, refresh, updateExternal} = useCalendarEvents({start: days[0], end: addDays(days.at(-1), 1), timezone});
-    // Keep an open details dialog in sync when a job changes or is deleted.
-    const selected = events.find(event => event.id === selectedId) || null;
+    const subscribedEvents = useMemo(() => events.filter(event => observationsEnabled || !isLocalObservation(event)),
+        [events, observationsEnabled]);
+    // Keep an open details dialog in sync when a job changes or its feed is hidden.
+    const selected = subscribedEvents.find(event => event.id === selectedId) || null;
     const satellites = [...new Set(events.flatMap(satelliteNames))].sort();
     const filteredEvents = useMemo(() => {
         const query = search.trim().toLocaleLowerCase(locale);
-        return events.filter(event => (satellite === 'all' || satelliteNames(event).includes(satellite))
+        return subscribedEvents.filter(event => (satellite === 'all' || satelliteNames(event).includes(satellite))
             && (kind === 'all' || event.kind === kind)
             && (!query || `${event.title} ${satelliteNames(event).join(' ')} ${labels[event.kind] || event.kind} ${frequencyLabel(event, locale)}`.toLocaleLowerCase(locale).includes(query)));
-    }, [events, satellite, kind, search, locale, labels]);
+    }, [subscribedEvents, satellite, kind, search, locale, labels]);
     const dayEvents = useMemo(() => groupEventsByDay(filteredEvents, days, timezone), [filteredEvents, days, timezone]);
     // Adjacent month cells offer context, but do not leak into the month's agenda.
     const agendaDays = days.filter(day => (view === 'week' || day.slice(0, 7) === anchor.slice(0, 7)) && dayEvents.get(day).length);
@@ -95,6 +127,9 @@ export default function CalendarPage() {
                     <Tooltip title={t('previous')}><IconButton size="small" aria-label={t('previous')} onClick={() => setAnchor(movePeriod(anchor, -1, view))}><ChevronLeftIcon /></IconButton></Tooltip>
                     <Tooltip title={t('next')}><IconButton size="small" aria-label={t('next')} onClick={() => setAnchor(movePeriod(anchor, 1, view))}><ChevronRightIcon /></IconButton></Tooltip>
                     <Typography component="h2" variant="h6" aria-live="polite" sx={{flex: 1, minWidth: {xs: '100%', sm: 180}, order: {xs: -1, sm: 0}, fontSize: 18}}>{periodLabel}</Typography>
+                    <CapsButton size="small" variant="outlined" startIcon={<RefreshIcon />} disabled={loading} onClick={refresh}>
+                        {t('refresh')}
+                    </CapsButton>
                     <TextField type="date" label={t('go_to_date')} size="small" value={anchor}
                         onChange={event => {if (isCalendarDay(event.target.value)) setAnchor(event.target.value);}}
                         slotProps={{inputLabel: {shrink: true}, htmlInput: {min: '1900-01-01', max: '9999-12-31'}}}
@@ -104,6 +139,8 @@ export default function CalendarPage() {
                             variant={view === value ? 'contained' : 'outlined'} disableElevation
                             aria-pressed={view === value} onClick={() => setView(value)}>{label}</CapsButton>)}
                     </ButtonGroup>
+                    <FeedSettings observationsEnabled={observationsEnabled} onObservationsChanged={setObservationsEnabled}
+                        status={external} onChanged={updateExternal} locale={locale} timezone={timezone} />
                 </Stack>
                 <Divider />
                 <Stack direction="row" gap={1.5} flexWrap="wrap" sx={{p: 2, bgcolor: 'action.hover'}}>
@@ -125,13 +162,11 @@ export default function CalendarPage() {
                 </Stack>
                 <Divider />
 
-                <ExternalEvents status={external} onChanged={updateExternal} locale={locale} timezone={timezone} />
-                <Divider />
-                <Box component="section" aria-label={t('events_calendar')} aria-busy={loading}>
+                <Box component="section" aria-label={t('events_calendar')} aria-busy={loading}
+                    sx={{position: 'relative', minHeight: agendaLayout ? 240 : undefined}}>
                     {loading && <LinearProgress aria-label={t('common:loading')} />}
-                    {error && <Alert severity="error" sx={{m: 2}} action={<CapsButton color="inherit" size="small" onClick={refresh}>{t('common:scheduler_tables.shared.retry')}</CapsButton>}>{t('load_error')}</Alert>}
+                    {error && <Alert severity="error" sx={{m: 2}} action={<CapsButton color="inherit" size="small" disabled={loading} onClick={refresh}>{t('common:scheduler_tables.shared.retry')}</CapsButton>}>{t('load_error')}</Alert>}
                     {agendaLayout ? <>
-                        {!loading && !error && !agendaDays.length && <EmptyCalendar />}
                         {agendaDays.map(day => <Box key={day} sx={{display: 'grid', gridTemplateColumns: {xs: '1fr', sm: '155px 1fr'}, gap: 1.5, p: 2, borderBottom: 1, borderColor: 'divider'}}>
                             <Box sx={{pt: 0.5}}>
                                 <Typography variant="body2" fontWeight={650} color={day === today ? 'primary.main' : 'text.primary'}>{dateLabel(day, {weekday: 'short', month: 'short', day: 'numeric'})}</Typography>
@@ -168,16 +203,17 @@ export default function CalendarPage() {
                                 </Box>;
                             })}
                         </Box>
-                        {!loading && !error && !eventCount && <EmptyCalendar />}
                     </>}
+                    {!loading && !error && (agendaLayout ? !agendaDays.length : !eventCount) && <EmptyCalendar />}
                 </Box>
-                <Stack direction="row" gap={2} alignItems="center" useFlexGap flexWrap="wrap" sx={{px: 2, py: 1.5, borderTop: 1, borderColor: 'divider'}}>
-                    <SourceLabel event={{source: 'observations'}} />
-                    <SourceLabel event={{source: 'gscontrol'}} />
+                <Stack component="footer" direction="row" gap={2} alignItems="center" useFlexGap flexWrap="wrap" sx={{px: 2, py: 1.5, borderTop: 1, borderColor: 'divider'}}>
+                    {observationsEnabled && <SourceLabel event={{source: 'observations'}} />}
+                    {external?.enabled && <SourceLabel event={{source: 'gscontrol'}} />}
+                    <ExternalEventsStatus status={external} locale={locale} timezone={timezone} />
                     <Typography variant="caption" color="text.secondary" aria-live="polite" sx={{ml: 'auto'}}>{t('event_count', {count: eventCount})}</Typography>
                 </Stack>
             </Paper>
-            {events.some(event => !isLocalObservation(event)) && <Typography variant="caption" color="text.secondary" display="block" sx={{mt: 1.5}}>{t('window_note')}</Typography>}
+            {subscribedEvents.some(event => !isLocalObservation(event)) && <Typography variant="caption" color="text.secondary" display="block" sx={{mt: 1.5}}>{t('window_note')}</Typography>}
             <EventDetails key={selected?.id || 'closed'} event={selected} onClose={() => setSelectedId(null)}
                 onViewResults={setResultsObservation} timezone={timezone} locale={locale} />
             {resultsObservation && <ObservationDataDialog open observation={resultsObservation}

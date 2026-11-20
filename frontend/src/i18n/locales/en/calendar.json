@@ -1,5 +1,11 @@
 {
   "today": "Today",
+  "refresh": "Refresh",
+  "feeds": {
+    "title": "Calendar feeds",
+    "observations_hint": "Show this station's scheduled observations in the calendar.",
+    "announcements_hint": "Satellite activity announcements from GS Control. Enabling this feed requires accepting the service terms."
+  },
   "previous": "Previous period",
   "next": "Next period",
   "go_to_date": "Go to date",

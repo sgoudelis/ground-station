@@ -85,6 +85,7 @@ async def test_default_and_reads_make_no_external_requests(service):
         await service.status()
         await read_cache(service)
         await service.tick(client)
+        await service.tick(client, force=True)
     assert calls == []
     assert not service.consent.path.exists()
 
@@ -154,6 +155,130 @@ async def test_snapshot_replaces_withdrawn_approval_and_never_touches_observatio
     cached, _ = await read_cache(service)
     assert [row["id"] for row in cached] == ["gscontrol:second"]
     assert cached[0]["title"] == "Corrected activity"
+
+
+async def test_manual_refresh_replaces_snapshot_before_next_scheduled_poll(service):
+    await service.configure(OPT_IN)
+    client, _ = client_for([event("withdrawn")])
+    async with client:
+        await service.tick(client, NOW)
+    client, calls = client_for([event("new", title="Latest announcement")])
+    async with client:
+        assert not await service.tick(client, NOW + 60)
+        assert await service.tick(client, NOW + 60, force=True)
+    cached, status = await read_cache(service)
+    assert [row["id"] for row in cached] == ["gscontrol:new"]
+    assert cached[0]["title"] == "Latest announcement"
+    assert len(calls) == 1 and calls[0].method == "GET"
+    assert status["next_poll_at"] == NOW + 60 + POLL_SECONDS
+
+
+async def test_calendar_refresh_downloads_from_service_instead_of_only_reading_cache(
+    service, monkeypatch
+):
+    await service.configure(OPT_IN)
+    client, _ = client_for([event("old")])
+    async with client:
+        await service.tick(client, NOW)
+    client, calls = client_for([event("latest")])
+    factory = Mock(return_value=client)
+    monkeypatch.setattr("calendars.external.httpx.AsyncClient", factory)
+    monkeypatch.setattr(calendar, "external_events", service)
+    monkeypatch.setattr(calendar, "AsyncSessionLocal", service.sessions)
+    sio = Mock(emit=AsyncMock())
+    response = await calendar.refresh_calendar_events(
+        sio, WINDOW.model_dump(mode="json"), Mock(), "sid"
+    )
+    assert response["success"]
+    assert [row["id"] for row in response["data"]["events"]] == ["gscontrol:latest"]
+    assert len(calls) == 1 and calls[0].url.host == "events.gscontrol.net"
+    factory.assert_called_once_with(timeout=15, follow_redirects=False, trust_env=False)
+    sio.emit.assert_awaited_once_with(
+        "external-events-changed", {}, room=auth.AUTHENTICATED_SOCKET_ROOM
+    )
+
+
+async def test_failed_manual_refresh_retains_cached_announcements(service):
+    await service.configure(OPT_IN)
+    client, _ = client_for()
+    async with client:
+        await service.tick(client, NOW)
+    client, calls = client_for(handler=lambda _: httpx.Response(503))
+    async with client:
+        assert await service.tick(client, NOW + 60, force=True)
+    cached, status = await read_cache(service)
+    assert len(calls) == 1
+    assert cached[0]["id"] == "gscontrol:sstv"
+    assert status["error"] == "service_unavailable"
+
+
+async def test_manual_refresh_waits_for_inflight_poll_to_commit(service):
+    await service.configure(OPT_IN)
+    requested, finish = asyncio.Event(), asyncio.Event()
+    calls = []
+
+    async def handler(request):
+        calls.append(request)
+        if request.method == "GET":
+            requested.set()
+            await finish.wait()
+        return httpx.Response(
+            200,
+            json={"schema_version": 1, "range": dict(request.url.params), "events": [event()]},
+        )
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        polling = asyncio.create_task(service.tick(client, NOW))
+        await requested.wait()
+        refreshing = asyncio.create_task(service.tick(client, NOW + 60, force=True))
+        await asyncio.sleep(0)
+        assert not refreshing.done()
+        finish.set()
+        await asyncio.gather(polling, refreshing)
+    assert len([request for request in calls if request.method == "GET"]) == 1
+    assert (await read_cache(service))[0][0]["id"] == "gscontrol:sstv"
+
+
+async def test_manual_refresh_still_fetches_when_overlapping_poll_only_prunes(service, monkeypatch):
+    await service.configure(OPT_IN)
+    service.consent.state["next_poll_at"] = NOW + POLL_SECONDS
+    pruning, finish = asyncio.Event(), asyncio.Event()
+    original_prune = service._prune
+
+    async def prune(now):
+        pruning.set()
+        await finish.wait()
+        await original_prune(now)
+
+    monkeypatch.setattr(service, "_prune", prune)
+    client, calls = client_for()
+    async with client:
+        polling = asyncio.create_task(service.tick(client, NOW))
+        await pruning.wait()
+        refreshing = asyncio.create_task(service.tick(client, NOW, force=True))
+        await asyncio.sleep(0)
+        finish.set()
+        assert await polling is False
+        assert await refreshing is True
+    assert len([request for request in calls if request.method == "GET"]) == 1
+
+
+@pytest.mark.parametrize("retry_after", ["120", "43200"])
+async def test_manual_refresh_respects_provider_retry_after_across_restart(service, retry_after):
+    await service.configure(OPT_IN)
+    client, _ = client_for()
+    async with client:
+        await service.tick(client, NOW)
+    client, calls = client_for(
+        handler=lambda _: httpx.Response(429, headers={"Retry-After": retry_after})
+    )
+    async with client:
+        await service.tick(client, NOW + 60, force=True)
+        restarted = ExternalEventsService(service.consent.path, service.sessions)
+        assert not await restarted.tick(client, NOW + 61, force=True)
+        assert len(calls) == 1
+        assert await restarted.tick(client, NOW + 60 + int(retry_after), force=True)
+        assert len(calls) == 2
 
 
 @pytest.mark.parametrize(
@@ -316,6 +441,7 @@ async def test_disable_clears_cache_and_persists_across_restart(service):
         assert (await read_cache(service))[0]
         assert not (await service.configure({"enabled": False}))["enabled"]
         assert not (await read_cache(service))[0]
+        assert not await service.tick(client, NOW + 60, force=True)
         restarted = ExternalEventsService(service.consent.path, service.sessions)
         await restarted.tick(client, NOW + POLL_SECONDS)
     assert [request.method for request in calls] == ["POST", "PUT", "GET", "DELETE"]
@@ -390,6 +516,7 @@ async def test_consent_save_failure_stops_networking(service, monkeypatch):
     client, calls = client_for()
     async with client:
         await service.tick(client, NOW)
+        await service.tick(client, NOW, force=True)
     assert not calls and not (await service.status())["enabled"]
 
 
