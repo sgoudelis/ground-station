@@ -19,7 +19,7 @@
 
 import React, { useEffect } from 'react';
 import { Box, Stack } from '@mui/material';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { Link, Navigate, useParams } from 'react-router';
 import { AntTab, AntTabs } from '../common/common.jsx';
@@ -36,6 +36,11 @@ export default function ScheduledObservationsLayout() {
     const dispatch = useDispatch();
     const { socket } = useSocket();
     const { t } = useTranslation('common');
+    // Startup preferences and retained resources do not mean reception is running.
+    const runningContinuousCount = useSelector((state) => (
+        (state.continuousObservations?.definitions || [])
+            .filter((observation) => observation.runtime?.status === 'running').length
+    ));
     // The URL is the source of truth for direct links and browser history.
     const { tab: activeTab } = useParams();
     const validTab = ['monitored', 'observations', 'continuous'].includes(activeTab);
@@ -89,7 +94,7 @@ export default function ScheduledObservationsLayout() {
                     to="/scheduler/continuous"
                     id="scheduler-tab-continuous"
                     aria-controls="scheduler-panel-continuous"
-                    label={t('continuous_observations.title')}
+                    label={`${t('continuous_observations.title')}${runningContinuousCount > 0 ? ` (${runningContinuousCount})` : ''}`}
                 />
             </AntTabs>
         }>
