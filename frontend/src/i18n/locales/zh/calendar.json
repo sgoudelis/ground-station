@@ -109,6 +109,13 @@
     "controls_heading": "存储和控制选项",
     "terms_heading": "使用这些信息"
   },
+  "attribution": {
+    "title": "日历订阅源的数据来源",
+    "introduction": "日历订阅源通过 GS Control 提供，使用以下发布者和数据提供商的信息。",
+    "announcements": "卫星新闻与公告",
+    "weather": "空间天气警报与预报",
+    "launches": "发射计划"
+  },
   "source_types": {
     "local": "本地观测",
     "external": "公告"

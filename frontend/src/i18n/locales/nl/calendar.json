@@ -109,6 +109,13 @@
     "controls_heading": "Opslag en je instellingen",
     "terms_heading": "Gebruik van deze informatie"
   },
+  "attribution": {
+    "title": "Bronnen van kalenderfeeds",
+    "introduction": "De kalenderfeeds worden via GS Control geleverd met informatie van deze uitgevers en gegevensaanbieders.",
+    "announcements": "Satellietnieuws en aankondigingen",
+    "weather": "Waarschuwingen en voorspellingen voor ruimteweer",
+    "launches": "Lanceringsschema’s"
+  },
   "source_types": {
     "local": "Lokale waarneming",
     "external": "Aankondiging"

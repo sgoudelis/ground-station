@@ -109,6 +109,13 @@
     "controls_heading": "Stockage et options de contrôle",
     "terms_heading": "Utilisation de ces informations"
   },
+  "attribution": {
+    "title": "Sources des flux du calendrier",
+    "introduction": "Les flux du calendrier sont distribués par GS Control à partir des informations de ces éditeurs et fournisseurs de données.",
+    "announcements": "Actualités et annonces sur les satellites",
+    "weather": "Alertes et prévisions de météo spatiale",
+    "launches": "Calendriers des lancements"
+  },
   "source_types": {
     "local": "Observation locale",
     "external": "Annonce"

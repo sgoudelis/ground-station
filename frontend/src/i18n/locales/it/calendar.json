@@ -109,6 +109,13 @@
     "controls_heading": "Archiviazione e opzioni di controllo",
     "terms_heading": "Uso di queste informazioni"
   },
+  "attribution": {
+    "title": "Fonti dei feed del calendario",
+    "introduction": "I feed del calendario sono distribuiti tramite GS Control e utilizzano informazioni dei seguenti editori e fornitori di dati.",
+    "announcements": "Notizie e annunci sui satelliti",
+    "weather": "Avvisi e previsioni meteo spaziali",
+    "launches": "Calendari dei lanci"
+  },
   "source_types": {
     "local": "Osservazione locale",
     "external": "Annuncio"

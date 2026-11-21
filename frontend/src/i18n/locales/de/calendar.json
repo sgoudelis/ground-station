@@ -109,6 +109,13 @@
     "controls_heading": "Speicherung und Ihre Einstellungen",
     "terms_heading": "Nutzung dieser Informationen"
   },
+  "attribution": {
+    "title": "Quellen der Kalender-Feeds",
+    "introduction": "Die Kalender-Feeds werden über GS Control bereitgestellt und nutzen Informationen der folgenden Herausgeber und Datenanbieter.",
+    "announcements": "Satellitennachrichten und Ankündigungen",
+    "weather": "Weltraumwetterwarnungen und Vorhersagen",
+    "launches": "Starttermine"
+  },
   "source_types": {
     "local": "Lokale Beobachtung",
     "external": "Ankündigung"

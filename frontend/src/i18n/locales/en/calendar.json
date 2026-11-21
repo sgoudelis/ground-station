@@ -109,6 +109,13 @@
     "controls_heading": "Storage and your controls",
     "terms_heading": "Using this information"
   },
+  "attribution": {
+    "title": "Calendar feed sources",
+    "introduction": "Calendar feeds are delivered through GS Control using information from these publishers and data providers.",
+    "announcements": "Satellite news and announcements",
+    "weather": "Space-weather alerts and forecasts",
+    "launches": "Launch schedules"
+  },
   "source_types": {
     "local": "Local observation",
     "external": "Announcement"

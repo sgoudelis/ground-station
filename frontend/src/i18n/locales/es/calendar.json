@@ -109,6 +109,13 @@
     "controls_heading": "Almacenamiento y opciones de control",
     "terms_heading": "Uso de esta información"
   },
+  "attribution": {
+    "title": "Fuentes de los canales del calendario",
+    "introduction": "Los canales del calendario se distribuyen a través de GS Control con información de estos editores y proveedores de datos.",
+    "announcements": "Noticias y anuncios sobre satélites",
+    "weather": "Alertas y previsiones del clima espacial",
+    "launches": "Calendarios de lanzamientos"
+  },
   "source_types": {
     "local": "Observación local",
     "external": "Anuncio"

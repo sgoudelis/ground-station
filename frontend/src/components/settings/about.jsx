@@ -41,6 +41,7 @@ import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import { useTranslation } from 'react-i18next';
 import { GroundStationLogoMeridian } from '../common/logo-dataurl.js';
 import { APP_NAME } from '../../config/branding.jsx';
+import CalendarFeedSources from '../calendar/feed-sources.jsx';
 
 const AboutPage = () => {
     const theme = useTheme();
@@ -325,6 +326,10 @@ const AboutPage = () => {
                         </Grid>
                     </AccordionDetails>
                 </Accordion>
+
+                <Card elevation={1} sx={{ p: 2 }}>
+                    <CalendarFeedSources headingComponent="h2" />
+                </Card>
 
                 <Card elevation={1} sx={{ p: 2 }}>
                     <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>

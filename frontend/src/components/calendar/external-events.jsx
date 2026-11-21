@@ -5,6 +5,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import {useTranslation} from 'react-i18next';
 import CapsButton from '../common/capsbutton.jsx';
 import FeedRow from './feed-row.jsx';
+import CalendarFeedSources from './feed-sources.jsx';
 
 export function ExternalEventsStatus({status, locale, timezone}) {
     const {t} = useTranslation('calendar');
@@ -97,6 +98,7 @@ export default function ExternalEvents({status, isAdmin, pending, error, onSave,
                         <Typography component="h3" variant="subtitle2" sx={{mb: 0.75}}>{heading}</Typography>
                         <Typography variant="body2" sx={{lineHeight: 1.75}}>{body}</Typography>
                     </Box>)}
+                    <CalendarFeedSources />
                     {isAdmin && !consented && status && pendingFeed && <Box sx={{p: 1.5, border: '1px solid',
                         borderColor: 'divider', borderRadius: 1.5, bgcolor: 'action.hover'}}>
                         <FormControlLabel sx={{m: 0, alignItems: 'flex-start', '& .MuiFormControlLabel-label': {pt: 0.5}}}
