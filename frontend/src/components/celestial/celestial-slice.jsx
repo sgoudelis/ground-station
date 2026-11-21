@@ -216,32 +216,29 @@ export const fetchCelestialTracks = createAsyncThunk(
 export const fetchTargetCelestialScene = createAsyncThunk(
     'celestial/fetchTargetScene',
     async ({ socket, payload = {}, requestKey }, { rejectWithValue }) => {
+        const fetchScenePart = async (cmd, errorMessage) => {
+            // Plain ACK callbacks are silently discarded on disconnect, leaving
+            // every island stuck behind the shared loading guard. Timed ACKs
+            // reject on disconnect as well as when the server stops replying.
+            const request = () => socket.timeout(60_000).emitWithAck('api.call', { cmd, data: payload });
+            let response;
+            try {
+                response = await request();
+            } catch {
+                // Retry this read once; Socket.IO buffers it until reconnect.
+                // Keep a successful sibling response and bound offline waiting.
+                response = await request();
+            }
+            if (!response?.success) {
+                throw new Error(response?.error || errorMessage);
+            }
+            return response.data;
+        };
+
         try {
             const [solarScene, celestialTracks] = await Promise.all([
-                new Promise((resolve, reject) => {
-                    socket.emit('api.call', {
-                        cmd: 'get-solar-system-scene',
-                        data: payload,
-                    }, (response) => {
-                        if (response?.success) {
-                            resolve(response.data);
-                        } else {
-                            reject(new Error(response?.error || 'Failed to fetch solar system scene'));
-                        }
-                    });
-                }),
-                new Promise((resolve, reject) => {
-                    socket.emit('api.call', {
-                        cmd: 'get-celestial-tracks',
-                        data: payload,
-                    }, (response) => {
-                        if (response?.success) {
-                            resolve(response.data);
-                        } else {
-                            reject(new Error(response?.error || 'Failed to fetch celestial tracks'));
-                        }
-                    });
-                }),
+                fetchScenePart('get-solar-system-scene', 'Failed to fetch solar system scene'),
+                fetchScenePart('get-celestial-tracks', 'Failed to fetch celestial tracks'),
             ]);
             return { requestKey, solarScene, celestialTracks };
         } catch (error) {
