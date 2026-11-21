@@ -182,7 +182,9 @@ export default function CalendarPage() {
 
                 <Box component="section" aria-label={t('events_calendar')} aria-busy={loading}
                     sx={{position: 'relative', minHeight: agendaLayout ? 240 : undefined}}>
-                    {loading && <LinearProgress aria-label={t('common:loading')} />}
+                    {/* Overlay progress so refreshing never changes the calendar's height. */}
+                    {loading && <LinearProgress aria-label={t('common:loading')}
+                        sx={{position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1}} />}
                     {error && <Alert severity="error" sx={{m: 2}} action={<CapsButton color="inherit" size="small" disabled={loading} onClick={refresh}>{t('common:scheduler_tables.shared.retry')}</CapsButton>}>{t('load_error')}</Alert>}
                     {agendaLayout ? <>
                         {agendaDays.map(day => <Box key={day} sx={{display: 'grid', gridTemplateColumns: {xs: '1fr', sm: '155px 1fr'}, gap: 1.5, p: 2, borderBottom: 1, borderColor: 'divider'}}>
