@@ -390,6 +390,12 @@ class ExternalEventsService:
             return False
         except httpx.HTTPStatusError as exc:
             error = "service_unavailable"
+            logger.warning(
+                "External calendar synchronization failed: HTTP %s from %s; "
+                "retaining cached events",
+                exc.response.status_code,
+                exc.request.url.host,
+            )
             if exc.response.status_code == 429:
                 value = exc.response.headers.get("Retry-After", "")
                 try:
@@ -401,8 +407,14 @@ class ExternalEventsService:
                         retry_after = max(0, parsedate_to_datetime(value).timestamp() - now)
                     except (ValueError, TypeError, OverflowError):
                         pass
-        except (httpx.RequestError, ValueError, TimeoutError, OSError):
+        except (httpx.RequestError, ValueError, TimeoutError, OSError) as exc:
             error = "service_unavailable"
+            # Exception messages can contain response data or identity details.
+            # Log the failure category without exposing request credentials.
+            logger.warning(
+                "External calendar synchronization failed (%s); retaining cached events",
+                type(exc).__name__,
+            )
         finally:
             # Only the owner may release a request after disable/re-enable.
             if self.fetch_task is task:
@@ -460,10 +472,26 @@ class ExternalEventsService:
                     self.consent.state["feed_status"] = {
                         feed.id: feed.model_dump(mode="json") for feed in snapshot.feeds
                     }
-                    if any(
-                        feed.error or feed.stale or not feed.complete for feed in snapshot.feeds
-                    ):
+                    unhealthy = [
+                        feed
+                        for feed in snapshot.feeds
+                        if feed.error or feed.stale or not feed.complete
+                    ]
+                    if unhealthy:
                         error = "upstream_feed_unavailable"
+                        # HTTP 200 confirms delivery, not upstream collection
+                        # health. Explain the same degraded state the UI shows.
+                        for feed in unhealthy:
+                            logger.warning(
+                                "External calendar download succeeded, but upstream feed '%s' "
+                                "needs attention (error=%s, stale=%s, complete=%s, "
+                                "last_success_at=%s)",
+                                feed.id,
+                                feed.error,
+                                feed.stale,
+                                feed.complete,
+                                feed.last_success_at.isoformat() if feed.last_success_at else None,
+                            )
                     self.consent.state["next_poll_at"] = now + snapshot.refresh_after_seconds
                     self.consent.state.update(
                         last_success_at=datetime.fromtimestamp(now, timezone.utc).isoformat(),

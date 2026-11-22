@@ -147,7 +147,7 @@ async def test_local_observations_do_not_revoke_an_active_external_feed(service)
     assert next(row["enabled"] for row in changed["feeds"] if row["id"] == "space_weather")
 
 
-async def test_failed_feed_retains_cache_while_complete_empty_feed_clears(service):
+async def test_failed_feed_retains_cache_while_complete_empty_feed_clears(service, caplog):
     for feed in EXTERNAL_FEEDS:
         await service.configure({"feed_id": feed, "enabled": True, "terms_version": "events-1"})
     transport, _ = client([event(feed) for feed in EXTERNAL_FEEDS])
@@ -159,9 +159,51 @@ async def test_failed_feed_retains_cache_while_complete_empty_feed_clears(servic
     rows, status = await cached(service)
     assert {row["source_id"] for row in rows} == {"space_weather:one", "announcements:updated"}
     assert status["error"] == "upstream_feed_unavailable"
+    warnings = [record for record in caplog.records if record.name == "calendar.events"]
+    assert len(warnings) == 1
+    assert warnings[0].levelname == "WARNING"
+    assert "download succeeded" in warnings[0].message
+    assert "upstream feed 'space_weather'" in warnings[0].message
+    assert "error=source_unavailable, stale=True, complete=False" in warnings[0].message
     await service.configure({"revoke": True})
     assert not (await cached(service))[0]
     assert not (await service.status())["consented"]
+
+
+async def test_complete_but_stale_announcement_snapshot_logs_upstream_update_time(service, caplog):
+    await service.configure({"enabled": True, "terms_version": "events-1"})
+
+    def respond(request):
+        return httpx.Response(
+            200,
+            json=dict(
+                schema_version=1,
+                range=dict(request.url.params),
+                events=[event("announcements")],
+                feeds=[
+                    dict(
+                        id=feed,
+                        complete=True,
+                        stale=feed == "announcements",
+                        error="source_unavailable" if feed == "announcements" else None,
+                        last_success_at="2026-11-18T12:00:00Z",
+                    )
+                    for feed in EXTERNAL_FEEDS
+                ],
+            ),
+        )
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as transport:
+        await service.tick(transport)
+    rows, status = await cached(service)
+    assert len(rows) == 1
+    assert status["error"] == "upstream_feed_unavailable"
+    assert status["last_success_at"] == NOW.isoformat()
+    warnings = [record for record in caplog.records if record.name == "calendar.events"]
+    assert len(warnings) == 1
+    assert "upstream feed 'announcements'" in warnings[0].message
+    assert "stale=True, complete=True" in warnings[0].message
+    assert "last_success_at=2026-11-18T12:00:00+00:00" in warnings[0].message
 
 
 async def test_expired_data_is_hidden_even_when_source_is_down(service, monkeypatch):

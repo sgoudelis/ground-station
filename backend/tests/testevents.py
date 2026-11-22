@@ -202,7 +202,7 @@ async def test_calendar_refresh_downloads_from_service_instead_of_only_reading_c
     )
 
 
-async def test_failed_manual_refresh_retains_cached_announcements(service):
+async def test_failed_manual_refresh_retains_cached_announcements(service, caplog):
     await service.configure(OPT_IN)
     client, _ = client_for()
     async with client:
@@ -212,6 +212,28 @@ async def test_failed_manual_refresh_retains_cached_announcements(service):
         assert await service.tick(client, NOW + 60, force=True)
     cached, status = await read_cache(service)
     assert len(calls) == 1
+    assert cached[0]["id"] == "gscontrol:sstv"
+    assert status["error"] == "service_unavailable"
+    assert "External calendar synchronization failed: HTTP 503 from events.gscontrol.net" in (
+        caplog.text
+    )
+
+
+async def test_transport_failure_is_logged_without_exception_contents(service, caplog):
+    await service.configure(OPT_IN)
+    client, _ = client_for()
+    async with client:
+        await service.tick(client, NOW)
+
+    def timeout(request):
+        raise httpx.ReadTimeout("sensitive response content", request=request)
+
+    client, _ = client_for(handler=timeout)
+    async with client:
+        await service.tick(client, NOW + POLL_SECONDS)
+    assert "External calendar synchronization failed (ReadTimeout)" in caplog.text
+    assert "sensitive response content" not in caplog.text
+    cached, status = await read_cache(service)
     assert cached[0]["id"] == "gscontrol:sstv"
     assert status["error"] == "service_unavailable"
 
