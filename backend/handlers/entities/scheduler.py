@@ -24,6 +24,7 @@ from db import AsyncSessionLocal
 from observations.constants import STATUS_FAILED
 from observations.events import emit_scheduled_observations_changed
 from observations.generator import generate_observations_for_monitored_satellites
+from observations.timing import calculate_observation_task_times
 from observations.validation import (
     validate_observation_pass,
     validate_satdump_postprocessing,
@@ -99,6 +100,8 @@ async def create_scheduled_observation(
         return {"success": False, "error": validation_result["error"]}
 
     async with AsyncSessionLocal() as dbsession:
+        # Single observations need the same elevation-constrained timing as generated passes.
+        data = {**data, **await calculate_observation_task_times(dbsession, data)}
         result = await crud_observations.add_scheduled_observation(dbsession, data)
 
         # Sync to APScheduler if successful
@@ -171,6 +174,8 @@ async def update_scheduled_observation(
         return {"success": False, "error": validation_result["error"]}
 
     async with AsyncSessionLocal() as dbsession:
+        # Recalculate after pass or threshold changes instead of persisting old task times.
+        data = {**data, **await calculate_observation_task_times(dbsession, data)}
         result = await crud_observations.edit_scheduled_observation(dbsession, data)
 
         # Sync to APScheduler if successful

@@ -39,6 +39,12 @@ import { useUserTimeSettings } from '../../hooks/useUserTimeSettings.jsx';
 import { formatDateTime, formatTime } from '../../utils/date-time.js';
 import { useTranslation } from 'react-i18next';
 
+// Single observations may omit task times; use the same pass-time fallback as the scheduler.
+const getObservationTimes = (observation) => ({
+    start: observation?.task_start || observation?.pass?.event_start,
+    end: observation?.task_end || observation?.pass?.event_end,
+});
+
 const ObservationsTimeline = () => {
     const { t } = useTranslation('common');
     const dispatch = useDispatch();
@@ -93,13 +99,13 @@ const ObservationsTimeline = () => {
 
         return observations.filter(obs => {
             if (!obs.pass) return false;
-            // Use task_start and task_end (elevation-constrained times) instead of event times
-            if (!obs.task_start || !obs.task_end) return false;
-            const obsStart = new Date(obs.task_start);
-            const obsEnd = new Date(obs.task_end);
-            const inTimeWindow = obsEnd >= startTime && obsStart <= endTime;
+            const { start, end } = getObservationTimes(obs);
+            if (!start || !end) return false;
+            const obsStart = new Date(start);
+            const obsEnd = new Date(end);
+            const inTimeWindow = obsEnd > obsStart && obsEnd >= startTime && obsStart <= endTime;
             return inTimeWindow;
-        }).sort((a, b) => new Date(a.task_start) - new Date(b.task_start));
+        }).sort((a, b) => new Date(getObservationTimes(a).start) - new Date(getObservationTimes(b).start));
     }, [observations, durationHours, staticNow]);
 
     // Layout observations in a single row; visual overlaps are allowed.
@@ -198,9 +204,10 @@ const ObservationsTimeline = () => {
         }
 
         const layoutData = filteredObservations.map((obs) => {
-            // Use task_start and task_end for positioning
-            const obsStartTime = new Date(obs.task_start);
-            const obsEndTime = new Date(obs.task_end);
+            // Keep positioning consistent with the window filter and tooltip.
+            const { start, end } = getObservationTimes(obs);
+            const obsStartTime = new Date(start);
+            const obsEndTime = new Date(end);
 
             const startX = marginLeft + Math.max(0, ((obsStartTime - startTime) / totalMs) * drawableWidth);
             const endX = marginLeft + Math.min(drawableWidth, ((obsEndTime - startTime) / totalMs) * drawableWidth);
@@ -264,6 +271,7 @@ const ObservationsTimeline = () => {
     const hasPeakElevation = Number.isFinite(peakElevation);
     const hoveredBarColor = hoveredObservation ? getBarColor(hoveredObservation) : theme.palette.primary.main;
     const hoveredTasks = hoveredObservation ? getFlattenedTasks(hoveredObservation) : [];
+    const { start: hoveredStart, end: hoveredEnd } = getObservationTimes(hoveredObservation);
     const passStartLabel = formatDateTime(hoveredObservation?.pass?.event_start, { timezone, locale });
     const passEndLabel = formatDateTime(hoveredObservation?.pass?.event_end, { timezone, locale });
     const tooltipOnRightEdge = tooltipPosition.x > window.innerWidth - 370;
@@ -558,19 +566,19 @@ const ObservationsTimeline = () => {
                                 <Box sx={{ display: 'grid', gridTemplateColumns: '72px minmax(0, 1fr)', columnGap: 1.5, rowGap: 0.75, mt: 0.75 }}>
                                     <Typography variant="caption" color="text.secondary">{t('observations_timeline_svg.starts', { defaultValue: 'Starts' })}</Typography>
                                     <Typography variant="caption" sx={{ fontWeight: 600 }}>
-                                        {formatDateTime(hoveredObservation.task_start, { timezone, locale })}
+                                        {formatDateTime(hoveredStart, { timezone, locale })}
                                     </Typography>
                                     <Typography variant="caption" color="text.secondary">{t('observations_timeline_svg.ends', { defaultValue: 'Ends' })}</Typography>
                                     <Typography variant="caption" sx={{ fontWeight: 600 }}>
-                                        {formatDateTime(hoveredObservation.task_end, { timezone, locale })}
+                                        {formatDateTime(hoveredEnd, { timezone, locale })}
                                     </Typography>
                                     <Typography variant="caption" color="text.secondary">{t('observations_timeline_svg.duration', { defaultValue: 'Duration' })}</Typography>
                                     <Typography variant="caption" sx={{ fontWeight: 600 }}>
-                                        {formatDuration(hoveredObservation.task_start, hoveredObservation.task_end)}
+                                        {formatDuration(hoveredStart, hoveredEnd)}
                                     </Typography>
                                     <Typography variant="caption" color="text.secondary">{t('observations_timeline_svg.begins', { defaultValue: 'Begins' })}</Typography>
                                     <Typography variant="caption" sx={{ fontWeight: 600 }}>
-                                        {humanizeFutureDateInMinutes(hoveredObservation.task_start)}
+                                        {humanizeFutureDateInMinutes(hoveredStart)}
                                     </Typography>
                                 </Box>
                             </Box>
