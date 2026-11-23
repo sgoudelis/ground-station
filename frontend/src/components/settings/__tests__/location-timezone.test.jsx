@@ -81,25 +81,15 @@ describe('wizard timezone', () => {
         });
     });
 
-    it('offers Automatic, restores detection, and submits a manual override', async () => {
+    it('offers Automatic and submits a manual override', async () => {
         renderWizard();
         advanceToIdentity();
         const selector = screen.getByRole('combobox', { name: 'Timezone' });
         expect(selector).toHaveTextContent('Automatic');
         fireEvent.mouseDown(selector);
-        fireEvent.click(await screen.findByRole('option', { name: 'Asia/Kathmandu' }));
+        // Text queries avoid computing accessible names for hundreds of IANA zones.
+        fireEvent.click(await screen.findByText('Asia/Kathmandu', { selector: '[role="option"]' }));
         expect(selector).toHaveTextContent('Asia/Kathmandu');
-        fireEvent.mouseDown(selector);
-        fireEvent.click(await screen.findByRole('option', { name: 'Automatic' }));
-        expect(selector).toHaveTextContent('Automatic');
-        advanceFromIdentityToReview();
-        expect(await screen.findByText(/^Europe\/Amsterdam \(UTC[+-]\d{2}:\d{2}\)$/)).toBeInTheDocument();
-        fireEvent.click(screen.getByRole('button', { name: 'Back' }));
-        fireEvent.click(screen.getByRole('button', { name: 'Back' }));
-        const restoredSelector = screen.getByRole('combobox', { name: 'Timezone' });
-        expect(restoredSelector).toHaveTextContent('Automatic');
-        fireEvent.mouseDown(restoredSelector);
-        fireEvent.click(await screen.findByRole('option', { name: 'Asia/Kathmandu' }));
         advanceFromIdentityToReview();
         expect(screen.queryByRole('combobox', { name: 'Timezone' })).not.toBeInTheDocument();
         expect(screen.queryByRole('checkbox', { name: /discover soapysdr/i })).not.toBeInTheDocument();
@@ -116,6 +106,22 @@ describe('wizard timezone', () => {
         expect(screen.getByText('Asia/Kathmandu (UTC+05:45)')).toBeInTheDocument();
     }, WIZARD_TEST_TIMEOUT_MS);
 
+    it('resumes coordinate detection when Automatic is selected again', async () => {
+        renderWizard();
+        advanceToIdentity();
+        const selector = screen.getByRole('combobox', { name: 'Timezone' });
+        fireEvent.mouseDown(selector);
+        fireEvent.click(await screen.findByText('Asia/Kathmandu', { selector: '[role="option"]' }));
+        fireEvent.mouseDown(selector);
+        fireEvent.click(await screen.findByText('Automatic', { selector: '[role="option"]' }));
+        expect(selector).toHaveTextContent('Automatic');
+        advanceFromIdentityToReview();
+        expect(await screen.findByText(/^Europe\/Amsterdam \(UTC[+-]\d{2}:\d{2}\)$/)).toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+        expect(screen.getByRole('combobox', { name: 'Timezone' })).toHaveTextContent('Automatic');
+    }, WIZARD_TEST_TIMEOUT_MS);
+
     it('requires a manual selection if timezone detection fails', async () => {
         socket.emitWithAck.mockResolvedValue({ success: false });
         renderWizard();
@@ -129,7 +135,7 @@ describe('wizard timezone', () => {
         await screen.findByText('Could not detect timezone. Select one to continue.');
         const selector = screen.getByRole('combobox', { name: 'Timezone' });
         fireEvent.mouseDown(selector);
-        fireEvent.click(await screen.findByRole('option', { name: 'UTC' }));
+        fireEvent.click(await screen.findByText('UTC', { selector: '[role="option"]' }));
         advanceFromIdentityToReview();
         expect(screen.getByRole('button', { name: 'Save location' })).toBeEnabled();
     }, WIZARD_TEST_TIMEOUT_MS);

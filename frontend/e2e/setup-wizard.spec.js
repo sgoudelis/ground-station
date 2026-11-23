@@ -148,7 +148,8 @@ test.describe('Setup Wizard', () => {
     const setupDialog = await openSetupWizard(page, { advanceLanguage: false });
 
     await expect(setupDialog.getByRole('button', { name: /^back$/i })).toBeDisabled();
-    const theme = setupDialog.getByRole('combobox', { name: 'Theme', exact: true });
+    // MUI includes the selected value in the dropdown's accessible name.
+    const theme = setupDialog.getByRole('combobox', { name: /^Theme\b/ });
     await expect(theme).toContainText('Dark');
     await theme.click();
     await page.getByRole('option', { name: 'Night (OLED)', exact: true }).click();
@@ -161,11 +162,11 @@ test.describe('Setup Wizard', () => {
     await setupDialog.getByRole('button', { name: 'ΕΠΟΜΕΝΟ', exact: true }).click();
     await expect(setupDialog.getByLabel(/^Ονομα χρήστη/)).toBeVisible();
     await setupDialog.getByRole('button', { name: 'ΠΙΣΩ', exact: true }).click();
-    await expect(setupDialog.getByRole('combobox', { name: 'Γλώσσα', exact: true })).toContainText('Ελληνικά');
-    await setupDialog.getByRole('combobox', { name: 'Γλώσσα', exact: true }).click();
+    await expect(setupDialog.getByRole('combobox', { name: /^Γλώσσα(?:\s|$)/ })).toContainText('Ελληνικά');
+    await setupDialog.getByRole('combobox', { name: /^Γλώσσα(?:\s|$)/ }).click();
     await page.getByRole('option', { name: 'English', exact: true }).click();
     await expect(page.locator('html')).toHaveAttribute('lang', 'en');
-    await expect(setupDialog.getByRole('combobox', { name: 'Theme', exact: true })).toContainText('Night (OLED)');
+    await expect(theme).toContainText('Night (OLED)');
     await setupDialog.getByRole('button', { name: /^next$/i }).click();
 
     await expect(setupDialog.getByText(/create admin user/i).first()).toBeVisible();
