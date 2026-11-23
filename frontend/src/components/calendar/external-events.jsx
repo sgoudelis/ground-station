@@ -10,17 +10,19 @@ import CalendarFeedSources from './feed-sources.jsx';
 export function ExternalEventsStatus({status, locale, timezone}) {
     const {t} = useTranslation('calendar');
     const enabled = Boolean(status?.enabled);
+    // Upstream feed health is separate from this station's connection to GS Control.
+    const syncFailed = status?.error === 'service_unavailable';
     const format = value => new Date(value).toLocaleString(locale, {timeZone: timezone});
     // Failures that prevent syncing take priority over the last successful timestamp.
     const label = status?.storage_error ? t('external.storage_error')
         : status?.needs_consent_review ? t('external.review_terms')
-            : enabled && status?.error ? t('external.sync_error')
+            : enabled && syncFailed ? t('external.sync_error')
                 : enabled && status?.stale ? t('external.stale')
                     : enabled && status.last_success_at ? t('external.updated', {date: format(status.last_success_at)})
                         : enabled ? t('external.waiting') : '';
     if (!label) return null;
     return <Typography variant="caption" role="status"
-        color={status?.error || status?.stale || status?.storage_error || status?.needs_consent_review ? 'warning.main' : 'text.secondary'}>
+        color={syncFailed || status?.stale || status?.storage_error || status?.needs_consent_review ? 'warning.main' : 'text.secondary'}>
         {label}
     </Typography>;
 }

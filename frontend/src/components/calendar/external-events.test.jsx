@@ -6,6 +6,7 @@ import userEvent from '@testing-library/user-event';
 import {beforeEach, expect, it, vi} from 'vitest';
 import '../../i18n/config.js';
 import FeedSettings from './feed-settings.jsx';
+import {ExternalEventsStatus} from './external-events.jsx';
 
 const {socket} = vi.hoisted(() => ({socket: {timeout: vi.fn(), emitWithAck: vi.fn()}}));
 vi.mock('../common/socket.jsx', () => ({useSocket: () => ({socket})}));
@@ -41,6 +42,35 @@ function show(role = 'admin', changes = {}) {
     render(<Provider store={store}><Feeds /></Provider>);
     return changed;
 }
+
+it.each(['announcements', 'space_weather', 'launches'])('shows successful synchronization when only the %s source is unavailable', feed => {
+    render(<ExternalEventsStatus locale="en-GB" timezone="UTC" status={{
+        enabled: true, error: 'upstream_feed_unavailable', stale: false,
+        last_success_at: '2026-11-23T07:00:00Z',
+        feed_status: {[feed]: {complete: false, stale: true, error: 'source_unavailable'}},
+    }} />);
+
+    expect(screen.getByRole('status')).toHaveTextContent('Last synchronized:');
+    expect(screen.queryByText(/Synchronization failed/)).not.toBeInTheDocument();
+    expect(screen.queryByText('Cached events are awaiting an update.')).not.toBeInTheDocument();
+});
+
+it('clears the communication warning after a successful download even when an upstream source is still unavailable', () => {
+    const status = {enabled: true, last_success_at: '2026-11-23T07:00:00Z'};
+    const {rerender} = render(<ExternalEventsStatus locale="en-GB" timezone="UTC"
+        status={{...status, error: 'service_unavailable', stale: true}} />);
+
+    expect(screen.getByRole('status')).toHaveTextContent('Synchronization failed. Previously cached events may be outdated.');
+
+    rerender(<ExternalEventsStatus locale="en-GB" timezone="UTC" status={{
+        ...status, error: 'upstream_feed_unavailable', stale: false,
+        last_success_at: '2026-11-23T07:10:00Z',
+        feed_status: {launches: {complete: false, stale: true, error: 'source_unavailable'}},
+    }} />);
+
+    expect(screen.getByRole('status')).toHaveTextContent('Last synchronized:');
+    expect(screen.queryByText(/Synchronization failed/)).not.toBeInTheDocument();
+});
 
 it('saves the local feed station-wide without opening consent', async () => {
     const user = userEvent.setup();
