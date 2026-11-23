@@ -116,7 +116,7 @@ admin_only_commands = {
 }
 
 admin_only_prefixes = (
-    "feedback.",
+    "usage.",
     "database-backup.",
     "transmitter-import.",
     "users.",

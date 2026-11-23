@@ -7,8 +7,8 @@
 
 set -euo pipefail
 
-# Development launches identify themselves without changing census consent.
-export GS_FEEDBACK_ENVIRONMENT="${GS_FEEDBACK_ENVIRONMENT:-development}"
+# Share the application's environment with activity and event requests.
+export GS_ENVIRONMENT="${GS_ENVIRONMENT:-development}"
 
 backend_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 venv_python="$backend_dir/venv/bin/python"

@@ -33,6 +33,7 @@ describe('station timezone selection', () => {
             cmd: 'get-location-timezone', data: { lat: 52.3676, lon: 4.9041 },
         });
         expect(result.current.timezone).toBe('Europe/Amsterdam');
+        expect(result.current.automatic).toBe(true);
         expect(result.current.loading).toBe(false);
     });
 
@@ -61,12 +62,16 @@ describe('station timezone selection', () => {
         socket.emitWithAck.mockResolvedValueOnce(reply('Europe/Amsterdam')).mockResolvedValueOnce(reply('Asia/Kathmandu'));
         const { result, rerender } = renderTimezone();
         await startLookup();
+        // Choosing the detected zone explicitly still counts as a manual choice.
+        act(() => result.current.setTimezone('Europe/Amsterdam'));
+        expect(result.current.automatic).toBe(false);
         act(() => result.current.setTimezone('UTC'));
         rerender({ latitude: 27.7172, longitude: 85.3240 });
         await startLookup();
         expect(result.current.timezone).toBe('UTC');
         act(() => result.current.setTimezone(null));
         expect(result.current.timezone).toBe('Asia/Kathmandu');
+        expect(result.current.automatic).toBe(true);
     });
 
     it('allows manual selection when detection fails', async () => {

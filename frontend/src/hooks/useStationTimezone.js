@@ -42,6 +42,7 @@ export const useStationTimezone = ({ socket, latitude, longitude, enabled = true
     const detectedTimezone = currentLookup?.timezone || null;
     return {
         timezone: selection || detectedTimezone,
+        automatic: !selection,
         detectedTimezone,
         loading: enabled && hasCoordinates && !currentLookup,
         error: Boolean(currentLookup?.error),

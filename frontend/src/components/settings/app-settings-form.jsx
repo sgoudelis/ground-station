@@ -27,6 +27,8 @@ import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import CapsButton from '../common/capsbutton.jsx';
 import { useSocket } from '../common/socket.jsx';
+import { useUsageSettings } from '../../hooks/useUsageSettings.js';
+import UsageForm from './usage-form.jsx';
 import { toast } from '../../utils/toast-with-timestamp.jsx';
 import {
     SettingsActionFooter,
@@ -215,6 +217,7 @@ const getApplyModeMeta = (applyMode, t) => {
 
 const AppSettingsForm = () => {
     const { socket } = useSocket();
+    const usage = useUsageSettings(socket);
     const { t } = useTranslation('settings');
 
     // Field descriptions come from the backend schema as plain English strings with no
@@ -249,7 +252,8 @@ const AppSettingsForm = () => {
             .map((field) => field.key);
     }, [draft, fields, payload?.locked, savedDraft]);
 
-    const isDirty = changedKeys.length > 0;
+    const isDirty = changedKeys.length > 0 || usage.dirty;
+    const isLoading = loading || usage.loading;
 
     const groupedFields = useMemo(() => {
         const fieldsByKey = new Map(fields.map((field) => [field.key, field]));
@@ -285,15 +289,15 @@ const AppSettingsForm = () => {
 
     const statusLabel = saving
         ? t('app_settings.saving', { defaultValue: 'Saving...' })
-        : loading
+        : isLoading
             ? t('app_settings.loading_state', { defaultValue: 'Loading' })
         : isDirty
             ? t('app_settings.unsaved', { defaultValue: 'Unsaved changes' })
             : t('app_settings.saved', { defaultValue: 'Saved' });
 
-    const statusColor = saving || loading ? 'info' : (isDirty ? 'warning' : 'success');
+    const statusColor = saving || isLoading ? 'info' : (isDirty ? 'warning' : 'success');
 
-    const footerStatusText = loading && fields.length === 0
+    const footerStatusText = isLoading && fields.length === 0
         ? t('app_settings.loading', { defaultValue: 'Loading application settings...' })
         : statusLabel;
 
@@ -352,16 +356,22 @@ const AppSettingsForm = () => {
 
     const handleReset = () => {
         setDraft(savedDraft);
+        usage.reset();
         setValidationErrors({});
         setSaveResult(null);
+    };
+
+    const handleReload = () => {
+        loadConfig();
+        void usage.reload();
     };
 
     const handleToggleSensitive = (key) => {
         setVisibleSensitive((prev) => ({ ...prev, [key]: !prev[key] }));
     };
 
-    const handleSave = () => {
-        if (!socket || saving || !isDirty) {
+    const handleSave = async () => {
+        if (!socket || saving || isLoading || !isDirty) {
             return;
         }
 
@@ -374,42 +384,47 @@ const AppSettingsForm = () => {
 
         setSaving(true);
         setValidationErrors({});
-        setSaveResult(null);
 
-        socket.emit("api.call", {
-  cmd: 'update-app-config',
-  data: {
-    values: updates
-  }
-}, response => {
-  if (!response?.success) {
-    const nextValidationErrors = response?.data?.validation_errors || {};
-    const errorMessage = response?.error || 'Failed to save application settings';
-    setValidationErrors(nextValidationErrors);
-    toast.error(errorMessage);
-    setSaving(false);
-    return;
-  }
-  const nextPayload = response.data || {};
-  const nextDraft = buildDraftFromPayload(nextPayload);
-  setPayload(nextPayload);
-  setDraft(nextDraft);
-  setSavedDraft(nextDraft);
-  setValidationErrors({});
-  const changed = nextPayload.changed_keys || [];
-  if (changed.length > 0) {
-    toast.success(t('app_settings.save_success', {
-      defaultValue: 'Application settings were saved.'
-    }));
-  }
-  setSaveResult({
-    changedKeys: changed,
-    changedHotKeys: nextPayload.changed_hot_keys || [],
-    changedRestartKeys: nextPayload.changed_restart_keys || [],
-    restartRequired: Boolean(nextPayload.restart_required)
-  });
-  setSaving(false);
-});
+        try {
+            // Only schema-backed fields belong in app_config.json. A usage-only
+            // save must not rewrite the runtime configuration at all.
+            if (changedKeys.length > 0) {
+                setSaveResult(null);
+                const response = await new Promise((resolve) => {
+                    socket.emit('api.call', {
+                        cmd: 'update-app-config', data: { values: updates },
+                    }, resolve);
+                });
+                if (!response?.success) {
+                    setValidationErrors(response?.data?.validation_errors || {});
+                    toast.error(response?.error || t('app_settings.save_failed'));
+                    return;
+                }
+
+                const nextPayload = response.data || {};
+                const nextDraft = buildDraftFromPayload(nextPayload);
+                setPayload(nextPayload);
+                setDraft(nextDraft);
+                setSavedDraft(nextDraft);
+                setSaveResult({
+                    changedKeys: nextPayload.changed_keys || [],
+                    changedHotKeys: nextPayload.changed_hot_keys || [],
+                    changedRestartKeys: nextPayload.changed_restart_keys || [],
+                    restartRequired: Boolean(nextPayload.restart_required),
+                });
+            }
+
+            // The two stores are independent. If activity saving fails after
+            // config saving succeeds, retry only the still-unsaved activity choice.
+            if (!await usage.save()) return;
+            toast.success(t('app_settings.save_success', {
+                defaultValue: 'Application settings were saved.',
+            }));
+        } catch (failure) {
+            toast.error(failure.message || t('app_settings.save_failed'));
+        } finally {
+            setSaving(false);
+        }
     };
 
     const renderFieldControl = (field, locked) => {
@@ -576,9 +591,9 @@ const AppSettingsForm = () => {
                         defaultValue: 'Manage backend runtime configuration by subsystem.',
                     })}
                     status={{ label: statusLabel, color: statusColor }}
-                    onReload={loadConfig}
+                    onReload={handleReload}
                     reloadLabel={t('app_settings.reload', { defaultValue: 'Reload' })}
-                    reloadDisabled={loading || saving}
+                    reloadDisabled={isLoading || saving}
                 />
 
                 <SettingsMetaRow sx={{ justifyContent: 'space-between' }}>
@@ -739,6 +754,14 @@ const AppSettingsForm = () => {
                     </SettingsSection>
                 ))}
 
+                <UsageForm
+                    enabled={usage.enabled}
+                    onChange={usage.onChange}
+                    disabled={saving || usage.loading || !usage.status || usage.status.storage_error}
+                    error={usage.error}
+                    storageError={usage.status?.storage_error}
+                />
+
                 <SettingsActionFooter
                     statusText={footerStatusText}
                     sticky
@@ -750,10 +773,10 @@ const AppSettingsForm = () => {
                             : '0 0 12px rgba(0, 0, 0, 0.16)',
                     }}
                 >
-                    <CapsButton variant="outlined" onClick={handleReset} disabled={saving || loading || !isDirty}>
+                    <CapsButton variant="outlined" onClick={handleReset} disabled={saving || isLoading || !isDirty}>
                         {t('app_settings.reset', { defaultValue: 'Reset' })}
                     </CapsButton>
-                    <CapsButton variant="contained" onClick={handleSave} disabled={saving || loading || !isDirty}>
+                    <CapsButton variant="contained" onClick={handleSave} disabled={saving || isLoading || !isDirty}>
                         {saving
                             ? t('app_settings.saving', { defaultValue: 'Saving...' })
                             : t('app_settings.save', { defaultValue: 'Save Settings' })}

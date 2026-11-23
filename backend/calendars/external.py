@@ -26,9 +26,9 @@ from calendars.protocol import (
     EventSnapshot,
 )
 from calendars.schemas import CalendarEvent
+from common.environment import reporting_environment
 from db import AsyncSessionLocal
 from db.models import CachedExternalEvents
-from feedback.payload import reporting_environment
 from installationid import REGISTRY_URL, InstallationIdentity, installation_identity
 
 logger = logging.getLogger("calendar.events")

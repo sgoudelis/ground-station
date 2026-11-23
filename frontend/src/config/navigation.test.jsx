@@ -40,7 +40,7 @@ describe('administration navigation', () => {
         const system = navigation.filter((item) => item.segment?.startsWith('admin/system'));
         expect(system.map((item) => item.title)).toEqual(['Settings', 'Maintenance', 'About']);
         expect(system[0].children.map((item) => item.segment)).toEqual([
-            'general', 'hardware', 'location', 'users', 'feedback',
+            'general', 'hardware', 'location', 'users',
         ]);
         expect(system[1].children.map((item) => item.segment)).toEqual([
             'updates', 'frontend-state', 'sessions', 'message-log',

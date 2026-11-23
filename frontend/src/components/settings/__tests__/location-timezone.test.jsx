@@ -63,8 +63,6 @@ const advanceToIdentity = () => {
 const advanceFromIdentityToReview = () => {
     fireEvent.click(screen.getByRole('button', { name: 'Next' }));
     fireEvent.click(screen.getByRole('button', { name: 'Next' }));
-    expect(screen.getByRole('switch', { name: 'Share installation census' })).not.toBeChecked();
-    fireEvent.click(screen.getByRole('button', { name: 'Next' }));
 };
 
 describe('wizard timezone', () => {
@@ -77,22 +75,33 @@ describe('wizard timezone', () => {
                 return { success: true, data: { timezone: 'Europe/Amsterdam' } };
             }
             if (payload.cmd === 'setup.status') {
-                return { success: true, data: { state: 'running', feedback_environment: 'test' } };
+                return { success: true, data: { state: 'running' } };
             }
             return { success: true, data: { state: 'running' } };
         });
     });
 
-    it('shows the detected zone and submits the user override', async () => {
+    it('offers Automatic, restores detection, and submits a manual override', async () => {
         renderWizard();
         advanceToIdentity();
-        const selector = screen.getByRole('combobox', { name: 'Time Zone' });
-        await waitFor(() => expect(selector).toHaveValue('Europe/Amsterdam'));
-        fireEvent.change(selector, { target: { value: 'Asia/Kathmandu' } });
+        const selector = screen.getByRole('combobox', { name: 'Timezone' });
+        expect(selector).toHaveTextContent('Automatic');
+        fireEvent.mouseDown(selector);
         fireEvent.click(await screen.findByRole('option', { name: 'Asia/Kathmandu' }));
-        expect(selector).toHaveValue('Asia/Kathmandu');
+        expect(selector).toHaveTextContent('Asia/Kathmandu');
+        fireEvent.mouseDown(selector);
+        fireEvent.click(await screen.findByRole('option', { name: 'Automatic' }));
+        expect(selector).toHaveTextContent('Automatic');
         advanceFromIdentityToReview();
-        expect(screen.queryByRole('combobox', { name: 'Time Zone' })).not.toBeInTheDocument();
+        expect(await screen.findByText(/^Europe\/Amsterdam \(UTC[+-]\d{2}:\d{2}\)$/)).toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+        const restoredSelector = screen.getByRole('combobox', { name: 'Timezone' });
+        expect(restoredSelector).toHaveTextContent('Automatic');
+        fireEvent.mouseDown(restoredSelector);
+        fireEvent.click(await screen.findByRole('option', { name: 'Asia/Kathmandu' }));
+        advanceFromIdentityToReview();
+        expect(screen.queryByRole('combobox', { name: 'Timezone' })).not.toBeInTheDocument();
         expect(screen.queryByRole('checkbox', { name: /discover soapysdr/i })).not.toBeInTheDocument();
         expect(screen.getByText('Asia/Kathmandu (UTC+05:45)')).toBeInTheDocument();
         fireEvent.click(screen.getByRole('button', { name: 'Save location' }));
@@ -117,41 +126,43 @@ describe('wizard timezone', () => {
         await screen.findByText('Could not detect timezone. Go back to Station Identity and select one.');
         fireEvent.click(screen.getByRole('button', { name: 'Back' }));
         fireEvent.click(screen.getByRole('button', { name: 'Back' }));
-        fireEvent.click(screen.getByRole('button', { name: 'Back' }));
         await screen.findByText('Could not detect timezone. Select one to continue.');
-        const selector = screen.getByRole('combobox', { name: 'Time Zone' });
-        fireEvent.change(selector, { target: { value: 'UTC' } });
+        const selector = screen.getByRole('combobox', { name: 'Timezone' });
+        fireEvent.mouseDown(selector);
         fireEvent.click(await screen.findByRole('option', { name: 'UTC' }));
         advanceFromIdentityToReview();
         expect(screen.getByRole('button', { name: 'Save location' })).toBeEnabled();
     }, WIZARD_TEST_TIMEOUT_MS);
 
-    it('saves explicit census consent only as part of setup finalization', async () => {
+    it.each([true, false])('saves the activity choice only at setup finalization (enabled: %s)', async (enabled) => {
         renderWizard();
         advanceToIdentity();
-        await waitFor(() => expect(screen.getByRole('combobox', { name: 'Time Zone' })).toHaveValue('Europe/Amsterdam'));
-        fireEvent.click(screen.getByRole('button', { name: 'Next' }));
-        fireEvent.click(screen.getByRole('button', { name: 'Next' }));
-        const census = screen.getByRole('switch', { name: 'Share installation census' });
-        expect(census).not.toBeChecked();
-        expect(screen.queryByText('Installation environment')).not.toBeInTheDocument();
-        expect(screen.queryByRole('switch', { name: /share performance metrics/i })).not.toBeInTheDocument();
-        fireEvent.click(screen.getByRole('button', { name: 'What is shared?' }));
-        // Mirror the E2E contract (e2e/setup-wizard.spec.js): the disclosure must be addressable as a
-        // named dialog. MUI spreads unknown <Dialog> props onto the Modal root, so labelling the root
-        // leaves the role="dialog" element nameless and this query fails.
-        expect(await screen.findByRole('dialog', { name: 'Help shape Ground Station' })).toBeInTheDocument();
-        expect(screen.getByText(/pseudonymous, not fully anonymous/i)).toBeInTheDocument();
-        fireEvent.click(screen.getByRole('button', { name: 'Close', exact: true }));
-        await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
-        fireEvent.click(census);
-        expect(socket.emitWithAck.mock.calls.some(([, request]) => request.cmd === 'feedback.update')).toBe(false);
-        fireEvent.click(screen.getByRole('button', { name: 'Next' }));
-        expect(screen.getByText('Installation census: enabled (Test)')).toBeInTheDocument();
-        fireEvent.click(screen.getByRole('button', { name: 'Save location' }));
+        expect(screen.getByRole('combobox', { name: 'Timezone' })).toHaveTextContent('Automatic');
+        const activity = screen.getByRole('checkbox', { name: 'Anonymous usage ping' });
+        expect(activity).toBeChecked();
+        const explanation = 'Sends a ping to help the developer count active Ground Station installations by country. No station or account details are shared.';
+        const infoButton = screen.getByRole('button', { name: 'About this option' });
+        expect(screen.queryByText(explanation)).not.toBeInTheDocument();
+        expect(infoButton).toHaveAttribute('aria-expanded', 'false');
+        fireEvent.click(infoButton);
+        expect(screen.getByText(explanation)).toBeVisible();
+        expect(infoButton).toHaveAttribute('aria-expanded', 'true');
+        expect(activity).toBeChecked();
+        fireEvent.click(infoButton);
+        expect(screen.queryByText(explanation)).not.toBeInTheDocument();
+        expect(screen.queryByText(/discards the IP/)).not.toBeInTheDocument();
+        if (!enabled) fireEvent.click(activity);
+        expect(socket.emitWithAck.mock.calls.some(([, request]) => request.cmd === 'usage.update')).toBe(false);
+        advanceFromIdentityToReview();
+        expect(screen.getByText(enabled ? 'Activity sharing: enabled' : 'Activity sharing: off')).toBeInTheDocument();
+        const save = screen.getByRole('button', { name: 'Save location' });
+        await waitFor(() => expect(save).toBeEnabled());
+        fireEvent.click(save);
         await waitFor(() => expect(socket.emitWithAck).toHaveBeenCalledWith('api.call', {
             cmd: 'setup.finalize',
-            data: expect.objectContaining({ feedback: { enabled: true, consent_notice_version: 'census-2' } }),
+            data: expect.objectContaining({ usage: { enabled }, timezone: 'Europe/Amsterdam' }),
         }));
+        const payload = socket.emitWithAck.mock.calls.find(([, request]) => request.cmd === 'setup.finalize')[1].data;
+        expect(payload).not.toHaveProperty('feedback');
     }, WIZARD_TEST_TIMEOUT_MS);
 });

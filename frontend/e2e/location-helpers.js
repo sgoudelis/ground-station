@@ -169,6 +169,9 @@ export const completeLocationWizardIfVisible = async (
     if (await nextButton.isVisible().catch(() => false)) {
       await fillAdminDraftIfVisible(wizardDialog, { adminUsername, adminPassword });
       await ensureStationIdentityDraft(wizardDialog);
+      // Never enable public activity requests while preparing browser fixtures.
+      const activity = wizardDialog.getByRole('checkbox', { name: /^anonymous usage ping$/i });
+      if (await activity.isVisible().catch(() => false)) await activity.uncheck();
       await ensureCoordinatesForWizardStep(page, wizardDialog, coordinates);
 
       const nextEnabled = await waitForEnabled(page, nextButton, 10000);

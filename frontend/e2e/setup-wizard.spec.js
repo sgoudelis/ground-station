@@ -61,16 +61,15 @@ const advanceToReviewStep = async (page, setupDialog, { username, password }) =>
   await nextButton.click();
 
   await expect(setupDialog.getByRole('heading', { name: /^station identity$/i })).toBeVisible();
+  const activity = setupDialog.getByRole('checkbox', { name: /^anonymous usage ping$/i });
+  await expect(activity).toBeChecked();
+  // Completing browser tests must not submit activity to the public service.
+  await activity.uncheck();
   await nextButton.click();
 
   await expect(setupDialog.getByText(/click on the map to set your ground station location/i)).toBeVisible();
   await fillCoordinatesInWizard(page, setupDialog);
   await expect(nextButton).toBeEnabled();
-  await nextButton.click();
-
-  await expect(setupDialog.getByRole('heading', { name: /help shape ground station/i })).toBeVisible();
-  await expect(setupDialog.getByRole('switch', { name: /share installation census/i })).toBeEnabled();
-  await expect(setupDialog.getByRole('switch', { name: /share installation census/i })).not.toBeChecked();
   await nextButton.click();
 
   await expect(setupDialog.getByRole('heading', { name: /review configuration/i })).toBeVisible();
@@ -149,18 +148,24 @@ test.describe('Setup Wizard', () => {
     const setupDialog = await openSetupWizard(page, { advanceLanguage: false });
 
     await expect(setupDialog.getByRole('button', { name: /^back$/i })).toBeDisabled();
+    const theme = setupDialog.getByRole('combobox', { name: 'Theme', exact: true });
+    await expect(theme).toContainText('Dark');
+    await theme.click();
+    await page.getByRole('option', { name: 'Night (OLED)', exact: true }).click();
+    await expect(theme).toContainText('Night (OLED)');
     await setupDialog.getByRole('combobox', { name: /^language\b/i }).click();
     await page.getByRole('option', { name: 'Ελληνικά', exact: true }).click();
     await expect(page.locator('html')).toHaveAttribute('lang', 'el');
-    await expect(setupDialog.getByRole('heading', { name: 'Επιλέξτε τη γλώσσα σας' })).toBeVisible();
+    await expect(setupDialog.getByRole('heading', { name: 'Επιλέξτε γλώσσα και θέμα' })).toBeVisible();
     // CapsButton renders Greek accessible names in capitals without tonos.
     await setupDialog.getByRole('button', { name: 'ΕΠΟΜΕΝΟ', exact: true }).click();
     await expect(setupDialog.getByLabel(/^Ονομα χρήστη/)).toBeVisible();
     await setupDialog.getByRole('button', { name: 'ΠΙΣΩ', exact: true }).click();
-    await expect(setupDialog.getByRole('combobox')).toContainText('Ελληνικά');
-    await setupDialog.getByRole('combobox').click();
+    await expect(setupDialog.getByRole('combobox', { name: 'Γλώσσα', exact: true })).toContainText('Ελληνικά');
+    await setupDialog.getByRole('combobox', { name: 'Γλώσσα', exact: true }).click();
     await page.getByRole('option', { name: 'English', exact: true }).click();
     await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+    await expect(setupDialog.getByRole('combobox', { name: 'Theme', exact: true })).toContainText('Night (OLED)');
     await setupDialog.getByRole('button', { name: /^next$/i }).click();
 
     await expect(setupDialog.getByText(/create admin user/i).first()).toBeVisible();
@@ -187,33 +192,16 @@ test.describe('Setup Wizard', () => {
     await setupDialog.getByLabel(/confirm password/i).fill(E2E_ADMIN_PASSWORD);
     await nextButton.click();
     await expect(setupDialog.getByRole('heading', { name: /^station identity$/i })).toBeVisible();
+    const activity = setupDialog.getByRole('checkbox', { name: /^anonymous usage ping$/i });
+    await expect(activity).toBeChecked();
+    await expect(setupDialog.getByText(/every 12 hours/)).toHaveCount(0);
+    await activity.uncheck();
 
     await nextButton.click();
     await expect(setupDialog.getByText(/click on the map to set your ground station location/i)).toBeVisible();
 
     await fillCoordinatesInWizard(page, setupDialog);
     await expect(nextButton).toBeEnabled();
-    await nextButton.click();
-    await expect(setupDialog.getByRole('heading', { name: /help shape ground station/i })).toBeVisible();
-    await expect(setupDialog.getByRole('switch', { name: /share installation census/i })).toBeEnabled();
-    await expect(setupDialog.getByRole('switch', { name: /share installation census/i })).not.toBeChecked();
-
-    await expect(setupDialog.getByText('What gets reported', { exact: true })).toBeHidden();
-    const detailsLink = setupDialog.getByRole('button', { name: 'What is shared?' });
-    await detailsLink.click();
-    const feedbackDialog = page.getByRole('dialog', { name: 'Help shape Ground Station', exact: true });
-    await expect(feedbackDialog).toBeVisible();
-    await expect(feedbackDialog.getByRole('list', { name: 'What gets reported' })).toBeVisible();
-    await expect(feedbackDialog.getByRole('list', { name: 'What stays on your station' })).toBeVisible();
-    await expect(feedbackDialog.getByText(/pseudonymous, not fully anonymous/i)).toBeVisible();
-    await expect(feedbackDialog.getByText('Where it goes, how often, and how to stop', { exact: true })).toBeVisible();
-    // Both switches edit the same draft; dismissing the disclosure keeps the choice.
-    await feedbackDialog.getByRole('switch', { name: /share installation census/i }).click();
-    await feedbackDialog.getByRole('button', { name: /^close$/i }).click();
-    await expect(feedbackDialog).toBeHidden();
-    await expect(detailsLink).toBeFocused();
-    await expect(setupDialog.getByRole('switch', { name: /share installation census/i })).toBeChecked();
-    await setupDialog.getByRole('switch', { name: /share installation census/i }).click();
     await nextButton.click();
     await expect(setupDialog.getByRole('heading', { name: /review configuration/i })).toBeVisible();
   });

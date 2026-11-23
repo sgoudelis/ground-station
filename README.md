@@ -520,11 +520,13 @@ for its supported versions, trust boundaries, and reporting process.
 
 ## Application Configuration
 
-Optional installation census reporting is off by default. First-time setup and
-**Settings → Feedback** offer the same full disclosure and opt-in choice.
-Administrators can preview the payload, check delivery and withdraw consent.
-See [census reporting and privacy details](docs/feedback.md) for the fields,
-IP-address handling, retention and local state. Performance reporting is inactive.
+Optional **Activity sharing** sends only the existing random installation ID and its deployment
+environment every 12 hours. The first-time wizard offers a checked **Anonymous usage ping** checkbox on
+Station Identity; administrators can turn it off in the **Activity sharing** card at the bottom of **Settings → General**.
+The receiver estimates country from the connection IP without storing the IP and
+retains the ID, environment, country and latest contact indefinitely. Existing installations
+start off. See [activity sharing](docs/usage.md) for scheduling, privacy and local
+state. Ground Station no longer submits hardware census reports.
 
 Ground Station backend runtime options are stored in `backend/data/configs/app_config.json` and are editable in the UI at `Settings -> Settings`.
 

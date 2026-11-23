@@ -14,7 +14,7 @@ const announcementSources = [
     {name: 'R4UAB', url: 'https://r4uab.ru/'},
 ];
 
-export default function CalendarFeedSources({headingComponent = 'h3'}) {
+export default function CalendarFeedSources({headingComponent = 'h3', introduction}) {
     const {t} = useTranslation('calendar');
     const groups = [
         {label: t('attribution.announcements'), sources: announcementSources},
@@ -29,7 +29,7 @@ export default function CalendarFeedSources({headingComponent = 'h3'}) {
     return <Box component="section" aria-label={t('attribution.title')}>
         <Typography component={headingComponent} variant="subtitle2">{t('attribution.title')}</Typography>
         <Typography variant="body2" color="text.secondary" sx={{mt: 0.5, mb: 1.5, lineHeight: 1.6}}>
-            {t('attribution.introduction')}
+            {introduction ?? t('attribution.introduction')}
         </Typography>
         <Stack spacing={1.5}>
             {groups.map(({label, sources}) => <Box key={label}>

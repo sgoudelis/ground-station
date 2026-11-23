@@ -25,12 +25,11 @@ from typing import Any, Dict, Optional, cast
 
 from common import auth as authsvc
 from common.timezones import normalize_coordinates, timezone_for_coordinates, validate_timezone
-from feedback.payload import reporting_environment
-from feedback.service import feedback_service, validate_choice
 from handlers.entities import locations, satellites
 from server import runtimestate
 from server.scheduler import schedule_celestial_sync_warmup_job
 from tlesync.state import sync_state_manager
+from usage.service import usage_service, validate_choice
 
 CALL_STATUS_IDLE = "idle"
 CALL_STATUS_PENDING = "pending"
@@ -133,13 +132,14 @@ def _normalize_finalize_payload(payload: Any) -> Dict[str, Any]:
         raise ValueError("Password is required.")
 
     location = _normalize_location_payload(payload.get("location"))
-    # Older clients omit feedback entirely. Only a submitted, versioned choice
-    # may change installation consent; completing setup is not consent itself.
-    feedback = validate_choice(payload["feedback"]) if "feedback" in payload else None
+    # Only the new wizard submits an activity choice. Legacy census choices
+    # are ignored and never grant activity sharing.
+    usage = validate_choice(payload["usage"]) if "usage" in payload else None
     return {
-        "feedback": feedback,
+        "usage": usage,
         "location": location,
         "language": str(payload.get("language") or "").strip() or None,
+        "theme": str(payload.get("theme") or "").strip() or None,
         # Older clients omit the selection and keep coordinate-based detection.
         "timezone": (
             validate_timezone(payload["timezone"])
@@ -174,9 +174,6 @@ async def _refresh_setup_required_in_state() -> None:
 def _finalize_state_snapshot() -> Dict[str, Any]:
     snapshot = deepcopy(_setup_finalize_state)
     snapshot["sync_state"] = sync_state_manager.get_state()
-    # Setup can display deployment metadata without exposing feedback identity,
-    # credentials or hardware through the administrator-only feedback.get RPC.
-    snapshot["feedback_environment"] = reporting_environment()
     return snapshot
 
 
@@ -241,10 +238,11 @@ async def _run_finalize_job(
         _set_step("admin", CALL_STATUS_PENDING, "Creating admin user...")
         await _emit_setup_status(sio, sid)
         initial_preferences = {"timezone": payload["timezone"]}
-        # Older clients omit language, preserving any legacy bootstrap value.
-        # Explicit selections are stored in the account-creation transaction.
-        if payload.get("language"):
-            initial_preferences["language"] = payload["language"]
+        # Older clients omit these choices, preserving legacy bootstrap values.
+        # Save both explicit selections in the account-creation transaction.
+        for preference in ("language", "theme"):
+            if payload.get(preference):
+                initial_preferences[preference] = payload[preference]
         admin_reply = await authsvc.bootstrap_admin(
             username=payload["admin"]["username"],
             password=payload["admin"]["password"],
@@ -259,14 +257,14 @@ async def _run_finalize_job(
             raise RuntimeError(error_message)
         _set_step("admin", CALL_STATUS_SUCCESS, "Admin user created.")
 
-        if payload.get("feedback") is not None:
+        if payload.get("usage") is not None:
             try:
-                await feedback_service.configure(payload["feedback"])
+                await usage_service.configure(payload["usage"])
             except ValueError:
-                # Account creation has succeeded. Optional feedback storage must
+                # Account creation has succeeded. Optional activity storage must
                 # not strand a usable station in an unretryable setup failure.
-                _setup_finalize_state["feedback_error"] = (
-                    "Your feedback choice could not be saved. Review Settings > Feedback."
+                _setup_finalize_state["usage_error"] = (
+                    "Your activity choice could not be saved. Review Settings > Activity sharing."
                 )
 
         _setup_finalize_state["job_id"] = job_id

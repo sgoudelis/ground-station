@@ -59,7 +59,6 @@ from db.models import (
     ScheduledObservations,
     SDRs,
 )
-from feedback.service import feedback_service
 from handlers.entities.control import restore_full_backup_file
 from hardware.lifecycle import start_hardware
 from hardware.service import hardware
@@ -113,6 +112,7 @@ from tracker.instances import emit_tracker_instances, restore_tracker_instances_
 from tracker.messages import handle_command_updates, handle_tracker_messages
 from tracker.operations import OperationRegistry, operations
 from tracker.runner import get_tracker_supervisor
+from usage.service import usage_service
 
 # Increase payload limits to handle large waterfall PNG images and maintenance uploads.
 Payload.max_decode_packets = 50
@@ -348,10 +348,10 @@ async def lifespan(fastapiapp: FastAPI):
     except (OSError, ValueError, KeyError, TypeError):
         logger.error("Installation identity unavailable; remote features require storage repair")
 
-    # One consent-gated sender belongs to the backend lifecycle, independent of
-    # browser sessions. An opted-out installation makes no collector requests.
-    feedback_task = asyncio.create_task(feedback_service.run())
-    background_tasks.add(feedback_task)
+    # One optional activity sender runs independently of browser sessions.
+    # The removed hardware census is never started, including on upgrades.
+    usage_task = asyncio.create_task(usage_service.run())
+    background_tasks.add(usage_task)
 
     async def notify_external_events():
         await sio.emit("external-events-changed", {}, room=authsvc.AUTHENTICATED_SOCKET_ROOM)
@@ -369,9 +369,9 @@ async def lifespan(fastapiapp: FastAPI):
         yield
     finally:
         logger.info("FastAPI lifespan cleanup...")
-        feedback_task.cancel()
+        usage_task.cancel()
         events_task.cancel()
-        await asyncio.gather(feedback_task, events_task, return_exceptions=True)
+        await asyncio.gather(usage_task, events_task, return_exceptions=True)
         # Prevent new scheduled work while active observations transition to a
         # durable failed state and release their runtime resources.
         try:

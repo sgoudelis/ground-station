@@ -73,7 +73,7 @@ async def test_bootstrap_admin_uses_initial_timezone_preference(patch_auth_sessi
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("bootstrap_language", [None, "fr_FR"])
-async def test_bootstrap_admin_saves_initial_language_preference(
+async def test_bootstrap_admin_saves_initial_language_and_theme_preferences(
     patch_auth_session, bootstrap_language
 ):
     if bootstrap_language:
@@ -86,10 +86,15 @@ async def test_bootstrap_admin_saves_initial_language_preference(
                     user_id=None,
                 )
             )
+            session.add(
+                Preferences(
+                    name="theme", value="light", scope=PreferenceScope.BOOTSTRAP.value, user_id=None
+                )
+            )
             await session.commit()
 
     result = await auth.bootstrap_admin(
-        "admin", "password123", initial_preferences={"language": "el_GR"}
+        "admin", "password123", initial_preferences={"language": "el_GR", "theme": "night"}
     )
     assert result["success"] is True
 
@@ -98,6 +103,7 @@ async def test_bootstrap_admin_saves_initial_language_preference(
         reply = await preferencescrud.fetch_user_preferences(session, result["user"]["id"])
     assert reply["success"] is True
     assert next(item["value"] for item in reply["data"] if item["name"] == "language") == "el_GR"
+    assert next(item["value"] for item in reply["data"] if item["name"] == "theme") == "night"
 
 
 @pytest.mark.asyncio

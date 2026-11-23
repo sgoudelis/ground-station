@@ -51,14 +51,29 @@ async def _reset_setup_state():
 @pytest.mark.asyncio
 @pytest.mark.parametrize("legacy_discover_soapy", [False, True])
 @pytest.mark.parametrize("selected_timezone", [None, "Asia/Kathmandu"])
-@pytest.mark.parametrize("selected_language", [None, "el_GR", "zh_CN"])
+@pytest.mark.parametrize(
+    ("selected_language", "selected_theme"),
+    [(None, None), ("el_GR", "light"), ("zh_CN", "sonar"), ("el_GR", None), (None, "auto")],
+)
+@pytest.mark.parametrize("selected_usage", [None, True, False, "storage-failure"])
 async def test_setup_finalize_runs_backend_orchestration(
-    monkeypatch, selected_timezone, legacy_discover_soapy, selected_language
+    monkeypatch,
+    selected_timezone,
+    legacy_discover_soapy,
+    selected_language,
+    selected_theme,
+    selected_usage,
 ):
     sio = _Sio()
     logger = _Logger()
     setup_completed = False
     start_task = AsyncMock()
+    storage_failure = selected_usage == "storage-failure"
+    usage_enabled = True if storage_failure else selected_usage
+    configure_usage = AsyncMock(
+        side_effect=ValueError("Storage unavailable") if storage_failure else None
+    )
+    monkeypatch.setattr(setuphandler.usage_service, "configure", configure_usage)
 
     async def _is_setup_required(force_refresh=False):
         del force_refresh
@@ -84,7 +99,9 @@ async def test_setup_finalize_runs_backend_orchestration(
         assert initial_preferences == {
             "timezone": selected_timezone or "America/New_York",
             **({"language": selected_language} if selected_language else {}),
+            **({"theme": selected_theme} if selected_theme else {}),
         }
+        configure_usage.assert_not_awaited()
         setup_completed = True
         return {"success": True, "token": "token"}
 
@@ -97,8 +114,10 @@ async def test_setup_finalize_runs_backend_orchestration(
     finalize_reply = await setuphandler.setup_finalize(
         sio,
         {
+            **({"usage": {"enabled": usage_enabled}} if selected_usage is not None else {}),
             **({"timezone": selected_timezone} if selected_timezone else {}),
             **({"language": selected_language} if selected_language else {}),
+            **({"theme": selected_theme} if selected_theme else {}),
             # Older clients may still send the removed option; setup must ignore it.
             **({"discover_soapy": True} if legacy_discover_soapy else {}),
             "location": {
@@ -134,6 +153,11 @@ async def test_setup_finalize_runs_backend_orchestration(
     start_task.assert_not_awaited()
     assert status_reply["data"]["steps"]["orbital"]["status"] == "success"
     assert status_reply["data"]["steps"]["admin"]["status"] == "success"
+    if selected_usage is None:
+        configure_usage.assert_not_awaited()
+    else:
+        configure_usage.assert_awaited_once_with({"enabled": usage_enabled})
+    assert bool(status_reply["data"].get("usage_error")) == storage_failure
 
 
 @pytest.mark.asyncio

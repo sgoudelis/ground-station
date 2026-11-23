@@ -23,6 +23,8 @@ export default function FeedSettings({observationsEnabled, status, onChanged, op
         setPending(feed);
         setError(null);
         try {
+            // Enabling an external switch records the current terms directly;
+            // the service information remains available through its own link.
             const reply = await socket.timeout(15000).emitWithAck('api.call', {
                 cmd: 'calendar.external.update',
                 data: {feed_id: feed, enabled,
@@ -67,8 +69,8 @@ export default function FeedSettings({observationsEnabled, status, onChanged, op
                                 onChange={enabled => save('observations', enabled)} />
                         </Box>
                     </Box>
-                    {/* Keep consent inside this modal's React tree so it opens
-                        above settings and restores focus to the selected feed. */}
+                    {/* Keep service information inside this modal's React tree so it opens
+                        above settings and restores focus to its link. */}
                     <ExternalEvents status={status} isAdmin={isAdmin} pending={pending} error={error}
                         onSave={save} onClearError={() => setError(null)} />
                 </Stack>

@@ -48,7 +48,6 @@ import {AntTab, AntTabs} from "../common/common.jsx";
 import PageTabsLayout from '../common/page-tabs.jsx';
 import SDRsPage from "../hardware/sdr-table.jsx";
 import AppSettingsForm from "./app-settings-form.jsx";
-import FeedbackForm from "./feedback-form.jsx";
 import { SYSTEM_SETTINGS_PAGES } from '../../config/system-navigation.jsx';
 import {
     CelestialCatalogPage,
@@ -193,14 +192,6 @@ export function AdminSystemGeneralPage() {
     return (
         <AdminSystemPageLayout activeTab="general">
             <AppSettingsForm />
-        </AdminSystemPageLayout>
-    );
-}
-
-export function AdminSystemFeedbackPage() {
-    return (
-        <AdminSystemPageLayout activeTab="feedback">
-            <FeedbackForm />
         </AdminSystemPageLayout>
     );
 }

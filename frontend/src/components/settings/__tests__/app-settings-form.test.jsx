@@ -19,6 +19,14 @@ vi.mock('../../common/socket.jsx', () => ({
     useSocket: () => ({ socket: socketValue }),
 }));
 
+// Runtime-config tests isolate the independently persisted activity choice.
+vi.mock('../../../hooks/useUsageSettings.js', () => ({
+    useUsageSettings: () => ({
+        status: { enabled: false }, enabled: false, loading: false, error: '', dirty: false,
+        onChange: vi.fn(), reset: vi.fn(), reload: vi.fn(), save: vi.fn().mockResolvedValue(true),
+    }),
+}));
+
 vi.mock('../../../utils/toast-with-timestamp.jsx', () => ({
     toast: {
         success: (...args) => toastSuccessMock(...args),

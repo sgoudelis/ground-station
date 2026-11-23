@@ -18,7 +18,7 @@
  */
 
 import React, { useEffect } from 'react';
-import {Autocomplete,Box,ButtonGroup,Dialog,DialogActions,DialogContent,DialogTitle,Fab,InputAdornment,MenuItem,Skeleton,Stack,TextField,Typography,} from '@mui/material';
+import {Box,ButtonGroup,Dialog,DialogActions,DialogContent,DialogTitle,Fab,InputAdornment,MenuItem,Skeleton,Stack,TextField,Typography,} from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import Grid from '@mui/material/Grid';
 import ZoomInIcon from '@mui/icons-material/ZoomIn';
@@ -69,7 +69,8 @@ const MAPLIBRE_LOCATION_MAX_ZOOM = 10;
 const LOCATION_COVERAGE_RADIUS_METERS = 400000;
 const LOCATION_COVERAGE_STEPS = 96;
 const EARTH_RADIUS_METERS = 6371008.8;
-const TIMEZONE_OPTIONS = tz.names();
+const AUTOMATIC_TIMEZONE = 'auto';
+const TIMEZONE_OPTIONS = [AUTOMATIC_TIMEZONE, ...tz.names()];
 
 const createEmptyFeatureCollection = () => ({
     type: 'FeatureCollection',
@@ -209,6 +210,7 @@ const LocationPage = ({
     }, [hasLocation, location?.lat, location?.lon]);
     const {
         timezone: selectedTimezone,
+        automatic: timezoneAutomatic,
         detectedTimezone,
         loading: timezoneLoading,
         error: timezoneError,
@@ -722,42 +724,28 @@ const LocationPage = ({
                 </Grid>
                 {wizardMode && wizardRequireAdminSetup && (
                     <Grid size={{ xs: 12, sm: 6 }}>
-                        <Stack spacing={0.5}>
-                            <Autocomplete
-                                options={TIMEZONE_OPTIONS}
-                                value={selectedTimezone}
-                                onChange={(_event, value) => setTimezone(value)}
-                                loading={timezoneLoading}
-                                disabled={locationSaving}
-                                fullWidth
-                                // Match TextField: only the input has a background,
-                                // while the label and helper area use the section surface.
-                                sx={{ backgroundColor: 'transparent' }}
-                                renderInput={(params) => (
-                                    <TextField
-                                        {...params}
-                                        fullWidth
-                                        label={t('location.timezone')}
-                                        placeholder={t('location.timezone_automatic', { defaultValue: 'Automatic (from station location)' })}
-                                        error={timezoneError && !selectedTimezone}
-                                        helperText={timezoneError
-                                            ? t('location.timezone_detection_failed', { defaultValue: 'Could not detect timezone. Select one to continue.' })
-                                            : !hasLocation
-                                                ? t('location.timezone_pending_help', { defaultValue: 'Automatically selected after you choose the station location, or choose one now.' })
-                                                : t('location.timezone_setup_help', { defaultValue: 'Detected from station coordinates. You can choose a different timezone for your account.' })}
-                                    />
-                                )}
-                            />
-                            {detectedTimezone && selectedTimezone !== detectedTimezone && (
-                                <CapsButton
-                                    size="small"
-                                    sx={{ alignSelf: 'flex-start', ml: 0.75 }}
-                                    onClick={() => setTimezone(null)}
-                                >
-                                    {t('location.use_detected_timezone', { defaultValue: 'Use detected timezone' })}
-                                </CapsButton>
-                            )}
-                        </Stack>
+                        <TextField
+                            id="setup-timezone"
+                            select
+                            // Keep the mode in the dropdown and submit the resolved IANA zone.
+                            value={timezoneAutomatic ? AUTOMATIC_TIMEZONE : selectedTimezone}
+                            onChange={(event) => setTimezone(event.target.value === AUTOMATIC_TIMEZONE ? null : event.target.value)}
+                            disabled={locationSaving}
+                            fullWidth
+                            label={t('location.timezone')}
+                            error={timezoneError && !selectedTimezone}
+                            helperText={timezoneError && !selectedTimezone
+                                ? t('location.timezone_detection_failed', { defaultValue: 'Could not detect timezone. Select one to continue.' })
+                                : !hasLocation
+                                    ? t('location.timezone_pending_help', { defaultValue: 'Automatically selected after you choose the station location, or choose one now.' })
+                                    : t('location.timezone_setup_help', { defaultValue: 'Detected from station coordinates. You can choose a different timezone for your account.' })}
+                        >
+                            {TIMEZONE_OPTIONS.map((timezone) => (
+                                <MenuItem key={timezone} value={timezone}>
+                                    {timezone === AUTOMATIC_TIMEZONE ? t('location.timezone_automatic') : timezone}
+                                </MenuItem>
+                            ))}
+                        </TextField>
                     </Grid>
                 )}
             </Grid>

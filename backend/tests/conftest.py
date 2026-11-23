@@ -26,9 +26,9 @@ from db.models import Base
 
 
 @pytest.fixture(autouse=True)
-def feedback_test_environment(monkeypatch):
-    """Keep test census samples distinct from normal deployments."""
-    monkeypatch.setenv("GS_FEEDBACK_ENVIRONMENT", "test")
+def deployment_test_environment(monkeypatch):
+    """Keep event requests from tests distinct from normal deployments."""
+    monkeypatch.setenv("GS_ENVIRONMENT", "test")
 
 
 @pytest_asyncio.fixture

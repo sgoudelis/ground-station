@@ -2,14 +2,13 @@
 
 import json
 from concurrent.futures import ThreadPoolExecutor
-from uuid import uuid4
 
 import pytest
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from calendars.external import ExternalEventsService
-from feedback.service import FeedbackService
 from installationid import InstallationIdentity
+from usage.service import UsageService
 
 pytestmark = pytest.mark.unit
 
@@ -31,45 +30,22 @@ def test_corrupt_identity_is_preserved_for_repair(tmp_path):
     assert path.read_text() == '{"installation_id": "broken"}'
 
 
-async def test_census_and_events_share_identity_with_independent_optins(tmp_path, db_engine):
-    census = FeedbackService(tmp_path / "feedback/state.json")
+async def test_activity_and_events_share_identity_with_independent_choices(tmp_path, db_engine):
+    usage = UsageService(tmp_path / "usage/state.json")
     events = ExternalEventsService(tmp_path / "events/state.json", async_sessionmaker(db_engine))
-    assert not (await census.status())["enabled"]
-    assert not (await events.status())["enabled"]
+    assert not (await usage.status())["enabled"]
     await events.configure({"enabled": True, "terms_version": "events-1"})
-    assert not (await census.status())["enabled"]
-    await census.configure({"enabled": True, "consent_notice_version": "census-2"})
-    assert census.identity.credentials() == events.identity.credentials()
-    await census.configure({"enabled": False})
+    assert not (await usage.status())["enabled"]
+    await usage.configure({"enabled": True})
+    assert usage.identity.credentials() == events.identity.credentials()
+    await usage.configure({"enabled": False})
     assert (await events.status())["enabled"]
-    assert census.identity.path.exists()
+    assert usage.identity.path.exists()
 
 
-async def test_existing_census_consent_survives_without_identity_migration(tmp_path):
-    census = FeedbackService(tmp_path / "feedback/state.json")
-    await census.configure({"enabled": True, "consent_notice_version": "census-2"})
-    old = json.loads(census.path.read_text())
-    old.update(installation_id=str(uuid4()), credential="a" * 43, registered=True)
-    census.path.write_text(json.dumps(old))
-    census.identity.path.unlink()
-    before = census.path.read_bytes()
-    restarted = FeedbackService(census.path)
-    assert not census.identity.path.exists()
-    await restarted.status()
-    assert restarted.state["enabled"] and not restarted.state["registered"]
-    assert restarted.state["installation_id"] != old["installation_id"]
-    assert restarted.state["credential"] != old["credential"]
-    assert census.path.read_bytes() == before
-
-
-async def test_identity_metadata_cannot_override_feature_consent(tmp_path):
-    census = FeedbackService(tmp_path / "feedback/state.json")
-    await census.configure({"enabled": True, "consent_notice_version": "census-2"})
-    identity = json.loads(census.identity.path.read_text())
-    identity.update(enabled=False, deletion_pending=True, grant_pending=False)
-    census.identity.path.write_text(json.dumps(identity))
-
-    status = await census.status()
-    assert status["enabled"]
-    assert not status["deletion_pending"]
-    assert census.state["grant_pending"]
+def test_identity_metadata_cannot_override_activity_choice(tmp_path):
+    usage = UsageService(tmp_path / "usage/state.json")
+    identity = usage.identity.credentials()
+    usage.identity.path.write_text(json.dumps({**identity, "enabled": True}))
+    assert usage.identity.credentials() == identity
+    assert not usage.state["enabled"]

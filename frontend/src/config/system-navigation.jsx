@@ -4,7 +4,6 @@ import SettingsApplicationsIcon from '@mui/icons-material/SettingsApplications';
 import MemoryIcon from '@mui/icons-material/Memory';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import GroupIcon from '@mui/icons-material/Group';
-import FeedbackIcon from '@mui/icons-material/Feedback';
 import SystemUpdateAltIcon from '@mui/icons-material/SystemUpdateAlt';
 import DashboardCustomizeIcon from '@mui/icons-material/DashboardCustomize';
 import HistoryIcon from '@mui/icons-material/History';
@@ -21,7 +20,6 @@ export const SYSTEM_SETTINGS_PAGES = [
     { key: 'hardware', labelKey: 'tabs.hardware', defaultLabel: 'Hardware', icon: <MemoryIcon />, path: '/admin/system/hardware/sdrs' },
     { key: 'location', labelKey: 'tabs.location', defaultLabel: 'Location', icon: <LocationOnIcon />, path: '/admin/system/location' },
     { key: 'users', labelKey: 'tabs.users', defaultLabel: 'Users', icon: <GroupIcon />, path: '/admin/system/users' },
-    { key: 'feedback', labelKey: 'tabs.feedback', defaultLabel: 'Feedback', icon: <FeedbackIcon />, path: '/admin/system/feedback' },
 ];
 
 export const MAINTENANCE_PATH = '/admin/system/maintenance';

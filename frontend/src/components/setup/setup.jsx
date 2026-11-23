@@ -39,8 +39,7 @@ import { loginUser } from '../auth/auth-slice.jsx';
 import { useSocket } from '../common/socket.jsx';
 import { SettingsActionFooter } from '../settings/shared/index.js';
 import { setPreference } from '../settings/preferences-slice.jsx';
-import { CENSUS_NOTICE_VERSION } from '../settings/feedback-disclosure.jsx';
-import FeedbackStep from './feedback-step.jsx';
+import UsageChoice from '../settings/usage-choice.jsx';
 import LanguageStep from './language-step.jsx';
 import WizardSection from './section.jsx';
 
@@ -49,7 +48,6 @@ const WIZARD_STEP_COORDINATES = 1;
 const WIZARD_STEP_REVIEW = 2;
 const WIZARD_STEP_ADMIN = 3;
 const WIZARD_STEP_FINALIZE = 4;
-const WIZARD_STEP_FEEDBACK = 5;
 const WIZARD_STEP_LANGUAGE = 6;
 
 const CALL_STATUS_IDLE = 'idle';
@@ -99,6 +97,9 @@ const SetupWizard = ({
     const languagePreference = useSelector((state) =>
         state.preferences.preferences.find((preference) => preference.name === 'language')?.value || 'en_US'
     );
+    const themePreference = useSelector((state) =>
+        state.preferences.preferences.find((preference) => preference.name === 'theme')?.value || 'dark'
+    );
     const { syncState, synchronizing, error: syncError } = useSelector(
         (state) => state.syncSatellite
     );
@@ -116,9 +117,8 @@ const SetupWizard = ({
     const [wizardFinalizing, setWizardFinalizing] = React.useState(false);
     const [wizardFinalizationCompleted, setWizardFinalizationCompleted] = React.useState(false);
     const [callChecklist, setCallChecklist] = React.useState(createInitialCallChecklist);
-    const [censusEnabled, setCensusEnabled] = React.useState(false);
-    const [feedbackEnvironment, setFeedbackEnvironment] = React.useState('unknown');
-    const [feedbackError, setFeedbackError] = React.useState('');
+    const [usageEnabled, setUsageEnabled] = React.useState(true);
+    const [usageError, setUsageError] = React.useState(false);
 
     React.useEffect(() => {
         // Long pages share one scroll container; each new step starts at its heading.
@@ -135,7 +135,7 @@ const SetupWizard = ({
 
     const wizardStepLabels = React.useMemo(
         () => ({
-            [WIZARD_STEP_LANGUAGE]: t('preferences.language'),
+            [WIZARD_STEP_LANGUAGE]: `${t('preferences.language')} / ${t('preferences.theme')}`,
             [WIZARD_STEP_ADMIN]: t('location.wizard_step_admin', { defaultValue: 'Create Admin User' }),
             [WIZARD_STEP_IDENTITY]: t('location.wizard_step_identity', {
                 defaultValue: 'Station Identity',
@@ -144,7 +144,6 @@ const SetupWizard = ({
                 defaultValue: 'Location',
             }),
             [WIZARD_STEP_REVIEW]: t('location.wizard_step_review', { defaultValue: 'Review' }),
-            [WIZARD_STEP_FEEDBACK]: t('feedback.wizard_step'),
             [WIZARD_STEP_FINALIZE]: t('location.wizard_step_finalize', {
                 defaultValue: 'Finalize Setup',
             }),
@@ -159,7 +158,6 @@ const SetupWizard = ({
                       WIZARD_STEP_ADMIN,
                       WIZARD_STEP_IDENTITY,
                       WIZARD_STEP_COORDINATES,
-                      WIZARD_STEP_FEEDBACK,
                       WIZARD_STEP_REVIEW,
                       WIZARD_STEP_FINALIZE,
                   ]
@@ -210,8 +208,7 @@ const SetupWizard = ({
 
     const applySetupStatus = React.useCallback((statusPayload) => {
         if (!statusPayload || typeof statusPayload !== 'object') return;
-        setFeedbackError(String(statusPayload.feedback_error || ''));
-        setFeedbackEnvironment(statusPayload.feedback_environment || 'unknown');
+        setUsageError(Boolean(statusPayload.usage_error));
 
         const steps = statusPayload?.steps && typeof statusPayload.steps === 'object'
             ? statusPayload.steps
@@ -264,21 +261,7 @@ const SetupWizard = ({
         return null;
     }, [applySetupStatus, callApi]);
 
-    React.useEffect(() => {
-        if (!showWizardAdminStep || !socket) return;
-        let cancelled = false;
-        // Setup status exposes the backend's environment before authentication,
-        // without granting access to administrator-only feedback settings.
-        const loadEnvironment = async () => {
-            const reply = await callApi('setup.status');
-            if (!cancelled && reply?.success) {
-                setFeedbackEnvironment(reply.data?.feedback_environment || 'unknown');
-            }
-        };
-        void loadEnvironment();
-        socket.on('connect', loadEnvironment);
-        return () => { cancelled = true; socket.off('connect', loadEnvironment); };
-    }, [callApi, showWizardAdminStep, socket]);
+
 
     const effectiveSyncState = wizardSyncState || syncState;
     const syncLastUpdateText = React.useMemo(() => {
@@ -444,6 +427,12 @@ const SetupWizard = ({
         void i18n.changeLanguage(language.split('_')[0]);
     };
 
+    const handleThemeChange = (theme) => {
+        // The app previews Redux preferences immediately. Persist the theme
+        // alongside language only when setup creates the administrator account.
+        dispatch(setPreference({ name: 'theme', value: theme }));
+    };
+
     const handleWizardNext = () => {
         if (isWizardLastStep || isWizardSaveStep || !canAdvanceWizard) return;
 
@@ -503,10 +492,8 @@ const SetupWizard = ({
             location: setupLocationPayload,
             timezone: setupTimezone,
             language: languagePreference,
-            feedback: {
-                enabled: censusEnabled,
-                consent_notice_version: CENSUS_NOTICE_VERSION,
-            },
+            theme: themePreference,
+            usage: { enabled: usageEnabled },
             admin: {
                 username: normalizedUsername,
                 password: adminPassword,
@@ -655,9 +642,7 @@ const SetupWizard = ({
         <Stack spacing={2} sx={{ flex: 1 }}>
             {showWizardAdminStep && (
                 <Alert severity="info">
-                    {censusEnabled
-                        ? t('feedback.review_enabled', { environment: t(`feedback.environments.${feedbackEnvironment}`) })
-                        : t('feedback.review_disabled')}
+                    {usageEnabled ? t('usage.review_enabled') : t('usage.review_disabled')}
                 </Alert>
             )}
             <Box
@@ -974,11 +959,19 @@ const SetupWizard = ({
                     {/* Fill short steps and let longer forms grow into the body's scroll area. */}
                     <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%', flex: '1 0 auto' }}>
                         {wizardStep === WIZARD_STEP_LANGUAGE && (
-                            <LanguageStep value={languagePreference} onChange={handleLanguageChange} />
+                            <LanguageStep
+                                value={languagePreference}
+                                onChange={handleLanguageChange}
+                                themeValue={themePreference}
+                                onThemeChange={handleThemeChange}
+                            />
                         )}
 
                         {wizardStep === WIZARD_STEP_IDENTITY && (
-                            <Stack spacing={2} sx={{ flex: 1 }}>{stationIdentitySection}</Stack>
+                            <Stack spacing={2} sx={{ flex: 1 }}>
+                                {stationIdentitySection}
+                                {showWizardAdminStep && <UsageChoice enabled={usageEnabled} onChange={setUsageEnabled} showDetails={false} showInfo />}
+                            </Stack>
                         )}
 
                         {wizardStep === WIZARD_STEP_COORDINATES && (
@@ -987,18 +980,11 @@ const SetupWizard = ({
 
                         {wizardStep === WIZARD_STEP_REVIEW && wizardReviewContent}
 
-                        {wizardStep === WIZARD_STEP_FEEDBACK && (
-                            <FeedbackStep
-                                enabled={censusEnabled}
-                                onChange={setCensusEnabled}
-                            />
-                        )}
-
                         {wizardStep === WIZARD_STEP_ADMIN && <Stack spacing={2} sx={{ flex: 1 }}>{wizardAdminSection}</Stack>}
 
                         {wizardStep === WIZARD_STEP_FINALIZE && (
                             <Stack spacing={2} sx={{ flex: 1 }}>
-                                {feedbackError && <Alert severity="warning">{feedbackError}</Alert>}
+                                {usageError && <Alert severity="warning">{t('usage.setup_warning')}</Alert>}
                                 {wizardFinalizeContent}
                             </Stack>
                         )}

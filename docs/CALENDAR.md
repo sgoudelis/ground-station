@@ -72,7 +72,7 @@ when they concern the same satellite and time window.
 The calendar's gear dialog contains station-wide switches for observations,
 satellite announcements, space weather and launches. Only administrators can
 change them through `calendar.external.update`. Observations need no consent.
-All three external feeds share one acceptance of the in-app `events-1` disclosure:
+All three external feeds share one versioned `events-1` acceptance receipt:
 
 ```json
 {"feed_id": "announcements", "enabled": true, "terms_version": "events-1"}
@@ -83,9 +83,12 @@ icons and colors with descriptions and right-aligned switches. Changes save
 immediately, with progress and errors beside the affected feed; switches share one
 pending update to avoid overwriting station selections. The external group has
 a service-information link without consent status badges or a withdrawal control.
-The consent dialog retains the full disclosure under section headings and opens
-above settings. Sync status
-and coverage warnings remain in the calendar footer.
+Enabling an external switch immediately saves that selection and records the
+current terms version through the existing API; it opens no extra confirmation.
+The optional **About this service** dialog briefly explains that GS Control is
+contacted to fetch external feeds and lists their publisher credits and links.
+Opening it never changes feeds or grants acceptance.
+Sync status and coverage warnings remain in the calendar footer.
 
 The backend records feed selections in `calendar_feeds` and the shared receipt,
 installation binding and polling metadata in `calendar_services`. It imports
@@ -103,7 +106,7 @@ with a fixed rolling date range, shared installation ID and credential, deployme
 environment and ordinary HTTP connection metadata including the public IP.
 Registration at `reports.gscontrol.net` and a separate `events` consent grant
 precede the first pull. The identity comes from `backend/data/installationid.json`,
-also used by the independently optional hardware census. No station coordinates,
+also used by independently optional activity sharing. No station coordinates,
 usernames or observation jobs are sent. The shared ID permits the provider to
 recognise overlap between the separately enabled features.
 
@@ -139,13 +142,14 @@ sync. Local observations remain available when the external service/cache fails.
 
 Turning off the last enabled external feed withdraws the shared consent, regardless
 of the local-observations switch. Enabling any external feed afterward requires
-fresh acceptance. The backend decides against the latest station settings, so a
-stale browser cannot determine whether other external feeds are still selected.
+fresh acceptance, recorded directly by the administrator's enable action. The
+backend decides against the latest station settings, so a stale browser cannot
+determine whether other external feeds are still selected.
 Withdrawal (also supported explicitly with `{"revoke": true}`) persists the global
 choice before
 deleting the external cache, cancels an active download and rejects late results.
 A durable pending withdrawal removes only event consent and event details at the
-registry, retrying after outages. Census consent and the shared identity remain.
+registry, retrying after outages. Activity sharing and the shared identity remain unchanged.
 This withdrawal request is the only permitted traffic after withdrawing consent.
 All browsers refresh on `external-events-changed`. No local observation is
 created, modified or deleted by this integration.
@@ -187,7 +191,7 @@ snapshot for exactly the requested interval:
 The service must select **approved, current, canonical** events, omit superseded
 and duplicate records, and expand recurrence into stable occurrence IDs. Requests
 use the shared installation credential and event consent; a console cookie or
-census opt-in is not required. Responses are
+activity sharing is not required. Responses are
 limited to 10,000 unique event IDs and must not silently truncate or paginate.
 The publication contract is independent of the private console's internal schema.
 

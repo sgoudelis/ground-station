@@ -26,7 +26,6 @@ from handlers.entities import (
     continuous,
     control,
     decoderconfig,
-    feedback,
     filebrowser,
     groups,
     hardware,
@@ -43,6 +42,7 @@ from handlers.entities import (
     telemetry,
     tracking,
     transmitters,
+    usage,
     users,
     vfo,
 )
@@ -58,7 +58,7 @@ def _register_all_handlers():
     apitokens.register_handlers(handler_registry)
     appsettings.register_handlers(handler_registry)
     calendar.register_handlers(handler_registry)
-    feedback.register_handlers(handler_registry)
+    usage.register_handlers(handler_registry)
     satellites.register_handlers(handler_registry)
     orbitalsources.register_handlers(handler_registry)
     groups.register_handlers(handler_registry)

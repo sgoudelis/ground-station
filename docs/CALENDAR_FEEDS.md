@@ -4,8 +4,12 @@ Calendar settings are station-wide and managed by administrators through the
 gear dialog. Local observations require no consent. Satellite announcements,
 space weather and launches share one external-service consent and one bundled
 `GET https://events.gscontrol.net/v1/events` request. Enabling one feed does not
-enable the others. The disclosure explains that every download contains all three
-external feeds; switches control which categories appear in the calendar.
+enable the others. Every download contains all three external feeds; switches
+control which categories appear in the calendar.
+An administrator's switch change applies immediately. Enabling a feed records the
+current shared terms through the existing API, without a confirmation dialog.
+**About this service** briefly explains the external service connection and lists
+publisher credits and links; opening it never enables a feed.
 
 ## Persistence and migration
 
@@ -29,9 +33,9 @@ external switches reuse that acceptance while any external feed remains enabled.
 Turning off the last external feed withdraws the shared consent, stops polling,
 clears the external cache and schedules the existing remote withdrawal. Local
 observations have no effect on that decision. Enabling an external feed afterward
-requires fresh acceptance. There is no separate withdrawal control or consent
-status badge in the dialog; only withdrawal retries can contact the service after
-consent is revoked.
+records fresh acceptance directly from the enable action. There is no separate
+withdrawal control or consent status badge in the dialog; only withdrawal retries
+can contact the service after consent is revoked.
 
 Full database restores and calendar-settings table imports invalidate external
 consent and selections. They retain receipt details for inspection, require fresh

@@ -622,7 +622,6 @@ function SetupWizardScreen() {
                     px: { xs: 1.5, sm: 3 },
                     pt: '0 !important',
                     pb: { xs: 1.5, sm: 2.5 },
-                    bgcolor: 'background.default',
                     display: 'flex',
                     flexDirection: 'column',
                     flex: 1,

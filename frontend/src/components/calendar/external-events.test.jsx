@@ -87,68 +87,70 @@ it('saves the local feed station-wide without opening consent', async () => {
     expect(server.consented).toBe(false);
 });
 
-it('accepts once for all external feeds while preserving independent selections', async () => {
+it.each([
+    ['Satellite announcements', 'announcements'], ['Space weather', 'space_weather'], ['Launches', 'launches'],
+])('enables %s immediately and shares acceptance across external feeds', async (label, id) => {
     const user = userEvent.setup();
     show();
     await user.click(screen.getByRole('button', {name: 'Calendar feeds'}));
-    const settings = screen.getByRole('dialog', {name: 'Calendar feeds'});
-    await user.click(screen.getByRole('switch', {name: 'Space weather'}));
-    const dialog = screen.getByRole('dialog', {name: 'External calendar feeds'});
-    expect(screen.getAllByRole('dialog', {hidden: true})).toHaveLength(2);
-    expect(settings.closest('[aria-hidden="true"]')).not.toBeNull();
-    expect(within(dialog).getByText(/NOAA SWPC/)).toHaveTextContent('Each download contains all three feeds');
-    expect(within(dialog).getByText(/public IP address/)).toBeVisible();
-    for (const name of ['Service', 'Data shared and retention', 'Storage and your controls', 'Using this information']) {
-        expect(within(dialog).getByRole('heading', {name})).toBeVisible();
-    }
-    const enable = within(dialog).getByRole('button', {name: 'Agree and enable'});
-    expect(enable).toBeDisabled();
     expect(socket.emitWithAck).not.toHaveBeenCalled();
-    await user.click(within(dialog).getByRole('checkbox'));
-    await user.click(enable);
-    await waitFor(() => expect(screen.queryByRole('dialog', {name: 'External calendar feeds'})).not.toBeInTheDocument());
-    expect(screen.getByRole('switch', {name: 'Space weather'})).toBeChecked();
-    expect(screen.getByRole('switch', {name: 'Satellite announcements'})).not.toBeChecked();
+    await user.click(screen.getByRole('switch', {name: label}));
+    expect(screen.getByRole('switch', {name: label})).toBeChecked();
+    expect(screen.getAllByRole('dialog')).toHaveLength(1);
+    expect(screen.queryByRole('dialog', {name: 'External calendar feeds'})).not.toBeInTheDocument();
     expect(socket.emitWithAck).toHaveBeenLastCalledWith('api.call', {
-        cmd: 'calendar.external.update', data: {feed_id: 'space_weather', enabled: true, terms_version: 'events-1'},
+        cmd: 'calendar.external.update', data: {feed_id: id, enabled: true, terms_version: 'events-1'},
     });
-    await user.click(screen.getByRole('switch', {name: 'Launches'}));
-    await user.click(screen.getByRole('switch', {name: 'Satellite announcements'}));
+    for (const name of ['Satellite announcements', 'Space weather', 'Launches'].filter(name => name !== label)) {
+        expect(screen.getByRole('switch', {name})).not.toBeChecked();
+        await user.click(screen.getByRole('switch', {name}));
+    }
     expect(screen.queryByRole('dialog', {name: 'External calendar feeds'})).not.toBeInTheDocument();
     expect(socket.emitWithAck.mock.calls.filter(([, request]) => request.data.terms_version)).toHaveLength(1);
     expect(screen.getByRole('switch', {name: 'Launches'})).toBeChecked();
 });
 
-it('canceling consent keeps all external feeds off and resets acceptance', async () => {
+it('opens service information only on request without changing any feed', async () => {
     const user = userEvent.setup();
     show();
     await user.click(screen.getByRole('button', {name: 'Calendar feeds'}));
-    await user.click(screen.getByRole('switch', {name: 'Satellite announcements'}));
-    await user.click(screen.getByRole('checkbox'));
-    await user.click(screen.getAllByRole('button', {name: 'Close'}).at(-1));
-    await waitFor(() => expect(screen.getByRole('dialog', {name: 'Calendar feeds'})).toBeVisible());
+    const settings = screen.getByRole('dialog', {name: 'Calendar feeds'});
+    await user.click(screen.getByRole('button', {name: 'About this service'}));
+    const dialog = screen.getByRole('dialog', {name: 'External calendar feeds'});
+    expect(screen.getAllByRole('dialog', {hidden: true})).toHaveLength(2);
+    expect(settings.closest('[aria-hidden="true"]')).not.toBeNull();
+    expect(within(dialog).getByText('When external feeds are enabled, Ground Station contacts the external GS Control service to fetch them. The information comes from the publishers and data providers listed below.')).toBeVisible();
+    expect(within(dialog).getByRole('heading', {name: 'Calendar feed sources'})).toBeVisible();
+    expect(within(dialog).getByRole('link', {name: 'ARISS', exact: true})).toHaveAttribute('href', 'https://www.ariss.org/');
+    expect(within(dialog).getByRole('link', {name: 'NOAA Space Weather Prediction Center (SWPC)'})).toBeVisible();
+    expect(within(dialog).getByRole('link', {name: 'Launch Library 2 · The Space Devs'})).toBeVisible();
+    expect(within(dialog).queryByRole('heading', {name: 'Data shared and retention'})).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole('checkbox')).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole('button', {name: 'Agree and enable'})).not.toBeInTheDocument();
     expect(socket.emitWithAck).not.toHaveBeenCalled();
-    await user.click(screen.getByRole('switch', {name: 'Launches'}));
-    expect(screen.getByRole('checkbox')).not.toBeChecked();
     await user.keyboard('{Escape}');
     await waitFor(() => expect(screen.getByRole('dialog', {name: 'Calendar feeds'})).toBeVisible());
+    expect(screen.getByRole('button', {name: 'About this service'})).toHaveFocus();
+    expect(socket.emitWithAck).not.toHaveBeenCalled();
 });
 
-it('keeps acceptance open when persistence fails', async () => {
+it('keeps a failed first enable off, shows an inline error, and allows retry', async () => {
     socket.emitWithAck.mockResolvedValueOnce({success: false});
     const user = userEvent.setup();
     const changed = show();
     await user.click(screen.getByRole('button', {name: 'Calendar feeds'}));
     const announcements = screen.getByRole('switch', {name: 'Satellite announcements'});
     await user.click(announcements);
-    await user.click(screen.getByRole('checkbox'));
-    await user.click(screen.getByRole('button', {name: 'Agree and enable'}));
     expect(await screen.findByRole('alert')).toHaveTextContent('Could not save');
     expect(changed).not.toHaveBeenCalled();
     expect(announcements).not.toBeChecked();
+    expect(screen.queryByRole('dialog', {name: 'External calendar feeds'})).not.toBeInTheDocument();
+    await user.click(announcements);
+    await waitFor(() => expect(announcements).toBeChecked());
+    expect(changed).toHaveBeenCalledTimes(1);
 });
 
-it('withdraws consent when the last external feed is switched off and requires consent again', async () => {
+it('withdraws consent when the last external feed is switched off and re-enables directly', async () => {
     const user = userEvent.setup();
     show('admin', {consented: true, enabled: true, feeds: initial().feeds.map(feed => ({...feed, enabled: true}))});
     await user.click(screen.getByRole('button', {name: 'Calendar feeds'}));
@@ -166,9 +168,12 @@ it('withdraws consent when the last external feed is switched off and requires c
         cmd: 'calendar.external.update', data: {feed_id: 'launches', enabled: false},
     });
     await user.click(screen.getByRole('switch', {name: 'Space weather'}));
-    expect(screen.getByRole('dialog', {name: 'External calendar feeds'})).toBeVisible();
-    expect(screen.getByRole('button', {name: 'Agree and enable'})).toBeDisabled();
-    expect(socket.emitWithAck).toHaveBeenCalledTimes(3);
+    expect(screen.queryByRole('dialog', {name: 'External calendar feeds'})).not.toBeInTheDocument();
+    expect(screen.getByRole('switch', {name: 'Space weather'})).toBeChecked();
+    expect(socket.emitWithAck).toHaveBeenCalledTimes(4);
+    expect(socket.emitWithAck).toHaveBeenLastCalledWith('api.call', {
+        cmd: 'calendar.external.update', data: {feed_id: 'space_weather', enabled: true, terms_version: 'events-1'},
+    });
 });
 
 it('does not withdraw external consent when local observations are switched off', async () => {

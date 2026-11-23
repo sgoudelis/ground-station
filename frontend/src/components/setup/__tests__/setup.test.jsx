@@ -6,6 +6,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import i18n from '../../../i18n/config.js';
 import { languageOptions } from '../../../i18n/languages.js';
+import { getAvailableThemesWithMetadata } from '../../../themes/theme-configs.js';
 import { capsLabel } from '../../../utils/greekcaps.js';
 import { setupTheme } from '../../../theme.js';
 import preferencesReducer from '../../settings/preferences-slice.jsx';
@@ -63,21 +64,33 @@ const chooseLanguage = async (name) => {
     ));
 };
 
-describe('Setup wizard language selection', () => {
+const chooseTheme = (name) => {
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: tr('preferences.theme') }));
+    expect(screen.getAllByRole('option').map((option) => option.textContent))
+        .toEqual(getAvailableThemesWithMetadata().map((option) => option.name));
+    fireEvent.click(screen.getByRole('option', { name, exact: true }));
+};
+
+describe('Setup wizard language and theme selection', () => {
     beforeEach(async () => {
         vi.clearAllMocks();
         socket.emitWithAck.mockResolvedValue({ success: true, data: { state: 'idle' } });
         await i18n.changeLanguage('en');
     });
 
-    it('starts with language selection and applies the choice without losing wizard drafts', async () => {
+    it('previews language and theme preferences without losing wizard drafts', async () => {
         const store = renderWizard();
-        expect(screen.getByRole('heading', { name: 'Choose your language' })).toBeVisible();
+        expect(screen.getByRole('heading', { name: 'Choose your language and theme' })).toBeVisible();
         expect(screen.getByRole('button', { name: 'Back' })).toBeDisabled();
         expect(screen.queryByLabelText(/^Username/)).not.toBeInTheDocument();
+        expect(screen.getByRole('combobox', { name: tr('preferences.theme') })).toHaveTextContent('Dark');
+        chooseTheme('Night (OLED)');
+        expect(store.getState().preferences.userPreferences).toContainEqual(
+            expect.objectContaining({ name: 'theme', value: 'night' })
+        );
 
         await chooseLanguage('Ελληνικά');
-        expect(await screen.findByRole('heading', { name: 'Επιλέξτε τη γλώσσα σας' })).toBeVisible();
+        expect(await screen.findByRole('heading', { name: 'Επιλέξτε γλώσσα και θέμα' })).toBeVisible();
         expect(document.documentElement).toHaveAttribute('lang', 'el');
         expect(store.getState().preferences.userPreferences).toContainEqual(
             expect.objectContaining({ name: 'language', value: 'el_GR' })
@@ -87,16 +100,25 @@ describe('Setup wizard language selection', () => {
         next();
         fireEvent.change(field('setup.username'), { target: { value: 'wizard-admin' } });
         back();
-        expect(screen.getByRole('combobox')).toHaveTextContent('Ελληνικά');
+        expect(screen.getByRole('combobox', { name: tr('preferences.language') })).toHaveTextContent('Ελληνικά');
+        expect(screen.getByRole('combobox', { name: tr('preferences.theme') })).toHaveTextContent('Night (OLED)');
         await chooseLanguage('English');
-        expect(await screen.findByRole('heading', { name: 'Choose your language' })).toBeVisible();
+        expect(await screen.findByRole('heading', { name: 'Choose your language and theme' })).toBeVisible();
+        chooseTheme('Light');
+        expect(store.getState().preferences.userPreferences).toContainEqual(
+            expect.objectContaining({ name: 'theme', value: 'light' })
+        );
+        expect(socket.emitWithAck.mock.calls.some(([, request]) =>
+            ['setup.finalize', 'update-preferences'].includes(request.cmd)
+        )).toBe(false);
         next();
         expect(field('setup.username')).toHaveValue('wizard-admin');
     });
 
-    it('includes the selected language when finalizing the administrator account', async () => {
+    it('submits the chosen language and actual theme value together when finalizing', async () => {
         renderWizard();
         await chooseLanguage('Ελληνικά');
+        chooseTheme('Auto (System)');
         next();
         fireEvent.change(field('setup.username'), { target: { value: 'wizard-admin' } });
         fireEvent.change(field('setup.password'), { target: { value: 'Password123!' } });
@@ -106,15 +128,13 @@ describe('Setup wizard language selection', () => {
         next();
         expect(screen.getByText('Station map')).toBeVisible();
         next();
-        expect(screen.getByRole('heading', { name: tr('feedback.title') })).toBeVisible();
-        next();
         // This one is an IconButton labelled by aria-label, not by capped child text, so it keeps
         // the authored mixed case.
         fireEvent.click(screen.getByRole('button', { name: tr('location.save_location') }));
 
         await waitFor(() => expect(socket.emitWithAck).toHaveBeenCalledWith('api.call', {
             cmd: 'setup.finalize',
-            data: expect.objectContaining({ language: 'el_GR', timezone: 'Europe/Athens' }),
+            data: expect.objectContaining({ language: 'el_GR', theme: 'auto', timezone: 'Europe/Athens', usage: { enabled: true } }),
         }));
     });
 
