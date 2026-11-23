@@ -11,11 +11,26 @@
     height: 100%;
 }
 
+.packet-aircraft-content::before {
+    /* Join both centers using the same lift; zero lift leaves no visible line. */
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: 50%;
+    height: var(--aircraft-lift);
+    border-left: 1px dotted rgb(160 170 180 / 55%);
+    transform: translateX(-50%);
+    /* The marker sits above the separate shadow layer; keep its line below the plane. */
+    z-index: 0;
+    pointer-events: none;
+}
+
 .packet-aircraft-symbol,
 .packet-aircraft-crosshair {
     position: absolute;
     inset: 0;
     transform: translateY(calc(-1 * var(--aircraft-lift)));
+    z-index: 1;
 }
 
 .packet-aircraft-symbol > svg {
