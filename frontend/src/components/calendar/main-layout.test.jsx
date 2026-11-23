@@ -228,7 +228,10 @@ it('shares the local feed selection across users and keeps refresh available', a
     await user.click(screen.getByRole('button', {name: 'Calendar feeds'}));
     await user.click(screen.getByRole('switch', {name: 'Local observations'}));
     await waitFor(() => expect(screen.getByRole('switch', {name: 'Local observations'})).not.toBeChecked());
-    await user.click(within(screen.getByRole('dialog', {name: 'Calendar feeds'})).getAllByRole('button', {name: 'Close'}).at(-1));
+    let close = within(screen.getByRole('dialog', {name: 'Calendar feeds'})).getAllByRole('button', {name: 'Close'}).at(-1);
+    // Saving disables Close; clicking it early is ignored and leaves the calendar hidden.
+    await waitFor(() => expect(close).toBeEnabled());
+    await user.click(close);
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(screen.queryByRole('button', {name: /ISS pass earlier/})).not.toBeInTheDocument();
     expect(localStorage.getItem('calendar.observations.admin-1')).toBeNull();
@@ -240,7 +243,11 @@ it('shares the local feed selection across users and keeps refresh available', a
     await user.click(screen.getByRole('button', {name: 'Calendar feeds'}));
     expect(screen.getByRole('switch', {name: 'Local observations'})).not.toBeChecked();
     await user.click(screen.getByRole('switch', {name: 'Local observations'}));
-    await user.click(within(screen.getByRole('dialog', {name: 'Calendar feeds'})).getAllByRole('button', {name: 'Close'}).at(-1));
+    await waitFor(() => expect(screen.getByRole('switch', {name: 'Local observations'})).toBeChecked());
+    close = within(screen.getByRole('dialog', {name: 'Calendar feeds'})).getAllByRole('button', {name: 'Close'}).at(-1);
+    await waitFor(() => expect(close).toBeEnabled());
+    await user.click(close);
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     await waitFor(() => expect(screen.getByRole('button', {name: /ISS pass earlier/})).toBeVisible());
 });
 
