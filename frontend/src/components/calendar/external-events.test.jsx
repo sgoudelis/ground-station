@@ -119,7 +119,7 @@ it('opens service information only on request without changing any feed', async 
     const dialog = screen.getByRole('dialog', {name: 'External calendar feeds'});
     expect(screen.getAllByRole('dialog', {hidden: true})).toHaveLength(2);
     expect(settings.closest('[aria-hidden="true"]')).not.toBeNull();
-    expect(within(dialog).getByText('When external feeds are enabled, Ground Station contacts the external service to fetch them. The information comes from the publishers and data providers listed below.')).toBeVisible();
+    expect(within(dialog).getByText('When external feeds are enabled, Ground Station contacts an external service to fetch them. The information comes from the publishers and data providers listed below.')).toBeVisible();
     expect(within(dialog).getByRole('heading', {name: 'Calendar feed sources'})).toBeVisible();
     expect(within(dialog).getByRole('link', {name: 'ARISS', exact: true})).toHaveAttribute('href', 'https://www.ariss.org/');
     expect(within(dialog).getByRole('link', {name: 'NOAA Space Weather Prediction Center (SWPC)'})).toBeVisible();
