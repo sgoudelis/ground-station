@@ -36,12 +36,15 @@ export default function EventCard({event, day, timezone, locale, now, onOpen, co
                 const backgroundOpacity = inactive ? 0.045 : theme.palette.mode === 'dark' ? 0.12 : 0.07;
                 return {
                     display: 'block', width: '100%', minWidth: 0, textAlign: 'start',
-                    // Mute the surface and accent only, preserving text contrast and status colors.
+                    // Keep the activity color recognizable on past events.
                     borderLeft: `3px solid ${past ? alpha(color, 0.45) : color}`, borderRadius: '4px', px: 1, py: compact ? 0.6 : 1.25,
                     bgcolor: alpha(color, past ? backgroundOpacity * 0.4 : backgroundOpacity),
                     transition: 'background-color 120ms, border-left-color 120ms',
+                    // Dim ordinary text independently so status badges retain their emphasis.
+                    '& .MuiTypography-root': {opacity: past ? 0.8 : 1, transition: 'opacity 120ms'},
                     '&:hover, &.Mui-focusVisible': {
                         bgcolor: alpha(color, theme.palette.mode === 'dark' ? 0.2 : 0.13), borderLeftColor: color,
+                        '& .MuiTypography-root': {opacity: 1},
                     },
                     '&.Mui-focusVisible': {outline: `2px solid ${theme.palette.primary.main}`, outlineOffset: 2},
                 };
