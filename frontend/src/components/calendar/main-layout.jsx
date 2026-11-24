@@ -110,14 +110,14 @@ export default function CalendarPage() {
         : dateLabel(anchor, {month: 'long', year: 'numeric'});
 
     useEffect(() => {
-        // Refresh the today marker if the calendar stays open across midnight.
+        // Refresh past-event styling and the today marker while the calendar stays open.
         const timer = setInterval(() => setNow(Date.now()), 60000);
         return () => clearInterval(timer);
     }, []);
 
     const openDay = day => {setAnchor(day); setView('week');};
     const card = (event, day, compact) => <EventCard key={event.id} event={event} day={day}
-        timezone={timezone} locale={locale} onOpen={item => setSelectedId(item.id)} compact={compact} />;
+        timezone={timezone} locale={locale} now={now} onOpen={item => setSelectedId(item.id)} compact={compact} />;
 
     return (
         <Box sx={{width: '100%', minWidth: 0, p: {xs: 1.5, md: 2.5}}}>

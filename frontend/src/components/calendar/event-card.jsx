@@ -2,12 +2,12 @@ import {Box, ButtonBase, Stack, Typography} from '@mui/material';
 import {alpha} from '@mui/material/styles';
 import {useTranslation} from 'react-i18next';
 import {activityLabels} from './activities.js';
-import {dayKey} from './dates.js';
+import {dayKey, hasEventEnded} from './dates.js';
 import {frequencyLabel, observationStatuses, satelliteNames} from './events.js';
 import {ActivityBadge, ObservationBadges, SourceLabel} from './event-badges.jsx';
 import {eventAccent, isLocalObservation} from './presentation.js';
 
-export default function EventCard({event, day, timezone, locale, onOpen, compact = false}) {
+export default function EventCard({event, day, timezone, locale, now, onOpen, compact = false}) {
     const {t} = useTranslation(['calendar', 'common']);
     const local = isLocalObservation(event);
     const label = activityLabels(t)[event.kind] || event.kind;
@@ -15,6 +15,7 @@ export default function EventCard({event, day, timezone, locale, onOpen, compact
     const status = observationStatuses(t)[event.status];
     const source = local ? t('source_types.local') : t('source_types.external');
     const frequency = !compact ? frequencyLabel(event, locale) : null;
+    const past = hasEventEnded(event, now, timezone);
     const clock = value => new Date(value).toLocaleTimeString(locale, {
         timeZone: timezone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
     });
@@ -32,12 +33,16 @@ export default function EventCard({event, day, timezone, locale, onOpen, compact
             sx={theme => {
                 const color = eventAccent(event, theme);
                 const inactive = event.enabled === false || event.status === 'cancelled';
+                const backgroundOpacity = inactive ? 0.045 : theme.palette.mode === 'dark' ? 0.12 : 0.07;
                 return {
                     display: 'block', width: '100%', minWidth: 0, textAlign: 'start',
-                    borderLeft: `3px solid ${color}`, borderRadius: '4px', px: 1, py: compact ? 0.6 : 1.25,
-                    bgcolor: alpha(color, inactive ? 0.045 : theme.palette.mode === 'dark' ? 0.12 : 0.07),
-                    transition: 'background-color 120ms',
-                    '&:hover': {bgcolor: alpha(color, theme.palette.mode === 'dark' ? 0.2 : 0.13)},
+                    // Mute the surface and accent only, preserving text contrast and status colors.
+                    borderLeft: `3px solid ${past ? alpha(color, 0.45) : color}`, borderRadius: '4px', px: 1, py: compact ? 0.6 : 1.25,
+                    bgcolor: alpha(color, past ? backgroundOpacity * 0.4 : backgroundOpacity),
+                    transition: 'background-color 120ms, border-left-color 120ms',
+                    '&:hover, &.Mui-focusVisible': {
+                        bgcolor: alpha(color, theme.palette.mode === 'dark' ? 0.2 : 0.13), borderLeftColor: color,
+                    },
                     '&.Mui-focusVisible': {outline: `2px solid ${theme.palette.primary.main}`, outlineOffset: 2},
                 };
             }}

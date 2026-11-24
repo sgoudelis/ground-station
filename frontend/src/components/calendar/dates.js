@@ -66,6 +66,17 @@ export function hasCalendarDate(event) {
 
 export const eventsOnDay = (events, day, timezone) => groupEventsByDay(events, [day], timezone).get(day);
 
+export function hasEventEnded(event, now, timezone) {
+    if (event.time_precision && event.time_precision !== 'instant') {
+        const today = dayKey(now, timezone);
+        // A start marker has no known end; keep it emphasized through its local day.
+        if (event.start_at) return dayKey(event.start_at, timezone) < today;
+        // Date-only coverage ends at the start of the exclusive end date.
+        return event.end <= today;
+    }
+    return new Date(event.end).getTime() <= now;
+}
+
 export function isCalendarDay(value) {
     return /^\d{4}-\d{2}-\d{2}$/.test(value)
         && !Number.isNaN(civilDate(value).getTime()) && dayKey(civilDate(value)) === value;
