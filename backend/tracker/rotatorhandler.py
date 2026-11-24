@@ -734,12 +734,12 @@ class RotatorHandler:
             if self.tracker.rotator_controller is not None and self.tracker.rotator_data.get(
                 "connected"
             ):
+                # Connect may acquire an already parked device. Keep the
+                # physical status received from the runtime across the handoff.
                 self.tracker.rotator_data["connected"] = True
                 self.tracker.rotator_data["stopped"] = not self.tracker.rotator_data.get(
                     "motion_unconfirmed", False
                 )
-                self.tracker.rotator_data["parked"] = False
-                self.tracker.rotator_data["park_requested"] = False
         elif new == "tracking":
             self._reset_slew_state()
             self._clear_overlap_lane_state()
@@ -955,7 +955,9 @@ class RotatorHandler:
 
     async def control_rotator_position(self, skypoint):
         """Control rotator position for tracking or nudging."""
-        if self.tracker.current_rotator_state == "parked":
+        if self.tracker.current_rotator_state == "parked" or self.tracker.rotator_data.get(
+            "parked"
+        ):
             self.tracker.manual_rotator_target = None
             return
         if getattr(self.tracker, "manual_rotator_stop_requested", False):

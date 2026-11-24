@@ -15,6 +15,7 @@ import {resolveHardwarePresentation} from '../common/hardware-status-presentatio
 import {isCommandOutstanding} from '../target/tracker-command-state.js';
 import {TrackerCommandHeaderStatus} from '../target/tracker-command-feedback.jsx';
 import CloseIcon from '@mui/icons-material/Close';
+import LocalParkingIcon from '@mui/icons-material/LocalParking';
 import {setManualRotatorDialogPosition} from './dashboard-slice.jsx';
 
 const CENTERED_POSITION = {x: 0, y: 0};
@@ -264,6 +265,7 @@ export default function ManualRotatorDialog({
     onClose,
     onMove,
     onStop,
+    onPark,
     rotator,
     rotatorStatus,
     currentAz,
@@ -275,6 +277,7 @@ export default function ManualRotatorDialog({
     disabled,
     command,
     canStop,
+    canPark,
     stopLabel,
 }) {
     const { t } = useTranslation('target');
@@ -289,7 +292,8 @@ export default function ManualRotatorDialog({
     const [az, setAz] = React.useState('');
     const [el, setEl] = React.useState('');
     const busy = isCommandOutstanding(command);
-    const moving = busy && !['pause', 'stop'].includes(command.action);
+    const parking = busy && command.action === 'park';
+    const moving = busy && !['pause', 'stop', 'park'].includes(command.action);
     const stopping = busy && ['pause', 'stop'].includes(command.action);
     const hardwareStatus = resolveHardwarePresentation({source: 'rotator', status: rotatorStatus?.key || 'unknown', t});
     const wasOpen = React.useRef(false);
@@ -388,6 +392,12 @@ export default function ManualRotatorDialog({
         try { await onStop(); }
         catch { /* Failure remains visible in the shared operation record. */ }
     };
+    const park = async () => {
+        // Parking uses the device's configured destination, independent of the dials.
+        if (!canPark || busy) return;
+        try { await onPark(); }
+        catch { /* Failure remains visible in the shared operation record. */ }
+    };
 
     if (!open) return null;
 
@@ -437,7 +447,7 @@ export default function ManualRotatorDialog({
                                     value={az}
                                     min={minAz}
                                     max={maxAz}
-                                    disabled={disabled || moving || stopping}
+                                    disabled={disabled || busy}
                                     onChange={(next) => setAz(formatDegrees(next))}
                                 />
                             </Grid>
@@ -447,23 +457,24 @@ export default function ManualRotatorDialog({
                                     value={el}
                                     min={minEl}
                                     max={maxEl}
-                                    disabled={disabled || moving || stopping}
+                                    disabled={disabled || busy}
                                     onChange={(next) => setEl(formatDegrees(next))}
                                 />
                             </Grid>
                             <Grid size={{ xs: 6, sm: 6 }}>
-                                <AzimuthDial value={numericAz} currentValue={currentAz} min={minAz} max={maxAz} disabled={disabled || moving || stopping} onChange={(next) => setAz(formatDegrees(next))} />
+                                <AzimuthDial value={numericAz} currentValue={currentAz} min={minAz} max={maxAz} disabled={disabled || busy} onChange={(next) => setAz(formatDegrees(next))} />
                                 <CoordinateReadout axis={t('manual_rotator_dialog.az', {defaultValue: 'AZ'})} current={currentAz} requested={az} />
                             </Grid>
                             <Grid size={{ xs: 6, sm: 6 }}>
-                                <ElevationDial value={numericEl} currentValue={currentEl} min={minEl} max={maxEl} disabled={disabled || moving || stopping} onChange={(next) => setEl(formatDegrees(next))} />
+                                <ElevationDial value={numericEl} currentValue={currentEl} min={minEl} max={maxEl} disabled={disabled || busy} onChange={(next) => setEl(formatDegrees(next))} />
                                 <CoordinateReadout axis={t('manual_rotator_dialog.el', {defaultValue: 'EL'})} current={currentEl} requested={el} />
                             </Grid>
                         </Grid>
                     </DialogContent>
                     <DialogActions sx={{ p: 2 }}>
                         <CapsButton color="error" disabled={!canStop || (stopping && command?.status !== 'unknown')} loading={stopping && command?.status !== 'unknown'} variant="contained" onClick={stop}>{stopLabel || t('rotator_control.stop')}</CapsButton>
-                        <CapsButton disabled={disabled || !validPosition || moving || stopping} loading={moving && command?.status !== 'unknown'} variant="contained" onClick={submit}>{t('rotator_control.move')}</CapsButton>
+                        <CapsButton disabled={!canPark || busy} loading={parking && command?.status !== 'unknown'} variant="outlined" color="inherit" startIcon={<LocalParkingIcon />} onClick={park}>{t('rotator_control.park')}</CapsButton>
+                        <CapsButton disabled={disabled || !validPosition || busy} loading={moving && command?.status !== 'unknown'} variant="contained" onClick={submit}>{t('rotator_control.move')}</CapsButton>
                     </DialogActions>
                 </Paper>
             </Box>

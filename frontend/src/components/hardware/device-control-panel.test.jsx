@@ -174,6 +174,42 @@ describe('device actions and status', () => {
         expect(requests[0].data.action).toBe('park');
     });
 
+    it('parks from the manual dialog and disables further movement when parking completes', async () => {
+        const {store, requests} = setup({snapshots: [snapshot({owner: {type: 'manual', id: 'manual:rotator:mount'}})]});
+        fireEvent.click(screen.getByRole('button', {name: 'Manual movement…'}));
+        const dialog = within(screen.getByRole('dialog'));
+        await act(async () => fireEvent.click(dialog.getByRole('button', {name: /^park$/i})));
+        expect(requests[0].data).toMatchObject({action: 'park', device_id: 'mount', generation: 'lease'});
+        expect(dialog.getByRole('button', {name: /^park$/i})).toBeDisabled();
+        expect(dialog.getByRole('button', {name: /^move$/i})).toBeDisabled();
+        act(() => {
+            store.dispatch(receiveDeviceSnapshot(snapshot({sequence: 2,
+                owner: {type: 'manual', id: 'manual:rotator:mount'},
+                data: {connected: true, az: 0, el: 0, parked: true, stopped: true},
+            })));
+            store.dispatch(receiveDeviceCommand({command_id: requests[0].data.command_id,
+                status: 'succeeded', revision: 2}));
+        });
+        expect(dialog.getByRole('button', {name: /^park$/i})).toBeDisabled();
+        expect(dialog.getByRole('button', {name: /^move$/i})).toBeDisabled();
+        expect(screen.getByRole('dialog')).toBeInTheDocument();
+    });
+
+    it.each([
+        ['parked', {parked: true}], ['uncertain motion', {motion_unconfirmed: true}],
+        ['disconnected', {connected: false}], ['transferred', {}, {type: 'tracker', id: 'target-1'}],
+    ])('disables dialog parking when hardware becomes %s', (_label, data, owner) => {
+        const manualOwner = {type: 'manual', id: 'manual:rotator:mount'};
+        const {store} = setup({snapshots: [snapshot({owner: manualOwner})]});
+        fireEvent.click(screen.getByRole('button', {name: 'Manual movement…'}));
+        const park = within(screen.getByRole('dialog')).getByRole('button', {name: /^park$/i});
+        expect(park).toBeEnabled();
+        act(() => store.dispatch(receiveDeviceSnapshot(snapshot({sequence: 2, owner: owner || manualOwner,
+            data: {connected: true, ...data},
+        }))));
+        expect(park).toBeDisabled();
+    });
+
     it('shows an empty state without target rows when no devices are configured', () => {
         setup({config: [], snapshots: []});
         expect(screen.getByText('No rotators configured')).toBeInTheDocument();

@@ -380,5 +380,7 @@ export function DeviceManualRotatorDialog({deviceId, onClose}) {
         minEl={selected?.minel ?? 0} maxEl={selected?.maxel ?? 90}
         disabled={status.key !== 'connected' || snapshot?.owner?.type !== 'manual' || Boolean(data.motion_unconfirmed) || Boolean(data.parked) || Boolean(data.tracking)}
         command={command} canStop={socket?.connected && control.loaded && data.connected} stopLabel={stopLabel}
+        canPark={status.key === 'connected' && snapshot?.owner?.type === 'manual' && !data.motion_unconfirmed && !data.parked}
+        onPark={() => submit('park')}
         onMove={(az, el) => submit('move', {az, el})} onStop={() => submit(pauseOnly ? 'pause' : 'stop')} />;
 }

@@ -766,11 +766,13 @@ const RotatorControl = React.memo(function RotatorControl({ trackerId: trackerId
                 onClose={() => setOpenManualControlDialog(false)}
                 onMove={handleManualMove}
                 onStop={handleManualStop}
+                onPark={() => parkRotator().unwrap()}
                 rotator={selectedRotatorDevice || null}
                 {...manualControl}
                 rotatorStatus={{key: hardwareStatus}}
                 command={activeRotatorCommand}
                 canStop={!stopDisabled}
+                canPark={!parkDisabled}
             />
             <ErrorDialog
                 open={Boolean(rotatorErrorMessage)}

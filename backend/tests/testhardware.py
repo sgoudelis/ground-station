@@ -129,13 +129,19 @@ async def test_rotator_connection_survives_transfer_and_fences_old_producer(stat
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("activity", ["idle", "pending", "moving", "unsupported-stop"])
+@pytest.mark.parametrize(
+    "activity", ["idle", "pending", "moving", "unsupported-stop", "parked", "parked-without-stop"]
+)
 async def test_explicit_tracker_connect_takes_manual_rotator_control(
     station, monkeypatch, db_session, activity
 ):
     service, details, commands, connections = station
     details["_hold_moves"] = activity in {"moving", "unsupported-stop"}
-    details["stop_supported"] = activity != "unsupported-stop"
+    details["stop_supported"] = activity not in {"unsupported-stop", "parked-without-stop"}
+    parked = activity in {"parked", "parked-without-stop"}
+    moving = activity not in {"idle", "parked", "parked-without-stop"}
+    if parked:
+        details.update(parkaz=90, parkel=25)
     registry = OperationRegistry()
     monkeypatch.setattr(control, "hardware", service)
     monkeypatch.setattr(control, "operations", registry)
@@ -173,7 +179,13 @@ async def test_explicit_tracker_connect_takes_manual_rotator_control(
     async with asyncio.timeout(5):
         while registry.records["connect"]["status"] != "succeeded":
             await asyncio.sleep(0.01)
-    if activity != "idle":
+    if parked:
+        await submit("park")
+        async with asyncio.timeout(5):
+            while registry.records["park"]["status"] != "succeeded":
+                await asyncio.sleep(0.01)
+        assert service.snapshots()[0]["data"]["parked"] is True
+    if moving:
         await submit("move", position={"az": 90, "el": 25})
         async with asyncio.timeout(5):
             while "P 90 25" not in commands:
@@ -190,7 +202,7 @@ async def test_explicit_tracker_connect_takes_manual_rotator_control(
     command = reply["command"]
     assert command["manual_handoff"]["generation"] == previous["generation"]
     # Acceptance cannot cancel physical work before its ownership is fenced.
-    if activity != "idle":
+    if moving:
         assert command["supersedes"] == ["move"]
         assert registry.records["move"]["status"] == "started"
 
@@ -211,6 +223,8 @@ async def test_explicit_tracker_connect_takes_manual_rotator_control(
     assert tracker.rotator_data["connected"] is True
     assert tracker.rotator_data["tracking"] is False
     assert tracker.rotator_data["error"] is False
+    assert tracker.rotator_data.get("parked", False) is parked
+    assert service.snapshots()[0]["data"]["parked"] is parked
     assert service.snapshots()[0]["owner"]["id"] == "target-1"
     assert len(connections) == opened
     assert commands.count("S") == (1 if activity == "moving" else 0)
@@ -221,7 +235,7 @@ async def test_explicit_tracker_connect_takes_manual_rotator_control(
     ]
     assert results[-1]["status"] == "succeeded"
     assert "tracker-connect" not in tracker.operations.pending
-    if activity != "idle":
+    if moving:
         async with asyncio.timeout(5):
             while registry.records["move"]["status"] == "started":
                 await asyncio.sleep(0.01)
@@ -828,6 +842,55 @@ def request(runtime, method, **payload):
         method=method,
         payload=payload,
     )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("method", ["pause", "release"])
+@pytest.mark.parametrize("stop_supported", [True, False])
+async def test_confirmed_park_survives_ownership_transfer(method, stop_supported):
+    controller = FakeController()
+    runtime = DeviceRuntime(
+        "rotator", "mount", {"stop_supported": stop_supported}, "epoch", controller
+    )
+    runtime.owner = "tracker:old:incarnation"
+    runtime.data.update(connected=True, parked=True, stopped=True)
+    runtime.target = (10, 20)
+    runtime.park_target = True
+    runtime.arrival_hits = 2
+    stale_move = request(runtime, "position", az=100, el=20)
+
+    await runtime.execute(request(runtime, method))
+    lease = await runtime.execute({**request(runtime, "acquire"), "owner": "manual:rotator:mount"})
+    await runtime.poll()
+
+    assert lease["data"]["parked"] is True
+    assert runtime.data["parked"] is True
+    assert runtime.data["stopped"] is True
+    assert runtime.data["motion_unconfirmed"] is False
+    assert controller.commands == []
+    with pytest.raises(ControlReleased):
+        await runtime.execute(stale_move)
+    await runtime.execute(request(runtime, "mode", mode="stopped"))
+    await runtime.poll()
+    assert runtime.data["parked"] is False
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("mode", ["stopped", "tracking"])
+async def test_leaving_park_retires_park_arrival_detection(mode):
+    runtime = DeviceRuntime("rotator", "mount", {}, "epoch", FakeController())
+    runtime.owner = "manual:rotator:mount"
+    runtime.data.update(connected=True, parked=True, stopped=True)
+    runtime.target = (10, 20)
+    runtime.park_target = True
+    runtime.arrival_hits = 2
+
+    await runtime.execute(request(runtime, "mode", mode=mode))
+    await runtime.poll()
+
+    assert runtime.data["parked"] is False
+    assert runtime.target is None
+    assert runtime.park_target is False
 
 
 @pytest.mark.asyncio

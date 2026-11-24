@@ -115,7 +115,10 @@ class DeviceRuntime:
         self.generation = str(uuid.uuid4())
         self.motion_revision += 1
         self.data["tracking"] = False
+        # Confirmed parking belongs to the mount, so changing producers must
+        # preserve it. In-flight motion is handled separately by quiesce/pause.
         self.target = None
+        self.park_target = False
         # A new producer's first frequency must not wait for the old producer's
         # retune interval, which can be configured as long as a minute.
         self.rig_handler.last_vfo_update_time = 0.0
@@ -351,7 +354,7 @@ class DeviceRuntime:
                 )
                 self._fence()
                 self.owner = None
-                self.data.update(parked=False, park_requested=False)
+                self.data["park_requested"] = False
                 if self.kind == "rotator" and active:
                     # Pausing updates cannot halt the last physical movement.
                     # Require fresh stationary samples before allowing new motion.
@@ -400,6 +403,11 @@ class DeviceRuntime:
                 self.rig_context.rig_details = self.details
                 return True
             if method == "mode":
+                if self.park_target:
+                    # Explicit Unpark/Track must retire arrival detection too,
+                    # or the next poll could mark the mount parked again.
+                    self.target = None
+                    self.park_target = False
                 self.data.update(
                     tracking=payload["mode"] == "tracking", parked=False, park_requested=False
                 )

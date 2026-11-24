@@ -2,7 +2,7 @@ import React from 'react';
 import {describe, expect, it, vi} from 'vitest';
 import {configureStore} from '@reduxjs/toolkit';
 import {Provider} from 'react-redux';
-import {act, fireEvent, render, screen, waitFor} from '@testing-library/react';
+import {act, fireEvent, render, screen, waitFor, within} from '@testing-library/react';
 import {ThemeProvider} from '@mui/material/styles';
 import {setupTheme} from '../../../theme.js';
 import {useSocket} from '../../common/socket.jsx';
@@ -14,11 +14,11 @@ vi.mock('react-i18next', async importOriginal => ({
     ...await importOriginal(), useTranslation: () => ({t: (key, options) => options?.defaultValue ?? key}),
 }));
 
-function setup() {
+function setup({rotatorState = 'disconnected'} = {}) {
     const initial = reducer(undefined, {type: '@@init'});
     const trackingState = {
         rotator_id: 'original',
-        rotator_state: 'disconnected',
+        rotator_state: rotatorState,
         target_type: 'satellite',
         norad_id: 25544,
         rig_id: 'none',
@@ -29,7 +29,7 @@ function setup() {
         confirmedTrackingState: trackingState,
         selectedRotator: 'original',
         satelliteId: 25544,
-        rotatorData: {connected: false, az: 0, el: 0},
+        rotatorData: {connected: rotatorState !== 'disconnected', az: 0, el: 0},
         hardwareObservedAt: Date.now(),
         hardwareReceivedAt: Date.now(),
     };
@@ -77,6 +77,16 @@ function setup() {
 }
 
 describe('rotator selection errors', () => {
+    it('routes manual dialog parking to its target rotator', async () => {
+        const {requests} = setup({rotatorState: 'connected'});
+        fireEvent.click(screen.getByRole('button', {name: 'rotator_control.manual_control'}));
+        fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', {name: 'rotator_control.park'}));
+        expect(requests).toHaveLength(1);
+        expect(requests[0].request.data).toMatchObject({tracker_id: 'target-1',
+            value: {rotator_state: 'parked'}, operation: {action: 'park', device_ids: {rotator: 'original'}}});
+        await act(async () => requests[0].ack(null, {success: true, data: {}}));
+    });
+
     it('shows the backend rejection and restores the previous selection', async () => {
         const {store, requests} = setup();
         fireEvent.mouseDown(document.getElementById('rotator-select'));

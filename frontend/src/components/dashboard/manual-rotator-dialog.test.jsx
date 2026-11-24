@@ -12,14 +12,16 @@ afterEach(() => {
     vi.unstubAllGlobals();
 });
 
-function setup(position = {x: 0, y: 0}) {
+function setup(position = {x: 0, y: 0}, overrides = {}) {
     const store = configureStore({reducer: {dashboard}});
     store.dispatch(setManualRotatorDialogPosition(position));
     const onClose = vi.fn();
     const onMove = vi.fn();
+    const onPark = vi.fn();
     const gainChanged = vi.fn();
-    const props = {open: true, onClose, onMove, onStop: vi.fn(), rotator: {name: 'Mount'},
-        currentAz: 10, currentEl: 20, minAz: 0, maxAz: 360, minEl: 0, maxEl: 90, canStop: true};
+    const props = {open: true, onClose, onMove, onPark, onStop: vi.fn(), rotator: {name: 'Mount'},
+        currentAz: 10, currentEl: 20, minAz: 0, maxAz: 360, minEl: 0, maxEl: 90, canStop: true, canPark: true,
+        ...overrides};
     const ui = (open) => <Provider store={store}>
         <input aria-label="Waterfall gain" type="range" onChange={gainChanged} />
         <ManualRotatorDialog {...props} open={open} />
@@ -31,10 +33,36 @@ function setup(position = {x: 0, y: 0}) {
     title.setPointerCapture = vi.fn();
     title.hasPointerCapture = vi.fn(() => true);
     title.releasePointerCapture = vi.fn();
-    return {...result, store, paper, title, onClose, onMove, gainChanged, ui};
+    return {...result, store, paper, title, onClose, onMove, onPark, gainChanged, ui};
 }
 
 describe('floating manual rotator controls', () => {
+    it('parks independently of invalid manual coordinates and keeps the dialog open', () => {
+        const {onPark, onMove, onClose} = setup({x: 0, y: 0}, {currentEl: 100});
+        expect(screen.getByRole('button', {name: /^move$/i})).toBeDisabled();
+        fireEvent.click(screen.getByRole('button', {name: /^park$/i}));
+        expect(onPark).toHaveBeenCalledExactlyOnceWith();
+        expect(onMove).not.toHaveBeenCalled();
+        expect(onClose).not.toHaveBeenCalled();
+    });
+
+    it.each(['move', 'park', 'stop'])('prevents another Park during %s and keeps Stop available during motion', (action) => {
+        const {onPark} = setup({x: 0, y: 0}, {command: {action, status: 'started'}});
+        const park = screen.getByRole('button', {name: /^park$/i});
+        expect(park).toBeDisabled();
+        expect(screen.getByRole('button', {name: /^move$/i})).toBeDisabled();
+        if (action !== 'stop') expect(screen.getByRole('button', {name: /^stop$/i})).toBeEnabled();
+        fireEvent.click(park);
+        expect(onPark).not.toHaveBeenCalled();
+    });
+
+    it('disables Park when the device cannot park', () => {
+        const {onPark} = setup({x: 0, y: 0}, {canPark: false});
+        fireEvent.click(screen.getByRole('button', {name: /^park$/i}));
+        expect(screen.getByRole('button', {name: /^park$/i})).toBeDisabled();
+        expect(onPark).not.toHaveBeenCalled();
+    });
+
     it.each(['mouse', 'touch'])('drags with %s and restores the position when reopened', (pointerType) => {
         const {store, paper, title, rerender, ui} = setup();
         fireEvent.pointerDown(title, {pointerId: 1, pointerType, isPrimary: true, button: 0, clientX: 400, clientY: 200});
