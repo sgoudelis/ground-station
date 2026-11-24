@@ -65,12 +65,13 @@ async function renderCalendar(userId = 'admin-1') {
     return {...result, store};
 }
 
-it('requests the visible range, navigates periods and views, and returns to today', async () => {
+it('uses the timezone preference to request the visible range, navigate periods and views, and return to today', async () => {
     const user = userEvent.setup();
     await renderCalendar();
     expect(socket.emitWithAck).toHaveBeenLastCalledWith('api.call', {
-        cmd: 'get-calendar-events', data: {start: '2026-10-26', end: '2026-12-07', timezone: 'UTC'},
+        cmd: 'get-calendar-events', data: {start: '2026-10-26', end: '2026-12-07', timezone: 'Asia/Tokyo'},
     });
+    expect(screen.queryByRole('combobox', {name: 'Timezone'})).not.toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     expect(screen.getByRole('heading', {name: 'November 2026'})).toBeVisible();
     await user.click(screen.getByRole('button', {name: 'Next period'}));
@@ -80,12 +81,12 @@ it('requests the visible range, navigates periods and views, and returns to toda
     await user.click(screen.getByRole('button', {name: 'Week', exact: true}));
     expect(screen.getByRole('heading', {name: /16 Nov.*22 Nov 2026/})).toBeVisible();
     expect(socket.emitWithAck).toHaveBeenLastCalledWith('api.call', {
-        cmd: 'get-calendar-events', data: {start: '2026-11-16', end: '2026-11-23', timezone: 'UTC'},
+        cmd: 'get-calendar-events', data: {start: '2026-11-16', end: '2026-11-23', timezone: 'Asia/Tokyo'},
     });
     await user.click(screen.getByRole('button', {name: 'Agenda', exact: true}));
     expect(screen.getByRole('heading', {name: 'November 2026'})).toBeVisible();
     expect(socket.emitWithAck).toHaveBeenLastCalledWith('api.call', {
-        cmd: 'get-calendar-events', data: {start: '2026-11-01', end: '2026-12-01', timezone: 'UTC'},
+        cmd: 'get-calendar-events', data: {start: '2026-11-01', end: '2026-12-01', timezone: 'Asia/Tokyo'},
     });
 });
 
@@ -197,7 +198,7 @@ it('refreshes announcements and observations while preserving the visible period
     await user.click(refresh);
     expect(refresh).toBeDisabled();
     expect(socket.emitWithAck).toHaveBeenLastCalledWith('api.call', {
-        cmd: 'refresh-calendar-events', data: {start: '2026-11-01', end: '2026-12-01', timezone: 'UTC'},
+        cmd: 'refresh-calendar-events', data: {start: '2026-11-01', end: '2026-12-01', timezone: 'Asia/Tokyo'},
     });
     const updated = observation('new', 'ISS', '2026-11-18T15:00:00Z', '2026-11-18T15:10:00Z');
     const announcement = {id: 'gscontrol:new', source: 'gscontrol', source_id: 'new', kind: 'sstv',
@@ -257,9 +258,6 @@ it('expands crowded days and shows task, pass, frequency, and status details wit
     const today = screen.getByLabelText('Wednesday, 18 November 2026', {selector: 'div'});
     await user.click(within(today).getByRole('button', {name: /more/}));
     expect(screen.getByRole('button', {name: 'Week', exact: true})).toHaveAttribute('aria-pressed', 'true');
-    await user.click(screen.getByRole('combobox', {name: 'Timezone'}));
-    await user.click(screen.getByRole('option', {name: 'Asia/Tokyo'}));
-    await waitFor(() => expect(screen.getByRole('region')).toHaveAttribute('aria-busy', 'false'));
     await user.click(screen.getByRole('button', {name: /ISS pass earlier/}));
     const dialog = screen.getByRole('dialog');
     expect(within(dialog).getByText('Asia/Tokyo')).toBeVisible();
@@ -341,7 +339,7 @@ it.each(['observations', 'announcements', 'space_weather', 'launches'])(
     },
 );
 
-it('shows cached announcements with source links and date precision across timezones', async () => {
+it('shows cached announcements with source links and preserves date precision in the preferred timezone', async () => {
     const user = userEvent.setup();
     socket.emitWithAck.mockResolvedValue({success: true, data: {
         events: [{id: 'gscontrol:dated', source: 'gscontrol', source_id: 'dated', kind: 'ssdv',
@@ -356,9 +354,6 @@ it('shows cached announcements with source links and date precision across timez
     expect(within(feeds).getByRole('switch', {name: 'Satellite announcements'})).toBeChecked();
     await user.click(within(feeds).getAllByRole('button', {name: 'Close'}).at(-1));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
-    await user.click(screen.getByRole('combobox', {name: 'Timezone'}));
-    await user.click(screen.getByRole('option', {name: 'Asia/Tokyo'}));
-    await waitFor(() => expect(screen.getByRole('region')).toHaveAttribute('aria-busy', 'false'));
     const day = screen.getByLabelText('Wednesday, 18 November 2026', {selector: 'div'});
     await user.click(within(day).getByRole('button', {name: /Reviewed SSDV announcement/}));
     const dialog = screen.getByRole('dialog');
@@ -500,12 +495,12 @@ it('shows a known start without a timing warning or an invented end in every cal
     for (const view of ['Month', 'Week', 'Agenda']) {
         await user.click(screen.getByRole('button', {name: view, exact: true}));
         const card = screen.getByRole('button', {name: /XU7AMO weekly QO-100 operation/});
-        expect(card).toHaveTextContent('12:00');
+        expect(card).toHaveTextContent('21:00');
         expect(screen.queryByText('Time or timezone unspecified')).not.toBeInTheDocument();
     }
     await user.click(screen.getByRole('button', {name: /XU7AMO weekly QO-100 operation/}));
     const dialog = within(screen.getByRole('dialog'));
-    expect(dialog.getByText('Fri, 20 Nov 2026, 12:00')).toBeVisible();
+    expect(dialog.getByText('Fri, 20 Nov 2026, 21:00')).toBeVisible();
     expect(dialog.getByText('Not specified')).toBeVisible();
     expect(dialog.queryByText('Time or timezone unspecified')).not.toBeInTheDocument();
     expect(dialog.queryByText(/Duration:/)).not.toBeInTheDocument();

@@ -49,12 +49,10 @@ export default function CalendarPage() {
     const smallScreen = useMediaQuery(theme.breakpoints.down('md'));
     const settings = useUserTimeSettings();
     const locale = settings.locale || i18n.resolvedLanguage || i18n.language;
-    const [zoneChoice, setZoneChoice] = useState('UTC');
-    const timezone = zoneChoice;
-    const timezones = [...new Set(['UTC', settings.timezone, Intl.DateTimeFormat().resolvedOptions().timeZone])];
+    const timezone = settings.timezone;
     const [now, setNow] = useState(() => Date.now());
     const today = dayKey(now, timezone);
-    const [anchor, setAnchor] = useState(() => dayKey(Date.now()));
+    const [anchor, setAnchor] = useState(today);
     const [view, setView] = useState('month');
     const [search, setSearch] = useState('');
     const [satellite, setSatellite] = useState('all');
@@ -173,9 +171,6 @@ export default function CalendarPage() {
                                 flexShrink: 0, bgcolor: eventAccent({kind: value}, theme)}} />
                             {label}
                         </MenuItem>)}
-                    </TextField>
-                    <TextField select label={t('timezone')} value={zoneChoice} onChange={event => setZoneChoice(event.target.value)} size="small" sx={{minWidth: 150}}>
-                        {timezones.map(zone => <MenuItem key={zone} value={zone}>{zone}</MenuItem>)}
                     </TextField>
                 </Stack>
                 <Divider />
