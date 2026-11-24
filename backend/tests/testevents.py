@@ -121,7 +121,7 @@ async def test_consent_is_atomic_and_stored_with_station_feed_flags(service):
     assert "accepted_by" not in status
 
 
-async def test_poll_every_six_hours_and_restart_preserves_schedule(service):
+async def test_poll_every_hour_and_restart_preserves_schedule(service):
     await service.configure(OPT_IN)
     client, calls = client_for()
     async with client:
@@ -146,6 +146,34 @@ async def test_poll_every_six_hours_and_restart_preserves_schedule(service):
     cached, status = await read_cache(service)
     assert cached[0]["id"] == "gscontrol:sstv"
     assert status["last_success_at"] is not None
+
+
+@pytest.mark.parametrize("provider_interval", [600, 3600, 7200])
+async def test_automatic_poll_waits_at_least_one_hour_and_honors_longer_provider_interval(
+    service, provider_interval
+):
+    await service.configure(OPT_IN)
+
+    def handler(request):
+        return httpx.Response(
+            200,
+            json={
+                "schema_version": 1,
+                "feeds": FEEDS,
+                "range": dict(request.url.params),
+                "events": [event()],
+                "refresh_after_seconds": provider_interval,
+            },
+        )
+
+    client, calls = client_for(handler=handler)
+    expected_interval = max(3600, provider_interval)
+    async with client:
+        assert await service.tick(client, NOW)
+        restarted = ExternalEventsService(service.consent.path, service.sessions)
+        assert not await restarted.tick(client, NOW + expected_interval - 1)
+        assert await restarted.tick(client, NOW + expected_interval)
+    assert len([request for request in calls if request.method == "GET"]) == 2
 
 
 async def test_snapshot_replaces_withdrawn_approval_and_never_touches_observations(service):
@@ -346,7 +374,7 @@ async def test_invalid_or_unapproved_snapshot_retains_previous_cache(service, ba
     assert status["error"] == "service_unavailable"
 
 
-async def test_failed_or_redirected_requests_wait_six_hours(service):
+async def test_failed_or_redirected_requests_wait_one_hour(service):
     await service.configure(OPT_IN)
     client, calls = client_for(
         handler=lambda _: httpx.Response(302, headers={"Location": "https://example.com"})

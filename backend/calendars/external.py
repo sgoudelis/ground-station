@@ -492,7 +492,11 @@ class ExternalEventsService:
                                 feed.complete,
                                 feed.last_success_at.isoformat() if feed.last_success_at else None,
                             )
-                    self.consent.state["next_poll_at"] = now + snapshot.refresh_after_seconds
+                    # Older providers may still suggest ten minutes. Keep the
+                    # hourly minimum while honoring longer provider intervals.
+                    self.consent.state["next_poll_at"] = now + max(
+                        POLL_SECONDS, snapshot.refresh_after_seconds
+                    )
                     self.consent.state.update(
                         last_success_at=datetime.fromtimestamp(now, timezone.utc).isoformat(),
                         coverage_start=str(first),

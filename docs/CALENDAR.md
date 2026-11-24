@@ -121,8 +121,9 @@ A valid event request counts as contact even if publication fails.
 
 `cached_external_events` stores a disposable, shared snapshot. It contains no
 consent. A single backend lifecycle task fetches while any external feed is
-enabled, normally every **600 seconds (ten minutes)**, independently of open
-browsers. Each attempt reserves its next poll in SQL before networking. Calendar
+enabled, normally every **3600 seconds (60 minutes)**, independently of open
+browsers. Provider refresh hints can extend this interval but cannot shorten it
+below one hour. Each attempt reserves its next poll in SQL before networking. Calendar
 navigation reads the cache; the refresh button explicitly requests an update and
 joins an ongoing download. HTTP 429 `Retry-After` also applies to manual refresh.
 Requests have a 15-second I/O timeout, a
@@ -164,7 +165,7 @@ snapshot for exactly the requested interval:
 {
   "schema_version": 1,
   "range": {"start": "2026-10-19", "end": "2027-05-17"},
-  "refresh_after_seconds": 600,
+  "refresh_after_seconds": 3600,
   "feeds": [
     {"id": "announcements", "complete": true, "stale": false},
     {"id": "space_weather", "complete": true, "stale": false},

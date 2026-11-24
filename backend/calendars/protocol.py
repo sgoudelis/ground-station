@@ -21,7 +21,7 @@ from calendars.schemas import CalendarEvent
 
 EVENTS_URL = "https://events.gscontrol.net"
 TERMS_VERSION = "events-1"
-POLL_SECONDS = 10 * 60
+POLL_SECONDS = 60 * 60
 PAST_DAYS = 30
 FUTURE_DAYS = 180
 SOURCE: Literal["gscontrol"] = "gscontrol"
