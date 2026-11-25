@@ -530,7 +530,10 @@
     "scheduler_error": "Plannerfout",
     "select_an_item_to_open_it_in_its_dedicated_viewer": "Selecteer een item om het in de bijbehorende viewer te openen",
     "task_end": "Einde van taak",
-    "task_start": "Start van taak"
+    "task_start": "Start van taak",
+    "recordings_and_waterfalls": "Opnamen en watervallen",
+    "recording_active": "Bezig met opnemen",
+    "iq_recording": "IQ-opname"
   },
   "processing_dialog": {
     "completed": "Voltooid",
@@ -620,7 +623,9 @@
     "start_time": "Starttijd",
     "target_satellite": "Doelsatelliet",
     "metadata": "Metadata",
-    "recorder": "Recorder"
+    "recorder": "Recorder",
+    "waterfall_only": "Alleen waterval",
+    "iq_deleted_after_waterfall": "De IQ-samples zijn verwijderd na het genereren van deze waterval. De afbeelding en opnamemetadata blijven behouden."
   },
   "search": {
     "clear": "Zoekopdracht wissen",

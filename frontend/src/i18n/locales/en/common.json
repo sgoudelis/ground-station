@@ -367,7 +367,9 @@
       "carrier_hz_suffix": "{{value}}Hz carrier",
       "baud_value": "Baud: {{value}}",
       "baudrate_value": "Baudrate: {{value}}",
-      "drift_hz_value": "Drift: {{value}} Hz"
+      "drift_hz_value": "Drift: {{value}} Hz",
+      "delete_iq_after_waterfall_label": "Delete IQ data after generating the waterfall",
+      "delete_iq_after_waterfall_help": "Delete samples only after successful waterfall generation; keep the image and metadata. IQ is kept if generation fails. Playback, later decoding and regeneration will be unavailable. Unavailable with SatDump post-processing."
     },
     "observation": {
       "new_title": "New Observation",

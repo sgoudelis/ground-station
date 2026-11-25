@@ -319,7 +319,10 @@
     "processing": "处理中",
     "recording_actions": "录音操作",
     "product_summary": "{{count}} 张图像 · {{size}}",
-    "processing_failed": "后处理失败或已中断。保留的文件见下方。"
+    "processing_failed": "后处理失败或已中断。保留的文件见下方。",
+    "recordings_and_waterfalls": "录制与瀑布图",
+    "recording_active": "正在录制",
+    "iq_recording": "IQ 录制"
   },
   "processing_dialog": {
     "background_task": "后台任务",
@@ -370,7 +373,9 @@
     "recording_details": "录制详情",
     "recording_files": "录制文件",
     "segment": "分段",
-    "source_data_and_generated_visual_products": "源数据与生成的视觉产物"
+    "source_data_and_generated_visual_products": "源数据与生成的视觉产物",
+    "waterfall_only": "仅瀑布图",
+    "iq_deleted_after_waterfall": "生成此瀑布图后已删除 IQ 采样数据。图像和采集元数据仍然保留。"
   },
   "telemetry_analysis_tab": {
     "0xff_bytes": "0xFF 字节",

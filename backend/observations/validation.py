@@ -33,6 +33,11 @@ def validate_satdump_postprocessing(data: Dict[str, Any]) -> Dict[str, Any]:
             config = task.get("config", {}) or {}
             if not isinstance(config, dict):
                 return {"success": False, "error": "Invalid SatDump task configuration."}
+            if config.get("delete_after_waterfall") and config.get("enable_post_processing"):
+                return {
+                    "success": False,
+                    "error": "Deleting IQ after waterfall generation cannot be combined with SatDump post-processing.",
+                }
             pipeline = config.get("post_process_pipeline")
             if pipeline in (None, "") and not config.get("enable_post_processing"):
                 continue

@@ -123,6 +123,16 @@ class RecorderHandler:
                 "target_satellite_name": satellite.get("name", ""),
                 "decimation_factor": decimation_factor,
                 "storage_format": storage_format,
+                # SatDump also consumes this file. Keep IQ if older/edited settings
+                # accidentally request both workflows despite command validation.
+                "delete_after_waterfall": (
+                    task_config.get("delete_after_waterfall") is True
+                    and not task_config.get("enable_post_processing")
+                ),
+                "skip_auto_waterfall": bool(
+                    task_config.get("enable_post_processing")
+                    and task_config.get("delete_after_post_processing")
+                ),
             }
 
             # Add frequency shift parameters if enabled

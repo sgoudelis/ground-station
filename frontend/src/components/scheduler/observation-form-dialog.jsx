@@ -74,6 +74,7 @@ import SaveIcon from '@mui/icons-material/Save';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import ResponsiveActionButton from '../common/responsive-action-button.jsx';
 import CapsButton from '../common/capsbutton.jsx';
+import IqRetentionFields from './iq-retention-fields.jsx';
 import { mobileFullScreenPaperSx } from '../common/dialog-layout.js';
 import { useSocket } from '../common/socket.jsx';
 import { getLibreTargetOptions, isLibrePairSupported, resolveTranslationBackend, TranslationBackendField, useLibreTranslateCapabilities } from '../common/translation-options.jsx';
@@ -652,6 +653,7 @@ const ObservationFormDialog = ({ onExited }) => {
                         target_center_freq: '',
                         decimation_factor: 1,
                         storage_format: 'cf32_le',
+                        delete_after_waterfall: false,
                         enable_post_processing: false,
                         post_process_pipeline: getDefaultSatdumpPipeline(t),
                         delete_after_post_processing: false,
@@ -2522,6 +2524,11 @@ const ObservationFormDialog = ({ onExited }) => {
                                                             </Typography>
                                                         )}
                                                     </FormControl>
+                                                    <IqRetentionFields
+                                                        config={task.config}
+                                                        onChange={(checked) => handleTaskConfigChange(index, 'delete_after_waterfall', checked)}
+                                                        disabled={isFormDisabled}
+                                                    />
                                                     <Box sx={{ mt: 2 }}>
                                                         <FormControlLabel
                                                             control={
@@ -2537,7 +2544,7 @@ const ObservationFormDialog = ({ onExited }) => {
                                                                             handleTaskConfigChange(index, 'delete_after_post_processing', false);
                                                                         }
                                                                     }}
-                                                                    disabled={isFormDisabled}
+                                                                    disabled={isFormDisabled || task.config.delete_after_waterfall === true}
                                                                 />
                                                             }
                                                             label={t('scheduler_dialogs.shared.run_satdump_post_processing_label')}

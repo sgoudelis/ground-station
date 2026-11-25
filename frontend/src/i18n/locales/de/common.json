@@ -514,7 +514,9 @@
       "observation_rig": "Beobachtungs-Rig",
       "observation_rig_transmitter": "Rig verfolgt Sender",
       "parakeet_help": "Parakeet nutzt den konfigurierten Transkriptionsdienst und erkennt unterstützte Sprachen automatisch. Die Quellsprache steuert nur die optionale Übersetzung.",
-      "language_chinese_traditional": "Chinesisch (Traditionell)"
+      "language_chinese_traditional": "Chinesisch (Traditionell)",
+      "delete_iq_after_waterfall_label": "IQ-Daten nach der Wasserfallerzeugung löschen",
+      "delete_iq_after_waterfall_help": "Samples erst nach erfolgreicher Wasserfallerzeugung löschen; Bild und Metadaten behalten. Bei einem Fehler bleiben die IQ-Daten erhalten. Wiedergabe, spätere Dekodierung und erneute Erzeugung sind danach nicht verfügbar. Nicht mit SatDump-Nachverarbeitung verfügbar."
     },
     "observation": {
       "new_title": "Neue Beobachtung",

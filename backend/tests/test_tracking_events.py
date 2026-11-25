@@ -24,7 +24,8 @@ import multiprocessing
 import pytest
 
 from orbits import CentralBody, get_propagation_input
-from tracking.events import _generate_cache_key, _named_worker_init, _orbit_cache_identity
+from tracking.events import _generate_cache_key, _orbit_cache_identity
+from tracking.passpool import _named_worker_init
 
 
 # Module-level functions for multiprocessing tests (must be picklable)

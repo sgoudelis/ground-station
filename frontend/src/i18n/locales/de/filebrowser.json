@@ -530,7 +530,10 @@
     "scheduler_error": "Planerfehler",
     "select_an_item_to_open_it_in_its_dedicated_viewer": "Wähle ein Element, um es im passenden Betrachter zu öffnen",
     "task_end": "Ende der Aufgabe",
-    "task_start": "Start der Aufgabe"
+    "task_start": "Start der Aufgabe",
+    "recordings_and_waterfalls": "Aufnahmen und Wasserfälle",
+    "recording_active": "Aufnahme läuft",
+    "iq_recording": "IQ-Aufnahme"
   },
   "processing_dialog": {
     "completed": "Vollendet",
@@ -620,7 +623,9 @@
     "segment": "Abschnitt",
     "source_data_and_generated_visual_products": "Quelldaten und erzeugte Bildprodukte",
     "start_time": "Startzeit",
-    "target_satellite": "Zielsatellit"
+    "target_satellite": "Zielsatellit",
+    "waterfall_only": "Nur Wasserfall",
+    "iq_deleted_after_waterfall": "Die IQ-Samples wurden nach der Wasserfallerzeugung gelöscht. Bild und Aufnahmemetadaten bleiben erhalten."
   },
   "search": {
     "clear": "Suche löschen",

@@ -530,7 +530,10 @@
     "scheduler_error": "Erreur de l'ordonnanceur",
     "select_an_item_to_open_it_in_its_dedicated_viewer": "Sélectionne un élément pour l'ouvrir dans sa visionneuse dédiée",
     "task_end": "Fin de la tâche",
-    "task_start": "Début de la tâche"
+    "task_start": "Début de la tâche",
+    "recordings_and_waterfalls": "Enregistrements et cascades",
+    "recording_active": "Enregistrement en cours",
+    "iq_recording": "Enregistrement IQ"
   },
   "processing_dialog": {
     "completed": "Complété",
@@ -620,7 +623,9 @@
     "segment": "Segment",
     "source_data_and_generated_visual_products": "Données sources et produits visuels générés",
     "start_time": "Heure de début",
-    "target_satellite": "Satellite cible"
+    "target_satellite": "Satellite cible",
+    "waterfall_only": "Cascade uniquement",
+    "iq_deleted_after_waterfall": "Les échantillons IQ ont été supprimés après la génération de cette cascade. L’image et les métadonnées de capture sont conservées."
   },
   "search": {
     "clear": "Effacer la recherche",

@@ -1005,7 +1005,9 @@
       "drift_hz_value": "Deriva: {{value}} Hz",
       "enable_frequency_shift_help": "Centra il segnale sulla frequenza di destinazione. Alcuni SDR presentano picchi centrali che possono contaminare un segnale centrato, quindi lo spostamento porta il segnale del trasmettitore di destinazione al centro per migliorare la decodifica. Alcune applicazioni richiedono che il segnale sia centrato.",
       "decimation_center_hint": "La decimazione presuppone che il segnale di destinazione sia centrato. Abilita lo spostamento di frequenza per centrare il segnale prima di decimare.",
-      "bandwidth_validation_error": "La larghezza di banda richiesta per la combinazione di trasmettitori scelta ({{required}} MHz) supera la frequenza di campionamento dell'SDR selezionata ({{sampleRate}} MHz). Aumenta la frequenza di campionamento o scegli trasmettitori più vicini in frequenza."
+      "bandwidth_validation_error": "La larghezza di banda richiesta per la combinazione di trasmettitori scelta ({{required}} MHz) supera la frequenza di campionamento dell'SDR selezionata ({{sampleRate}} MHz). Aumenta la frequenza di campionamento o scegli trasmettitori più vicini in frequenza.",
+      "delete_iq_after_waterfall_label": "Elimina i dati IQ dopo la generazione della cascata",
+      "delete_iq_after_waterfall_help": "Elimina i campioni solo dopo la corretta generazione della cascata; conserva l’immagine e i metadati. Se la generazione non riesce, i dati IQ vengono conservati. La riproduzione, la decodifica successiva e la rigenerazione non saranno disponibili. Non disponibile con la post-elaborazione SatDump."
     },
     "monitored": {
       "save_and_generate": "Salva e genera",

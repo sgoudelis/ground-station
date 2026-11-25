@@ -5,8 +5,10 @@ This task generates waterfall spectrograms from SigMF IQ recordings.
 It's designed to run as a background task with progress reporting.
 """
 
+import json
 import logging
 import multiprocessing
+import threading
 from multiprocessing import Queue
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -49,6 +51,7 @@ def generate_waterfall_task(
     recording_path: str,
     options: Optional[Dict[str, Any]] = None,
     _progress_queue: Optional[Queue] = None,
+    delete_after_waterfall: bool = False,
 ):
     """
     Generate waterfall spectrogram from a SigMF recording.
@@ -57,14 +60,17 @@ def generate_waterfall_task(
         recording_path: Path to the recording (without extension)
         options: Optional manual waterfall generation options (UI-provided)
         _progress_queue: Queue for sending progress updates (injected by manager)
+        delete_after_waterfall: Remove IQ samples after successful image generation;
+            retain the SigMF metadata for the waterfall viewer.
 
     Returns:
         Dict with generation results
     """
-    # Set process name
-    if HAS_SETPROCTITLE:
-        setproctitle.setproctitle("Ground Station - Waterfall-Generator")
-    multiprocessing.current_process().name = "Ground Station - Waterfall-Generator"
+    # The fallback runs in a thread inside the server; only rename a task process.
+    if threading.current_thread() is threading.main_thread():
+        if HAS_SETPROCTITLE:
+            setproctitle.setproctitle("Ground Station - Waterfall-Generator")
+        multiprocessing.current_process().name = "Ground Station - Waterfall-Generator"
 
     try:
         recording_path_obj = Path(recording_path)
@@ -113,6 +119,21 @@ def generate_waterfall_task(
                 generator.logger.setLevel(original_log_level)
 
         if success:
+            if delete_after_waterfall is True:
+                # Keep the samples on any generation/finalization failure. Mark the
+                # retained metadata first so a crash after unlink cannot hide the image.
+                image_path = Path(f"{recording_path_obj}.png")
+                if not image_path.is_file() or image_path.stat().st_size == 0:
+                    raise RuntimeError("Waterfall image is missing; retaining IQ data")
+                meta_path = Path(f"{recording_path_obj}.sigmf-meta")
+                metadata = json.loads(meta_path.read_text())
+                metadata.setdefault("global", {})["gs:iq_data_deleted"] = True
+                temporary_meta = meta_path.with_suffix(".sigmf-meta.tmp")
+                temporary_meta.write_text(json.dumps(metadata, indent=2) + "\n")
+                temporary_meta.replace(meta_path)
+                Path(f"{recording_path_obj}.sigmf-data").unlink()
+                logger.info("Deleted IQ samples after waterfall generation: %s", recording_path_obj)
+
             if _progress_queue:
                 _progress_queue.put(
                     {

@@ -85,7 +85,7 @@ function formatObservationTime(timestamp) {
 /** Summary line for a grouped recording card: size, frequency and sample rate. */
 function recordingSummary(recording) {
     return [
-        formatBytes(recording.data_size),
+        formatBytes(recording.iq_data_deleted ? recording.snapshot?.size : recording.data_size),
         formatFrequency(recording.metadata?.center_frequency),
         formatSampleRate(recording.metadata?.sample_rate),
     ]
@@ -208,7 +208,7 @@ export default function ObservationFolderDialog({
             return;
         }
         // Grouped recordings carry download URLs instead of a single file URL.
-        const fallbackUrl = artifact.url || artifact.download_urls?.data;
+        const fallbackUrl = artifact.url || artifact.download_urls?.data || artifact.snapshot?.url;
         if (fallbackUrl) window.open(fallbackUrl, '_blank', 'noopener,noreferrer');
     };
 
@@ -370,7 +370,7 @@ export default function ObservationFolderDialog({
                 </Box>
                 {recordings.length > 0 && (
                     <>
-                        <Typography variant="subtitle2" sx={{ mb: 1.25 }}>{t('observation_folder_dialog.iq_recordings', { defaultValue: 'IQ recordings' })}</Typography>
+                        <Typography variant="subtitle2" sx={{ mb: 1.25 }}>{t('observation_folder_dialog.recordings_and_waterfalls')}</Typography>
                         <Grid container spacing={1.5} sx={{ mb: 3 }}>
                             {recordings.map((recording) => {
                                 const previewUrl = recording.snapshot?.thumbnail_url || recording.snapshot?.url;
@@ -391,12 +391,16 @@ export default function ObservationFolderDialog({
                                                 )}
                                                 {isGeneratingWaterfall && <WaterfallGenerationOverlay />}
                                                 <Chip
-                                                    label={recording.recording_in_progress ? 'Recording' : 'IQ recording'}
+                                                    label={recording.iq_data_deleted
+                                                        ? t('recording_dialog.waterfall_only')
+                                                        : recording.recording_in_progress
+                                                            ? t('observation_folder_dialog.recording_active')
+                                                            : t('observation_folder_dialog.iq_recording')}
                                                     size="small"
                                                     color={recording.recording_in_progress ? 'warning' : 'error'}
                                                     sx={{ position: 'absolute', top: 8, left: 8 }}
                                                 />
-                                                {(onGenerateWaterfall || onProcessRecording) && (
+                                                {!recording.iq_data_deleted && (onGenerateWaterfall || onProcessRecording) && (
                                                     <IconButton
                                                         size="small"
                                                         aria-label={t('observation_folder_dialog.recording_actions', { defaultValue: 'Recording actions' })}

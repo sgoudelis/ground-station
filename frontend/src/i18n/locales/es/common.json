@@ -514,7 +514,9 @@
       "observation_rig": "Equipo de observación",
       "observation_rig_transmitter": "El equipo sigue el transmisor",
       "parakeet_help": "Parakeet usa el servicio de transcripción configurado y detecta automáticamente los idiomas compatibles. El idioma de origen solo guía la traducción opcional.",
-      "language_chinese_traditional": "Chino (tradicional)"
+      "language_chinese_traditional": "Chino (tradicional)",
+      "delete_iq_after_waterfall_label": "Eliminar los datos IQ después de generar la cascada",
+      "delete_iq_after_waterfall_help": "Eliminar las muestras solo tras generar la cascada correctamente; conservar la imagen y los metadatos. Si falla la generación, se conservan los datos IQ. No se podrá reproducir, decodificar más tarde ni regenerar la cascada. No disponible con el posprocesamiento de SatDump."
     },
     "observation": {
       "new_title": "Nueva observación",

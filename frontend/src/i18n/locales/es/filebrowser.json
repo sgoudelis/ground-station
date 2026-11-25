@@ -530,7 +530,10 @@
     "scheduler_error": "Error del planificador",
     "select_an_item_to_open_it_in_its_dedicated_viewer": "Selecciona un elemento para abrirlo en su visor específico",
     "task_end": "Fin de la tarea",
-    "task_start": "Inicio de la tarea"
+    "task_start": "Inicio de la tarea",
+    "recordings_and_waterfalls": "Grabaciones y cascadas",
+    "recording_active": "Grabando",
+    "iq_recording": "Grabación IQ"
   },
   "processing_dialog": {
     "completed": "Terminado",
@@ -620,7 +623,9 @@
     "segment": "Segmento",
     "source_data_and_generated_visual_products": "Datos fuente y productos visuales generados",
     "start_time": "Hora de inicio",
-    "target_satellite": "Satélite objetivo"
+    "target_satellite": "Satélite objetivo",
+    "waterfall_only": "Solo cascada",
+    "iq_deleted_after_waterfall": "Las muestras IQ se eliminaron después de generar esta cascada. Se conservan la imagen y los metadatos de captura."
   },
   "search": {
     "clear": "Borrar búsqueda",

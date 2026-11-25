@@ -62,6 +62,7 @@ import SaveIcon from '@mui/icons-material/Save';
 import EventRepeatIcon from '@mui/icons-material/EventRepeat';
 import ResponsiveActionButton from '../common/responsive-action-button.jsx';
 import CapsButton from '../common/capsbutton.jsx';
+import IqRetentionFields from './iq-retention-fields.jsx';
 import { mobileFullScreenPaperSx } from '../common/dialog-layout.js';
 import {
     setMonitoredSatelliteDialogOpen,
@@ -591,6 +592,7 @@ export default function MonitoredSatelliteDialog({ onExited }) {
                         target_center_freq: '',
                         decimation_factor: 1,
                         storage_format: 'cf32_le',
+                        delete_after_waterfall: false,
                         enable_post_processing: false,
                         post_process_pipeline: getDefaultSatdumpPipeline(t),
                         delete_after_post_processing: false,
@@ -2439,6 +2441,10 @@ export default function MonitoredSatelliteDialog({ onExited }) {
                                                                     </Typography>
                                                                 )}
                                                             </FormControl>
+                                                            <IqRetentionFields
+                                                                config={task.config}
+                                                                onChange={(checked) => handleTaskConfigChange(index, 'delete_after_waterfall', checked)}
+                                                            />
                                                             <Box sx={{ mt: 2 }}>
                                                                 <FormControlLabel
                                                                     control={
@@ -2454,6 +2460,7 @@ export default function MonitoredSatelliteDialog({ onExited }) {
                                                                                     handleTaskConfigChange(index, 'delete_after_post_processing', false);
                                                                                 }
                                                                             }}
+                                                                            disabled={task.config.delete_after_waterfall === true}
                                                                         />
                                                                     }
                                                                     label={t('scheduler_dialogs.shared.run_satdump_post_processing_label')}

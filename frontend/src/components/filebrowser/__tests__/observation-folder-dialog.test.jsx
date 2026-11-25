@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '../../../test/test-utils.jsx';
 import ObservationFolderDialog from '../observation-folder-dialog.jsx';
 import fixtures from '../../../../../backend/tests/fixtures/viewer.json';
+import '../../../i18n/config.js';
 
 const BUNDLE = 'ALFEROV_20260816_121242.gsobs';
 const BASE = 'capture_iq_1';
@@ -114,6 +115,20 @@ const folder = {
 };
 
 describe('ObservationFolderDialog', () => {
+    it('opens survey waterfalls without offering IQ processing or regeneration', async () => {
+        const survey = { ...recording, iq_data_deleted: true, data_file: null, data_size: 0 };
+        const onOpenArtifact = vi.fn();
+        renderWithProviders(<ObservationFolderDialog
+            open onClose={vi.fn()} folder={{ ...folder, recordings: [survey] }}
+            onOpenArtifact={onOpenArtifact} onGenerateWaterfall={vi.fn()} onProcessRecording={vi.fn()}
+        />);
+
+        expect(screen.getByText('Waterfall only')).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Recording actions' })).not.toBeInTheDocument();
+        await act(async () => screen.getByTestId('observation-recording-card').click());
+        expect(onOpenArtifact).toHaveBeenCalledWith(survey);
+    });
+
     it('opens a grouped Meteor dataset without duplicating its member images or intermediates', async () => {
         const product = {
             type: 'decoded_folder', name: 'capture.satdump_meteor_hrpt',

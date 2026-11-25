@@ -23,6 +23,7 @@ from server.startup import (  # noqa: E402
     socket_app,
 )
 from server.version import get_version_base  # noqa: E402
+from tracking.passpool import shutdown_worker_pool  # noqa: E402
 
 try:
     import setproctitle
@@ -118,6 +119,9 @@ def main() -> None:
         logger.exception(e)
         cleanup_everything()
         os._exit(1)
+    finally:
+        # Uvicorn can return without lifespan cleanup after startup cancellation.
+        shutdown_worker_pool()
 
 
 if __name__ == "__main__":

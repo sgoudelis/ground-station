@@ -16,9 +16,9 @@
 
 import asyncio
 import logging
+from functools import partial
 from pathlib import Path
 
-from fft.waterfallgenerator import WaterfallConfig, WaterfallGenerator
 from handlers.entities.filebrowser import emit_file_browser_state
 from pipeline.managers.consumerbase import ConsumerManager
 from server import runtimestate
@@ -34,9 +34,6 @@ class RecorderManager(ConsumerManager):
         super().__init__(processes)
         self.logger = logging.getLogger("recorder-manager")
         self.sio = sio  # Socket.IO instance for emitting notifications
-
-        # Internal/fallback generation always uses built-in defaults.
-        self.waterfall_generator = WaterfallGenerator(WaterfallConfig())
 
     def start_recorder(self, sdr_id, session_id, recorder_class, recorder_id=None, **kwargs):
         """
@@ -97,6 +94,12 @@ class RecorderManager(ConsumerManager):
 
             # Get recording path before stopping (for IQ recordings)
             recording_path = getattr(recorder, "recording_path", None)
+            delete_after_waterfall = getattr(recorder, "delete_after_waterfall", False) is True
+            # Each capture owns its policy; other IQ tasks in the session may
+            # still need their waterfall even when SatDump will discard this one.
+            skip_auto_waterfall = (
+                skip_auto_waterfall or getattr(recorder, "skip_auto_waterfall", False) is True
+            )
 
             recorder.stop()
             recorder.join(timeout=2.0)  # Wait up to 2 seconds
@@ -122,7 +125,9 @@ class RecorderManager(ConsumerManager):
                     # Generate waterfall spectrograms (unless UI already provided one)
                     if not skip_auto_waterfall:
                         self.logger.info(f"Scheduling waterfall generation for {recording_path}")
-                        asyncio.create_task(self._generate_waterfall_async(recording_path))
+                        asyncio.create_task(
+                            self._generate_waterfall_async(recording_path, delete_after_waterfall)
+                        )
                     else:
                         self.logger.info(
                             f"Skipping auto-waterfall generation for {recording_path} (UI provided)"
@@ -198,7 +203,7 @@ class RecorderManager(ConsumerManager):
         except Exception as e:
             self.logger.error(f"Error emitting recording-stopped notification: {e}")
 
-    async def _generate_waterfall_async(self, recording_path):
+    async def _generate_waterfall_async(self, recording_path, delete_after_waterfall=False):
         """
         Generate waterfall spectrograms using the background task system.
 
@@ -212,12 +217,17 @@ class RecorderManager(ConsumerManager):
                 self.logger.error(
                     "Background task manager not available, falling back to legacy method"
                 )
-                # Fallback to old method if task manager not available
+                # Use the same finalization and cleanup rules without the task manager.
                 loop = asyncio.get_event_loop()
-                success = await loop.run_in_executor(
-                    None, self.waterfall_generator.generate_from_sigmf, Path(recording_path)
+                result = await loop.run_in_executor(
+                    None,
+                    partial(
+                        get_task("generate_waterfall"),
+                        str(recording_path),
+                        delete_after_waterfall=delete_after_waterfall,
+                    ),
                 )
-                if success and self.sio:
+                if result["status"] == "completed" and self.sio:
                     await emit_file_browser_state(
                         self.sio,
                         {"action": "waterfall-generated", "recording_path": recording_path},
@@ -232,7 +242,7 @@ class RecorderManager(ConsumerManager):
             task_id = await background_task_manager.start_task(
                 func=task_func,
                 args=(str(recording_path),),
-                kwargs={},
+                kwargs={"delete_after_waterfall": delete_after_waterfall},
                 name=f"Waterfall: {recording_name}",
             )
 

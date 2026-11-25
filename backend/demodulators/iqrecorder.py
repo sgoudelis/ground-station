@@ -53,11 +53,15 @@ class IQRecorder(threading.Thread):
         enable_frequency_shift=False,
         decimation_factor=1,
         storage_format="cf32_le",
+        delete_after_waterfall=False,
+        skip_auto_waterfall=False,
     ):
         super().__init__(daemon=True, name=f"IQRecorder-{session_id}")
         self.iq_queue = iq_queue
         self.recording_path = Path(recording_path)
         self.session_id = session_id
+        self.delete_after_waterfall = delete_after_waterfall is True
+        self.skip_auto_waterfall = skip_auto_waterfall is True
         self.running = True
         self.target_satellite_norad_id = target_satellite_norad_id
         self.target_satellite_name = target_satellite_name

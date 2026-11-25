@@ -367,6 +367,18 @@ class TrackerSupervisor:
         self._release_rotator_ownership(normalized_id)
         return True
 
+    def wait_for_stop(self, timeout: float = 3.0) -> None:
+        """Request a graceful exit while the caller keeps consuming tracker output."""
+        runtimes = list(self.runtimes.values())
+        for runtime in runtimes:
+            runtime.stop_event.set()
+
+        # All workers share the grace period. Their Queue feeder threads need
+        # the parent's event loop to keep draining output before they can exit.
+        deadline = time.monotonic() + timeout
+        for runtime in runtimes:
+            runtime.process.join(timeout=max(0.0, deadline - time.monotonic()))
+
     def stop_all(self, timeout: float = 3.0) -> None:
         # Let every worker begin its graceful shutdown before waiting on any one
         # of them. This prevents later workers from losing the whole timeout while

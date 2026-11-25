@@ -536,7 +536,10 @@
     "select_an_item_to_open_it_in_its_dedicated_viewer": "Επίλεξε ένα στοιχείο για άνοιγμα στον ειδικό του προβολέα",
     "task_end": "Τέλος εργασίας",
     "task_start": "Εναρξη εργασίας",
-    "norad_id": "Αναγνωριστικό NORAD"
+    "norad_id": "Αναγνωριστικό NORAD",
+    "recordings_and_waterfalls": "Καταγραφές και καταρράκτες",
+    "recording_active": "Καταγραφή σε εξέλιξη",
+    "iq_recording": "Καταγραφή IQ"
   },
   "processing_dialog": {
     "completed": "Ολοκληρώθηκε το",
@@ -626,7 +629,9 @@
     "source_data_and_generated_visual_products": "Πηγαία δεδομένα και παραγόμενα οπτικά προϊόντα",
     "start_time": "Ωρα έναρξης",
     "target_satellite": "Δορυφόρος στόχος",
-    "norad_id": "Αναγνωριστικό NORAD"
+    "norad_id": "Αναγνωριστικό NORAD",
+    "waterfall_only": "Μόνο καταρράκτης",
+    "iq_deleted_after_waterfall": "Τα δείγματα IQ διαγράφηκαν μετά τη δημιουργία αυτού του καταρράκτη. Η εικόνα και τα μεταδεδομένα της καταγραφής διατηρούνται."
   },
   "search": {
     "clear": "Εκκαθάριση αναζήτησης",

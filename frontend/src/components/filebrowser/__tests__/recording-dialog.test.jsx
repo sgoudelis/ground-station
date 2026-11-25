@@ -39,6 +39,26 @@ const recording = {
 };
 
 describe('RecordingDialog', () => {
+    it('keeps survey waterfalls viewable without offering deleted IQ downloads', () => {
+        renderWithProviders(<RecordingDialog open onClose={vi.fn()} recording={{
+            ...recording,
+            iq_data_deleted: true,
+            data_file: null,
+            data_size: 0,
+            download_urls: { meta: recording.download_urls.meta },
+        }} />);
+
+        expect(screen.getByTestId('waterfall-viewer')).toBeInTheDocument();
+        expect(screen.getByText('Waterfall only')).toBeInTheDocument();
+        expect(screen.getByRole('alert')).toHaveTextContent('IQ samples were deleted');
+        expect(screen.queryByText('IQ Data')).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Download Data' })).not.toBeInTheDocument();
+        for (const button of screen.getAllByRole('button', { name: /Download (Metadata|Snapshot)/ })) {
+            expect(button).toBeEnabled();
+        }
+        expect(screen.getByText('Download Snapshot', { selector: 'button' })).toBeEnabled();
+    });
+
     it('loads transmitter annotations from the recording target NORAD ID', () => {
         const socket = { emit: vi.fn() };
         const targetedRecording = {

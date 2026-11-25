@@ -95,6 +95,28 @@ describe.each(['observation', 'monitored'])('%s SDR settings', (kind) => {
     });
     afterEach(() => vi.restoreAllMocks());
 
+    it('saves survey retention and prevents concurrent SatDump processing', async () => {
+        const { save, writes } = renderDialog(kind, { sessions: [{
+            sdr: initialSdr,
+            tasks: [{ type: 'iq_recording', config: { storage_format: 'cf32_le' } }],
+        }] });
+        fireEvent.click(await screen.findByRole('button', { name: /IQ Recording.*No transmitter/ }));
+        const survey = await screen.findByRole('checkbox', { name: 'Delete IQ data after generating the waterfall' });
+        const satdump = screen.getByRole('checkbox', { name: 'Run SatDump post-processing after IQ recording' });
+        expect(survey).not.toBeChecked();
+        fireEvent.click(satdump);
+        expect(survey).toBeDisabled();
+        fireEvent.click(satdump);
+        fireEvent.click(survey);
+        expect(satdump).toBeDisabled();
+        await waitFor(() => expect(save).toBeEnabled());
+        fireEvent.click(save);
+        expect(writes[0].sessions[0].tasks[0].config).toMatchObject({
+            delete_after_waterfall: true,
+            enable_post_processing: false,
+        });
+    });
+
     it('saves advanced controls and precise rates without changing their numeric values', async () => {
         const { save, writes } = renderDialog(kind);
         await screen.findByRole('combobox', { name: 'LNA attenuation state (RFGR)' });

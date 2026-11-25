@@ -112,6 +112,7 @@ from tracker.instances import emit_tracker_instances, restore_tracker_instances_
 from tracker.messages import handle_command_updates, handle_tracker_messages
 from tracker.operations import OperationRegistry, operations
 from tracker.runner import get_tracker_supervisor
+from tracking.passpool import shutdown_worker_pool, start_worker_pool
 from usage.service import usage_service
 
 # Increase payload limits to handle large waterfall PNG images and maintenance uploads.
@@ -176,6 +177,7 @@ async def lifespan(fastapiapp: FastAPI):
     global background_task_manager
 
     logger.info("FastAPI lifespan startup...")
+    start_worker_pool()
     # In an async context, prefer get_running_loop() (get_event_loop() is deprecated when no loop set)
     event_loop = asyncio.get_running_loop()
 
@@ -259,8 +261,10 @@ async def lifespan(fastapiapp: FastAPI):
     operations.__dict__.update(OperationRegistry().__dict__)
     await start_hardware(sio)
     Path(arguments.db).with_suffix(".commands.json").unlink(missing_ok=True)
-    asyncio.create_task(handle_command_updates(sio))
-    asyncio.create_task(handle_tracker_messages(sio))
+    tracker_message_tasks = (
+        asyncio.create_task(handle_command_updates(sio)),
+        asyncio.create_task(handle_tracker_messages(sio)),
+    )
     await restore_tracker_instances_from_db()
     await emit_tracker_instances(sio)
 
@@ -369,6 +373,9 @@ async def lifespan(fastapiapp: FastAPI):
         yield
     finally:
         logger.info("FastAPI lifespan cleanup...")
+        # Retire the pool before other cleanup awaits; late forecasts must not
+        # restart workers while the application is shutting down.
+        shutdown_worker_pool()
         usage_task.cancel()
         events_task.cancel()
         await asyncio.gather(usage_task, events_task, return_exceptions=True)
@@ -411,9 +418,13 @@ async def lifespan(fastapiapp: FastAPI):
         await shutdown.cleanup_sessions()
         await shutdown.cleanup_sdr_processes()
         stop_scheduler()
+        # These consumers must remain alive while trackers flush their output,
+        # and must be cancelled before any unresponsive producer is killed.
+        await shutdown.cleanup_trackers(tracker_message_tasks)
         shutdown.cleanup_everything()
         await hardware.shutdown()
         process_manager.shutdown()
+        logger.info("FastAPI lifespan cleanup complete")
 
 
 sio = socketio.AsyncServer(

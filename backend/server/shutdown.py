@@ -7,6 +7,7 @@ from audio.audiostreamer import WebAudioStreamer
 from common.logger import logger
 from server import runtimestate
 from session.service import active_sdr_clients, session_service
+from tracking.passpool import shutdown_worker_pool
 
 # Globals used by audio threads
 audio_consumer: Optional[WebAudioStreamer] = None
@@ -15,9 +16,28 @@ SESSION_CLEANUP_TIMEOUT_SECONDS = 10
 SDR_PROCESS_CLEANUP_TIMEOUT_SECONDS = 15
 
 
+async def cleanup_trackers(message_tasks: tuple[asyncio.Task, ...]) -> None:
+    """Drain tracker output during graceful exit, then retire readers before writers."""
+    supervisor = tracker.runner.get_tracker_supervisor()
+    try:
+        # Joining on the event loop prevents Queue feeder threads in exiting
+        # trackers from flushing. Keep their consumers and hardware IPC running.
+        await asyncio.to_thread(supervisor.wait_for_stop, 3.0)
+    finally:
+        for task in message_tasks:
+            task.cancel()
+        await asyncio.gather(*message_tasks, return_exceptions=True)
+        # A forced stop can leave a partial message in the shared pipe. No
+        # reader may call get_nowait() after this: it can block in recv_bytes().
+        await asyncio.to_thread(tracker.runner.stop_all_tracker_processes, timeout=0)
+
+
 def cleanup_everything():
     """Cleanup function to stop all processes and threads."""
     logger.info("Cleaning up all processes and threads...")
+
+    # Also runs when startup fails or a forced exit skips the ASGI lifespan.
+    shutdown_worker_pool()
 
     # Terminate tracker processes
     try:
@@ -53,7 +73,7 @@ def cleanup_everything():
     except Exception as e:  # pragma: no cover
         logger.warning(f"Error stopping transcription consumers: {e}")
 
-    logger.info("Cleanup complete")
+    logger.info("Tracker, audio and transcription cleanup complete")
 
 
 async def cleanup_sessions() -> None:

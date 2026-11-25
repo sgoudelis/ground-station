@@ -472,7 +472,10 @@
     "open_image_viewer": "· Apri visualizzatore immagini",
     "open_in_dedicated_viewer": "Apri nel visualizzatore dedicato",
     "no_files_were_produced_by_this_observation": "Nessun file è stato prodotto da questa osservazione.",
-    "generate_waterfall_image": "Genera immagine del waterfall"
+    "generate_waterfall_image": "Genera immagine del waterfall",
+    "recordings_and_waterfalls": "Registrazioni e cascate",
+    "recording_active": "Registrazione in corso",
+    "iq_recording": "Registrazione IQ"
   },
   "processing_dialog": {
     "completed": "Completato",
@@ -562,7 +565,9 @@
     "start_time": "Ora di inizio",
     "end_time": "Ora di fine",
     "capture_segments": "Segmenti di cattura (",
-    "segment": "Segmento"
+    "segment": "Segmento",
+    "waterfall_only": "Solo cascata",
+    "iq_deleted_after_waterfall": "I campioni IQ sono stati eliminati dopo la generazione di questa cascata. L’immagine e i metadati della registrazione vengono conservati."
   },
   "refresh": "Aggiorna",
   "search": {

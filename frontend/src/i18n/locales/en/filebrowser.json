@@ -97,7 +97,10 @@
     "no_files_were_produced_by_this_observation": "No files were produced by this observation.",
     "delete": "Delete",
     "close": "Close",
-    "generate_waterfall_image": "Generate Waterfall Image"
+    "generate_waterfall_image": "Generate Waterfall Image",
+    "recordings_and_waterfalls": "Recordings and waterfalls",
+    "recording_active": "Recording",
+    "iq_recording": "IQ recording"
   },
   "telemetry_values_tab": {
     "spacecraft_time_utc": "Spacecraft time (UTC)",
@@ -762,7 +765,9 @@
     "download_data": "Download Data",
     "download_metadata": "Download Metadata",
     "download_snapshot": "Download Snapshot",
-    "close": "Close"
+    "close": "Close",
+    "waterfall_only": "Waterfall only",
+    "iq_deleted_after_waterfall": "IQ samples were deleted after generating this waterfall. The image and capture metadata are retained."
   },
   "telemetry_analysis_tab": {
     "no_data_available_for_analysis": "No data available for analysis",

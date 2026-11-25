@@ -18,7 +18,7 @@
  */
 
 import React, { useEffect, useMemo, useState } from 'react';
-import {Box,Typography,Chip,Dialog,DialogTitle,DialogContent,DialogActions,IconButton,Stack,Paper,Tooltip,} from '@mui/material';
+import {Alert,Box,Typography,Chip,Dialog,DialogTitle,DialogContent,DialogActions,IconButton,Stack,Paper,Tooltip,} from '@mui/material';
 import FileDialogDetails from './file-dialog-details.jsx';
 import {
     fileDialogActionsSx,
@@ -189,7 +189,9 @@ export default function RecordingDialog({ open, onClose, recording, socket }) {
                                     variant="outlined"
                                 />
                             )}
-                            <Chip label={formatBytes(recording?.data_size || 0)} size="small" variant="outlined" />
+                            <Chip label={recording.iq_data_deleted
+                                ? t('recording_dialog.waterfall_only')
+                                : formatBytes(recording?.data_size || 0)} size="small" variant="outlined" />
                         </Box>
                         <IconButton onClick={onClose} size="small" aria-label={t('common:close', { defaultValue: 'Close' })}>
                             <CloseIcon fontSize="small" />
@@ -198,6 +200,11 @@ export default function RecordingDialog({ open, onClose, recording, socket }) {
                 </Box>
             </DialogTitle>
             <DialogContent sx={fileDialogContentSx}>
+                {recording.iq_data_deleted && (
+                    <Alert severity="info" sx={{ mb: 2 }}>
+                        {t('recording_dialog.iq_deleted_after_waterfall')}
+                    </Alert>
+                )}
                 {recording.snapshot && (
                     <WaterfallViewer
                         src={recording.snapshot.url}
@@ -369,13 +376,15 @@ export default function RecordingDialog({ open, onClose, recording, socket }) {
                 disableSpacing
                 sx={fileDialogActionsSx}
             >
-                <CapsButton
-                    onClick={() => window.open(recording?.download_urls.data, '_blank')}
-                    startIcon={<DownloadIcon />}
-                    variant="outlined"
-                >
-                    {t('recording_dialog.download_data', { defaultValue: 'Download Data' })}
-                </CapsButton>
+                {recording.download_urls?.data && (
+                    <CapsButton
+                        onClick={() => window.open(recording.download_urls.data, '_blank')}
+                        startIcon={<DownloadIcon />}
+                        variant="outlined"
+                    >
+                        {t('recording_dialog.download_data', { defaultValue: 'Download Data' })}
+                    </CapsButton>
+                )}
                 <CapsButton
                     onClick={() => window.open(recording?.download_urls.meta, '_blank')}
                     startIcon={<DownloadIcon />}

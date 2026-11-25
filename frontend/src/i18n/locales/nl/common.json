@@ -514,7 +514,9 @@
       "observation_rig": "Observatie-rig",
       "observation_rig_transmitter": "Rig volgt zender",
       "parakeet_help": "Parakeet gebruikt de geconfigureerde transcriptiedienst en detecteert ondersteunde talen automatisch. De brontaal stuurt alleen de optionele vertaling.",
-      "language_chinese_traditional": "Chinees (Traditioneel)"
+      "language_chinese_traditional": "Chinees (Traditioneel)",
+      "delete_iq_after_waterfall_label": "IQ-gegevens verwijderen na het genereren van de waterval",
+      "delete_iq_after_waterfall_help": "Verwijder samples alleen nadat de waterval is gegenereerd; behoud de afbeelding en metadata. Bij een fout blijven de IQ-gegevens behouden. Afspelen, later decoderen en opnieuw genereren zijn daarna niet beschikbaar. Niet beschikbaar met SatDump-naverwerking."
     },
     "observation": {
       "new_title": "Nieuwe waarneming",

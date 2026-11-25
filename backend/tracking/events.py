@@ -1,4 +1,3 @@
-import asyncio
 import hashlib
 import json
 import logging
@@ -17,29 +16,13 @@ from db import AsyncSessionLocal
 from orbits import CentralBody, build_skyfield_satellite, get_propagation_input
 
 from .passes import calculate_next_events
+from .passpool import get_worker_pool, wait_for_result
 
 # Create logger
 logger = logging.getLogger("passes-worker")
 
 # Create a simple in-memory cache (no multiprocessing needed since cache is only accessed from main process)
 _cache: Dict[str, tuple] = {}
-
-# Create a persistent worker pool (reused across all calculations to avoid repeated pool creation/destruction)
-_worker_pool = None
-
-
-def _get_worker_pool():
-    """Get or create the persistent worker pool"""
-    global _worker_pool
-    if _worker_pool is None:
-        logger.info("Creating persistent worker pool for satellite pass calculations")
-        # This pool starts after HTTP clients connect. Forking would keep their
-        # sockets open in the worker after Uvicorn closes them, leaving nginx
-        # reusing connections that no web-server process can read.
-        _worker_pool = multiprocessing.get_context("spawn").Pool(
-            processes=1, initializer=_named_worker_init
-        )
-    return _worker_pool
 
 
 def _generate_cache_key(tle_groups, homelat, homelon, hours, above_el, step_minutes):
@@ -67,15 +50,6 @@ def _orbit_cache_identity(satellite, propagation_input):
     if propagation_input.model_kind.value == "omm":
         identity.append(satellite.get("orbit_payload"))
     return identity
-
-
-def _named_worker_init():
-    """Initialize worker process with a descriptive name"""
-    # Set process title for system monitoring tools
-    setproctitle.setproctitle("Ground Station - SatellitePassWorker")
-
-    # Set multiprocessing process name
-    multiprocessing.current_process().name = "Ground Station - SatellitePassWorker"
 
 
 def _calculate_elevation_curve(
@@ -364,7 +338,7 @@ async def fetch_next_events_for_group(
 
                 logger.info("Cache miss - submitting calculation to worker pool")
                 # Use persistent pool (reused across all calculations)
-                pool = _get_worker_pool()
+                pool = get_worker_pool()
                 # Submit the calculation task to the pool, passing the serialized satellites list
                 # NOTE: use_cache=False because cache is handled in main process
                 logger.info("Submitting calculation to worker pool")
@@ -373,7 +347,7 @@ async def fetch_next_events_for_group(
                     (satellites, homelat, homelon, hours, above_el, step_minutes, False),
                 )
                 logger.info("Waiting for worker to complete calculation")
-                result = await asyncio.get_event_loop().run_in_executor(None, async_result.get)
+                result = await wait_for_result(pool, async_result)
                 logger.info("Worker completed, result received")
 
                 # Add calculation window to result (result is guaranteed to be dict here)
@@ -555,7 +529,7 @@ async def fetch_next_events_for_satellite(
             if result is None:
                 logger.info("Cache miss - submitting calculation to worker pool")
                 # Use persistent pool (reused across all calculations)
-                pool = _get_worker_pool()
+                pool = get_worker_pool()
                 # Submit the calculation task to the pool, passing the serialized satellite dict
                 # NOTE: use_cache=False because cache is handled in main process
                 logger.info("Submitting calculation to worker pool")
@@ -564,7 +538,7 @@ async def fetch_next_events_for_satellite(
                     (satellite, homelat, homelon, hours, above_el, step_minutes, False),
                 )
                 logger.info("Waiting for worker to complete calculation")
-                result = await asyncio.get_event_loop().run_in_executor(None, async_result.get)
+                result = await wait_for_result(pool, async_result)
                 logger.info("Worker completed, result received")
 
                 # Store result in cache (main process only, no IPC from worker)

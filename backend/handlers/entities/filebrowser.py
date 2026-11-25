@@ -127,6 +127,7 @@ def parse_sigmf_metadata(meta_file_path: str) -> dict:
             "description": global_meta.get("core:description"),
             "recorder": global_meta.get("core:recorder"),
             "recording_in_progress": global_meta.get("gs:recording_in_progress", False),
+            "iq_data_deleted": global_meta.get("gs:iq_data_deleted", False),
             "start_time": global_meta.get("gs:start_time"),
             "capture_time": captures[0].get("core:datetime") if captures else None,
             "finalized_time": global_meta.get("gs:finalized_time"),
@@ -503,13 +504,18 @@ def build_observation_bundle_recordings(
     for meta_file in sorted(recordings_dir.glob("*.sigmf-meta")):
         base_name = meta_file.stem
         data_file = recordings_dir / f"{base_name}.sigmf-data"
-        if not data_file.exists():
-            continue
-
         metadata = parse_sigmf_metadata(str(meta_file))
         snapshot_file = recordings_dir / f"{base_name}.png"
-        data_stat = data_file.stat()
+        has_iq_data = data_file.is_file()
+        # A survey keeps its metadata and waterfall together after discarding IQ.
+        # Unmarked orphan metadata still represents an incomplete capture.
+        waterfall_only = (
+            not has_iq_data and metadata.get("iq_data_deleted") is True and snapshot_file.is_file()
+        )
+        if not has_iq_data and not waterfall_only:
+            continue
         meta_stat = meta_file.stat()
+        data_stat = data_file.stat() if has_iq_data else meta_stat
 
         # Everything the capture owns folds into its single card.
         member_files = (
@@ -527,9 +533,10 @@ def build_observation_bundle_recordings(
                 "type": "recording",
                 "name": base_name,
                 "observation_bundle": bundle_dir.name,
-                "data_file": data_file.name,
+                "data_file": data_file.name if has_iq_data else None,
                 "meta_file": meta_file.name,
-                "data_size": data_stat.st_size,
+                "data_size": data_stat.st_size if has_iq_data else 0,
+                "iq_data_deleted": waterfall_only,
                 "meta_size": meta_stat.st_size,
                 "created": datetime.fromtimestamp(data_stat.st_ctime, timezone.utc).isoformat(),
                 "modified": datetime.fromtimestamp(data_stat.st_mtime, timezone.utc).isoformat(),
@@ -539,7 +546,7 @@ def build_observation_bundle_recordings(
                 "snapshot": build_recording_snapshot_info(snapshot_file, url_prefix),
                 "recording_in_progress": metadata.get("recording_in_progress", False),
                 "download_urls": {
-                    "data": f"{url_prefix}/{quote(data_file.name)}",
+                    **({"data": f"{url_prefix}/{quote(data_file.name)}"} if has_iq_data else {}),
                     "meta": f"{url_prefix}/{quote(meta_file.name)}",
                 },
             }
