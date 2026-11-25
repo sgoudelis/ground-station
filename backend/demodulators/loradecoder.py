@@ -25,7 +25,7 @@ from gnuradio import filter, gr, lora_sdr  # noqa: E402
 from common.iqsamples import require_complex64  # noqa: E402
 from common.meshstorage import MeshStorage  # noqa: E402
 from demodulators.basedecoderprocess import BaseDecoderProcess  # noqa: E402
-from demodulators.loraconfig import lora_sync_symbols, normalize_lora  # noqa: E402
+from demodulators.loraconfig import lora_bandwidth, lora_sync_symbols, normalize_lora  # noqa: E402
 from telemetry.parser import TelemetryParser  # noqa: E402
 
 logger = logging.getLogger("loradecoder")
@@ -106,19 +106,24 @@ class LoRaFlowgraph(gr.top_block):
     def __init__(self, sample_rate, center_freq, params, events):
         super().__init__("Ground Station LoRa")
         bw, sf = params["bw"], params["sf"]
+        physical_bw = lora_bandwidth(bw)
         if not 0 < center_freq <= 0xFFFFFFFF:
             raise ValueError("LoRa requires the actual RF frequency (1..4294967295 Hz)")
-        if sample_rate < 2 * bw or int(sample_rate) != sample_rate:
+        if sample_rate < 2 * physical_bw or int(sample_rate) != sample_rate:
             raise ValueError(
                 "LoRa requires an integer IQ sample rate of at least twice its bandwidth"
             )
         self.source = LoRaSource()
         self.sink = LoRaPacketSink(events)
-        factor = max(1, int(sample_rate // (4 * bw)))
-        taps = filter.firdes.low_pass(1, sample_rate, 0.68 * bw, 0.24 * bw)
+        factor = max(1, Fraction(int(sample_rate)) // (4 * physical_bw))
+        taps = filter.firdes.low_pass(
+            1, sample_rate, 0.68 * float(physical_bw), 0.24 * float(physical_bw)
+        )
         channel = filter.fir_filter_ccc(factor, taps)
         chain = [self.source, channel]
-        ratio = Fraction(4 * bw * factor, int(sample_rate))
+        # Reference chirps require exactly four samples per physical chip.
+        # Fractions retain narrow modes such as 125000/12 without rounding.
+        ratio = 4 * physical_bw * factor / int(sample_rate)
         if ratio != 1:
             if max(ratio.numerator, ratio.denominator) > 10000:
                 raise ValueError(
@@ -129,6 +134,8 @@ class LoRaFlowgraph(gr.top_block):
                     interpolation=ratio.numerator, decimation=ratio.denominator
                 )
             )
+        # Native blocks accept integer bandwidths. Retain the nominal mode
+        # there; their chirps use samples/chip, which the resampler sets above.
         # The RF frequency is required for native sample-frequency-offset correction.
         sync = lora_sdr.frame_sync(
             int(center_freq),
@@ -215,7 +222,7 @@ class LoRaDecoder(BaseDecoderProcess):
         self.params = normalize_lora(config.to_dict())
         self.baudrate = 0
         self.framing = "lora"
-        self.sample_rate = 4 * self.params["bw"]
+        self.sample_rate = float(4 * lora_bandwidth(self.params["bw"]))
         self.sdr_sample_rate = None
         self.sdr_center_freq = None
         self.cached_vfo_state: dict[str, Any] | None = None
@@ -271,6 +278,7 @@ class LoRaDecoder(BaseDecoderProcess):
         return {
             **self.params,
             "spreading_factor": self.params["sf"],
+            "effective_bandwidth_hz": float(lora_bandwidth(self.params["bw"])),
             "receiver_sample_rate": self.sample_rate,
         }
 
@@ -384,7 +392,8 @@ class LoRaDecoder(BaseDecoderProcess):
         frequency = float(state["center_freq"])
         offset = frequency - sdr_center
         # Require room for the entire channel, including the anti-alias filter.
-        if rate < 2 * self.params["bw"] or abs(offset) + 0.8 * self.params["bw"] > rate / 2:
+        physical_bw = float(lora_bandwidth(self.params["bw"]))
+        if rate < 2 * physical_bw or abs(offset) + 0.8 * physical_bw > rate / 2:
             self.stats["samples_dropped_out_of_band"] += len(samples)
             self._reset_stream()
             if not self.is_sleeping:

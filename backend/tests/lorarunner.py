@@ -128,6 +128,77 @@ def test_meshtastic():
     )
 
 
+def test_narrowband():
+    from telemetry.parser import TelemetryParser
+
+    # Generate at an exact BW125 chip clock, then stretch by the hardware
+    # divisor. Generating at the rounded receive bandwidth would hide this bug.
+    payload = b"narrowband\x00\xff"
+    params = normalize_lora({"sf": 8, "sync_word": [0x34], "ldro_mode": 1})
+    waveform = transmit(payload, params)
+    for nominal, divisor in [(7800, 16), (10400, 12), (15600, 8), (20800, 6), (41700, 3)]:
+        stretched = resample_poly(waveform, divisor, 1).astype(np.complex64)
+        received = receive(stretched, **{**params, "bw": nominal})
+        assert len(received) == 1 and received[0][0] == payload, (nominal, received)
+        assert received[0][1]["crc_valid"] is True
+
+    recorded = json.loads((FIXTURE / "ufo.json").read_text())
+    with np.load(FIXTURE / "ufo.npz") as fixture:
+        data = (fixture["iq"].astype(np.float32) * fixture["scale"]).view(np.complex64).ravel()
+        rate = int(fixture["sample_rate"])
+    params = normalize_lora(recorded)
+    config = DecoderConfig(baudrate=0, framing="lora", config_source="manual", **params)
+    expected = bytes.fromhex(recorded["hex"])
+    frequency, offset = recorded["frequency_hz"], 7000
+    # Exercise the actual VFO mixer, filtering/resampling and packet storage
+    # with hardware IQ. Include an IF offset and arbitrary chunk boundaries.
+    data *= np.exp(2j * np.pi * offset * np.arange(len(data)) / rate).astype(np.complex64)
+    data = np.r_[data, np.zeros(32768, dtype=np.complex64)]
+    with tempfile.TemporaryDirectory() as output:
+        decoder = LoRaDecoder(
+            queue.Queue(), queue.Queue(), "narrow-lora", config, output_dir=output, vfo=3
+        )
+        decoder.events = queue.Queue()
+        decoder.stats = defaultdict(int)
+        decoder.telemetry_parser = TelemetryParser()
+        start, sequence = 0, 0
+        sizes = (997, 13001, 4096, 653)
+        try:
+            while start < len(data):
+                chunk = data[start : start + sizes[sequence % len(sizes)]]
+                decoder._consume(
+                    {
+                        "samples": chunk,
+                        "sample_rate": rate,
+                        "center_freq": frequency - offset,
+                        "logical_center_freq_hz": frequency - offset,
+                        "iq_sequence": sequence,
+                        "playback_elapsed_seconds": start / rate,
+                        "vfo_states": {
+                            3: {"active": True, "center_freq": frequency, "bandwidth": 10400}
+                        },
+                    }
+                )
+                start += len(chunk)
+                sequence += 1
+        finally:
+            decoder._reset_stream(drain=True)
+        files = list(Path(output).glob("*.bin"))
+        assert len(files) == 1 and files[0].read_bytes() == expected, files
+        meta = json.loads(files[0].with_suffix(".json").read_text())
+        assert meta["decoder"]["crc_present"] is False
+        assert meta["decoder"]["crc_valid"] is None
+        assert meta["signal"]["frequency_hz"] == frequency
+        assert meta["signal"]["sample_rate_hz"] == 125000 / 3
+        assert meta["demodulator_parameters"]["effective_bandwidth_hz"] == 125000 / 12
+        assert decoder.stats["samples_dropped_overflow"] == 0
+        assert decoder.stats["samples_dropped_out_of_band"] == 0
+    print(
+        "Narrowband: all rounded modes pass CRC; recorded SF12/BW10.4 passes VFO mixing, arbitrary chunks and binary persistence",
+        flush=True,
+    )
+
+
 def test_worker(sample_rate=500000, inverted=False):
     iq_queue, data_queue = multiprocessing.Queue(), multiprocessing.Queue()
     # On assertion failure there may be unconsumed IQ; do not hang the runner
@@ -288,6 +359,7 @@ if __name__ == "__main__":
         "worker": test_worker,
         "modes": test_modes,
         "meshtastic": test_meshtastic,
+        "narrowband": test_narrowband,
         "resampled": lambda: test_worker(800000, True),
         "persistence": test_persistence,
         "continuity": test_continuity,

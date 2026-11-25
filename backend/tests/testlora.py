@@ -4,11 +4,12 @@ import signal
 import subprocess
 import sys
 from dataclasses import replace
+from fractions import Fraction
 from pathlib import Path
 
 import pytest
 
-from demodulators.loraconfig import lora_sync_symbols, normalize_lora
+from demodulators.loraconfig import lora_bandwidth, lora_sync_symbols, normalize_lora
 from pipeline.config.decoderconfigservice import DecoderConfigService
 from telemetry.parser import TelemetryParser
 
@@ -45,6 +46,29 @@ def test_config_metadata_overrides_and_legacy_tinygs_values():
         assert changed != config
         assert hash(changed) != hash(config)
         assert changed.to_dict()[key] == value
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "nominal,physical",
+    [
+        (7800, Fraction(125000, 16)),
+        (10400, Fraction(125000, 12)),
+        (15600, Fraction(15625)),
+        (20800, Fraction(125000, 6)),
+        (31250, Fraction(31250)),
+        (41700, Fraction(125000, 3)),
+        (62500, Fraction(62500)),
+        (125000, Fraction(125000)),
+        (250000, Fraction(250000)),
+        (500000, Fraction(500000)),
+        (16000, Fraction(16000)),
+    ],
+)
+def test_bandwidth_modes_use_physical_chip_rates(nominal, physical):
+    assert lora_bandwidth(nominal) == physical
+    # Persisted settings remain stable; the physical rate is a DSP concern.
+    assert normalize_lora({"bw": nominal})["bw"] == nominal
 
 
 @pytest.mark.unit
@@ -93,7 +117,17 @@ def test_lora_payload_remains_opaque():
 
 @pytest.mark.integration
 @pytest.mark.parametrize(
-    "scenario", ["graph", "worker", "modes", "meshtastic", "resampled", "persistence", "continuity"]
+    "scenario",
+    [
+        "graph",
+        "worker",
+        "modes",
+        "meshtastic",
+        "resampled",
+        "narrowband",
+        "persistence",
+        "continuity",
+    ],
 )
 def test_native_recorded_lora(scenario):
     if importlib.util.find_spec("gnuradio") is None:

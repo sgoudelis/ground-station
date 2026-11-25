@@ -1,6 +1,7 @@
 """LoRa PHY settings shared by the resolver and receiver (no native imports)."""
 
 import re
+from fractions import Fraction
 from typing import Any
 
 LORA_DEFAULTS: dict[str, Any] = {
@@ -15,6 +16,15 @@ LORA_DEFAULTS: dict[str, Any] = {
     "has_crc": True,
     "invert_iq": False,
 }
+
+
+def lora_bandwidth(bandwidth: int) -> Fraction:
+    """Resolve rounded Semtech mode labels to their physical chip rates."""
+    # Keep the existing integer settings/API, but never clock the receiver at
+    # the rounded labels: e.g. BW10.4 is 125000/12 Hz, not 10400 Hz.
+    divisors = {7800: 16, 10400: 12, 15600: 8, 20800: 6, 41700: 3}
+    divisor = divisors.get(bandwidth)
+    return Fraction(125000, divisor) if divisor else Fraction(bandwidth)
 
 
 def lora_sync_symbols(sync_word: list[int], sf: int) -> list[int]:

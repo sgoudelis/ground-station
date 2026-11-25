@@ -1,0 +1,20 @@
+{
+  "hex": "ea98df0275a788a131cf",
+  "sample_rate": 31250,
+  "frequency_hz": 257050000,
+  "sf": 12,
+  "bw": 10400,
+  "cr": 4,
+  "sync_word": [
+    18
+  ],
+  "preamble_len": 12,
+  "ldro_mode": 1,
+  "implicit_header": true,
+  "payload_length": 10,
+  "has_crc": false,
+  "invert_iq": false,
+  "source_file": "UFO_10_USA_146_-256_950MHz-20261125_132813_20261125_112813.sigmf-data",
+  "source_start_seconds": 14.8,
+  "source_end_seconds": 28.6
+}
