@@ -62,7 +62,14 @@ def test_ctrl_c_and_cancellation_allow_interpreter_exit(phase, tmp_path):
         stderr=subprocess.PIPE,
         text=True,
         start_new_session=True,
-        env={**os.environ, "ALEMBIC_CONTEXT": "1"},
+        env={
+            **os.environ,
+            "ALEMBIC_CONTEXT": "1",
+            # CI runs checkout scripts with an interpreter installed elsewhere.
+            "PYTHONPATH": os.pathsep.join(
+                filter(None, (str(Path(__file__).resolve().parents[1]), os.getenv("PYTHONPATH")))
+            ),
+        },
     )
     try:
         stdout, stderr = process.communicate(timeout=20)
