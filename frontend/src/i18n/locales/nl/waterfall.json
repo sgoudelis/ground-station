@@ -541,5 +541,16 @@
   "waterfall_statusbar": {
     "fps": "FPS:",
     "ffts_s": "FFT/s:"
+  },
+  "bandwidth_ruler": {
+    "title": "Bandbreedte meten",
+    "bandwidth": "Bandbreedte",
+    "start": "Beginfrequentie",
+    "end": "Eindfrequentie",
+    "center": "Middenfrequentie",
+    "finish": "Meting afronden",
+    "edit": "Meting bewerken",
+    "clear": "Meting wissen",
+    "hint": "Sleep over een signaal om de bandbreedte te meten."
   }
 }

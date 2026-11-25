@@ -666,5 +666,16 @@
     "task_output": "任务输出",
     "this_dialog_stays_open_to_show_task_updates_you_can_clos": "此对话框会保持打开以显示任务更新。您可以随时关闭它。",
     "waiting_for_task_output": "等待任务输出..."
+  },
+  "bandwidth_ruler": {
+    "title": "测量带宽",
+    "bandwidth": "带宽",
+    "start": "起始频率",
+    "end": "结束频率",
+    "center": "中心频率",
+    "finish": "完成测量",
+    "edit": "编辑测量",
+    "clear": "清除测量",
+    "hint": "在信号上拖动以测量其带宽。"
   }
 }

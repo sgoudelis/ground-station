@@ -7,6 +7,7 @@ import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
 import ZoomInIcon from '@mui/icons-material/ZoomIn';
 import ZoomOutIcon from '@mui/icons-material/ZoomOut';
+import StraightenIcon from '@mui/icons-material/Straighten';
 import ErrorIcon from '@mui/icons-material/Error';
 import CameraAltIcon from '@mui/icons-material/CameraAlt';
 import LockIcon from '@mui/icons-material/Lock';
@@ -55,6 +56,9 @@ const WaterfallToolbar = ({
                               handleZoomIn,
                               handleZoomOut,
                               handleZoomReset,
+                              bandwidthRulerEnabled = false,
+                              onBandwidthRulerEnabledChange,
+                              bandwidthRulerAvailable = false,
                               vfoColors,
                               vfoActive,
                               toggleVfo,
@@ -322,6 +326,18 @@ const WaterfallToolbar = ({
                     title={t('toolbar.reset_zoom')}
                 >
                     <ResetZoomIcon/>
+                </IconButton>
+
+                <IconButton
+                    sx={{ borderRadius: 0, bgcolor: bandwidthRulerEnabled ? 'action.selected' : undefined }}
+                    onClick={() => onBandwidthRulerEnabledChange(!bandwidthRulerEnabled)}
+                    color={bandwidthRulerEnabled ? 'warning' : 'primary'}
+                    disabled={!bandwidthRulerAvailable}
+                    title={t('bandwidth_ruler.title')}
+                    aria-label={t('bandwidth_ruler.title')}
+                    aria-pressed={bandwidthRulerEnabled}
+                >
+                    <StraightenIcon />
                 </IconButton>
 
                 {/* New toggle button for rotator dotted lines */}

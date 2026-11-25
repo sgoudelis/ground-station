@@ -327,6 +327,8 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay({
 
     const targetFPSRef = useRef(targetFPS);
     const waterfallControlRef = useRef(null);
+    const statusBarRef = useRef(null);
+    const [bandwidthRulerEnabled, setBandwidthRulerEnabled] = useState(false);
     // The store retains the current rotator status while navigating between
     // pages. Start from that status so returning to the waterfall does not
     // redraw a historical marker; only subsequent status changes are events.
@@ -1191,6 +1193,9 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay({
                     handleZoomIn={handleZoomIn}
                     handleZoomOut={handleZoomOut}
                     handleZoomReset={handleZoomReset}
+                    bandwidthRulerEnabled={bandwidthRulerEnabled}
+                    onBandwidthRulerEnabledChange={setBandwidthRulerEnabled}
+                    bandwidthRulerAvailable={Number(sampleRate) > 0}
                     vfoColors={vfoColors}
                     vfoActive={vfoActive}
                     toggleVfo={handleToggleVfo}
@@ -1318,6 +1323,9 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay({
                         onVisibleWaterfallHeightChange={updateVisibleWaterfallHeight}
                         frequencyBands={frequencyBands}
                         playbackRemainingSecondsRef={playbackRemainingSecondsRef}
+                        bandwidthRulerEnabled={bandwidthRulerEnabled}
+                        onBandwidthRulerEnabledChange={setBandwidthRulerEnabled}
+                        statusBarRef={statusBarRef}
                     />
 
                     <WaterfallRightSidebar
@@ -1346,6 +1354,7 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay({
 
             {/* Bottom status bar */}
             <Box
+                ref={statusBarRef}
                 sx={{
                     position: 'absolute',
                     bottom: 0,

@@ -14,6 +14,7 @@ it('exports complete viewport overlays and crops spectrum pixels using the displ
             <canvas class="bookmark-canvas" width="2000" height="400"></canvas>
             <canvas class="vfo-markers-canvas" width="2000" height="400"></canvas></div>
         <canvas class="frequency-scale-canvas" width="2000" height="40"></canvas>
+        <canvas class="bandwidth-ruler-canvas" width="2000" height="1240" data-overlay-height="620"></canvas>
     </div>`;
     vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(1000);
     vi.stubGlobal('DOMMatrixReadOnly', class {
@@ -31,6 +32,7 @@ it('exports complete viewport overlays and crops spectrum pixels using the displ
     const bandscope = document.querySelector('.bandscope-canvas');
     const bookmark = document.querySelector('.bookmark-canvas');
     const ruler = document.querySelector('.frequency-scale-canvas');
+    const bandwidthRuler = document.querySelector('.bandwidth-ruler-canvas');
     const margin = document.createElement('canvas');
     margin.width = 60;
     const { result } = renderHook(() => useWaterfallSnapshot({
@@ -50,4 +52,8 @@ it('exports complete viewport overlays and crops spectrum pixels using the displ
     expect(drawImage).toHaveBeenCalledWith(bandscope, 7600, 0, 800, 200, 60, 0, 1000, 200);
     expect(drawImage).toHaveBeenCalledWith(bookmark, 0, 0, 2000, 400, 60, 0, 1000, 200);
     expect(drawImage).toHaveBeenCalledWith(ruler, 0, 0, 2000, 40, 60, 200, 1000, 20);
+    expect(drawImage).toHaveBeenCalledWith(bandwidthRuler, 0, 0, 2000, 1240, 60, 0, 1000, 620);
+    const measurementCall = drawImage.mock.calls.findIndex(([source]) => source === bandwidthRuler);
+    const waterfallCall = drawImage.mock.calls.findIndex(([source]) => source instanceof Image);
+    expect(measurementCall).toBeGreaterThan(waterfallCall);
 });

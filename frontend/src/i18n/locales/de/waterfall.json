@@ -541,5 +541,16 @@
   "waterfall_statusbar": {
     "fps": "FPS:",
     "ffts_s": "FFTs/s:"
+  },
+  "bandwidth_ruler": {
+    "title": "Bandbreite messen",
+    "bandwidth": "Bandbreite",
+    "start": "Startfrequenz",
+    "end": "Endfrequenz",
+    "center": "Mittenfrequenz",
+    "finish": "Messung abschließen",
+    "edit": "Messung bearbeiten",
+    "clear": "Messung löschen",
+    "hint": "Ziehen Sie über ein Signal, um seine Bandbreite zu messen."
   }
 }

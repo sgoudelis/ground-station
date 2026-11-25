@@ -541,5 +541,16 @@
   "waterfall_statusbar": {
     "fps": "FPS:",
     "ffts_s": "FFTs/s:"
+  },
+  "bandwidth_ruler": {
+    "title": "Medir ancho de banda",
+    "bandwidth": "Ancho de banda",
+    "start": "Frecuencia inicial",
+    "end": "Frecuencia final",
+    "center": "Frecuencia central",
+    "finish": "Finalizar medición",
+    "edit": "Editar medición",
+    "clear": "Borrar medición",
+    "hint": "Arrastra sobre una señal para medir su ancho de banda."
   }
 }

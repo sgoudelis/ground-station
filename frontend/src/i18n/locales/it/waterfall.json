@@ -541,5 +541,16 @@
   "waterfall_statusbar": {
     "fps": "FPS:",
     "ffts_s": "FFT/s:"
+  },
+  "bandwidth_ruler": {
+    "title": "Misura la larghezza di banda",
+    "bandwidth": "Larghezza di banda",
+    "start": "Frequenza iniziale",
+    "end": "Frequenza finale",
+    "center": "Frequenza centrale",
+    "finish": "Termina misurazione",
+    "edit": "Modifica misurazione",
+    "clear": "Cancella misurazione",
+    "hint": "Trascina su un segnale per misurarne la larghezza di banda."
   }
 }

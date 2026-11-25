@@ -31,10 +31,12 @@ import {
 import VFOMarkersContainer from './vfo-marker/vfo-container.jsx';
 import FrequencyBandOverlay from './bandplan-overlay.jsx';
 import RecordingBandOverlay from './recording-band-overlay.jsx';
+import BandwidthRulerOverlay from './bandwidth-ruler-overlay.jsx';
 import {useDopplerNeighbors} from '../../hooks/useDopplerNeighbors.jsx';
 import { useTranslation } from 'react-i18next';
 
 const PLAYBACK_COUNTDOWN_UPDATE_MS = 250;
+const RULER_BOTTOM_GAP = 8;
 
 const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
                                               bandscopeCanvasRef,
@@ -50,6 +52,9 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
                                               minZoom = 1,
                                               maxZoom = 20,
                                               playbackRemainingSecondsRef,
+                                              bandwidthRulerEnabled = false,
+                                              onBandwidthRulerEnabledChange,
+                                              statusBarRef,
                                           }, ref) {
 
     const { t } = useTranslation('waterfall');
@@ -76,6 +81,7 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
     const {
         waterFallCanvasWidth,
         waterFallCanvasHeight,
+        fftSize,
         bandScopeHeight,
         bandscopeTopPadding,
         waterFallScaleX,
@@ -90,6 +96,7 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
     } = useSelector((state) => ({
         waterFallCanvasWidth: state.waterfall.waterFallCanvasWidth,
         waterFallCanvasHeight: state.waterfall.waterFallCanvasHeight,
+        fftSize: state.waterfall.fftSize,
         bandScopeHeight: state.waterfall.bandScopeHeight,
         bandscopeTopPadding: state.waterfall.bandscopeTopPadding ?? 0,
         waterFallScaleX: state.waterfall.waterFallScaleX,
@@ -106,9 +113,21 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
     // Track playback countdown for display
     const [playbackCountdown, setPlaybackCountdown] = useState(0);
     const [overlayViewport, setOverlayViewport] = useState({
-        width: 0, scale: waterFallScaleX, positionX: waterFallPositionX,
+        width: 0, height: 0, scale: waterFallScaleX, positionX: waterFallPositionX,
         pixelRatio: window.devicePixelRatio || 1,
     });
+
+    const getRulerHeight = useCallback(() => {
+        const viewport = viewportRef.current;
+        if (!viewport) return 0;
+        const statusBar = statusBarRef?.current;
+        // The status bar floats over the visualization rather than taking up
+        // layout space. Clip to its actual top, with a small visible gap.
+        const visibleHeight = statusBar
+            ? Math.min(viewport.clientHeight, statusBar.getBoundingClientRect().top - viewport.getBoundingClientRect().top)
+            : viewport.clientHeight;
+        return Math.max(0, visibleHeight - RULER_BOTTOM_GAP);
+    }, [statusBarRef]);
 
     // Update playback countdown from ref
     useEffect(() => {
@@ -148,12 +167,13 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
             if (width <= 0) return;
             setOverlayViewport({
                 width,
+                height: getRulerHeight(),
                 scale: scaleRef.current,
                 positionX: positionXRef.current,
                 pixelRatio: window.devicePixelRatio || 1,
             });
         });
-    }, []);
+    }, [getRulerHeight]);
 
     useLayoutEffect(() => {
         // Measure before the first paint. Overlays mount only after this width
@@ -161,9 +181,15 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
         const width = containerRef.current?.clientWidth || 0;
         if (width > 0) {
             containerWidthRef.current = width;
-            setOverlayViewport((viewport) => ({ ...viewport, width }));
+            setOverlayViewport((viewport) => ({ ...viewport, width, height: getRulerHeight() }));
         }
     }, []);
+
+    useLayoutEffect(() => {
+        // Grid resizing can move the floating status bar before the viewport's
+        // own dimensions change. Recheck the clipping boundary in that case.
+        applyTransform();
+    }, [waterFallWindowHeight, applyTransform]);
 
     useLayoutEffect(() => {
         const transform = `translateX(${overlayViewport.positionX}px) scaleX(${overlayViewport.scale})`;
@@ -241,6 +267,8 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
 
         // Start observing the container
         resizeObserver.observe(containerRef.current);
+        if (viewportRef.current) resizeObserver.observe(viewportRef.current);
+        if (statusBarRef?.current) resizeObserver.observe(statusBarRef.current);
         window.addEventListener('resize', handleResize);
 
         return () => {
@@ -248,7 +276,7 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
             window.removeEventListener('resize', handleResize);
         };
 
-    }, [handleResize]);
+    }, [handleResize, statusBarRef]);
 
     // Debounced persist function
     const persistToRedux = useCallback(() => {
@@ -412,6 +440,9 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
 
         // Mouse events for panning
         const handleMouseDown = (e) => {
+            // The ruler owns primary drags while editing. These native listeners
+            // run before React bubbling, so propagation alone cannot guard pan.
+            if (bandwidthRulerEnabled || e.button !== 0) return;
             isDraggingRef.current = true;
             lastXRef.current = e.clientX;
             // Prevent text selection during drag
@@ -431,6 +462,7 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
         };
 
         const handleMouseUp = () => {
+            if (!isDraggingRef.current) return;
             isDraggingRef.current = false;
             // Reset cursor
             if (container) {
@@ -443,10 +475,12 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
         // Touch events
         const handleTouchStart = (e) => {
             if (e.touches.length === 1) {
+                if (bandwidthRulerEnabled) return;
                 isDraggingRef.current = true;
                 lastXRef.current = e.touches[0].clientX;
                 //e.preventDefault();
             } else if (e.touches.length === 2) {
+                isDraggingRef.current = false;
                 // Pinch-to-zoom
                 const touch1 = e.touches[0];
                 const touch2 = e.touches[1];
@@ -499,7 +533,8 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
         };
 
         // Set initial cursor
-        container.style.cursor = 'grab';
+        isDraggingRef.current = false;
+        container.style.cursor = bandwidthRulerEnabled ? 'crosshair' : 'grab';
 
         // Add all event listeners
         container.addEventListener('wheel', handleWheel, {passive: false});
@@ -525,7 +560,7 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
             window.removeEventListener('touchend', handleTouchEnd);
             window.removeEventListener('touchcancel', handleTouchCancel);
         };
-    }, [persistToRedux, zoomOnXAxisOnly, panOnXAxisOnly]);
+    }, [persistToRedux, zoomOnXAxisOnly, panOnXAxisOnly, bandwidthRulerEnabled]);
 
     // Expose functions to parent component
     useImperativeHandle(ref, () => ({
@@ -857,6 +892,20 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
                     )}
                 </Box>
             </Box>
+
+            {/* Remount on tuning changes to discard endpoints from the previous capture. */}
+            {overlayViewport.width > 0 && overlayViewport.height > 0 && Number(sampleRate) > 0 && (
+                <BandwidthRulerOverlay
+                    key={`${selectedSDRId}:${centerFrequency}:${sampleRate}`}
+                    enabled={bandwidthRulerEnabled}
+                    onEnabledChange={onBandwidthRulerEnabledChange}
+                    centerFrequency={centerFrequency}
+                    sampleRate={Number(sampleRate)}
+                    fftSize={fftSize}
+                    viewport={overlayViewport}
+                    height={overlayViewport.height}
+                />
+            )}
 
         </Box>
     );

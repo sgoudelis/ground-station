@@ -541,5 +541,16 @@
   "waterfall_statusbar": {
     "fps": "FPS:",
     "ffts_s": "FFTs/s:"
+  },
+  "bandwidth_ruler": {
+    "title": "Measure bandwidth",
+    "bandwidth": "Bandwidth",
+    "start": "Start frequency",
+    "end": "End frequency",
+    "center": "Center frequency",
+    "finish": "Finish measuring",
+    "edit": "Edit measurement",
+    "clear": "Clear measurement",
+    "hint": "Drag across a signal to measure its bandwidth."
   }
 }

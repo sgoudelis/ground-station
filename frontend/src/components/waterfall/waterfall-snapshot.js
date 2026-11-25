@@ -130,6 +130,7 @@ export const useWaterfallSnapshot = ({
         const frequencyScaleLeftCanvas = waterFallLeftMarginFillerRef.current;
         let vfoContainerCanvas = null;
         let recordingBandCanvas = null;
+        let bandwidthRulerCanvas = null;
 
         const bandscopeCanvas = bandscopeCanvasRef.current;
         // Limit discovery to this waterfall. The old document-wide search could
@@ -151,6 +152,8 @@ export const useWaterfallSnapshot = ({
             } else if (canvas.classList.contains('vfo-markers-canvas')) {
                 // VFO container overlay
                 vfoContainerCanvas = canvas;
+            } else if (canvas.classList.contains('bandwidth-ruler-canvas')) {
+                bandwidthRulerCanvas = canvas;
             }
         });
 
@@ -161,6 +164,7 @@ export const useWaterfallSnapshot = ({
             frequencyScaleLeftCanvas,
             vfoContainerCanvas,
             recordingBandCanvas,
+            bandwidthRulerCanvas,
         };
     }, [bandscopeCanvasRef, waterFallLeftMarginFillerRef]);
 
@@ -181,6 +185,7 @@ export const useWaterfallSnapshot = ({
             frequencyScaleLeftCanvas,
             vfoContainerCanvas,
             recordingBandCanvas,
+            bandwidthRulerCanvas,
         } = overlayCanvases;
 
         // Get the actual visual container width from the DOM
@@ -293,6 +298,12 @@ export const useWaterfallSnapshot = ({
             waterfallSourceX, 0, waterfallSourceWidth, waterFallCanvasHeight,
             leftMarginWidth, yOffset, actualVisualWidth, waterFallCanvasHeight
         );
+
+        // The ruler spans the visible bandscope and waterfall. Composite it
+        // last, preserving its CSS height rather than stretching it over history.
+        if (bandwidthRulerCanvas) {
+            drawOverlay(bandwidthRulerCanvas, 0, Number(bandwidthRulerCanvas.dataset.overlayHeight));
+        }
 
         return compositeCanvas;
     }, [
