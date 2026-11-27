@@ -11,7 +11,7 @@ single web interface.
 
 ## Recent Releases
 
-* **v0.8.32 (2026-11-25):** Narrow LoRa modes now size the receiver filter by physical occupied bandwidth instead of the nominal rate, keeping the full signal inside the passband; the fix is pinned by a new UFO beacon regression test.
+* **v0.8.32 (2026-11-25):** Narrow LoRa modes now size the receiver filter by physical occupied bandwidth instead of the nominal rate, keeping the full signal inside the passband.
 * **v0.8.31 (2026-11-25):** The waterfall gained a bandwidth ruler overlay, recordings can drop their IQ file once the waterfall is generated, and external calendar feeds are now polled strictly hourly.
 * **v0.8.30 (2026-11-24):** The rotator can now be parked straight from the manual control dialog, and calendar events follow your preferred timezone while past events dim as they age without losing their status colors.
 * **v0.8.29 (2026-11-23):** Calendar arrives in the sidebar with external event feeds featuring persisted consent, feed settings with manual refresh, activity filters with icons, source attribution, and known-start handling for partial events; sync status now tolerates upstream outages and logs failures safely. Pass times are computed again for single observations, the continuous tab shows running counts, the Packet Map gained an aircraft lift guide line, and celestial target requests retry on lost ACKs.
