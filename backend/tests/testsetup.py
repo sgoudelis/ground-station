@@ -53,7 +53,7 @@ async def _reset_setup_state():
 @pytest.mark.parametrize("selected_timezone", [None, "Asia/Kathmandu"])
 @pytest.mark.parametrize(
     ("selected_language", "selected_theme"),
-    [(None, None), ("el_GR", "light"), ("zh_CN", "sonar"), ("el_GR", None), (None, "auto")],
+    [(None, None), ("el_GR", "light"), ("zh_CN", "cyberpunk"), ("el_GR", None), (None, "auto")],
 )
 @pytest.mark.parametrize("selected_usage", [None, True, False, "storage-failure"])
 async def test_setup_finalize_runs_backend_orchestration(

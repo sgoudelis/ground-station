@@ -28,6 +28,13 @@ from common.imageguard import is_thumbnail_source_within_pixel_limit
 
 logger = logging.getLogger("waterfall-generator")
 
+# Separate bundles keep backend and frontend deployments independent. The tables
+# must match frontend/src/components/waterfall/worker-modules/palettes.json.
+_SDR_PALETTES = {
+    name: tuple(tuple(bytes.fromhex(color[1:])) for color in colors)
+    for name, colors in json.loads(Path(__file__).with_name("palettes.json").read_text()).items()
+}
+
 
 class WaterfallConfig:
     """Configuration for waterfall generation"""
@@ -46,9 +53,31 @@ class WaterfallConfig:
     }
     SUPPORTED_FFT_SIZES = (512, 1024, 2048, 4096, 8192, 16384, 32768, 65536)
     SUPPORTED_WINDOWS = {"hann", "hamming", "blackman"}
-    SUPPORTED_COLOR_MAPS = ("iceberg", "heat", "cosmic", "greyscale", "light", "sonar")
+    SUPPORTED_COLOR_MAPS = (
+        "iceberg",
+        "heat",
+        "cosmic",
+        "cyberpunk",
+        "greyscale",
+        "light",
+        "midnight-rx",
+        "classic-rf",
+        "phosphor",
+        "viridis",
+    )
     MAX_ALLOWED_HEIGHT = 12000
     _LUT_CACHE: dict[str, np.ndarray] = {}
+    # Mirror the live waterfall stops in frontend's worker-modules/color-maps.js.
+    _CYBERPUNK_STOPS = (
+        (9, 6, 19),
+        (29, 15, 51),
+        (67, 28, 112),
+        (129, 42, 166),
+        (230, 76, 191),
+        (255, 126, 219),
+        (134, 243, 255),
+        (255, 247, 205),
+    )
 
     @staticmethod
     def _parse_bool(value: Any, field_name: str) -> bool:
@@ -191,13 +220,19 @@ class WaterfallConfig:
 
         color_fn_map: dict[str, Callable[[float], tuple[int, int, int]]] = {
             "cosmic": WaterfallConfig._cosmic_color,
+            "cyberpunk": WaterfallConfig._cyberpunk_color,
             "greyscale": WaterfallConfig._greyscale_color,
             "light": WaterfallConfig._light_color,
             "iceberg": WaterfallConfig._iceberg_color,
             "heat": WaterfallConfig._heat_color,
-            "sonar": WaterfallConfig._sonar_color,
         }
-        lut = WaterfallConfig._build_lut(color_fn_map[normalized])
+        if normalized in _SDR_PALETTES:
+            stops = _SDR_PALETTES[normalized]
+            lut = WaterfallConfig._build_lut(
+                lambda value: WaterfallConfig._interpolate_palette(value, stops)
+            )
+        else:
+            lut = WaterfallConfig._build_lut(color_fn_map[normalized])
         WaterfallConfig._LUT_CACHE[normalized] = lut
         return lut
 
@@ -210,6 +245,35 @@ class WaterfallConfig:
             lut[i, 1] = np.uint8(max(0, min(255, g)))
             lut[i, 2] = np.uint8(max(0, min(255, b)))
         return lut
+
+    @staticmethod
+    def _interpolate_palette(
+        normalized_value: float, stops: tuple[tuple[int, ...], ...]
+    ) -> tuple[int, int, int]:
+        # Match the frontend's linear scale and rounding, including halfway values.
+        position = normalized_value * (len(stops) - 1)
+        index = min(int(position), len(stops) - 2)
+        factor = position - index
+        start, end = stops[index], stops[index + 1]
+        return (
+            int(start[0] + (end[0] - start[0]) * factor + 0.5),
+            int(start[1] + (end[1] - start[1]) * factor + 0.5),
+            int(start[2] + (end[2] - start[2]) * factor + 0.5),
+        )
+
+    @staticmethod
+    def _cyberpunk_color(normalized_value: float) -> tuple[int, int, int]:
+        # Match the frontend curve: keep noise dark and stronger signals luminous.
+        stops = WaterfallConfig._CYBERPUNK_STOPS
+        position = normalized_value**1.6 * (len(stops) - 1)
+        index = min(int(position), len(stops) - 2)
+        factor = position - index
+        start, end = stops[index], stops[index + 1]
+        return (
+            int(start[0] + (end[0] - start[0]) * factor),
+            int(start[1] + (end[1] - start[1]) * factor),
+            int(start[2] + (end[2] - start[2]) * factor),
+        )
 
     @staticmethod
     def _cosmic_color(normalized_value: float) -> tuple[int, int, int]:
@@ -316,33 +380,6 @@ class WaterfallConfig:
 
         factor = (heat_curved_value - 0.9) / 0.1
         return 255, 255, 150 + int(factor * 105)
-
-    @staticmethod
-    def _sonar_color(normalized_value: float) -> tuple[int, int, int]:
-        sonar_curved_value = normalized_value**1.7
-
-        if sonar_curved_value < 0.15:
-            factor = sonar_curved_value / 0.15
-            return int(factor * 8), int(factor * 10), int(factor * 15)
-        if sonar_curved_value < 0.3:
-            factor = (sonar_curved_value - 0.15) / 0.15
-            return (
-                8 + int(factor * 18),
-                10 + int(factor * 8),
-                15 - int(factor * 15),
-            )
-        if sonar_curved_value < 0.5:
-            factor = (sonar_curved_value - 0.3) / 0.2
-            return 26 + int(factor * 51), 18 + int(factor * 33), 0
-        if sonar_curved_value < 0.7:
-            factor = (sonar_curved_value - 0.5) / 0.2
-            return 77 + int(factor * 93), 51 + int(factor * 68), 0
-        if sonar_curved_value < 0.85:
-            factor = (sonar_curved_value - 0.7) / 0.15
-            return 170 + int(factor * 85), 119 + int(factor * 57), 0
-
-        factor = (sonar_curved_value - 0.85) / 0.15
-        return 255, 176 + int(factor * 45), int(factor * 136)
 
 
 class WaterfallGenerator:

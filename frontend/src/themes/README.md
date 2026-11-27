@@ -8,10 +8,39 @@ The ground station application supports multiple themes with completely customiz
 
 ### Built-in Themes
 
-1. **Dark** (default) - Standard dark theme with blue accents
-2. **Light** - Clean light theme for daytime use
-3. **Ocean Blue** - Deep blue nautical theme
-4**Forest Green** - Nature-inspired green theme
+| Theme | Appearance | Suggested waterfall colormap |
+| --- | --- | --- |
+| Auto (System) | Follows the system's dark/light preference | Any |
+| Dark (default) | Neutral dark grey with muted blue accents | Cosmic |
+| Slate Blue | Dark grey with blue and mint accents | Iceberg |
+| Light | Light surfaces for daytime use | Light |
+| Night (OLED) | Black surfaces with purple accents | Cosmic |
+| Cyberpunk | Charcoal grey with neon cyan and magenta accents | Cyberpunk |
+| Midnight RX | Dark navy panels with blue accents | Midnight RX |
+| Classic RF | Charcoal panels with soft green controls | Classic RF |
+| Phosphor | Almost-black green panels with bright green highlights | Phosphor |
+| Signal Lab | Graphite panels with teal and yellow accents | Viridis |
+
+Interface themes and waterfall colormaps are selected independently. Choose the
+theme in Settings → Preferences (or initial setup), and the colormap in the
+waterfall FFT settings. Recorded waterfall generation offers the same colormaps.
+
+### SDR palette sources
+
+- Midnight RX uses the [SDR++ Electric palette](https://github.com/AlexandreRouma/SDRPlusPlus/blob/master/root/res/colormaps/electric.json), credited to Ryzerth, with a Deep Blue-inspired interface.
+- Classic RF uses the [Gqrx palette distributed by SDR++](https://github.com/AlexandreRouma/SDRPlusPlus/blob/master/root/res/colormaps/gqrx.json), credited to csete (Alexandru Csete).
+- Phosphor uses [SDR++ Classic Green](https://github.com/AlexandreRouma/SDRPlusPlus/blob/master/root/res/colormaps/classic_green.json), credited to Paul (PD0SWL). Its waterfall progresses through blue, cyan, green and orange/red, with dark red at the upper end.
+- Signal Lab pairs with Viridis, also offered by [SDRangel](https://github.com/f4exb/sdrangel/blob/master/sdrbase/util/colormap.cpp). The original 256-sample table is from [BIDS/colormap](https://github.com/BIDS/colormap/blob/master/colormaps.py), by Nathaniel J. Smith, Stefan van der Walt and Eric Firing, released under [CC0](https://creativecommons.org/publicdomain/zero/1.0/). Samples are rounded to 8-bit RGB without changing the linear intensity scale.
+
+The SDR++ palette resources are distributed under its GPL-3.0 license, compatible
+with this project's license. Attribution above applies to the imported tables;
+the interface theme colors are original adaptations.
+
+The palette tables are intentionally bundled in both
+`components/waterfall/worker-modules/palettes.json` and `backend/fft/palettes.json`
+so the frontend build and backend package work independently. Keep these files
+identical when changing a palette, and verify that both renderers return the same
+RGB values. The backend package includes its table as package data.
 
 ## Adding a New Theme
 
@@ -58,20 +87,12 @@ export const themeConfigs = {
 };
 ```
 
-### Step 2: Add Translation Keys
+### Step 2: Register the Theme
 
-Add translations for your theme name in the i18n locale files:
-
-**`frontend/src/i18n/locales/en/settings.json`:**
-```json
-{
-  "preferences": {
-    "theme_my-custom-theme": "My Custom Theme"
-  }
-}
-```
-
-Repeat for other locales (el, fr, es, de, nl).
+Add its stable `id` and display `name` to `getAvailableThemesWithMetadata()` in
+`theme-configs.js`. Both the preferences form and initial setup use this registry.
+Theme names are preset names displayed directly; the legacy `preferences.theme_*`
+locale keys do not drive these selectors.
 
 ### Step 3: Test Your Theme
 
@@ -79,7 +100,7 @@ Repeat for other locales (el, fr, es, de, nl).
 2. Go to Settings → Preferences
 3. Select your new theme from the dropdown
 4. Click "Save Preferences"
-5. The theme should apply immediately
+5. Reload if requested to apply the saved theme
 
 ## Theme Structure
 
@@ -213,9 +234,9 @@ Note: HTML5 Canvas elements (waterfall display) cannot use theme tokens directly
 3. Test in different browsers
 4. Verify rgba values have correct alpha channel
 
-### Missing Translations
-1. Add translation keys to all locale files
-2. Use fallback in `preferences-form.jsx`: `t('preferences.theme_name', 'Fallback Name')`
+### Missing Preset Name
+1. Register the preset's `id` and `name` in `getAvailableThemesWithMetadata()`
+2. Keep the `id` identical to its key in `themeConfigs`
 
 ## File Structure
 
@@ -236,7 +257,7 @@ frontend/src/
 When contributing a new theme:
 1. Follow the color scheme guidelines
 2. Test thoroughly across all pages
-3. Add translations for all supported languages
+3. Register the display name for the preferences and setup selectors
 4. Document any custom properties
 5. Include screenshots in your PR
 6. Verify accessibility standards

@@ -18,14 +18,36 @@
  * Developed with the assistance of Claude (Anthropic AI Assistant)
  */
 
+import paletteData from './palettes.json' with { type: 'json' };
+
 /**
  * Color map implementations for waterfall display
  */
+
+// Decode once: this module also runs in the FFT worker's rendering hot path.
+// Sources are documented in themes/README.md. Keep the backend JSON copy identical.
+const sdrPaletteStops = Object.fromEntries(Object.entries(paletteData).map(([name, colors]) => [
+    name,
+    colors.map((hex) => [1, 3, 5].map((offset) => parseInt(hex.slice(offset, offset + 2), 16))),
+]));
 
 /**
  * Cache for color values to avoid recalculation
  */
 const colorCache = new Map();
+
+// Keep these stops and the curve in sync with backend/fft/waterfallgenerator.py
+// so generated images match the live waterfall. Bright accents follow dark noise.
+const cyberpunkStops = [
+    [9, 6, 19],      // #090613 — near-black violet
+    [29, 15, 51],    // #1d0f33
+    [67, 28, 112],   // #431c70
+    [129, 42, 166],  // #812aa6
+    [230, 76, 191],  // #e64cbf — magenta
+    [255, 126, 219], // #ff7edb — SynthWave '84 pink
+    [134, 243, 255], // #86f3ff — pale cyan
+    [255, 247, 205], // #fff7cd — warm peak highlight
+];
 
 /**
  * Get list of available color maps
@@ -36,9 +58,13 @@ export const getAvailableColorMaps = () => {
         { id: 'iceberg', name: 'Iceberg' },
         { id: 'heat', name: 'Heat' },
         { id: 'cosmic', name: 'Cosmic' },
+        { id: 'cyberpunk', name: 'Cyberpunk' },
+        { id: 'midnight-rx', name: 'Midnight RX' },
+        { id: 'classic-rf', name: 'Classic RF' },
+        { id: 'phosphor', name: 'Phosphor' },
+        { id: 'viridis', name: 'Viridis' },
         { id: 'greyscale', name: 'Greyscale' },
         { id: 'light', name: 'Light' },
-        { id: 'sonar', name: 'Sonar' },
     ];
 };
 
@@ -83,8 +109,14 @@ export const getColorForPower = (powerDb, mapName, [minDb, maxDb]) => {
         case 'heat':
             color = heatColorMap(normalizedValue);
             break;
-        case 'sonar':
-            color = sonarColorMap(normalizedValue);
+        case 'cyberpunk':
+            color = cyberpunkColorMap(normalizedValue);
+            break;
+        case 'midnight-rx':
+        case 'classic-rf':
+        case 'phosphor':
+        case 'viridis':
+            color = interpolatePalette(normalizedValue, sdrPaletteStops[mapName]);
             break;
         default:
             color = cosmicColorMap(normalizedValue);
@@ -93,6 +125,40 @@ export const getColorForPower = (powerDb, mapName, [minDb, maxDb]) => {
     colorCache.set(cacheKey, color);
     return color;
 };
+
+function interpolatePalette(normalizedValue, stops) {
+    // Keep a linear scale for the SDR palettes, including canonical Viridis.
+    const position = normalizedValue * (stops.length - 1);
+    const index = Math.min(Math.floor(position), stops.length - 2);
+    const factor = position - index;
+    const start = stops[index];
+    const end = stops[index + 1];
+
+    return {
+        r: Math.round(start[0] + (end[0] - start[0]) * factor),
+        g: Math.round(start[1] + (end[1] - start[1]) * factor),
+        b: Math.round(start[2] + (end[2] - start[2]) * factor),
+    };
+}
+
+/**
+ * Dark violet through neon pink and cyan to warm white.
+ * Inspired by https://github.com/robb0wen/synthwave-vscode
+ */
+function cyberpunkColorMap(normalizedValue) {
+    // Suppress noise-floor brightness; reserve the neon stops for strong signals.
+    const position = Math.pow(normalizedValue, 1.6) * (cyberpunkStops.length - 1);
+    const index = Math.min(Math.floor(position), cyberpunkStops.length - 2);
+    const factor = position - index;
+    const start = cyberpunkStops[index];
+    const end = cyberpunkStops[index + 1];
+
+    return {
+        r: Math.floor(start[0] + (end[0] - start[0]) * factor),
+        g: Math.floor(start[1] + (end[1] - start[1]) * factor),
+        b: Math.floor(start[2] + (end[2] - start[2]) * factor),
+    };
+}
 
 /**
  * Cosmic color map - purple/blue to bright colors
@@ -271,67 +337,4 @@ function heatColorMap(normalizedValue) {
         };
     }
     return heatRGB;
-}
-
-/**
- * Sonar color map - deep ocean black to tactical amber
- * Inspired by naval sonar displays: deep ocean darkness, phosphor CRT amber glow, tactical readouts
- * Classic submarine warfare aesthetic with amber monochrome tactical displays
- * @param {number} normalizedValue - Value between 0 and 1
- * @returns {Object} RGB color {r, g, b}
- */
-function sonarColorMap(normalizedValue) {
-    let sonarRGB;
-    const sonarCurvedValue = Math.pow(normalizedValue, 1.7);
-
-    if (sonarCurvedValue < 0.15) {
-        // Deep ocean void - pure black to faint dark blue-black
-        const factor = sonarCurvedValue / 0.15;
-        sonarRGB = {
-            r: Math.floor(0 + factor * 8),    // 0 -> 8
-            g: Math.floor(0 + factor * 10),   // 0 -> 10
-            b: Math.floor(0 + factor * 15)    // 0 -> 15
-        };
-    } else if (sonarCurvedValue < 0.3) {
-        // Pressure darkness to dim amber glow - #080a0f to #1a1200
-        const factor = (sonarCurvedValue - 0.15) / 0.15;
-        sonarRGB = {
-            r: Math.floor(8 + factor * 18),   // 8 -> 26
-            g: Math.floor(10 + factor * 8),   // 10 -> 18
-            b: Math.floor(15 - factor * 15)   // 15 -> 0
-        };
-    } else if (sonarCurvedValue < 0.5) {
-        // Dim amber to phosphor warm - #1a1200 to #4d3300
-        const factor = (sonarCurvedValue - 0.3) / 0.2;
-        sonarRGB = {
-            r: Math.floor(26 + factor * 51),  // 26 -> 77
-            g: Math.floor(18 + factor * 33),  // 18 -> 51
-            b: Math.floor(0)                  // 0 -> 0
-        };
-    } else if (sonarCurvedValue < 0.7) {
-        // Phosphor warm to tactical amber - #4d3300 to #aa7700
-        const factor = (sonarCurvedValue - 0.5) / 0.2;
-        sonarRGB = {
-            r: Math.floor(77 + factor * 93),  // 77 -> 170
-            g: Math.floor(51 + factor * 68),  // 51 -> 119
-            b: Math.floor(0)                  // 0 -> 0
-        };
-    } else if (sonarCurvedValue < 0.85) {
-        // Tactical amber to bright sonar - #aa7700 to #ffb000
-        const factor = (sonarCurvedValue - 0.7) / 0.15;
-        sonarRGB = {
-            r: Math.floor(170 + factor * 85), // 170 -> 255
-            g: Math.floor(119 + factor * 57), // 119 -> 176
-            b: Math.floor(0)                  // 0 -> 0
-        };
-    } else {
-        // Bright contact - #ffb000 to #ffdd88 (hot amber-white)
-        const factor = (sonarCurvedValue - 0.85) / 0.15;
-        sonarRGB = {
-            r: Math.floor(255),               // 255 -> 255
-            g: Math.floor(176 + factor * 45), // 176 -> 221
-            b: Math.floor(0 + factor * 136)   // 0 -> 136 (adds slight warmth at peaks)
-        };
-    }
-    return sonarRGB;
 }

@@ -230,73 +230,204 @@ export const themeConfigs = {
         },
     },
 
-    'sonar': {
+    // Palette reference: https://github.com/robb0wen/synthwave-vscode
+    // Neutral charcoal keeps large panels quiet; neon colors mark controls and selection.
+    cyberpunk: {
         mode: 'dark',
-        primary: { main: '#ffb000' }, // Amber sonar
-        secondary: { main: '#ff6600' }, // Deep sea rust
-        success: { main: '#88cc00' }, // Contact confirmed
-        warning: { main: '#ffaa00' }, // Proximity alert
-        error: { main: '#ff3300' }, // Critical depth
-        info: { main: '#ffb000' }, // Bearing data
+        primary: { main: '#00f0ff', contrastText: '#0c0d0f' },
+        secondary: { main: '#ff2e97', contrastText: '#0c0d0f' },
+        success: { main: '#39ff88' },
+        warning: { main: '#fcee0a' },
+        error: { main: '#ff496c' },
+        info: { main: '#00f0ff' },
         background: {
-            default: '#000000', // Deep ocean void
-            paper: '#0a0f12', // Hull interior
-            elevated: '#121a20', // Conning tower
-            titleBar: '#1a2a18',
-            appBar: '#263828',
+            default: '#0c0d0f',
+            paper: '#15171a',
+            elevated: '#202327',
+            titleBar: '#101215',
+            appBar: '#25282d',
+        },
+        text: {
+            primary: '#f1f3f5',
+            secondary: '#aeb5bf',
         },
         border: {
-            main: '#3a4520', // Phosphor grid
-            light: '#4d5a2a',
-            dark: '#2a3518',
+            main: '#343a42',
+            light: '#4b5560',
+            dark: '#24292f',
         },
         overlay: {
-            light: 'rgba(255, 176, 0, 0.06)', // Amber glow
-            medium: 'rgba(255, 176, 0, 0.12)',
-            dark: 'rgba(0, 0, 0, 0.85)', // Pressure darkness
+            light: 'rgba(0, 240, 255, 0.06)',
+            medium: 'rgba(255, 46, 151, 0.12)',
+            dark: 'rgba(0, 0, 0, 0.8)',
         },
         status: {
-            connected: '#ffb000', // Sonar lock
-            connecting: '#ffaa00', // Pinging
-            disconnected: '#664400', // Signal lost
-            polling: '#ff8800', // Active sweep
-        },
-        // Submarine/naval themed custom properties
-        sonar: {
-            contact: '#ffb000',
-            sweep: 'rgba(255, 176, 0, 0.3)',
-            grid: '#3a4520',
-            bearing: '#ff8800',
-        },
-        tactical: {
-            friendly: '#88cc00',
-            unknown: '#ffaa00',
-            hostile: '#ff3300',
-            neutral: '#7a8080',
-        },
-        depth: {
-            safe: '#88cc00',
-            warning: '#ffaa00',
-            critical: '#ff3300',
+            connected: '#39ff88',
+            connecting: '#fcee0a',
+            disconnected: '#ff496c',
+            polling: '#00f0ff',
         },
         action: {
-            play: '#88cc00',
-            stop: '#ff3300',
+            play: '#39ff88',
+            stop: '#ff496c',
         },
         settingsTabs: {
-            border: '#52584a',
+            border: '#4b5560',
             mainRow: {
-                background: '#30352f',
-                selected: '#3f463d',
+                background: '#202327',
+                selected: '#164047',
             },
             subRow: {
-                background: '#2b312b',
-                selected: '#3a4138',
+                background: '#1a1d21',
+                selected: '#163238',
             },
             detailRow: {
-                background: '#262c26',
-                selected: '#353d33',
+                background: '#16181c',
+                selected: '#142c31',
             },
+        },
+    },
+    // SDR++ Deep Blue-inspired surfaces and Electric waterfall accents.
+    'midnight-rx': {
+        mode: 'dark',
+        primary: { main: '#6eafff', contrastText: '#0b111c' },
+        secondary: { main: '#9ad9ef', contrastText: '#0b111c' },
+        success: { main: '#72d9a1' },
+        warning: { main: '#ffd166' },
+        error: { main: '#ff788c' },
+        info: { main: '#6eafff' },
+        background: {
+            default: '#0b111c',
+            paper: '#142132',
+            elevated: '#1b2c40',
+            titleBar: '#101b2a',
+            appBar: '#1b2c40',
+        },
+        text: { primary: '#edf4ff', secondary: '#aebed3' },
+        border: { main: '#31445d', light: '#475f7d', dark: '#24344a' },
+        overlay: {
+            light: 'rgba(110, 175, 255, 0.06)',
+            medium: 'rgba(110, 175, 255, 0.12)',
+            dark: 'rgba(0, 0, 0, 0.8)',
+        },
+        status: {
+            connected: '#72d9a1', connecting: '#ffd166',
+            disconnected: '#ff788c', polling: '#6eafff',
+        },
+        action: { play: '#72d9a1', stop: '#ff788c' },
+        settingsTabs: {
+            border: '#475f7d',
+            mainRow: { background: '#1b2c40', selected: '#284667' },
+            subRow: { background: '#172638', selected: '#243e5c' },
+            detailRow: { background: '#142132', selected: '#203650' },
+        },
+    },
+
+    // Gqrx-inspired receiver chrome with a traditional multicolor waterfall.
+    'classic-rf': {
+        mode: 'dark',
+        primary: { main: '#8fd98d', contrastText: '#111315' },
+        secondary: { main: '#8bc5ef', contrastText: '#111315' },
+        success: { main: '#8fd98d' },
+        warning: { main: '#f2ce68' },
+        error: { main: '#f47c7c' },
+        info: { main: '#8bc5ef' },
+        background: {
+            default: '#111315',
+            paper: '#1e2226',
+            elevated: '#282e34',
+            titleBar: '#171b1e',
+            appBar: '#252b30',
+        },
+        text: { primary: '#edf0ed', secondary: '#b3bdb7' },
+        border: { main: '#3e4843', light: '#55625a', dark: '#2c3430' },
+        overlay: {
+            light: 'rgba(143, 217, 141, 0.06)',
+            medium: 'rgba(143, 217, 141, 0.12)',
+            dark: 'rgba(0, 0, 0, 0.75)',
+        },
+        status: {
+            connected: '#8fd98d', connecting: '#f2ce68',
+            disconnected: '#f47c7c', polling: '#8bc5ef',
+        },
+        action: { play: '#8fd98d', stop: '#f47c7c' },
+        settingsTabs: {
+            border: '#55625a',
+            mainRow: { background: '#282e34', selected: '#324b3a' },
+            subRow: { background: '#23292e', selected: '#2c4233' },
+            detailRow: { background: '#1e2428', selected: '#26392d' },
+        },
+    },
+
+    // Green instrument panels echo SDR++'s Classic Green palette.
+    phosphor: {
+        mode: 'dark',
+        primary: { main: '#80ff80', contrastText: '#0c100e' },
+        secondary: { main: '#b7dca3', contrastText: '#0c100e' },
+        success: { main: '#80ff80' },
+        warning: { main: '#ffd166' },
+        error: { main: '#ff7b78' },
+        info: { main: '#80cce8' },
+        background: {
+            default: '#0c100e',
+            paper: '#18231b',
+            elevated: '#223027',
+            titleBar: '#111b14',
+            appBar: '#1e2c22',
+        },
+        text: { primary: '#e9f4e8', secondary: '#adbfac' },
+        border: { main: '#354d3b', light: '#4d6951', dark: '#26392b' },
+        overlay: {
+            light: 'rgba(128, 255, 128, 0.05)',
+            medium: 'rgba(128, 255, 128, 0.10)',
+            dark: 'rgba(0, 0, 0, 0.8)',
+        },
+        status: {
+            connected: '#80ff80', connecting: '#ffd166',
+            disconnected: '#ff7b78', polling: '#80cce8',
+        },
+        action: { play: '#80ff80', stop: '#ff7b78' },
+        settingsTabs: {
+            border: '#4d6951',
+            mainRow: { background: '#223027', selected: '#304c35' },
+            subRow: { background: '#1c2921', selected: '#2a432f' },
+            detailRow: { background: '#18231b', selected: '#243a29' },
+        },
+    },
+
+    // Graphite and teal pair with the Viridis palette offered by SDRangel.
+    'signal-lab': {
+        mode: 'dark',
+        primary: { main: '#5ed6b3', contrastText: '#101517' },
+        secondary: { main: '#e5da69', contrastText: '#101517' },
+        success: { main: '#8cdb92' },
+        warning: { main: '#e5da69' },
+        error: { main: '#f57f90' },
+        info: { main: '#80c9df' },
+        background: {
+            default: '#101517',
+            paper: '#1a2427',
+            elevated: '#233034',
+            titleBar: '#141d20',
+            appBar: '#202e32',
+        },
+        text: { primary: '#eaf3f1', secondary: '#adbfbd' },
+        border: { main: '#354e50', light: '#4c696a', dark: '#263b3d' },
+        overlay: {
+            light: 'rgba(94, 214, 179, 0.06)',
+            medium: 'rgba(94, 214, 179, 0.12)',
+            dark: 'rgba(0, 0, 0, 0.75)',
+        },
+        status: {
+            connected: '#8cdb92', connecting: '#e5da69',
+            disconnected: '#f57f90', polling: '#80c9df',
+        },
+        action: { play: '#8cdb92', stop: '#f57f90' },
+        settingsTabs: {
+            border: '#4c696a',
+            mainRow: { background: '#233034', selected: '#245047' },
+            subRow: { background: '#1e292d', selected: '#20463f' },
+            detailRow: { background: '#1a2427', selected: '#1d3d37' },
         },
     },
 };
@@ -341,7 +472,11 @@ export function getAvailableThemesWithMetadata() {
         { id: 'slate-blue', name: 'Slate Blue' },
         { id: 'light', name: 'Light' },
         { id: 'night', name: 'Night (OLED)' },
-        { id: 'sonar', name: 'Sonar' },
+        { id: 'cyberpunk', name: 'Cyberpunk' },
+        { id: 'midnight-rx', name: 'Midnight RX' },
+        { id: 'classic-rf', name: 'Classic RF' },
+        { id: 'phosphor', name: 'Phosphor' },
+        { id: 'signal-lab', name: 'Signal Lab' },
     ];
 }
 

@@ -43,7 +43,7 @@ export default function LanguageStep({ value, onChange, themeValue, onThemeChang
                     select
                     fullWidth
                     label={t('preferences.theme')}
-                    value={themeValue}
+                    value={themes.some((option) => option.id === themeValue) ? themeValue : 'dark'}
                     onChange={(event) => onThemeChange(event.target.value)}
                 >
                     {themes.map((option) => (

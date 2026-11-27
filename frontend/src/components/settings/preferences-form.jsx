@@ -138,6 +138,11 @@ const normalizePreferences = (preferences, editableKeys) => {
         result.locale = 'browser';
     }
 
+    // Match the theme renderer's fallback when a saved preset has been removed.
+    if (result.theme && !getAvailableThemesWithMetadata().some((theme) => theme.id === result.theme)) {
+        result.theme = 'dark';
+    }
+
     return result;
 };
 
